@@ -1,0 +1,48 @@
+{
+  "key": "becd5c300fbeb00247eb6d93bc400f675c1687de73364f0cf6f9f2c130161a3d",
+  "value": {
+    "id": "chatcmpl-ETBAkFSJuTTH9i4z2LSZ8LRHa9iMo",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points 1 et 2 développent des idées distinctes : le premier invoque l’exemple des autres pays européens pour justifier la réforme, tandis que le second conteste la pertinence de cette comparaison en soulignant les différences structurelles entre les systèmes. Aucune redondance substantielle n’est identifiable dans les éléments fournis.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623166,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 174,
+      "prompt_tokens": 290,
+      "total_tokens": 464,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 84,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

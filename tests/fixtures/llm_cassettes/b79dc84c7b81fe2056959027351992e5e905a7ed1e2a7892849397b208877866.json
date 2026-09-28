@@ -1,14 +1,14 @@
 {
   "key": "b79dc84c7b81fe2056959027351992e5e905a7ed1e2a7892849397b208877866",
   "value": {
-    "id": "chatcmpl-ER3TrusDpmGh7s0f4jXvZZOcxvIOz",
+    "id": "chatcmpl-ETBFMgipy15JxBqVSTNXxxOj2ysnt",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"L'avis des personnes qui ne sont pas expertes devrait compter ou être pris en considération.\",\"main_thesis\":\"L'unanimité des experts suffit à établir qu'une affirmation est vraie, et l'avis des non-experts ne compte pas.\"}",
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"L'avis des personnes qui ne sont pas expertes pourrait compter ou remettre en cause la vérité de la proposition.\",\"main_thesis\":\"La proposition est vraie parce que les experts sont unanimes, et l'avis des non-experts ne compte pas.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1790116943,
+    "created": 1790623452,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 244,
+      "completion_tokens": 176,
       "prompt_tokens": 214,
-      "total_tokens": 458,
+      "total_tokens": 390,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 173,
+        "reasoning_tokens": 105,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

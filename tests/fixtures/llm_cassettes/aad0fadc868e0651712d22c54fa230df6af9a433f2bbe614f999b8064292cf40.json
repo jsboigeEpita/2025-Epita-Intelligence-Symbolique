@@ -6,36 +6,26 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_O8g7DAIsPe8Ij86cKQuFmxvn",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"191\"}"
-        },
-        {
-          "id": "call_hICeiLg6hTrAGjwEKlEOoZmn",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"203\"}"
-        },
-        {
-          "id": "call_NsudOtTxwqECscnInsm8nQLf",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"211\"}"
+          "id": "call_ZaeNXeCe5ssTnR9WyIu0NZTD",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"190\",\"confidence\":\"high\",\"justification\":\"Les deux arguments intimident en invoquant l'unanimité des experts et en disqualifiant l'avis des non-experts, afin de faire accepter la conclusion sans discussion ni examen des raisons.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ER3T0jN3Wr7zRooI0nCxsVkth0ETz",
-        "created": 1790116890,
+        "id": "chatcmpl-ETBEVj0IgICGrAsMfN0Fjv4BtFjQR",
+        "created": 1790623399,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 1581,
+          "prompt_tokens": 1601,
           "prompt_tokens_details": {
             "audio_tokens": 0,
-            "cache_write_tokens": 1578,
+            "cache_write_tokens": 1598,
             "cached_tokens": 0,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 76,
+          "completion_tokens": 70,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

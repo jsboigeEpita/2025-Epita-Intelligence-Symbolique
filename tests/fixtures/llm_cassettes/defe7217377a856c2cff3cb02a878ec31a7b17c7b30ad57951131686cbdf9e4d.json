@@ -1,0 +1,40 @@
+{
+  "key": "defe7217377a856c2cff3cb02a878ec31a7b17c7b30ad57951131686cbdf9e4d",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_IOUh9nzIvOfO3jIdoQ7l1eKb",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"2\",\"confidence\":\"high\",\"justification\":\"L’énoncé présente comme incontestable le succès de la politique économique sans fournir aucune preuve, donnée ou exemple permettant de l’établir. Il s’agit d’une affirmation non étayée, mais le texte ne spécifie pas un sous-type plus précis.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBDCLobcdLwB9zPEX84sJHQJLGPY",
+        "created": 1790623318,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1729,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1726,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 84,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

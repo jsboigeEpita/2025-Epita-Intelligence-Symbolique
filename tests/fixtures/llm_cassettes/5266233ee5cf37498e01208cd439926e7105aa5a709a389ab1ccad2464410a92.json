@@ -1,0 +1,48 @@
+{
+  "key": "5266233ee5cf37498e01208cd439926e7105aa5a709a389ab1ccad2464410a92",
+  "value": {
+    "id": "chatcmpl-ETBAOcRr8bchKGELAg7VHLsiIWud4",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"La réforme des retraites est nécessaire parce que tous les pays européens l'ont déjà faite, et si elle n'est pas adoptée maintenant, le système s'effondrera dans cinq ans.\",\"main_thesis\":\"Les arguments avancés pour justifier la réforme des retraites ne sont pas valides, car la comparaison avec les autres pays européens ignore les différences structurelles et la prédiction d'un effondrement imminent constitue un appel à la peur.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623144,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 194,
+      "prompt_tokens": 284,
+      "total_tokens": 478,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 81,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "key": "ece512ed0f6e41c95f277e66f0acad140b82e990c39125858a652186ae19e318",
+  "value": {
+    "id": "chatcmpl-ETBJ2tDANeJvJ9fhr1ltR7xCm2HhP",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Les échiquiers actuels sont usés et il faut donner la priorité à l’amélioration des conditions d’apprentissage ainsi qu’au remplacement du matériel usé.\",\"conclusion\":\"Il faut investir intégralement les 2000 euros dans du matériel pédagogique neuf (option B).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623680,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 181,
+      "prompt_tokens": 324,
+      "total_tokens": 505,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 107,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

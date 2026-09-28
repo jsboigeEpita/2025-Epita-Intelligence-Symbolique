@@ -1,0 +1,48 @@
+{
+  "key": "6c1f20aebf92bc3737b3d7ffcd2acd495bb1fdf2bfcd72797b3e48b9e0d6b016",
+  "value": {
+    "id": "chatcmpl-ETBLqKNWf4qZrw7IIJRTWtoG6p9vM",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points portent sur des idées distinctes : efficacité historique de la vaccination, rejet de l’affirmation d’une dangerosité au regard des recherches cliniques, et début d’un point distinct sur les entreprises pharmaceutiques. Aucune redondance substantielle n’est identifiable dans l’extrait fourni.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623854,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 198,
+      "prompt_tokens": 292,
+      "total_tokens": 490,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 115,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

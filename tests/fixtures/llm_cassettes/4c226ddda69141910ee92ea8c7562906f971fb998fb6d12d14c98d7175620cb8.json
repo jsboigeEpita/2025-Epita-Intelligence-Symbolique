@@ -1,0 +1,40 @@
+{
+  "key": "4c226ddda69141910ee92ea8c7562906f971fb998fb6d12d14c98d7175620cb8",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_T3M0Exw2OwOLJkVhnYx2g6Ya",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"697\",\"confidence\":\"high\",\"justification\":\"L’énoncé affirme que la politique économique est un succès incontestable, mais ne fournit aucun élément établissant un lien causal ou une justification démontrée. Il s’agit d’une assertion non étayée relevant de la causalité douteuse au niveau disponible.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBDIs0JUOb61dvWri4B6MYfFhQqz",
+        "created": 1790623324,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1879,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1876,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 84,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

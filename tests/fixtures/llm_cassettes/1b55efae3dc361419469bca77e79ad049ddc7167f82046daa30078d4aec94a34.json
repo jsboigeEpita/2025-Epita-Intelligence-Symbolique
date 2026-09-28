@@ -1,0 +1,48 @@
+{
+  "key": "1b55efae3dc361419469bca77e79ad049ddc7167f82046daa30078d4aec94a34",
+  "value": {
+    "id": "chatcmpl-ETBMeFPmFR3bL8n8x8zDCnyVEjmuv",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.2,\"exhibit\":\"Anaphore non résolvable : « Elle » n’a pas d’antécédent clairement identifiable, et le texte ne permet pas de déterminer si la dissuasion renvoie aux progrès de l’analyse ADN ou à une autre mesure. Verdict : opacité réelle ; le sens global reste seulement partiellement reconstructible.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623904,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 159,
+      "prompt_tokens": 269,
+      "total_tokens": 428,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 76,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

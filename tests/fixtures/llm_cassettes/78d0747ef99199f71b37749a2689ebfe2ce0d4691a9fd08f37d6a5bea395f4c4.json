@@ -1,0 +1,40 @@
+{
+  "key": "78d0747ef99199f71b37749a2689ebfe2ce0d4691a9fd08f37d6a5bea395f4c4",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_nuIC9QY0Q6wWLOvqrkI8Jb4T",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"La phrase affirme seulement que la politique économique est un succès, en invoquant l'autorité du président, sans susciter principalement une émotion ni détourner d'un raisonnement rationnel. Elle ne correspond à aucun sous-type d'appel à l'émotion présenté.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBDEIrWM4ZQv4JTAbK7SjEsbw1Bc",
+        "created": 1790623320,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1729,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1726,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 75,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

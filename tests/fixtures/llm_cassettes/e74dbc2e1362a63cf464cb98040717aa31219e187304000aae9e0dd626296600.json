@@ -1,0 +1,55 @@
+{
+  "key": "e74dbc2e1362a63cf464cb98040717aa31219e187304000aae9e0dd626296600",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_2YsWYJsre5IuTzdwpYEr1MCx",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"361\"}"
+        },
+        {
+          "id": "call_kmKuyRK2O47zBjWLyYGPt2uc",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"363\"}"
+        },
+        {
+          "id": "call_ICMfjwPCkD9s6gSLMxj8fs4E",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"364\"}"
+        },
+        {
+          "id": "call_7rr6E4xZkddVvjF7AG2R2eet",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"368\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBDIxvUhVZyHk2QpbHzgkYsAPkaR",
+        "created": 1790623324,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1585,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1582,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 95,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

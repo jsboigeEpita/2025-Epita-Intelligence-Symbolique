@@ -1,0 +1,40 @@
+{
+  "key": "98ad51e1a63944aa62826ef91bd58cc30616f9be2c65fb737e0ea53773303ba4",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_fHX9065ETavlz630bNwB7pmu",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"La phrase affirme directement le succès incontestable d’une politique, sans commencer par une affirmation consensuelle pour glisser ensuite vers une conclusion contestable. Elle ne correspond donc pas à l’appât et substitution ni à son sous-type visible.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBDJxWMEMTbMTGjKMeBYTcC0GYiO",
+        "created": 1790623325,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1252,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1249,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 70,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

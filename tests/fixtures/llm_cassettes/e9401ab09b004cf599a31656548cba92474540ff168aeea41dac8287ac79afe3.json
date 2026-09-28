@@ -1,0 +1,40 @@
+{
+  "key": "e9401ab09b004cf599a31656548cba92474540ff168aeea41dac8287ac79afe3",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_pJThhSt1YNUpWIYIXTFwNeav",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"133\",\"confidence\":\"high\",\"justification\":\"L’affirmation présente comme « succès incontestable » une conclusion excessivement catégorique sans fournir aucun élément permettant de l’étayer.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBDEXPGzNpIJs9G8asuWVjWixHXy",
+        "created": 1790623320,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1687,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1684,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 58,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

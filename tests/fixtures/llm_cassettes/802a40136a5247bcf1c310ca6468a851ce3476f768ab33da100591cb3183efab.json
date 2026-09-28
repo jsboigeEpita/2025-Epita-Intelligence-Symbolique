@@ -1,0 +1,48 @@
+{
+  "key": "802a40136a5247bcf1c310ca6468a851ce3476f768ab33da100591cb3183efab",
+  "value": {
+    "id": "chatcmpl-ETBMxVQpjH9Vw28CpDrMj5FhUX0rz",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Chaîne reconstruite : les progrès de l’analyse ADN réduisent le risque d’erreur judiciaire et la peine de mort aurait un effet dissuasif contre les crimes les plus graves, puis conclusion : « La peine de mort est justifiée ». Verdict : saut logique net, car ces prémisses ne suffisent pas à établir la justification de la peine de mort.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623923,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 135,
+      "prompt_tokens": 284,
+      "total_tokens": 419,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 41,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

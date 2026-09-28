@@ -1,0 +1,48 @@
+{
+  "key": "8217093805146c6aaeb193fc9951ffbb0203d0a16d416451d5712d0c151c87fe",
+  "value": {
+    "id": "chatcmpl-ETBAUK7ktE9BSs61R0DiTXdvtrCkl",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Le gouvernement soutient que travailler plus longtemps est une évolution naturelle et inévitable et que, sans action immédiate, le système s’effondrera dans cinq ans.\",\"main_thesis\":\"Les justifications du gouvernement en faveur d’un allongement de la durée du travail sont fallacieuses et fragiles : elles reposent sur un sophisme naturaliste, un appel à la peur et une projection financière fondée sur des hypothèses de croissance trop optimistes.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623150,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 250,
+      "prompt_tokens": 317,
+      "total_tokens": 567,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 133,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

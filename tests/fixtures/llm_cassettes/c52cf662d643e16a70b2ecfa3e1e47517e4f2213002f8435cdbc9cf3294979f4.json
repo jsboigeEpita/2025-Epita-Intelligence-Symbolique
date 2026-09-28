@@ -1,0 +1,48 @@
+{
+  "key": "c52cf662d643e16a70b2ecfa3e1e47517e4f2213002f8435cdbc9cf3294979f4",
+  "value": {
+    "id": "chatcmpl-ETBMeR6Znhe7veyd7ZLhOk2MDG9sS",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La thèse porte sur la nécessité de la peine de mort pour neutraliser des criminels jugés irrécupérables et durablement dangereux. Aucune digression n’est identifiée ; toutes les propositions sont donc pertinentes.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623904,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 60,
+      "prompt_tokens": 273,
+      "total_tokens": 333,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

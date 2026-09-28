@@ -1,0 +1,33 @@
+{
+  "key": "dec19a19fe6a7761d678315ecd7d5d485c2d66edb0413b9896895d331f435581",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"propositions\":[\"alice_studies\",\"alice_succeeds\"]}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBL84zA2R34xuVdzZlXDZYQ1jf7i",
+        "created": 1790623810,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 225,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 93,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 70,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

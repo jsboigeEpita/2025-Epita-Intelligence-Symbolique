@@ -6,18 +6,18 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_pgQxslbJljWAVYflbtfW6vsV",
+          "id": "call_mwIlN58L1djHFgoK8rfRV1LR",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"74\",\"confidence\":\"high\",\"justification\":\"L’argument 2 affirme que l’avis d’une personne ne compte pas simplement parce qu’elle n’est pas experte, ce qui substitue une prétendue autorité personnelle à une justification. Toutefois, l’argument 1 relève plus précisément d’un appel à l’autorité collective; le nœud 74 correspond bien à l’argument 2.\"}"
+          "arguments": "{\"node_pk\":\"74\",\"confidence\":\"high\",\"justification\":\"L’argument 2 affirme que l’avis d’une personne ne compte pas simplement parce qu’elle n’est pas experte, ce qui érige une prétendue position d’autorité en substitut de justification. Toutefois, l’argument 1 relève plus précisément de l’appel à l’autorité collective; le nœud 74 correspond bien à l’argument 2.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ER3TPWCZgvNA0C5ibHmLsWBhgz1GO",
-        "created": 1790116915,
+        "id": "chatcmpl-ETBEknY3j4HjFgBFPFYynMhdvrznG",
+        "created": 1790623414,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 648,
+          "prompt_tokens": 668,
           "prompt_tokens_details": {
             "audio_tokens": 0,
             "cache_write_tokens": 0,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 105,
+          "completion_tokens": 108,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

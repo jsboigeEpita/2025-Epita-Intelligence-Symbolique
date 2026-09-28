@@ -1,0 +1,33 @@
+{
+  "key": "169cfed2ea69e138cfee42a82d16a9b9ca6c02f3800e901107b6a58b3b1c6889",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\n  \"formulas\": [\n    \"Test(memoire_0)\",\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La première phrase indique l'existence ou l'identification du test mémoire numéro 0, représenté par la constante memoire_0. La seconde phrase affirme que tout élément qui est un test est important.\"\n}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBI3EcQAuVYsahsX1JMHoVNzU0rQ",
+        "created": 1790623619,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 285,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 307,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 178,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

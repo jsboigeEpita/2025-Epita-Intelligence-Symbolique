@@ -1,0 +1,48 @@
+{
+  "key": "9f337449c39c7b05ae42c5a24a27d293f797ce895435433a5b2e5b1fef7fdc2a",
+  "value": {
+    "id": "chatcmpl-ETBMxkI55IEuqKYtqrJfCDXz4TQ5b",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse soutient que le coût cumulé des appels et procédures de la peine de mort dépasse celui de l’emprisonnement à vie. Une digression est localisée : l’irréversibilité de la peine de mort et le caractère fatal d’une erreur, qui ne démontre pas directement la comparaison des coûts.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623923,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 210,
+      "prompt_tokens": 286,
+      "total_tokens": 496,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 124,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

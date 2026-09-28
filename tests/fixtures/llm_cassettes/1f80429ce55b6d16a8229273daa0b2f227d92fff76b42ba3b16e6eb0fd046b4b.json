@@ -1,0 +1,48 @@
+{
+  "key": "1f80429ce55b6d16a8229273daa0b2f227d92fff76b42ba3b16e6eb0fd046b4b",
+  "value": {
+    "id": "chatcmpl-ETBBHwNFVbjmXNYx02wAChu9tFC09",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\":false,\"structure_verdict\":\"saut_logique\",\"reasoning\":\"Les prémisses établissent une visée émotionnelle et l’absence de proposition de suppression, mais elles ne suffisent pas à démontrer que l’argument repose sur un homme de paille ni qu’il détourne effectivement le débat technique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623199,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 235,
+      "prompt_tokens": 408,
+      "total_tokens": 643,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 158,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

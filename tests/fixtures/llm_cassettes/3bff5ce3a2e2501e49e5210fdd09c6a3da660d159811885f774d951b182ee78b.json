@@ -1,0 +1,33 @@
+{
+  "key": "3bff5ce3a2e2501e49e5210fdd09c6a3da660d159811885f774d951b182ee78b",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"propositions\":[\"it_is_raining\",\"street_is_wet\"]}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBL6zeayFgnBYbqNFy22x2yhwKsB",
+        "created": 1790623808,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 220,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 81,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 57,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "key": "efde4cb711b23fdc2db726b741cb28bd01389c52a088d430ad5f984efb68b59c",
+  "value": {
+    "id": "chatcmpl-ETBOClXhIES3pF4HxKWa5kFqIiYU0",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Les activités humaines ont un impact déterminant sur l’évolution actuelle du climat, ce que confirment unanimement les modèles prédictifs.\\n2. L’argument selon lequel le climat a toujours changé néglige la vitesse sans précédent du changement climatique actuel.\\n3. Les personnes qui minimisent la crise climatique s’appuient souvent sur des données sélectionnées pour soutenir leur position.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790624000,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 179,
+      "prompt_tokens": 218,
+      "total_tokens": 397,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 84,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

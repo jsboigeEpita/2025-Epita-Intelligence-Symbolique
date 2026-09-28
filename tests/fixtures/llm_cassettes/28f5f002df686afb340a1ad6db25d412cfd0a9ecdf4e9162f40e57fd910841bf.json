@@ -1,0 +1,48 @@
+{
+  "key": "28f5f002df686afb340a1ad6db25d412cfd0a9ecdf4e9162f40e57fd910841bf",
+  "value": {
+    "id": "chatcmpl-ETBLZQOs09YH37QFdIhzIU9pKzMki",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Les vaccins sont dangereux.\",\"main_thesis\":\"La vaccination est efficace et sûre, comme le montrent ses succès contre la variole et la polio ainsi que des décennies de recherche clinique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623837,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 93,
+      "prompt_tokens": 258,
+      "total_tokens": 351,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 33,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

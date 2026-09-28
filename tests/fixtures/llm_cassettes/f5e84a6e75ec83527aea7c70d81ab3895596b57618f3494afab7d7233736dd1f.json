@@ -1,0 +1,48 @@
+{
+  "key": "f5e84a6e75ec83527aea7c70d81ab3895596b57618f3494afab7d7233736dd1f",
+  "value": {
+    "id": "chatcmpl-ETBB3RI1YnT7gduCVkz9LfhWT2a65",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Le gouvernement présente le débat comme portant sur la suppression des retraites et justifie sa position par une projection de déficit ainsi que par un appel à l'émotion concernant les enfants.\",\"main_thesis\":\"Le débat porte sur différentes modalités de réforme des retraites, et les arguments gouvernementaux sont contestables parce que les projections reposent sur des hypothèses de croissance optimistes et que l'appel à l'émotion détourne des questions techniques de financement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623185,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 310,
+      "prompt_tokens": 319,
+      "total_tokens": 629,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 198,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

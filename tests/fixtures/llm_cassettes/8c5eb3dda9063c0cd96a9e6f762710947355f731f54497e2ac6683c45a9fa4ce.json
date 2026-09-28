@@ -1,14 +1,14 @@
 {
   "key": "8c5eb3dda9063c0cd96a9e6f762710947355f731f54497e2ac6683c45a9fa4ce",
   "value": {
-    "id": "chatcmpl-ER3WGcoGEON0DJm9A3BkFYyAOfgLR",
+    "id": "chatcmpl-ETBLIBCLJK3gdf3aiZYAonvfm87Uc",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[{\"text\":\"La vaccination est indispensable à la protection de la santé publique.\",\"source_quote\":\"Les vaccins sont indispensables pour la sante publique.\"},{\"text\":\"Les vaccins sont dangereux.\",\"source_quote\":\"Ceux qui affirment que les vaccins sont dangereux\"},{\"text\":\"Les entreprises pharmaceutiques cachent les effets secondaires de leurs produits.\",\"source_quote\":\"L'argument selon lequel les produits pharmaceutiques cachent les effets secondaires\"},{\"text\":\"La vaccination est défendue par un appel aux résultats de la recherche scientifique et à ses effets historiques sur les maladies.\",\"source_quote\":\"Les etudes scientifiques montrent que la vaccination a eradique la variole et reduit considerablement la polio.\"},{\"text\":\"Les taux élevés de vaccination protègent indirectement les personnes qui ne peuvent pas être vaccinées grâce à l’immunité collective.\",\"source_quote\":\"Les taux de vaccination eleves protegent aussi ceux qui ne peuvent pas etre vaccines grace a l'immunite collective.\"}],\"claims\":[{\"text\":\"La vaccination a éradiqué la variole.\",\"source_quote\":\"la vaccination a eradique la variole\"},{\"text\":\"La vaccination a considérablement réduit la poliomyélite.\",\"source_quote\":\"reduit considerablement la polio\"},{\"text\":\"La sécurité des vaccins a fait l’objet de plusieurs décennies de recherche clinique.\",\"source_quote\":\"les decennies de recherche clinique\"},{\"text\":\"L’affirmation selon laquelle les produits pharmaceutiques cachent les effets secondaires est présentée comme une théorie du complot dépourvue de fondement.\",\"source_quote\":\"une theorie du complot sans fondement\"},{\"text\":\"Des taux de vaccination élevés procurent une protection aux personnes qui ne peuvent pas être vaccinées par le mécanisme de l’immunité collective.\",\"source_quote\":\"Les taux de vaccination eleves protegent aussi ceux qui ne peuvent pas etre vaccines grace a l'immunite collective.\"}],\"summary\":\"Le texte défend la vaccination en s’appuyant sur ses effets historiques, la recherche clinique et l’immunité collective. Il présente en parallèle deux positions opposées — la dangerosité des vaccins et la dissimulation des effets secondaires par les entreprises pharmaceutiques — qu’il rejette, notamment par une caractérisation de la seconde comme théorie du complot.\"}",
+          "content": "{\"arguments\":[{\"text\":\"Les vaccins sont nécessaires à la protection de la santé publique.\",\"source_quote\":\"Les vaccins sont indispensables pour la sante publique.\"},{\"text\":\"Les résultats historiques de la vaccination soutiennent l’idée qu’elle est bénéfique pour la santé publique.\",\"source_quote\":\"Les etudes scientifiques montrent que la vaccination a eradique la variole et reduit considerablement la polio.\"},{\"text\":\"Position opposée : les vaccins sont dangereux.\",\"source_quote\":\"Ceux qui affirment que les vaccins sont dangereux\"},{\"text\":\"La position selon laquelle les entreprises pharmaceutiques dissimulent les effets secondaires est présentée comme infondée.\",\"source_quote\":\"L'argument selon lequel les produits pharmaceutiques cachent les effets secondaires est une theorie du complot sans fondement.\"},{\"text\":\"Les décennies de recherche clinique doivent être prises en compte pour évaluer la sécurité des vaccins.\",\"source_quote\":\"ignorent les decades de recherche clinique\"},{\"text\":\"Des taux de vaccination élevés protègent indirectement les personnes qui ne peuvent pas être vaccinées grâce à l’immunité collective.\",\"source_quote\":\"Les taux de vaccination eleves protegent aussi ceux qui ne peuvent pas etre vaccines grace a l'immunite collective.\"}],\"claims\":[{\"text\":\"La vaccination a éradiqué la variole.\",\"source_quote\":\"la vaccination a eradique la variole\"},{\"text\":\"La vaccination a considérablement réduit la polio.\",\"source_quote\":\"reduit considerablement la polio\"},{\"text\":\"La sécurité des vaccins fait l’objet de décennies de recherche clinique.\",\"source_quote\":\"les decades de recherche clinique\"},{\"text\":\"L’affirmation selon laquelle les produits pharmaceutiques cachent les effets secondaires est une théorie du complot sans fondement.\",\"source_quote\":\"les produits pharmaceutiques cachent les effets secondaires est une theorie du complot sans fondement\"},{\"text\":\"Des taux de vaccination élevés peuvent protéger les personnes qui ne peuvent pas être vaccinées par le mécanisme de l’immunité collective.\",\"source_quote\":\"Les taux de vaccination eleves protegent aussi ceux qui ne peuvent pas etre vaccines grace a l'immunite collective.\"}],\"summary\":\"Le texte défend la vaccination en invoquant ses résultats historiques, la recherche clinique et l’immunité collective. Il présente deux positions opposées — la dangerosité des vaccins et la dissimulation des effets secondaires — puis les rejette. Les stratégies rhétoriques principales sont l’appel aux études scientifiques, l’opposition entre preuves et accusations, et la mise en avant de la protection des personnes vulnérables.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1790117092,
+    "created": 1790623820,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 613,
+      "completion_tokens": 831,
       "prompt_tokens": 405,
-      "total_tokens": 1018,
+      "total_tokens": 1236,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 136,
+        "reasoning_tokens": 291,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

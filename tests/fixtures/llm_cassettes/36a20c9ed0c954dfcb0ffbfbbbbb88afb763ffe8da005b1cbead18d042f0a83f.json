@@ -1,0 +1,48 @@
+{
+  "key": "36a20c9ed0c954dfcb0ffbfbbbbb88afb763ffe8da005b1cbead18d042f0a83f",
+  "value": {
+    "id": "chatcmpl-ETBC47km2u3nDZRLZ6ycHbkXOw5aE",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"arguments\":[],\"claims\":[{\"text\":\"Le soleil brille.\",\"source_quote\":\"Le soleil brille.\"},{\"text\":\"Il fait beau.\",\"source_quote\":\"Il fait beau.\"}],\"summary\":\"Le texte énonce deux affirmations factuelles sur l’ensoleillement et les conditions météorologiques.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623248,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 112,
+      "prompt_tokens": 260,
+      "total_tokens": 372,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 36,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

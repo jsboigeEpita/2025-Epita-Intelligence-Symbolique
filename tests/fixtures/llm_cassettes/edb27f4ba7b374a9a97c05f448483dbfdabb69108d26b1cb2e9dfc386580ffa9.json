@@ -1,0 +1,48 @@
+{
+  "key": "edb27f4ba7b374a9a97c05f448483dbfdabb69108d26b1cb2e9dfc386580ffa9",
+  "value": {
+    "id": "chatcmpl-ETBAqar8hIShLu2rnYuNASsD0lpeT",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Le point 1 présente l’argument gouvernemental de l’urgence fondée sur un risque d’effondrement dans cinq ans. Le point 2 en propose une critique méthodologique, en contestant l’argument d’autorité et l’absence de prise en compte des différences structurelles. Les idées sont distinctes et aucune redondance substantielle n’est localisée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623172,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 187,
+      "prompt_tokens": 294,
+      "total_tokens": 481,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 92,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "key": "9c89dd930e64a0c4d6862f727672a8b14e2a88af2441f506ad13f8f650531e41",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_hx0bOi6WTgHb6ddOvCKPGlL3",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"Les arguments relèvent plutôt de l'appel à l'autorité et du discrédit de l'opinion des non-experts, pas d'une définition biaisée.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBEo4MLk2R003JG9x0baKqCf2vBo",
+        "created": 1790623418,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1618,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1615,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 56,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

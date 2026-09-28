@@ -1,0 +1,40 @@
+{
+  "key": "ab948ea6eceeeb69723b540046b3b4c0f96f49084837cf2850a7ac4c5fbeb955",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_WkES3Z7zCTgkFCuvRkY0CEQ1",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"667\",\"confidence\":\"high\",\"justification\":\"L’affirmation qualifie la politique économique de « succès incontestable » sans fournir de données ni de critères précis; la conclusion repose donc sur une caractérisation imprécise.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBDCOQA2KzV0brWvgKdGZwnb0t3A",
+        "created": 1790623318,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1538,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1535,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 67,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

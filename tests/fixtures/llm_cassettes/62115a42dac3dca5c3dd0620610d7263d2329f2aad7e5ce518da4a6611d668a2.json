@@ -1,0 +1,40 @@
+{
+  "key": "62115a42dac3dca5c3dd0620610d7263d2329f2aad7e5ce518da4a6611d668a2",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_OjvB4oFi14bNrT2hCS5F0k0F",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"78\",\"confidence\":\"high\",\"justification\":\"La proposition est présentée comme vraie uniquement parce qu’elle est affirmée par le président, une personne réputée ou investie d’une autorité, sans preuve indépendante.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBDGBn6t0WaPBTeYyiXMh6VZmZoG",
+        "created": 1790623322,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1373,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1370,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 65,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

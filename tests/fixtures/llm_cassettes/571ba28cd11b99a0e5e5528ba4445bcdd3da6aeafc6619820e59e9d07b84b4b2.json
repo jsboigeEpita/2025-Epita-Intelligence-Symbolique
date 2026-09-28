@@ -1,0 +1,48 @@
+{
+  "key": "571ba28cd11b99a0e5e5528ba4445bcdd3da6aeafc6619820e59e9d07b84b4b2",
+  "value": {
+    "id": "chatcmpl-ETBLizDyWSrz93EUPHyDKhsU9rp9A",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Ceux qui affirment que les vaccins sont dangereux ignorent des décennies de recherche clinique ; l'affirmation selon laquelle les produits pharmaceutiques cachent les effets secondaires est qualifiée de théorie du complot sans fondement.\",\"conclusion\":\"La position selon laquelle les entreprises pharmaceutiques dissimulent les effets secondaires est infondée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623846,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 261,
+      "prompt_tokens": 265,
+      "total_tokens": 526,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 171,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

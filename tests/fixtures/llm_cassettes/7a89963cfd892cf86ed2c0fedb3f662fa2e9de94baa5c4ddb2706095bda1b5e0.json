@@ -1,0 +1,33 @@
+{
+  "key": "7a89963cfd892cf86ed2c0fedb3f662fa2e9de94baa5c4ddb2706095bda1b5e0",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "Hypothèse : Le gardien était complice du vol et s’est volontairement absenté pour permettre aux voleurs d’entrer dans le musée.",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBLGoGhftNgSvo8cLqzJ9oXQV5Jm",
+        "created": 1790623818,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 30,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 69,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 28,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

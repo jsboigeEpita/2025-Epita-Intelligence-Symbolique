@@ -1,0 +1,48 @@
+{
+  "key": "857548bf8c6b74b1216684e46ab7aea88fb5c1418320bfe2274d47191fe3ca66",
+  "value": {
+    "id": "chatcmpl-ETBEvWNomic799yXYl8Ig0GKX12ob",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\n  \"sorts\": {\n    \"Person\": [],\n    \"Thing\": []\n  },\n  \"predicates\": {\n    \"Expert\": [\"Person\"],\n    \"Unanimous\": [\"Person\"],\n    \"OpinionCounts\": [\"Person\"],\n    \"True\": [\"Thing\"]\n  },\n  \"constants\": {}\n}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623425,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 521,
+      "prompt_tokens": 195,
+      "total_tokens": 716,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 448,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

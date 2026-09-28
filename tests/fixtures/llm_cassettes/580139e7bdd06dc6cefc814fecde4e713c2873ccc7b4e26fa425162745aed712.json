@@ -1,0 +1,48 @@
+{
+  "key": "580139e7bdd06dc6cefc814fecde4e713c2873ccc7b4e26fa425162745aed712",
+  "value": {
+    "id": "chatcmpl-ETBOD4wQDhn3cqWOTpfOXgwozt3ld",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points abordent des idées distinctes : la variabilité naturelle passée, la hausse mesurée de 1,1 °C et l’amorce d’une distinction du changement climatique actuel. Aucune redondance substantielle n’est visible, même si le troisième point est incomplet.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790624001,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 153,
+      "prompt_tokens": 292,
+      "total_tokens": 445,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 75,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

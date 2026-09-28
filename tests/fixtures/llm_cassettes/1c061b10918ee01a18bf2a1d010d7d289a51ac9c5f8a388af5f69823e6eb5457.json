@@ -1,0 +1,48 @@
+{
+  "key": "1c061b10918ee01a18bf2a1d010d7d289a51ac9c5f8a388af5f69823e6eb5457",
+  "value": {
+    "id": "chatcmpl-ETBGePMsLoEAaVoJzubrXJ305W4MH",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.55,\"fairness_assessment\":\"Une procédure de vote préférentiel avec critères explicites permettrait de comparer équitablement visibilité, développement pédagogique, durabilité et risque de sous-financement, sans privilégier automatiquement le statu quo ou le compromis.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"agent_1\",\"position\":\"Favorable à l’option A, un tournoi inter-villes avec buffet et prix pour accroître la visibilité du club.\",\"influence\":0.33},{\"agent\":\"agent_2\",\"position\":\"Favorable à l’option B, consacrer tout le budget au matériel pédagogique et aux nouveaux échiquiers.\",\"influence\":0.33},{\"agent\":\"agent_3\",\"position\":\"Favorable à l’option C, partager le budget entre un tournoi réduit et du matériel.\",\"influence\":0.34}],\"recommended_resolution\":\"collaborative\",\"governance_reasoning\":\"Les trois options répondent à des objectifs légitimes et les objections portent surtout sur leur efficacité et leur équilibre, non sur des incompatibilités fondamentales. Il est recommandé de définir collectivement des critères pondérés, de demander un budget détaillé et des indicateurs de réussite, puis d’utiliser un vote préférentiel ou par jugement majoritaire. Une option hybride ne devrait être retenue que si elle démontre une valeur suffisante, plutôt que par simple partage égal.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623532,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 387,
+      "prompt_tokens": 543,
+      "total_tokens": 930,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 81,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

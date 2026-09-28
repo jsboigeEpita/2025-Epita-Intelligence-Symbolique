@@ -1,0 +1,48 @@
+{
+  "key": "8d31ae14a0c4cf3dbc1313735635b8fc9d880765e660fdf6723b78efd11983e8",
+  "value": {
+    "id": "chatcmpl-ETBB0Xkmj1joednwIok9ucWvWtTdc",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"L'opposition aurait proposé de supprimer les retraites, ou défendrait une position nécessitant de recourir à l'argument « pensez à vos enfants » pour la justifier.\",\"main_thesis\":\"L'évocation des enfants constitue un appel à l'émotion qui détourne l'attention des aspects techniques du financement des retraites, tandis que l'accusation selon laquelle l'opposition voudrait les supprimer repose sur un homme de paille.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623182,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 347,
+      "prompt_tokens": 272,
+      "total_tokens": 619,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 233,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

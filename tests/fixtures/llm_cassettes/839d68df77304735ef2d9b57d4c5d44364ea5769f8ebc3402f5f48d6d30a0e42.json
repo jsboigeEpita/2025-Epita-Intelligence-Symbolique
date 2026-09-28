@@ -1,0 +1,48 @@
+{
+  "key": "839d68df77304735ef2d9b57d4c5d44364ea5769f8ebc3402f5f48d6d30a0e42",
+  "value": {
+    "id": "chatcmpl-ETBJB3bE7ZppmCWCheOlzY4HOHidC",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. L’option B propose d’investir l’intégralité du budget de 2000 euros dans du matériel pédagogique neuf.\\n2. Cet investissement vise à améliorer les conditions d’apprentissage.\\n3. Il permet de remplacer le matériel actuellement usé, notamment les échiquiers.\\n4. L’option A propose d’organiser un tournoi inter-villes avec buffet et prix pour 2000 euros.\\n5. Ce tournoi augmenterait la visibilité du club.\\n6. Ce tournoi permettrait de recruter de nouveaux membres.\\n7. L’option B prévoit l’achat d’échiquiers neufs, d’horloges et de supports de cours.\\n8. L’option C propose un format hybride répartissant les 2000 euros à parts égales entre un tournoi réduit et du matériel pédagogique.\\n9. Ce format hybride cherche à équilibrer la visibilité du club et les objectifs pédagogiques.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623689,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 332,
+      "prompt_tokens": 284,
+      "total_tokens": 616,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 128,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

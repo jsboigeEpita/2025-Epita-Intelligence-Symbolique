@@ -1,0 +1,40 @@
+{
+  "key": "0a2580a37fd5edcfdfa9ac8d2ff0e3e0229afaeaf20a30e18ebcd03c1c2bfb8d",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_7KgBP82fDOPtNQpNHz0CDkhB",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"74\",\"confidence\":\"0.93\",\"justification\":\"L’énoncé présente l’affirmation du président comme un succès incontestable uniquement en raison de son statut d’autorité, sans fournir de justification ni d’éléments permettant d’établir ce succès. Cela correspond à l’argument d’autorité personnelle.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBDNqCQuX6b2cE9gthCZf5NqoadZ",
+        "created": 1790623329,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 649,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 87,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

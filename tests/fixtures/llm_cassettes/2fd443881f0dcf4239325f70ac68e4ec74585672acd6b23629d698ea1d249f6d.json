@@ -1,0 +1,33 @@
+{
+  "key": "2fd443881f0dcf4239325f70ac68e4ec74585672acd6b23629d698ea1d249f6d",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\n  \"formulas\": [\n    \"forall X: (Homme(X) => Mortel(X))\",\n    \"Homme(socrate)\"\n  ],\n  \"predicates\": {\n    \"Homme\": \"est un homme\",\n    \"Mortel\": \"est mortel\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La première phrase affirme que tout humain est mortel, ce qui se traduit par une implication universelle. La seconde affirme que Socrate est un humain.\"\n}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBIgSjlphSEsZs9wcKjyrHmn5ibO",
+        "created": 1790623658,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 287,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 166,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 44,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

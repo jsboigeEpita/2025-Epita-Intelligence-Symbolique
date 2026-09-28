@@ -6,26 +6,26 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_kLOdQAhveDmZdEI0bGez0UlS",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\":\"300\"}"
+          "id": "call_xQ4AoFLXOLAMOmj3cEAGHMRP",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"Les arguments reposent sur un appel à l’autorité et une disqualification des non-experts, pas sur une émotion utilisée comme opérateur principal.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ER3SSFJHhbX5IB7Wfu29w1Ix43L4N",
-        "created": 1790116856,
+        "id": "chatcmpl-ETBDy2XwdLJguf0UskTIiXJ2ssJKq",
+        "created": 1790623366,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 1728,
+          "prompt_tokens": 1748,
           "prompt_tokens_details": {
             "audio_tokens": 0,
-            "cache_write_tokens": 1725,
+            "cache_write_tokens": 1745,
             "cached_tokens": 0,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 22,
+          "completion_tokens": 53,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

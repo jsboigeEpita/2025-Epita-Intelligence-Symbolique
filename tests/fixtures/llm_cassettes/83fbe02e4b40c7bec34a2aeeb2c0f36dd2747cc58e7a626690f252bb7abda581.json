@@ -1,0 +1,48 @@
+{
+  "key": "83fbe02e4b40c7bec34a2aeeb2c0f36dd2747cc58e7a626690f252bb7abda581",
+  "value": {
+    "id": "chatcmpl-ETBLcmLNrMRvdZVh1WTuAJ1S3VYCm",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Les études scientifiques montrent que la vaccination a éradiqué la variole et réduit considérablement la polio, d'où la conclusion que les vaccins sont nécessaires à la protection de la santé publique. La progression est logique, mais le terme « nécessaires » est plus fort que ce que les prémisses établissent directement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623840,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 159,
+      "prompt_tokens": 278,
+      "total_tokens": 437,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 75,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

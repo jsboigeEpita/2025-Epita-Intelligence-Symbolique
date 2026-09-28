@@ -1,0 +1,48 @@
+{
+  "key": "377e4da7c0f6c5e67e4caf10562d355fc8d76e9009a439990d39ca2c7ee7343a",
+  "value": {
+    "id": "chatcmpl-ETBGx4GKiRlU2vYeq6fqZwQB8Lk2h",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La thèse défend la cons­­écration totale de la subvention à un espace numérique avec ordinateurs en libre accès. Les options A (élargir le fonds de livres jeunesse) et C (répartir la somme entre livres et espace numérique) sont présentées comme des alternatives directement liées à la décision d’allocation, sans digression hors sujet.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623551,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 150,
+      "prompt_tokens": 317,
+      "total_tokens": 467,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 55,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

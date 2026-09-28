@@ -1,0 +1,48 @@
+{
+  "key": "edd75222b43cb38aeabc787e3c94cdb77790b7b68996b99141a22fd6f6e30cca",
+  "value": {
+    "id": "chatcmpl-ETBNkHvMdBLkk0PWfcYVnEf28mRei",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"La transition énergétique est nécessaire pour répondre à la crise climatique et avantageuse économiquement à long terme.\",\"digressions\":\"« Ceux qui minimisent la crise climatique utilisent souvent des données sélectives pour soutenir leur position. »\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623972,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 126,
+      "prompt_tokens": 225,
+      "total_tokens": 351,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 61,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "key": "d0e9837f83dd8fae9fd6507d4eac3ea19ba3c0919f74ff54cf76b365ab68b121",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "[\n  {\n    \"fallacy_name\": \"Non sequitur implicite\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.62\n  },\n  {\n    \"fallacy_name\": \"Affirmation gratuite\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.58\n  },\n  {\n    \"fallacy_name\": \"Généralisation hâtive\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.34\n  },\n  {\n    \"fallacy_name\": \"Confusion entre corrélation et causalité\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.28\n  },\n  {\n    \"fallacy_name\": \"Simplification excessive de la notion de beau temps\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.55\n  },\n  {\n    \"fallacy_name\": \"Ambiguïté du terme « beau »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.78\n  },\n  {\n    \"fallacy_name\": \"Vaguité de l’assertion météorologique\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.72\n  },\n  {\n    \"fallacy_name\": \"Présupposition non justifiée d’un lien entre luminosité et météo favorable\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.49\n  },\n  {\n    \"fallacy_name\": \"Conclusion implicite non étayée\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.57\n  },\n  {\n    \"fallacy_name\": \"Appel implicite au sens commun\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.22\n  }\n]",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBC6WJMoNNVXzJyqHw6lkhz69qJB",
+        "created": 1790623250,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 203,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 1141,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 723,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

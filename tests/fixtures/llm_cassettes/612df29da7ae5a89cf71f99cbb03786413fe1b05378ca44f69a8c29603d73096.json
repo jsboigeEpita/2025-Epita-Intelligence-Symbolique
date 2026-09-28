@@ -1,0 +1,48 @@
+{
+  "key": "612df29da7ae5a89cf71f99cbb03786413fe1b05378ca44f69a8c29603d73096",
+  "value": {
+    "id": "chatcmpl-ETBLr0Kz8hsOE2d5BFBKm77OYigil",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Les points 1 et 2 se recouvrent en affirmant tous deux le bénéfice ou le caractère indispensable de la vaccination pour la santé publique. Le point 3 apporte un exemple historique et scientifique concret — l’éradication de la variole — qui étaye ces affirmations, malgré une redondance partielle.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623855,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 155,
+      "prompt_tokens": 290,
+      "total_tokens": 445,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 67,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

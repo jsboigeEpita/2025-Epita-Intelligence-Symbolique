@@ -1,0 +1,48 @@
+{
+  "key": "623fe44e7a67acc64dc21b9a865e3314fcc26901275749b534079ba72b0c8cd9",
+  "value": {
+    "id": "chatcmpl-ETBHka3BxV9d5fJaHhQzE00yHNHcl",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.58,\"fairness_assessment\":\"La méthode est relativement équitable car elle permet de comparer explicitement les trois options et de prendre en compte les préférences de l'ensemble des usagers, plutôt que de privilégier automatiquement un seul besoin. Une pondération fondée sur les besoins réels et les coûts serait toutefois plus juste qu'un partage égal par défaut.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"agent_1\",\"position\":\"Favorable à consacrer toute la subvention à l'élargissement du fonds de livres jeunesse, en privilégiant l'offre culturelle et les besoins des jeunes lecteurs.\",\"influence\":0.33},{\"agent\":\"agent_2\",\"position\":\"Favorable à consacrer toute la subvention à la création d'un espace numérique avec ordinateurs en libre accès, afin de réduire la fracture numérique.\",\"influence\":0.33},{\"agent\":\"agent_3\",\"position\":\"Favorable à répartir la subvention entre les deux projets, mais cette solution est contestée car elle pourrait être arbitraire et ne pas refléter les besoins ou coûts réels.\",\"influence\":0.34}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"Les trois options répondent à des besoins légitimes et aucun débat ne se dégage nettement. Un processus de choix social, complété par des données sur la demande, les coûts de maintenance et l'impact attendu, devrait permettre de retenir une allocation mixte ajustée plutôt qu'un partage strictement égal. Une réévaluation après une période pilote renforcerait la légitimité de la décision.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623600,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 430,
+      "prompt_tokens": 526,
+      "total_tokens": 956,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 81,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

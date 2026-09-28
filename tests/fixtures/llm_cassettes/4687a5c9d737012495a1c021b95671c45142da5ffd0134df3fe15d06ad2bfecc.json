@@ -1,0 +1,48 @@
+{
+  "key": "4687a5c9d737012495a1c021b95671c45142da5ffd0134df3fe15d06ad2bfecc",
+  "value": {
+    "id": "chatcmpl-ETBAh56JT07UGDioRRi9opiakI34d",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Prémisse : en l’absence d’action immédiate, le système s’effondrera dans cinq ans. Conclusion : une intervention immédiate est urgente. Verdict : saut logique ; la prémisse ne suffit pas à établir l’urgence d’une intervention immédiate.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790623163,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 183,
+      "prompt_tokens": 270,
+      "total_tokens": 453,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 110,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

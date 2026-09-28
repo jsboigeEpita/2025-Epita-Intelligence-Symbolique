@@ -1,0 +1,33 @@
+{
+  "key": "1766b9b89724d3647ae7862b902790c7612758d87b0a34f383573af257d2cf91",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\n  \"formulas\": [\n    \"forall X: (Test(X) => Important(X))\",\n    \"Test(test9)\"\n  ],\n  \"predicates\": {\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La phrase « Tous les tests sont importants » se traduit par une implication universelle : tout objet qui est un test est important. « Test mémoire numéro 9 » est représenté par le fait que test9 est un test.\"\n}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBIaDnnW7EsZdUnKdr3C7NK52Q5X",
+        "created": 1790623652,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 285,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 456,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 326,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}
