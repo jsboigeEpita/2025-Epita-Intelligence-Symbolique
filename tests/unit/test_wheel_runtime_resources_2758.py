@@ -38,10 +38,12 @@ def test_installed_wheel_runtime_resources(tmp_path: Path) -> None:
         capture_output=True,
     ).stdout
     for name in tracked.decode("utf-8").split("\0"):
-        if (
-            not name
-            or name == "argumentation_analysis/data/extract_sources.json.gz.enc"
-        ):
+        if not name:
+            continue
+        if name == "argumentation_analysis/data/extract_sources.json.gz.enc":
+            placeholder = source / name
+            placeholder.parent.mkdir(parents=True, exist_ok=True)
+            placeholder.write_bytes(b"packaging exclusion sentinel")
             continue
         original = ROOT / name
         if original.is_file():
