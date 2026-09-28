@@ -119,7 +119,9 @@ class TestIndexArguments:
             },
         }
         fallacies = [
-            {"argument_index": 1, "fallacy_type": "appeal_to_ignorance"},
+            # Producer shape (#2744): the hierarchical descent names its
+            # target under ``target_argument``.
+            {"target_argument": "arg_2", "fallacy_type": "appeal_to_ignorance"},
         ]
 
         doc_ids = service.index_arguments(
@@ -180,7 +182,7 @@ class TestIndexArguments:
         assert len(doc_ids) == 1  # Only second one succeeded
 
     def test_index_with_string_fallacy_target(self):
-        """Fallacy with arg_N target format works."""
+        """State-entry shape (``target_argument_id`` = arg_N) still resolves."""
         service = SemanticIndexService()
         uploaded = []
         service.upload_document = lambda name, text, source_type="text", tags=None: (
@@ -193,6 +195,67 @@ class TestIndexArguments:
             source_name="test",
         )
         assert uploaded[0]["tags"]["fallacy_type"] == "ad_hominem"
+
+    def test_index_reads_the_hierarchical_producer_key(self):
+        """#2744: the descent writes ``target_argument`` — the indexer reads it.
+
+        ``_invoke_semantic_index`` feeds ``index_arguments`` the
+        ``phase_hierarchical_fallacy_output`` fallacies straight; those dicts
+        name their target under ``target_argument`` (an arg_N identifier
+        attached by ``invoke_callables._enrich_fallacies``). The reader used
+        to look under ``target_argument_id``/``argument_index`` — keys that
+        producer never writes — so every indexed argument carried
+        ``has_fallacy=false`` and the fallacy filter could never match."""
+        service = SemanticIndexService()
+        uploaded = []
+        service.upload_document = lambda name, text, source_type="text", tags=None: (
+            uploaded.append({"tags": tags or {}}) or f"doc_{len(uploaded)}"
+        )
+
+        service.index_arguments(
+            arguments=[
+                {"text": "First clean argument with enough length"},
+                {"text": "Second argument carrying the ad hominem attack"},
+            ],
+            fallacies=[
+                {
+                    "type": "ad_hominem",
+                    "target_argument": "arg_2",
+                    "problematic_quote": "Second argument carrying",
+                }
+            ],
+            source_name="run_witness_2744",
+        )
+        assert uploaded[1]["tags"]["fallacy_type"] == "ad_hominem"
+        assert uploaded[1]["tags"]["has_fallacy"] == "true"
+        assert uploaded[0]["tags"]["has_fallacy"] == "false"
+
+    def test_fallacy_without_target_tags_no_argument(self):
+        """#2744 DoD: a detection with no argument target associates nothing.
+
+        Non-taxonomic detections carry no target at all; a missing or
+        out-of-range reference must not fabricate an association."""
+        service = SemanticIndexService()
+        uploaded = []
+        service.upload_document = lambda name, text, source_type="text", tags=None: (
+            uploaded.append({"tags": tags or {}}) or f"doc_{len(uploaded)}"
+        )
+
+        service.index_arguments(
+            arguments=[
+                {"text": "First argument with sufficient length"},
+                {"text": "Second argument with sufficient length"},
+            ],
+            fallacies=[
+                {"type": "non_taxonomic", "justification": "no target carried"},
+                {"type": "out_of_range", "target_argument": "arg_9"},
+                {"target_argument": None, "type": "null_target"},
+            ],
+            source_name="run_no_target",
+        )
+        for entry in uploaded:
+            assert entry["tags"]["has_fallacy"] == "false"
+            assert "fallacy_type" not in entry["tags"]
 
 
 class TestSearchArguments:

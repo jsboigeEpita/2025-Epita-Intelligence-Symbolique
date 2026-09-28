@@ -22,6 +22,11 @@ import unicodedata
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from argumentation_analysis.services.argument_ids import (
+    read_fallacy_target,
+    resolve_target_argument_index,
+)
+
 logger = logging.getLogger(__name__)
 
 # ── Configuration ────────────────────────────────────────────────────────
@@ -342,20 +347,21 @@ class SemanticIndexService:
         fallacies = fallacies or []
         doc_ids = []
 
-        # Build fallacy lookup: arg_index → fallacy type
+        # Build fallacy lookup: arg_index → fallacy type.
+        # #2744 — resolve targets through the shared resolver
+        # (``services.argument_ids``, #1629/#1633): the key loop, the ``arg_N``
+        # convention and the 1-based bounds check have one owner, used by this
+        # service and ``invoke_callables`` alike. A target that is absent,
+        # malformed or out of range resolves to nothing — the caller does not
+        # guess (#1019).
         fallacy_by_arg: Dict[int, str] = {}
         for f in fallacies:
-            if isinstance(f, dict):
-                target = f.get("target_argument_id", f.get("argument_index", -1))
-                ftype = f.get("type", f.get("fallacy_type", "unknown"))
-                if isinstance(target, int) and target >= 0:
-                    fallacy_by_arg[target] = str(ftype)
-                elif isinstance(target, str) and target.startswith("arg_"):
-                    try:
-                        idx = int(target.split("_")[1]) - 1
-                        fallacy_by_arg[idx] = str(ftype)
-                    except (ValueError, IndexError):
-                        pass
+            if not isinstance(f, dict):
+                continue
+            ftype = f.get("type", f.get("fallacy_type", "unknown"))
+            idx = resolve_target_argument_index(read_fallacy_target(f), len(arguments))
+            if idx is not None:
+                fallacy_by_arg[idx] = str(ftype)
 
         for i, arg in enumerate(arguments):
             arg_text = arg.get("text", str(arg)) if isinstance(arg, dict) else str(arg)
