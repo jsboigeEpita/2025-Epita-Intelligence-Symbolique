@@ -180,7 +180,8 @@ DelegationOrchestrator.analyze(text)
   T→O: for task: interface.translate_task_to_command(task)
        command["strategic_objective_description"] = objective.description   # NL thread S→T→O
        operational_executor(command)        # CapabilityRegistry via RegistryBackedOperationalRegistry
-  O→T→S: aggregate per-objective success_rate → StrategicManager.evaluate_final_results()
+  O→S: aggregate per-objective success_rate → StrategicManager.evaluate_final_results()
+       # results skip the tactical tier: its state keeps tasks + assignments, not outcomes (#2794)
 ```
 
 A detailed M3-vs-M2 comparison on a reference corpus (opaque IDs, provenance header) lives in

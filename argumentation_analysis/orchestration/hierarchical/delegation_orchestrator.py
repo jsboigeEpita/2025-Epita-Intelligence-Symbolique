@@ -366,8 +366,11 @@ class DelegationOrchestrator:
        strategic objective's NL description (decomposition only carries the
        ``objective_id``, so the intent is re-attached here to flow S→T→O), and
        handed to the injectable ``operational_executor``.
-    4. **O→T→S** — results are aggregated per objective and passed to
-       ``StrategicManager.evaluate_final_results`` for the final verdict.
+    4. **O→S** — results are aggregated per objective and passed to
+       ``StrategicManager.evaluate_final_results`` for the final verdict. They
+       go from the operational tier straight to the aggregation: the tactical
+       state keeps the decomposition and the assignments, not the task
+       outcomes (#2794).
 
     The two seams (``strategic_manager`` and ``operational_executor``) are
     injectable so the chain can be unit tested without an LLM or live agents.
@@ -392,8 +395,10 @@ class DelegationOrchestrator:
         self.tactical_coordinator = tactical_coordinator or TaskCoordinator(
             middleware=middleware
         )
-        # Interface MUST share the coordinator's tactical state so the bottom-up
-        # result-processing updates the same task records the coordinator created.
+        # The interface shares the coordinator's tactical state because the
+        # translation reads it: the corpus (``raw_text``, CC #1531), the
+        # related tasks and the dependencies. No result is written back into it
+        # (#2794).
         self.interface = tactical_operational_interface or TacticalOperationalInterface(
             tactical_state=self.tactical_coordinator.state,
             middleware=middleware,
@@ -512,17 +517,16 @@ class DelegationOrchestrator:
                 objective.get("description", "") if objective else ""
             )
             result = await self.operational_executor(command)
+            # #2794: the result is not handed back to
+            # ``interface.process_operational_result``. That call never updated
+            # the tactical state: it sent a report to a middleware recipient
+            # that no production code reads, and wrote it under ``RESULTS_DIR``,
+            # where nothing reads it back. Nothing reads the tactical state
+            # after this loop either: ``run_delegation_analysis`` drops the
+            # orchestrator once ``analyze`` returns, and the returned dict
+            # carries no tactical state. The outcome travels in
+            # ``operational_results`` to ``_aggregate_results_by_objective``.
             operational_results.append(result)
-            # Bottom-up: feed the result back through the tactical interface so
-            # the shared tactical state reflects task completion.
-            try:
-                self.interface.process_operational_result(command, result)
-            except Exception as exc:  # noqa: BLE001 — best-effort bookkeeping
-                self.logger.warning(
-                    "process_operational_result failed for %s: %s",
-                    command.get("id"),
-                    exc,
-                )
 
             # CB #1528 item 2: hand the caller what has been produced so far.
             # Guarded like the pipeline's ``_record_completed`` — a recording
@@ -536,7 +540,7 @@ class DelegationOrchestrator:
                 except Exception as cb_err:  # noqa: BLE001
                     self.logger.warning("Checkpoint callback failed: %s", cb_err)
 
-        # --- O→T→S: aggregate + strategic evaluation -----------------------
+        # --- O→S: aggregate + strategic evaluation -------------------------
         eval_input = self._aggregate_results_by_objective(
             objectives, operational_results
         )
