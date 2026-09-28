@@ -17,7 +17,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from pathlib import Path
 
 # Import de l'InformalAnalysisPlugin pour accéder à la taxonomie
-from .informal_definitions import InformalAnalysisPlugin
+from .informal_definitions import InformalAnalysisPlugin, reported_fallacy_name
 from argumentation_analysis.utils.taxonomy_local_overrides import render_alias
 from argumentation_analysis.utils.taxonomy_tree import taxonomy_parent_paths
 
@@ -105,7 +105,7 @@ class TaxonomySophismDetector:
             for _, row in main_branches.iterrows():
                 branch = {
                     "taxonomy_key": int(row.name),  # PK
-                    "name": _clean_cell(row.get("Name")),
+                    "name": reported_fallacy_name(row),
                     "nom_vulgarise": _clean_cell(row.get("nom_vulgarisé")),
                     "famille": _clean_cell(row.get("Famille")),
                     "description_courte": _clean_cell(row.get("text_fr")),
@@ -208,8 +208,6 @@ class TaxonomySophismDetector:
                 confidence = 0.0
                 matches = []
 
-                # Vérifier les correspondances avec les noms
-                name = _clean_cell(row.get("Name")).lower()
                 nom_vulgarise = _clean_cell(row.get("nom_vulgarisé")).lower()
                 description = _clean_cell(row.get("text_fr")).lower()
 
@@ -217,11 +215,6 @@ class TaxonomySophismDetector:
                 if nom_vulgarise and nom_vulgarise in text_lower:
                     confidence += 0.7
                     matches.append(f"Nom vulgarisé: '{nom_vulgarise}'")
-
-                # Correspondance avec le nom officiel
-                if name and name in text_lower:
-                    confidence += 0.5
-                    matches.append(f"Nom officiel: '{name}'")
 
                 # Correspondance avec des mots-clés de la description
                 if description:
@@ -237,7 +230,7 @@ class TaxonomySophismDetector:
                 if confidence >= 0.3:
                     sophism: Dict[str, Any] = {
                         "taxonomy_key": int(pk),
-                        "name": _clean_cell(row.get("Name")),
+                        "name": reported_fallacy_name(row),
                         "nom_vulgarise": _clean_cell(
                             render_alias(pk, _clean_cell(row.get("nom_vulgarisé")))
                         ),
@@ -314,7 +307,7 @@ class TaxonomySophismDetector:
             for _, sibling in siblings.iterrows():
                 sibling_info = {
                     "taxonomy_key": int(sibling.name),
-                    "name": _clean_cell(sibling.get("Name")),
+                    "name": reported_fallacy_name(sibling),
                     "nom_vulgarise": _clean_cell(sibling.get("nom_vulgarisé")),
                     "description_courte": _clean_cell(sibling.get("text_fr")),
                 }
@@ -382,15 +375,12 @@ class TaxonomySophismDetector:
                 score = 0.0
 
                 # Recherche dans les différents champs
-                name = _clean_cell(row.get("Name")).lower()
                 nom_vulgarise = _clean_cell(row.get("nom_vulgarisé")).lower()
                 description = _clean_cell(row.get("text_fr")).lower()
                 famille = _clean_cell(row.get("Famille")).lower()
 
                 if pattern_lower in nom_vulgarise:
                     score += 0.8
-                if pattern_lower in name:
-                    score += 0.6
                 if pattern_lower in description:
                     score += 0.4
                 if pattern_lower in famille:
@@ -399,7 +389,7 @@ class TaxonomySophismDetector:
                 if score > 0:
                     sophism: Dict[str, Any] = {
                         "taxonomy_key": int(pk),
-                        "name": _clean_cell(row.get("Name")),
+                        "name": reported_fallacy_name(row),
                         "nom_vulgarise": _clean_cell(
                             render_alias(pk, _clean_cell(row.get("nom_vulgarisé")))
                         ),
