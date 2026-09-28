@@ -80,12 +80,16 @@ def refused_url():
 class TestAnalyzeSmokeControls:
     def test_success_envelope_passes(self, stub_backend):
         url = stub_backend(200, SUCCESS)
-        smoke.TestWebAppAPIInvestigation().test_api_analyze_endpoint((url, None))
+        smoke.TestWebAppAPIInvestigation().test_api_analyze_endpoint(
+            (url, None), "synthetic-token"
+        )
 
     def test_upstream_502_fails(self, stub_backend):
         url = stub_backend(502, UPSTREAM)
         with pytest.raises(AssertionError, match="answered 502"):
-            smoke.TestWebAppAPIInvestigation().test_api_analyze_endpoint((url, None))
+            smoke.TestWebAppAPIInvestigation().test_api_analyze_endpoint(
+                (url, None), "synthetic-token"
+            )
 
     def test_200_without_a_structure_fails(self, stub_backend):
         body = {
@@ -94,22 +98,26 @@ class TestAnalyzeSmokeControls:
         }
         url = stub_backend(200, body)
         with pytest.raises(AssertionError):
-            smoke.TestWebAppAPIInvestigation().test_api_analyze_endpoint((url, None))
+            smoke.TestWebAppAPIInvestigation().test_api_analyze_endpoint(
+                (url, None), "synthetic-token"
+            )
 
     def test_refused_connection_is_not_a_skip(self, refused_url):
         with pytest.raises(requests.exceptions.ConnectionError):
             smoke.TestWebAppAPIInvestigation().test_api_analyze_endpoint(
-                (refused_url, None)
+                (refused_url, None), "synthetic-token"
             )
 
     def test_disabled_fixture_is_an_explicit_skip(self):
         with pytest.raises(pytest.skip.Exception, match="disable-e2e-servers-fixture"):
-            smoke.TestWebAppAPIInvestigation().test_api_analyze_endpoint((None, None))
+            smoke.TestWebAppAPIInvestigation().test_api_analyze_endpoint(
+                (None, None), "synthetic-token"
+            )
 
 
 class TestFallaciesSmokeControls:
     def test_refused_connection_is_not_a_pass(self, refused_url):
         with pytest.raises(requests.exceptions.ConnectionError):
             smoke.TestWebAppAPIInvestigation().test_api_fallacies_endpoint(
-                (refused_url, None)
+                (refused_url, None), "synthetic-token"
             )

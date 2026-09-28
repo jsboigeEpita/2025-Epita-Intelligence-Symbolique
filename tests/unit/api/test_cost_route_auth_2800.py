@@ -42,11 +42,10 @@ def _app() -> FastAPI:
 
 
 def test_all_post_routes_are_classified_and_cost_routes_are_guarded() -> None:
-    from api.main import app
-
+    # Build from the actual mounted routers: another test may replace api.main.app.
     posts = [
         route
-        for route in app.routes
+        for route in _app().routes
         if isinstance(route, APIRoute)
         and "POST" in route.methods
         and not route.path.startswith("/api/v1/jtms/")

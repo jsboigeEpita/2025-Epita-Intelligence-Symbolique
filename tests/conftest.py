@@ -10,6 +10,7 @@ Configuration pytest globale pour l'ensemble des tests du projet.
 import pytest
 import logging
 import os
+import secrets
 import sys
 import asyncio
 from pathlib import Path
@@ -1109,7 +1110,13 @@ def _e2e_backend_command(host: str, port: str) -> list:
     ]
 
 
-def _e2e_backend_env(port: str, project_root: Path) -> dict:
+@pytest.fixture(scope="session")
+def e2e_api_token():
+    """One synthetic token shared by the live backend, proxy, and direct smokes."""
+    return os.environ.get("SHIELD_ENDPOINT_TOKEN") or secrets.token_hex(32)
+
+
+def _e2e_backend_env(port: str, project_root: Path, token: str = None) -> dict:
     """The e2e backend's environment: this process's, plus the keys the
     fixture decides.
 
@@ -1121,6 +1128,9 @@ def _e2e_backend_env(port: str, project_root: Path) -> dict:
     env = os.environ.copy()
     env["PORT"] = str(port)
     env["PYTHONPATH"] = str(project_root)
+    if token is not None:
+        env["SHIELD_ENDPOINT_TOKEN"] = token
+        env.pop("SHIELD_ALLOW_ANONYMOUS", None)
     return env
 
 
@@ -1149,13 +1159,16 @@ def _e2e_frontend_command(host: str, port: str) -> list:
     ]
 
 
-def _e2e_frontend_env(backend_url: str, project_root: Path) -> dict:
+def _e2e_frontend_env(backend_url: str, project_root: Path, token: str = None) -> dict:
     """The e2e frontend's environment: the backend it relays ``/api/*`` to."""
     backend = urlparse(backend_url)
     env = os.environ.copy()
     env["FASTAPI_HOST"] = backend.hostname or "127.0.0.1"
     env["FASTAPI_PORT"] = str(backend.port)
     env["PYTHONPATH"] = str(project_root)
+    if token is not None:
+        env["SHIELD_ENDPOINT_TOKEN"] = token
+        env.pop("SHIELD_ALLOW_ANONYMOUS", None)
     return env
 
 
@@ -1172,7 +1185,7 @@ def _e2e_frontend_build(project_root: Path) -> Path:
     return index
 
 
-def _start_e2e_frontend(frontend_url, backend_url, project_root, logs_dir):
+def _start_e2e_frontend(frontend_url, backend_url, project_root, logs_dir, token=None):
     """Start the e2e frontend and wait until it serves ``/``.
     ``(process, log_file)``.
 
@@ -1193,7 +1206,7 @@ def _start_e2e_frontend(frontend_url, backend_url, project_root, logs_dir):
         cwd=project_root,
         stdout=log_file,
         stderr=log_file,
-        env=_e2e_frontend_env(backend_url, project_root),
+        env=_e2e_frontend_env(backend_url, project_root, token),
     )
     try:
         _wait_for_server(frontend_url, process, log_path=log_path, path="/")
@@ -1221,7 +1234,7 @@ def _kill_process(proc):
 
 
 @pytest.fixture(scope="session")
-def e2e_servers(request):
+def e2e_servers(request, e2e_api_token):
     """
     Fixture de session qui démarre et gère les serveurs backend et frontend pour les tests E2E.
     Elle utilise `subprocess.Popen` et garantit l'arrêt des serveurs à la fin.
@@ -1245,7 +1258,7 @@ def e2e_servers(request):
         backend_command = _e2e_backend_command(
             parsed_backend_url.hostname or "127.0.0.1", backend_port
         )
-        backend_env = _e2e_backend_env(backend_port, project_root)
+        backend_env = _e2e_backend_env(backend_port, project_root, e2e_api_token)
 
         logger.info(
             f"Démarrage du serveur backend avec la commande: {' '.join(backend_command)}"
@@ -1270,7 +1283,7 @@ def e2e_servers(request):
 
         # --- Démarrage du serveur Frontend (interface_web.app:app, #2548) ---
         frontend_process, frontend_log_file = _start_e2e_frontend(
-            frontend_url, backend_url, project_root, e2e_logs_dir
+            frontend_url, backend_url, project_root, e2e_logs_dir, e2e_api_token
         )
 
         yield backend_url, frontend_url
