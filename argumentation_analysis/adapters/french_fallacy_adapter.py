@@ -1069,6 +1069,11 @@ class SelfHostedLLMFallacyDetector:
         # response (valid + unreadable) keeps its valid detections and names
         # the rejected ones here instead of discarding everything.
         self._last_rejected: List[str] = []
+        self._last_received = 0
+        # #2747: whole-response failure must be observable too — a bare []
+        # return is indistinguishable from "no fallacies found" (#1019).
+        self._last_degraded: bool = False
+        self._last_error: Optional[str] = None
 
     def is_available(self) -> bool:
         if self._available is None:
@@ -1084,13 +1089,31 @@ class SelfHostedLLMFallacyDetector:
         """
         return self._last_rejected
 
+    @property
+    def last_received(self) -> int:
+        """Entry count of the most recent LLM response (#2747)."""
+        return self._last_received
+
+    @property
+    def last_degraded(self) -> bool:
+        """True if the most recent detect_async() failed, else False (#1019)."""
+        return self._last_degraded
+
+    @property
+    def last_error(self) -> Optional[str]:
+        """Error of the most recent detect_async() failure, else None."""
+        return self._last_error
+
     async def detect_async(self, text: str) -> List[FallacyDetection]:
         """Detect fallacies via self-hosted LLM with structured output."""
         if not self.is_available():
             return []
 
-        # Reset per-call rejection state (#2747).
+        # Reset per-call state (#2747, #1019).
         self._last_rejected = []
+        self._last_received = 0
+        self._last_degraded = False
+        self._last_error = None
 
         import json
         import httpx
@@ -1148,6 +1171,7 @@ class SelfHostedLLMFallacyDetector:
 
             parsed = json.loads(content[start:end])
             fallacies = parsed.get("fallacies", [])
+            self._last_received = len(fallacies)
 
             detections = []
             for f in fallacies:
@@ -1186,7 +1210,15 @@ class SelfHostedLLMFallacyDetector:
             return detections
 
         except Exception as e:
-            logger.warning("Self-hosted LLM fallacy detection failed: %s", e)
+            # #1019: a bare [] is indistinguishable from "no fallacies
+            # found" — make the failure observable for the adapter to route.
+            self._last_degraded = True
+            self._last_error = str(e)
+            logger.warning(
+                "Self-hosted LLM fallacy detection failed: %s "
+                "(returning [] — check detector.last_degraded)",
+                e,
+            )
             return []
 
     def detect(self, text: str) -> List[FallacyDetection]:
@@ -1272,11 +1304,12 @@ class LLMFallacyDetector:
         # actual API call fails (a bare [] return would be indistinguishable
         # from "no fallacies found"). Consumers check ``last_degraded``.
         self._last_degraded: bool = False
-        self._last_error = None
+        self._last_error: Optional[str] = None
         # #2747: entries rejected by the last detect_async() — a mixed
         # response (valid + unreadable) keeps its valid detections and names
         # the rejected ones here instead of discarding everything.
         self._last_rejected: List[str] = []
+        self._last_received = 0
 
     @property
     def last_degraded(self) -> bool:
@@ -1304,6 +1337,11 @@ class LLMFallacyDetector:
         ones — the valid detections were kept; these were not, by name.
         """
         return self._last_rejected
+
+    @property
+    def last_received(self) -> int:
+        """Entry count of the most recent LLM response (#2747)."""
+        return self._last_received
 
     def _get_openai_client(self):
         """Get OpenAI-compatible client and model via the canonical toggle.
@@ -1342,6 +1380,7 @@ class LLMFallacyDetector:
         self._last_degraded = False
         self._last_error = None
         self._last_rejected = []
+        self._last_received = 0
 
         try:
             import json as _json
@@ -1376,6 +1415,7 @@ class LLMFallacyDetector:
 
             data = _json.loads(raw)
             fallacies_data = data.get("fallacies", [])
+            self._last_received = len(fallacies_data)
 
             detections = []
             for f in fallacies_data:
@@ -1455,6 +1495,27 @@ class LLMFallacyDetector:
 
 
 # ── Main Adapter ─────────────────────────────────────────────────────────
+
+
+def _tier_rejection_note(detector) -> str:
+    """Consumer-facing note for a tier's rejected entries or failure (#2747).
+
+    ``FrenchFallacyAdapter.detect`` routes this into
+    ``FallacyAnalysisResult.tier_warnings`` so a partial rejection or a
+    whole-response failure never reads as "tier ran, found nothing" one
+    level up (the #1019 do-not-invent-a-zero rule). Empty when the tier
+    has nothing to report.
+    """
+    if detector.last_degraded:
+        error = detector.last_error or "unknown error"
+        return f"tier failed: {error}"
+    if detector.last_rejected:
+        rejected = "; ".join(detector.last_rejected)
+        return (
+            f"{len(detector.last_rejected)}/{detector.last_received} "
+            f"entries rejected: {rejected}"
+        )
+    return ""
 
 
 class FrenchFallacyAdapter(AbstractFallacyDetector):
@@ -1594,6 +1655,11 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
             all_detections.extend(self_hosted_results)
             if self_hosted_results:
                 result.tiers_used.append("self_hosted_llm")
+            # #2747: surface partial rejections / whole-response failures to
+            # the consumer — never as a silent "tier ran, found nothing".
+            self_hosted_note = _tier_rejection_note(self._self_hosted_llm)
+            if self_hosted_note:
+                result.tier_warnings["self_hosted_llm"] = self_hosted_note
 
         # Tier 1.5: CamemBERT fine-tuned (#169, deprecated)
         if self._camembert and self._camembert.is_available():
@@ -1617,6 +1683,10 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
             all_detections.extend(llm_results)
             if llm_results:
                 result.tiers_used.append("llm")
+            # #2747: same routing as the self-hosted tier above.
+            llm_note = _tier_rejection_note(self._llm)
+            if llm_note:
+                result.tier_warnings["llm"] = llm_note
 
         # Ensemble: merge detections by fallacy type
         merged: Dict[str, FallacyDetection] = {}

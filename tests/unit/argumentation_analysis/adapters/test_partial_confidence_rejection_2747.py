@@ -15,6 +15,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from argumentation_analysis.adapters.french_fallacy_adapter import (
+    FrenchFallacyAdapter,
     LLMFallacyDetector,
     SelfHostedLLMFallacyDetector,
 )
@@ -164,3 +165,64 @@ class TestSelfHostedPartialRejection:
             await detector.detect_async("Tu es stupide donc tort.")
         assert len(detector.last_rejected) == 1
         assert "tres elevee" in detector.last_rejected[0]
+
+
+class TestAdapterSurfacesRejections:
+    """#2747 DoD: the rejection reaches the CONSUMER, not just the detector.
+
+    ``FrenchFallacyAdapter.detect`` is the only production reader of the two
+    detectors (coordinator review on PR #2831): it must route
+    ``last_rejected`` / ``last_degraded`` into
+    ``FallacyAnalysisResult.tier_warnings``, which ``to_dict()`` exports and
+    ``FrenchFallacyPlugin.detect_fallacies`` returns to the agent.
+    """
+
+    def test_llm_partial_rejection_reaches_tier_warnings(self):
+        adapter = FrenchFallacyAdapter(
+            enable_symbolic=False, enable_self_hosted_llm=False
+        )
+        client = _openai_double({"fallacies": [VALID_ENTRY, MALFORMED_ENTRY]})
+        with patch.object(
+            adapter._llm,
+            "_get_openai_client",
+            return_value=(client, "gpt-test"),
+        ):
+            result = adapter.detect("Tu es stupide donc tort.")
+        assert (
+            "Ad Hominem" in result["detected_fallacies"]
+        ), "#2747: the valid detection must survive at the adapter level"
+        warning = result["tier_warnings"]["llm"]
+        assert (
+            "1/2" in warning and "tres elevee" in warning
+        ), f"the partial rejection must be visible to the consumer, got {warning!r}"
+
+    def test_self_hosted_partial_rejection_reaches_tier_warnings(self):
+        adapter = FrenchFallacyAdapter(
+            enable_symbolic=False,
+            enable_llm=False,
+            self_hosted_endpoint="http://llm-double.invalid",
+            self_hosted_model="m",
+        )
+        _FakeAsyncClient.payload = {"fallacies": [VALID_ENTRY, MALFORMED_ENTRY]}
+        with patch("httpx.AsyncClient", _FakeAsyncClient):
+            result = adapter.detect("Tu es stupide donc tort.")
+        assert "Ad Hominem" in result["detected_fallacies"]
+        warning = result["tier_warnings"]["self_hosted_llm"]
+        assert "1/2" in warning and "tres elevee" in warning
+
+    def test_llm_whole_tier_failure_reaches_tier_warnings(self):
+        """A failed tier must not read as "tier ran, found nothing" (#1019)."""
+        adapter = FrenchFallacyAdapter(
+            enable_symbolic=False, enable_self_hosted_llm=False
+        )
+        client = MagicMock()
+        client.chat.completions.create = AsyncMock(side_effect=Exception("API error"))
+        with patch.object(
+            adapter._llm,
+            "_get_openai_client",
+            return_value=(client, "gpt-test"),
+        ):
+            result = adapter.detect("Texte.")
+        assert result["detected_fallacies"] == {}
+        assert result["tier_warnings"]["llm"] == "tier failed: API error"
+        assert "llm" not in result["tiers_used"]
