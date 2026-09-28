@@ -10,10 +10,11 @@ des fichiers téléchargés via leur taille.
 
 import logging
 import os
+import re
 from pathlib import Path
 import requests
 import httpx
-from typing import Optional, Any
+from typing import Any, Dict, Optional, Tuple
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -234,7 +235,8 @@ class LoggingHttpTransport(httpx.AsyncBaseTransport):
 
 
 class ReasoningEffortTransport(httpx.AsyncBaseTransport):
-    """#2324 — le paramètre que le connecteur SK ne peut pas exprimer.
+    """#2324/#2827 — le paramètre que le connecteur SK ne peut pas exprimer,
+    à la valeur que le modèle accepte.
 
     Mesuré le 22/09 (#2324) : ``gpt-5.6-luna`` (famille reasoning) rejette
     400 ``« Function tools with reasoning_effort are not supported … set
@@ -252,45 +254,152 @@ class ReasoningEffortTransport(httpx.AsyncBaseTransport):
     + modèle reasoning (``is_reasoning_model``) + champ absent. Un appel
     sans tools ou un modèle non-reasoning ne doit pas recevoir le paramètre
     (l'API le rejette pour eux).
+
+    #2827 (mesuré 28/09) : la valeur acceptée dépend du modèle. Le 'none'
+    injecté est requis par ``gpt-5.6-luna`` avec tools, mais une génération
+    gpt-5 antérieure le rejette (``« 'reasoning_effort' does not support
+    'none' with this model. Supported values: 'minimal', 'low', 'medium',
+    'high'. »``) — chaque descente d'un siège ainsi configuré se dégradait
+    en one-shot silencieux. Pas de table modèle→valeur (elle mentirait au
+    prochain changement de modèle) : le 400 du fournisseur décide, son
+    message nomme soit la valeur à utiliser (``set reasoning_effort to
+    'X'``) soit les valeurs admises (valeur envoyée absente ⇒ champ retiré,
+    le défaut du fournisseur reprend la main). Un seul rejeu adapté ; un
+    second rejet se propage. Le 400 arrive ici sous deux formes selon la
+    chaîne : exception ``HTTPStatusError`` (chaîne résiliente, où
+    ``LoggingHttpTransport`` lève) ou réponse de statut 400 (chaîne nue de
+    ``build_async_openai_client``) — les deux sont écoutées.
     """
+
+    # Les deux 400 réels mesurés (#2827) : le remède nommé…
+    _DIRECTIVE_RE = re.compile(r"set reasoning_effort to '([^']+)'", re.IGNORECASE)
+    # …ou la liste des valeurs admises, épellée de deux façons (« values: »
+    # sur la génération antérieure, « values are: » sur luna).
+    _SUPPORTED_RE = re.compile(r"supported values(?: are)?:\s*(.*)", re.IGNORECASE)
 
     def __init__(self, wrapped_transport: httpx.AsyncBaseTransport):
         self._wrapped_transport = wrapped_transport
 
+    @staticmethod
+    def _effort_retry_value(
+        rejection_text: str, sent_value: Optional[str]
+    ) -> Tuple[bool, Optional[str]]:
+        """Que faire d'un 400 nommant ``reasoning_effort`` ?
+
+        Retourne ``(rejouer, nouvelle_valeur)`` : ``nouvelle_valeur`` à
+        ``None`` signifie retirer le champ ; ``(False, None)`` signifie ne
+        pas réagir (le rejet n'offre aucune base de correction).
+        """
+        if "reasoning_effort" not in rejection_text:
+            return False, None
+        directive = ReasoningEffortTransport._DIRECTIVE_RE.search(rejection_text)
+        if directive:
+            return True, directive.group(1)
+        supported = ReasoningEffortTransport._SUPPORTED_RE.search(rejection_text)
+        if supported:
+            values = re.findall(r"'([^']+)'", supported.group(1))
+            if sent_value not in values:
+                return True, None
+        return False, None
+
+    @staticmethod
+    def _with_body(request: httpx.Request, body: Dict[str, Any]) -> httpx.Request:
+        new_content = json.dumps(body, ensure_ascii=False).encode("utf-8")
+        # Deux écritures, parce que deux lecteurs : le send
+        # httpx consomme ``request.stream`` (_transports/
+        # default.py passe ``content=request.stream`` au canal),
+        # tandis que tout ``aread()`` en aval sert le cache
+        # ``_content``. Écrire l'un sans l'autre et l'appel
+        # part sur le fil avec l'ancien corps — mesuré #2324 :
+        # l'idiome ``stream._buffer`` (hérité de LoggingHttp-
+        # Transport) est un no-op sur le ByteStream de httpx
+        # 0.28, qui n'a plus d'attribut ``_buffer``. Le flux de
+        # remplacement vient d'une Request jetable — publique,
+        # pas d'import privé.
+        request.stream = httpx.Request("POST", request.url, content=new_content).stream
+        request._content = new_content
+        request.headers["content-length"] = str(len(new_content))
+        return request
+
+    async def _retry_adapted(
+        self,
+        request: httpx.Request,
+        body: Dict[str, Any],
+        sent_value: Optional[str],
+        new_value: Optional[str],
+    ) -> httpx.Response:
+        """Un seul rejeu au corps adapté ; le verdict du second essai
+        remonte tel quel (réponse ou exception du niveau enveloppé)."""
+        model = body.get("model", "?")
+        if new_value is None:
+            body.pop("reasoning_effort", None)
+            logger.warning(
+                "reasoning_effort=%r rejeté par le modèle %s — rejeu sans le "
+                "champ (défaut du fournisseur)",
+                sent_value,
+                model,
+            )
+        else:
+            body["reasoning_effort"] = new_value
+            logger.warning(
+                "reasoning_effort=%r rejeté par le modèle %s — rejeu avec la "
+                "valeur nommée par le 400 : %r",
+                sent_value,
+                model,
+                new_value,
+            )
+        retry_request = self._with_body(request, body)
+        return await self._wrapped_transport.handle_async_request(retry_request)
+
+    @staticmethod
+    def _rejection_text(exc: httpx.HTTPStatusError) -> str:
+        """Le corps du 400 tel que mesuré — le message de l'exception ne
+        porte que ses 500 premiers caractères, la liste des valeurs admises
+        peut vivre plus loin."""
+        try:
+            return exc.response.text or str(exc)
+        except httpx.ResponseNotRead:
+            return str(exc)
+
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        body: Optional[Dict[str, Any]] = None
+        sent_effort: Optional[str] = None
         if request.method == "POST" and "chat/completions" in request.url.path:
             content_bytes = await request.aread()
             try:
-                body = json.loads(content_bytes.decode("utf-8"))
+                parsed = json.loads(content_bytes.decode("utf-8"))
             except (json.JSONDecodeError, UnicodeDecodeError):
-                body = None
-            if (
-                isinstance(body, dict)
-                and body.get("tools")
-                and "reasoning_effort" not in body
-            ):
-                from argumentation_analysis.core.llm_service import is_reasoning_model
+                parsed = None
+            if isinstance(parsed, dict):
+                body = parsed
+                sent_effort = body.get("reasoning_effort")
+                if body.get("tools") and sent_effort is None:
+                    from argumentation_analysis.core.llm_service import (
+                        is_reasoning_model,
+                    )
 
-                if is_reasoning_model(str(body.get("model", ""))):
-                    body["reasoning_effort"] = "none"
-                    new_content = json.dumps(body, ensure_ascii=False).encode("utf-8")
-                    # Deux écritures, parce que deux lecteurs : le send
-                    # httpx consomme ``request.stream`` (_transports/
-                    # default.py passe ``content=request.stream`` au canal),
-                    # tandis que tout ``aread()`` en aval sert le cache
-                    # ``_content``. Écrire l'un sans l'autre et l'appel
-                    # part sur le fil avec l'ancien corps — mesuré #2324 :
-                    # l'idiome ``stream._buffer`` (hérité de LoggingHttp-
-                    # Transport) est un no-op sur le ByteStream de httpx
-                    # 0.28, qui n'a plus d'attribut ``_buffer``. Le flux de
-                    # remplacement vient d'une Request jetable — publique,
-                    # pas d'import privé.
-                    request.stream = httpx.Request(
-                        "POST", request.url, content=new_content
-                    ).stream
-                    request._content = new_content
-                    request.headers["content-length"] = str(len(new_content))
-        return await self._wrapped_transport.handle_async_request(request)
+                    if is_reasoning_model(str(body.get("model", ""))):
+                        body["reasoning_effort"] = "none"
+                        sent_effort = "none"
+                        self._with_body(request, body)
+        try:
+            response = await self._wrapped_transport.handle_async_request(request)
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 400 and body is not None:
+                retry, new_value = self._effort_retry_value(
+                    self._rejection_text(exc), sent_effort
+                )
+                if retry:
+                    return await self._retry_adapted(
+                        request, body, sent_effort, new_value
+                    )
+            raise
+        if response.status_code == 400 and body is not None:
+            await response.aread()
+            retry, new_value = self._effort_retry_value(response.text, sent_effort)
+            if retry:
+                return await self._retry_adapted(request, body, sent_effort, new_value)
+        return response
 
     async def aclose(self) -> None:
         await self._wrapped_transport.aclose()

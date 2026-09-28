@@ -266,3 +266,234 @@ async def test_non_json_chat_body_passes_through(monkeypatch):
         assert (await sent.aread()) == b"ceci n'est pas du json"
     finally:
         await client.aclose()
+
+
+# ===========================================================================
+# 3. #2827 — la valeur acceptée dépend du modèle : le 400 du fournisseur décide
+#
+# Mesuré 28/09 (#2827) : l'injection 'none' est bonne pour gpt-5.6-luna
+# (par défaut documenté) mais une génération gpt-5 antérieure la rejette —
+# « 'reasoning_effort' does not support 'none' with this model. Supported
+# values: 'minimal', 'low', 'medium', 'high'. » — et chaque descente guidée
+# d'un siège ainsi configuré se dégrade en one-shot SILENCIEusement.
+#
+# Pas de table modèle→valeur (elle mentirait au prochain changement de
+# modèle) : le 400 du fournisseur décide, son message nomme soit la valeur
+# à utiliser (« set reasoning_effort to 'none' ») soit les valeurs admises.
+# Un seul rejeu ; un second rejet se propage. Les corps ci-dessous sont les
+# corps RÉELS du fournisseur, mesurés sur les deux formes de modèle.
+# ===========================================================================
+
+_OLD_GPT5_REJECTS_NONE = {
+    "error": {
+        "message": (
+            "'reasoning_effort' does not support 'none' with this model. "
+            "Supported values: 'minimal', 'low', 'medium', 'high'."
+        ),
+        "type": "invalid_request_error",
+        "param": "reasoning_effort",
+        "code": None,
+    }
+}
+
+_LUNA_REJECTS_MINIMAL = {
+    "error": {
+        "message": (
+            "'reasoning_effort' does not support 'minimal' with this model. "
+            "Supported values are: 'none', 'low', 'medium', 'high', and 'xhigh'."
+        ),
+        "type": "invalid_request_error",
+        "param": "reasoning_effort",
+        "code": None,
+    }
+}
+
+_OK_BODY = {"id": "resp", "object": "chat.completion"}
+
+
+class _ScriptedTransport(httpx.AsyncBaseTransport):
+    """Faux transport de fond servant un scénario écrit : une réponse
+    (statut, corps) par appel, chaque corps parti sur le fil étant capturé.
+    Un scénario épuisé lève — le test veut alors dénoncer un appel de trop.
+    """
+
+    def __init__(self, script: list):
+        self._script = list(script)
+        self.wire_bodies: list = []
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        self.wire_bodies.append(json.loads((await request.aread()).decode("utf-8")))
+        status, body = self._script.pop(0)
+        return httpx.Response(status, json=body, request=request)
+
+
+def _scripted_client(monkeypatch, script) -> tuple:
+    """Client de production (chaîne résiliente complète) sur scénario écrit.
+    Retourne (client, fake) — le fake porte les corps partis sur le fil."""
+    fake = _ScriptedTransport(script)
+    monkeypatch.setattr(httpx, "AsyncHTTPTransport", lambda *args, **kwargs: fake)
+    client = network_utils.get_resilient_async_client()
+    return client, fake
+
+
+async def test_rejected_none_retries_once_without_the_field(monkeypatch):
+    """Né-rouge #2827 : gpt-5-mini (famille reasoning, le modèle que le
+    `.env` de ce siège nomme) rejette le 'none' injecté — le transport doit
+    réagir AU 400 en retirant le champ (le défaut du fournisseur reprend la
+    main), pas laisser mourir la descente en fallback silencieux."""
+    client, fake = _scripted_client(
+        monkeypatch, [(400, _OLD_GPT5_REJECTS_NONE), (200, _OK_BODY)]
+    )
+    try:
+        response = await client.post(
+            _COMPLETIONS_URL, json=_chat_payload("gpt-5-mini", tools=_TOOLS)
+        )
+    finally:
+        await client.aclose()
+    assert (
+        response.status_code == 200
+    ), "le rejeu adapté devait passer — le 400 initial s'est propagé"
+    assert len(fake.wire_bodies) == 2, "un seul rejeu, pas de boucle"
+    # L'injection #2324 a bien eu lieu au premier essai…
+    assert fake.wire_bodies[0]["reasoning_effort"] == "none"
+    # …et le rejeu omet le champ rejeté : le fournisseur applique SON défaut.
+    assert (
+        "reasoning_effort" not in fake.wire_bodies[1]
+    ), f"le rejeu porte encore le champ rejeté : {fake.wire_bodies[1]}"
+
+
+@pytest.mark.parametrize(
+    "sent_effort, error_body, spelling",
+    [
+        ("none", _OLD_GPT5_REJECTS_NONE, "Supported values:"),
+        ("minimal", _LUNA_REJECTS_MINIMAL, "Supported values are:"),
+    ],
+)
+async def test_both_supported_values_spellings_drop_the_field(
+    monkeypatch, sent_effort, error_body, spelling
+):
+    """Le fournisseur épelle sa liste de DEUX façons (« values: » /
+    « values are: » — les deux mesurées) : la valeur envoyée absente de la
+    liste ⇒ rejeu SANS le champ, pour les deux graphies."""
+    client, fake = _scripted_client(monkeypatch, [(400, error_body), (200, _OK_BODY)])
+    try:
+        response = await client.post(
+            _COMPLETIONS_URL,
+            json=_chat_payload(
+                "gpt-5-mini", tools=_TOOLS, extra={"reasoning_effort": sent_effort}
+            ),
+        )
+    finally:
+        await client.aclose()
+    assert response.status_code == 200, f"graphie « {spelling} » non reconnue"
+    assert len(fake.wire_bodies) == 2
+    assert fake.wire_bodies[0]["reasoning_effort"] == sent_effort
+    assert "reasoning_effort" not in fake.wire_bodies[1]
+
+
+async def test_directive_400_names_the_value_and_it_is_used(monkeypatch):
+    """Le 400 « set reasoning_effort to 'none' » (mesuré gpt-5.6-luna avec
+    tools) NOMME la valeur : le rejeu la porte, au lieu de laisser l'appel
+    mourir alors que le remède était dans le message."""
+    client, fake = _scripted_client(
+        monkeypatch, [(400, _API_400_BODY), (200, _OK_BODY)]
+    )
+    try:
+        response = await client.post(
+            _COMPLETIONS_URL,
+            json=_chat_payload(
+                REASONING_MODEL, tools=_TOOLS, extra={"reasoning_effort": "low"}
+            ),
+        )
+    finally:
+        await client.aclose()
+    assert response.status_code == 200
+    assert len(fake.wire_bodies) == 2
+    # Le choix explicite part tel quel au premier essai…
+    assert fake.wire_bodies[0]["reasoning_effort"] == "low"
+    # …et le rejeu porte la valeur nommée par le message du fournisseur.
+    assert fake.wire_bodies[1]["reasoning_effort"] == "none"
+
+
+async def test_unrelated_400_propagates_without_retry(monkeypatch):
+    """Accord : un 400 qui ne parle pas de reasoning_effort (modèle
+    inexistant) se propage tel quel — AUCUN rejeu n'invente une hypothèse."""
+    client, fake = _scripted_client(
+        monkeypatch,
+        [
+            (
+                400,
+                {
+                    "error": {
+                        "message": "The model `nope` does not exist or you do "
+                        "not have access to it.",
+                        "type": "invalid_request_error",
+                        "param": None,
+                        "code": "model_not_found",
+                    }
+                },
+            )
+        ],
+    )
+    try:
+        with pytest.raises(httpx.HTTPStatusError):
+            await client.post(
+                _COMPLETIONS_URL, json=_chat_payload("nope", tools=_TOOLS)
+            )
+    finally:
+        await client.aclose()
+    assert len(fake.wire_bodies) == 1, "un 404-modèle n'a rien à rejouer"
+
+
+async def test_second_rejection_propagates(monkeypatch):
+    """Un rejeu SEULEMENT : si le corps adapté est rejeté à son tour, le
+    second verdict remonte au appelant — pas de boucle de rejeux."""
+    client, fake = _scripted_client(
+        monkeypatch, [(400, _OLD_GPT5_REJECTS_NONE), (400, _OLD_GPT5_REJECTS_NONE)]
+    )
+    try:
+        with pytest.raises(httpx.HTTPStatusError) as excinfo:
+            await client.post(
+                _COMPLETIONS_URL, json=_chat_payload("gpt-5-mini", tools=_TOOLS)
+            )
+    finally:
+        await client.aclose()
+    assert len(fake.wire_bodies) == 2, "plus d'un rejeu ou aucun rejeu"
+    assert "reasoning_effort" in str(excinfo.value)
+
+
+async def test_bare_stack_adapts_the_returned_400_response():
+    """``build_async_openai_client`` pose le transport SANS LoggingHttp-
+    Transport : le 400 y revient comme RÉPONSE, pas comme exception — et
+    c'est la chaîne du garde RA2 (fixture #2391). L'adaptation doit agir
+    sur la réponse, sinon le SDK au-dessus tranche sur le 400 brut."""
+    fake = _ScriptedTransport([(400, _OLD_GPT5_REJECTS_NONE), (200, _OK_BODY)])
+    transport = network_utils.ReasoningEffortTransport(fake)
+    request = httpx.Request(
+        "POST",
+        _COMPLETIONS_URL,
+        content=json.dumps(_chat_payload("gpt-5-mini", tools=_TOOLS)).encode("utf-8"),
+        headers={"content-type": "application/json"},
+    )
+    response = await transport.handle_async_request(request)
+    assert (
+        response.status_code == 200
+    ), "le 400-response de la chaîne nue n'est pas adapté"
+    assert len(fake.wire_bodies) == 2
+    assert fake.wire_bodies[0]["reasoning_effort"] == "none"
+    assert "reasoning_effort" not in fake.wire_bodies[1]
+
+
+async def test_first_try_success_never_retries(monkeypatch):
+    """Accord : gpt-5.6-luna + tools accepte le 'none' injecté du premier
+    coup — un appel, aucune régression du comportement #2324."""
+    client, fake = _scripted_client(monkeypatch, [(200, _OK_BODY)])
+    try:
+        response = await client.post(
+            _COMPLETIONS_URL, json=_chat_payload(REASONING_MODEL, tools=_TOOLS)
+        )
+    finally:
+        await client.aclose()
+    assert response.status_code == 200
+    assert len(fake.wire_bodies) == 1
+    assert fake.wire_bodies[0]["reasoning_effort"] == "none"
