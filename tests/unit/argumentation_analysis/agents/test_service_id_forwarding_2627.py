@@ -18,6 +18,7 @@ from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
 from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
+from argumentation_analysis.agents.factory import AgentFactory
 from argumentation_analysis.agents.core.logic.modal_logic_agent import (
     ModalLogicAgent,
 )
@@ -103,6 +104,25 @@ def test_sherlock_refuses_a_second_name_for_the_id():
 def test_without_an_id_the_kernel_default_service_is_used(build):
     agent = build(_kernel("svc_a", "svc_b"), None)
     assert agent.service.service_id == "svc_a"
+
+
+@pytest.mark.parametrize(
+    "create", ["create_debate_agent", "create_counter_argument_agent"]
+)
+def test_factory_specialist_binds_selected_service(create):
+    factory = AgentFactory(_kernel("svc_a", "svc_b"), llm_service_id="svc_b")
+    agent = getattr(factory, create)()
+    assert agent.service.service_id == "svc_b"
+    assert agent._llm_service_id == "svc_b"
+
+
+@pytest.mark.parametrize(
+    "create", ["create_debate_agent", "create_counter_argument_agent"]
+)
+def test_factory_specialist_refuses_missing_service(create):
+    factory = AgentFactory(_kernel("svc_a", "svc_b"), llm_service_id="svc_missing")
+    with pytest.raises(ValueError, match="svc_missing"):
+        getattr(factory, create)()
 
 
 def test_deep_synthesis_without_an_id_keeps_its_llm_paths_off():

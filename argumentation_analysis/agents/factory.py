@@ -554,6 +554,7 @@ class AgentFactory:
         return self._create_agent(
             agent_class=CounterArgumentAgent,
             agent_name=agent_name,
+            llm_service_id=self.llm_service_id,
             trace_log_path=trace_log_path,
         )
 
@@ -574,6 +575,7 @@ class AgentFactory:
             agent_name=agent_name,
             personality=personality,
             position=position,
+            llm_service_id=self.llm_service_id,
             trace_log_path=trace_log_path,
         )
 
