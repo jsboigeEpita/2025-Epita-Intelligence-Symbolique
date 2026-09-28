@@ -29,7 +29,7 @@ from argumentation_analysis.services.web_api.models.response_models import (
     ValidationResponse,
 )
 
-from .auth import require_api_token
+from .auth import require_billed_request
 from .fallacy_detection import (
     FallacyDetectionRequest,
     FallacyDetectionResponse,
@@ -89,7 +89,7 @@ async def validate_argument(
 @frontend_router.post(
     "/logic/belief-set",
     response_model=LogicBeliefSetResponse,
-    dependencies=[Depends(require_api_token)],
+    dependencies=[Depends(require_billed_request)],
 )
 async def logic_belief_set(
     request: LogicBeliefSetRequest, service=Depends(get_logic_service)
@@ -106,7 +106,7 @@ async def logic_belief_set(
 @frontend_router.post(
     "/fallacies",
     response_model=FallacyDetectionResponse,
-    dependencies=[Depends(require_api_token)],
+    dependencies=[Depends(require_billed_request)],
 )
 async def fallacies(request: FallacyDetectionRequest):
     """The fallacies of a text, by the detector the pipeline's fallacy phase uses.

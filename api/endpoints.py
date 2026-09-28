@@ -9,7 +9,7 @@ from .errors import (
     UpstreamError,
 )
 
-from .auth import require_api_token
+from .auth import require_billed_request
 from .fallacy_detection import detect_fallacies
 from .models import (
     AnalysisRequest,
@@ -271,7 +271,7 @@ def _build_response_payload(analysis_result: Dict) -> Dict:
     return payload
 
 
-@router.post("/analyze", dependencies=[Depends(require_api_token)])
+@router.post("/analyze", dependencies=[Depends(require_billed_request)])
 async def analyze_text_endpoint(analysis_req: AnalysisRequest, fastapi_req: Request):
     """
     Analyse un texte donné pour en extraire la structure argumentative.

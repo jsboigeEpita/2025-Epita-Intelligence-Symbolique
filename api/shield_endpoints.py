@@ -22,7 +22,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from .auth import require_api_token
+from .auth import require_billed_request
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ class ShieldValidateResponse(BaseModel):
 @shield_router.post(
     "/validate",
     response_model=ShieldValidateResponse,
-    dependencies=[Depends(require_api_token)],
+    dependencies=[Depends(require_billed_request)],
 )
 async def shield_validate(request: ShieldValidateRequest):
     """Validate text against adversarial patterns using AI Shield.
