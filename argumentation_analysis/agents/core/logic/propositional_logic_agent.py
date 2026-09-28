@@ -95,7 +95,7 @@ Important: Utilisez TOUJOURS task_id reçu pour add_answer. La syntaxe Tweety es
 """
 
 PROMPT_TEXT_TO_PL_DEFS = """
-Vous êtes un expert en logique propositionnelle (PL). Votre tâche est d'identifier les propositions atomiques (faits de base) dans un texte donné.
+Vous êtes un expert reconnu en logique propositionnelle (PL). Votre tâche est d'identifier les propositions atomiques (faits de base) dans un texte donné.
 
 **Format de Sortie (JSON Strict):**
 Votre sortie DOIT être un objet JSON unique contenant une seule clé : `propositions`.
