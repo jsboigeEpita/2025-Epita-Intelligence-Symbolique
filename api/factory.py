@@ -1,8 +1,10 @@
 import os
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Callable, Optional
 
+from .auth import refund_unaccepted_billed_request
 from .errors import install_error_handlers
 
 
@@ -63,5 +65,14 @@ def create_app(
     # Democratech critical path. Other endpoints keep their existing
     # HTTPException behavior. Anti-pendule: do NOT replace globally.
     install_error_handlers(app)
+
+    # #2820: the billed budget counts ACCEPTED requests — a body-validation
+    # 422 releases the unit ``require_billed_request`` reserved. The handler's
+    # narrower exc type is the same shape as fastapi's own validation handler
+    # (the registry keys handlers by exception class).
+    app.add_exception_handler(
+        RequestValidationError,
+        refund_unaccepted_billed_request,  # type: ignore[arg-type]
+    )
 
     return app

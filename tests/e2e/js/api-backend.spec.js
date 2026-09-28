@@ -5,6 +5,12 @@ const { test, expect } = require('@playwright/test');
  * Backend API : argumentation_analysis/services/web_api/app.py
  * Port : 5004 (par défaut via config)
  * Orchestrateur : project_core/webapp_from_scripts/unified_web_orchestrator.py
+ *
+ * DORMANT (#2820): aucun workflow CI ne lance cette spec, et elle cible
+ * l'API legacy services/web_api (port 5004) — PAS le backend FastAPI gardé
+ * par jeton (api.main). Si elle est ressuscitée contre api.main, chaque POST
+ * model-backed devra envoyer l'en-tête X-Shield-Token. Sa retraite suivrait
+ * le Cleanup Gate (justification par fichier).
  */
 
 test.describe('API Backend - Services d\'Analyse', () => {

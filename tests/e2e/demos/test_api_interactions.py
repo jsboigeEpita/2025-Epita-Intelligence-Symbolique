@@ -13,10 +13,14 @@ from playwright.sync_api import Page, expect
 
 
 @pytest.mark.e2e
-def test_api_analyze_interactions(page: Page, e2e_servers):
+def test_api_analyze_interactions(page: Page, e2e_servers, e2e_api_token):
     """Test avec interactions API /analyze pour générer des traces exploitables"""
     backend_url, _ = e2e_servers
     assert backend_url, "L'URL du backend doit être fournie par la fixture e2e_servers"
+    # #2820: /api/analyze est une route facturée gardée par X-Shield-Token —
+    # le harnais pose un jeton synthétique (e2e_api_token) qu'on doit envoyer,
+    # et le résultat asserté doit être l'analyse, pas un corps 401 affiché.
+    token_js = json.dumps(e2e_api_token)
 
     # Charger l'interface de test locale
     demo_html_path = Path(__file__).parent / "test_interface_demo.html"
@@ -86,21 +90,22 @@ def test_api_analyze_interactions(page: Page, e2e_servers):
                     method: 'POST',
                     headers: {{
                         'Content-Type': 'application/json',
+                        'X-Shield-Token': {token_js},
                     }},
                     body: JSON.stringify({{
                         'text': textInput.value,
                         'analysis_type': 'full_analysis'
                     }})
                 }});
-                
+
                 const data = await response.json();
                 console.log('Analyse Response:', data);
-                
+
                 results.innerHTML = '<h3>Résultat d\\'analyse:</h3><pre>' +
                     JSON.stringify(data, null, 2) + '</pre>';
-                    
+
                 window.analysisResult = data;
-                
+
             }} catch (error) {{
                 console.error('Erreur d\\'analyse:', error);
                 results.innerHTML = '<p style="color: red;">Erreur: ' + error.message + '</p>';
@@ -116,6 +121,17 @@ def test_api_analyze_interactions(page: Page, e2e_servers):
     results = page.locator("#results")
     expect(results).to_be_visible()
 
+    # #2820: avec le jeton du harnais, /api/analyze doit répondre 200 et le
+    # panneau afficher l'analyse — pas un corps 401/429 qui rendrait le test
+    # vert par hasard.
+    analyze_calls = [call for call in api_calls if "/analyze" in call["url"]]
+    assert (
+        analyze_calls and analyze_calls[0]["status"] == 200
+    ), f"/api/analyze avec le jeton du harnais n'a pas répondu 200 : {analyze_calls}"
+    assert page.evaluate(
+        "() => window.analysisResult !== undefined"
+    ), "l'analyse n'a pas été reçue côté navigateur"
+
     # Test 3: Analyse de sophisme
     sophism_text = "Cette théorie sur le climat est fausse parce que son auteur a été condamné pour fraude."
 
@@ -130,6 +146,7 @@ def test_api_analyze_interactions(page: Page, e2e_servers):
                     method: 'POST',
                     headers: {{
                         'Content-Type': 'application/json',
+                        'X-Shield-Token': {token_js},
                     }},
                     body: JSON.stringify({{
                         'text': textInput.value,
@@ -168,6 +185,7 @@ def test_api_analyze_interactions(page: Page, e2e_servers):
                     method: 'POST',
                     headers: {{
                         'Content-Type': 'application/json',
+                        'X-Shield-Token': {token_js},
                     }},
                     body: JSON.stringify({{
                         'text': textInput.value,
