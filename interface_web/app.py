@@ -29,8 +29,14 @@ Date: 2026-06-02
 
 import logging
 import os
+import sys
 import argparse
 from pathlib import Path
+
+# Direct file execution needs the checkout root before importing sibling packages.
+# Module imports through Uvicorn do not alter sys.path.
+if __name__ == "__main__":
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # --- Imports ASGI/Starlette ---
 from contextlib import asynccontextmanager
@@ -301,11 +307,12 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    if args.fastapi_port:
-        FASTAPI_PORT = args.fastapi_port
+    os.environ["FASTAPI_PORT"] = str(args.fastapi_port)
+    # Uvicorn's reloader resolves interface_web.app from this working directory.
+    os.chdir(PROJECT_ROOT)
 
     logger.info(f"Demarrage du frontend proxy sur http://{args.host}:{args.port}")
-    logger.info(f"  -> Backend FastAPI: {FASTAPI_BASE_URL}")
+    logger.info(f"  -> Backend FastAPI: http://{FASTAPI_HOST}:{args.fastapi_port}")
 
     uvicorn.run(
         "interface_web.app:app",
