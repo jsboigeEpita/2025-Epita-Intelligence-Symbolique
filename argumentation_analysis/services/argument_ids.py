@@ -12,7 +12,7 @@ dragging package dependencies along.
 """
 
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 # #1629: fallacy records name their target by *identifier* — ``arg_1``,
 # ``arg_2``, … — minted by ``shared_state._generate_id`` as
@@ -58,3 +58,23 @@ def resolve_target_argument_index(raw_target: Any, count: int) -> Optional[int]:
         return None
     index = int(match.group(1)) - 1  # IDs are 1-based
     return index if 0 <= index < count else None
+
+
+# ``_invoke_jtms`` mints premise belief names as ``f"arg_{i+1}:{text}"`` over
+# the run's argument units — the same 1-based enumeration with a
+# colon-joined text suffix (#2763). The bare-id regex above is anchored to
+# the plain id and deliberately does not match these names; the prefix form
+# has its own pattern so the two conventions cannot be conflated.
+ARG_ID_PREFIX_RE = re.compile(r"^arg_(\d+):(.*)$", re.DOTALL)
+
+
+def split_arg_id_prefix(name: str) -> Optional[Tuple[int, str]]:
+    """Split an ``arg_N:<text>`` belief name into ``(N, text)`` — 1-based ``N``.
+
+    Returns ``None`` for names without the premise prefix (claims, defeats,
+    rebuttals…).
+    """
+    match = ARG_ID_PREFIX_RE.match(name)
+    if not match:
+        return None
+    return int(match.group(1)), match.group(2)

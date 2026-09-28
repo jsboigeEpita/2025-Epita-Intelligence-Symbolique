@@ -46,6 +46,7 @@ from argumentation_analysis.services.argument_ids import (
     FALLACY_TARGET_KEYS as _FALLACY_TARGET_KEYS,
     read_fallacy_target as _read_fallacy_target,
     resolve_target_argument_index as _resolve_target_argument_index,
+    split_arg_id_prefix,
 )
 from argumentation_analysis.core.prover9_runner import SolverInputDefect
 
@@ -3456,6 +3457,38 @@ def _run_source_name(input_text: str) -> str:
     return "run_" + hashlib.sha256(input_text.encode("utf-8")).hexdigest()[:12]
 
 
+def _belief_premises(belief_output: Any) -> List[Dict[str, str]]:
+    """Recover a run's argument units from the belief phase's premises.
+
+    ``_invoke_jtms`` names premise beliefs ``arg_N:<text>`` over the units it
+    tracked (extract arguments, or the sentence fallback when the workflow has
+    no extract phase — #2763). Claims, defeats and rebuttals carry other names
+    and are not argument units. Order is the ``arg_N`` enumeration, not dict
+    insertion order.
+    """
+    beliefs = (
+        belief_output.get("beliefs", {}) if isinstance(belief_output, dict) else {}
+    )
+    if not isinstance(beliefs, dict):
+        return []
+    premises: Dict[int, str] = {}
+    for name, entry in beliefs.items():
+        if not isinstance(entry, dict):
+            continue
+        entry_context = entry.get("context")
+        if not isinstance(entry_context, dict):
+            continue
+        if entry_context.get("belief_type") != "premise":
+            continue
+        split = split_arg_id_prefix(name)
+        if split is None:
+            continue
+        unit, text = split
+        if text and unit not in premises:
+            premises[unit] = text
+    return [{"text": premises[unit]} for unit in sorted(premises)]
+
+
 async def _invoke_semantic_index(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -3487,20 +3520,64 @@ async def _invoke_semantic_index(
             "reason": "SemanticIndexService at 127.0.0.1:9001 is not reachable",
         }
 
+    # #2763 — the units this run actually produced, per workflow. The full and
+    # standard workflows extract them (``phase_extract_output``, the #2744
+    # producer shape). The fact_check workflow has no extract phase; its
+    # indexing phase declares ``depends_on=["belief_tracking"]``, and
+    # ``_invoke_jtms`` tracks the run's units as ``arg_N:<text>`` premises —
+    # extract arguments win when present (untruncated texts), else the
+    # tracked premises are the run's units.
     extract_output = context.get("phase_extract_output", {})
     arguments = (
         extract_output.get("arguments", []) if isinstance(extract_output, dict) else []
     )
-    quality_output = context.get("phase_quality_output", {})
-    per_argument_scores = (
-        quality_output.get("per_argument_scores", {})
-        if isinstance(quality_output, dict)
-        else {}
+    if not arguments:
+        arguments = _belief_premises(context.get("phase_belief_tracking_output", {}))
+    if not arguments:
+        # Fail-loud (#1019): an empty index is not a successful run. Report
+        # the absent input instead of answering ``ran`` over nothing.
+        return {
+            "status": "skipped: no_input_arguments",
+            "reason": (
+                "no upstream output carries arguments to index "
+                "(extract arguments absent, tracked premises absent)"
+            ),
+        }
+
+    # Quality scores: the quality phase is ``quality`` in the full/standard
+    # workflows and ``quality_assessment`` in fact_check (#2763).
+    quality_output: Dict[str, Any] = next(
+        (
+            context[key]
+            for key in ("phase_quality_output", "phase_quality_assessment_output")
+            if isinstance(context.get(key), dict)
+        ),
+        {},
     )
+    per_argument_scores = quality_output.get("per_argument_scores", {})
+
+    # Fallacies: the hierarchical descent writes a target-bearing list under
+    # ``phase_hierarchical_fallacy_output`` (#2744); the neural detector of
+    # the fact_check workflow (``fallacy_screen``) writes a type-keyed dict
+    # with no per-argument target — its records resolve to no association
+    # (#1019), never a guessed one.
     fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
     fallacies = (
         fallacy_output.get("fallacies", []) if isinstance(fallacy_output, dict) else []
     )
+    if not fallacies:
+        screen_output = context.get("phase_fallacy_screen_output", {})
+        detected = (
+            screen_output.get("detected_fallacies", {})
+            if isinstance(screen_output, dict)
+            else {}
+        )
+        if isinstance(detected, dict):
+            fallacies = [
+                {"fallacy_type": fallacy_type, **meta}
+                for fallacy_type, meta in detected.items()
+                if isinstance(meta, dict)
+            ]
 
     run_name = _run_source_name(input_text)
     doc_ids = await asyncio.to_thread(
