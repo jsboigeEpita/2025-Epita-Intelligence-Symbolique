@@ -1,11 +1,5 @@
-# start_web_application.ps1
-# Script de lancement de l'application web d'analyse argumentative
-# 
-# Usage:
-#   .\start_web_application.ps1                     # Lance backend + frontend
-#   .\start_web_application.ps1 -BackendOnly        # Lance seulement le backend
-#   .\start_web_application.ps1 -FrontendOnly       # Lance seulement le frontend
-#   .\start_web_application.ps1 -Help               # Affiche l'aide
+# Lanceur backend FastAPI + frontend React depuis le checkout.
+# Usage: .\config\clean\web_application_launcher.ps1 [-BackendOnly | -FrontendOnly | -Help]
 
 param(
     [switch]$BackendOnly,
@@ -15,6 +9,7 @@ param(
 
 # Configuration UTF-8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 
 # Affichage de l'aide
 if ($Help) {
@@ -22,13 +17,13 @@ if ($Help) {
     Write-Host "=" * 70
     Write-Host ""
     Write-Host "USAGE:" -ForegroundColor Yellow
-    Write-Host "  .\start_web_application.ps1                 # Lance backend + frontend"
-    Write-Host "  .\start_web_application.ps1 -BackendOnly    # Lance seulement le backend"
-    Write-Host "  .\start_web_application.ps1 -FrontendOnly   # Lance seulement le frontend"
-    Write-Host "  .\start_web_application.ps1 -Help           # Affiche cette aide"
+    Write-Host "  .\config\clean\web_application_launcher.ps1                 # Lance backend + frontend"
+    Write-Host "  .\config\clean\web_application_launcher.ps1 -BackendOnly    # Lance seulement le backend"
+    Write-Host "  .\config\clean\web_application_launcher.ps1 -FrontendOnly   # Lance seulement le frontend"
+    Write-Host "  .\config\clean\web_application_launcher.ps1 -Help           # Affiche cette aide"
     Write-Host ""
     Write-Host "SERVICES:" -ForegroundColor Yellow
-    Write-Host "  Backend API:  http://localhost:5003"
+    Write-Host "  Backend API:  http://localhost:8095"
     Write-Host "  Frontend UI:  http://localhost:3000"
     Write-Host ""
     Write-Host "ARRÊT:" -ForegroundColor Yellow
@@ -47,33 +42,30 @@ Write-Host ""
 Write-Host "[LAUNCH] Lancement de l'Application Web d'Analyse Argumentative" -ForegroundColor Green
 Write-Host "=" * 60
 
-# Charger l'environnement
-Write-Host "[ENV] Chargement de l'environnement Python..." -ForegroundColor Blue
-& .\scripts\env\activate_project_env.ps1
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "[ERROR] Erreur lors du chargement de l'environnement" -ForegroundColor Red
+# Le processus enfant hérite de l'interpréteur Python de l'environnement actif.
+$python = if (-not $FrontendOnly) { Get-Command python -ErrorAction SilentlyContinue }
+if (-not $FrontendOnly -and -not $python) {
+    Write-Host "[ERROR] Python introuvable dans l'environnement actif" -ForegroundColor Red
     exit 1
 }
 
 # Fonction pour lancer le backend
 function Start-Backend {
-    Write-Host "[BACKEND] Démarrage du serveur backend Flask..." -ForegroundColor Blue
-    
-    # Vérifier que le backend existe
-    if (-not (Test-Path "argumentation_analysis/services/web_api/app.py")) {
-        Write-Host "[ERROR] Fichier backend non trouvé: argumentation_analysis/services/web_api/app.py" -ForegroundColor Red
+    Write-Host "[BACKEND] Démarrage du serveur backend FastAPI..." -ForegroundColor Blue
+
+    if (-not (Test-Path (Join-Path $projectRoot "api/main.py"))) {
+        Write-Host "[ERROR] Fichier backend non trouvé: api/main.py" -ForegroundColor Red
         return $false
     }
-    
-    # Lancer le backend en arrière-plan
+
     $backendJob = Start-Job -ScriptBlock {
-        param($projectPath)
-        Set-Location $projectPath
-        & .\scripts\env\activate_project_env.ps1 -CommandToRun "python -m argumentation_analysis.services.web_api.app"
-    } -ArgumentList (Get-Location).Path -Name "Backend"
-    
-    Write-Host "[API] Backend Flask démarré (Job ID: $($backendJob.Id))" -ForegroundColor Green
-    Write-Host "[WEB] URL Backend: http://localhost:5003" -ForegroundColor Cyan
+        param($root, $pythonPath)
+        Set-Location $root
+        & $pythonPath -m uvicorn api.main:app --host 127.0.0.1 --port 8095
+    } -ArgumentList $projectRoot, $python.Source -Name "Backend"
+
+    Write-Host "[API] Backend FastAPI démarré (Job ID: $($backendJob.Id))" -ForegroundColor Green
+    Write-Host "[WEB] URL Backend: http://localhost:8095" -ForegroundColor Cyan
     
     return $backendJob
 }
@@ -83,8 +75,8 @@ function Start-Frontend {
     Write-Host "[REACT] Démarrage de l'interface React..." -ForegroundColor Blue
     
     # Vérifier que le frontend existe
-    $frontendPath = "services/web_api/interface-web-argumentative"
-    if (-not (Test-Path "$frontendPath/package.json")) {
+    $frontendPath = Join-Path $projectRoot "services/web_api/interface-web-argumentative"
+    if (-not (Test-Path (Join-Path $frontendPath "package.json"))) {
         Write-Host "[ERROR] Interface frontend non trouvée: $frontendPath" -ForegroundColor Red
         return $false
     }
@@ -106,7 +98,7 @@ function Start-Frontend {
         param($frontendPath)
         Set-Location $frontendPath
         npm start
-    } -ArgumentList (Get-Location) -Name "Frontend"
+    } -ArgumentList $frontendPath -Name "Frontend"
     
     Pop-Location
     
@@ -127,17 +119,21 @@ function Wait-ForServers {
     
     while ($attempt -lt $maxAttempts) {
         $attempt++
+        if ($jobs | Where-Object { $_.State -ne "Running" }) {
+            Write-Host "[ERROR] Un service s'est arrêté avant d'être prêt" -ForegroundColor Red
+            return $false
+        }
         $backendReady = $true
         $frontendReady = $true
         
         if ($CheckBackend) {
-            try { $response = Invoke-WebRequest -Uri "http://localhost:5003/api/health" -TimeoutSec 2 -ErrorAction SilentlyContinue; $backendReady = $true } catch { $backendReady = $false }
+            try { Invoke-WebRequest -Uri "http://localhost:8095/health" -TimeoutSec 2 -ErrorAction Stop | Out-Null; $backendReady = $true } catch { $backendReady = $false }
         }
         if ($CheckFrontend) {
-            try { $response = Invoke-WebRequest -Uri "http://localhost:3000" -TimeoutSec 2 -ErrorAction SilentlyContinue; $frontendReady = $true } catch { $frontendReady = $false }
+            try { Invoke-WebRequest -Uri "http://localhost:3000" -TimeoutSec 2 -ErrorAction Stop | Out-Null; $frontendReady = $true } catch { $frontendReady = $false }
         }
         
-        if ($backendReady -and $frontendReady) {
+        if ($backendReady -and $frontendReady -and -not ($jobs | Where-Object { $_.State -ne "Running" })) {
             Write-Host "[OK] Tous les serveurs sont opérationnels!" -ForegroundColor Green
             return $true
         }
@@ -175,6 +171,10 @@ if (-not $BackendOnly) {
         $jobs += $frontendJob
     } else {
         Write-Host "[ERROR] Impossible de démarrer le frontend" -ForegroundColor Red
+        foreach ($job in $jobs) {
+            if ($job.State -eq "Running") { Stop-Job $job }
+            Remove-Job $job -Force
+        }
         exit 1
     }
 }
@@ -185,8 +185,14 @@ if ($jobs.Count -eq 0) {
     exit 1
 }
 
-# Attendre que les serveurs soient prêts
-Wait-ForServers -CheckBackend (-not $FrontendOnly) -CheckFrontend (-not $BackendOnly)
+# Une sonde échouée n'est pas un démarrage réussi ; les jobs seront nettoyés.
+if (-not (Wait-ForServers -CheckBackend (-not $FrontendOnly) -CheckFrontend (-not $BackendOnly))) {
+    foreach ($job in $jobs) {
+        if ($job.State -eq "Running") { Stop-Job $job }
+        Remove-Job $job -Force
+    }
+    exit 1
+}
 
 # Affichage des informations finales
 Write-Host ""
@@ -206,8 +212,8 @@ if (-not $BackendOnly) {
 }
 
 if (-not $FrontendOnly) {
-    Write-Host "  Backend:  http://localhost:5003" -ForegroundColor Cyan
-    Write-Host "  Health:   http://localhost:5003/api/health" -ForegroundColor Cyan
+    Write-Host "  Backend:  http://localhost:8095" -ForegroundColor Cyan
+    Write-Host "  Health:   http://localhost:8095/health" -ForegroundColor Cyan
 }
 
 Write-Host ""
@@ -238,7 +244,7 @@ try {
     
     foreach ($job in $jobs) {
         if ($job.State -eq "Running") {
-            Stop-Job $job -Force
+            Stop-Job $job
             Write-Host "  [OK] $($job.Name) arrêté" -ForegroundColor Green
         }
         Remove-Job $job -Force
