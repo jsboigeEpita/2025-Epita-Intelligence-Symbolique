@@ -3,7 +3,7 @@ import subprocess
 import sys
 import os
 from pathlib import Path
-from dotenv import load_dotenv, find_dotenv
+from dotenv import dotenv_values
 
 
 @pytest.fixture(scope="function")
@@ -37,17 +37,13 @@ def run_in_jvm_subprocess():
         # Remove PYTEST_CURRENT_TEST to prevent auto-mock in subprocess
         env.pop("PYTEST_CURRENT_TEST", None)
 
-        # Charger les variables du fichier .env
-        dotenv_path = find_dotenv(str(project_root / ".env"))
-        if dotenv_path:
-            load_dotenv(dotenv_path=dotenv_path, override=True)
-            env.update(
-                {
-                    k: v
-                    for k, v in os.environ.items()
-                    if k in ["JAVA_HOME", "TWEETY_CLASSPATH"]
-                }
-            )
+        # Only the checkout-root dotenv may supply missing JVM child settings.
+        dotenv_path = project_root / ".env"
+        if dotenv_path.is_file():
+            for key, value in dotenv_values(dotenv_path).items():
+                if key in ("JAVA_HOME", "TWEETY_CLASSPATH") and key not in env:
+                    if value is not None:
+                        env[key] = value
 
         print(
             f"Exécution du worker en sous-processus: {' '.join(command_for_subprocess)}"
