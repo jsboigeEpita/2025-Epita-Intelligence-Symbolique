@@ -17,6 +17,11 @@ A collection error in one of the non-LLM import-only tests does not count as a
 leaker; the guard only requires the collection to have COMPLETED ("N tests
 collected") and the leaker ids to be absent. The egress=4 post-fix figure is
 the positional measurement (widened argv run), not this guard.
+
+#1867 (d) admitted ``tests/agents/`` the same way: measured alone under the
+gate filter with a real key, 8 of its tests posted to the LLM (12 requests).
+They are marked ``requires_api`` test by test and listed below; the rest of
+those three files stays in the gate.
 """
 
 import re
@@ -30,6 +35,9 @@ FILES = [
     "tests/integration/triage/test_realite_pure_jtms.py",
     "tests/integration/triage/test_informal_agent_tool_choice.py",
     "tests/integration/workers/worker_sherlock_watson_moriarty.py",
+    "tests/agents/core/informal/test_informal_agent_authentic.py",
+    "tests/agents/core/logic/test_propositional_logic_agent_authentic.py",
+    "tests/agents/core/pm/test_sherlock_enquete_agent.py",
 ]
 
 # Every genuine-verdict LLM test in those four files. The #1867 measurement
@@ -71,6 +79,22 @@ for _name in (
             f"tests/integration/workers/worker_sherlock_watson_moriarty.py::{_name}::{_tid}"
         )
 
+# #1867 (d): the tests/agents/ tests measured posting to the LLM.
+_AGENTS_INFORMAL = "tests/agents/core/informal/test_informal_agent_authentic.py::TestInformalAnalysisAgentAuthentic"
+for _tid in (
+    "test_analyze_argument_authentic",
+    "test_analyze_fallacies_authentic",
+    "test_analyze_text_authentic",
+    "test_complete_informal_analysis_workflow_authentic",
+    "test_identify_arguments_authentic",
+):
+    LEAKER_NODEIDS.add(f"{_AGENTS_INFORMAL}::{_tid}")
+LEAKER_NODEIDS |= {
+    "tests/agents/core/logic/test_propositional_logic_agent_authentic.py::test_full_propositional_reasoning_workflow_authentic",
+    "tests/agents/core/logic/test_propositional_logic_agent_authentic.py::test_text_to_belief_set_authentic",
+    "tests/agents/core/pm/test_sherlock_enquete_agent.py::TestSherlockEnqueteAgentAuthentic::test_jtms_formulate_hypothesis",
+}
+
 _NODEID_RE = re.compile(r"^\S+::\S+$")
 
 # Contrôle de non-vacuité. Le verdict est `LEAKER_NODEIDS & admitted` : il est
@@ -87,6 +111,10 @@ EXPECTED_ADMITTED = {
     "tests/integration/triage/test_realite_pure_jtms.py::test_imports_jtms_reels",
     "tests/integration/triage/test_realite_pure_jtms.py::test_existence_fichiers_reels",
     "tests/integration/triage/test_realite_pure_jtms.py::test_interface_web_reelle",
+    # #1867 (d): siblings in the tests/agents/ files that make no LLM call.
+    f"{_AGENTS_INFORMAL}::test_initialization_and_setup_authentic",
+    "tests/agents/core/logic/test_propositional_logic_agent_authentic.py::test_initialization_and_setup_authentic",
+    "tests/agents/core/pm/test_sherlock_enquete_agent.py::TestSherlockEnqueteAgentAuthentic::test_agent_instantiation",
 }
 
 

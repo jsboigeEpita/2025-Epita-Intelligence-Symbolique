@@ -160,6 +160,7 @@ def test_initialization_and_setup_authentic(authentic_pl_agent):
 @pytest.mark.llm_integration
 @pytest.mark.phase5
 @pytest.mark.propositional
+@pytest.mark.requires_api  # real LLM POST, measured #1867 (d)
 async def test_text_to_belief_set_authentic(authentic_pl_agent):
     """Test authentique de conversion texte vers ensemble de croyances propositionnelles."""
     if not authentic_pl_agent["llm_service_configured"]:
@@ -260,6 +261,7 @@ async def test_execute_query_authentic(authentic_pl_agent):
 @pytest.mark.llm_integration
 @pytest.mark.phase5
 @pytest.mark.propositional
+@pytest.mark.requires_api  # real LLM POST, measured #1867 (d)
 async def test_full_propositional_reasoning_workflow_authentic(authentic_pl_agent):
     """Test authentique du workflow complet de raisonnement propositionnel."""
     if not (
