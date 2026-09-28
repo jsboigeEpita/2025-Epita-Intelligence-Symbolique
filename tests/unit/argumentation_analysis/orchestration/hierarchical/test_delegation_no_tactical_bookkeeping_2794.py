@@ -108,8 +108,10 @@ async def test_delegation_writes_no_result_file(results_dir):
     result = await orch.analyze("Texte de test court, sans source nominative.")
 
     assert len(result["operational_results"]) == 3
+    # ``_save_result_to_file`` writes straight into RESULTS_DIR: a flat
+    # listing sees every report it could leave.
     written = (
-        sorted(p.name for p in results_dir.rglob("*")) if results_dir.exists() else []
+        sorted(p.name for p in results_dir.iterdir()) if results_dir.exists() else []
     )
     assert (
         written == []
