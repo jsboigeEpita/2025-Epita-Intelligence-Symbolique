@@ -112,6 +112,8 @@ exclude = ["tests*"]
     "agents/core/quality/ressources_argumentatives.json",
     "data/argumentum_taxonomy_provenance.json",
     "data/argumentum_fallacies_taxonomy.csv",
+    "data/taxonomy_medium.csv",
+    "data/taxonomy_full.csv",
     "plugin_framework/core/plugins/standard/taxonomy_explorer/data/fallacy_families.yaml",
 ]
 
