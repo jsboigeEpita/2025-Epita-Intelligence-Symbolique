@@ -28,7 +28,10 @@ name: requires_api band (scheduled real-LLM lane)
 #
 # Cost: 9 tests x ~$0.01-0.05 => roughly $0.09-0.45 per scheduled run.
 # Full-band dispatch is an on-demand operator action, never scheduled, so it
-# cannot silently balloon.
+# cannot silently balloon. The replay job spends no LLM credit (dummy key,
+# egress 0); it costs one Windows runner for ~8 min (run 36478952679: job
+# 8m13s, of which setup 4m51s and replay 2m12s), and it is the only job that
+# runs on pull requests and on pushes to main (#2837).
 #
 # TWO-BAND SHAPE (#1603, dispatch R1021): the LIVE band below stays the 8
 # llm_light tests with the real key and is NEVER widened to replay -- it is
@@ -62,22 +65,53 @@ name: requires_api band (scheduled real-LLM lane)
 #
 # First scheduled run: Saturday 05:37 UTC -- off the :00 mark deliberately,
 # per cluster convention on API-hitting cadences.
+#
+# WHO READS THE REPLAY RESULT (#2837). Until #2837 the replay job ran on main
+# only on the Saturday schedule, and both scheduled runs it ever had were red
+# with nobody reading them (26/09: miss_replay=161, cassettes drifted within
+# three days of a re-record). A cassette key hashes the prompt, so the PR that
+# changes a prompt is the one that invalidates a cassette. Two readers now:
+#   - the PR author: the replay job runs on every pull request to main, as a
+#     non-required check. A PR that drifts a prompt sees miss_replay > 0 on
+#     its own checks and re-records in the same PR (record-llm-cassettes.yml,
+#     the paid part);
+#   - the coordinator: a red run on main (scheduled, or a push to main) opens
+#     or updates ONE open issue titled "[band-red] ..." (job report-main
+#     below). It stays open until someone closes it; the coordinator reads the
+#     open-issue list at every /coordinate tick. A later green run on main
+#     comments on that issue, so the reader sees the red end.
 
 on:
   schedule:
     - cron: "37 5 * * 6"
+  # #2837: replay job only (the live job is gated to schedule/dispatch below).
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       full-band:
         description: "Run the whole requires_api band WITHIN this argv (80 tests measured 2026-09-28), not just the 9 llm_light ones"
         type: boolean
         default: false
+      replay-only:
+        description: "Skip the live (paid) job and run only the replay job"
+        type: boolean
+        default: false
+      report-red:
+        description: "Report this run to the [band-red] issue as a run on main would (used to prove the reporter, #2837)"
+        type: boolean
+        default: false
 
 # Scheduled runs must never supersede each other mid-run: a cancelled
-# real-LLM run is money spent with no report.
+# real-LLM run is money spent with no report. One group per event keeps a
+# push or a PR from superseding a pending scheduled run. Pull-request runs
+# are replay-only and cost no credit, so a newer push to the same PR cancels
+# the older run.
 concurrency:
-  group: requires-api-band
-  cancel-in-progress: false
+  group: requires-api-band-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.ref || 'lane' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -85,6 +119,9 @@ permissions:
 
 jobs:
   requires-api:
+    # The live, paid job: schedule and manual dispatch only, never on a PR or
+    # a push (#2837).
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && !inputs.replay-only)
     runs-on: windows-latest
     timeout-minutes: 180  # light band ~1h expected; full-band dispatch gets the headroom
     env:
@@ -471,3 +508,62 @@ jobs:
             pytest_report_replay.xml
             llm_egress_report*.json
           if-no-files-found: warn
+
+  # ─────────────────────────────────────────────────────────────────────
+  # #2837 (b): a red run on main reaches a reader. Before this job, a failed
+  # scheduled run notified at most one account and nobody treated it as a
+  # task (runs 35435391692 and 36234875533 were both red and both unread).
+  # On main (schedule or push), a red run opens ONE "[band-red]" issue, or
+  # comments on the one already open; a green run comments on it so the red
+  # has a visible end. Closing it stays a human decision. Cancelled runs
+  # (a superseded push) report nothing. The body carries links and job
+  # results only, never test output (privacy: GitHub-indexed surface).
+  # ─────────────────────────────────────────────────────────────────────
+  report-main:
+    needs: [requires-api, replay-band]
+    if: >-
+      always() &&
+      ((github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'push')) ||
+       (github.event_name == 'workflow_dispatch' && inputs.report-red))
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      EVENT: ${{ github.event_name }}
+      SHA: ${{ github.sha }}
+      REF: ${{ github.ref_name }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      LIVE: ${{ needs.requires-api.result }}
+      REPLAY: ${{ needs.replay-band.result }}
+    steps:
+      - name: Open, update or close out the [band-red] issue
+        shell: bash
+        run: |
+          set -euo pipefail
+          line="${EVENT} run ${RUN_URL} on \`${SHA:0:9}\` (\`${REF}\`): live job ${LIVE}, replay job ${REPLAY}."
+          echo "$line"
+          if [ "$LIVE" = "cancelled" ] || [ "$REPLAY" = "cancelled" ]; then
+            echo "Cancelled run: nothing to report."
+            exit 0
+          fi
+          open=$(gh issue list --state open --limit 200 --json number,title \
+            --jq '[.[] | select(.title | startswith("[band-red]"))][0].number // empty')
+          if [ "$LIVE" = "failure" ] || [ "$REPLAY" = "failure" ]; then
+            if [ -n "$open" ]; then
+              gh issue comment "$open" --body "Still red: ${line}"
+              echo "Commented on #${open}."
+            else
+              body=$(printf '%s\n\n%s\n\n%s\n' \
+                "The requires_api band is red: ${line}" \
+                "Read the failing job's log first. For the replay job, the replay-band-results artifact carries replay_stats.json (live, hit, miss_replay). miss_replay > 0 on main usually means a merged PR changed a prompt: re-record with record-llm-cassettes.yml in a PR." \
+                "This issue was opened by the report-main job of requires_api_band.yml (#2837). Later red runs on main comment here, and a green run says so. Close it once the band is green on main again.")
+              gh issue create --title "[band-red] requires_api band is red on main" --body "$body"
+            fi
+          elif [ -n "$open" ]; then
+            gh issue comment "$open" --body "Green again: ${line}"
+            echo "Commented on #${open} (green)."
+          else
+            echo "Green, and no open [band-red] issue: nothing to report."
+          fi
