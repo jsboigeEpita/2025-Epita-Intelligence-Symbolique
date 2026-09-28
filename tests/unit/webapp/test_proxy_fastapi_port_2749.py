@@ -38,7 +38,8 @@ def _free_port():
 
 
 def test_direct_cli_proxies_to_requested_port_after_reload(tmp_path):
-    with http.server.ThreadingHTTPServer(("127.0.0.1", 9000), Backend) as backend:
+    with http.server.ThreadingHTTPServer(("127.0.0.1", 0), Backend) as backend:
+        backend_port = backend.server_address[1]
         thread = threading.Thread(target=backend.serve_forever, daemon=True)
         thread.start()
         port = _free_port()
@@ -56,7 +57,7 @@ def test_direct_cli_proxies_to_requested_port_after_reload(tmp_path):
                     "--port",
                     str(port),
                     "--fastapi-port",
-                    "9000",
+                    str(backend_port),
                 ],
                 cwd=ROOT,
                 env=env,

@@ -33,6 +33,11 @@ import sys
 import argparse
 from pathlib import Path
 
+# Direct file execution needs the checkout root before importing sibling packages.
+# Module imports through Uvicorn do not alter sys.path.
+if __name__ == "__main__":
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 # --- Imports ASGI/Starlette ---
 from contextlib import asynccontextmanager
 
@@ -298,9 +303,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     os.environ["FASTAPI_PORT"] = str(args.fastapi_port)
-    # A directly executed file has interface_web/, not its parent, on sys.path.
-    # Uvicorn's reloader must be able to resolve the module in its child too.
-    sys.path.insert(0, str(PROJECT_ROOT))
+    # Uvicorn's reloader resolves interface_web.app from this working directory.
     os.chdir(PROJECT_ROOT)
 
     logger.info(f"Demarrage du frontend proxy sur http://{args.host}:{args.port}")
