@@ -373,7 +373,15 @@
 
            // Afficher le résumé
            const summaryContainer = document.getElementById('counter-argument-text');
-           summaryContainer.innerHTML = `<h4>Résumé de l'Analyse</h4><p>${data.summary || 'Aucun résumé fourni.'}</p>`;
+           // #2768: report values can quote the submitted argument, so they
+           // are rendered as text, never parsed as HTML.
+           summaryContainer.innerHTML = '';
+           const summaryTitle = document.createElement('h4');
+           summaryTitle.textContent = "Résumé de l'Analyse";
+           const summaryText = document.createElement('p');
+           summaryText.textContent = data.summary || 'Aucun résumé fourni.';
+           summaryContainer.appendChild(summaryTitle);
+           summaryContainer.appendChild(summaryText);
            
            // Cacher les détails qui ne sont plus pertinents
             document.getElementById('counter-type-text').textContent = "N/A";
@@ -395,10 +403,14 @@
                    const cardBody = document.createElement('div');
                    cardBody.className = 'card-body';
                    
-                   let content = `<strong>Sophisme: ${item.fallacy_name || item.name}</strong> (Score: ${item.validation_score || 'N/A'})`;
-                   content += `<p>Justification: ${item.validation_justification || item.description}</p>`;
-                   
-                   cardBody.innerHTML = content;
+                   const fallacyName = document.createElement('strong');
+                   fallacyName.textContent = `Sophisme: ${item.fallacy_name || item.name}`;
+                   const score = document.createTextNode(` (Score: ${item.validation_score || 'N/A'})`);
+                   const justification = document.createElement('p');
+                   justification.textContent = `Justification: ${item.validation_justification || item.description}`;
+                   cardBody.appendChild(fallacyName);
+                   cardBody.appendChild(score);
+                   cardBody.appendChild(justification);
                    card.appendChild(cardBody);
                    detailsContainer.appendChild(card);
                });

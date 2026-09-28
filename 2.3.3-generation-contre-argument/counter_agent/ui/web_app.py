@@ -298,12 +298,14 @@ def _get_strategy_description(strategy: RhetoricalStrategy) -> str:
     return descriptions.get(strategy, "Description non disponible.")
 
 
-def start_app(host="0.0.0.0", port=5000, debug=False, config=None):
+def start_app(host="127.0.0.1", port=5000, debug=False, config=None):
     """
     Démarre l'application web.
 
     Args:
-        host: L'hôte sur lequel démarrer l'application
+        host: L'hôte sur lequel démarrer l'application. Par défaut la
+            machine locale seulement (#2768) : ``python web_app.py`` lance
+            le mode debug, qui ne doit jamais écouter sur le réseau.
         port: Le port sur lequel démarrer l'application
         debug: Activer le mode debug
         config: Configuration pour l'agent
