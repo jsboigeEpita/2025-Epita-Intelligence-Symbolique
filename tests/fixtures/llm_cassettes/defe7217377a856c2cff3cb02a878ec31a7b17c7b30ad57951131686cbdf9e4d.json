@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_IOUh9nzIvOfO3jIdoQ7l1eKb",
-          "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"2\",\"confidence\":\"high\",\"justification\":\"L’énoncé présente comme incontestable le succès de la politique économique sans fournir aucune preuve, donnée ou exemple permettant de l’établir. Il s’agit d’une affirmation non étayée, mais le texte ne spécifie pas un sous-type plus précis.\"}"
+          "id": "call_CeFrB58HN33UoVMXK3TzyiXY",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\":\"3\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETBDCLobcdLwB9zPEX84sJHQJLGPY",
-        "created": 1790623318,
+        "id": "chatcmpl-ETBvU8cwiv65X1YZqA88TFX5GdreT",
+        "created": 1790626064,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1729,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 84,
+          "completion_tokens": 22,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

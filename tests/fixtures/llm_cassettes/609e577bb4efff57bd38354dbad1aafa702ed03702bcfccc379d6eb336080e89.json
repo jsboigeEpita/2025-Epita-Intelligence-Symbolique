@@ -1,0 +1,40 @@
+{
+  "key": "609e577bb4efff57bd38354dbad1aafa702ed03702bcfccc379d6eb336080e89",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_ovLEAvhxGjawl20BwbgPwOEq",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"Le texte invoque un appel à l'autorité et exclut les avis des non-experts, mais il n'invente pas de récit spéculatif invérifiable pour expliquer un phénomène. La catégorie « Histoire ad hoc » ne correspond donc pas.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBz53hdpALDhyLhni1hxRnqlkpOv",
+        "created": 1790626287,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 646,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 75,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

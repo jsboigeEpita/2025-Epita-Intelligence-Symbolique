@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_TGbth786126qpW8pG3p4KgRG",
-          "name": "Exploration-conclude_no_fallacy",
-          "arguments": "{\"reason\":\"Les phrases « Le soleil brille. Il fait beau. » sont des énoncés simples et non ambigus ; aucun sous-type d’ambiguïté ne s’applique.\"}"
+          "id": "call_qtbck9JRrBGuJLRIt2x4vVjY",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"846\",\"confidence\":\"high\",\"justification\":\"Les deux phrases sont claires et ne reposent sur aucune ambiguïté sémantique ou syntaxique; ce n’est pas une instance d’ambiguïté.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETBCMXFlhkBdFgcqvNROrKmfK6QIV",
-        "created": 1790623266,
+        "id": "chatcmpl-ETBudShV4ev82Y7YiojEbM6SLP0F8",
+        "created": 1790626011,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1662,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 61,
+          "completion_tokens": 66,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

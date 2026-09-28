@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_pJThhSt1YNUpWIYIXTFwNeav",
+          "id": "call_3gdbwf5GqKlvi7cRTcmvaFHe",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"133\",\"confidence\":\"high\",\"justification\":\"L’affirmation présente comme « succès incontestable » une conclusion excessivement catégorique sans fournir aucun élément permettant de l’étayer.\"}"
+          "arguments": "{\"node_pk\":\"133\",\"confidence\":\"high\",\"justification\":\"L’énoncé tire une conclusion excessivement catégorique (« succès incontestable ») sans fournir d’éléments permettant de l’établir.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETBDEXPGzNpIJs9G8asuWVjWixHXy",
-        "created": 1790623320,
+        "id": "chatcmpl-ETBvVTiBPm46sl13ocE3kLwwa3dQQ",
+        "created": 1790626065,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1687,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 58,
+          "completion_tokens": 61,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

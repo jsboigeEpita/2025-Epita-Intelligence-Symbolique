@@ -1,0 +1,48 @@
+{
+  "key": "cdc788fa881bfc4adb57ca2e7f710e520b67982ae9e3061ea5f6a3a82a2ae109",
+  "value": {
+    "id": "chatcmpl-ETC8p3Lfge605QB4FEM4NCamt7ZZz",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points 1 et 2 apportent des informations distinctes : le premier porte sur la vitesse exceptionnelle du changement climatique, le second sur l’ampleur mesurée de la hausse thermique. Le point 3 est incomplet et ne permet pas d’identifier une redondance.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790626891,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 161,
+      "prompt_tokens": 299,
+      "total_tokens": 460,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 83,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

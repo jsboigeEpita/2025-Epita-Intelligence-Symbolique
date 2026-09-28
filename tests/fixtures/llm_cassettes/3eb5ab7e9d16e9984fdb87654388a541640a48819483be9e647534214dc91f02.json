@@ -1,0 +1,40 @@
+{
+  "key": "3eb5ab7e9d16e9984fdb87654388a541640a48819483be9e647534214dc91f02",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_kg4nFfIB7BkjkgvpUSPjCtHD",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"203\",\"confidence\":\"high\",\"justification\":\"La formulation « succès incontestable » emploie une expression valorisante et catégorique destinée à influencer l’auditoire, sans fournir de preuve de la réussite annoncée.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBvbWOaQE9ZDKwuEocmzVhGwzyqA",
+        "created": 1790626071,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1451,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1448,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 68,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "key": "4604e72fd5e7fe494e9acc52f9bd303b355a803b8d04c5df254bb98bf465c0b7",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_E6WQyZVcPxCBQhRoHB5qNK5j",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"49\",\"confidence\":\"0.98\",\"justification\":\"Le texte invoque l’unanimité supposée des experts comme preuve suffisante (« c’est donc vrai »), sans fournir de vérification indépendante, et disqualifie les avis non experts (« votre avis ne compte pas »). Cela correspond à la recherche d’un faux consensus scientifique pour établir une conclusion non démontrée.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBykex6B2CmuJ7B99yBCsif3qeVg",
+        "created": 1790626266,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 641,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 98,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

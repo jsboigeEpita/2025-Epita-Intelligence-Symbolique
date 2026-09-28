@@ -1,0 +1,48 @@
+{
+  "key": "748058d09a615059338a301ebc6eedc55bb8f6e624edd884de065223f6c709ba",
+  "value": {
+    "id": "chatcmpl-ETC7NYTvBfu6ErWWNMUhlU36NdhDX",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\":false,\"engagement_verdict\":\"non_sequitur\",\"reasoning\":\"La réfutation souligne les risques d’erreur judiciaire et les coûts de la peine de mort, mais ne répond pas à l’affirmation que certains criminels seraient irrécupérables et représenteraient un danger permanent.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790626801,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 262,
+      "prompt_tokens": 328,
+      "total_tokens": 590,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 185,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

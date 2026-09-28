@@ -6,25 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_9b20EMpKMEGPxI0FQSLAz2RD",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"697\"}"
-        },
-        {
-          "id": "call_iCRxusKBHkZ40mJVekhbyQvg",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"726\"}"
-        },
-        {
-          "id": "call_4inFq8IRFdD4lv0VEKROP5x0",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"758\"}"
+          "id": "call_Pamku5MLtUoRyKonHUWRU8Wt",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"696\",\"confidence\":\"high\",\"justification\":\"L’énoncé affirme simplement que la politique économique est un succès incontestable, sans fournir de prémisse ni de raisonnement permettant d’étayer cette conclusion. Il relève donc, au niveau disponible, d’une thèse reposant sur un raisonnement insuffisant ou incohérent.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETBDCBsMgThUrkZgBisDRFI7RgaoP",
-        "created": 1790623318,
+        "id": "chatcmpl-ETBvUlsH1MUu3qITJu7F27VLmLG49",
+        "created": 1790626064,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1556,
@@ -35,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 76,
+          "completion_tokens": 88,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

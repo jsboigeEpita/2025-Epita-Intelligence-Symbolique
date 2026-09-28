@@ -1,14 +1,14 @@
 {
   "key": "dd428c49c0ed3ac61e6f7382ff32e78aec47fcdb1be175f2f4de9fc1ef6b580c",
   "value": {
-    "id": "chatcmpl-ETBCyAdb9kaDhMfkyxOMBpmu40ZnL",
+    "id": "chatcmpl-ETBvFndsHt6e68Gk7lXFqWUwUEYtH",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[{\"text\":\"Le président soutient que la politique économique constitue un succès incontestable.\",\"source_quote\":\"Le president affirme que la politique economique est un succes incontestable.\"}],\"claims\":[{\"text\":\"Le président a affirmé que la politique économique est un succès incontestable.\",\"source_quote\":\"Le president affirme que la politique economique est un succes incontestable.\"}],\"summary\":\"Le texte rapporte la position du président, qui présente la politique économique comme un succès certain, en s’appuyant sur une formulation catégorique.\"}",
+          "content": "{\"arguments\":[{\"text\":\"Le président soutient que la politique économique constitue un succès incontestable.\",\"source_quote\":\"le president affirme que la politique economique est un succes incontestable\"}],\"claims\":[{\"text\":\"Le président affirme que la politique économique est un succès incontestable.\",\"source_quote\":\"Le president affirme que la politique economique est un succes incontestable.\"}],\"summary\":\"Le texte rapporte la position du président, qui présente la politique économique comme un succès incontestable. La formulation repose sur une affirmation d’autorité et un caractère catégorique.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1790623304,
+    "created": 1790626049,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 258,
+      "completion_tokens": 118,
       "prompt_tokens": 317,
-      "total_tokens": 575,
+      "total_tokens": 435,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 137,
+        "reasoning_tokens": 0,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

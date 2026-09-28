@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "[\n  {\n    \"fallacy_name\": \"Non sequitur implicite\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.62\n  },\n  {\n    \"fallacy_name\": \"Affirmation gratuite\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.58\n  },\n  {\n    \"fallacy_name\": \"Généralisation hâtive\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.34\n  },\n  {\n    \"fallacy_name\": \"Confusion entre corrélation et causalité\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.28\n  },\n  {\n    \"fallacy_name\": \"Simplification excessive de la notion de beau temps\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.55\n  },\n  {\n    \"fallacy_name\": \"Ambiguïté du terme « beau »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.78\n  },\n  {\n    \"fallacy_name\": \"Vaguité de l’assertion météorologique\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.72\n  },\n  {\n    \"fallacy_name\": \"Présupposition non justifiée d’un lien entre luminosité et météo favorable\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.49\n  },\n  {\n    \"fallacy_name\": \"Conclusion implicite non étayée\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.57\n  },\n  {\n    \"fallacy_name\": \"Appel implicite au sens commun\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.22\n  }\n]",
+      "content": "[\n  {\n    \"fallacy_name\": \"Non sequitur\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.82\n  },\n  {\n    \"fallacy_name\": \"Généralisation hâtive\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.55\n  },\n  {\n    \"fallacy_name\": \"Affirmation sans preuve\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.78\n  },\n  {\n    \"fallacy_name\": \"Confusion entre corrélation et implication\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.68\n  },\n  {\n    \"fallacy_name\": \"Ambiguïté lexicale sur « beau »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.86\n  },\n  {\n    \"fallacy_name\": \"Subjectivité non signalée\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.72\n  },\n  {\n    \"fallacy_name\": \"Présupposition implicite concernant le lieu et le moment\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.63\n  },\n  {\n    \"fallacy_name\": \"Conclusion non étayée par les prémisses\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.76\n  },\n  {\n    \"fallacy_name\": \"Réduction abusive de la météo à l’ensoleillement\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.8\n  },\n  {\n    \"fallacy_name\": \"Vaguité contextuelle\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.84\n  }\n]",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETBC6WJMoNNVXzJyqHw6lkhz69qJB",
-        "created": 1790623250,
+        "id": "chatcmpl-ETBuVdlKmiWGCWIK01j83yjZksR56",
+        "created": 1790626003,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 203,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 1141,
+          "completion_tokens": 673,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 723,
+            "reasoning_tokens": 266,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

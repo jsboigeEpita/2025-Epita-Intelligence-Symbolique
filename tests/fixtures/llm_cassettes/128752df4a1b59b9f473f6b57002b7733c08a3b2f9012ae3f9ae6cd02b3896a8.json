@@ -6,20 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_2NpJrdIpoZl3Egvt9VJizFGN",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"857\"}"
-        },
-        {
-          "id": "call_F9ya7Aw6HyYYIaZqTtweEzrk",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"858\"}"
+          "id": "call_T8CN5m9gaCDKuSmzuoq9mi26",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"856\",\"confidence\":\"high\",\"justification\":\"L’assertion « succès incontestable » est extrêmement vague et ne précise ni les critères, ni les données, ni la période permettant d’évaluer le succès de la politique économique. Elle empêche une compréhension et une vérification claires.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETBDFAjyOkMaO7Cwc2dOQPfj0Abkk",
-        "created": 1790623321,
+        "id": "chatcmpl-ETBvVpdeHQTERjIF8SgVoED0sTUiQ",
+        "created": 1790626065,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1280,
@@ -30,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 57,
+          "completion_tokens": 80,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

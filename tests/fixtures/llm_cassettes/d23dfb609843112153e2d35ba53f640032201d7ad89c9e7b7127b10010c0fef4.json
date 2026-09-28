@@ -1,0 +1,40 @@
+{
+  "key": "d23dfb609843112153e2d35ba53f640032201d7ad89c9e7b7127b10010c0fef4",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_ScwwHqXtV2uOMUYPWDOcfcwB",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"624\",\"confidence\":0.98,\"justification\":\"Le texte traite l’avis unanime des experts comme une preuve suffisante de la vérité, puis exclut entièrement l’avis des non-experts. Il réduit ainsi un groupe ou un aspect particulier (les experts) à la totalité de la justification, et transforme une partie de l’expertise pertinente en représentation exacte du vrai. Cette généralisation fallacieuse correspond au sophisme métonymique.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBznjguYaDZPPjqgBO2zd1w7kZO0",
+        "created": 1790626331,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 650,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 114,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

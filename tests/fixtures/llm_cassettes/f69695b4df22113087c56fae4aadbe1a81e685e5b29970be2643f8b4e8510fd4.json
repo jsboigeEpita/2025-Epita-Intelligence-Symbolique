@@ -1,0 +1,48 @@
+{
+  "key": "f69695b4df22113087c56fae4aadbe1a81e685e5b29970be2643f8b4e8510fd4",
+  "value": {
+    "id": "chatcmpl-ETC6TSxNjA7VXYyWYlcDpM4jpjva7",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Prémisses : ceux qui affirment que les vaccins sont dangereux ignorent des décennies de recherche clinique ; des taux de vaccination élevés protègent les personnes. Conclusion : l’argument selon lequel les entreprises pharmaceutiques dissimulent les effets secondaires des vaccins est une théorie d... Verdict : saut logique, car les prémisses ne permettent pas d’inférer cette conclusion.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790626745,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 139,
+      "prompt_tokens": 297,
+      "total_tokens": 436,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 40,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

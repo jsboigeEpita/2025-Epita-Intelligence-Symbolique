@@ -1,0 +1,40 @@
+{
+  "key": "e0d092378a4e26249f8bd4f697f7b1327e8151d5a9f69fb86beea7ddc42947ab",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_kEaFHbJ3Of2dU1n6mhWyVeSh",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"698\",\"confidence\":\"high\",\"justification\":\"L’énoncé présente le succès de la politique économique comme « incontestable » sans fournir de prémisse ni de preuve indépendante. Il affirme ainsi la conclusion comme si elle se justifiait elle-même; aucune sous-catégorie plus spécifique (cercle cartésien, question piège, analogie, etc.) n’est instanciée.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBvXz36ufgZSrRZu84RMZ0JZju5r",
+        "created": 1790626067,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1523,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1520,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 103,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

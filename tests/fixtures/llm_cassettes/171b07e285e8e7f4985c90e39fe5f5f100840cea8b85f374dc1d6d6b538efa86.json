@@ -1,0 +1,48 @@
+{
+  "key": "171b07e285e8e7f4985c90e39fe5f5f100840cea8b85f374dc1d6d6b538efa86",
+  "value": {
+    "id": "chatcmpl-ETC7OWivyjzNSJzNbA8utaFBZoNTE",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Le système judiciaire peut se tromper, ce qui implique que la peine de mort risque d’entraîner des erreurs judiciaires et des condamnations injustes.\",\"main_thesis\":\"La peine de mort est justifiée, car les progrès de l’ADN réduisent le risque d’erreur judiciaire, elle dissuade les crimes les plus graves et permet de protéger la société contre les criminels jugés irrécupérables.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790626802,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 216,
+      "prompt_tokens": 269,
+      "total_tokens": 485,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 106,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

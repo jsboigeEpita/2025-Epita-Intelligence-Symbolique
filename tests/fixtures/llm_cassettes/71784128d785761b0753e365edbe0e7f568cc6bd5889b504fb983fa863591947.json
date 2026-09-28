@@ -1,14 +1,14 @@
 {
   "key": "71784128d785761b0753e365edbe0e7f568cc6bd5889b504fb983fa863591947",
   "value": {
-    "id": "chatcmpl-ETBLhG25OSaxVWoJT1t1nGFPpbIT1",
+    "id": "chatcmpl-ETC6JlILBAvyTNdrIbi27S0SYreiK",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":1.0,\"exhibit\":\"La position adverse — les vaccins sont dangereux et les entreprises pharmaceutiques cachent leurs effets secondaires — est identifiée, et l'engagement est jugé réel.\"}",
+          "content": "{\"score\":1.0,\"exhibit\":\"Position adverse identifiée : les vaccins sont dangereux et les entreprises pharmaceutiques cachent leurs effets secondaires. Verdict : engagement réel avec cette thèse adverse, indiquant une réfutation constructive pleinement démontrée.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1790623845,
+    "created": 1790626735,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 83,
+      "completion_tokens": 114,
       "prompt_tokens": 261,
-      "total_tokens": 344,
+      "total_tokens": 375,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 29,
+        "reasoning_tokens": 51,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

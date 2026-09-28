@@ -1,0 +1,40 @@
+{
+  "key": "fbdf00ec3d45bcbb2827b3274f003be5c4956b0d4a75c86e1c8ef78ead3e56dd",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_hOZfPGLy2w6QVbSM3s6TfQej",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1389\",\"confidence\":\"high\",\"justification\":\"L’argument 2 écarte l’avis d’une personne au seul motif qu’elle n’est pas experte, au lieu de répondre à la critique ou d’en examiner les raisons. Cela correspond directement à la Réponse de courtier. L’unanimité alléguée des experts dans l’argument 1 peut aussi être une invocation d’autorité, mais le nœud présenté est bien illustré par l’argument 2.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBzh119L9QiPpWV3IN9shk2l156h",
+        "created": 1790626325,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 643,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 123,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

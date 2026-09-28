@@ -1,0 +1,40 @@
+{
+  "key": "2d5068f19ccd8caa0e642c4be886ca1ab6dc56af3955672f2baa22c77ac50d61",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_4WYEo0H5RLj8Jq0WrUd2QDpA",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"Le texte relève plutôt d’un appel à l’autorité et d’une disqualification de l’avis des non-experts, mais ne discrédite pas l’adversaire par des informations préjudiciables au sens spécifique de l’empoisonnement du puits.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBzp4XkAfsqJQNVfW0hmX4xt3dt4",
+        "created": 1790626333,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1479,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1476,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 78,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

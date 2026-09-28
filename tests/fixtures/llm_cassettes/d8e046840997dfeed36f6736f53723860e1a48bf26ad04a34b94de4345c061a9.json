@@ -1,0 +1,48 @@
+{
+  "key": "d8e046840997dfeed36f6736f53723860e1a48bf26ad04a34b94de4345c061a9",
+  "value": {
+    "id": "chatcmpl-ETBtJZNvtGLwOZucjmSbaBv6zf3rf",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. La réforme des retraites serait nécessaire parce que tous les pays européens l'ont déjà menée.\\n2. Cet argument n'est pas pertinent, car les systèmes de retraite présentent des différences structurelles.\\n3. Affirmer que le système s'effondrera dans cinq ans si aucune action n'est entreprise constitue un appel à la peur.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790625929,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 198,
+      "prompt_tokens": 234,
+      "total_tokens": 432,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 114,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

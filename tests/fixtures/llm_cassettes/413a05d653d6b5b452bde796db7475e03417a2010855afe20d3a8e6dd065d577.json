@@ -1,0 +1,48 @@
+{
+  "key": "413a05d653d6b5b452bde796db7475e03417a2010855afe20d3a8e6dd065d577",
+  "value": {
+    "id": "chatcmpl-ETBtNtkGZ4ZqpIPAWBQsPwIs5j5oX",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Les syndicats contestent l’idée que travailler plus longtemps soit une conséquence naturelle, inévitable ou « dans l’ordre des choses » ; ils y voient un sophisme naturaliste.\\n2. L’affirmation selon laquelle le système s’effondrerait dans cinq ans si aucune mesure n’était prise constitue un appel classique à la peur.\\n3. La projection ministérielle d’un déficit atteignant 2,3 % du PIB en 2030 repose sur une hypothèse de croissance jugée optimiste, de 1,8 % par an.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790625933,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 465,
+      "prompt_tokens": 275,
+      "total_tokens": 740,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 334,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

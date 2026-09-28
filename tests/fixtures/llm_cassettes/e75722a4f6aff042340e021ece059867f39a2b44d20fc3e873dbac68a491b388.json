@@ -1,14 +1,14 @@
 {
   "key": "e75722a4f6aff042340e021ece059867f39a2b44d20fc3e873dbac68a491b388",
   "value": {
-    "id": "chatcmpl-ETBF9bTxUxpde6pdFINfyDUEUVI6w",
+    "id": "chatcmpl-ETC07MzfMBbOt9OXBWyw55o38Rz9R",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Anaphore non résolvable : dans « c'est donc vrai », le pronom « c' » ne renvoie pas clairement à une proposition précise ; on ne sait pas exactement ce qui est présenté comme vrai.\"}",
+          "content": "{\"has_clarity_obstacle\":false,\"obstacles\":\"\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1790623439,
+    "created": 1790626351,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 244,
+      "completion_tokens": 80,
       "prompt_tokens": 212,
-      "total_tokens": 456,
+      "total_tokens": 292,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 180,
+        "reasoning_tokens": 57,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

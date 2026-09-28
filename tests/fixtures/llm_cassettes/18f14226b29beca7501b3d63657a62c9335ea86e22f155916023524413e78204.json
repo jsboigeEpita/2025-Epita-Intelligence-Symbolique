@@ -6,25 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_T2FeBUo6L3QokWtSKP5trRyr",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"800\"}"
-        },
-        {
-          "id": "call_jnbjT7wruDf8SXTdHWUsDiB4",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"804\"}"
-        },
-        {
-          "id": "call_hZPXRdQ3grSNvv31oiP9T9OK",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"826\"}"
+          "id": "call_piWz4Cqt2cl7WG45DLIE3Xk5",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"799\",\"confidence\":\"high\",\"justification\":\"L’énoncé affirme simplement que la politique économique est un succès « incontestable », sans définir les critères de succès ni fournir de justification. Toutefois, il ne présente pas réellement une définition biaisée ou une sous-catégorie identifiable ; la qualification la plus proche dans la branche actuelle reste générale.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETBDKmB8o5cGaiJT9JMoi8P2YeTf2",
-        "created": 1790623326,
+        "id": "chatcmpl-ETBvVnjCXSZSPQHqSpllL9RXSQREo",
+        "created": 1790626065,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1599,
@@ -35,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 76,
+          "completion_tokens": 90,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

@@ -1,0 +1,40 @@
+{
+  "key": "1b9227fbfdcfb6a87604cba5d602e3461f6a055b7b823bf165e5436f60ad452d",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_GB5kwgS4PoIPQCYpeidA4YPC",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1243\",\"confidence\":\"high\",\"justification\":\"L’assertion présente la politique économique comme un succès « incontestable », sans fournir de preuves ni admettre la possibilité de preuves contraires. Elle érige donc une croyance en vérité indiscutable, ce qui correspond au dogmatisme.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBvXy1wi8AmCEfMlZKrigCyHkwQV",
+        "created": 1790626067,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1575,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1572,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 83,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,14 +1,14 @@
 {
   "key": "7b73cb4cbe466c6e7fe44d8c102499d9ed753b8a43fe1c247256278191eb2b69",
   "value": {
-    "id": "chatcmpl-ETBDZRYVMBozPB4UJRrUeJ3l9XEQE",
+    "id": "chatcmpl-ETByHwmhSzdfRiHOfQio80biSalir",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":1.0,\"exhibit\":\"La thèse « La politique économique est un succès incontestable » est présentée sans digression identifiée ; toutes les propositions servent donc directement cette thèse.\"}",
+          "content": "{\"score\":1.0,\"exhibit\":\"La thèse « La politique économique est un succès incontestable » est présentée sans aucune digression identifiée ; toutes les propositions servent donc directement la thèse.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1790623341,
+    "created": 1790626237,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 79,
+      "completion_tokens": 83,
       "prompt_tokens": 254,
-      "total_tokens": 333,
+      "total_tokens": 337,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 27,
+        "reasoning_tokens": 30,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

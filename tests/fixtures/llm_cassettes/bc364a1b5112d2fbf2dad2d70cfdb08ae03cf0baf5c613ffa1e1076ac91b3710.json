@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_ZO5Frl2u8qtTZ621JszsdtV1",
+          "id": "call_UJhqaGsIqnUHpLnmrXaNNGcA",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"1360\",\"confidence\":\"high\",\"justification\":\"L'argument 2 écarte l'avis d'une personne en raison de son absence d'expertise plutôt que d'examiner son contenu : c'est une attaque ad hominem, plus précisément un rejet fondé sur le statut de l'interlocuteur. L'argument 1 relève séparément d'un appel fallacieux à l'autorité, mais dans la branche actuelle le match est l'ad hominem.\"}"
+          "arguments": "{\"node_pk\":\"1360\",\"confidence\":\"high\",\"justification\":\"Le second argument rejette l’avis d’une personne en raison de son absence supposée d’expertise, plutôt que d’examiner le contenu de son argument. Cela vise la personne et relève donc de l’ad hominem.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETBEpR8FVXWFxiwNZeFH7QBHhDLrq",
-        "created": 1790623419,
+        "id": "chatcmpl-ETBzc6Wt11lbklbz6f2wXpkiwaBS0",
+        "created": 1790626320,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1728,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 117,
+          "completion_tokens": 79,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

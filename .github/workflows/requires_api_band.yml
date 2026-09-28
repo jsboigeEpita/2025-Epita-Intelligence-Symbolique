@@ -422,7 +422,7 @@ jobs:
         # (measured: 12 live requests on a dummy key, 3/11 cache-routed).
         # Routed through create_llm_service, 11/11 are cache-routed; the band
         # cassettes are re-recorded with tests/agents/ in the recorder's argv
-        # (record job 36469969515, 42 passed, 680 exported, 0 refused).
+        # (record job 36475269283, 42 passed, 660 exported, 0 refused).
         run: |
           $marker = "requires_api and not llm_light"
           Write-Host "Band marker: $marker"
