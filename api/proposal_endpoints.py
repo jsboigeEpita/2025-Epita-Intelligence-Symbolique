@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 
-from .auth import require_api_token
+from .auth import require_billed_request
 
 from .proposal_models import (
     CapabilitiesResponse,
@@ -112,7 +112,7 @@ async def vote_on_proposal(proposal_id: str, vote: VoteCreate):
     "/deliberate",
     response_model=DeliberationStatusResponse,
     status_code=202,
-    dependencies=[Depends(require_api_token)],
+    dependencies=[Depends(require_billed_request)],
 )
 async def start_deliberation(
     request: DeliberationRequest, background_tasks: BackgroundTasks
@@ -199,7 +199,7 @@ async def list_capabilities():
 @proposal_router.post(
     "/workflow/custom",
     response_model=WorkflowResult,
-    dependencies=[Depends(require_api_token)],
+    dependencies=[Depends(require_billed_request)],
 )
 async def run_custom_workflow(request: CustomWorkflowRequest):
     """Run a custom analysis workflow on arbitrary text.

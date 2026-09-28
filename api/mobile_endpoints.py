@@ -26,7 +26,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from .auth import require_api_token
+from .auth import require_billed_request
 from .errors import ServiceUnavailableError, UnanalyzableInputError, UpstreamError
 from .fallacy_detection import detect_fallacies
 
@@ -109,7 +109,7 @@ EXTRACTION_UNAVAILABLE = "failed:no-openai-client"
 @mobile_router.post(
     "/analyze",
     response_model=AnalyzeResponse,
-    dependencies=[Depends(require_api_token)],
+    dependencies=[Depends(require_billed_request)],
 )
 async def mobile_analyze(request: TextRequest):
     """Analyze argumentative text — returns structured arguments.
@@ -182,7 +182,7 @@ async def mobile_analyze(request: TextRequest):
 @mobile_router.post(
     "/fallacies",
     response_model=FallacyResponse,
-    dependencies=[Depends(require_api_token)],
+    dependencies=[Depends(require_billed_request)],
 )
 async def mobile_fallacies(request: TextRequest):
     """Detect logical fallacies in text.
@@ -302,7 +302,7 @@ CHAT_SYSTEM_PROMPT = (
 
 
 @mobile_router.post(
-    "/chat", response_model=ChatResponse, dependencies=[Depends(require_api_token)]
+    "/chat", response_model=ChatResponse, dependencies=[Depends(require_billed_request)]
 )
 async def mobile_chat(request: ChatRequest):
     """Chat with AI assistant specialized in argument analysis.

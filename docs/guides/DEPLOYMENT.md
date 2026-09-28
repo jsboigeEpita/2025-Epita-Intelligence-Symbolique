@@ -90,6 +90,7 @@ uvicorn api.main:app --reload --port 8000
 | `FRONTEND_URL` | str | `http://127.0.0.1:3001` | `api/factory.py` — CORS |
 | `SHIELD_ENDPOINT_TOKEN` | str | None | `api/auth.py` — shared Shield and model-backed HTTP token, checked per request |
 | `SHIELD_ALLOW_ANONYMOUS` | bool | off | Development-only explicit opt-in; never enable on a public interface |
+| `BILLED_REQUEST_BUDGET` | positive int | `1000` | `api/auth.py` — maximum accepted cost-bearing requests per backend process |
 
 ### Self-hosted LLM (optional)
 
@@ -118,6 +119,7 @@ uvicorn api.main:app --reload --port 8000
 - Status: `GET /api/status` → `operational` or `degraded`
 - Version: `2.0.0`
 - Model-backed POST routes and Shield return **503** without `SHIELD_ENDPOINT_TOKEN` or an explicit development-only `SHIELD_ALLOW_ANONYMOUS=1`; a missing/wrong `X-Shield-Token` returns **401** when configured. This deliberately changes bare local `uvicorn api.main:app` behavior. `docker-compose.yml` passes the token to the backend, which binds `0.0.0.0`; restrict access to that port and set a token before exposing it.
+- Every authenticated cost-bearing POST reserves one request against `BILLED_REQUEST_BUDGET` (default 1000 per process). Exhaustion returns **429** before scheduling or calling a service; invalid or nonpositive configuration returns **503**. The count resets on process restart and is independent for each worker; it bounds requests, not provider tokens or spending, so set it for the deployment's expected cost per request. Local-only routes do not consume it.
 
 ### Starlette web UI (frontend proxy)
 

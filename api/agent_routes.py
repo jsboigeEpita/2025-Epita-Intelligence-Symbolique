@@ -20,7 +20,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from .auth import require_api_token
+from .auth import require_billed_request
 from .errors import UnanalyzableInputError, UpstreamError
 
 logger = logging.getLogger(__name__)
@@ -109,7 +109,7 @@ class FullAnalysisResponse(BaseModel):
 agent_router = APIRouter(
     prefix="/api/v1/agents",
     tags=["Pipeline Agents"],
-    dependencies=[Depends(require_api_token)],
+    dependencies=[Depends(require_billed_request)],
 )
 
 
