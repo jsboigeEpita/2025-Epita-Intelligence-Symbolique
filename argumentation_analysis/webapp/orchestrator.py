@@ -306,7 +306,7 @@ class MinimalBackendManager:
             startup_event = asyncio.Event()
 
             # Lancer immédiatement les tâches de logging en arrière-plan
-            self.log_tasks = [
+            self._log_tasks = [
                 asyncio.create_task(
                     self._log_stream_continuously(
                         self.process.stdout, "SERVER STDOUT", startup_event
@@ -411,17 +411,16 @@ class MinimalBackendManager:
         return False
 
     async def stop(self):
+        for task in self._log_tasks:
+            if not task.done():
+                task.cancel()
+        await asyncio.gather(*self._log_tasks, return_exceptions=True)
+        self._log_tasks = []
+
         if self.process and self.process.returncode is None:
             self.logger.info(
                 f"[BACKEND] Arrêt du processus backend (PID: {self.process.pid})..."
             )
-
-            # Annuler les tâches de logging
-            for task in self._log_tasks:
-                if not task.done():
-                    task.cancel()
-            await asyncio.gather(*self._log_tasks, return_exceptions=True)
-            self._log_tasks = []
 
             try:
                 # Terminer le processus principal
