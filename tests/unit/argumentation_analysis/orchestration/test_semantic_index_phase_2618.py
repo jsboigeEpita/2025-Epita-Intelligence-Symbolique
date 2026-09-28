@@ -274,7 +274,9 @@ def test_fallacy_type_filter_excludes_untagged_arguments():
     }, f"le filtre fallacy_type laisse passer des arguments non taggues: {returned}"
 
 
-async def test_phase_without_arguments_still_searches():
+async def test_phase_without_arguments_reports_no_input():
+    """#2763: no upstream arguments is an explicit skipped status, not a
+    successful empty run — nothing is uploaded, nothing is searched."""
     transport = _FakeKMTransport()
     with patch(
         "argumentation_analysis.services.semantic_index_service.SemanticIndexService._get_requests",
@@ -282,13 +284,9 @@ async def test_phase_without_arguments_still_searches():
     ):
         result = await ic._invoke_semantic_index("requete synthetique", {})
 
+    assert result["status"] == "skipped: no_input_arguments"
     assert _first(transport, "POST", "/upload") is None
-    assert _first(transport, "POST", "/search") is not None
-    assert result["status"] == "ran"
-    assert result["indexed_count"] == 0
-    assert result["arguments_seen"] == 0
-    assert result["indexing"]["total"] == 0
-    assert result["indexing"]["timed_out"] is False
+    assert _first(transport, "POST", "/search") is None
 
 
 async def test_indexing_wait_is_bounded_and_named(monkeypatch):

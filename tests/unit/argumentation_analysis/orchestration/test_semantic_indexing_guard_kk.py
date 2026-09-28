@@ -44,10 +44,18 @@ class TestSemanticIndexGuard:
         hit.tags = {"tags": ["chunk_type:argument"]}
         mock_service.search_arguments.return_value = [hit]
 
+        # #2763: the no-input branch returns ``skipped: no_input_arguments``
+        # before reaching the service — this guard's branch needs arguments.
+        context = {
+            "phase_extract_output": {
+                "arguments": [{"text": "argument synthetique", "source_quote": "q1"}]
+            }
+        }
+
         with patch(_SERVICE_PATH, return_value=mock_service), patch(
             "asyncio.to_thread", side_effect=lambda fn, *a, **kw: fn(*a, **kw)
         ):
-            result = await mod._invoke_semantic_index("some text", {})
+            result = await mod._invoke_semantic_index("some text", context)
 
         assert result["status"] == "ran"
         assert result["indexed_count"] == 1
