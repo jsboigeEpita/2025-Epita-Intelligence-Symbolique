@@ -4,10 +4,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import FastAPI
-from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
 
-from api.auth import require_api_token
 from api.agent_routes import agent_router
 from api.endpoints import framework_router, informal_router, router
 from api.frontend_endpoints import frontend_router
@@ -41,27 +39,52 @@ def _app() -> FastAPI:
     return app
 
 
-def test_all_post_routes_are_classified_and_cost_routes_are_guarded() -> None:
-    # Build from the actual mounted routers: another test may replace api.main.app.
+def _assert_post_cost_policy(app: FastAPI) -> None:
+    # OpenAPI includes mounted routes even on FastAPI versions where app.routes
+    # omits include_router additions (#1853).
     posts = [
-        route
-        for route in _app().routes
-        if isinstance(route, APIRoute)
-        and "POST" in route.methods
-        and not route.path.startswith("/api/v1/jtms/")
+        (path, methods["post"])
+        for path, methods in app.openapi()["paths"].items()
+        if "post" in methods and not path.startswith("/api/v1/jtms/")
     ]
     assert len(posts) >= 20  # 19 audited POSTs plus the Shield route
-    for route in posts:
-        local = (route.openapi_extra or {}).get("x-cost-class") in {
-            "local",
-            "local-model",
-        }
-        guarded = any(
-            dep.call is require_api_token for dep in route.dependant.dependencies
+    for path, operation in posts:
+        local = operation.get("x-cost-class") in {"local", "local-model"}
+        token_header = any(
+            parameter.get("name") == "X-Shield-Token"
+            and parameter.get("in") == "header"
+            for parameter in operation.get("parameters", [])
         )
         assert (
-            local != guarded
-        ), f"Unclassified or contradictory POST route: {route.path}"
+            local != token_header
+        ), f"Unclassified or contradictory POST route: {path}"
+
+
+def test_all_post_routes_are_classified_and_cost_routes_are_guarded(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    app = _app()
+    _assert_post_cost_policy(app)
+    monkeypatch.setenv("SHIELD_ENDPOINT_TOKEN", "synthetic-token")
+    client = TestClient(app, raise_server_exceptions=False)
+    for path, methods in app.openapi()["paths"].items():
+        if "post" not in methods or path.startswith("/api/v1/jtms/"):
+            continue
+        if methods["post"].get("x-cost-class") in {"local", "local-model"}:
+            continue
+        response = client.post(path, json={})
+        assert response.status_code == 401, f"Unguarded POST route: {path}"
+
+
+def test_new_post_without_guard_fails_census() -> None:
+    app = _app()
+
+    @app.post("/api/new-billed-route")
+    def new_billed_route() -> dict[str, str]:
+        return {"status": "synthetic"}
+
+    with pytest.raises(AssertionError, match="new-billed-route"):
+        _assert_post_cost_policy(app)
 
 
 def test_shared_token_policy_and_hot_rotation(monkeypatch: pytest.MonkeyPatch) -> None:
