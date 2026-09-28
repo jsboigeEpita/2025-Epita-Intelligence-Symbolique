@@ -1447,6 +1447,7 @@ async def _run_conversational_analysis_inner(
     # run stopped by the clock still ran a whole extra 4-agent phase.
     if (
         not budget_exhausted
+        and turns_used < max_total_turns
         and hasattr(state, "get_enrichment_summary")
         and _budget_allows("Re-Analysis")
     ):
@@ -1507,10 +1508,8 @@ async def _run_conversational_analysis_inner(
                     )
 
                     # CONV-C #1334 §6: clamp Re-Analysis to remaining budget.
-                    remaining = max(0, max_total_turns - turns_used)
-                    reanalysis_effective = max(
-                        1, min(reanalysis_cfg["max_turns"], remaining)
-                    )
+                    remaining = max_total_turns - turns_used
+                    reanalysis_effective = min(reanalysis_cfg["max_turns"], remaining)
 
                     try:
                         trace.begin_phase(
