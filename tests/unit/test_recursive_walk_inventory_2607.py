@@ -59,10 +59,6 @@ ROOTS_BY_WALK = {
     "unit/docs/test_report_anchors_2258.py": ["DOCS (docs/)"],
     "unit/mocks/test_no_sysmodules_hijack_1891.py": ["MOCKS_DIR (tests/mocks/)"],
     "unit/scripts/test_extract_promising_versions_3827.py": ["out (tmp_path output)"],
-    "unit/test_fixture_modules_resolve_2416.py": [
-        "FIXTURES (tests/fixtures/)",
-        "ROOT/docs (docs/)",
-    ],
     "unit/test_probe_walk_race_2607.py": ["tmp_path (stable synthetic tree)"],
 }
 
@@ -141,6 +137,8 @@ def test_an_unlisted_tests_root_walk_turns_the_guard_red(tmp_path):
 
 def test_a_removed_walk_leaves_a_stale_root():
     observed = _recursive_walks(TESTS_ROOT)
-    observed.pop("unit/test_fixture_modules_resolve_2416.py")
+    # #2821 removed 2416's rglob calls (index-backed population), so this
+    # construction needs a walk that still exists.
+    observed.pop("unit/docs/test_report_anchors_2258.py")
     with pytest.raises(AssertionError, match="stale roots"):
         _assert_named_roots(observed)

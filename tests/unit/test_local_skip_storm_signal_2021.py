@@ -37,7 +37,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from tests.support.tree_walk import iter_files  # noqa: E402
+from tests.support.tree_walk import iter_tracked_files  # noqa: E402
 
 from tests.jvm_skip_storm_signal import (  # noqa: E402
     JVM_REASON_RE,
@@ -91,7 +91,7 @@ def test_signal_and_ci_guard_agree_on_the_real_population():
     ci_pattern = re.compile(_guard_pattern())
     disagreements = []
     jvm_signed = 0
-    for path in iter_files(ROOT / "tests"):
+    for path in iter_tracked_files(ROOT / "tests"):
         for message in _skip_literals(path):
             local = bool(JVM_REASON_RE.search(message))
             ci = bool(ci_pattern.search(_as_junit_skip(message)))

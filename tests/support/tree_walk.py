@@ -36,7 +36,9 @@ Two rules, and the second is the one that keeps every caller's coverage:
 """
 
 import configparser
+import subprocess
 from pathlib import Path
+from typing import Iterator, Union
 
 # The directory prefix ``tests/nested_pytest.py`` gives its probes. They are
 # the only directories under ``tests/`` created and deleted while the suite
@@ -76,6 +78,60 @@ def iter_files(root, pattern="*.py", skip_prefixes=(PROBE_PREFIX,)):
                 stack.append(entry)
             elif entry.match(pattern):
                 yield entry
+
+
+def iter_tracked_files(
+    root: Union[str, Path],
+    pattern: str = "*.py",
+    skip_prefixes: "tuple[str, ...]" = (PROBE_PREFIX,),
+) -> Iterator[Path]:
+    """The TRACKED files under ``root`` matching ``pattern``, as ``Path`` objects (#2821).
+
+    The population is read from the git index (``git ls-files``), never from
+    the filesystem. A filesystem walk also reads gitignored, seat-local files,
+    so a census built that way counts what CI never runs: the #2720 config
+    census collected 31 cases on a seat holding ``.playwright-mcp/`` page
+    snapshots against 24 in a clean worktree of the same commit, and the
+    other direction is worse — a config naming a class that exists only in a
+    seat-local untracked file passed the census on that seat and failed on
+    CI. The index cannot list what the seat added, so an index-backed
+    population is the same on every seat and on CI.
+
+    ``root`` may be a ``str`` or a ``Path`` and must lie inside a git
+    repository. ``pattern`` is matched against the path from the right, as
+    ``PurePath.match`` reads it. A path with any part starting with one of
+    ``skip_prefixes`` is dropped — tracked vendored trees (``libs``,
+    ``portable_jdk``) are in the index and still have to be named.
+
+    Fails LOUD when git is unavailable or ``root`` is not inside a
+    repository: it never silently falls back to walking the filesystem,
+    because that fallback is the seat-local population the index exists to
+    exclude.
+    """
+    root_path = Path(root).resolve()
+    try:
+        listed = subprocess.run(
+            ["git", "-C", str(root_path), "ls-files"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise RuntimeError(
+            f"cannot read the git index under {root_path} — git ls-files failed "
+            f"({exc}); an index-backed census refuses to walk the filesystem in "
+            "its place (#2821)"
+        ) from exc
+    for rel in listed.stdout.splitlines():
+        path = root_path / rel
+        if not path.match(pattern):
+            continue
+        if any(
+            part.startswith(tuple(skip_prefixes))
+            for part in path.relative_to(root_path).parts
+        ):
+            continue
+        yield path
 
 
 def prefix_is_skipped_by_collection(pytest_ini, prefix=PROBE_PREFIX):

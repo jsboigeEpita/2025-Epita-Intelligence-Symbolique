@@ -9,12 +9,15 @@ issue asks for: every ``class:``/``class_name:`` value in every tracked
 YAML config must be a class defined somewhere in the tracked Python
 sources. No class list lives here — both sides are derived from the tree.
 
-The tree is walked through ``tests.support.tree_walk.iter_files`` — the
-#2607 common walk. It never follows directory symlinks, so the recursive
-``node_modules`` link npm workspaces leave (present in CI, absent locally —
-``WinError 1921``, run 36298081443) cannot kill collection, and the
-vendored prefixes below keep the walk out of ``node_modules`` and the other
-non-source trees.
+The tree is read through ``tests.support.tree_walk.iter_tracked_files`` —
+the population comes from the git index, not the filesystem (#2821). A
+filesystem walk also read gitignored seat-local files: this census collected
+31 cases on a seat holding ``.playwright-mcp/`` page snapshots against 24 in
+a clean worktree of the same commit, and a config naming a class that exists
+only in a seat-local untracked file passed here while failing on CI. The
+index lists neither, and never enters ``.git`` either. The vendored prefixes
+below stay: ``libs`` and ``portable_jdk`` are tracked, so the index still
+needs them named.
 
 A config that returns naming a dead class reddens this witness, whatever
 the file.
@@ -25,7 +28,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.support.tree_walk import iter_files
+from tests.support.tree_walk import iter_tracked_files
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 _CLASS_KEY = re.compile(
@@ -43,27 +46,15 @@ _SKIPPED_PREFIXES = (
 )
 
 
-def _not_vcs_internal(path: Path) -> bool:
-    # ``.git`` cannot be a skip_prefix: startswith(".git") also matches
-    # ``.github``, which silently dropped six workflow YAMLs from this
-    # witness's coverage (measured 18 vs 24 files).
-    return ".git" not in path.parts
+def _yaml_configs(root: Path = _REPO_ROOT) -> list:
+    return list(
+        iter_tracked_files(root, "*.yaml", skip_prefixes=_SKIPPED_PREFIXES)
+    ) + list(iter_tracked_files(root, "*.yml", skip_prefixes=_SKIPPED_PREFIXES))
 
 
-def _yaml_configs() -> list:
-    return [
-        p
-        for p in list(iter_files(_REPO_ROOT, "*.yaml", skip_prefixes=_SKIPPED_PREFIXES))
-        + list(iter_files(_REPO_ROOT, "*.yml", skip_prefixes=_SKIPPED_PREFIXES))
-        if _not_vcs_internal(p)
-    ]
-
-
-def _defined_classes() -> set:
+def _defined_classes(root: Path = _REPO_ROOT) -> set:
     names = set()
-    for p in iter_files(_REPO_ROOT, "*.py", skip_prefixes=_SKIPPED_PREFIXES):
-        if not _not_vcs_internal(p):
-            continue
+    for p in iter_tracked_files(root, "*.py", skip_prefixes=_SKIPPED_PREFIXES):
         try:
             names.update(
                 _DEFINED_CLASS.findall(p.read_text(encoding="utf-8", errors="replace"))

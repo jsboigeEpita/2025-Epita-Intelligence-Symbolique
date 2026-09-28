@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.support.tree_walk import iter_files
+from tests.support.tree_walk import iter_tracked_files
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "tests" / "fixtures"
@@ -29,17 +29,22 @@ DOC_IMPORT = re.compile(
 
 def _fixture_files():
     return sorted(
-        p
-        for p in FIXTURES.rglob("*.py")
-        if p.stem != "__init__" and "__pycache__" not in p.parts
+        p for p in iter_tracked_files(FIXTURES, "*.py") if p.stem != "__init__"
     )
 
 
 def _doc_files():
+    # The third call keeps its original root-only scope: ``Path.match`` is
+    # right-anchored, so without the depth filter it would re-list every
+    # tracked ``.md`` of the two trees above.
     docs = (
-        list((ROOT / "docs").rglob("*.md"))
-        + list(iter_files(ROOT / "tests", "*.md"))
-        + list(ROOT.glob("*.md"))
+        list(iter_tracked_files(ROOT / "docs", "*.md"))
+        + list(iter_tracked_files(ROOT / "tests", "*.md"))
+        + [
+            p
+            for p in iter_tracked_files(ROOT, "*.md")
+            if len(p.relative_to(ROOT).parts) == 1
+        ]
     )
     return sorted(
         p
