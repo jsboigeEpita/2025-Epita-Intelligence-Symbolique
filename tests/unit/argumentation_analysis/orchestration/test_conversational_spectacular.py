@@ -60,6 +60,61 @@ def mock_conversational_deps():
         }
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("turn_cap", "expected_reanalysis_turns"), [(22, 0), (23, 1)])
+async def test_reanalysis_respects_remaining_turn_budget(
+    mock_conversational_deps, turn_cap, expected_reanalysis_turns
+):
+    from argumentation_analysis.orchestration.conversational_orchestrator import (
+        run_conversational_analysis,
+    )
+
+    phase_calls = []
+
+    async def phase_at_limit(*args, **kwargs):
+        phase_calls.append((kwargs["phase_name"], kwargs["max_turns"]))
+        return [
+            {
+                "phase": kwargs["phase_name"],
+                "turn": kwargs["max_turns"],
+                "agent": "ProjectManager",
+                "content": "synthetic response",
+            }
+        ]
+
+    with patch.object(
+        RhetoricalAnalysisState,
+        "get_enrichment_summary",
+        lambda self: {"total_arguments": 1, "with_fallacy_analysis": 0},
+        create=True,
+    ), patch(
+        "argumentation_analysis.orchestration.conversational_orchestrator._run_phase",
+        side_effect=phase_at_limit,
+    ), patch(
+        "argumentation_analysis.orchestration.conversational_orchestrator._resolve_phase_conflicts",
+        new_callable=AsyncMock,
+        return_value=[],
+    ), patch(
+        "argumentation_analysis.orchestration.conversational_orchestrator._retract_fallacious_beliefs",
+        return_value=None,
+    ), patch(
+        "argumentation_analysis.orchestration.conversational_orchestrator._should_add_reanalysis_phase",
+        return_value=True,
+    ):
+        result = await run_conversational_analysis(
+            "synthetic text", spectacular=False, max_total_turns=turn_cap
+        )
+
+    reanalysis = [turns for name, turns in phase_calls if name == "Re-Analysis"]
+    assert reanalysis == (
+        [expected_reanalysis_turns] if expected_reanalysis_turns else []
+    )
+    assert result["budget"]["turns_used"] == 22 + expected_reanalysis_turns
+    assert result["budget"]["turns_used"] <= turn_cap
+    assert result["status"] == "COMPLETED"
+    assert result["budget"]["exhausted"] is False
+
+
 class TestSpectacularStateUpgrade:
     """Verify UnifiedAnalysisState is used in spectacular mode."""
 
