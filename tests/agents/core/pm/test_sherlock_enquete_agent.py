@@ -153,6 +153,7 @@ class TestSherlockEnqueteAgentAuthentic:
             "gardien" in str(name).lower() for name in beliefs.keys()
         ), f"Belief not found in {beliefs}"
 
+    @pytest.mark.requires_api  # real LLM POST, measured #1867 (d)
     async def test_jtms_formulate_hypothesis(self, sherlock_agent):
         """Test formulate_hypothesis (replaces old add_new_hypothesis test)."""
         agent = sherlock_agent

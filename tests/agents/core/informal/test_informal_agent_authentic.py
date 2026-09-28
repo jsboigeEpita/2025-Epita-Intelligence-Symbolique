@@ -97,6 +97,7 @@ class TestInformalAnalysisAgentAuthentic:
     @pytest.mark.llm_integration
     @pytest.mark.phase5
     @pytest.mark.informal
+    @pytest.mark.requires_api  # real LLM POST, measured #1867 (d)
     async def test_analyze_fallacies_authentic(
         self, simple_authentic_informal_agent, sample_authentic_test_text
     ):
@@ -166,6 +167,7 @@ class TestInformalAnalysisAgentAuthentic:
     @pytest.mark.llm_integration
     @pytest.mark.phase5
     @pytest.mark.informal
+    @pytest.mark.requires_api  # real LLM POST, measured #1867 (d)
     async def test_identify_arguments_authentic(
         self, simple_authentic_informal_agent, sample_authentic_test_text
     ):
@@ -234,6 +236,7 @@ class TestInformalAnalysisAgentAuthentic:
     @pytest.mark.llm_integration
     @pytest.mark.phase5
     @pytest.mark.informal
+    @pytest.mark.requires_api  # real LLM POST, measured #1867 (d)
     async def test_analyze_argument_authentic(self, simple_authentic_informal_agent):
         """
         Test authentique d'analyse d'argument, refactorisé pour utiliser une invocation directe.
@@ -297,6 +300,7 @@ class TestInformalAnalysisAgentAuthentic:
     @pytest.mark.llm_integration
     @pytest.mark.phase5
     @pytest.mark.informal
+    @pytest.mark.requires_api  # real LLM POST, measured #1867 (d)
     async def test_analyze_text_authentic(
         self, authentic_informal_agent, sample_authentic_test_text
     ):
@@ -497,6 +501,7 @@ class TestInformalAnalysisAgentAuthentic:
     @pytest.mark.llm_integration
     @pytest.mark.phase5
     @pytest.mark.informal
+    @pytest.mark.requires_api  # real LLM POST, measured #1867 (d)
     async def test_complete_informal_analysis_workflow_authentic(
         self, authentic_informal_agent, sample_authentic_test_text
     ):
