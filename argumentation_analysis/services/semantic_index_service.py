@@ -22,6 +22,11 @@ import unicodedata
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from argumentation_analysis.services.argument_ids import (
+    read_fallacy_target,
+    resolve_target_argument_index,
+)
+
 logger = logging.getLogger(__name__)
 
 # ── Configuration ────────────────────────────────────────────────────────
@@ -29,12 +34,6 @@ logger = logging.getLogger(__name__)
 DEFAULT_KM_URL = "http://127.0.0.1:9001"
 ENV_KM_URL = "KERNEL_MEMORY_URL"
 ENV_KM_API_KEY = "KERNEL_MEMORY_API_KEY"
-
-# Twin of ``invoke_callables._ARG_ID_RE`` (#2744): the service layer cannot
-# import the orchestration layer's resolver, so the identifier convention
-# ``arg_N`` (1-based, minted by ``shared_state._generate_id`` and the extract
-# enumeration) is re-stated here.
-_ARG_ID_RE = re.compile(r"^\s*arg_(\d+)\s*$")
 
 
 # ── Data classes ─────────────────────────────────────────────────────────
@@ -349,36 +348,20 @@ class SemanticIndexService:
         doc_ids = []
 
         # Build fallacy lookup: arg_index → fallacy type.
-        # #2744 — read the keys the producers actually write, in the #1633
-        # order: the hierarchical descent names its target ``target_argument``
-        # (``invoke_callables._enrich_fallacies``), state entries carry
-        # ``target_argument_id``, legacy payloads ``target_arg_id``. Explicit
-        # loop, not a chained ``get``: producers emit the key with a ``None``
-        # value when a detection has no target, and ``get(k, default)`` would
-        # return that ``None`` instead of falling through.
+        # #2744 — resolve targets through the shared resolver
+        # (``services.argument_ids``, #1629/#1633): the key loop, the ``arg_N``
+        # convention and the 1-based bounds check have one owner, used by this
+        # service and ``invoke_callables`` alike. A target that is absent,
+        # malformed or out of range resolves to nothing — the caller does not
+        # guess (#1019).
         fallacy_by_arg: Dict[int, str] = {}
         for f in fallacies:
             if not isinstance(f, dict):
                 continue
-            target = None
-            for key in ("target_argument", "target_argument_id", "target_arg_id"):
-                if f.get(key):
-                    target = f[key]
-                    break
             ftype = f.get("type", f.get("fallacy_type", "unknown"))
-            # ``arg_N`` ids are 1-based over the same insertion-ordered
-            # enumeration (``shared_state._generate_id``, the extract list):
-            # the inverse is arithmetic, not matching (#1629). Out-of-range or
-            # malformed ⇒ no association — the caller does not guess (#1019).
-            if isinstance(target, int):
-                if 0 <= target < len(arguments):
-                    fallacy_by_arg[target] = str(ftype)
-            elif isinstance(target, str):
-                match = _ARG_ID_RE.match(target)
-                if match:
-                    idx = int(match.group(1)) - 1
-                    if 0 <= idx < len(arguments):
-                        fallacy_by_arg[idx] = str(ftype)
+            idx = resolve_target_argument_index(read_fallacy_target(f), len(arguments))
+            if idx is not None:
+                fallacy_by_arg[idx] = str(ftype)
 
         for i, arg in enumerate(arguments):
             arg_text = arg.get("text", str(arg)) if isinstance(arg, dict) else str(arg)

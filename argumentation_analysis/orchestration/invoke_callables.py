@@ -41,6 +41,12 @@ from argumentation_analysis.core.llm_service import (
     REASONING_MODEL_PREFIXES as _REASONING_MODEL_PREFIXES,
 )
 from argumentation_analysis.services.llm_cache import LLMCacheMiss
+from argumentation_analysis.services.argument_ids import (
+    ARG_ID_RE as _ARG_ID_RE,
+    FALLACY_TARGET_KEYS as _FALLACY_TARGET_KEYS,
+    read_fallacy_target as _read_fallacy_target,
+    resolve_target_argument_index as _resolve_target_argument_index,
+)
 from argumentation_analysis.core.prover9_runner import SolverInputDefect
 
 logger = logging.getLogger("UnifiedPipeline")
@@ -3602,49 +3608,10 @@ def _extract_arguments_from_context(
     return [input_text[:200] if len(input_text) > 10 else "argument_placeholder"]
 
 
-# #1629: fallacy records name their target by *identifier* — ``arg_1``,
-# ``arg_2``, … — minted by ``shared_state._generate_id`` as
-# ``f"{prefix}_{index + 1}"`` over an insertion-ordered dict. Resolution is that
-# generation's inverse.
-_ARG_ID_RE = re.compile(r"^\s*arg_(\d+)\s*$")
-
-
-# #1633 — the three key conventions a fallacy record may name its target by.
-# Ordered most-specific first. An explicit loop rather than a chained ``get``
-# default: producers emit the key with a ``None`` value when a detection has no
-# target, and ``get(k, default)`` returns that ``None`` instead of the default.
-_FALLACY_TARGET_KEYS = ("target_argument", "target_argument_id", "target_arg_id")
-
-
-def _read_fallacy_target(fallacy: Dict[str, Any]) -> Any:
-    """First non-empty target reference a fallacy record carries, or ``None``."""
-    for key in _FALLACY_TARGET_KEYS:
-        value = fallacy.get(key)
-        if value:
-            return value
-    return None
-
-
-def _resolve_target_argument_index(raw_target: Any, count: int) -> Optional[int]:
-    """Resolve an upstream ``arg_N`` reference to a 0-based index below ``count``.
-
-    ``arg_1``, ``arg_2``, … are minted by ``shared_state._generate_id`` as
-    ``f"{prefix}_{index + 1}"`` over an insertion-ordered dict, and by
-    ``_extract_arguments_for_parallel`` as ``f"arg_{i+1}"`` over the extract
-    phase's argument list — the same 1-based enumeration in both cases, so the
-    inverse is arithmetic, not matching.
-
-    Returns ``None`` when the reference is absent, malformed (e.g. the
-    ``paragraph_N`` ids the heuristic fallback mints), or out of range. The
-    caller must NOT guess in that case (#1019).
-    """
-    if not raw_target:
-        return None
-    match = _ARG_ID_RE.match(str(raw_target))
-    if not match:
-        return None
-    index = int(match.group(1)) - 1  # IDs are 1-based
-    return index if 0 <= index < count else None
+# #1629/#1633/#2744: the ``arg_N`` target conventions and their resolver now
+# live in ``argumentation_analysis.services.argument_ids`` (single owner,
+# shared with ``semantic_index_service``). The historical private names are
+# bound to that module's exports at import time — see the imports above.
 
 
 def _resolve_target_argument_id(raw_target: Any, arguments: List[str]) -> Optional[str]:
