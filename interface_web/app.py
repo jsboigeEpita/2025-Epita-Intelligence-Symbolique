@@ -50,6 +50,8 @@ from starlette.middleware import Middleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
+from api.factory import allowed_frontend_origins
+
 # --- Configuration du Logging ---
 logging.basicConfig(
     level=logging.INFO,
@@ -264,7 +266,10 @@ routes = [
 # Configuration de CORS pour autoriser les requetes cross-origin
 middleware = [
     Middleware(
-        CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
+        CORSMiddleware,
+        allow_origins=allowed_frontend_origins(),
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 ]
 

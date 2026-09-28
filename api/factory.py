@@ -6,6 +6,17 @@ from typing import List, Callable, Optional
 from .errors import install_error_handlers
 
 
+def allowed_frontend_origins() -> List[str]:
+    return [
+        os.environ.get("FRONTEND_URL", "http://127.0.0.1:3001"),
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "http://localhost:3000",
+        "http://localhost:8081",  # Expo dev server
+        "http://127.0.0.1:8081",
+    ]
+
+
 def create_app(
     title: str,
     description: str,
@@ -40,18 +51,9 @@ def create_app(
     )
 
     # Configuration CORS standardisée, basée sur la version la plus robuste disponible
-    origins = [
-        os.environ.get("FRONTEND_URL", "http://127.0.0.1:3001"),
-        "http://localhost:3001",
-        "http://127.0.0.1:3000",
-        "http://localhost:3000",
-        "http://localhost:8081",  # Expo dev server
-        "http://127.0.0.1:8081",
-    ]
-
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=origins,
+        allow_origins=allowed_frontend_origins(),
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
