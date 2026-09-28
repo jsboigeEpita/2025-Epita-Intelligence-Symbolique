@@ -82,3 +82,5 @@ if old_script.exists():
         print(f"\n[CLEANUP] Ancien script '{old_script.name}' supprimé.")
     except OSError as e:
         print(f"\n[CLEANUP] Erreur en supprimant l'ancien script : {e}")
+
+sys.exit(process.returncode)
