@@ -44,8 +44,11 @@ def fresh_store():
 
 
 @pytest.fixture
-def client():
-    return TestClient(app, raise_server_exceptions=False)
+def client(monkeypatch):
+    monkeypatch.setenv("SHIELD_ENDPOINT_TOKEN", "synthetic-integration-token")
+    client = TestClient(app, raise_server_exceptions=False)
+    client.headers["X-Shield-Token"] = "synthetic-integration-token"
+    return client
 
 
 @pytest.mark.requires_api

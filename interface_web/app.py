@@ -134,6 +134,11 @@ async def api_proxy(request: Request):
     # Determiner les headers a transferer (exclure host)
     headers = dict(request.headers)
     headers.pop("host", None)
+    # Never forward a browser-supplied credential; the proxy owns this header.
+    headers.pop("x-shield-token", None)
+    token = os.environ.get("SHIELD_ENDPOINT_TOKEN")
+    if token:
+        headers["x-shield-token"] = token
 
     # Lire le body
     body = await request.body()

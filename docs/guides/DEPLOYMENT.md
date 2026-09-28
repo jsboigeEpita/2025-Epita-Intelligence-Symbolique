@@ -18,6 +18,7 @@ cp .env.example .env
 # Edit .env — at minimum set:
 #   OPENAI_API_KEY=sk-...
 #   TEXT_CONFIG_PASSPHRASE=<provided separately>
+#   SHIELD_ENDPOINT_TOKEN=<long random token for model-backed HTTP routes>
 
 # 3. Verify
 python -c "from argumentation_analysis.orchestration.registry_setup import setup_registry; setup_registry(); print('OK')"
@@ -86,7 +87,9 @@ uvicorn api.main:app --reload --port 8000
 | `FASTAPI_HOST` | str | `127.0.0.1` | `interface_web/app.py:19` |
 | `FASTAPI_PORT` | str | `8095` | `interface_web/app.py:20` |
 | `PORT` | str | `5003` | `interface_web/app.py:21` — Starlette proxy |
-| `FRONTEND_URL` | str | `http://127.0.0.1:3001` | `api/factory.py:41` — CORS |
+| `FRONTEND_URL` | str | `http://127.0.0.1:3001` | `api/factory.py` — CORS |
+| `SHIELD_ENDPOINT_TOKEN` | str | None | `api/auth.py` — shared Shield and model-backed HTTP token, checked per request |
+| `SHIELD_ALLOW_ANONYMOUS` | bool | off | Development-only explicit opt-in; never enable on a public interface |
 
 ### Self-hosted LLM (optional)
 
@@ -114,6 +117,7 @@ uvicorn api.main:app --reload --port 8000
 - Health: `GET /health` → `{"status": "healthy", "details": {"jvm": "Running"}}`
 - Status: `GET /api/status` → `operational` or `degraded`
 - Version: `2.0.0`
+- Model-backed POST routes and Shield return **503** without `SHIELD_ENDPOINT_TOKEN` or an explicit development-only `SHIELD_ALLOW_ANONYMOUS=1`; a missing/wrong `X-Shield-Token` returns **401** when configured. This deliberately changes bare local `uvicorn api.main:app` behavior. `docker-compose.yml` passes the token to the backend, which binds `0.0.0.0`; restrict access to that port and set a token before exposing it.
 
 ### Starlette web UI (frontend proxy)
 
@@ -130,7 +134,7 @@ python interface_web/app.py --port 5003 --fastapi-port 8095
 FASTAPI_PORT=8095 uvicorn interface_web.app:app --port 5003
 ```
 
-- Proxies `/api/*` → FastAPI backend
+- Proxies `/api/*` → FastAPI backend, replacing any browser-supplied `X-Shield-Token` with its own `SHIELD_ENDPOINT_TOKEN`. Set the same token in both processes. The browser never receives the token; the proxy itself becomes the gate, so binding it publicly is an operator decision and requires separate access controls. WebSockets are not relayed.
 - Serves React SPA from `services/web_api/interface-web-argumentative/build/`
 - **WebSocket**: NOT proxied — WS clients must connect directly to FastAPI (`ws://FASTAPI_HOST:FASTAPI_PORT/ws/*`)
 

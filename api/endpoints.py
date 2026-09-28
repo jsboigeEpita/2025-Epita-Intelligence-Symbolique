@@ -9,6 +9,7 @@ from .errors import (
     UpstreamError,
 )
 
+from .auth import require_api_token
 from .fallacy_detection import detect_fallacies
 from .models import (
     AnalysisRequest,
@@ -50,7 +51,11 @@ informal_router = APIRouter(
 )
 
 
-@informal_router.post("/analyze", response_model=ToulminAnalysisResult)
+@informal_router.post(
+    "/analyze",
+    response_model=ToulminAnalysisResult,
+    openapi_extra={"x-cost-class": "local-model"},
+)
 async def analyze_informal_fallacy(
     request: InformalAnalysisRequest,
 ) -> ToulminAnalysisResult:
@@ -89,7 +94,11 @@ framework_router = APIRouter(
 )
 
 
-@framework_router.post("/analyze", response_model=FrameworkAnalysisResponse)
+@framework_router.post(
+    "/analyze",
+    response_model=FrameworkAnalysisResponse,
+    openapi_extra={"x-cost-class": "local"},
+)
 async def analyze_framework_endpoint(
     request: FrameworkAnalysisRequest,
     dung_service: DungAnalysisService = Depends(get_dung_analysis_service),
@@ -262,7 +271,7 @@ def _build_response_payload(analysis_result: Dict) -> Dict:
     return payload
 
 
-@router.post("/analyze")
+@router.post("/analyze", dependencies=[Depends(require_api_token)])
 async def analyze_text_endpoint(analysis_req: AnalysisRequest, fastapi_req: Request):
     """
     Analyse un texte donné pour en extraire la structure argumentative.
@@ -287,9 +296,7 @@ async def analyze_text_endpoint(analysis_req: AnalysisRequest, fastapi_req: Requ
         service_result = _perform_tweety_analysis(analysis_req.text, project_context)
         logger.info(f"[{analysis_id}] Analyse réussie.")
     except TimeoutError as exc:
-        logger.error(
-            f"[{analysis_id}] Analyse timeout: {exc}", exc_info=True
-        )
+        logger.error(f"[{analysis_id}] Analyse timeout: {exc}", exc_info=True)
         raise TimeoutError_(
             f"Analysis exceeded its time budget: {exc}",
             context={"analysis_id": analysis_id},
@@ -299,9 +306,7 @@ async def analyze_text_endpoint(analysis_req: AnalysisRequest, fastapi_req: Requ
         # n'est pas une panne d'amont — il traverse tel quel.
         raise
     except Exception as exc:
-        logger.error(
-            f"[{analysis_id}] Erreur lors de l'analyse: {exc}", exc_info=True
-        )
+        logger.error(f"[{analysis_id}] Erreur lors de l'analyse: {exc}", exc_info=True)
         raise UpstreamError(
             f"Analysis service failed: {exc}",
             context={
