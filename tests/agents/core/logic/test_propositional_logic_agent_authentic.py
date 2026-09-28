@@ -39,7 +39,7 @@ from argumentation_analysis.agents.core.logic.propositional_logic_agent import (
 from argumentation_analysis.agents.core.logic.belief_set import PropositionalBeliefSet
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 from argumentation_analysis.agents.core.pl.pl_definitions import PL_AGENT_INSTRUCTIONS
-from argumentation_analysis.config.settings import DEFAULT_CHAT_MODEL_ID
+from argumentation_analysis.core.llm_service import create_llm_service
 from argumentation_analysis.core.jvm_setup import is_jvm_started
 
 
@@ -71,10 +71,11 @@ def authentic_pl_agent(tweety_bridge_fixture):
         print(f"[AUTHENTIC] Azure AI Inference configuré: {llm_service_id}")
 
     if not llm_service_configured and openai_available and os.getenv("OPENAI_API_KEY"):
-        openai_service = OpenAIChatCompletion(
-            api_key=os.getenv("OPENAI_API_KEY"),
-            ai_model_id=os.getenv("OPENAI_CHAT_MODEL_ID", DEFAULT_CHAT_MODEL_ID),
-            service_id=llm_service_id,
+        # #2829 : le service passe par la fabrique de production. Une construction
+        # directe contournait le cache de rejeu (LLM_CACHE_MODE) et le modèle configuré :
+        # sous la bande de rejeu, ce test appelait le réseau au lieu de sa cassette.
+        openai_service = create_llm_service(
+            service_id=llm_service_id, force_authentic=True
         )
         kernel.add_service(openai_service)
         llm_service_configured = True

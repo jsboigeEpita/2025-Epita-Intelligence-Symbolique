@@ -47,6 +47,7 @@ from argumentation_analysis.agents.core.logic.belief_set import (
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 from argumentation_analysis.core.jvm_setup import is_jvm_started
 from argumentation_analysis.config.settings import DEFAULT_CHAT_MODEL_ID
+from argumentation_analysis.core.llm_service import create_llm_service
 
 
 # Création d'une classe concrète pour les tests
@@ -86,10 +87,11 @@ def authentic_agent(tweety_bridge_fixture):
         llm_available = True
         print(f"✅ Service LLM Azure configuré pour Modal: {azure_deployment}")
     elif openai_api_key and OpenAIChatCompletion:
-        chat_service = OpenAIChatCompletion(
-            service_id=llm_service_id,
-            ai_model_id=model_id,
-            api_key=openai_api_key,
+        # #2829 : le service passe par la fabrique de production. Une construction
+        # directe contournait le cache de rejeu (LLM_CACHE_MODE) et le modèle configuré :
+        # sous la bande de rejeu, ce test appelait le réseau au lieu de sa cassette.
+        chat_service = create_llm_service(
+            service_id=llm_service_id, force_authentic=True
         )
         kernel.add_service(chat_service)
         llm_available = True

@@ -5,7 +5,6 @@ import pytest
 import asyncio
 import os
 from semantic_kernel import Kernel
-from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from argumentation_analysis.agents.factory import AgentFactory, AgentType
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import (
     SherlockEnqueteAgent,
@@ -15,6 +14,7 @@ from typing import AsyncGenerator, Union
 from semantic_kernel.contents.chat_history import ChatHistory
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 from argumentation_analysis.config.settings import AppSettings
+from argumentation_analysis.core.llm_service import create_llm_service
 
 TEST_AGENT_NAME = "TestSherlockAgent"
 
@@ -65,9 +65,10 @@ def authentic_kernel():
     if not api_key:
         return kernel  # Retourne un kernel vide, les tests seront sautés
 
-    llm_service = OpenAIChatCompletion(
-        service_id="chat_completion", ai_model_id="gpt-5-mini", api_key=api_key
-    )
+    # #2829 : le service passe par la fabrique de production. Une construction
+    # directe contournait le cache de rejeu (LLM_CACHE_MODE) et le modèle configuré :
+    # sous la bande de rejeu, ce test appelait le réseau au lieu de sa cassette.
+    llm_service = create_llm_service(service_id="chat_completion", force_authentic=True)
     kernel.add_service(llm_service)
     return kernel
 
@@ -75,7 +76,9 @@ def authentic_kernel():
 @pytest.fixture
 def agent_factory(authentic_kernel):
     """Fixture pour créer une instance de l'AgentFactory."""
-    if not authentic_kernel.get_service("chat_completion"):
+    # Sans clé le kernel est vide, et get_service lève au lieu de rendre None :
+    # le test partait en erreur au lieu d'être sauté (#2829).
+    if "chat_completion" not in authentic_kernel.services:
         pytest.skip("Le service de chat 'chat_completion' n'est pas configuré.")
     settings = AppSettings()
     settings.service_manager.default_llm_service_id = "chat_completion"
