@@ -139,6 +139,156 @@ class TestSpectacularResultFormat:
     """Verify result format matches unified pipeline output."""
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("budget", "expected_status", "completed", "skipped"),
+        [
+            (1, "BUDGET_EXHAUSTED", 1, 2),
+            (10, "COMPLETED", 3, 0),
+        ],
+    )
+    async def test_summary_counts_executed_phases(
+        self, mock_conversational_deps, budget, expected_status, completed, skipped
+    ):
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            run_conversational_analysis,
+        )
+        from argumentation_analysis.orchestration.trace_analyzer import (
+            ConversationalTraceAnalyzer,
+        )
+
+        async def phase_with_one_turn(*args, **kwargs):
+            return [
+                {
+                    "phase": kwargs["phase_name"],
+                    "turn": 1,
+                    "agent": "ProjectManager",
+                    "content": "synthetic response",
+                }
+            ]
+
+        with patch(
+            "argumentation_analysis.orchestration.conversational_orchestrator.ConversationalTraceAnalyzer",
+            ConversationalTraceAnalyzer,
+        ), patch(
+            "argumentation_analysis.orchestration.conversational_orchestrator._run_phase",
+            side_effect=phase_with_one_turn,
+        ), patch(
+            "argumentation_analysis.orchestration.conversational_orchestrator._resolve_phase_conflicts",
+            new_callable=AsyncMock,
+            return_value=[],
+        ), patch(
+            "argumentation_analysis.orchestration.conversational_orchestrator._retract_fallacious_beliefs",
+            return_value=None,
+        ), patch(
+            "argumentation_analysis.orchestration.conversational_orchestrator._should_add_reanalysis_phase",
+            return_value=False,
+        ):
+            result = await run_conversational_analysis(
+                "synthetic text", spectacular=False, max_total_turns=budget
+            )
+
+        assert result["status"] == expected_status
+        assert result["budget"]["exhausted"] is (skipped > 0)
+        assert result["budget"]["turns_used"] == completed
+        assert result["summary"]["completed"] == completed
+        assert result["summary"]["failed"] == 0
+        assert result["summary"]["skipped"] == skipped
+        assert result["summary"]["skipped_phases"] == result["phases"][completed:]
+        assert result["summary"]["total"] == 3
+
+    @pytest.mark.asyncio
+    async def test_error_only_phase_is_failed_not_completed(
+        self, mock_conversational_deps
+    ):
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            run_conversational_analysis,
+        )
+
+        async def failed_turn(*args, **kwargs):
+            return [
+                {
+                    "phase": kwargs["phase_name"],
+                    "turn": 1,
+                    "agent": "ProjectManager",
+                    "content": "ERROR: synthetic failure",
+                }
+            ]
+
+        with patch(
+            "argumentation_analysis.orchestration.conversational_orchestrator._run_phase",
+            side_effect=failed_turn,
+        ), patch(
+            "argumentation_analysis.orchestration.conversational_orchestrator._resolve_phase_conflicts",
+            new_callable=AsyncMock,
+            return_value=[],
+        ), patch(
+            "argumentation_analysis.orchestration.conversational_orchestrator._retract_fallacious_beliefs",
+            return_value=None,
+        ), patch(
+            "argumentation_analysis.orchestration.conversational_orchestrator._should_add_reanalysis_phase",
+            return_value=False,
+        ):
+            result = await run_conversational_analysis(
+                "synthetic text", spectacular=False, max_total_turns=1
+            )
+
+        assert result["status"] == "BUDGET_EXHAUSTED"
+        assert result["summary"]["completed"] == 0
+        assert result["summary"]["failed"] == 1
+        assert result["summary"]["skipped"] == 2
+        assert result["summary"]["skipped_phases"] == result["phases"][1:]
+
+    @pytest.mark.asyncio
+    async def test_phase_with_no_turn_is_not_completed(self, mock_conversational_deps):
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            run_conversational_analysis,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.conversational_orchestrator._run_phase",
+            new_callable=AsyncMock,
+            return_value=[],
+        ), patch(
+            "argumentation_analysis.orchestration.conversational_orchestrator._resolve_phase_conflicts",
+            new_callable=AsyncMock,
+            return_value=[],
+        ), patch(
+            "argumentation_analysis.orchestration.conversational_orchestrator._retract_fallacious_beliefs",
+            return_value=None,
+        ), patch(
+            "argumentation_analysis.orchestration.conversational_orchestrator._should_add_reanalysis_phase",
+            return_value=False,
+        ):
+            result = await run_conversational_analysis(
+                "synthetic text", spectacular=False
+            )
+
+        assert result["summary"]["completed"] == 0
+        assert result["summary"]["skipped_phases"] == result["phases"]
+
+    @pytest.mark.asyncio
+    async def test_wall_deadline_skips_all_named_phases(self, mock_conversational_deps):
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            run_conversational_analysis,
+        )
+
+        with patch(
+            "argumentation_analysis.orchestration.conversational_orchestrator._run_phase",
+            new_callable=AsyncMock,
+        ) as run_phase:
+            result = await run_conversational_analysis(
+                "synthetic text", spectacular=False, max_wall_seconds=0.0
+            )
+
+        run_phase.assert_not_awaited()
+        assert result["status"] == "WALL_CLOCK_BOUNDED"
+        assert result["budget"]["wall_clock_bounded"] is True
+        assert result["summary"]["completed"] == 0
+        assert result["summary"]["failed"] == 0
+        assert result["summary"]["skipped"] == 3
+        assert result["summary"]["skipped_phases"] == result["phases"]
+
+    @pytest.mark.asyncio
     async def test_result_has_unified_pipeline_keys(self, mock_conversational_deps):
         from argumentation_analysis.orchestration.conversational_orchestrator import (
             run_conversational_analysis,

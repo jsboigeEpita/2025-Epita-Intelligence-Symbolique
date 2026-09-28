@@ -1810,6 +1810,37 @@ async def _run_conversational_analysis_inner(
     # Generate trace report (#208-S)
     trace_report = trace.generate_report()
 
+    # A configured phase may never enter the loop (budget breach or missing
+    # room), or a deadline may stop it before the first turn. Count only
+    # substantive turn entries, not post-processing or validation messages.
+    configured_names = {phase["name"] for phase in phase_configs}
+    phase_turns = {
+        name: [
+            message
+            for message in conversation_log
+            if message.get("phase") == name
+            and isinstance(message.get("turn"), int)
+            and message["turn"] > 0
+            and not message.get("type")
+            and not message.get("re_prompt")
+        ]
+        for name in configured_names
+    }
+    failed_phases = [
+        name
+        for name, messages in phase_turns.items()
+        if messages
+        and all(str(m.get("content", "")).startswith("ERROR:") for m in messages)
+    ]
+    completed_phases = [
+        name
+        for name, messages in phase_turns.items()
+        if messages and name not in failed_phases
+    ]
+    skipped_phases = [
+        phase["name"] for phase in phase_configs if not phase_turns[phase["name"]]
+    ]
+
     # Dict[str, Any] (matches the return type): the literal holds heterogeneous
     # value types (state objects, counts, lists, the RenderedReport), and a
     # narrow inference rejects later heterogeneous assignments (#1335 wiring).
@@ -1885,9 +1916,10 @@ async def _run_conversational_analysis_inner(
             else ("BUDGET_EXHAUSTED" if budget_exhausted else "COMPLETED")
         ),
         "summary": {
-            "completed": len(phase_configs),
-            "failed": 0,
-            "skipped": 0,
+            "completed": len(completed_phases),
+            "failed": len(failed_phases),
+            "skipped": len(skipped_phases),
+            "skipped_phases": skipped_phases,
             "total": len(phase_configs),
             "total_messages": len(conversation_log),
         },
