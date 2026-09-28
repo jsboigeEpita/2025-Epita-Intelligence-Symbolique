@@ -6132,13 +6132,21 @@ async def _invoke_taxonomy_only_fallacy(
 
         fallacies = []
         for s in sophisms:
+            # The detector writes the row's PK as ``taxonomy_key``. This used to
+            # read ``key``, which it never writes, and fell back to the popular
+            # name, so ``taxonomy_pk`` carried a name, or "" for the rows that
+            # have none. Only 40 of the 1408 rows have a popular name; the
+            # others are named by ``text_fr``, which the detector returns as
+            # ``description``.
+            name = s["nom_vulgarise"] or s["description"]
             fallacies.append(
                 {
-                    "fallacy_type": s.get("nom_vulgarise", s.get("type", "unknown")),
-                    "type": s.get("nom_vulgarise", s.get("type", "unknown")),
-                    "confidence": s.get("confidence", 0.0),
-                    "description": s.get("description", ""),
-                    "taxonomy_pk": s.get("key", s.get("nom_vulgarise", "")),
+                    "fallacy_type": name,
+                    "type": name,
+                    "confidence": s["confidence"],
+                    "description": s["description"],
+                    "taxonomy_pk": s["taxonomy_key"],
+                    "family": s["famille"] or None,
                 }
             )
 
@@ -6177,41 +6185,32 @@ async def _invoke_hybrid_fallacy(
             enable_self_hosted_llm=False,
             enable_camembert=False,
         )
+        # #2806: with no tier able to run (no spaCy French model), an empty
+        # list would read as "ran and found nothing".
+        if not adapter.get_available_tiers():
+            return {
+                "fallacies": [],
+                "extraction_method": "unavailable",
+                "error": "no hybrid tier can run (symbolic tier needs a spaCy French model)",
+            }
         result = adapter.detect(input_text)
 
-        fallacies = []
-        if isinstance(result, dict):
-            for f in result.get("fallacies", result.get("detections", [])):
-                if isinstance(f, dict):
-                    fallacies.append(
-                        {
-                            "fallacy_type": f.get(
-                                "type", f.get("fallacy_type", "unknown")
-                            ),
-                            "type": f.get("type", f.get("fallacy_type", "unknown")),
-                            "confidence": f.get("confidence", 0.0),
-                            "description": f.get(
-                                "description", f.get("explanation", "")
-                            ),
-                            "source_tier": f.get("tier", "hybrid"),
-                        }
-                    )
-        elif isinstance(result, list):
-            for f in result:
-                if isinstance(f, dict):
-                    fallacies.append(
-                        {
-                            "fallacy_type": f.get(
-                                "type", f.get("fallacy_type", "unknown")
-                            ),
-                            "type": f.get("type", f.get("fallacy_type", "unknown")),
-                            "confidence": f.get("confidence", 0.0),
-                            "description": f.get(
-                                "description", f.get("explanation", "")
-                            ),
-                            "source_tier": f.get("tier", "hybrid"),
-                        }
-                    )
+        # #2806: the adapter's contract (``FallacyAnalysisResult.to_dict``) puts
+        # its detections under ``detected_fallacies``, a dict keyed by fallacy
+        # type. This used to read ``fallacies``/``detections``, keys the adapter
+        # never produces, so the hybrid tier answered 0 on every input.
+        fallacies = [
+            {
+                "fallacy_type": fallacy_type,
+                "type": fallacy_type,
+                "confidence": detection["confidence"],
+                "description": detection.get("description") or "",
+                "taxonomy_pk": detection.get("taxonomy_pk"),
+                "matched_rule": detection.get("matched_rule"),
+                "source_tier": detection.get("source", "hybrid"),
+            }
+            for fallacy_type, detection in result["detected_fallacies"].items()
+        ]
 
         return {
             "fallacies": fallacies,
