@@ -179,9 +179,9 @@ def _slave_kernel_stub():
 def _confirm_call(node_pk, justification="matches the general pattern"):
     """A FunctionCallContent scripting the LLM to confirm at node_pk.
 
-    ``confidence`` MUST be a label ('high'/'medium'/'low') — exploration_plugin's
-    confirm_fallacy maps it to a numeric score, and passing a float would raise
-    AttributeError inside the tool call (caught → error dict → no confirm).
+    ``confidence`` is a level label here; since #2746 confirm_fallacy reads
+    one contract — a number in [0, 1] (what the leaf prompt asks for) or a
+    level name — a numeric confidence would be kept faithful too.
     """
     return FunctionCallContent(
         name="confirm_fallacy",
