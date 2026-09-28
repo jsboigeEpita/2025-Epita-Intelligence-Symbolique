@@ -177,3 +177,40 @@ class TestIterTrackedFiles:
             for p in iter_tracked_files(tmp_path, "*.py", skip_prefixes=("libs",))
         ]
         assert got == ["real.py"], got
+
+    def test_tracked_non_ascii_path_is_returned_readable(self, tmp_path):
+        """#2833 review: without ``-z``, ``git ls-files`` quotes non-ASCII
+        paths (``core.quotepath`` defaults on) and octal-escapes their bytes,
+        so ``root / rel`` builds a path that does not exist — the file left
+        the population without a trace (measured 930 ``.md`` on main's index
+        instead of 932). A tracked accented path must come back as itself,
+        and every returned path must exist on disk."""
+        from tests.support.tree_walk import iter_tracked_files
+
+        _make_repo(tmp_path)
+        accented = tmp_path / "données_é_2821.py"
+        accented.write_text("x = 1\n", encoding="utf-8")
+        _git(tmp_path, "add", "-A")
+        _git(
+            tmp_path,
+            "-c",
+            "user.email=census@example.invalid",
+            "-c",
+            "user.name=census",
+            "commit",
+            "-qm",
+            "accented path fixture",
+        )
+        # Reproduce git's DEFAULT on any seat: this seat carries
+        # ``core.quotepath=off``, CI does not — without this line the witness
+        # passes on a quiet seat and misses the defect entirely.
+        _git(tmp_path, "config", "core.quotepath", "true")
+        got = list(iter_tracked_files(tmp_path, "*.py"))
+        names = [p.name for p in got]
+        assert (
+            accented.name in names
+        ), f"the tracked accented path left the population: {sorted(names)}"
+        assert all(p.exists() for p in got), (
+            "a returned path does not exist on disk — the population holds a "
+            "quoted mangle, which census readers silently skip"
+        )

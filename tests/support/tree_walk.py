@@ -107,13 +107,24 @@ def iter_tracked_files(
     repository: it never silently falls back to walking the filesystem,
     because that fallback is the seat-local population the index exists to
     exclude.
+
+    ``ls-files -z`` is not negotiable: without it, git quotes non-ASCII
+    paths (``core.quotepath`` defaults on) and octal-escapes their bytes, so
+    ``root / rel`` builds a path that does not exist — the file left the
+    population without a trace (measured on main's index: 930 ``.md``
+    returned instead of 932). The output is decoded as UTF-8 explicitly —
+    the locale default mangles the same paths on Windows even with ``-z``.
+
+    Known cost, accepted: a file not yet ``git add``-ed is absent from the
+    index, so a new test file drops from the population — guards stay green
+    locally and redden on CI, the #2804 pattern.
     """
     root_path = Path(root).resolve()
     try:
         listed = subprocess.run(
-            ["git", "-C", str(root_path), "ls-files"],
+            ["git", "-C", str(root_path), "ls-files", "-z"],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             check=True,
         )
     except (OSError, subprocess.CalledProcessError) as exc:
@@ -122,7 +133,9 @@ def iter_tracked_files(
             f"({exc}); an index-backed census refuses to walk the filesystem in "
             "its place (#2821)"
         ) from exc
-    for rel in listed.stdout.splitlines():
+    for rel in listed.stdout.split("\0"):
+        if not rel:
+            continue  # trailing NUL after the last entry
         path = root_path / rel
         if not path.match(pattern):
             continue
