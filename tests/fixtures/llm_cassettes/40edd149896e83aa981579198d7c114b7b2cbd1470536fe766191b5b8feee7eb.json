@@ -1,0 +1,48 @@
+{
+  "key": "40edd149896e83aa981579198d7c114b7b2cbd1470536fe766191b5b8feee7eb",
+  "value": {
+    "id": "chatcmpl-ETC7b2mBj55aCPWmH0M7p3TvhEFjx",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Les points couvrent trois idées liées mais distinctes : la réduction du risque d’erreur grâce à l’ADN, la dangerosité permanente de certains criminels et l’irréversibilité de la peine de mort. Les points 1 et 3 se recoupent toutefois autour de la question de l’erreur judiciaire.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790626815,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 301,
+      "prompt_tokens": 299,
+      "total_tokens": 600,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 213,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

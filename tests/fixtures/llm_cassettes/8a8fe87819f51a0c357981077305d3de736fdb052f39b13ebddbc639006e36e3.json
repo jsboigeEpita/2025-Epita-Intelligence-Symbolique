@@ -1,0 +1,48 @@
+{
+  "key": "8a8fe87819f51a0c357981077305d3de736fdb052f39b13ebddbc639006e36e3",
+  "value": {
+    "id": "chatcmpl-ETC0tUEIWOdlzR8bXqYuf3opPbsvy",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Consacrer les 2000 euros à l’organisation d’un tournoi inter-villes avec buffet et prix afin d’accroître la visibilité du club.\\n2. Investir les 2000 euros dans du matériel pédagogique et de nouveaux échiquiers.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790626399,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 140,
+      "prompt_tokens": 228,
+      "total_tokens": 368,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 72,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

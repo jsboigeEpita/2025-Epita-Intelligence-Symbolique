@@ -1,0 +1,40 @@
+{
+  "key": "18f14226b29beca7501b3d63657a62c9335ea86e22f155916023524413e78204",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_piWz4Cqt2cl7WG45DLIE3Xk5",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"799\",\"confidence\":\"high\",\"justification\":\"L’énoncé affirme simplement que la politique économique est un succès « incontestable », sans définir les critères de succès ni fournir de justification. Toutefois, il ne présente pas réellement une définition biaisée ou une sous-catégorie identifiable ; la qualification la plus proche dans la branche actuelle reste générale.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBvVnjCXSZSPQHqSpllL9RXSQREo",
+        "created": 1790626065,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1599,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1596,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 90,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

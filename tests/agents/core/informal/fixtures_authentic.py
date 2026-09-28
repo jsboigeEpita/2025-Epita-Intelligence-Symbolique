@@ -17,6 +17,7 @@ from semantic_kernel import Kernel
 from argumentation_analysis.agents.factory import AgentFactory, AgentType
 from semantic_kernel.functions import KernelArguments
 from argumentation_analysis.config.settings import AppSettings
+from argumentation_analysis.core.llm_service import create_llm_service
 
 # Conditional imports pour connecteurs authentiques
 try:
@@ -79,8 +80,11 @@ class AuthenticSemanticKernel:
             and os.getenv("OPENAI_API_KEY")
         ):
             try:
-                openai_service = OpenAIChatCompletion(
-                    api_key=os.getenv("OPENAI_API_KEY"), service_id=self.llm_service_id
+                # #2829 : le service passe par la fabrique de production. Une construction
+                # directe contournait le cache de rejeu (LLM_CACHE_MODE) et le modèle configuré :
+                # sous la bande de rejeu, ce test appelait le réseau au lieu de sa cassette.
+                openai_service = create_llm_service(
+                    service_id=self.llm_service_id, force_authentic=True
                 )
                 self.kernel.add_service(openai_service)
                 self.services_configured.append("openai")

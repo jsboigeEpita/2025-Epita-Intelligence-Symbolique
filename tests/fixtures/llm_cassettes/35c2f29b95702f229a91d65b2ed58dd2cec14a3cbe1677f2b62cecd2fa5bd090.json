@@ -1,0 +1,48 @@
+{
+  "key": "35c2f29b95702f229a91d65b2ed58dd2cec14a3cbe1677f2b62cecd2fa5bd090",
+  "value": {
+    "id": "chatcmpl-ETC8ciWh1xg5sTnmM39AqASvfBHzN",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Les mesures montrent une hausse de 1,1 °C depuis l’ère préindustrielle, et les modèles prédictifs sont unanimes quant à l’impact des activités humaines. Le fait que le climat ait toujours changé ne réfute pas l’argument, car les sceptiques omettent la vitesse sans précédent du changement actuel.\",\"conclusion\":\"La particularité du changement climatique actuel réside dans sa vitesse sans précédent, et non dans le simple fait que le climat change.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790626878,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 269,
+      "prompt_tokens": 269,
+      "total_tokens": 538,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 152,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

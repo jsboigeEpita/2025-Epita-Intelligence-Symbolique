@@ -6,31 +6,26 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_NiVzCJqDPpITTM0CE8UMn2Jm",
+          "id": "call_4WYEo0H5RLj8Jq0WrUd2QDpA",
           "name": "Exploration-conclude_no_fallacy",
-          "arguments": "{\"reason\": \"Le texte ne relève pas de l’empoisonnement du puits : il contient plutôt un appel à l’autorité et une disqualification de l’opinion des non-experts, sans information préjudiciable visant à discréditer un adversaire précis.\"}"
-        },
-        {
-          "id": "call_D2DrqT72PhjlNg2wahP4XbFV",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"1354\"}"
+          "arguments": "{\"reason\":\"Le texte relève plutôt d’un appel à l’autorité et d’une disqualification de l’avis des non-experts, mais ne discrédite pas l’adversaire par des informations préjudiciables au sens spécifique de l’empoisonnement du puits.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ER3TVIAuFP9gajv2aRig6GYBNp5NK",
-        "created": 1790116921,
+        "id": "chatcmpl-ETBzp4XkAfsqJQNVfW0hmX4xt3dt4",
+        "created": 1790626333,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 1459,
+          "prompt_tokens": 1479,
           "prompt_tokens_details": {
             "audio_tokens": 0,
-            "cache_write_tokens": 1456,
+            "cache_write_tokens": 1476,
             "cached_tokens": 0,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 112,
+          "completion_tokens": 78,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

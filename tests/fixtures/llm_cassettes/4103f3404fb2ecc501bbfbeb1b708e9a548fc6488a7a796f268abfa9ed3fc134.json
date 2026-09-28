@@ -1,0 +1,48 @@
+{
+  "key": "4103f3404fb2ecc501bbfbeb1b708e9a548fc6488a7a796f268abfa9ed3fc134",
+  "value": {
+    "id": "chatcmpl-ETBtJD7r1vpync7Yu2cZEDdPEA5BM",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La chaîne relie la critique de l’appel à la peur et d’un autre argument tronqué à la conclusion que la nécessité prétendument naturelle ou inévitable de travailler plus longtemps n’est pas établie. Le verdict indique une progression logique, mais l’inférence reste partielle et imprécise en raison des éléments tronqués.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790625929,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 184,
+      "prompt_tokens": 304,
+      "total_tokens": 488,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 95,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

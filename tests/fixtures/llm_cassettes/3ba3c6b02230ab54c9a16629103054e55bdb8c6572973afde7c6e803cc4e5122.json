@@ -1,0 +1,48 @@
+{
+  "key": "3ba3c6b02230ab54c9a16629103054e55bdb8c6572973afde7c6e803cc4e5122",
+  "value": {
+    "id": "chatcmpl-ETC3WCShoYdcbZesJ5j9GWWoRBNl1",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Les échiquiers actuels sont usés et justifient l’achat de matériel pédagogique. Il est souhaitable de préserver à la fois la visibilité et la pédagogie. L’option C consacre 1000 euros à un tournoi réduit et 1000 euros au matériel pédagogique.\",\"conclusion\":\"L’option C constitue un compromis équilibré entre visibilité et pédagogie.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790626562,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 239,
+      "prompt_tokens": 283,
+      "total_tokens": 522,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 144,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

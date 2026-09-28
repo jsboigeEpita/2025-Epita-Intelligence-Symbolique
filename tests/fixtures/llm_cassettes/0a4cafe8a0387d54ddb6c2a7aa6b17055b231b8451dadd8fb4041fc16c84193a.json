@@ -1,0 +1,48 @@
+{
+  "key": "0a4cafe8a0387d54ddb6c2a7aa6b17055b231b8451dadd8fb4041fc16c84193a",
+  "value": {
+    "id": "chatcmpl-ETC6bjdRgeAPKF3QoFjpl0MnOPMhf",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points 1 et 2 abordent des idées distinctes : l’efficacité historique des vaccins et la prise en compte des décennies de recherche sur leur sécurité. Le point 3 est tronqué (« L’affirmation selon laquelle »), donc aucune redondance supplémentaire ne peut être évaluée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790626753,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 183,
+      "prompt_tokens": 295,
+      "total_tokens": 478,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 102,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

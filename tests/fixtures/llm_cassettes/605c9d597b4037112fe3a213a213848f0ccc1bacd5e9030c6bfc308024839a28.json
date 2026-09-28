@@ -1,0 +1,48 @@
+{
+  "key": "605c9d597b4037112fe3a213a213848f0ccc1bacd5e9030c6bfc308024839a28",
+  "value": {
+    "id": "chatcmpl-ETBtPFC1Knb3NK3JHIfZwqLcA0dIJ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points fournis abordent des idées différentes : le premier dénonce un homme de paille concernant la position de l’opposition, tandis que le second introduit un chiffre sur le déficit. Aucune redondance substantielle n’est visible, même si le deuxième point est tronqué.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790625935,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 150,
+      "prompt_tokens": 302,
+      "total_tokens": 452,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 71,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

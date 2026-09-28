@@ -1,0 +1,40 @@
+{
+  "key": "48c9a9dc4a11042720fde7b4c463d075bfba355356803f7a972e0748b4a39be2",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_dX7P7MHoRUAZQbAjSPSteq0L",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"888\",\"confidence\":\"high\",\"justification\":\"L’énoncé présente comme incontestable le succès de la politique économique sans fournir de faits ni de justification; il s’agit d’une présentation potentiellement trompeuse des faits, mais rien ne permet d’établir plus spécifiquement un mensonge, une fausse attribution ou une attention sélective.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBvaiMOujGF5GRd6q16vmZZSkNA4",
+        "created": 1790626070,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1637,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1634,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 93,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

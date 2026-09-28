@@ -26,7 +26,8 @@ LIVE = "requires_api and llm_light"
 REPLAY = "requires_api and not llm_light"
 
 # Gate directory -> issue that owns its admission to the replay-band job.
-REPLAY_PENDING = {"tests/agents/": "#2829"}
+# Empty since #2829 admitted tests/agents/ with its cassettes.
+REPLAY_PENDING = {}
 
 
 def _paths(line: str) -> list:

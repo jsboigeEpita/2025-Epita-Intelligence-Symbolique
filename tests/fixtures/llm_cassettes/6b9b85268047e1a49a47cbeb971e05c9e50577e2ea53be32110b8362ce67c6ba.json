@@ -1,0 +1,33 @@
+{
+  "key": "6b9b85268047e1a49a47cbeb971e05c9e50577e2ea53be32110b8362ce67c6ba",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\n  \"formulas\": [\n    \"exists X: (Idee(X) && Incolore(X) && Vert(X) && DortFurieusement(X))\"\n  ],\n  \"predicates\": {\n    \"Idee\": \"est une idee\",\n    \"Incolore\": \"est incolore\",\n    \"Vert\": \"est verte\",\n    \"DortFurieusement\": \"dort furieusement\"\n  },\n  \"variables\": {\n    \"X\": \"chose ou idee\"\n  },\n  \"reasoning\": \"La phrase affirme l'existence d'au moins une idee qui est incolore, verte et qui dort furieusement. L'incoherence semantique apparente entre « incolore » et « verte » n'empeche pas sa formalisation logique.\"\n}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETC2Y2WUwbU8EpK7K1OMKjur2tpoM",
+        "created": 1790626502,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 286,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 446,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 269,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

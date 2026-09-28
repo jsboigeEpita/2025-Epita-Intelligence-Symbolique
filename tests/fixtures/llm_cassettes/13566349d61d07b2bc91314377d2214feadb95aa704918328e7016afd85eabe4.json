@@ -1,0 +1,48 @@
+{
+  "key": "13566349d61d07b2bc91314377d2214feadb95aa704918328e7016afd85eabe4",
+  "value": {
+    "id": "chatcmpl-ETC8XUXv3jtKZlR3vqx7INps2pxH8",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Le climat a toujours changé naturellement, ce qui tend à minimiser ou à nier que les activités humaines soient principalement responsables des impacts actuels.\",\"main_thesis\":\"Les impacts climatiques observés ou prévus sont principalement attribuables aux activités humaines, comme le confirment les modèles prédictifs.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790626873,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 143,
+      "prompt_tokens": 262,
+      "total_tokens": 405,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 60,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

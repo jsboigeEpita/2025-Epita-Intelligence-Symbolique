@@ -1,0 +1,33 @@
+{
+  "key": "c719eced413509cbe8f64af09272ad6cca133227aaa78097c406f38ca46b693a",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "Bonjour ! Oui, je suis là. Que puis-je faire pour vous ?",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBuGSYgMmE478plPb88lMytSOqM2",
+        "created": 1790625988,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 12,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 18,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

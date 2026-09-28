@@ -6,21 +6,21 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_nAFKHxS90fNTh4BvYC5N7AHC",
+          "id": "call_4vrRp8nBjFlcukotgAzGCbzy",
           "name": "Exploration-explore_branch",
           "arguments": "{\"node_pk\":\"74\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ER3TNz4EF9ylheGTKabyy0wERc2UG",
-        "created": 1790116913,
+        "id": "chatcmpl-ETBzJyVs0pB3qtHX5jk6Xc1drSJMs",
+        "created": 1790626301,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 1251,
+          "prompt_tokens": 1271,
           "prompt_tokens_details": {
             "audio_tokens": 0,
-            "cache_write_tokens": 1248,
+            "cache_write_tokens": 1268,
             "cached_tokens": 0,
             "image_tokens": null,
             "text_tokens": null

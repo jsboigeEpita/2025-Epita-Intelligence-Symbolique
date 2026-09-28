@@ -1,14 +1,14 @@
 {
   "key": "2bc3a28534fdf150f6ed5305a3eea70f84801901f71d831f9801f922a13d62a5",
   "value": {
-    "id": "chatcmpl-ER3UD6a3ty9AaqP1y6QCBUudIUknF",
+    "id": "chatcmpl-ETC0Y9jrjLkaJv42uGw0rdN52vJJe",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[{\"text\":\"L'option A consiste à consacrer les 2000 euros à un tournoi inter-villes comprenant un buffet et des prix, afin d'accroître la visibilité du club.\",\"source_quote\":\"Option A : organiser un tournoi inter-villes avec buffet et prix pour 2000 euros, augmentant la visibilite du club.\"},{\"text\":\"L'option B consiste à investir les 2000 euros dans du matériel pédagogique et de nouveaux échiquiers.\",\"source_quote\":\"Option B : investir les 2000 euros en materiel pedagogique et echiquiers neufs.\"},{\"text\":\"L'option C propose de répartir le budget entre un tournoi réduit de 1000 euros et l'achat de matériel pour 1000 euros.\",\"source_quote\":\"Option C : un format hybride, 1000 euros tournoi reduit et 1000 euros materiel.\"}],\"claims\":[{\"text\":\"Le club d'échecs dispose d'un budget participatif annuel de 2000 euros.\",\"source_quote\":\"Le club d'echecs dispose d'un budget participatif annuel de 2000 euros.\"},{\"text\":\"Un tournoi inter-villes avec buffet et prix peut être organisé pour 2000 euros.\",\"source_quote\":\"organiser un tournoi inter-villes avec buffet et prix pour 2000 euros\"},{\"text\":\"L'organisation du tournoi inter-villes augmenterait la visibilité du club.\",\"source_quote\":\"augmentant la visibilite du club.\"},{\"text\":\"L'option C prévoit une répartition égale de 1000 euros entre le tournoi réduit et le matériel.\",\"source_quote\":\"1000 euros tournoi reduit et 1000 euros materiel.\"}],\"summary\":\"Le texte présente trois options concurrentes pour l'utilisation d'un budget annuel de 2000 euros : privilégier la visibilité par un tournoi, privilégier les ressources pédagogiques, ou combiner les deux à parts égales.\"}",
+          "content": "{\"arguments\":[{\"text\":\"L'option A consiste à consacrer les 2000 euros à un tournoi inter-villes comprenant un buffet et des prix, afin d'accroître la visibilité du club.\",\"source_quote\":\"Option A : organiser un tournoi inter-villes avec buffet et prix pour 2000 euros, augmentant la visibilite du club.\"},{\"text\":\"L'option B consiste à investir les 2000 euros dans du matériel pédagogique et des échiquiers neufs.\",\"source_quote\":\"Option B : investir les 2000 euros en materiel pedagogique et echiquiers neufs.\"},{\"text\":\"L'option C consiste à répartir le budget à parts égales entre un tournoi réduit et l'achat de matériel.\",\"source_quote\":\"Option C : un format hybride, 1000 euros tournoi reduit et 1000 euros materiel.\"}],\"claims\":[{\"text\":\"Le club d'échecs dispose chaque année d'un budget participatif de 2000 euros.\",\"source_quote\":\"Le club d'echecs dispose d'un budget participatif annuel de 2000 euros.\"},{\"text\":\"L'organisation du tournoi inter-villes avec buffet et prix est prévue pour coûter 2000 euros.\",\"source_quote\":\"organiser un tournoi inter-villes avec buffet et prix pour 2000 euros\"},{\"text\":\"Le tournoi inter-villes devrait accroître la visibilité du club.\",\"source_quote\":\"augmentant la visibilite du club.\"},{\"text\":\"L'option hybride prévoit une dépense de 1000 euros pour un tournoi réduit.\",\"source_quote\":\"1000 euros tournoi reduit\"},{\"text\":\"L'option hybride prévoit une dépense de 1000 euros pour du matériel.\",\"source_quote\":\"1000 euros materiel\"}],\"summary\":\"Le texte présente trois options concurrentes pour l'affectation d'un budget annuel de 2000 euros : un tournoi favorisant la visibilité, un investissement pédagogique complet ou un partage équilibré entre les deux.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1790116965,
+    "created": 1790626378,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 517,
+      "completion_tokens": 508,
       "prompt_tokens": 402,
-      "total_tokens": 919,
+      "total_tokens": 910,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 114,
+        "reasoning_tokens": 95,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

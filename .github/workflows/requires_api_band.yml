@@ -21,10 +21,10 @@ name: requires_api band (scheduled real-LLM lane)
 # Naming the gap is deliberate: a lane that silently covered 66% while its
 # header said "the entire band" is the theater this lane exists to end.
 # Widening the argv is a USER decision (#1867) and is filed in the registry.
-# The live job's argv equals the gate's (ci.yml "Run automated tests"); the
-# replay-band job's equals it minus tests/agents/, whose 11 requires_api tests
-# have no cassettes yet (#2829). tests/unit/test_band_argv_matches_gate_1867.py
-# holds both equalities, so the gate's argv can no longer move alone.
+# Both jobs carry the gate's argv (ci.yml "Run automated tests"); the replay
+# job admitted tests/agents/ once its 11 requires_api tests had cassettes
+# (#2829). tests/unit/test_band_argv_matches_gate_1867.py holds both
+# equalities, so the gate's argv can no longer move alone.
 #
 # Cost: 9 tests x ~$0.01-0.05 => roughly $0.09-0.45 per scheduled run.
 # Full-band dispatch is an on-demand operator action, never scheduled, so it
@@ -69,7 +69,7 @@ on:
   workflow_dispatch:
     inputs:
       full-band:
-        description: "Run the whole requires_api band WITHIN this argv (59 tests measured 2026-09-18), not just the 8 llm_light ones"
+        description: "Run the whole requires_api band WITHIN this argv (80 tests measured 2026-09-28), not just the 9 llm_light ones"
         type: boolean
         default: false
 
@@ -379,7 +379,8 @@ jobs:
         # The 13 deselect flags below (occurrence-counted after the #2300
         # removal — the previous commit claimed 13 while the run line still
         # carried 15: a purely-commentary hunk, caught by coordinator review
-        # R1024) cover 28 of the 51 non-light tests,
+        # R1024) cover 29 of the 71 non-light tests (measured 2026-09-28 by
+        # --collect-only on this argv: 80 requires_api, 9 llm_light, 42 left),
         # each with a MEASURED reason (classification replay, dummy key,
         # po-2023 2026-09-18, post max_tokens-repair record):
         #   - BYPASS, 23 tests: their traffic never consults the cache, so on
@@ -411,19 +412,23 @@ jobs:
         #     35792294382, 22/22 passed, 276 exported, 0 refused) with the
         #     delegation test IN the recorder's argv, so it replays here.
         # Validated on THIS workflow's argv (13 --deselect flags), on the
-        # runner, against the committed cassettes of record 35792294382:
-        # band run 35797422276 (2026-09-23) — 22 passed, 0 skipped, the
-        # delegation test among them; hit=699, miss_replay=0, live=0; egress
-        # report llm_outcomes {} (zero LLM requests). Earlier figures in this
-        # comment (21/23 passed, hit=72/76) measured other argvs and older
-        # cassettes; they no longer describe this step.
-        # tests/agents/ is in the gate argv but NOT here: its 11 requires_api
-        # tests have no cassettes, so admitting it would make miss_replay > 0
-        # (#2829; test_band_argv_matches_gate_1867.py names the exception).
+        # runner, against the committed cassettes of record 36475269283:
+        # band run 36478952679 (2026-09-28) — 42 passed, 0 skipped, the 11
+        # tests/agents/ tests and the delegation test among them;
+        # hit=1820, miss_replay=0, live=0; egress total 0. Earlier figures in
+        # this comment (22 passed / hit=699 on record 35792294382, 21/23,
+        # hit=72/76) measured other argvs and older cassettes; they no longer
+        # describe this step.
+        # tests/agents/ ADMITTED (#2829): 8 of its 11 requires_api tests built
+        # their own OpenAIChatCompletion, which skips the replay-cache wrapper
+        # (measured: 12 live requests on a dummy key, 3/11 cache-routed).
+        # Routed through create_llm_service, 11/11 are cache-routed; the band
+        # cassettes are re-recorded with tests/agents/ in the recorder's argv
+        # (record job 36475269283, 42 passed, 660 exported, 0 refused).
         run: |
           $marker = "requires_api and not llm_light"
           Write-Host "Band marker: $marker"
-          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ tests/test_fact_checking_integration.py tests/test_integration_success_validation.py tests/test_orchestration_integration.py tests/test_readme_quickstart.py tests/test_regression_golden.py -m "$marker" --deselect "tests/test_regression_golden.py::TestGoldenStandardWorkflow" --deselect "tests/unit/argumentation_analysis/orchestration/test_regression_golden.py::TestGoldenIntegration::test_run_unified_analysis_standard_thresholds" --deselect "tests/unit/argumentation_analysis/test_value_gates.py::TestFOLValueGate::test_fol_consistent_is_bool_when_tweety_available" --deselect "tests/integration/orchestration/test_replay_cache_sk_path.py" --deselect "tests/unit/argumentation_analysis/evaluation/test_fallacy_benchmark.py::TestModeRunners::test_mode_c_constrained" --deselect "tests/unit/argumentation_analysis/evaluation/test_judge_advanced.py::TestEvaluateMethod::test_evaluate_with_api" --deselect "tests/config/test_config_real_gpt.py" --deselect "tests/integration/api/test_deliberation_genuine_verdict.py::TestDeliberationGenuineVerdictViaAPI::test_deliberation_decides_governance_firsthand_via_http" --deselect "tests/unit/argumentation_analysis/orchestration/test_fact_extraction_opposing_poles_1745.py::TestInventoryCarriesBothPoles::test_inventory_carries_both_poles_of_explicit_opposition" --deselect "tests/unit/argumentation_analysis/workflows/test_democratech.py::TestDemocratechE2EGenuineFirsthand::test_governance_decides_firsthand_on_multi_option_proposition" --deselect "tests/scripts/test_proof_bo2b_dashboard_1493.py::test_proof_script_cli_real_llm_path" --deselect "tests/integration/orchestration/test_replay_cache_determinism.py::TestReplayCacheDeterminism::test_record_then_replay_yields_identical_governance_verdict" --deselect "tests/integration/orchestration/test_replay_cache_profiling_batch.py::TestReplayCacheProfilingBatch::test_batch_record_then_replay_zero_live_and_profiled" -p scripts.cassettes.replay_stats_plugin --junitxml=pytest_report_replay.xml -v --timeout=900 --timeout-method=thread
+          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ tests/agents/ tests/test_fact_checking_integration.py tests/test_integration_success_validation.py tests/test_orchestration_integration.py tests/test_readme_quickstart.py tests/test_regression_golden.py -m "$marker" --deselect "tests/test_regression_golden.py::TestGoldenStandardWorkflow" --deselect "tests/unit/argumentation_analysis/orchestration/test_regression_golden.py::TestGoldenIntegration::test_run_unified_analysis_standard_thresholds" --deselect "tests/unit/argumentation_analysis/test_value_gates.py::TestFOLValueGate::test_fol_consistent_is_bool_when_tweety_available" --deselect "tests/integration/orchestration/test_replay_cache_sk_path.py" --deselect "tests/unit/argumentation_analysis/evaluation/test_fallacy_benchmark.py::TestModeRunners::test_mode_c_constrained" --deselect "tests/unit/argumentation_analysis/evaluation/test_judge_advanced.py::TestEvaluateMethod::test_evaluate_with_api" --deselect "tests/config/test_config_real_gpt.py" --deselect "tests/integration/api/test_deliberation_genuine_verdict.py::TestDeliberationGenuineVerdictViaAPI::test_deliberation_decides_governance_firsthand_via_http" --deselect "tests/unit/argumentation_analysis/orchestration/test_fact_extraction_opposing_poles_1745.py::TestInventoryCarriesBothPoles::test_inventory_carries_both_poles_of_explicit_opposition" --deselect "tests/unit/argumentation_analysis/workflows/test_democratech.py::TestDemocratechE2EGenuineFirsthand::test_governance_decides_firsthand_on_multi_option_proposition" --deselect "tests/scripts/test_proof_bo2b_dashboard_1493.py::test_proof_script_cli_real_llm_path" --deselect "tests/integration/orchestration/test_replay_cache_determinism.py::TestReplayCacheDeterminism::test_record_then_replay_yields_identical_governance_verdict" --deselect "tests/integration/orchestration/test_replay_cache_profiling_batch.py::TestReplayCacheProfilingBatch::test_batch_record_then_replay_zero_live_and_profiled" -p scripts.cassettes.replay_stats_plugin --junitxml=pytest_report_replay.xml -v --timeout=900 --timeout-method=thread
 
       - name: Anti-vacuity gate (live==0, hit>=1, miss_replay==0)
         if: always()

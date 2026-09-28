@@ -1,0 +1,48 @@
+{
+  "key": "be4ff63717019ec71febad83c3ee639ddd4cc2d4340cc1c4de364e086230915b",
+  "value": {
+    "id": "chatcmpl-ETC1c7mqpj4T3KNbxwjS7YJIMUXAj",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"L’option B consiste à utiliser la subvention pour créer un espace numérique avec des ordinateurs en libre accès.\",\"digressions\":\"La mention de l’option A (élargir le fonds de livres jeunesse) et de l’option C (répartir la somme entre le fonds de livres et l’espace numérique) s’écarte de cette thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790626444,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 285,
+      "prompt_tokens": 229,
+      "total_tokens": 514,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 191,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

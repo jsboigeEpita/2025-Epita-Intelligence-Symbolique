@@ -1,0 +1,40 @@
+{
+  "key": "dfd1e9aab5c106dc8951cb42a048bcf887a9486a3404a8c837e450cc2ac64475",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_ab8T1bdWUUTvhck19Go8BxDn",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"35\",\"confidence\":\"high\",\"justification\":\"L'argument affirme que les experts sont unanimes sans citer ni rendre vérifiables les propos ou les sources invoquées. Il s'appuie donc sur un témoignage rapporté comme preuve de la vérité. La seconde phrase ajoute une exclusion injustifiée des avis non experts, mais le nœud « argument par ouï-dire » correspond bien au premier argument.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETByxSawoK6svHSYvVo00eQR1LsrZ",
+        "created": 1790626279,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 644,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 104,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

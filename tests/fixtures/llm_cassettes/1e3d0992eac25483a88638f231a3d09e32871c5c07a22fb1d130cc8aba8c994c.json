@@ -1,0 +1,48 @@
+{
+  "key": "1e3d0992eac25483a88638f231a3d09e32871c5c07a22fb1d130cc8aba8c994c",
+  "value": {
+    "id": "chatcmpl-ETBtabSOShCRjwMI4mRksfpkYdc6r",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Personne n’a proposé de supprimer les retraites, mais seulement de les réformer différemment ; l’invocation de l’avenir des enfants mobilise l’émotion plutôt que l’examen des aspects techniques du financement.\",\"conclusion\":\"L’argument adverse constitue un homme de paille et un appel à l’émotion qui détourne le débat des questions techniques de financement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790625946,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 366,
+      "prompt_tokens": 265,
+      "total_tokens": 631,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 269,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

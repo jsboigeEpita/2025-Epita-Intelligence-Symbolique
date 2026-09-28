@@ -1,0 +1,40 @@
+{
+  "key": "6ba2c9497c2e388a28748b77f5c04e0191e2cf8959f473999231ff2d27ce0c18",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_FVTW3IVAg5052ZdWAPZ9cKZZ",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1297\",\"confidence\":\"high\",\"justification\":\"Le président affirme que la politique économique est un succès incontestable sans fournir de preuves ni d’arguments pour étayer cette assertion. L’énoncé présente donc une preuve par assertion.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETBvV3eMbljeDTK4QL4xqB71DkNi2",
+        "created": 1790626065,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1662,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1659,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 69,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

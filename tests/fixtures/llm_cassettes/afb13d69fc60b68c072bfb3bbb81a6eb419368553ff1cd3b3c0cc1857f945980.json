@@ -1,0 +1,48 @@
+{
+  "key": "afb13d69fc60b68c072bfb3bbb81a6eb419368553ff1cd3b3c0cc1857f945980",
+  "value": {
+    "id": "chatcmpl-ETC4JkusbpJ4OekPULe8s5AB3ta8n",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.68,\"fairness_assessment\":\"La méthode permet de comparer équitablement visibilité, recrutement, qualité pédagogique et risques d’exécution, sans accorder une priorité excessive au gagnant du débat. Une pondération transparente des critères est toutefois nécessaire.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"Agent A\",\"position\":\"Préconise d’allouer tout le budget à un tournoi inter-villes afin d’accroître la visibilité et le recrutement.\",\"influence\":0.3},{\"agent\":\"Agent B\",\"position\":\"Préconise d’investir tout le budget dans du matériel pédagogique pour remplacer les équipements usés et améliorer l’apprentissage.\",\"influence\":0.4},{\"agent\":\"Agent C\",\"position\":\"Préconise une répartition égale entre un tournoi réduit et du matériel pédagogique afin d’équilibrer les objectifs.\",\"influence\":0.3}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"Les trois options répondent à des objectifs légitimes et les contre-arguments révèlent des risques réels de coût d’opportunité et de dilution. Un vote social-choice fondé sur des critères explicites, complété par une négociation budgétaire, devrait favoriser une solution hybride ajustée, éventuellement avec une priorité modérée au matériel compte tenu de son besoin établi.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790626611,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 411,
+      "prompt_tokens": 642,
+      "total_tokens": 1053,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 119,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

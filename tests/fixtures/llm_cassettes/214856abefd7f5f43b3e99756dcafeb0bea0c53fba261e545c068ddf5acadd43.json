@@ -1,0 +1,33 @@
+{
+  "key": "214856abefd7f5f43b3e99756dcafeb0bea0c53fba261e545c068ddf5acadd43",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"propositions\":[\"all_men_are_mortal\",\"socrates_is_wise\"],\"modal_formulas\":[\"[](all_men_are_mortal)\",\"<>(socrates_is_wise)\"]}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETC5Q3dvl80vDYhW5ITKxhjaW7ACD",
+        "created": 1790626680,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 307,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 127,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 76,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}
