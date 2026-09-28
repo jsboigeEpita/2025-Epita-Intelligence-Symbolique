@@ -30,6 +30,12 @@ DEFAULT_KM_URL = "http://127.0.0.1:9001"
 ENV_KM_URL = "KERNEL_MEMORY_URL"
 ENV_KM_API_KEY = "KERNEL_MEMORY_API_KEY"
 
+# Twin of ``invoke_callables._ARG_ID_RE`` (#2744): the service layer cannot
+# import the orchestration layer's resolver, so the identifier convention
+# ``arg_N`` (1-based, minted by ``shared_state._generate_id`` and the extract
+# enumeration) is re-stated here.
+_ARG_ID_RE = re.compile(r"^\s*arg_(\d+)\s*$")
+
 
 # ── Data classes ─────────────────────────────────────────────────────────
 
@@ -342,20 +348,37 @@ class SemanticIndexService:
         fallacies = fallacies or []
         doc_ids = []
 
-        # Build fallacy lookup: arg_index → fallacy type
+        # Build fallacy lookup: arg_index → fallacy type.
+        # #2744 — read the keys the producers actually write, in the #1633
+        # order: the hierarchical descent names its target ``target_argument``
+        # (``invoke_callables._enrich_fallacies``), state entries carry
+        # ``target_argument_id``, legacy payloads ``target_arg_id``. Explicit
+        # loop, not a chained ``get``: producers emit the key with a ``None``
+        # value when a detection has no target, and ``get(k, default)`` would
+        # return that ``None`` instead of falling through.
         fallacy_by_arg: Dict[int, str] = {}
         for f in fallacies:
-            if isinstance(f, dict):
-                target = f.get("target_argument_id", f.get("argument_index", -1))
-                ftype = f.get("type", f.get("fallacy_type", "unknown"))
-                if isinstance(target, int) and target >= 0:
+            if not isinstance(f, dict):
+                continue
+            target = None
+            for key in ("target_argument", "target_argument_id", "target_arg_id"):
+                if f.get(key):
+                    target = f[key]
+                    break
+            ftype = f.get("type", f.get("fallacy_type", "unknown"))
+            # ``arg_N`` ids are 1-based over the same insertion-ordered
+            # enumeration (``shared_state._generate_id``, the extract list):
+            # the inverse is arithmetic, not matching (#1629). Out-of-range or
+            # malformed ⇒ no association — the caller does not guess (#1019).
+            if isinstance(target, int):
+                if 0 <= target < len(arguments):
                     fallacy_by_arg[target] = str(ftype)
-                elif isinstance(target, str) and target.startswith("arg_"):
-                    try:
-                        idx = int(target.split("_")[1]) - 1
+            elif isinstance(target, str):
+                match = _ARG_ID_RE.match(target)
+                if match:
+                    idx = int(match.group(1)) - 1
+                    if 0 <= idx < len(arguments):
                         fallacy_by_arg[idx] = str(ftype)
-                    except (ValueError, IndexError):
-                        pass
 
         for i, arg in enumerate(arguments):
             arg_text = arg.get("text", str(arg)) if isinstance(arg, dict) else str(arg)

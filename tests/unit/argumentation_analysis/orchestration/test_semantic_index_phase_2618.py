@@ -147,7 +147,14 @@ def _context():
         },
         "phase_hierarchical_fallacy_output": {
             "fallacies": [
-                {"target_argument_id": "arg_2", "fallacy_type": "appelautorite"}
+                # Real producer shape (#2744): the descent attaches the
+                # target under ``target_argument`` + a quote anchor — not
+                # ``target_argument_id``, which this payload never carries.
+                {
+                    "type": "appelautorite",
+                    "target_argument": "arg_2",
+                    "problematic_quote": "argument synthetique deux",
+                }
             ]
         },
     }
@@ -189,7 +196,11 @@ async def test_phase_indexes_arguments_before_searching():
     assert "chunk_type:argument" in joined_tags
     assert "quality_level:high" in joined_tags
     assert "quality_level:low" in joined_tags
+    # #2744: the producer's ``target_argument=arg_2`` must reach the indexed
+    # tags — searchable via fallacy_type/has_fallacy on this same run.
     assert "fallacy_type:appelautorite" in joined_tags
+    assert "has_fallacy:true" in joined_tags
+    assert "has_fallacy:false" in joined_tags
 
     assert result["results"][0]["id"] == f"{run_name}__arg_1"
     assert result["results"][0]["snippet"] == "argument synthetique un assez long"
