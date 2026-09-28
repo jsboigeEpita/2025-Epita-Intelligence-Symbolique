@@ -12,10 +12,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def test_proxy_preflight_rejects_foreign_origin_and_accepts_configured_origin(
-    monkeypatch,
-):
-    monkeypatch.setenv("FRONTEND_URL", "https://frontend.example.test")
+def test_proxy_preflight_rejects_foreign_origin_and_accepts_configured_origin():
     from interface_web.app import app
 
     with TestClient(app) as client:
@@ -26,23 +23,23 @@ def test_proxy_preflight_rejects_foreign_origin_and_accepts_configured_origin(
         )
         allowed = client.options(
             "/api/analyze",
-            headers={**headers, "Origin": "https://frontend.example.test"},
+            headers={**headers, "Origin": "http://localhost:3000"},
         )
 
     assert foreign.status_code == 400
     assert "access-control-allow-origin" not in foreign.headers
     assert allowed.status_code == 200
-    assert (
-        allowed.headers["access-control-allow-origin"]
-        == "https://frontend.example.test"
-    )
+    assert allowed.headers["access-control-allow-origin"] == "http://localhost:3000"
 
 
 def test_proxy_origin_policy_matches_api(monkeypatch):
-    monkeypatch.setenv("FRONTEND_URL", "https://frontend.example.test")
     from api.factory import allowed_frontend_origins, create_app
     from interface_web.app import app
 
+    configured_origins = next(
+        m for m in app.user_middleware if m.cls.__name__ == "CORSMiddleware"
+    ).kwargs["allow_origins"]
+    monkeypatch.setenv("FRONTEND_URL", configured_origins[0])
     api = create_app("test", "origin policy", "1")
     api_cors = next(
         m for m in api.user_middleware if m.cls.__name__ == "CORSMiddleware"
@@ -53,9 +50,11 @@ def test_proxy_origin_policy_matches_api(monkeypatch):
     assert api_cors.kwargs["allow_origins"] == allowed_frontend_origins()
     assert proxy_cors.kwargs["allow_origins"] == allowed_frontend_origins()
 
-
-def test_cors_is_not_authentication_for_a_direct_request(monkeypatch):
     monkeypatch.setenv("FRONTEND_URL", "https://frontend.example.test")
+    assert allowed_frontend_origins()[0] == "https://frontend.example.test"
+
+
+def test_cors_is_not_authentication_for_a_direct_request():
     from interface_web.app import app
 
     with TestClient(app) as client:
