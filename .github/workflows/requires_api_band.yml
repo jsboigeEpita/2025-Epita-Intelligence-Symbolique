@@ -379,7 +379,8 @@ jobs:
         # The 13 deselect flags below (occurrence-counted after the #2300
         # removal — the previous commit claimed 13 while the run line still
         # carried 15: a purely-commentary hunk, caught by coordinator review
-        # R1024) cover 28 of the 51 non-light tests,
+        # R1024) cover 29 of the 71 non-light tests (measured 2026-09-28 by
+        # --collect-only on this argv: 80 requires_api, 9 llm_light, 42 left),
         # each with a MEASURED reason (classification replay, dummy key,
         # po-2023 2026-09-18, post max_tokens-repair record):
         #   - BYPASS, 23 tests: their traffic never consults the cache, so on
@@ -411,12 +412,13 @@ jobs:
         #     35792294382, 22/22 passed, 276 exported, 0 refused) with the
         #     delegation test IN the recorder's argv, so it replays here.
         # Validated on THIS workflow's argv (13 --deselect flags), on the
-        # runner, against the committed cassettes of record 35792294382:
-        # band run 35797422276 (2026-09-23) — 22 passed, 0 skipped, the
-        # delegation test among them; hit=699, miss_replay=0, live=0; egress
-        # report llm_outcomes {} (zero LLM requests). Earlier figures in this
-        # comment (21/23 passed, hit=72/76) measured other argvs and older
-        # cassettes; they no longer describe this step.
+        # runner, against the committed cassettes of record 36475269283:
+        # band run 36478952679 (2026-09-28) — 42 passed, 0 skipped, the 11
+        # tests/agents/ tests and the delegation test among them;
+        # hit=1820, miss_replay=0, live=0; egress total 0. Earlier figures in
+        # this comment (22 passed / hit=699 on record 35792294382, 21/23,
+        # hit=72/76) measured other argvs and older cassettes; they no longer
+        # describe this step.
         # tests/agents/ ADMITTED (#2829): 8 of its 11 requires_api tests built
         # their own OpenAIChatCompletion, which skips the replay-cache wrapper
         # (measured: 12 live requests on a dummy key, 3/11 cache-routed).
