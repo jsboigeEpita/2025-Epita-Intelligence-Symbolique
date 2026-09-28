@@ -6132,13 +6132,21 @@ async def _invoke_taxonomy_only_fallacy(
 
         fallacies = []
         for s in sophisms:
+            # The detector writes the row's PK as ``taxonomy_key``. This used to
+            # read ``key``, which it never writes, and fell back to the popular
+            # name, so ``taxonomy_pk`` carried a name, or "" for the rows that
+            # have none. Only 40 of the 1408 rows have a popular name; the
+            # others are named by ``text_fr``, which the detector returns as
+            # ``description``.
+            name = s["nom_vulgarise"] or s["description"]
             fallacies.append(
                 {
-                    "fallacy_type": s.get("nom_vulgarise", s.get("type", "unknown")),
-                    "type": s.get("nom_vulgarise", s.get("type", "unknown")),
-                    "confidence": s.get("confidence", 0.0),
-                    "description": s.get("description", ""),
-                    "taxonomy_pk": s.get("key", s.get("nom_vulgarise", "")),
+                    "fallacy_type": name,
+                    "type": name,
+                    "confidence": s["confidence"],
+                    "description": s["description"],
+                    "taxonomy_pk": s["taxonomy_key"],
+                    "family": s["famille"] or None,
                 }
             )
 
