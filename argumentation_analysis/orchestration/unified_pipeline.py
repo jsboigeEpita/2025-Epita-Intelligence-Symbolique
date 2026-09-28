@@ -146,6 +146,18 @@ def _analysis_outcome(phase_results: Dict[str, Any]) -> Dict[str, str]:
             "phase": extraction.phase_name,
             "reason": str(reason or "unknown"),
         }
+    if extraction.status == PhaseStatus.SKIPPED:
+        blocked = any(
+            result.status == PhaseStatus.COMPLETED
+            and isinstance(result.output, dict)
+            and result.output.get("blocked") is True
+            for result in phase_results.values()
+        )
+        return {
+            "status": "blocked" if blocked else "skipped",
+            "phase": extraction.phase_name,
+            "reason": str(extraction.error or "unknown"),
+        }
     if extraction_status == "non_argumentative" or (
         extraction.terminal and extraction.status == PhaseStatus.COMPLETED
     ):

@@ -145,6 +145,11 @@ async def mobile_analyze(request: TextRequest):
             else UpstreamError
         )
         raise error(f"argument extraction: {reason}", context=context)
+    if outcome.get("status") in ("blocked", "skipped"):
+        raise UpstreamError(
+            f"argument extraction did not run: {outcome.get('reason', 'unknown')}",
+            context=context,
+        )
     if outcome.get("status") == "non_argumentative":
         raise UnanalyzableInputError(
             "The pipeline classified the text as non-argumentative: there is "
