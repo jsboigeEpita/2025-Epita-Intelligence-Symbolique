@@ -113,15 +113,14 @@ jobs:
             Write-Host "⚠️ OPENAI_API_KEY not configured - lane cannot run (it exists precisely to run WITH keys)"
           }
 
+      # #1803 step 5 (user decision 2026-09-28): the env is installed from
+      # the tracked conda-lock.yml, with no solver, instead of re-solving
+      # environment.yml on every run. The local action carries the command
+      # that regenerates the lock; a unit test reddens when environment.yml
+      # asks for something the lock does not provide.
       - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@v2
+        uses: ./.github/actions/setup-projet-is
         timeout-minutes: 15
-        with:
-          python-version: "3.10"
-          environment-file: environment.yml
-          activate-environment: projet-is
-          use-mamba: true
-          auto-update-conda: false
 
       # --- Java toolchain: same cache/provision/verify chain as the gate ---
       - name: Compute Java toolchain cache key
@@ -304,15 +303,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # #1803 step 5 (user decision 2026-09-28): the env is installed from
+      # the tracked conda-lock.yml, with no solver, instead of re-solving
+      # environment.yml on every run. The local action carries the command
+      # that regenerates the lock; a unit test reddens when environment.yml
+      # asks for something the lock does not provide.
       - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@v2
+        uses: ./.github/actions/setup-projet-is
         timeout-minutes: 15
-        with:
-          python-version: "3.10"
-          environment-file: environment.yml
-          activate-environment: projet-is
-          use-mamba: true
-          auto-update-conda: false
 
       # --- Java toolchain: same chain as the live band (JVM-face tests) ---
       - name: Compute Java toolchain cache key

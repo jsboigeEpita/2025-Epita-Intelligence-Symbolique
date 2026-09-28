@@ -22,15 +22,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # #1803 step 5 (user decision 2026-09-28): the env is installed from
+      # the tracked conda-lock.yml, with no solver, instead of re-solving
+      # environment.yml on every run. The local action carries the command
+      # that regenerates the lock; a unit test reddens when environment.yml
+      # asks for something the lock does not provide. Nine lines, like the
+      # block they replace, so the pytest line keeps its number.
       - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@v2
+        uses: ./.github/actions/setup-projet-is
         timeout-minutes: 15  # Protection contre timeouts
-        with:
-          python-version: "3.10"  # FIX: guillemets pour éviter 3.1
-          environment-file: environment.yml
-          activate-environment: projet-is
-          use-mamba: true  # Résolution 5-10x plus rapide
-          auto-update-conda: false  # Évite instabilités cache
 
       - name: Check code formatting
         shell: pwsh
@@ -80,15 +80,15 @@ jobs:
       # JAVA_HOME entirely and is_valid_jdk rejects any major < 15, so the
       # JDK installed here was never examined. Removed rather than bumped to
       # 17 -- a parallel source of truth would re-derive at the next bump.
+      # #1803 step 5 (user decision 2026-09-28): the env is installed from
+      # the tracked conda-lock.yml, with no solver, instead of re-solving
+      # environment.yml on every run. The local action carries the command
+      # that regenerates the lock; a unit test reddens when environment.yml
+      # asks for something the lock does not provide. Nine lines, like the
+      # block they replace, so the pytest line keeps its number.
       - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@v2
+        uses: ./.github/actions/setup-projet-is
         timeout-minutes: 15  # Protection contre timeouts
-        with:
-          python-version: "3.10"  # FIX: guillemets pour éviter 3.1
-          environment-file: environment.yml
-          activate-environment: projet-is
-          use-mamba: true  # Résolution 5-10x plus rapide
-          auto-update-conda: false  # Évite instabilités cache
 
       # Provision the React frontend build so the Starlette app imports cleanly
       # (interface_web/app.py mounts StaticFiles(directory=.../build) at module

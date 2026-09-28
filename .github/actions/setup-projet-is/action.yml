@@ -1,0 +1,44 @@
+name: Setup projet-is from conda-lock.yml
+description: >-
+  Creates the projet-is conda env from the tracked conda-lock.yml and leaves it
+  activated for later steps, as the former environment-file setup did (#1803 step 5).
+
+# Why the lock and not environment.yml (#1803 step 5, user decision 2026-09-28,
+# option b). Every run used to re-solve environment.yml, so CI installed
+# whatever the channels and PyPI served that day: the #1802 (openai) and #2566
+# (pytest) drifts were both measured that way. conda-lock.yml is the solve
+# frozen with checksums; CI now installs exactly it, with no solver.
+#
+# environment.yml stays the INPUT. After editing a dependency there, regenerate
+# the lock (win-64 only, no CUDA: the runners have no GPU and the cpu pytorch
+# build is the one CI ran):
+#
+#   conda-lock lock -f environment.yml -p win-64 --without-cuda --lockfile conda-lock.yml
+#
+# tests/unit/test_conda_lock_matches_environment_1803.py fails the gate when a
+# dependency or pin of environment.yml is not met by the lock, so an edit that
+# skips the regeneration is caught instead of silently ignored.
+runs:
+  using: composite
+  steps:
+    # Creates an EMPTY projet-is (no environment-file, no python-version) only
+    # so that setup-miniconda writes the shell activation for it: steps that
+    # call a bare `python` in pwsh rely on it. conda-lock install below
+    # replaces the empty env.
+    - name: Setup Miniconda
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+        activate-environment: projet-is
+        auto-update-conda: false
+
+    # The installer runs from its own env: it cannot run from projet-is, which
+    # it deletes and recreates. Its version is the conda-lock the lock itself
+    # pins (and generated the lock).
+    - name: Create projet-is from conda-lock.yml
+      shell: pwsh
+      run: |
+        conda create --name conda-lock-installer --override-channels -c conda-forge "python=3.10" "conda-lock=4.0.2" --yes --quiet
+        if ($LASTEXITCODE -ne 0) { throw "installer env creation failed" }
+        conda run -n conda-lock-installer --no-capture-output conda-lock install --name projet-is conda-lock.yml
+        if ($LASTEXITCODE -ne 0) { throw "conda-lock install failed" }
+        conda run -n projet-is --no-capture-output python -c "import sys; print('projet-is python', sys.version.split()[0])"
