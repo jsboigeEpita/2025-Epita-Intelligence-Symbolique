@@ -8,22 +8,25 @@ name: requires_api band (scheduled real-LLM lane)
 # stayed invisible: CI was green certifying code-without-keys while the
 # keys-without-CI side drifted. This lane is the missing half of the pair.
 #
-# SCOPE, measured 2026-09-18 on a CLEAN collection (the earlier figures were
-# taken while 6 MCP collection errors interrupted the run -- repaired in
-# #2288 + the same env defect on the coordinator machine):
-#   -m "requires_api and llm_light", this argv .... 8 tests   (scheduled)
-#   -m "requires_api",               this argv .... 59 tests  (full-band dispatch)
-#   -m "requires_api",               tests/ whole .. 90 tests
-# So this lane sees 59 of the band's 90 tests. The 31 it does NOT see live in
-# 10 files outside the argv -- tests/integration/triage/ (6 files),
-# tests/bench/test_spectacular_perf.py (excluded by design, 15+ min LLM),
-# tests/agents/core/logic/test_modal_logic_agent_authentic.py,
-# tests/integration/test_api_connectivity.py, test_growth_hook_corpus_a_597.py.
+# SCOPE, re-measured 2026-09-28 (collect-only, main 913234829) after #1867
+# option (d) admitted tests/agents/ to the gate argv and to this lane's argv:
+#   -m "requires_api and llm_light", this argv .... 9 tests   (scheduled)
+#   -m "requires_api",               this argv .... 80 tests  (full-band dispatch)
+#   -m "requires_api",               tests/ whole .. 106 tests
+# (First measured 2026-09-18 on a clean collection: 8 / 59 / 90; the band has
+# grown since.) The 26 this lane does NOT see live in 8 files outside the
+# argv -- tests/integration/triage/ (5 files), tests/bench/test_spectacular_perf.py
+# (excluded by design, 15+ min LLM), tests/integration/test_api_connectivity.py,
+# test_growth_hook_corpus_a_597.py.
 # Naming the gap is deliberate: a lane that silently covered 66% while its
 # header said "the entire band" is the theater this lane exists to end.
 # Widening the argv is a USER decision (#1867) and is filed in the registry.
+# The live job's argv equals the gate's (ci.yml "Run automated tests"); the
+# replay-band job's equals it minus tests/agents/, whose 11 requires_api tests
+# have no cassettes yet (#2829). tests/unit/test_band_argv_matches_gate_1867.py
+# holds both equalities, so the gate's argv can no longer move alone.
 #
-# Cost: 8 tests x ~$0.01-0.05 => roughly $0.08-0.40 per scheduled run.
+# Cost: 9 tests x ~$0.01-0.05 => roughly $0.09-0.45 per scheduled run.
 # Full-band dispatch is an on-demand operator action, never scheduled, so it
 # cannot silently balloon.
 #
@@ -157,7 +160,8 @@ jobs:
         if: env.API_KEYS_CONFIGURED == 'true'
         # Same argv as the per-push gate (the #1341-measured collectable
         # scope), with the marker inverted: this lane selects exactly what
-        # the gate deselects. Files marked requires_api that live OUTSIDE
+        # the gate deselects (test_band_argv_matches_gate_1867.py holds the
+        # equality). Files marked requires_api that live OUTSIDE
         # this argv are not in this lane either -- admitting a new directory
         # requires its own measurement, per the #1341 convention.
         #
@@ -169,7 +173,7 @@ jobs:
           $marker = "requires_api and llm_light"
           if ("${{ inputs.full-band }}" -eq "true") { $marker = "requires_api" }
           Write-Host "Band marker: $marker"
-          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ tests/test_fact_checking_integration.py tests/test_integration_success_validation.py tests/test_orchestration_integration.py tests/test_readme_quickstart.py tests/test_regression_golden.py -m "$marker" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
+          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ tests/agents/ tests/test_fact_checking_integration.py tests/test_integration_success_validation.py tests/test_orchestration_integration.py tests/test_readme_quickstart.py tests/test_regression_golden.py -m "$marker" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
 
       - name: Generate test summary (fail-loud)
         if: always()
@@ -413,6 +417,9 @@ jobs:
         # report llm_outcomes {} (zero LLM requests). Earlier figures in this
         # comment (21/23 passed, hit=72/76) measured other argvs and older
         # cassettes; they no longer describe this step.
+        # tests/agents/ is in the gate argv but NOT here: its 11 requires_api
+        # tests have no cassettes, so admitting it would make miss_replay > 0
+        # (#2829; test_band_argv_matches_gate_1867.py names the exception).
         run: |
           $marker = "requires_api and not llm_light"
           Write-Host "Band marker: $marker"
