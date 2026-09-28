@@ -27,6 +27,9 @@ from argumentation_analysis.plugin_framework.core.plugins.interfaces import Base
 from argumentation_analysis.agents.tools.analysis.fact_claim_extractor import (
     FactualClaim,
 )
+from argumentation_analysis.agents.tools.analysis.fallacy_family_analyzer import (
+    FallacyFamily,
+)
 from argumentation_analysis.services.fact_verification_service import (
     SOURCE_RELIABILITY_MAP,
     SourceReliability,
@@ -475,15 +478,31 @@ class ExternalVerificationPlugin(BasePlugin):
         status: VerificationStatus,
         sources: List[VerificationSource],
     ) -> List[Dict[str, Any]]:
+        """#2745 — one implication schema, producer to consumer.
+
+        Each implication carries the species this plugin names
+        (``potential_fallacy``) and the family the consumer integrates on
+        (``fallacy_family``, a ``FallacyFamily`` id). The species→family
+        mapping lives here — the only side that knows which species was
+        asserted; the consumer must not guess (#1019).
+        """
         implications = []
         if status == VerificationStatus.VERIFIED_FALSE:
             if any(w in claim.claim_text.lower() for w in ["tous", "jamais", "aucun"]):
                 implications.append(
-                    {"potential_fallacy": "Généralisation hâtive", "confidence": 0.8}
+                    {
+                        "potential_fallacy": "Généralisation hâtive",
+                        "fallacy_family": FallacyFamily.GENERALIZATION_CAUSALITY.value,
+                        "confidence": 0.8,
+                    }
                 )
             if claim.claim_type.value == "statistical":
                 implications.append(
-                    {"potential_fallacy": "Statistiques incorrectes", "confidence": 0.9}
+                    {
+                        "potential_fallacy": "Statistiques incorrectes",
+                        "fallacy_family": FallacyFamily.STATISTICAL_PROBABILISTIC.value,
+                        "confidence": 0.9,
+                    }
                 )
         return implications
 
