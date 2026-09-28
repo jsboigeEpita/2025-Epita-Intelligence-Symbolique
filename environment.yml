@@ -1,3 +1,6 @@
+# CI does not solve this file: it installs conda-lock.yml, solved from it
+# (#1803 step 5). After changing a dependency here, regenerate the lock in
+# the same PR; the command is in .github/actions/setup-projet-is/action.yml.
 name: projet-is
 channels:
   - conda-forge
