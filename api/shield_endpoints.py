@@ -17,64 +17,25 @@ Security:
 """
 
 import logging
-import os
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+
+from .auth import require_api_token
 
 logger = logging.getLogger(__name__)
 
 shield_router = APIRouter(prefix="/shield", tags=["AI Shield"])
-
-# ──── Auth guard ────
-
-# Opt-in dev explicite (#2144, item 4). L'absence de `SHIELD_ENDPOINT_TOKEN`
-# ne vaut plus « pas d'auth » : un déploiement qui oubliait la variable
-# exposait un endpoint ouvert et non bloquant. Sans token le service refuse de
-# servir, sauf si cette variable le dit explicitement.
-_DEV_ANON_ENV = "SHIELD_ALLOW_ANONYMOUS"
-_TRUTHY = frozenset({"1", "true", "yes", "on"})
-
-
-def _dev_anonymous_allowed() -> bool:
-    """Vrai seulement si l'opérateur l'a demandé explicitement."""
-    return (os.environ.get(_DEV_ANON_ENV) or "").strip().lower() in _TRUTHY
-
-
-def _verify_token(x_shield_token: Optional[str]) -> None:
-    """Refuse l'appel sauf si le client prouve qu'il peut utiliser l'endpoint.
-
-    Le token est relu **par requête** (#2144, item 5) : le bloc voisin relisait
-    déjà la clé pour cette raison (rotation à chaud), alors que le token exigeait
-    un redémarrage — asymétrie du même bloc, supprimée.
-
-    503 et non 401 quand rien n'est configuré : le client ne peut rien y faire,
-    c'est le serveur qui est mal configuré.
-    """
-    token = os.environ.get("SHIELD_ENDPOINT_TOKEN")
-    if not token:
-        if _dev_anonymous_allowed():
-            return
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "AI Shield endpoint is not configured: set SHIELD_ENDPOINT_TOKEN, "
-                f"or set {_DEV_ANON_ENV}=1 to serve it anonymously (development only)."
-            ),
-        )
-    if x_shield_token != token:
-        raise HTTPException(
-            status_code=401, detail="Invalid or missing X-Shield-Token header"
-        )
-
 
 # ──── Request/Response Models ────
 
 
 class ShieldValidateRequest(BaseModel):
     text: str = Field(..., min_length=1, description="Text to validate")
-    preset: str = Field("basic", description="Shield preset: basic, advanced, output_only, strict")
+    preset: str = Field(
+        "basic", description="Shield preset: basic, advanced, output_only, strict"
+    )
     direction: str = Field("input", description="Validation direction: input or output")
     fail_open: Optional[bool] = Field(
         None,
@@ -107,17 +68,16 @@ class ShieldValidateResponse(BaseModel):
 # ──── Endpoint ────
 
 
-@shield_router.post("/validate", response_model=ShieldValidateResponse)
-async def shield_validate(
-    request: ShieldValidateRequest,
-    x_shield_token: Optional[str] = Header(None, alias="X-Shield-Token"),
-):
+@shield_router.post(
+    "/validate",
+    response_model=ShieldValidateResponse,
+    dependencies=[Depends(require_api_token)],
+)
+async def shield_validate(request: ShieldValidateRequest):
     """Validate text against adversarial patterns using AI Shield.
 
     Requires X-Shield-Token header when SHIELD_ENDPOINT_TOKEN env var is set.
     """
-    _verify_token(x_shield_token)
-
     try:
         from argumentation_analysis.services.ai_shield import (
             PRESET_FAIL_OPEN,

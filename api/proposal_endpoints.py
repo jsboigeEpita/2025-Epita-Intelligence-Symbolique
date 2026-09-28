@@ -15,7 +15,9 @@ import asyncio
 import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+
+from .auth import require_api_token
 
 from .proposal_models import (
     CapabilitiesResponse,
@@ -45,7 +47,12 @@ proposal_router = APIRouter(tags=["Proposals & Deliberation"])
 # ──── Proposals ────
 
 
-@proposal_router.post("/propose", response_model=Proposal, status_code=201)
+@proposal_router.post(
+    "/propose",
+    response_model=Proposal,
+    status_code=201,
+    openapi_extra={"x-cost-class": "local"},
+)
 async def submit_proposal(data: ProposalCreate):
     """Submit a new citizen proposal for analysis and deliberation."""
     store = get_proposal_store()
@@ -78,7 +85,10 @@ async def get_proposal(proposal_id: str):
 
 
 @proposal_router.post(
-    "/proposals/{proposal_id}/vote", response_model=VoteResponse, status_code=201
+    "/proposals/{proposal_id}/vote",
+    response_model=VoteResponse,
+    status_code=201,
+    openapi_extra={"x-cost-class": "local"},
 )
 async def vote_on_proposal(proposal_id: str, vote: VoteCreate):
     """Cast a vote on a proposal (one vote per voter)."""
@@ -99,7 +109,10 @@ async def vote_on_proposal(proposal_id: str, vote: VoteCreate):
 
 
 @proposal_router.post(
-    "/deliberate", response_model=DeliberationStatusResponse, status_code=202
+    "/deliberate",
+    response_model=DeliberationStatusResponse,
+    status_code=202,
+    dependencies=[Depends(require_api_token)],
 )
 async def start_deliberation(
     request: DeliberationRequest, background_tasks: BackgroundTasks
@@ -183,7 +196,11 @@ async def list_capabilities():
 # ──── Custom Workflow ────
 
 
-@proposal_router.post("/workflow/custom", response_model=WorkflowResult)
+@proposal_router.post(
+    "/workflow/custom",
+    response_model=WorkflowResult,
+    dependencies=[Depends(require_api_token)],
+)
 async def run_custom_workflow(request: CustomWorkflowRequest):
     """Run a custom analysis workflow on arbitrary text.
 
@@ -229,7 +246,8 @@ async def run_custom_workflow(request: CustomWorkflowRequest):
 
             # hierarchical accepts **kwargs → merged into context at orchestrator.py:144
             result = await run_hierarchical_analysis(
-                text=request.text, **(context or {}),
+                text=request.text,
+                **(context or {}),
             )
         elif request.orchestration_mode == "sherlock_modern":
             from argumentation_analysis.orchestration.sherlock_modern_orchestrator import (
@@ -242,7 +260,8 @@ async def run_custom_workflow(request: CustomWorkflowRequest):
             # are N/A in investigation mode — they control rhetorical analysis,
             # not criminal investigation.
             inv_result = await orchestrator.investigate(
-                request.text, context=context or None,
+                request.text,
+                context=context or None,
             )
             result = {
                 "trace": inv_result.trace,

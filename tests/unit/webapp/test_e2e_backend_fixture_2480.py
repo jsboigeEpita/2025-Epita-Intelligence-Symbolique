@@ -97,6 +97,21 @@ def test_the_backend_environment_keeps_what_the_caller_set(tmp_path, monkeypatch
     assert env["PORT"] == "8095"
 
 
+def test_e2e_token_is_shared_and_anonymous_mode_is_disabled(tmp_path, monkeypatch):
+    monkeypatch.delenv("SHIELD_ENDPOINT_TOKEN", raising=False)
+    monkeypatch.setenv("SHIELD_ALLOW_ANONYMOUS", "1")
+    token = root_conftest.e2e_api_token.__wrapped__()
+    assert token and token != root_conftest.e2e_api_token.__wrapped__()
+
+    backend = root_conftest._e2e_backend_env("8095", tmp_path, token)
+    frontend = root_conftest._e2e_frontend_env("http://localhost:8095", tmp_path, token)
+    assert (
+        backend["SHIELD_ENDPOINT_TOKEN"] == frontend["SHIELD_ENDPOINT_TOKEN"] == token
+    )
+    assert "SHIELD_ALLOW_ANONYMOUS" not in backend
+    assert "SHIELD_ALLOW_ANONYMOUS" not in frontend
+
+
 def test_the_backend_command_serves_the_live_app():
     command = root_conftest._e2e_backend_command("127.0.0.1", "8095")
 

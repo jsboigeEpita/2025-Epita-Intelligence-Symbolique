@@ -29,6 +29,7 @@ from argumentation_analysis.services.web_api.models.response_models import (
     ValidationResponse,
 )
 
+from .auth import require_api_token
 from .fallacy_detection import (
     FallacyDetectionRequest,
     FallacyDetectionResponse,
@@ -70,7 +71,11 @@ def get_validation_service(logic_service=Depends(get_logic_service)):
     return _validation_service
 
 
-@frontend_router.post("/validate", response_model=ValidationResponse)
+@frontend_router.post(
+    "/validate",
+    response_model=ValidationResponse,
+    openapi_extra={"x-cost-class": "local"},
+)
 async def validate_argument(
     request: ValidationRequest, service=Depends(get_validation_service)
 ):
@@ -81,7 +86,11 @@ async def validate_argument(
     return await service.validate_argument(request)
 
 
-@frontend_router.post("/logic/belief-set", response_model=LogicBeliefSetResponse)
+@frontend_router.post(
+    "/logic/belief-set",
+    response_model=LogicBeliefSetResponse,
+    dependencies=[Depends(require_api_token)],
+)
 async def logic_belief_set(
     request: LogicBeliefSetRequest, service=Depends(get_logic_service)
 ):
@@ -94,7 +103,11 @@ async def logic_belief_set(
     return await service.text_to_belief_set(request)
 
 
-@frontend_router.post("/fallacies", response_model=FallacyDetectionResponse)
+@frontend_router.post(
+    "/fallacies",
+    response_model=FallacyDetectionResponse,
+    dependencies=[Depends(require_api_token)],
+)
 async def fallacies(request: FallacyDetectionRequest):
     """The fallacies of a text, by the detector the pipeline's fallacy phase uses.
 

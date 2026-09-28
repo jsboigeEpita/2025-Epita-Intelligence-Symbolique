@@ -23,9 +23,10 @@ or a structure that nothing decides.
 import logging
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from .auth import require_api_token
 from .errors import ServiceUnavailableError, UnanalyzableInputError, UpstreamError
 from .fallacy_detection import detect_fallacies
 
@@ -105,7 +106,11 @@ class ChatResponse(BaseModel):
 EXTRACTION_UNAVAILABLE = "failed:no-openai-client"
 
 
-@mobile_router.post("/analyze", response_model=AnalyzeResponse)
+@mobile_router.post(
+    "/analyze",
+    response_model=AnalyzeResponse,
+    dependencies=[Depends(require_api_token)],
+)
 async def mobile_analyze(request: TextRequest):
     """Analyze argumentative text — returns structured arguments.
 
@@ -174,7 +179,11 @@ async def mobile_analyze(request: TextRequest):
     )
 
 
-@mobile_router.post("/fallacies", response_model=FallacyResponse)
+@mobile_router.post(
+    "/fallacies",
+    response_model=FallacyResponse,
+    dependencies=[Depends(require_api_token)],
+)
 async def mobile_fallacies(request: TextRequest):
     """Detect logical fallacies in text.
 
@@ -228,7 +237,11 @@ def _endpoint_unreachable(exc: BaseException) -> bool:
     return False
 
 
-@mobile_router.post("/validate", response_model=ValidateResponse)
+@mobile_router.post(
+    "/validate",
+    response_model=ValidateResponse,
+    openapi_extra={"x-cost-class": "local-model"},
+)
 async def mobile_validate(request: TextRequest):
     """Validate the logical structure of an argument.
 
@@ -288,7 +301,9 @@ CHAT_SYSTEM_PROMPT = (
 )
 
 
-@mobile_router.post("/chat", response_model=ChatResponse)
+@mobile_router.post(
+    "/chat", response_model=ChatResponse, dependencies=[Depends(require_api_token)]
+)
 async def mobile_chat(request: ChatRequest):
     """Chat with AI assistant specialized in argument analysis.
 

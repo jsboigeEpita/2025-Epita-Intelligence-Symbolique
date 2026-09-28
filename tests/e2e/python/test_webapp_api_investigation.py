@@ -68,7 +68,18 @@ class TestWebAppAPIInvestigation:
             print(f"     {icon} {service}: {'OK' if status else 'Indisponible'}")
 
     @pytest.mark.e2e
-    def test_api_analyze_endpoint(self, e2e_servers):
+    def test_api_analyze_without_token_is_rejected(self, e2e_servers):
+        """The live uvicorn backend rejects a billed request without credentials."""
+        base_url = _backend_url(e2e_servers)
+        response = requests.post(
+            f"{base_url}/api/analyze",
+            json={"text": "Synthetic argument", "options": {}},
+            timeout=30,
+        )
+        assert response.status_code == 401, response.text
+
+    @pytest.mark.e2e
+    def test_api_analyze_endpoint(self, e2e_servers, e2e_api_token):
         """Test de l'endpoint d'analyse argumentative"""
         base_url = _backend_url(e2e_servers)
         test_text = "Dieu existe parce que la Bible le dit, et la Bible est vraie parce qu'elle est la parole de Dieu."
@@ -77,7 +88,12 @@ class TestWebAppAPIInvestigation:
 
         # #2756: a non-200 fails and a transport error propagates; the
         # skip policy lives in _backend_url, not around the request.
-        response = requests.post(f"{base_url}/api/analyze", json=payload, timeout=30)
+        response = requests.post(
+            f"{base_url}/api/analyze",
+            json=payload,
+            headers={"X-Shield-Token": e2e_api_token},
+            timeout=30,
+        )
         print(f"\n[ANALYZE] Test de l'endpoint /api/analyze:")
         print(f"   Status Code: {response.status_code}")
         print(f"   Texte analysé: {test_text[:50]}...")
@@ -89,7 +105,7 @@ class TestWebAppAPIInvestigation:
         )
 
     @pytest.mark.e2e
-    def test_api_fallacies_endpoint(self, e2e_servers):
+    def test_api_fallacies_endpoint(self, e2e_servers, e2e_api_token):
         """Test de l'endpoint de détection de sophismes"""
         base_url = _backend_url(e2e_servers)
         test_text = "Si nous autorisons le mariage gay, bientôt nous autoriserons aussi le mariage avec les animaux."
@@ -99,7 +115,12 @@ class TestWebAppAPIInvestigation:
         payload = {"text": test_text, "options": {"tier": "taxonomy"}}
 
         # #2756: a transport error used to be printed and the test PASSED.
-        response = requests.post(f"{base_url}/api/fallacies", json=payload, timeout=60)
+        response = requests.post(
+            f"{base_url}/api/fallacies",
+            json=payload,
+            headers={"X-Shield-Token": e2e_api_token},
+            timeout=60,
+        )
         print(f"\n[WARNING]  Test de l'endpoint /api/fallacies:")
         print(f"   Status Code: {response.status_code}")
         print(f"   Texte analysé: {test_text}")
@@ -154,7 +175,7 @@ class TestWebAppAPIInvestigation:
         assert [sorted(ext) for ext in extensions["preferred"]] == [["A1", "A3"]]
 
     @pytest.mark.e2e
-    def test_generate_api_investigation_report(self, e2e_servers):
+    def test_generate_api_investigation_report(self, e2e_servers, e2e_api_token):
         """Génère un rapport d'investigation de l'API"""
         base_url = _backend_url(e2e_servers)
         report_path = Path("tests/functional/logs/api_investigation_report.md")
@@ -186,7 +207,10 @@ class TestWebAppAPIInvestigation:
                     else:
                         test_data = {}
                     response = requests.post(
-                        f"{base_url}{endpoint}", json=test_data, timeout=5
+                        f"{base_url}{endpoint}",
+                        json=test_data,
+                        headers={"X-Shield-Token": e2e_api_token},
+                        timeout=5,
                     )
 
                 status = (
