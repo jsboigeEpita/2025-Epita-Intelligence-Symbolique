@@ -1065,16 +1065,32 @@ class SelfHostedLLMFallacyDetector:
         self._model = model or os.environ.get("SELF_HOSTED_LLM_MODEL", "")
         self._timeout = timeout
         self._available = None
+        # #2747: entries rejected by the last detect_async() — a mixed
+        # response (valid + unreadable) keeps its valid detections and names
+        # the rejected ones here instead of discarding everything.
+        self._last_rejected: List[str] = []
 
     def is_available(self) -> bool:
         if self._available is None:
             self._available = bool(self._endpoint and self._model)
         return self._available
 
+    @property
+    def last_rejected(self) -> List[str]:
+        """Entries rejected by the most recent detect_async() call (#2747).
+
+        Non-empty when the LLM response mixed valid entries with unreadable
+        ones — the valid detections were kept; these were not, by name.
+        """
+        return self._last_rejected
+
     async def detect_async(self, text: str) -> List[FallacyDetection]:
         """Detect fallacies via self-hosted LLM with structured output."""
         if not self.is_available():
             return []
+
+        # Reset per-call rejection state (#2747).
+        self._last_rejected = []
 
         import json
         import httpx
@@ -1136,9 +1152,19 @@ class SelfHostedLLMFallacyDetector:
             detections = []
             for f in fallacies:
                 if not isinstance(f, dict):
+                    self._last_rejected.append(f"non-object entry {f!r}")
                     continue
                 ftype = f.get("type", "")
-                conf = float(f.get("confidence", 0.5))
+                raw_conf = f.get("confidence", 0.5)
+                try:
+                    conf = float(raw_conf)
+                except (TypeError, ValueError):
+                    # #2747: one unreadable entry must not discard the valid
+                    # detections already collected — reject it, keep going.
+                    self._last_rejected.append(
+                        f"{ftype}: unreadable confidence {raw_conf!r}"
+                    )
+                    continue
                 explanation = f.get("explanation", "")
                 taxonomy_pk = _TAXONOMY_LABEL_TO_PK.get(ftype)
                 detections.append(
@@ -1149,6 +1175,13 @@ class SelfHostedLLMFallacyDetector:
                         description=explanation,
                         taxonomy_pk=taxonomy_pk,
                     )
+                )
+            if self._last_rejected:
+                logger.warning(
+                    "[PARTIAL] %d/%d self-hosted LLM entries rejected "
+                    "(detector.last_rejected names them)",
+                    len(self._last_rejected),
+                    len(fallacies),
                 )
             return detections
 
@@ -1240,6 +1273,10 @@ class LLMFallacyDetector:
         # from "no fallacies found"). Consumers check ``last_degraded``.
         self._last_degraded: bool = False
         self._last_error = None
+        # #2747: entries rejected by the last detect_async() — a mixed
+        # response (valid + unreadable) keeps its valid detections and names
+        # the rejected ones here instead of discarding everything.
+        self._last_rejected: List[str] = []
 
     @property
     def last_degraded(self) -> bool:
@@ -1248,6 +1285,25 @@ class LLMFallacyDetector:
         #1019 signal: distinguishes "LLM tier failed" from "no fallacies found".
         """
         return self._last_degraded
+
+    @property
+    def last_error(self) -> Optional[str]:
+        """Error of the most recent detect_async() failure, else None.
+
+        The #1019 degraded-signal comment already directed consumers to
+        ``detector.last_error``; #2747's born-red caught that no property
+        existed behind that documented name.
+        """
+        return self._last_error
+
+    @property
+    def last_rejected(self) -> List[str]:
+        """Entries rejected by the most recent detect_async() call (#2747).
+
+        Non-empty when the LLM response mixed valid entries with unreadable
+        ones — the valid detections were kept; these were not, by name.
+        """
+        return self._last_rejected
 
     def _get_openai_client(self):
         """Get OpenAI-compatible client and model via the canonical toggle.
@@ -1285,6 +1341,7 @@ class LLMFallacyDetector:
         # Reset per-call degradation state (set on failure below).
         self._last_degraded = False
         self._last_error = None
+        self._last_rejected = []
 
         try:
             import json as _json
@@ -1323,9 +1380,19 @@ class LLMFallacyDetector:
             detections = []
             for f in fallacies_data:
                 if not isinstance(f, dict):
+                    self._last_rejected.append(f"non-object entry {f!r}")
                     continue
                 ftype = f.get("type", "unknown")
-                conf = float(f.get("confidence", 0.5))
+                raw_conf = f.get("confidence", 0.5)
+                try:
+                    conf = float(raw_conf)
+                except (TypeError, ValueError):
+                    # #2747: one unreadable entry must not discard the valid
+                    # detections already collected — reject it, keep going.
+                    self._last_rejected.append(
+                        f"{ftype}: unreadable confidence {raw_conf!r}"
+                    )
+                    continue
                 if conf < self._threshold:
                     continue
                 explanation = f.get("explanation", "")
@@ -1342,6 +1409,13 @@ class LLMFallacyDetector:
                     )
                 )
 
+            if self._last_rejected:
+                logger.warning(
+                    "[PARTIAL] %d/%d LLM entries rejected "
+                    "(detector.last_rejected names them)",
+                    len(self._last_rejected),
+                    len(fallacies_data),
+                )
             logger.info(
                 f"LLM fallacy detection: {len(detections)} fallacies "
                 f"from {len(fallacies_data)} candidates (model={model})"
