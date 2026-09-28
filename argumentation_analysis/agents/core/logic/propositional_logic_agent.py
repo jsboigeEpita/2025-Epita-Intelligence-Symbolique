@@ -591,8 +591,13 @@ class PropositionalLogicAgent(BaseLogicAgent):
             )
             return None, f"Ensemble de croyances invalide: Incohérent"
 
+        # The model's order, deduplicated. ``list(declared_propositions)`` gave the
+        # set's order, which moves with PYTHONHASHSEED: GeneratePLQueryIdeas then
+        # got a different prompt in each process, so a cassette recorded in one
+        # never replayed in another (#2829).
         belief_set = PropositionalBeliefSet(
-            belief_set_content, propositions=list(declared_propositions)
+            belief_set_content,
+            propositions=list(dict.fromkeys(defs_json.get("propositions", []))),
         )
         self.logger.info("Conversion et validation du BeliefSet réussies.")
         return belief_set, "Conversion réussie."
@@ -736,9 +741,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
 
             is_entailed = self._tweety_bridge.pl_query(bs_str, query)
 
-            self.logger.info(
-                f"Résultat de l'exécution pour '{query}': {is_entailed}"
-            )
+            self.logger.info(f"Résultat de l'exécution pour '{query}': {is_entailed}")
             return is_entailed, f"Résultat de l'inférence: {is_entailed}."
 
         except Exception as e:
