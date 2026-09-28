@@ -9,13 +9,57 @@ Recovered from commit d2fdd930 and enhanced with structured output.
 
 import json
 import logging
-from typing import Annotated, Optional
+import math
+from typing import Annotated, Optional, Tuple
 
 from semantic_kernel.functions.kernel_function_decorator import kernel_function
 
 from argumentation_analysis.agents.utils.taxonomy_navigator import TaxonomyNavigator
 
 logger = logging.getLogger(__name__)
+
+#: Scores des niveaux lexicaux historiques — acceptés, mais le contrat que le
+#: prompt feuille énonce est un nombre (#2746).
+_CONFIDENCE_LEVELS = {"high": 0.9, "medium": 0.7, "low": 0.4}
+
+#: Ce qu'une confiance illisible dégrade : le défaut "medium" du paramètre,
+#: même valeur que le lecteur aval (fallacy_workflow_plugin lit
+#: ``lr.get("confidence", 0.7)``). L'entrée rejetée est nommée dans la note,
+#: jamais silencieuse.
+_UNREADABLE_CONFIDENCE_SCORE = 0.7
+
+
+def _confidence_score(raw: object) -> Tuple[float, str]:
+    """Le contrat unique de ``confirm_fallacy`` : un nombre dans ``[0, 1]``
+    (ce que le prompt feuille demande) ou un nom de niveau.
+
+    Rend ``(score, note)``. La note est vide quand l'entrée a été lue
+    fidèlement ; sinon elle nomme l'entrée rejetée. Jamais d'exception — un
+    appel de confirmation valide ne doit pas se perdre sur la forme de sa
+    confiance (#2746).
+    """
+    rejected = (
+        f"unreadable confidence {raw!r}, defaulted to "
+        f"{_UNREADABLE_CONFIDENCE_SCORE}"
+    )
+    if isinstance(raw, bool) or raw is None:
+        return _UNREADABLE_CONFIDENCE_SCORE, rejected
+    if isinstance(raw, (int, float)):
+        value = float(raw)
+    elif isinstance(raw, str):
+        text = raw.strip()
+        level = _CONFIDENCE_LEVELS.get(text.lower())
+        if level is not None:
+            return level, ""
+        try:
+            value = float(text.replace(",", "."))
+        except ValueError:
+            return _UNREADABLE_CONFIDENCE_SCORE, rejected
+    else:
+        return _UNREADABLE_CONFIDENCE_SCORE, rejected
+    if math.isnan(value) or math.isinf(value):
+        return _UNREADABLE_CONFIDENCE_SCORE, rejected
+    return min(max(value, 0.0), 1.0), ""
 
 
 class ExplorationPlugin:
@@ -100,7 +144,9 @@ class ExplorationPlugin:
         self,
         node_pk: Annotated[str, "The PK of the confirmed fallacy node"],
         confidence: Annotated[
-            str, "Confidence level: 'high', 'medium', or 'low'"
+            str,
+            "Confidence: a number between 0.0 and 1.0 (as the leaf prompt "
+            "specifies), or a level 'high'/'medium'/'low'",
         ] = "medium",
         justification: Annotated[str, "Why this fallacy matches the text"] = "",
     ) -> Annotated[str, "Confirmation result"]:
@@ -109,8 +155,7 @@ class ExplorationPlugin:
         if not node:
             return json.dumps({"error": f"Node {node_pk} not found"})
 
-        confidence_map = {"high": 0.9, "medium": 0.7, "low": 0.4}
-        confidence_score = confidence_map.get(confidence.lower().strip(), 0.5)
+        confidence_score, confidence_note = _confidence_score(confidence)
 
         lang = self.language
         result = {
@@ -126,6 +171,8 @@ class ExplorationPlugin:
             "confidence": confidence_score,
             "justification": justification,
         }
+        if confidence_note:
+            result["confidence_note"] = confidence_note
         return json.dumps(result, ensure_ascii=False)
 
     @kernel_function(
