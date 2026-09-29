@@ -50,10 +50,10 @@ DATASET_PATH = (
 
 # The analyst prompt is the campaign's starting point, verbatim from the
 # existing instrument (#2841: "start from ZEROSHOT_PROMPT in
-# run_capstone_c1.py"). Imported, not copied — a copy would drift. NB: the
-# importing module chdirs to the repo root at import time; the producer
-# already runs from there, so the side effect is a no-op here.
-from scripts.run_capstone_c1 import ZEROSHOT_PROMPT  # noqa: E402
+# run_capstone_c1.py"). Imported, not copied — a copy would drift. Since the
+# #2841 retouche it lives in a side-effect-free module, so importing it no
+# longer triggers run_capstone_c1's sys.path/chdir/load_dotenv at import time.
+from scripts.dataset.zeroshot_prompt import ZEROSHOT_PROMPT  # noqa: E402
 from scripts.dataset.run_corpus_batch import expand_corpus  # noqa: E402
 
 

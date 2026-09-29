@@ -34,6 +34,11 @@ load_dotenv(_env_path)
 from argumentation_analysis.core.utils.crypto_utils import derive_encryption_key
 from argumentation_analysis.core.io_manager import load_extract_definitions
 
+# 0-shot prompt (from CAPSTONE_INTEGRAL_VS_ZEROSHOT.md) — single source in a
+# side-effect-free module since the #2841 retouche (importers must not inherit
+# this script's sys.path/chdir/load_dotenv side effects).
+from scripts.dataset.zeroshot_prompt import ZEROSHOT_PROMPT
+
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
@@ -41,27 +46,6 @@ from argumentation_analysis.core.io_manager import load_extract_definitions
 CORPUS_SRC_IDX = {"A": 11, "B": 3, "C": 2}
 RESULTS_DIR = Path("argumentation_analysis/evaluation/results/capstone_c1")
 DATASET_PATH = Path("argumentation_analysis/data/extract_sources.json.gz.enc")
-
-# 0-shot prompt (from CAPSTONE_INTEGRAL_VS_ZEROSHOT.md)
-ZEROSHOT_PROMPT = """Tu es un analyste rhétorique expert. Analyse le texte suivant de manière exhaustive.
-
-Pour chaque argument identifié, fournis :
-1. La thèse de l'argument
-2. Les prémisses explicites et implicites
-3. Le type de raisonnement (déductif, inductif, analogique, causal, etc.)
-4. Tout sophisme ou erreur de raisonnement détecté (avec la famille : appel à l'autorité, homme de paille, faux dilemme, pente glissante, etc.)
-5. La force persuasive de l'argument (1-10)
-
-Ensuite, fournis une évaluation globale :
-6. La structure argumentative du texte (nombre et types d'arguments)
-7. Les stratégies rhétoriques employées
-8. Les points forts et les faiblesses de l'argumentation
-9. Une conclusion sur la qualité globale de l'argumentation
-
-Texte :
----
-{text}
----"""
 
 # Privacy: opaque IDs
 CORPUS_LABELS = {"A": "doc_A", "B": "doc_B", "C": "doc_C"}

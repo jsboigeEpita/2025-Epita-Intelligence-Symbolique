@@ -150,6 +150,11 @@ class TestSamePopulation:
     """The arm runs the pipeline arm's documents, via expand_corpus itself."""
 
     async def test_dry_run_ladder_matches_expand_corpus(self, monkeypatch, capsys):
+        # CI has no .env: the salt must come from the test, so the ladder
+        # comparison is decided by _synthetic_definitions alone (born red:
+        # delenv reproduces CI's RuntimeError first; convention neighbour
+        # tests/scripts/test_corpus_batch_coverage_1903.py:84).
+        monkeypatch.setenv("OPAQUE_ID_SALT", "synthetic-test-salt-2841")
         monkeypatch.setattr(arm, "load_definitions", _synthetic_definitions)
         rc = await arm.run_arm(["--dry-run", "--max-chars", "0"])
         assert rc == 0
@@ -168,6 +173,7 @@ class TestSamePopulation:
     async def test_dry_run_makes_no_network_and_writes_nothing(
         self, monkeypatch, tmp_path
     ):
+        monkeypatch.setenv("OPAQUE_ID_SALT", "synthetic-test-salt-2841")
         monkeypatch.setattr(arm, "load_definitions", _synthetic_definitions)
         monkeypatch.setattr(arm, "RESULTS_DIR", tmp_path / "zeroshot")
         called = []
