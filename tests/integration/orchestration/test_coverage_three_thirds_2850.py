@@ -17,6 +17,10 @@ Deterministic by construction (0 paid calls):
   do the same: it cannot extract a marker it never received;
 - the API-key environment is stripped for the run, so no other path can
   egress;
+- the two paths no other fake reaches — the agentic virtue layer's own sync
+  client, and the local-LLM availability probe — are answered by the same
+  faithful model and by "no local endpoint", respectively (measured before
+  the fakes: 2 POSTs to api.openai.com and 1 GET to localhost:5001);
 - everything else (heuristics, JVM, scoring) is deterministic.
 
 WHY IT IS RED AT BIRTH (measured on main at birth): the only LLM extraction
@@ -45,6 +49,11 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from semantic_kernel.connectors.ai.chat_completion_client_base import (
+    ChatCompletionClientBase,
+)
+from semantic_kernel.contents.chat_message_content import ChatMessageContent
+from semantic_kernel.contents.utils.author_role import AuthorRole
 
 INVOKE_PATH = "argumentation_analysis.orchestration.invoke_callables"
 
@@ -89,13 +98,9 @@ def _build_document() -> str:
     return "".join(parts)
 
 
-async def _fake_completion(_client=None, **kwargs):
-    """The faithful-model fake: extract the markers present in the prompt.
-
-    A marker absent from the prompt cannot be extracted — that is the
-    window defect this test measures, expressed as model behaviour.
-    """
-    messages = kwargs.get("messages", [])
+def _marker_payload(messages) -> str:
+    """The faithful model's answer, read off the prompt it is GIVEN: the
+    markers present in it, and no others. One rule, every call shape."""
     user = " ".join(str(m.get("content", "")) for m in messages if isinstance(m, dict))
     found = sorted({t for t in _MARKER.findall(user)})
     payload = {
@@ -107,9 +112,36 @@ async def _fake_completion(_client=None, **kwargs):
         "fallacies": [],
         "summary": "ok",
     }
+    return json.dumps(payload)
+
+
+def _fake_response(messages):
     return SimpleNamespace(
-        choices=[SimpleNamespace(message=SimpleNamespace(content=json.dumps(payload)))]
+        choices=[
+            SimpleNamespace(message=SimpleNamespace(content=_marker_payload(messages)))
+        ]
     )
+
+
+async def _fake_completion(_client=None, **kwargs):
+    """The faithful-model fake: extract the markers present in the prompt.
+
+    A marker absent from the prompt cannot be extracted — that is the
+    window defect this test measures, expressed as model behaviour.
+    """
+    return _fake_response(kwargs.get("messages", []))
+
+
+def _fake_sync_completion(_client=None, **kwargs):
+    """The same faithful model in the SYNCHRONOUS shape (#2324's sync twin).
+
+    The agentic virtue layer builds its own ``openai.OpenAI`` client and
+    calls ``cached_raw_chat_completion_sync`` (invoke_callables.py:299) —
+    neither the async fake nor the SK double reaches that path. Measured
+    without this patch: 2 real POSTs to api.openai.com (the client is built
+    with ``max_retries=1``) inside the gate, class ``llm``/``network``.
+    """
+    return _fake_response(kwargs.get("messages", []))
 
 
 def _fake_client():
@@ -121,6 +153,49 @@ def _fake_client():
     return SimpleNamespace(
         chat=SimpleNamespace(completions=SimpleNamespace(create=create))
     )
+
+
+class _FakeSkChatCompletion(ChatCompletionClientBase):
+    """A REAL SK chat client whose answer comes from ``_fake_completion``.
+
+    Not a MagicMock — a double richer than the object under test certifies a
+    dead path. The pipeline adds this to a kernel and calls it through the SK
+    base, so it honours the same contract the built service does: the plural
+    ``get_chat_message_contents`` is the interception point, and the singular
+    ``get_chat_message_content`` delegates to it inside the SK base (both
+    call shapes were measured on the real service).
+
+    It stands in for the ONE service construction no other patch reaches:
+    ``create_llm_service(..., force_authentic=True)`` at the two fallacy
+    wide-net sites of ``invoke_callables``, which ask for a real service on
+    purpose under ``PYTEST_CURRENT_TEST``. Measured without it: 12 requests
+    to api.openai.com (real 401 answers) inside the gate.
+    """
+
+    async def get_chat_message_contents(self, chat_history, settings=None, **kwargs):
+        messages = [
+            {
+                "role": str(getattr(message, "role", "user")),
+                "content": str(message.content),
+            }
+            for message in chat_history
+        ]
+        response = await _fake_completion(messages=messages)
+        return [
+            ChatMessageContent(
+                role=AuthorRole.ASSISTANT,
+                content=response.choices[0].message.content,
+                ai_model_id="fake-2850",
+            )
+        ]
+
+    async def get_streaming_chat_message_contents(
+        self, chat_history, settings=None, **kwargs
+    ):
+        raise AssertionError(
+            "the #2850 coverage test is non-streaming; a streaming call means "
+            "a path this faithful double was not built for"
+        )
 
 
 def _thirds_in_state(state) -> "dict[str, object]":
@@ -184,9 +259,12 @@ async def test_each_third_of_a_long_document_is_analysed(monkeypatch):
     monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
     monkeypatch.delenv("OPENROUTER_BASE_URL", raising=False)
 
-    # Egress net: a path that builds its own real client (measured: the
-    # self-hosted fallacy plugin reached api.openai.com for a 401 before
-    # this) must degrade loudly, not egress. The fake needs no socket.
+    # Socket barrier — with a measured limit, stated: it covers SYNC connects
+    # only. On Windows the async clients (the SK service, the OpenAI SDK)
+    # connect through the Proactor loop's overlapped ConnectEx, never through
+    # ``socket.connect`` — measured on ai-01: 14 real requests sailed past it
+    # to api.openai.com. The real nets are therefore the faithful double below
+    # and the gate's egress report (#2444), not this barrier.
     # Loopback stays open — Windows' ProactorEventLoop builds its internal
     # socketpair through 127.0.0.1 (a total block kills asyncio itself,
     # measured at birth), which is why the endpoint vars above are scrubbed
@@ -202,6 +280,25 @@ async def test_each_third_of_a_long_document_is_analysed(monkeypatch):
         raise OSError(f"network egress to {host} blocked by the #2850 coverage test")
 
     monkeypatch.setattr(socket.socket, "connect", _blocked)
+
+    # The fallacy wide-net asks the factory for a REAL service on purpose
+    # (``force_authentic=True`` — "never a mock under PYTEST_CURRENT_TEST",
+    # invoke_callables.py:6124 and :6663), and no patch above reaches the SK
+    # service it builds. The faithful double stands in for exactly those
+    # calls; every other caller keeps the factory's own pytest mock.
+    from argumentation_analysis.core import llm_service as llm_service_module
+
+    _real_create_llm_service = llm_service_module.create_llm_service
+
+    def _faithful_factory(*args, **kwargs):
+        force_authentic = kwargs.get("force_authentic") or (len(args) >= 5 and args[4])
+        if force_authentic:
+            return _FakeSkChatCompletion(
+                service_id="fake-2850", ai_model_id="fake-2850"
+            )
+        return _real_create_llm_service(*args, **kwargs)
+
+    monkeypatch.setattr(llm_service_module, "create_llm_service", _faithful_factory)
     from argumentation_analysis.orchestration.unified_pipeline import (
         run_unified_analysis,
     )
@@ -221,6 +318,26 @@ async def test_each_third_of_a_long_document_is_analysed(monkeypatch):
         patch(
             "argumentation_analysis.core.utils.network_utils.build_async_openai_client",
             return_value=_fake_client(),
+        ),
+        # The quality phase's agentic virtue layer does not go through any of
+        # the patches above: it builds its own sync ``OpenAI`` client and
+        # calls the #2324 sync twin of the cache seam (measured here: 2 real
+        # POSTs to api.openai.com, one retry, class llm/network — the gate's
+        # failure row). Fake the seam, not the client: the callable keeps its
+        # shape and answers from the prompt it was given.
+        patch(
+            "argumentation_analysis.services.llm_cache.cached_raw_chat_completion_sync",
+            new=_fake_sync_completion,
+        ),
+        # The local-LLM phase probes ``{endpoint}/models`` before doing
+        # anything (measured: 1 GET to localhost:5001). No seat of this
+        # cluster serves that endpoint; answering "unavailable" without a
+        # socket is the truthful double, and it keeps the phase's own
+        # degraded path (status skipped, traced) intact.
+        patch(
+            "argumentation_analysis.services.local_llm_service."
+            "LocalLLMService.is_available",
+            new=AsyncMock(return_value=False),
         ),
     ):
         result = await run_unified_analysis(document, workflow_name="standard")
