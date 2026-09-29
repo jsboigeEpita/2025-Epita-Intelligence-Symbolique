@@ -34,7 +34,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from tests.support.tree_walk import iter_files
+from tests.support.tree_walk import iter_tracked_files, stage_all_in_git
 
 import pytest
 
@@ -153,7 +153,7 @@ def verdict(root: Path, target: str, create: bool) -> str:
 def _collected_test_files(root: Path) -> List[Path]:
     # pytest.ini's norecursedirs skips every directory named ``_*`` or ``.*``.
     files = []
-    for path in sorted(iter_files(root / "tests")):
+    for path in sorted(iter_tracked_files(root / "tests")):
         parts = path.relative_to(root / "tests").parts[:-1]
         if any(part.startswith(("_", ".")) for part in parts):
             continue
@@ -299,6 +299,9 @@ def test_the_scan_reads_each_call_shape(tmp_path):
     (tests / "_archived" / "test_y.py").write_text(
         "patch('pkg.mod.Gone4')\n", encoding="utf-8"
     )
+    # The census reads the git index (#2834): a synthetic tree must be a
+    # real repository for its files to be in the population at all.
+    stage_all_in_git(tmp_path)
     _facts.cache_clear()
 
     dead, census = scan(tmp_path)

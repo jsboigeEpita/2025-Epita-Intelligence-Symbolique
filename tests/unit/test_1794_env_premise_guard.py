@@ -23,7 +23,7 @@ import re
 from pathlib import Path
 from unittest.mock import patch
 
-from tests.support.tree_walk import iter_files
+from tests.support.tree_walk import iter_tracked_files
 
 _TESTS_ROOT = Path(__file__).resolve().parents[1]
 
@@ -40,7 +40,7 @@ _SWAP_MOTIF = re.compile(
 def _gate_test_files():
     files = []
     for sub in ("unit", "scripts"):
-        files.extend(iter_files(Path(_TESTS_ROOT) / sub))
+        files.extend(iter_tracked_files(Path(_TESTS_ROOT) / sub))
     return sorted(files)
 
 

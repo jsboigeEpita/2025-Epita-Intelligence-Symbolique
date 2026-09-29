@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.support.tree_walk import iter_files
+from tests.support.tree_walk import iter_tracked_files
 
 ROOT = Path(__file__).resolve().parents[4]
 PRODUCTION_ROOTS = (
@@ -44,7 +44,7 @@ def _dotenv_sites(path: Path):
 def test_production_dotenv_has_one_loader():
     offenders = []
     for root in PRODUCTION_ROOTS:
-        for path in iter_files(root, skip_prefixes=("_probe_", "node_modules")):
+        for path in iter_tracked_files(root, skip_prefixes=("_probe_", "node_modules")):
             if path == LOADER or "_archives" in path.parts:
                 continue
             for line, call in _dotenv_sites(path):

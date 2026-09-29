@@ -28,7 +28,7 @@ import ast
 import functools
 from pathlib import Path
 
-from tests.support.tree_walk import iter_files
+from tests.support.tree_walk import iter_tracked_files, stage_all_in_git
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TESTS = REPO_ROOT / "tests"
@@ -39,13 +39,15 @@ def _archived(path: Path, root: Path) -> bool:
 
 
 def _workers(root: Path) -> list[Path]:
-    return sorted(p for p in iter_files(root, "worker_*.py") if not _archived(p, root))
+    return sorted(
+        p for p in iter_tracked_files(root, "worker_*.py") if not _archived(p, root)
+    )
 
 
 def _launch_files(root: Path) -> list[Path]:
     return sorted(
         p
-        for p in iter_files(root)
+        for p in iter_tracked_files(root)
         if (p.name.startswith("test_") or p.name == "conftest.py")
         and not _archived(p, root)
     )
@@ -170,6 +172,9 @@ def test_a_launcher_launches_its_own_path_not_every_worker_of_that_name(tmp_path
         "WORKER = Path(__file__).parent / 'workers' / 'worker_twin.py'\n",
         encoding="utf-8",
     )
+    # The census reads the git index (#2834): the synthetic twin tree must
+    # be a real repository for its workers to be in the population.
+    stage_all_in_git(tmp_path)
     workers, launched, unread = _census(tmp_path)
     assert len(workers) == 2 and not unread
     assert launched_twin.resolve() in launched

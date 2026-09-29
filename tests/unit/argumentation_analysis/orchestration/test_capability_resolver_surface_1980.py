@@ -30,7 +30,7 @@ and its operational conclusion is sound. It is not a sibling of the false claim.
 import ast
 from pathlib import Path
 
-from tests.support.tree_walk import iter_files
+from tests.support.tree_walk import iter_tracked_files, stage_all_in_git
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 PROD_ROOT = PROJECT_ROOT / "argumentation_analysis"
@@ -70,7 +70,7 @@ def _iter_python(root: Path):
     takes (#2373). A file that must sit outside the census is excluded by
     path — an exclusion is named, never deduced from a SyntaxError.
     """
-    for py in sorted(iter_files(root)):
+    for py in sorted(iter_tracked_files(root)):
         yield py, ast.parse(py.read_text(encoding="utf-8-sig"), filename=str(py))
 
 
@@ -115,6 +115,9 @@ def test_resolver_census_sees_a_bom_carrier(tmp_path: Path):
     """
     src = "﻿def find_for_capability(capability):\n    return []\n"
     (tmp_path / "bom_resolver.py").write_text(src, encoding="utf-8")
+    # The census reads the git index (#2834): the synthetic carrier must be
+    # in a real repository to be in the population at all.
+    stage_all_in_git(tmp_path)
     assert _definitions(tmp_path) == {"find_for_capability"}, (
         "a resolver definition behind a UTF-8 BOM must be in the census — "
         "if it is not, the population is amputated again (#2373)."

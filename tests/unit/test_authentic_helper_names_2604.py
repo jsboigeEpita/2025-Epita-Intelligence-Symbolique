@@ -16,7 +16,7 @@ de chacune : ``_make_authentic_llm_call``, ``_create_authentic_kernel_instance``
 import ast
 from pathlib import Path
 
-from tests.support.tree_walk import PROBE_PREFIX, iter_files
+from tests.support.tree_walk import PROBE_PREFIX, iter_tracked_files
 
 TESTS_ROOT = Path(__file__).resolve().parents[1]
 
@@ -64,7 +64,9 @@ def misnamed_helpers(source, label):
 def test_no_helper_named_authentic_serves_the_pytest_mock():
     found = []
     # ``_archived`` n'est pas collecté : il est hors de ce garde, comme du gate.
-    for path in iter_files(TESTS_ROOT, skip_prefixes=(PROBE_PREFIX, "_archived")):
+    for path in iter_tracked_files(
+        TESTS_ROOT, skip_prefixes=(PROBE_PREFIX, "_archived")
+    ):
         rel = path.relative_to(TESTS_ROOT).as_posix()
         found += misnamed_helpers(path.read_text(encoding="utf-8-sig"), rel)
     assert not found, (
