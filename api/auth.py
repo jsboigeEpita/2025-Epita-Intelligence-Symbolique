@@ -5,7 +5,10 @@ import os
 import threading
 from typing import Optional
 
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.responses import JSONResponse
 
 _TOKEN_ENV = "SHIELD_ENDPOINT_TOKEN"
 _ANONYMOUS_ENV = "SHIELD_ALLOW_ANONYMOUS"
@@ -37,8 +40,16 @@ def require_api_token(
         )
 
 
-def require_billed_request(_authorized: None = Depends(require_api_token)) -> None:
-    """Reserve one billed request, atomically, after authentication succeeds."""
+def require_billed_request(
+    request: Request, _authorized: None = Depends(require_api_token)
+) -> None:
+    """Reserve one billed request, atomically, after authentication succeeds.
+
+    The unit is released if FastAPI then rejects the body (#2820): an
+    unaccepted request never invokes the service and bears no cost, and
+    billing it would let a valid token exhaust the budget with malformed
+    bodies alone. See ``refund_unaccepted_billed_request``.
+    """
     global _budget_used
     configured = os.environ.get(_BUDGET_ENV, str(_DEFAULT_BUDGET))
     try:
@@ -55,3 +66,20 @@ def require_billed_request(_authorized: None = Depends(require_api_token)) -> No
                 status_code=429, detail="Billed request budget exhausted"
             )
         _budget_used += 1
+    request.state.billed_unit_reserved = True
+
+
+async def refund_unaccepted_billed_request(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """Release the reserved unit of a request the body validation rejected.
+
+    Registered by ``create_app`` so the budget counts ACCEPTED cost-bearing
+    requests, as DEPLOYMENT.md documents (#2820). Routes without the billed
+    guard never set the flag, so a local route's 422 changes nothing.
+    """
+    if getattr(request.state, "billed_unit_reserved", False):
+        global _budget_used
+        with _budget_lock:
+            _budget_used = max(0, _budget_used - 1)
+    return await request_validation_exception_handler(request, exc)

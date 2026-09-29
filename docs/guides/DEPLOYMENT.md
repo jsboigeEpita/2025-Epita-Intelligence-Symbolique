@@ -119,7 +119,7 @@ uvicorn api.main:app --reload --port 8000
 - Status: `GET /api/status` → `operational` or `degraded`
 - Version: `2.0.0`
 - Model-backed POST routes and Shield return **503** without `SHIELD_ENDPOINT_TOKEN` or an explicit development-only `SHIELD_ALLOW_ANONYMOUS=1`; a missing/wrong `X-Shield-Token` returns **401** when configured. This deliberately changes bare local `uvicorn api.main:app` behavior. `docker-compose.yml` passes the token to the backend, which binds `0.0.0.0`; restrict access to that port and set a token before exposing it.
-- Every authenticated cost-bearing POST reserves one request against `BILLED_REQUEST_BUDGET` (default 1000 per process). Exhaustion returns **429** before scheduling or calling a service; invalid or nonpositive configuration returns **503**. The count resets on process restart and is independent for each worker; it bounds requests, not provider tokens or spending, so set it for the deployment's expected cost per request. Local-only routes do not consume it.
+- Every **accepted** cost-bearing POST reserves one request against `BILLED_REQUEST_BUDGET` (default 1000 per process). A request rejected by body validation (**422**) releases its reserved unit — the budget counts accepted requests, not authenticated ones, so malformed bodies cannot exhaust it. Exhaustion returns **429** before scheduling or calling a service; invalid or nonpositive configuration returns **503**. The count resets on process restart and is independent for each worker; it bounds requests, not provider tokens or spending, so set it for the deployment's expected cost per request. Local-only routes do not consume it.
 
 ### Starlette web UI (frontend proxy)
 

@@ -3,6 +3,12 @@ const { test, expect } = require('@playwright/test');
 /**
  * Tests Playwright - Investigation Rigoureuse avec Textes Varies
  * Test de differents types de textes pour validation de l'analyse argumentative
+ *
+ * DORMANT (#2820): aucun workflow CI ne lance cette spec, et elle cible
+ * l'API legacy services/web_api (port 5004) — PAS le backend FastAPI gardé
+ * par jeton (api.main). Si elle est ressuscitée contre api.main, chaque POST
+ * model-backed devra envoyer l'en-tête X-Shield-Token. Sa retraite suivrait
+ * le Cleanup Gate (justification par fichier).
  */
 
 test.describe('Investigation Textes Varies - Analyse Argumentative', () => {
