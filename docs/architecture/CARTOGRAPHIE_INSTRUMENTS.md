@@ -35,14 +35,30 @@ affirmé à tort qu'aucune mesure récente n'existait.
 |---|---|---|---|
 | `scripts/measure_both_paths_vs_zeroshot.py` | **externe**, head-to-head sur corpus : DAG `spectacular` / conversationnel / référence zero-shot | quel *chemin d'orchestration* bat l'autre, dimension par dimension | **run : 31/05/2026** ⚠ non re-mesuré · imports revérifiés le 18/09 (3 points d'entrée OK) · référence : `docs/reports/BASELINE_0SHOT_2026-05-16.md` |
 | `scripts/dataset/run_zeroshot_arm.py` (#2841) | **bras zero-shot réel** : un appel par document, même corpus (`expand_corpus`), même modèle (résolveur canonique), même texte intégral ; réponse gardée entière en chemin gitignoré | ce que le modèle **seul** dit du document — l'autre moitié de la lecture côte à côte | **29/09/2026, campagne #2841** : 49/49 complets (~73 s/doc) face à la passe `spectacular` 49/49 (48/49 reader-valid = re-mesure exacte de #2062) |
-| `reporting/restitution/conclusion_salience.py` (#1914) | **interne**, déterministe, dérivé de l'état, rendu dans l'Acte III | ce que *ce run-ci* a établi qu'une lecture zero-shot forte ne donne pas | **vivant, campagne #2841 le 29/09** : 49 documents, surplus non procédural sur **48/49** (décisif_formel=69, structural=136, convergence_non_llm=71) · ⚠ défaut ouvert #2844 (les trouvailles structurelles à résultat vide sont comptées établies — 13/49 docs) |
+| `reporting/restitution/conclusion_salience.py` (#1914) | **interne**, déterministe, dérivé de l'état, rendu dans l'Acte III | ce que *ce run-ci* a établi qu'une lecture zero-shot forte ne donne pas | **vivant, campagne #2841 le 29/09** : 49 documents, surplus non procédural sur **48/49** (décisif_formel=69, structural=136, convergence_non_llm=71) · **portée #2850 : ce surplus est mesuré sur la fenêtre de tête analysée par le pipeline (3 000 caractères), pas sur le texte entier** · ⚠ défaut ouvert #2844 (les trouvailles structurelles à résultat vide sont comptées établies — 13/49 docs) |
 
-**Différence à ne pas confondre** : le premier compare des *chemins* entre eux et a besoin
-d'une référence zero-shot enregistrée ; le troisième exécute un vrai zero-shot **par run**
-(même corpus, même modèle, même texte) ; le second déclare un *surplus par run*, sans jamais
-exécuter de zero-shot — il dérive le surplus de la nature des trouvailles (réfutations
+**Différence à ne pas confondre** : le premier (`measure_both_paths_vs_zeroshot.py`) compare
+des *chemins* entre eux et a besoin d'une référence zero-shot enregistrée ; le second
+(`run_zeroshot_arm.py`) exécute un vrai zero-shot **par run** (même corpus, même modèle,
+même texte) ; le troisième (`conclusion_salience.py`) déclare un *surplus par run*, sans
+jamais exécuter de zero-shot — il dérive le surplus de la nature des trouvailles (réfutations
 formelles, exclusions de Dung, relations structurelles, convergences portant au moins un
 signal non-LLM).
+
+**Portée mesurée le 29/09 (#2850) — le pipeline n'analyse pas le texte entier.** « Même
+texte » est vrai de l'*entrée* du bras zero-shot, pas de ce que le pipeline **lit** : la
+phase d'extraction qui peuple `identified_arguments` (`_invoke_fact_extraction`,
+`invoke_callables.py:6869`) n'envoie au LLM qu'une **fenêtre de tête de 3 000 caractères**
+(`selected_text(input_text, 3000, "fact_extraction")` ; offset 0 sur corpus prose,
+`core/reading_window.py`). Re-mesuré le 29/09 (#2850) sur mes 49 dumps frais de la
+campagne, couverture recalculée par le producteur de l'audit (0 appel LLM) : position
+maximale médiane des unités LLM **0,04**, **0/19** documents ≥ 20 k caractères portant une
+unité dans le dernier tiers, 4 à 13 unités LLM par document (~9 675 caractères/unité) —
+l'analyse vit dans les premiers pourcents, quelle que soit la longueur. Les unités
+heuristiques, écrites sur le texte entier, ne sont touchées que **51 fois sur 13 597** —
+toutes par `counter_arguments` (0 par quality, 0 par fallacy). La lecture côte à côte compare
+donc *la tête lue par le pipeline* au *texte entier lu par le zero-shot* : un écart
+d'instrument à porter dans toute conclusion tirée du surplus.
 
 **Trou mesuré le 18/09 — comblé le 29/09 (campagne #2841).** Le surplus #1914 était calculé
 sur l'objet d'évidence de l'Acte III et rendu en prose, mais jamais persisté (0 occurrence
@@ -52,7 +68,9 @@ document, non agrégeable. Depuis #2298, chaque signature porte `zero_shot_surpl
 l'agrégat de campagne. **Mesuré le 29/09 (#2841)** : surplus non procédural sur **48/49**
 documents (décisif_formel=69, structural=136, convergence_non_llm=71) — avec la réserve
 #2844 : les trouvailles structurelles à résultat vide sont encore comptées (13/49 docs),
-le compte `structural` est donc un majorant.
+le compte `structural` est donc un majorant. Portée #2850 : ce surplus est mesuré sur la
+fenêtre de tête que le pipeline analyse, pas sur le texte entier (cf. le paragraphe de
+portée ci-dessus).
 
 ---
 
