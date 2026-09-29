@@ -170,15 +170,14 @@ async def test_text_to_belief_set_authentic_modal(authentic_agent):
     Il est possible que Socrate soit sage.
     """
 
-    try:
-        belief_set, message = await agent.text_to_belief_set(test_text)
-    except Exception as e:
-        pytest.skip(f"LLM text_to_belief_set failed: {e}")
+    # #2832 : un échec du fournisseur fait ÉCHOUER ce test, il ne le saute pas.
+    # Le skip reste réservé au chemin « pas de clé » ci-dessus — même doctrine
+    # que #2651 pour execute_query plus bas.
+    belief_set, message = await agent.text_to_belief_set(test_text)
 
     print(f"✅ Conversion Modal authentique: {message}")
 
-    if belief_set is None:
-        pytest.skip(f"LLM returned None belief set: {message}")
+    assert belief_set is not None, f"LLM returned no belief set: {message}"
 
     assert isinstance(belief_set, ModalBeliefSet)
     assert len(belief_set.content) > 0
@@ -209,10 +208,8 @@ async def test_generate_queries_authentic_modal(authentic_agent):
     belief_set = ModalBeliefSet(belief_set_content)
     context_text = "Nous analysons les propriétés nécessaires et possibles"
 
-    try:
-        queries = await agent.generate_queries(context_text, belief_set)
-    except Exception as e:
-        pytest.skip(f"LLM generate_queries failed: {e}")
+    # #2832 : même contrat que ci-dessus — l'échec fournisseur est un échec.
+    queries = await agent.generate_queries(context_text, belief_set)
 
     print(f"✅ Génération Modal authentique de {len(queries)} requêtes")
     assert isinstance(queries, list)
@@ -275,21 +272,16 @@ async def test_full_workflow_modal_authentic(authentic_agent):
     """
 
     # Step 1: Text to belief set
-    try:
-        belief_set, bs_message = await agent.text_to_belief_set(test_text)
-    except Exception as e:
-        pytest.skip(f"Workflow step 1 (text_to_belief_set) failed: {e}")
+    # #2832 : chaque étape LLM du workflow fait échouer le test si le
+    # fournisseur échoue ; le skip ne couvre que l'absence de clé, ci-dessus.
+    belief_set, bs_message = await agent.text_to_belief_set(test_text)
 
     print(f"✅ Étape 1 Modal authentique - Belief set: {bs_message}")
 
-    if belief_set is None:
-        pytest.skip(f"LLM returned None belief set: {bs_message}")
+    assert belief_set is not None, f"LLM returned no belief set: {bs_message}"
 
     # Step 2: Generate queries
-    try:
-        queries = await agent.generate_queries(test_text, belief_set)
-    except Exception as e:
-        pytest.skip(f"Workflow step 2 (generate_queries) failed: {e}")
+    queries = await agent.generate_queries(test_text, belief_set)
 
     print(f"✅ Étape 2 Modal authentique - {len(queries)} requêtes générées")
 

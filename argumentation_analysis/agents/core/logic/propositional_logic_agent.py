@@ -34,6 +34,7 @@ from argumentation_analysis.agents.core.semantic_setup import (
     prompt_settings,
     register_prompt_function,
 )
+from argumentation_analysis.core.llm_errors import provider_failure
 from .belief_set import BeliefSet, PropositionalBeliefSet
 from .tweety_bridge import TweetyBridge
 from .tweety_initializer import TweetyInitializer
@@ -466,6 +467,14 @@ class PropositionalLogicAgent(BaseLogicAgent):
                 error_msg = f"Erreur de décodage JSON: {e}. Réponse: {response_text}"
                 self.logger.error(f"[{log_tag}] {error_msg}")
             except Exception as e:
+                # #2832: a provider failure must not be retried into an ordinary
+                # ``None`` — three attempts at a rejected key is pure waste, and
+                # the caller then reads it as an empty model output.
+                if provider_failure(e) is not None:
+                    self.logger.error(
+                        f"[{log_tag}] Échec du fournisseur LLM: {e}", exc_info=True
+                    )
+                    raise
                 error_msg = f"Erreur inattendue lors de l'invocation LLM: {e}"
                 self.logger.error(f"[{log_tag}] {error_msg}", exc_info=True)
 
@@ -702,6 +711,14 @@ class PropositionalLogicAgent(BaseLogicAgent):
             )
             return []
         except Exception as e:
+            # #2832: same contract as _invoke_llm_for_json — a provider failure
+            # is not a model that answered with nothing usable.
+            if provider_failure(e) is not None:
+                self.logger.error(
+                    f"Échec du fournisseur LLM lors de la génération des requêtes: {e}",
+                    exc_info=True,
+                )
+                raise
             self.logger.error(
                 f"Erreur inattendue lors de la génération des requêtes: {e}",
                 exc_info=True,
