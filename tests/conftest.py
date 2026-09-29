@@ -590,9 +590,15 @@ def _skip_storm_signal(session, exitstatus):
     hit the shape in one round, one as a born-red that never ran (#2021).
 
     Exempt by design: sessions where JVM-less is a CHOICE (--disable-jvm-session,
-    E2E classification) — a JVM-less environment must still be able to run
-    the non-JVM suite. The defect is that a vacuous run is SILENT, not that
-    it skips. Never make the conftest fail instead of skip (#2021 anti-pendulum).
+    a REAL e2e session — one the collection agreed with) — a JVM-less
+    environment must still be able to run the non-JVM suite. The defect is
+    that a vacuous run is SILENT, not that it skips. Never make the conftest
+    fail instead of skip (#2021 anti-pendulum).
+
+    #2862: an argv that PREDICTED an e2e session while the collection found
+    zero e2e items is not a choice — the prediction itself skipped the JVM
+    boot, so the run measured nothing. That disagreement shouts, it does not
+    exempt (see the branch below).
     """
     if exitstatus != 0:
         return  # already red — there is no green mask to lift
@@ -601,14 +607,39 @@ def _skip_storm_signal(session, exitstatus):
         return
     if config.getoption("--disable-jvm-session"):
         return
-    if _cache(config).get("is_e2e_session", False) or _argv_decides_e2e_session(config):
-        return
     jvm_reasons = _skip_storm_counter.jvm_signature_reasons()
-    # #2490: the count the session decided on. The xdist controller collects
-    # nothing itself, so ``session.items`` stays empty there, and xdist
-    # publishes the workers' count in ``session.testscollected``. Serially
-    # the two are equal.
-    shout, message = _storm_verdict(session.testscollected, len(jvm_reasons))
+    if _cache(config).get("is_e2e_session", False):
+        # A REAL e2e session: the collection found e2e items, JVM-less is the
+        # design there, and the run measured what it set out to measure.
+        return
+    if _argv_decides_e2e_session(config):
+        # #2862: the argv predicted an e2e session while the collection found
+        # NO e2e item (the cache slot above is the post-collection truth,
+        # written at l.333). The disagreement IS the defect: the prediction
+        # alone skipped the JVM boot in ``pytest_sessionstart``, so every JVM
+        # test of this session skipped at setup and the run exits 0 having
+        # measured nothing — the #2021 silent green, on the one path #2021's
+        # own exemption did not cover. That exemption exists for sessions where
+        # JVM-less is a CHOICE (``--disable-jvm-session``, a real e2e session);
+        # a prediction the collection contradicts is not a choice, so it is
+        # never exempt — whatever the classifier failed to read (a filter it
+        # does not model, ``--deselect``, ``norecursedirs``, an xdist worker's
+        # pruned subset).
+        shout, message = True, (
+            "FAIL-LOUD (#2862): the argv predicted an e2e session while the "
+            f"collection found none — 0 e2e item collected, "
+            f"{session.testscollected} test(s) collected in all, "
+            f"{len(jvm_reasons)} skipped with a JVM signature. The JVM boot was "
+            "skipped on that prediction, so the JVM-side of this run decided "
+            "nothing. Fix the argv (--ignore/--ignore-glob/-m), or state "
+            "JVM-less on purpose with --disable-jvm-session."
+        )
+    else:
+        # #2490: the count the session decided on. The xdist controller collects
+        # nothing itself, so ``session.items`` stays empty there, and xdist
+        # publishes the workers' count in ``session.testscollected``. Serially
+        # the two are equal.
+        shout, message = _storm_verdict(session.testscollected, len(jvm_reasons))
     if not shout:
         return
     # print, not logger: sessionfinish runs after per-test capture is gone,
@@ -623,7 +654,7 @@ def _skip_storm_signal(session, exitstatus):
     )
     print("=" * 60)
     pytest.exit(
-        "skip-storm signal tripped (#2021) — see the FAIL-LOUD block above",
+        "skip-storm signal tripped (#2021/#2862) — see the FAIL-LOUD block above",
         returncode=1,
     )
 
