@@ -321,12 +321,25 @@ def main():
     print(f"  prover9.bat present       = {p9.is_file()}  ({p9})")
     for pkg in ("python-sat", "pycryptosat", "JPype1", "clingo", "z3-solver"):
         print(f"  package {pkg:<14} = {pkg_version(pkg)}")
-    import jpype
-
-    print(f"  JVM path: {jpype.getDefaultJVMPath()}")
-    if jpype.isJVMStarted():
-        java_ver = str(jpype.JClass("java.lang.System").getProperty("java.version"))
-        print(f"  JVM running: java.version={java_ver}")
+    try:
+        import jpype
+    except ImportError:
+        # A lock env that does not carry jpype must still get its REPORT, not a
+        # traceback: every JVM-backed check below is fail-loud through
+        # ``require`` (measured in the projet-is-lock env, #2851 DoD follow-up).
+        jpype = None
+        require(
+            "JVM boot (jpype import)",
+            False,
+            "jpype is not importable in this env (absent from the lock) — "
+            "JVM-backed checks (Tweety FOL, modal, SPASS, clingo JVM) cannot "
+            "decide here",
+        )
+    if jpype is not None:
+        print(f"  JVM path: {jpype.getDefaultJVMPath()}")
+        if jpype.isJVMStarted():
+            java_ver = str(jpype.JClass("java.lang.System").getProperty("java.version"))
+            print(f"  JVM running: java.version={java_ver}")
     from argumentation_analysis.core import jvm_setup as _jvm_setup
 
     tweety = getattr(_jvm_setup, "TWEETY_VERSION", None)
