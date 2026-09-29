@@ -3192,9 +3192,15 @@ async def _invoke_camembert_fallacy(
         )
 
         async_client = build_async_openai_client(api_key=api_key, base_url=endpoint)
-        llm_service = OpenAIChatCompletion(
-            ai_model_id=model_id,
-            async_client=async_client,
+        from argumentation_analysis.core.llm_service import _wrap_with_llm_cache
+
+        # #2849 — a raw SK service would bypass the one accounting point; the
+        # wrapper is an inert passthrough in off mode that still counts usage.
+        llm_service = _wrap_with_llm_cache(
+            OpenAIChatCompletion(
+                ai_model_id=model_id,
+                async_client=async_client,
+            )
         )
         master_kernel = Kernel()
         master_kernel.add_service(llm_service)

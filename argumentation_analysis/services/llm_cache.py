@@ -119,6 +119,169 @@ def get_cache_miss_keys() -> List[str]:
     return _cache_stats.get_miss_keys()
 
 
+# ──── Token-usage accounting (#2849 — one accounting point per run) ────
+#
+# The #2841 pass (49 docs) logged usage for only 44 client-direct calls: SK
+# calls logged nothing, so the token total of a full analysis was unknowable.
+# This section is the single accounting point every LIVE chat completion
+# passes through, whichever path it takes:
+#
+# - SK path:      ``CachedChatCompletion.get_chat_message_contents`` (the SK
+#                 service is wrapped in every cache mode since #2849 — in off
+#                 mode, a real paid run, the wrapper is an inert passthrough
+#                 that still accounts).
+# - direct path:  ``cached_raw_chat_completion`` (async) and its sync twin,
+#                 already the funnel of every direct ``chat.completions.create``.
+#
+# Only LIVE round-trips count (off passthrough and record-mode misses): a
+# replayed response was paid at record time, not by this run — counting it
+# would report a cost this run did not incur. Dollars appear only when the
+# provider returned one (``usage.cost``); absence stays ``None`` so the
+# runner prints "not reported", never a fabricated 0 (#2849 DoD 2).
+#
+# Phase attribution rides a ContextVar set by the workflow executor around
+# each phase (``llm_usage_phase``); a call outside any phase lands under
+# ``(unattributed)`` rather than being silently dropped.
+
+import contextvars
+
+UNATTRIBUTED_PHASE = "(unattributed)"
+
+_current_phase: "contextvars.ContextVar[Optional[str]]" = contextvars.ContextVar(
+    "llm_usage_current_phase", default=None
+)
+
+
+class _PhaseScope:
+    """Context manager naming the accounting bucket for calls made inside it."""
+
+    def __init__(self, name: str) -> None:
+        self._name = name
+        self._token: Optional[object] = None
+
+    def __enter__(self) -> "_PhaseScope":
+        self._token = _current_phase.set(self._name)
+        return self
+
+    def __exit__(self, *exc_info: object) -> None:
+        if self._token is not None:
+            _current_phase.reset(self._token)  # type: ignore[arg-type]
+
+
+def llm_usage_phase(name: str) -> _PhaseScope:
+    """Attribute every live LLM call made inside this scope to phase ``name``."""
+    return _PhaseScope(name)
+
+
+class UsageStats:
+    """Thread-safe per-phase tally of the LIVE token spend of one run (#2849).
+
+    ``{phase: {"prompt_tokens", "completion_tokens", "calls"}}`` plus a single
+    ``cost_usd`` — ``None`` until a provider reports one, a float once one did.
+    """
+
+    __slots__ = ("_lock", "_phases", "_cost_usd")
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._phases: Dict[str, Dict[str, int]] = {}
+        self._cost_usd: Optional[float] = None
+
+    def record(
+        self, prompt_tokens: int, completion_tokens: int, cost: Optional[float]
+    ) -> None:
+        phase = _current_phase.get() or UNATTRIBUTED_PHASE
+        with self._lock:
+            bucket = self._phases.setdefault(
+                phase, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0}
+            )
+            bucket["prompt_tokens"] += prompt_tokens
+            bucket["completion_tokens"] += completion_tokens
+            bucket["calls"] += 1
+            if cost is not None:
+                self._cost_usd = (self._cost_usd or 0.0) + cost
+
+    def as_dict(self) -> Dict[str, Any]:
+        with self._lock:
+            out: Dict[str, Any] = {k: dict(v) for k, v in self._phases.items()}
+            out["cost_usd"] = self._cost_usd
+            return out
+
+    def reset(self) -> None:
+        with self._lock:
+            self._phases.clear()
+            self._cost_usd = None
+
+
+_usage_stats = UsageStats()
+
+
+def get_usage_stats() -> Dict[str, Any]:
+    """Snapshot of the per-run token counters (live spend only, #2849)."""
+    return _usage_stats.as_dict()
+
+
+def reset_usage_stats() -> None:
+    """Zero the per-run usage counters (one run = one accounting window)."""
+    _usage_stats.reset()
+
+
+def _int_or_zero(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _usage_fields(usage: Any) -> "tuple[int, int, Optional[float]]":
+    """(prompt, completion, cost) from a pydantic or dict usage object."""
+    if isinstance(usage, dict):
+        prompt = usage.get("prompt_tokens")
+        completion = usage.get("completion_tokens")
+        cost = usage.get("cost")
+    else:
+        prompt = getattr(usage, "prompt_tokens", None)
+        completion = getattr(usage, "completion_tokens", None)
+        cost = getattr(usage, "cost", None)
+    return (
+        _int_or_zero(prompt),
+        _int_or_zero(completion),
+        float(cost) if isinstance(cost, (int, float)) else None,
+    )
+
+
+def _account_sk_usage(response: Any) -> None:
+    """Account the live usage of an SK response (#2849). Never raises into the call."""
+    try:
+        for msg in response if isinstance(response, list) else [response]:
+            metadata = getattr(msg, "metadata", None) or {}
+            usage = None
+            if hasattr(metadata, "get"):
+                usage = metadata.get("usage")
+            elif hasattr(metadata, "usage"):
+                usage = metadata.usage
+            if usage is None:
+                continue
+            prompt, completion, _cost = _usage_fields(usage)
+            _usage_stats.record(prompt, completion, None)
+            return  # one usage per round-trip, carried by the first message
+    except Exception as exc:  # noqa: BLE001 — instrument must not break the call
+        logger.warning("Usage accounting (SK path) skipped: %r", exc)
+
+
+def _account_raw_usage(response: Any) -> None:
+    """Account the live usage of a raw chat.completions response (#2849)."""
+    try:
+        usage = getattr(response, "usage", None)
+        if usage is None:
+            _usage_stats.record(0, 0, None)
+            return
+        prompt, completion, cost = _usage_fields(usage)
+        _usage_stats.record(prompt, completion, cost)
+    except Exception as exc:  # noqa: BLE001 — instrument must not break the call
+        logger.warning("Usage accounting (raw path) skipped: %r", exc)
+
+
 def get_cache_mode() -> str:
     """Read LLM_CACHE_MODE env var. Defaults to 'off'."""
     mode = os.getenv("LLM_CACHE_MODE", OFF).lower()
@@ -331,9 +494,11 @@ class CachedChatCompletion(ChatCompletionClientBase):
         """Intercept LLM calls with caching logic."""
         if self._mode == OFF or self._cache is None:
             _cache_stats.live += 1
-            return await self._inner.get_chat_message_contents(
+            response = await self._inner.get_chat_message_contents(
                 chat_history=chat_history, settings=settings, **kwargs
             )
+            _account_sk_usage(response)  # #2849 — live round-trip
+            return response
 
         key = compute_cache_key(chat_history, settings)
 
@@ -363,6 +528,7 @@ class CachedChatCompletion(ChatCompletionClientBase):
             chat_history=chat_history, settings=settings, **kwargs
         )
         _cache_stats.live += 1
+        _account_sk_usage(response)  # #2849 — live round-trip (record miss)
         # Record is an observer: it must never change the caller's outcome.
         # A response that cannot be serialized/pickled (mock responses in
         # unit tests) is passed through unrecorded rather than failing the
@@ -511,11 +677,15 @@ async def cached_raw_chat_completion(client: Any, **kwargs: Any) -> Any:
     mode = get_cache_mode()
     if mode == OFF:
         _cache_stats.live += 1
-        return await client.chat.completions.create(**kwargs)
+        response = await client.chat.completions.create(**kwargs)
+        _account_raw_usage(response)  # #2849 — live round-trip
+        return response
     cache = get_raw_cache()
     if cache is None:  # diskcache unavailable
         _cache_stats.live += 1
-        return await client.chat.completions.create(**kwargs)
+        response = await client.chat.completions.create(**kwargs)
+        _account_raw_usage(response)  # #2849 — live round-trip
+        return response
     key = compute_raw_cache_key(**kwargs)
     if mode == REPLAY:
         cached = cache.get(key)
@@ -539,6 +709,7 @@ async def cached_raw_chat_completion(client: Any, **kwargs: Any) -> Any:
     _cache_stats.miss_record += 1
     response = await client.chat.completions.create(**kwargs)
     _cache_stats.live += 1
+    _account_raw_usage(response)  # #2849 — live round-trip (record miss)
     # Same observer contract as the SK path: an unstorable response (mock
     # objects in tests) passes through unrecorded instead of raising from
     # inside the cache (#1603).
@@ -570,11 +741,15 @@ def cached_raw_chat_completion_sync(client: Any, **kwargs: Any) -> Any:
     mode = get_cache_mode()
     if mode == OFF:
         _cache_stats.live += 1
-        return client.chat.completions.create(**kwargs)
+        response = client.chat.completions.create(**kwargs)
+        _account_raw_usage(response)  # #2849 — live round-trip
+        return response
     cache = get_raw_cache()
     if cache is None:  # diskcache unavailable
         _cache_stats.live += 1
-        return client.chat.completions.create(**kwargs)
+        response = client.chat.completions.create(**kwargs)
+        _account_raw_usage(response)  # #2849 — live round-trip
+        return response
     key = compute_raw_cache_key(**kwargs)
     if mode == REPLAY:
         cached = cache.get(key)
@@ -598,6 +773,7 @@ def cached_raw_chat_completion_sync(client: Any, **kwargs: Any) -> Any:
     _cache_stats.miss_record += 1
     response = client.chat.completions.create(**kwargs)
     _cache_stats.live += 1
+    _account_raw_usage(response)  # #2849 — live round-trip (record miss)
     try:
         cache.set(key, _serialize_chat_completion(response))
     except Exception as exc:  # noqa: BLE001 — best-effort recording

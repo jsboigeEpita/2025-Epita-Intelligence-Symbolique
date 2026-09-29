@@ -429,6 +429,66 @@ def render_batch_verdict(summary: Dict[str, Any]) -> str:
     return "Verdict: PASS (0 documents failed)"
 
 
+def _usage_totals(usage: Dict[str, Any]) -> Dict[str, int]:
+    """Prompt/completion/calls summed across the per-phase buckets (#2849)."""
+    prompt = completion = calls = 0
+    phases = 0
+    for value in usage.values():
+        if not isinstance(value, dict):
+            continue
+        prompt += int(value.get("prompt_tokens", 0))
+        completion += int(value.get("completion_tokens", 0))
+        calls += int(value.get("calls", 0))
+        phases += 1
+    return {
+        "prompt_tokens": prompt,
+        "completion_tokens": completion,
+        "calls": calls,
+        "phases": phases,
+    }
+
+
+def render_usage_line(usage: Optional[Dict[str, Any]]) -> str:
+    """#2849 — one token-usage line. A missing dollar figure is printed as
+    "not reported", never as 0 (a fabricated 0 is a measurement lie)."""
+    if not usage:
+        return "LLM usage: not measured (no accounting window)"
+    totals = _usage_totals(usage)
+    cost = usage.get("cost_usd")
+    cost_txt = f"${cost:.4f}" if isinstance(cost, (int, float)) else "not reported"
+    return (
+        f"LLM usage: {totals['prompt_tokens']} prompt + "
+        f"{totals['completion_tokens']} completion tokens across "
+        f"{totals['calls']} call(s) in {totals['phases']} phase(s) — "
+        f"cost: {cost_txt}"
+    )
+
+
+def render_usage_total(signatures: List[Dict[str, Any]]) -> str:
+    """#2849 — batch-total tokens from the signatures, naming the documents
+    whose signature predates the accounting point instead of dropping them."""
+    prompt = completion = calls = 0
+    without_usage = 0
+    for sig in signatures:
+        usage = sig.get("llm_usage")
+        if not isinstance(usage, dict) or not _usage_totals(usage)["calls"]:
+            without_usage += 1
+            continue
+        totals = _usage_totals(usage)
+        prompt += totals["prompt_tokens"]
+        completion += totals["completion_tokens"]
+        calls += totals["calls"]
+    tail = (
+        f" ({without_usage} signature(s) without usage — pre-#2849)"
+        if without_usage
+        else ""
+    )
+    return (
+        f"Batch LLM usage: {prompt} prompt + {completion} completion tokens "
+        f"across {calls} call(s){tail}"
+    )
+
+
 def render_surplus_aggregate(signatures: List[Dict[str, Any]]) -> str:
     """#2298 — the corpus-scale zero-shot surplus aggregate, on stdout.
 
@@ -646,6 +706,15 @@ async def _run_single(
         level_counter[0] += 1
 
     # --- Execute pipeline ---------------------------------------------------
+    # #2849 — one accounting window per document: the per-run token counter is
+    # reset before the pipeline and read after, whatever the outcome (ok,
+    # timeout, error). A partial run reports the tokens it did spend.
+    from argumentation_analysis.services.llm_cache import (
+        get_usage_stats,
+        reset_usage_stats,
+    )
+
+    reset_usage_stats()
     t0 = time.perf_counter()
     partial = False
     partial_reason: Optional[str] = None
@@ -717,9 +786,14 @@ async def _run_single(
         }
 
     wall_clock = round(time.perf_counter() - t0, 1)
+    llm_usage = get_usage_stats()
+    logger.info("[%s] %s", opaque_id_str, render_usage_line(llm_usage))
 
     # Write full state dump
     state_dumps_dir.mkdir(parents=True, exist_ok=True)
+    # #2849 — the token accounting is part of the document's end state: a dump
+    # without it cannot answer "what did analyzing this document cost?".
+    state_snapshot["llm_usage"] = llm_usage
     dump_path = state_dumps_dir / f"state_full_{opaque_id_str}.json"
     dump_path.write_text(
         json.dumps(state_snapshot, ensure_ascii=False, indent=2, cls=_SafeEncoder),
@@ -738,6 +812,9 @@ async def _run_single(
         "wall_clock_s": wall_clock,
         "outcome": analysis_outcome,
         "state": sanitized,
+        # #2849 — per-run token accounting, persisted with the signature so the
+        # cost of a document is knowable after the fact (not only in the log).
+        "llm_usage": llm_usage,
     }
     # #2045 : provenance de run écrite au moment du dump — un dump sans
     # provenance n'est pas attributable à un run (le lot la fournit pour
@@ -1003,6 +1080,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     # in the summary, not only in a signature file.
     print(render_environment_stamp(environment_manifest()), flush=True)
     print(render_batch_summary(summary), flush=True)
+    print(render_usage_total(signatures), flush=True)
     print(render_surplus_aggregate(signatures), flush=True)
     print(render_batch_verdict(summary), flush=True)
     return 1 if summary["failed"] else 0
