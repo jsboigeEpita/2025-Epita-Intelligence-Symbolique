@@ -1,16 +1,16 @@
 {
-  "key": "96115adf1a0de29b34bcd0a91216d21ed72610857ed7865770851ec53c0051f5",
+  "key": "8d0b238098e331a5e7cefddf60af1ceb3dd5281e97b70860d42640b46c143b2a",
   "value": [
     {
       "role": "assistant",
-      "content": "{\"propositions\":[\"logique_coherente\",\"trouver_preuve\"],\"modal_formulas\":[\"[](logique_coherente)\",\"<>(trouver_preuve)\"]}",
+      "content": "{\"query_ideas\":[\"alice_succeeds\",\"alice_studies\"]}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETC5UvCHrocFsYuepflzpItlStSr4",
-        "created": 1790626684,
+        "id": "chatcmpl-ETC5fN6y5Zox4mgTrbNEvH4JfK0bN",
+        "created": 1790626695,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 308,
+          "prompt_tokens": 494,
           "prompt_tokens_details": {
             "audio_tokens": 0,
             "cache_write_tokens": 0,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 91,
+          "completion_tokens": 18,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 46,
+            "reasoning_tokens": 0,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

@@ -1,16 +1,16 @@
 {
-  "key": "d45b1b69d0a38579398d22010d4dc3e2dbd155030c11523a377a65bef42c7caf",
+  "key": "ef85006eb618fb563b3064c69e37a05d3ed0dbbbd0dfc0cdc22c492f504ac199",
   "value": [
     {
       "role": "assistant",
-      "content": "{\"query_ideas\":[{\"formula\":\"[](type(logique_coherente))\"},{\"formula\":\"<>(type(trouver_preuve))\"}]}",
+      "content": "{\"propositions\":[\"all_men_are_mortal\",\"socrates_is_wise\"],\"modal_formulas\":[\"[](all_men_are_mortal)\",\"<>(socrates_is_wise)\"]}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETC5WOVfRED8K86avUgQwkHCAknC0",
-        "created": 1790626686,
+        "id": "chatcmpl-ETC5Q3dvl80vDYhW5ITKxhjaW7ACD",
+        "created": 1790626680,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 212,
+          "prompt_tokens": 307,
           "prompt_tokens_details": {
             "audio_tokens": 0,
             "cache_write_tokens": 0,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 142,
+          "completion_tokens": 127,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 105,
+            "reasoning_tokens": 76,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

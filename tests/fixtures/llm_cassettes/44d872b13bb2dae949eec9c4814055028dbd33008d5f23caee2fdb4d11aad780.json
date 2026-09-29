@@ -1,16 +1,16 @@
 {
-  "key": "3bff5ce3a2e2501e49e5210fdd09c6a3da660d159811885f774d951b182ee78b",
+  "key": "44d872b13bb2dae949eec9c4814055028dbd33008d5f23caee2fdb4d11aad780",
   "value": [
     {
       "role": "assistant",
-      "content": "{\"propositions\":[\"il_pleut\",\"la_rue_est_mouillee\"]}",
+      "content": "{\"propositions\":[\"logique_coherente\",\"trouver_preuve\"],\"modal_formulas\":[\"[](logique_coherente)\",\"<>(trouver_preuve)\"]}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETC5ZOXBUiwDT4LcKHkiOzAPDjbjq",
-        "created": 1790626689,
+        "id": "chatcmpl-ETC5UvCHrocFsYuepflzpItlStSr4",
+        "created": 1790626684,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 220,
+          "prompt_tokens": 308,
           "prompt_tokens_details": {
             "audio_tokens": 0,
             "cache_write_tokens": 0,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 81,
+          "completion_tokens": 91,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 54,
+            "reasoning_tokens": 46,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

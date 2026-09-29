@@ -1,16 +1,16 @@
 {
-  "key": "ce0883eb43176ed13d4499ced29abca072bb281b0cb63c3c92db2e78affb6539",
+  "key": "86743d2ccbbf1b7d27b478e6d0327da12b177fe2f6ec24c8925301e8a2b2fa76",
   "value": [
     {
       "role": "assistant",
-      "content": "{\"query_ideas\":[{\"formula\":\"[](p)\"},{\"formula\":\"<>(p)\"},{\"formula\":\"[](q)\"},{\"formula\":\"<>(q)\"}]}",
+      "content": "{\"propositions\":[\"il_pleut\",\"la_rue_est_mouillee\"]}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETC5SDbJoGyfRAbQs0ing8mpfaTdX",
-        "created": 1790626682,
+        "id": "chatcmpl-ETC5ZOXBUiwDT4LcKHkiOzAPDjbjq",
+        "created": 1790626689,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 176,
+          "prompt_tokens": 220,
           "prompt_tokens_details": {
             "audio_tokens": 0,
             "cache_write_tokens": 0,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 100,
+          "completion_tokens": 81,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 58,
+            "reasoning_tokens": 54,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

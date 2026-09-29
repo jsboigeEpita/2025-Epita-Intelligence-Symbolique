@@ -1,16 +1,16 @@
 {
-  "key": "d2fd8f421df8c81746d703d0f176039d28f6b44fd8c2eefd0676f79584d1bc92",
+  "key": "e9ad4fa69259756bd875ac5acddf74d68da333ced16b83b20367d0ad1dca54bc",
   "value": [
     {
       "role": "assistant",
-      "content": "{\"query_ideas\":[\"alice_succeeds\",\"alice_studies\"]}",
+      "content": "{\"formulas\":[\"il_pleut => la_rue_est_mouillee\",\"il_pleut\"]}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETC5fN6y5Zox4mgTrbNEvH4JfK0bN",
-        "created": 1790626695,
+        "id": "chatcmpl-ETC5cdWFNUaxpKsd6fI3YfWRHYyAM",
+        "created": 1790626692,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 494,
+          "prompt_tokens": 388,
           "prompt_tokens_details": {
             "audio_tokens": 0,
             "cache_write_tokens": 0,
@@ -18,7 +18,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 18,
+          "completion_tokens": 26,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
