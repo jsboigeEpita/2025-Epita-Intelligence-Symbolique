@@ -431,7 +431,7 @@ def render_batch_verdict(summary: Dict[str, Any]) -> str:
 
 def _usage_totals(usage: Dict[str, Any]) -> Dict[str, int]:
     """Prompt/completion/calls summed across the per-phase buckets (#2849)."""
-    prompt = completion = calls = 0
+    prompt = completion = calls = without_usage = 0
     phases = 0
     for value in usage.values():
         if not isinstance(value, dict):
@@ -439,26 +439,35 @@ def _usage_totals(usage: Dict[str, Any]) -> Dict[str, int]:
         prompt += int(value.get("prompt_tokens", 0))
         completion += int(value.get("completion_tokens", 0))
         calls += int(value.get("calls", 0))
+        without_usage += int(value.get("calls_without_usage", 0))
         phases += 1
     return {
         "prompt_tokens": prompt,
         "completion_tokens": completion,
         "calls": calls,
+        "calls_without_usage": without_usage,
         "phases": phases,
     }
 
 
 def render_usage_line(usage: Optional[Dict[str, Any]]) -> str:
     """#2849 — one token-usage line. A missing dollar figure is printed as
-    "not reported", never as 0 (a fabricated 0 is a measurement lie)."""
+    "not reported", never as 0 (a fabricated 0 is a measurement lie). #2853:
+    calls whose response carried no usage (streams) are named, so "unknown
+    tokens" never reads as "0 tokens"."""
     if not usage:
         return "LLM usage: not measured (no accounting window)"
     totals = _usage_totals(usage)
     cost = usage.get("cost_usd")
     cost_txt = f"${cost:.4f}" if isinstance(cost, (int, float)) else "not reported"
+    without_usage = totals["calls_without_usage"]
+    tokens_txt = (
+        f"{totals['prompt_tokens']} prompt + {totals['completion_tokens']} completion tokens"
+        if not without_usage
+        else f"not reported for {without_usage} of {totals['calls']} call(s)"
+    )
     return (
-        f"LLM usage: {totals['prompt_tokens']} prompt + "
-        f"{totals['completion_tokens']} completion tokens across "
+        f"LLM usage: {tokens_txt} across "
         f"{totals['calls']} call(s) in {totals['phases']} phase(s) — "
         f"cost: {cost_txt}"
     )
@@ -501,7 +510,9 @@ def render_surplus_aggregate(signatures: List[Dict[str, Any]]) -> str:
         p = sig.get("zero_shot_surplus")
         return p if isinstance(p, dict) else {}
 
-    measured = [s for s in signatures if _proj(s) and "unavailable_reason" not in _proj(s)]
+    measured = [
+        s for s in signatures if _proj(s) and "unavailable_reason" not in _proj(s)
+    ]
     unavailable = len(signatures) - len(measured)
     carrying = [s for s in measured if _proj(s).get("carries_non_procedural_surplus")]
     by_nature: Dict[str, int] = {}
@@ -518,9 +529,7 @@ def render_surplus_aggregate(signatures: List[Dict[str, Any]]) -> str:
         )
         parts.append("by nature: {}".format(ventilation))
     else:
-        parts.append(
-            "by nature: none — measured absence, not an unwired instrument"
-        )
+        parts.append("by nature: none — measured absence, not an unwired instrument")
     if unavailable:
         parts.append(
             "{} document(s) unavailable (partial run, projection not derived)".format(

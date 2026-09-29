@@ -188,16 +188,36 @@ class UsageStats:
         self._cost_usd: Optional[float] = None
 
     def record(
-        self, prompt_tokens: int, completion_tokens: int, cost: Optional[float]
+        self,
+        prompt_tokens: int,
+        completion_tokens: int,
+        cost: Optional[float],
+        usage_reported: bool = True,
     ) -> None:
+        """Tally one live round-trip.
+
+        ``usage_reported=False`` marks a call whose response carried NO usage
+        (streamed chunks, providers that omit the field): the call is counted
+        (its tokens are unknown, not zero — never merge "0 tokens" with
+        "not reported", #2853 review item 3) and tallied apart so the runner
+        can print "not reported for k of n calls".
+        """
         phase = _current_phase.get() or UNATTRIBUTED_PHASE
         with self._lock:
             bucket = self._phases.setdefault(
-                phase, {"prompt_tokens": 0, "completion_tokens": 0, "calls": 0}
+                phase,
+                {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "calls": 0,
+                    "calls_without_usage": 0,
+                },
             )
             bucket["prompt_tokens"] += prompt_tokens
             bucket["completion_tokens"] += completion_tokens
             bucket["calls"] += 1
+            if not usage_reported:
+                bucket["calls_without_usage"] += 1
             if cost is not None:
                 self._cost_usd = (self._cost_usd or 0.0) + cost
 
@@ -251,7 +271,13 @@ def _usage_fields(usage: Any) -> "tuple[int, int, Optional[float]]":
 
 
 def _account_sk_usage(response: Any) -> None:
-    """Account the live usage of an SK response (#2849). Never raises into the call."""
+    """Account the live usage of an SK response (#2849). Never raises into the call.
+
+    #2853 review item 3 — a round-trip without usage is STILL a live call:
+    streamed chunks and some providers carry no ``metadata.usage``. Record the
+    call with ``usage_reported=False`` instead of dropping it, so "unknown
+    tokens" never merges with "0 tokens".
+    """
     try:
         for msg in response if isinstance(response, list) else [response]:
             metadata = getattr(msg, "metadata", None) or {}
@@ -265,6 +291,7 @@ def _account_sk_usage(response: Any) -> None:
             prompt, completion, _cost = _usage_fields(usage)
             _usage_stats.record(prompt, completion, None)
             return  # one usage per round-trip, carried by the first message
+        _usage_stats.record(0, 0, None, usage_reported=False)
     except Exception as exc:  # noqa: BLE001 — instrument must not break the call
         logger.warning("Usage accounting (SK path) skipped: %r", exc)
 
@@ -274,7 +301,7 @@ def _account_raw_usage(response: Any) -> None:
     try:
         usage = getattr(response, "usage", None)
         if usage is None:
-            _usage_stats.record(0, 0, None)
+            _usage_stats.record(0, 0, None, usage_reported=False)
             return
         prompt, completion, cost = _usage_fields(usage)
         _usage_stats.record(prompt, completion, cost)
@@ -549,6 +576,58 @@ class CachedChatCompletion(ChatCompletionClientBase):
     # Delegate attribute access to inner service
     def __getattr__(self, name):
         return getattr(self._inner, name)
+
+    # #2853 review item 2 — the class-level contract the agents read must not
+    # flip behind the wrapper. ``ChatCompletionClientBase.SUPPORTS_FUNCTION_CALLING``
+    # resolves on the wrapper's own class (False) before ``__getattr__`` is ever
+    # consulted, and a conversational/cluedo run deciding tool calling on it
+    # would lose the ability with no error. A NON-DATA descriptor forwards the
+    # read to the inner's value while still yielding to an instance assignment
+    # (``wrapper.SUPPORTS_FUNCTION_CALLING = ...`` shadows it — a @property
+    # would raise AttributeError on that write, mypy flags the override).
+    class _ForwardClassAttr:  # noqa: D401 — internal forwarding descriptor
+        def __init__(self, name: str) -> None:
+            self._name = name
+
+        def __set_name__(self, owner: type, name: str) -> None:
+            self._attr = name
+
+        def __get__(self, instance: object, owner: type) -> Any:
+            if instance is None:
+                return getattr(
+                    owner, "__forwarded_default__", False
+                )  # class access without instance
+            return getattr(instance._inner, self._name, False)
+
+    SUPPORTS_FUNCTION_CALLING = _ForwardClassAttr(  # noqa: N815 — SK's attr name
+        "SUPPORTS_FUNCTION_CALLING"
+    )
+
+    def get_prompt_execution_settings_class(self):
+        """#2853 review item 2 — forward the inner's settings class, not the
+        generic base-class one (``ChatCompletionAgent`` instantiates it)."""
+        return self._inner.get_prompt_execution_settings_class()
+
+    # #2853 review item 1 — the wrapper must stream. Without this override the
+    # call resolves on ``ChatCompletionClientBase`` (before ``__getattr__``) and
+    # raises NotImplementedError, breaking every off-mode run that streams
+    # (Sherlock ``kernel.invoke_stream``, the agent channels).
+    async def get_streaming_chat_message_contents(
+        self,
+        chat_history: ChatHistory,
+        settings=None,
+        **kwargs,
+    ):
+        """Stream through the inner service, accounting the call (#2849)."""
+        chunks: List[Any] = []
+        async for group in self._inner.get_streaming_chat_message_contents(
+            chat_history=chat_history, settings=settings, **kwargs
+        ):
+            chunks.extend(group)
+            yield group
+        _account_sk_usage(
+            chunks
+        )  # usage often absent on streamed chunks — still counts as a call
 
     def close(self):
         """Close the diskcache and release resources."""

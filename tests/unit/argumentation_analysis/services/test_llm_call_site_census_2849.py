@@ -10,25 +10,39 @@ Precedent #1787: "0 clean" must be distinguishable from "0 unplugged". The
 walker's own non-vacuity control asserts it SEES the funnel's create calls in
 ``llm_cache.py`` — a census that returns nothing anywhere is a broken walker,
 not a clean tree.
+
+#2853 review item 4 — the population comes from the git INDEX
+(``iter_tracked_files``), never from the filesystem: a filesystem walk reads
+seat-local untracked files CI never runs (#2821/#2833 doctrine), and a file
+that cannot be parsed fails loudly — a census that silently drops what it
+cannot read measures a smaller population without saying so.
 """
 
 import ast
 from pathlib import Path
 
+from tests.support.tree_walk import iter_tracked_files
+
 PRODUCTION_ROOT = Path(__file__).parents[4] / "argumentation_analysis"
 FUNNEL_MODULE = "llm_cache.py"
+
+
+def _parse_loud(py: Path) -> ast.Module:
+    """Parse a tracked production file, FAILING the census on a SyntaxError.
+
+    A census that cannot read a file it counts in its population must say so,
+    not measure a smaller tree.
+    """
+    return ast.parse(py.read_text(encoding="utf-8-sig"), filename=str(py))
 
 
 def _census_create_sites(root: Path) -> dict:
     """{relative_path: [line numbers]} of ``chat.completions.create`` calls."""
     sites: dict = {}
-    for py in sorted(root.rglob("*.py")):
+    for py in iter_tracked_files(root, "*.py"):
         if "__pycache__" in py.parts:
             continue
-        try:
-            tree = ast.parse(py.read_text(encoding="utf-8-sig"), filename=str(py))
-        except SyntaxError:
-            continue
+        tree = _parse_loud(py)
         lines = []
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
@@ -102,13 +116,10 @@ def _census_sk_constructions(root: Path) -> dict:
     and wraps through a variable, so the file is allowlisted as a whole.
     """
     sites: dict = {}
-    for py in sorted(root.rglob("*.py")):
+    for py in iter_tracked_files(root, "*.py"):
         if "__pycache__" in py.parts:
             continue
-        try:
-            tree = ast.parse(py.read_text(encoding="utf-8-sig"), filename=str(py))
-        except SyntaxError:
-            continue
+        tree = _parse_loud(py)
         wrapped_ids: set = set()
         for node in ast.walk(tree):
             if (
@@ -164,4 +175,28 @@ class TestNoUnaccountedSkService:
             "The census walker found no SK service construction at all, "
             "including inside the factory (llm_service.py) — the walker is "
             "broken and the guard above read a false 0."
+        )
+
+    # #2853 review (minor) — llm_service.py is allowlisted as a whole: a raw
+    # construction added to the factory later would be invisible to the guard
+    # above. Pin the factory's own construction count instead, so the pin
+    # reddens on any addition (then route it, and bump the constant).
+    FACTORY_SK_CONSTRUCTIONS = 2  # Azure (:386) + OpenAI (:543), both wrapped
+
+    def test_the_factory_builds_only_the_named_wrapped_services(self):
+        """A raw SK construction inside the factory must not hide behind the
+        whole-file allowlist — the count is pinned."""
+        sites = _census_sk_constructions(PRODUCTION_ROOT)
+        factory_lines = sorted(
+            ln
+            for path, lines in sites.items()
+            if path.endswith(FACTORY_MODULE)
+            for ln, _ in lines
+        )
+        assert len(factory_lines) == self.FACTORY_SK_CONSTRUCTIONS, (
+            f"the factory (llm_service.py) now holds {len(factory_lines)} SK "
+            f"service construction(s), expected {self.FACTORY_SK_CONSTRUCTIONS} "
+            "(Azure + OpenAI) — a raw construction added under the whole-file "
+            "allowlist is invisible to the bypass guard (#2853): route it "
+            "through _wrap_with_llm_cache and bump the pin"
         )

@@ -41,10 +41,6 @@ ROOTS_BY_WALK = {
         "root (PROD_ROOT or synthetic)"
     ]
     * 4,
-    "unit/argumentation_analysis/services/test_llm_call_site_census_2849.py": [
-        "root (PRODUCTION_ROOT production tree)"
-    ]
-    * 2,
     "unit/argumentation_analysis/test_cross_text_parallels_status_2344.py": [
         "REPO_ROOT/root (argumentation_analysis, scripts)"
     ],

@@ -53,6 +53,17 @@ class _FakeSKInner(ChatCompletionClientBase):
         return msgs[0]
 
 
+class _FakeSKInnerNoUsage(ChatCompletionClientBase):
+    """Inner SK service whose response carries NO usage (a streamed round-trip,
+    or a provider omitting the field) — #2853 review item 3."""
+
+    def __init__(self) -> None:
+        super().__init__(service_id="fake-nousage", ai_model_id="fake-model")
+
+    async def get_chat_message_contents(self, chat_history, settings=None, **kwargs):
+        return [ChatMessageContent(role="assistant", content="réponse")]
+
+
 def _fake_raw_response(prompt_tokens: int, completion_tokens: int, cost=None):
     """Duck-typed OpenAI ChatCompletion: ``.usage`` carries the measurements."""
     usage = types.SimpleNamespace(
@@ -159,6 +170,28 @@ class TestSkPathAccounting:
 
         wrapped = _wrap_with_llm_cache(_Anything())
         assert isinstance(wrapped, CachedChatCompletion)
+
+    def test_a_call_without_usage_is_counted_apart(self, usage_counter, monkeypatch):
+        """#2853 review item 3: a round-trip whose response carries no usage is
+        still a live call — counted (tokens unknown, not zero) and tallied in
+        ``calls_without_usage`` so the runner prints "not reported for k of n"."""
+        monkeypatch.setenv("LLM_CACHE_MODE", OFF)
+        from argumentation_analysis.services import llm_cache
+
+        llm_cache._raw_cache = None
+        inner = _FakeSKInnerNoUsage()
+        wrapper = CachedChatCompletion(inner=inner, mode=OFF)
+
+        import asyncio
+
+        asyncio.get_event_loop_policy().new_event_loop().run_until_complete(
+            wrapper.get_chat_message_contents(chat_history=_history())
+        )
+
+        stats = usage_counter()
+        assert stats["(unattributed)"]["calls"] == 1
+        assert stats["(unattributed)"]["calls_without_usage"] == 1
+        assert stats["(unattributed)"]["prompt_tokens"] == 0  # unknown, not zero-token
 
 
 class TestDirectPathAccounting:
