@@ -25,6 +25,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import Tuple
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -211,23 +212,34 @@ def clingo_python():
         require("clingo[python] decides", False, f"raised {type(e).__name__}: {e}")
 
 
-def spass_runnable() -> bool:
-    """The adapter path is not enough: the JVM reasoner must say installed."""
+def spass_state() -> "Tuple[bool, str]":
+    """``(runnable, reason)`` — the adapter path is not enough: the JVM
+    reasoner must say installed, and WHY it does not is part of the verdict.
+
+    A bare bool made the seat's answer unreadable: the section printed
+    "not runnable — skipped" and the run still exited 0, which under #2851
+    reads as "proved nothing" silently (coordinator point 5, 2026-09-29).
+    """
     try:
         import jpype
-
-        if not jpype.isJVMStarted():
-            return False
-        path = EXTERNAL_TOOL_PATHS.get("spass")
-        if not path:
-            return False
+    except ImportError as e:  # noqa: BLE001
+        return False, f"jpype not importable ({type(e).__name__}: {e})"
+    if not jpype.isJVMStarted():
+        return False, "the JVM is not started"
+    path = EXTERNAL_TOOL_PATHS.get("spass")
+    if not path:
+        return False, "EXTERNAL_TOOL_PATHS['spass'] is empty (no vendored path)"
+    try:
         reasoner_cls = jpype.JClass(
             "org.tweetyproject.logics.ml.reasoner.SPASSMlReasoner"
         )
         JString = jpype.JClass("java.lang.String")
-        return bool(reasoner_cls(JString(path)).isInstalled())
-    except Exception:  # noqa: BLE001
-        return False
+        installed = bool(reasoner_cls(JString(path)).isInstalled())
+    except Exception as e:  # noqa: BLE001
+        return False, (f"the JVM reasoner raised {type(e).__name__}: {e} (path={path})")
+    if not installed:
+        return False, f"SPASSMlReasoner.isInstalled() is False for {path}"
+    return True, f"installed at {path}"
 
 
 def lock_drift_section():
@@ -293,6 +305,16 @@ def lock_drift_section():
         "  NOTE: conda list measures the conda env; the interpreter resolves"
         " user-site FIRST when present (the #2851 po-2023 census) — the"
         " pkg_version lines above are the EFFECTIVE versions."
+    )
+    print(
+        "  SEAT-LOCAL, not a lock defect (coordinator point 6, 2026-09-29):"
+        " on po-2023 the env's site-packages is not writable without"
+        " elevation, so pip installs into"
+        " %APPDATA%\\Python\\Python310\\site-packages and jpype1/pycryptosat/"
+        " clingo/pysat resolve from there; ai-01 measured the same lock env"
+        " resolving jpype 1.7.1 from the ENV's own site-packages under"
+        " PYTHONNOUSERSITE=1. A MISSING/DIVERGENT row above naming those"
+        " packages therefore indicts the seat's shadowing, not the lock."
     )
 
 
@@ -377,12 +399,18 @@ def main():
 
     print("\n=== Modal — default SimpleMlReasoner (pure Java) ===")
     modal_under(bridge, "Modal[default]", prefer_spass=False)
-    print("\n=== Modal — SPASS adapter (when a vendored binary answers) ===")
-    if spass_runnable():
+    print("\n=== Modal — SPASS adapter ===")
+    spass_ok, spass_reason = spass_state()
+    if spass_ok:
         modal_under(bridge, "Modal[SPASS]", prefer_spass=True)
     else:
-        print(
-            "  SPASS adapter not runnable on this seat — section skipped (default path above still decides)"
+        # A skip is not a verdict (#2851): the default path above deciding
+        # says nothing about SPASS. The run fails, naming the tool and the
+        # reason the JVM reasoner gave.
+        require(
+            "Modal[SPASS] decides",
+            False,
+            f"SPASS does not run on this seat: {spass_reason}",
         )
 
     print("\n=== SAT — _invoke_sat (PySAT-backed) ===")
@@ -405,10 +433,22 @@ def main():
         loop = asyncio.new_event_loop()
         res = loop.run_until_complete(_invoke_asp_reasoning("a.\nb :- a.", {}))
         sets = [set(m) for m in res.get("answer_sets", [])]
+        # "Decides" must mean the JVM path decided (coordinator point 4,
+        # 2026-09-29): _invoke_asp_reasoning falls back to the Python binding
+        # when the JVM solver is refused (invoke_callables.py:6002) and
+        # returns the same {a, b} — reading `sets` alone printed DECIDES on a
+        # seat where the vendored binary is a leftover ELF (the po-2025 case
+        # of #2851/#2852, error=193). The solver name is part of the verdict.
         require(
             "clingo[JVM] decides",
-            {"a", "b"} in sets,
-            f"solver={res.get('solver')!r} sets={sets}",
+            res.get("solver") == "clingo_jvm" and {"a", "b"} in sets,
+            f"solver={res.get('solver')!r} sets={sets}"
+            + (
+                ""
+                if res.get("solver") == "clingo_jvm"
+                else " — the PYTHON fallback answered, not the JVM path"
+                f" (refusal: {res.get('jvm_refused', 'not reported')})"
+            ),
         )
     except Exception as e:  # noqa: BLE001
         require("clingo[JVM] decides", False, f"raised {type(e).__name__}: {e}")
