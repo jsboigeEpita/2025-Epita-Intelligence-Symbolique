@@ -85,12 +85,29 @@ def _plant(relpath: str, content: str):
     return _cleanup
 
 
+def _exclude_path() -> Path:
+    """Resolve ``info/exclude`` through git itself (#2843 review): in a
+    linked worktree ``ROOT/.git`` is a file, so concatenating the path makes
+    ``mkdir`` raise FileExistsError and the witness reddens in every
+    worktree. ``--git-path`` returns this checkout's effective exclude file
+    (common-dir, so a worktree resolves to the main repository's), absolute
+    or relative to ``ROOT``."""
+    resolved = subprocess.run(
+        ["git", "-C", str(ROOT), "rev-parse", "--git-path", "info/exclude"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    path = Path(resolved)
+    return path if path.is_absolute() else ROOT / path
+
+
 def _plant_via_exclude(relpath: str, content: str):
     """#2486's plant: ignored through ``.git/info/exclude`` — its census
     filter drops ``_``/``.``-prefixed directories, so ``.playwright-mcp``
     would be invisible even to the fs walk being disproven."""
     target = ROOT / relpath
-    exclude = ROOT / ".git" / "info" / "exclude"
+    exclude = _exclude_path()
     exclude.parent.mkdir(parents=True, exist_ok=True)
     before = exclude.read_text(encoding="utf-8") if exclude.exists() else None
 
