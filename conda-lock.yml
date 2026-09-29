@@ -13,7 +13,7 @@
 version: 1
 metadata:
   content_hash:
-    win-64: 51252b3cbcd4a82d4f3c9638ba0ed6714b022a95bc3817f1a7eb4bd2391b8b74
+    win-64: dba14908fc7b9f0265d4966a7baf488b9d731fa67c32fbe4cbafcdcf6c37877e
   channels:
   - url: conda-forge
     used_env_vars: []
@@ -2900,6 +2900,7 @@ package:
     libsqlite: '>=3.53.4,<4.0a0'
     libzlib: '>=1.3.2,<2.0a0'
     openssl: '>=3.5.7,<4.0a0'
+    pip: ''
     tk: '>=8.6.13,<8.7.0a0'
     tzdata: ''
     ucrt: '>=10.0.20348.0'
@@ -4732,7 +4733,7 @@ package:
   category: main
   optional: false
 - name: openapi-core
-  version: 0.19.5
+  version: 0.19.4
   manager: pip
   platform: win-64
   dependencies:
@@ -4743,11 +4744,10 @@ package:
     openapi-schema-validator: '>=0.6.0,<0.7.0'
     openapi-spec-validator: '>=0.7.1,<0.8.0'
     parse: '*'
-    typing-extensions: '>=4.8.0,<5.0.0'
-    werkzeug: <3.1.2
-  url: https://files.pythonhosted.org/packages/27/6f/83ead0e2e30a90445ee4fc0135f43741aebc30cca5b43f20968b603e30b6/openapi_core-0.19.5-py3-none-any.whl
+    werkzeug: '*'
+  url: https://files.pythonhosted.org/packages/d2/b3/4534adc8bac68a5d743caa786f1443545faed4d7cc7a5650b2d49255adfc/openapi_core-0.19.4-py3-none-any.whl
   hash:
-    sha256: ef7210e83a59394f46ce282639d8d26ad6fc8094aa904c9c16eb1bac8908911f
+    sha256: 38e8347b6ebeafe8d3beb588214ecf0171874bb65411e9d4efd23cb011687201
   category: main
   optional: false
 - name: openapi-schema-validator
@@ -4910,6 +4910,16 @@ package:
   url: https://files.pythonhosted.org/packages/44/75/e64d3d40a741e2be21d69154f4e5c43a66f0c603c5ef11f49e01429a5932/pybreaker-1.4.1-py3-none-any.whl
   hash:
     sha256: b4dab4a05195b7f2a64a6c1a6c4ba7a96534ef56ea7210e6bcb59f28897160e0
+  category: main
+  optional: false
+- name: pycryptosat
+  version: 5.16.0
+  manager: pip
+  platform: win-64
+  dependencies: {}
+  url: https://files.pythonhosted.org/packages/24/89/768b2ab8d85d9132285fe051dec74a5c5d02b8034e2ebf76f0fb39180bbf/pycryptosat-5.16.0-cp310-cp310-win_amd64.whl
+  hash:
+    sha256: 9801e6c9d09e2e6e0192779e3585eff792be70f9a354f5a7653a5aef6ce5cc1e
   category: main
   optional: false
 - name: pyee
@@ -5404,17 +5414,6 @@ package:
     sha256: 39c1fec2c11dc8d89bba6b2bf1556af381611a173ac2b511cf7231622058af41
   category: main
   optional: false
-- name: werkzeug
-  version: 3.1.1
-  manager: pip
-  platform: win-64
-  dependencies:
-    markupsafe: '>=2.1.1'
-  url: https://files.pythonhosted.org/packages/ee/ea/c67e1dee1ba208ed22c06d1d547ae5e293374bfc43e0eb0ef5e262b68561/werkzeug-3.1.1-py3-none-any.whl
-  hash:
-    sha256: a71124d1ef06008baafa3d266c02f56e1836a5984afd6dd6c9230669d60d9fb5
-  category: main
-  optional: false
 - name: widgetsnbextension
   version: 4.0.16
   manager: pip
@@ -5447,5 +5446,15 @@ package:
   url: https://files.pythonhosted.org/packages/42/67/cb5ea1baa0c0ac60bda44ce59f601133154af2a2e67722d3517f8793855d/yarl-1.25.1-cp310-cp310-win_amd64.whl
   hash:
     sha256: 3f4d48a6112712973e676bd792121fee470e432d749177162d9949d5c9460a1b
+  category: main
+  optional: false
+- name: z3-solver
+  version: 4.16.0.0
+  manager: pip
+  platform: win-64
+  dependencies: {}
+  url: https://files.pythonhosted.org/packages/86/20/cef4f4d70845df24572d005d19995f92b7f527eb2ffb63a3f5f938a0de2e/z3_solver-4.16.0.0-py3-none-win_amd64.whl
+  hash:
+    sha256: eb5df383cb6a3d6b7767dbdca348ac71f6f41e82f76c9ac42002a1f55e35f462
   category: main
   optional: false
