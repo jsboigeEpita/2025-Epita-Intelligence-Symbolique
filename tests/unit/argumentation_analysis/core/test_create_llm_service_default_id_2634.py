@@ -52,8 +52,11 @@ def test_the_authentic_service_without_an_id_carries_the_default_id(monkeypatch)
     monkeypatch.delenv("OPENROUTER_BASE_URL", raising=False)
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     service = create_llm_service(force_authentic=True)
-    assert isinstance(service, OpenAIChatCompletion)
-    assert service.service_id == DEFAULT_SERVICE_NAME
+    # #2849: the authentic service is always wrapped in the accounting
+    # envelope; the provenance this test pins lives on the inner SK service.
+    inner = getattr(service, "_inner", service)
+    assert isinstance(inner, OpenAIChatCompletion)
+    assert inner.service_id == DEFAULT_SERVICE_NAME
 
 
 def _production_trees():

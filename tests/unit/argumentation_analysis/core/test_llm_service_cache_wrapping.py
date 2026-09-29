@@ -7,7 +7,8 @@ orchestrator, the CLI). PR2 wraps its returned service with
 as the direct path (PR1, ``_guarded_chat_completion``). These tests assert the
 wiring CONTRACT with ``OpenAIChatCompletion`` patched out (no API key needed):
 
-- off mode  → service returned UNWRAPPED (zero behavior change)
+- off mode  → wrapped for usage accounting only (#2849): live-only passthrough,
+              the cache stays inert (no read, no write)
 - record    → wrapped with CachedChatCompletion(mode=record)
 - replay    → wrapped with CachedChatCompletion(mode=replay)
 - mock path → NOT wrapped (mocks are deterministic by nature; they return early)
@@ -68,18 +69,23 @@ def _build(monkeypatch, tmp_path, mode):
         )
 
 
-def test_off_mode_no_wrapping(monkeypatch, tmp_path):
+def test_off_mode_wraps_for_accounting_without_caching(monkeypatch, tmp_path):
+    """#2849: off mode wraps too — the envelope is a live-only passthrough
+    that accounts token usage; the old OFF hole meant cache-off runs were paid
+    but never counted. The cache itself stays inert in off mode (no read, no
+    write — pinned end-to-end in test_llm_usage_accounting_2849.py)."""
     service = _build(monkeypatch, tmp_path, OFF)
-    assert not isinstance(service, CachedChatCompletion), (
-        "off mode must NOT wrap the SK service (zero behavior change)"
-    )
+    assert isinstance(
+        service, CachedChatCompletion
+    ), "off mode must wrap the SK service for usage accounting (#2849)"
+    assert service.mode == OFF
 
 
 def test_record_mode_wraps(monkeypatch, tmp_path):
     service = _build(monkeypatch, tmp_path, RECORD)
-    assert isinstance(service, CachedChatCompletion), (
-        "record mode must wrap the SK service with CachedChatCompletion (PR2)"
-    )
+    assert isinstance(
+        service, CachedChatCompletion
+    ), "record mode must wrap the SK service with CachedChatCompletion (PR2)"
     assert service.mode == RECORD
 
 
