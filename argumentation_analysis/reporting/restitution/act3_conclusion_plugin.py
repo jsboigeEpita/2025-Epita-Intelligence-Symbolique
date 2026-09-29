@@ -87,6 +87,10 @@ _COUNTER_LIST_CAP = 8
 # SV (#1182): caps for governance/debate evidence (privacy + prompt budget).
 _DEBATE_CAP = 200
 _DEBATE_MAX_EXCHANGES = 4
+# #2845 — the source metadata entering the prompt. Same cap as Acte I's
+# `_META_CAP`: both acts quote the same recorded fields, so they must truncate
+# them alike (a divergence here would be a silent second contract).
+_META_CAP = 160
 # Epic #1258 / Track 4 #1262 — real claim excerpts for the reader-oriented
 # conclusion. A reader re-links the verdict to the discourse from a few claims,
 # not all; each is truncated (privacy HARD + prompt budget).
@@ -476,6 +480,15 @@ class Act3Evidence:
     # after Acte I). Empty when Acte I posed none — honest absence; the
     # prompt then forbids a retroactive question instead of fabricating one.
     interpretive_question: str = ""
+    # #2845 — the source metadata as the run recorded them
+    # (``state.source_metadata``). The prompt has always asked the writer to
+    # name the speaker "via les métadonnées" while the bundle carried none, so
+    # the writer harvested a name from the extracts — and on a reply, the only
+    # person named in the extracts is the INTERLOCUTOR the speaker answers.
+    # Measured on a campaign dump: the conclusion credited the thesis to the
+    # questioner. Same field, same cap and same honest-absence branch as Acte I,
+    # which is the act that has always carried it.
+    metadata: Dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -1590,6 +1603,13 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
     computed here (deterministic) so the orchestrator can gate the synthesis
     honestly.
     """
+    # #2845 — the recorded source metadata, truncated like everything else
+    # (privacy HARD + prompt budget). Mirrors build_act1_evidence.
+    metadata = getattr(state, "source_metadata", {}) or {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+    metadata_view = {str(k): _truncate(v, _META_CAP) for k, v in metadata.items() if v}
+
     args = getattr(state, "identified_arguments", {}) or {}
     fallacies = getattr(state, "identified_fallacies", {}) or {}
     quality = getattr(state, "argument_quality_scores", {}) or {}
@@ -1748,6 +1768,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         interpretive_question=str(
             getattr(state, "interpretive_question", "") or ""
         ).strip(),
+        metadata=metadata_view,
     )
 
 
@@ -2128,6 +2149,19 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         f"{surplus_procedural}"
     )
 
+    # #2845 — the metadata block Acte I has always carried. The prompt's own
+    # instruction asks the writer to name the speaker "via les métadonnées";
+    # without this block that instruction is unsatisfiable on every run, and the
+    # writer resolves it against the extracts — where a reply names only the
+    # interlocutor.
+    if evidence.metadata:
+        meta_block = "\n".join(f"  - {k} : {v}" for k, v in evidence.metadata.items())
+    else:
+        meta_block = (
+            "  (aucune métadonnée renseignée — le locuteur et l'arène ne sont "
+            "pas documentés par ce run)"
+        )
+
     opaque_block = f"{_OPAQUE_ID_DIRECTIVE}\n\n" if not evidence.deanonymized else ""
 
     return (
@@ -2152,6 +2186,8 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         f"{_FAIL_LOUD_INSTRUCTION}\n\n"
         f"{virtuous_section}"
         "DONNÉES VERIFIÉES DANS LE STATE (ne citer que celles-ci) :\n\n"
+        f"[MÉTADONNÉES DE LA SOURCE — l'origine du discours, telle qu'enregistrée]"
+        f"\n{meta_block}\n\n"
         f"[CE QUI A ÉTÉ DIT — revendications extraites]\n{claims_block}\n\n"
         f"[VERDICT GATED — plafond de claim honnête]\n{synthesis_block}\n\n"
         f"[CE QUI TIENT — forces (qualité)]\n{strengths_lines}\n\n"
@@ -2171,9 +2207,14 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         f"{consigne_virtue}"
         "- Rédige 3 paragraphes thématiques (un par battement), en prose lisible,\n"
         "  pas une liste de champs. Titres thématiques en ###.\n"
-        "- OUVRE en nommant le locuteur et en citant la (les) revendication(s)\n"
-        "  centrale(s) du discours — le lecteur doit raccrocher à ce qu'il a\n"
-        "  entendu. Reformule fidèlement, ne galvaude pas le propos.\n"
+        "- OUVRE en nommant le locuteur et l'arène d'après le bloc MÉTADONNÉES DE\n"
+        "  LA SOURCE ci-dessus, et en citant la (les) revendication(s) centrale(s)\n"
+        "  du discours — le lecteur doit raccrocher à ce qu'il a entendu.\n"
+        "  Reformule fidèlement, ne galvaude pas le propos.\n"
+        "- UN NOM DE PERSONNE CITÉ DANS LES REVENDICATIONS EST UN INTERLOCUTEUR\n"
+        "  (celui à qui le discours répond), JAMAIS le locuteur : ne lui attribue\n"
+        "  aucune position. Si le bloc métadonnées ne renseigne pas le locuteur,\n"
+        "  DIS-LE et n'en nomme aucun — ne l'invente jamais.\n"
         "- Le verdict formel (Tweety/Dung) est un APPUI, jamais un titre : formule-\n"
         "  le comme « l'analyse formelle invalide ce raisonnement » (théorie\n"
         "  inconsistante), « l'analyse formelle confirme la cohérence de ce\n"
