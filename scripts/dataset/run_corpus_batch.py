@@ -269,10 +269,22 @@ def parse_legacy_label(source_name: str) -> Dict[str, str]:
         speaker = text[:keyword_pos].strip(" -:–")
         if speaker:
             meta["speaker"] = speaker
-    else:
-        m = re.match(r"\A([A-ZÀ-Þ][\w'’-]+-[A-ZÀ-Þ][\w'’-]+)(?:\s|\Z)", text)
-        if m:
-            meta["speaker"] = m.group(1)
+    # #2877 — a third branch used to stand here, filing a bare hyphenated pair
+    # at the head of the label (``<NameA>-<NameB>``) as a ``speaker``. That is
+    # the shape a debate or a two-author series takes, and nothing on the label
+    # says which of the two speaks, or that a series rather than an orator is
+    # being named at all. Traced on the document #2845 was opened from: its
+    # recorded metadata carries ``speaker`` with neither ``title`` nor ``genre``,
+    # which rules out the two branches above and leaves only this one.
+    # Removed rather than narrowed — the pair is equally ambiguous as a
+    # hyphenated given name (``Jean-Luc`` matches the same regex), so no
+    # predicate over the text recovers a speaker claim the label does not carry,
+    # and this module's contract is to omit such a field, never invent one. The
+    # two branches above still attribute a speaker whenever the label marks the
+    # position (a `` - `` separator, a genre keyword), so a label naming one
+    # person still yields one; a label of the removed shape now yields none,
+    # which the restitution acts render honestly ("aucune métadonnée
+    # renseignée", #2845).
 
     meta = {k: v for k, v in meta.items() if v}
     return meta
