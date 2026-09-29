@@ -167,12 +167,16 @@ class TestTweetyBridge(unittest.TestCase):
             )
         else:
             try:
-                # Pour le test réel, nous devons d'abord créer un belief set via le handler
+                # #2860: the real FolParser wants the sort and type
+                # declarations BEFORE bare predicates — the mock-era
+                # "forall X: p(X)." dies with "Unrecognized formula type 'p'"
+                # (measured). Same typed shape as the #2851 verifier's FOL
+                # pair, measured to decide through this same handler.
                 belief_set_obj = self.bridge.fol_handler.create_belief_set_from_string(
-                    "forall X: p(X)."
+                    "Mortal = {socrate}\ntype(Human(Mortal))\nHuman(socrate)"
                 )
                 self.assertIsNotNone(belief_set_obj)
-                self.bridge.fol_handler.fol_query(belief_set_obj, query_str)
+                self.bridge.fol_handler.fol_query(belief_set_obj, "Human(socrate)")
             except Exception as e:
                 self.fail(f"fol_query a levé une exception inattendue: {e}")
 
@@ -212,7 +216,12 @@ class TestTweetyBridge(unittest.TestCase):
             )
         else:
             self.assertTrue(self.bridge.validate_pl_formula(formula))
-            self.assertFalse(self.bridge.validate_pl_formula("a ==> b"))
+            # #2860: the mock-era expectation read "a ==> b" as invalid; the
+            # real parser normalises the ASCII implication ("a ==> b" ->
+            # "a => b") and accepts it — measured on the real stack. The
+            # negative case is a formula that genuinely does not parse.
+            self.assertTrue(self.bridge.validate_pl_formula("a ==> b"))
+            self.assertFalse(self.bridge.validate_pl_formula("a =>"))
 
     def test_validate_fol_formula_delegation(self):
         """Vérifie que validate_fol_formula délègue correctement."""
@@ -223,16 +232,22 @@ class TestTweetyBridge(unittest.TestCase):
             )
             self.mock_fol_handler_instance.validate_formula_with_signature.assert_called_once()
         else:
-            # Pour un test réel, il faudrait une signature
-            sig_mock = MagicMock()
+            # #2860: a MagicMock where the real parser wants a FolSignature
+            # ("No matching overloads found for ... setSignature(MagicMock)",
+            # measured). The signature comes from production code: the belief
+            # set built from a typed KB carries the real FolSignature of that
+            # KB — no hand-built Java object, no mock in the real branch.
+            signature = self.bridge.fol_handler.create_belief_set_from_string(
+                "Mortal = {socrate}\ntype(Human(Mortal))\nHuman(socrate)"
+            ).getSignature()
             self.assertTrue(
                 self.bridge.fol_handler.validate_formula_with_signature(
-                    sig_mock, formula
+                    signature, "Human(socrate)"
                 )[0]
             )
             self.assertFalse(
                 self.bridge.fol_handler.validate_formula_with_signature(
-                    sig_mock, "forall X p(X)"
+                    signature, "forall X p(X)"
                 )[0]
             )
 
