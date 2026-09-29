@@ -439,8 +439,15 @@ os.environ["OPENAI_API_KEY"] = "sk-not-a-real-key"
 
 service = create_llm_service(service_id="openai")
 
+# #2849 : la fabrique enveloppe désormais TOUJOURS son service dans
+# CachedChatCompletion (point de comptabilité — passthrough inerte en mode
+# off). Le siège mesure le service CONSTRUIT, pas l'enveloppe : dérouler
+# ``_inner`` quand elle est là. Sans elle (fabrique nue), le service est
+# mesuré tel quel — l'assertion de type du test tient dans les deux mondes.
+inner = getattr(service, "_inner", service)
+
 Path(os.environ["_SEAT_OUT"]).write_text(
-    json.dumps({"ai_model_id": service.ai_model_id, "type": type(service).__name__}),
+    json.dumps({"ai_model_id": inner.ai_model_id, "type": type(inner).__name__}),
     encoding="utf-8",
 )
 """
