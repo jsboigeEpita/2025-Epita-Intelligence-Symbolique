@@ -176,13 +176,21 @@ async def test_each_third_of_a_long_document_is_analysed(monkeypatch):
     # call this test can make is either the fake or a 401.
     monkeypatch.setenv("OPENAI_API_KEY", "sk-deterministic-2850")
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    # Endpoint vars go too: the egress net below deliberately allows loopback
+    # (Windows' ProactorEventLoop needs it), so a seat whose .env points
+    # OPENAI_BASE_URL at 127.0.0.1 would let an unpatched path reach a real
+    # local model. Scrubbed, every client the run can build resolves to the
+    # default endpoint — and that one is blocked by the net.
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENROUTER_BASE_URL", raising=False)
 
     # Egress net: a path that builds its own real client (measured: the
     # self-hosted fallacy plugin reached api.openai.com for a 401 before
     # this) must degrade loudly, not egress. The fake needs no socket.
     # Loopback stays open — Windows' ProactorEventLoop builds its internal
-    # socketpair through 127.0.0.1, and the only loopback endpoint in play
-    # is the free local vLLM lane, never a paid one.
+    # socketpair through 127.0.0.1 (a total block kills asyncio itself,
+    # measured at birth), which is why the endpoint vars above are scrubbed
+    # rather than trusted.
     import socket
 
     _real_connect = socket.socket.connect

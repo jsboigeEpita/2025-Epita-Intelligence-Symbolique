@@ -23,10 +23,14 @@ Three site classes, read on the AST (never grep — the #1842 pattern):
 
 Census boundary, stated rather than hidden: a site is read when its slice
 base carries one of the tokens ``arg``, ``claim``, ``fallac``, ``sophism``,
-``counter``, ``text`` (case-insensitive; ``list(x.items())[:N]`` is unwrapped
-to ``x``). A differently-named collection (``results[:4]``) is outside the
-census — the boundary is held by the negative-control test below, so it is a
-documented limit, not an unknown one.
+``counter``, ``sentence``, ``segment``, ``chunk``, ``premise``, ``text``
+(case-insensitive; ``list(x.items())[:N]`` is unwrapped to ``x``). The
+sentence/segment/chunk/premise tokens were added in the #2854 re-triage:
+``sentences[:6]`` is the document's population of argument candidates, not a
+render — extending the unit tokens censused 11 previously invisible sites. A
+differently-named collection (``results[:4]``) is outside the census — the
+boundary is held by the negative-control test below, so it is a documented
+limit, not an unknown one.
 
 Registry keys are semantic — ``(relpath, base, cap, ordinal)`` — so a moved
 line stays green while a changed cap, a renamed base, a new site or a
@@ -46,7 +50,9 @@ from tests.support.tree_walk import iter_tracked_files
 ROOT = Path(__file__).resolve().parents[3]
 
 _TEXT_TOKEN = re.compile(r"text", re.IGNORECASE)
-_UNIT_TOKEN = re.compile(r"arg|claim|fallac|sophism|counter", re.IGNORECASE)
+_UNIT_TOKEN = re.compile(
+    r"arg|claim|fallac|sophism|counter|sentence|segment|chunk|premise", re.IGNORECASE
+)
 
 
 def _base_name(node: ast.expr) -> "str | None":
@@ -186,6 +192,16 @@ REGISTRY = {
         1,
     ): ("display", "first start chars of an already-produced string", "display only"),
     (
+        "argumentation_analysis/agents/core/counter_argument/parser.py",
+        "sentences",
+        "expr",
+        1,
+    ): (
+        "display",
+        "no drop — premise/conclusion fallback split, every sentence used",
+        "display only",
+    ),
+    (
         "argumentation_analysis/agents/core/informal/neuro_symbolic_arbitrator.py",
         "input_text",
         "8000",
@@ -281,7 +297,11 @@ REGISTRY = {
         "text",
         "200",
         1,
-    ): ("display", "first 200 chars of an already-produced string", "display only"),
+    ): (
+        "window",
+        "argument excerpts capped at 200 chars inside the stakes prompt block",
+        "silent — debt #2850",
+    ),
     (
         "argumentation_analysis/agents/core/quality/agentic_virtue_detectors.py",
         "arg_text",
@@ -422,6 +442,12 @@ REGISTRY = {
         1,
     ): ("display", "first 500 chars of an already-produced string", "display only"),
     (
+        "argumentation_analysis/core/utils/text_utils.py",
+        "extracted_segment",
+        "100",
+        1,
+    ): ("display", "log-line preview of the extracted segment", "display only"),
+    (
         "argumentation_analysis/evaluation/benchmark_runner.py",
         "text",
         "max_text_chars",
@@ -474,6 +500,16 @@ REGISTRY = {
     ): (
         "population_cap",
         "first 8 in insertion order; rest unanalysed",
+        "silent — debt #2850",
+    ),
+    (
+        "argumentation_analysis/orchestration/collaborative_debate.py",
+        "sentences",
+        "6",
+        1,
+    ): (
+        "population_cap",
+        "only the first 6 sentences are debated; rest unanalysed",
         "silent — debt #2850",
     ),
     (
@@ -595,7 +631,11 @@ REGISTRY = {
         "arg_text",
         "200",
         1,
-    ): ("display", "first 200 chars of an already-produced string", "display only"),
+    ): (
+        "window",
+        "argument excerpt inside the LLM quality-enrichment prompt",
+        "silent — debt #2850",
+    ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "args", "10", 1): (
         "population_cap",
         "first 10 in insertion order; rest unanalysed",
@@ -751,49 +791,81 @@ REGISTRY = {
         "input_text",
         "200",
         1,
-    ): ("display", "first 200 chars of an already-produced string", "display only"),
+    ): (
+        "window",
+        "the debate topic defaults to the first 200 chars",
+        "silent — debt #2850",
+    ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
         "input_text",
         "200",
         2,
-    ): ("display", "first 200 chars of an already-produced string", "display only"),
+    ): (
+        "window",
+        "the formula input defaults to the first 200 chars",
+        "silent — debt #2850",
+    ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
         "input_text",
         "200",
         3,
-    ): ("display", "first 200 chars of an already-produced string", "display only"),
+    ): (
+        "population_cap",
+        "the argument population falls back to the document's first 200 chars",
+        "silent — debt #2850",
+    ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
         "input_text",
         "200",
         4,
-    ): ("display", "first 200 chars of an already-produced string", "display only"),
+    ): (
+        "window",
+        "the UnifiedAnalysisState carries only the first 200 chars",
+        "silent — debt #2850",
+    ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
         "input_text",
         "200",
         5,
-    ): ("display", "first 200 chars of an already-produced string", "display only"),
+    ): (
+        "window",
+        "the UnifiedAnalysisState carries only the first 200 chars",
+        "silent — debt #2850",
+    ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
         "input_text",
         "200",
         6,
-    ): ("display", "first 200 chars of an already-produced string", "display only"),
+    ): (
+        "window",
+        "the UnifiedAnalysisState carries only the first 200 chars",
+        "silent — debt #2850",
+    ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
         "input_text",
         "200",
         7,
-    ): ("display", "first 200 chars of an already-produced string", "display only"),
+    ): (
+        "window",
+        "the UnifiedAnalysisState carries only the first 200 chars",
+        "silent — debt #2850",
+    ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
         "input_text",
         "200",
         8,
-    ): ("display", "first 200 chars of an already-produced string", "display only"),
+    ): (
+        "window",
+        "the counter-argument target defaults to the first 200 chars",
+        "silent — debt #2850",
+    ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
         "input_text",
@@ -966,15 +1038,45 @@ REGISTRY = {
         "silent — debt #2850",
     ),
     (
+        "argumentation_analysis/orchestration/invoke_callables.py",
+        "sentences",
+        "6",
+        1,
+    ): (
+        "population_cap",
+        "only the first 6 sentences become the assumption base; rest unanalysed",
+        "silent — debt #2850",
+    ),
+    (
+        "argumentation_analysis/orchestration/invoke_callables.py",
+        "sentences",
+        "8",
+        1,
+    ): (
+        "population_cap",
+        "only the first 8 sentences become argument atoms; rest unanalysed",
+        "silent — debt #2850",
+    ),
+    (
+        "argumentation_analysis/orchestration/invoke_callables.py",
+        "sentences",
+        "expr",
+        1,
+    ): (
+        "population_cap",
+        "only the first min(len, 6) sentences become argument units; rest unanalysed",
+        "silent — debt #2850",
+    ),
+    (
         "argumentation_analysis/orchestration/plugins/enquete_state_manager_plugin.py",
         "text",
         "50",
         1,
     ): ("display", "first 50 chars of an already-produced string", "display only"),
     ("argumentation_analysis/orchestration/router.py", "text", "LLM_TEXT_LIMIT", 1): (
-        "display",
-        "first LLM_TEXT_LIMIT chars of an already-produced string",
-        "display only",
+        "window",
+        "the LLM routing decision reads only the first LLM_TEXT_LIMIT chars",
+        "silent — debt #2850",
     ),
     ("argumentation_analysis/orchestration/service_manager.py", "text", "50", 1): (
         "display",
@@ -992,9 +1094,9 @@ REGISTRY = {
         "display only",
     ),
     ("argumentation_analysis/orchestration/state_writers.py", "target_text", "60", 1): (
-        "display",
-        "first 60 chars of an already-produced string",
-        "display only",
+        "window",
+        "argument resolution matches on a 60-char prefix only",
+        "silent — debt #2850",
     ),
     (
         "argumentation_analysis/orchestration/structured_arg_translator.py",
@@ -1134,9 +1236,9 @@ REGISTRY = {
         "display only",
     ),
     ("argumentation_analysis/plugins/narrative_synthesis_plugin.py", "text", "60", 1): (
-        "display",
-        "first 60 chars of an already-produced string",
-        "display only",
+        "window",
+        "argument resolution matches on a 60-char prefix only",
+        "silent — debt #2850",
     ),
     (
         "argumentation_analysis/reporting/document_assembler.py",
@@ -1190,9 +1292,9 @@ REGISTRY = {
         "silent — debt #2850",
     ),
     ("argumentation_analysis/run_orchestration.py", "text_content", "500", 1): (
-        "display",
-        "first 500 chars of an already-produced string",
-        "display only",
+        "window",
+        "the investigation opening prompt is built from the first 500 chars",
+        "silent — debt #2850",
     ),
     (
         "argumentation_analysis/services/ai_shield/layers/llm_validator.py",
@@ -1214,6 +1316,11 @@ REGISTRY = {
         "first match_start_in_context chars of an already-produced string",
         "display only",
     ),
+    ("argumentation_analysis/services/extract_service.py", "chunk", "expr", 1): (
+        "display",
+        "marker-length head recorded for highlighting, not a content cut",
+        "display only",
+    ),
     ("argumentation_analysis/services/nl_to_logic.py", "arguments", "10", 1): (
         "population_cap",
         "first 10 in insertion order; rest unanalysed",
@@ -1229,10 +1336,25 @@ REGISTRY = {
         "2000-char window from the selected offset",
         "record_reading_window; Acts silent — #2850",
     ),
+    ("argumentation_analysis/services/nl_to_logic.py", "sentences", "3", 1): (
+        "population_cap",
+        "only the first 3 sentences are propositionalised; rest unanalysed",
+        "silent — debt #2850",
+    ),
+    ("argumentation_analysis/services/nl_to_logic.py", "sentences", "5", 1): (
+        "population_cap",
+        "only the first 5 sentences are propositionalised; rest unanalysed",
+        "silent — debt #2850",
+    ),
+    ("argumentation_analysis/services/nl_to_logic.py", "sentences", "5", 2): (
+        "population_cap",
+        "only the first 5 sentences are propositionalised; rest unanalysed",
+        "silent — debt #2850",
+    ),
     ("argumentation_analysis/services/nl_to_logic.py", "text", "80", 1): (
-        "display",
-        "first 80 chars of an already-produced string",
-        "display only",
+        "window",
+        "the formula variable maps to only the first 80 chars of its source",
+        "silent — debt #2850",
     ),
     (
         "argumentation_analysis/services/web_api/services/analysis_service.py",
@@ -1246,6 +1368,16 @@ REGISTRY = {
         "expr",
         2,
     ): ("display", "first expr chars of an already-produced string", "display only"),
+    (
+        "argumentation_analysis/services/web_api/services/analysis_service.py",
+        "sentences",
+        "expr",
+        1,
+    ): (
+        "display",
+        "no drop — premise/conclusion fallback split, every sentence used",
+        "display only",
+    ),
     (
         "argumentation_analysis/services/web_api/services/analysis_service.py",
         "text",
@@ -1363,14 +1495,15 @@ def test_the_detector_reads_the_three_classes():
     mutation-proofs the instrument on all three classes at once."""
     snippet = (
         "from x import selected_text\n"
-        "def f(input_text, args, results):\n"
+        "def f(input_text, args, results, sentences):\n"
         "    a = selected_text(input_text, 3000, 'site')\n"  # window
         "    b = input_text[:8000]\n"  # text_head
         "    c = list(args.items())[:10]\n"  # collection_head, unwrapped
+        "    h = sentences[:6]\n"  # collection_head, extended unit token
         "    d = args[1:3]\n"  # NOT head (lower bound)
         "    e = input_text[:]\n"  # NOT a cap
         "    g = results[:4]\n"  # boundary token
-        "    return a, b, c, d, e, g\n"
+        "    return a, b, c, d, e, g, h\n"
     )
     sites = _sites_in_tree(ast.parse(snippet))
     sig = {(base, cap, cls) for base, cap, _s, _l, cls in sites}
@@ -1381,6 +1514,11 @@ def test_the_detector_reads_the_three_classes():
         "10",
         "collection_head",
     ) in sig, "list(x.items())[:N] must unwrap to x"
+    assert (
+        "sentences",
+        "6",
+        "collection_head",
+    ) in sig, "the sentence token must read the argument-candidate population"
     # What the census deliberately does NOT read — its stated boundary.
     assert not any(
         base == "results" for base, *_ in sites
