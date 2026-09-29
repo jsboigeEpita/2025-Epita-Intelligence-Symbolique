@@ -40,6 +40,10 @@ class TestTweetyBridge(unittest.TestCase):
 
     def setUp(self):
         """Initialisation avant chaque test."""
+        # #2858 keeps this switch: it selects mock-vs-real for THIS file's
+        # local runs only (the gate runs these 106 tests mocked, and the
+        # real-Tweety instruments now ride the session JVM unconditionally —
+        # see test_fb39_adversarial_verify.py / test_pl_handler_normalize.py).
         self.use_real_jpype = os.environ.get("USE_REAL_JPYPE") == "true"
         # #2664: the singleton may hold a bridge an earlier test left there,
         # with handlers built before the patches below.
@@ -91,11 +95,16 @@ class TestTweetyBridge(unittest.TestCase):
             self.bridge = TweetyBridge.get_instance()
 
     def tearDown(self):
-        """Nettoyage après chaque test."""
-        if self.use_real_jpype:
-            if self.bridge.initializer.is_jvm_ready():
-                self.bridge.shutdown_jvm()
-        else:
+        """Nettoyage après chaque test.
+
+        #2858: the real branch never shuts the JVM down. JPype cannot restart
+        a JVM in-process, so this call killed every later JVM test the moment
+        real mode ran in the same session ("OSError: JVM cannot be restarted"
+        — 30 failures). The session JVM belongs to pytest_sessionstart
+        (tests/conftest.py) and dies with the process; the census guard
+        tests/unit/test_session_jvm_shutdown_census_2858.py pins this.
+        """
+        if not self.use_real_jpype:
             patch.stopall()
         # Réinitialiser le singleton pour l'isolation des tests
         TweetyBridge._instance = None

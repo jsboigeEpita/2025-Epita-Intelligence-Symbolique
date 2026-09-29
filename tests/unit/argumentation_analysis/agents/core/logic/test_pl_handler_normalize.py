@@ -8,8 +8,6 @@ formulas/run of formal coverage. These tests guard the canonicalisation
 rejected). End-to-end Tweety parsing is covered by the tweety-marked class.
 """
 
-import os
-
 import pytest
 from unittest.mock import patch, MagicMock
 
@@ -146,11 +144,12 @@ class TestParsePlFormulaTweetyIntegration:
     ]
 
     @pytest.fixture(autouse=True)
-    def _require_jvm(self):
-        if os.environ.get("USE_REAL_JPYPE") != "true":
-            pytest.skip("set USE_REAL_JPYPE=true to exercise real Tweety parsing")
+    def _require_jvm(self, jvm_session):
+        # #2858: real Tweety rides the session JVM — ``jvm_session`` (autouse,
+        # tests/conftest.py) skips honestly when it is unavailable, replacing
+        # the mock-era USE_REAL_JPYPE opt-in that kept these tests out of the
+        # gate. Its yield value is the live jpype module.
         from argumentation_analysis.core.jvm_setup import initialize_jvm
-        import jpype  # noqa: F401
 
         initialize_jvm()
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
