@@ -226,3 +226,154 @@ class TestAppendixExactTarget:
             }
         }
         assert not _refs_in(build_act2_prompt(build_act2_evidence(state)))
+
+    def test_the_formal_axis_families_resolve_too(self):
+        """#1914 criterion 6 — the acceptance the map names: the exact-target
+        contract extended to the formal-axis families. Non-vacuous by
+        construction: the three refs are required (a missing section reddens),
+        and each is produced by the shared producer, not spelled here."""
+        from argumentation_analysis.reporting.restitution.formal_derivation import (
+            formal_axis_ref,
+        )
+
+        appendix = _appendix_of_formal(_formal_state())
+        refs = [formal_axis_ref(f) for f in ("FOL", "PL", "modale")]
+        assert len(set(refs)) == 3, "one ref per family, no collision"
+        for ref in refs:
+            assert f"#### {ref}" in appendix, f"cited ref {ref} has no target"
+
+
+# --- #1914 criterion 6 — the formal-axis derivation subsections -------------------
+
+
+def _formal_state(**overrides) -> SimpleNamespace:
+    """A state whose three formal axes all RAN and decided — synthetic opaque
+    atoms only (privacy HARD), plus one prose-shaped entry that exercises the
+    default/full split."""
+    fields = dict(
+        fol_analysis_results=[
+            {
+                "consistent": False,
+                "message": "incoherent",
+                "formulas": ["pred_alpha(cst_x)"],
+            }
+        ],
+        propositional_analysis_results=[
+            {"consistent": False, "message": "unsat", "formulas": ["a -> b"]}
+        ],
+        modal_analysis_results=[
+            {"valid": True, "message": "ok", "formulas": ["box(p)"]}
+        ],
+    )
+    fields.update(overrides)
+    return SimpleNamespace(**fields)
+
+
+def _appendix_of_formal(state: SimpleNamespace, *, full: bool = False) -> str:
+    return render_appendix(
+        {
+            "fol_analysis_results": state.fol_analysis_results,
+            "propositional_analysis_results": state.propositional_analysis_results,
+            "modal_analysis_results": state.modal_analysis_results,
+        },
+        include_full_state_json=full,
+    )
+
+
+def _axis_slice(appendix: str, ref: str) -> str:
+    """The text of one axis subsection — from its anchor to the next ``####``
+    (or the end). Scoping matters: the opt-in full mode ALSO dumps the state
+    JSON, so an unscoped ``in appendix`` would pass on the JSON dump and
+    witness nothing about the section."""
+    start = appendix.find(f"#### {ref}")
+    if start == -1:
+        return ""
+    nxt = appendix.find("\n#### ", start + 1)
+    return appendix[start : nxt if nxt != -1 else len(appendix)]
+
+
+class TestFormalDerivationAppendix1914:
+    """#1914 criterion 6 — « move exact solver formulas/derivations here ».
+
+    Measured on ``main`` (2026-09-29): the folded appendix carried NO formal
+    axis section and no citable anchor but Dung's; none of the three axes'
+    tested formulas appeared anywhere in it, while the state carried them.
+    """
+
+    def test_one_citable_subsection_per_axis_that_ran(self):
+        appendix = _appendix_of_formal(_formal_state())
+        for ref in (
+            "Annexe FOL[dérivations]",
+            "Annexe PL[dérivations]",
+            "Annexe modale[dérivations]",
+        ):
+            assert f"#### {ref}" in appendix
+
+    def test_the_axis_that_did_not_run_gets_no_section(self):
+        """Perimeter guard — green before and after: an axis with no records
+        is not announced, so the anchors mean what they say."""
+        appendix = _appendix_of_formal(
+            _formal_state(fol_analysis_results=[], modal_analysis_results=[])
+        )
+        assert "Annexe PL[dérivations]" in appendix
+        assert "Annexe FOL[dérivations]" not in appendix
+        assert "Annexe modale[dérivations]" not in appendix
+
+    def test_the_default_mode_counts_and_never_prints_corpus_prose(self):
+        """The measured population (90 real dumps): ~93 % of the stored
+        « formulas » are transcriptions, so the default folded mode — the one
+        every render uses — must not list them."""
+        state = _formal_state(
+            fol_analysis_results=[
+                {
+                    "consistent": False,
+                    "message": "incoherent",
+                    "formulas": [
+                        "une longue transcription de position reprise du corpus, "
+                        "avec des virgules, des propositions entières et un point."
+                    ],
+                }
+            ]
+        )
+        appendix = _appendix_of_formal(state)
+        section = _axis_slice(appendix, "Annexe FOL[dérivations]")
+        assert section, "the axis that ran must have its citable subsection"
+        assert "transcription de position reprise du corpus" not in appendix
+        assert "formules testées" in section
+
+    def test_the_opt_in_full_mode_carries_the_verbatim_formulas(self):
+        appendix = _appendix_of_formal(_formal_state(), full=True)
+        assert "pred_alpha(cst_x)" in _axis_slice(appendix, "Annexe FOL[dérivations]")
+        assert "a -> b" in _axis_slice(appendix, "Annexe PL[dérivations]")
+        assert "box(p)" in _axis_slice(appendix, "Annexe modale[dérivations]")
+
+    def test_placeholders_are_counted_but_never_listed(self):
+        """A writer status message is not a derivation — the same guard the
+        readable path applies, so the two surfaces cannot diverge."""
+        state = _formal_state(
+            fol_analysis_results=[
+                {
+                    "consistent": True,
+                    "message": "ok",
+                    "formulas": ["DL: Knowledge base is consistent."],
+                }
+            ]
+        )
+        appendix = _appendix_of_formal(state, full=True)
+        section = _axis_slice(appendix, "Annexe FOL[dérivations]")
+        assert "DL: Knowledge base" not in section
+        assert "entrée non formulaire" in section
+
+    def test_an_undecided_axis_contributes_no_tested_content(self):
+        """#1019 — ``consistent: None`` (degraded) is not a decision, so its
+        formulas are not counted as tested; the axis still gets its section
+        and its honest tri-state verdict."""
+        state = _formal_state(
+            fol_analysis_results=[
+                {"consistent": None, "message": "degraded", "formulas": ["p(a)"]}
+            ]
+        )
+        appendix = _appendix_of_formal(state)
+        assert "Annexe FOL[dérivations]" in appendix
+        assert "0 formule" in appendix
+        assert "p(a)" not in appendix

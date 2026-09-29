@@ -16,7 +16,7 @@ regardless, so a careless caller cannot leak the corpus through the appendix.
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Mapping, Optional
+from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from .fr_accord import accord
 
@@ -60,7 +60,7 @@ _LEAK_KEYS = (
 # actually reads is carried by ``test_two_reading_surfaces_1624.py``, which
 # checks it against an AST sweep of the three act modules — same shape as the
 # #1619 corrective.
-_MOBILISATION: Dict[str, tuple] = {
+_MOBILISATION: Dict[str, Tuple[Tuple[str, ...], str, str]] = {
     # dimension              state key(s)                        kind         site
     "arguments_extraits": (("identified_arguments",), "prose", "actes I–III"),
     "sophismes_localises": (("identified_fallacies",), "prose", "actes II–III"),
@@ -164,6 +164,16 @@ def _stakes_summary(stakes: Any) -> str:
     return f"{enjeux}, {parties}"
 
 
+def _fol_verdict_of(result: Any) -> Optional[bool]:
+    """Strict FOL verdict, or ``None`` when unverified (#1019) — the reader
+    :func:`_fol_axis_status` applies inline, named once so the axis sections
+    (#1914 criterion 6) read the same shape the same way."""
+    if not isinstance(result, dict):
+        return None
+    consistent = result.get("consistent")
+    return consistent if isinstance(consistent, bool) else None
+
+
 def _fol_axis_status(fol: Any) -> Any:
     """Coarse FOL-axis status for the appendix, aligned with Acte II's reader.
 
@@ -217,6 +227,15 @@ def _fol_axis_status(fol: Any) -> Any:
         # (which reads as "the axis never ran"). It ran but could not decide.
         return "indisponible (aucun verdict décidé — dégradé)"
     return "indisponible"
+
+
+def _modal_verdict_of(result: Any) -> Optional[bool]:
+    """Strict modal verdict, or ``None`` when unverified (#1019) — the strict
+    form of the shape :func:`_modal_axis_status` reads (``valid``)."""
+    if not isinstance(result, dict):
+        return None
+    valid = result.get("valid")
+    return valid if isinstance(valid, bool) else None
 
 
 def _modal_axis_status(modal: Any) -> Any:
@@ -491,6 +510,91 @@ def _dung_machinery_section(
     return lines
 
 
+# #1914 criterion 6 — the formal axes' tested content, where the issue's
+# Appendix contract asks for it ("move exact solver formulas/derivations,
+# taxonomy IDs and confidence provenance here"). Same shape as the Dung
+# machinery section: one subsection per axis that ran, one stable opaque
+# anchor, counts by default, the corpus-derived payload only in the opt-in
+# full mode. Measured on the 90 real campaign state dumps (2026-09-29): 996
+# stored « formulas » strings, of which 809 are 41–723-char transcriptions
+# (median 118) and 220 carry sentence punctuation — ~93 % prose, not formulas.
+# Listing them by default would print corpus prose into every report and
+# falsify the block's founding line below (« pas de contenu de corpus »).
+_FORMAL_AXES = (
+    ("FOL", "fol_analysis_results"),
+    ("PL", "propositional_analysis_results"),
+    ("modale", "modal_analysis_results"),
+)
+_FORMAL_VERDICT_READERS = {
+    "FOL": _fol_verdict_of,
+    "PL": _pl_verdict_of,
+    "modale": _modal_verdict_of,
+}
+_FORMAL_STATUS_READERS = {
+    "FOL": _fol_axis_status,
+    "PL": _pl_axis_status,
+    "modale": _modal_axis_status,
+}
+
+
+def _formal_derivation_section(
+    state: Mapping[str, Any], *, include_full: bool
+) -> List[str]:
+    """#1914 criterion 6 — one citable subsection per formal axis that ran.
+
+    The anchors are the axis twins of ``#### Annexe Dung[label]``: they make
+    the axis derivation material resolvable from the acts, which is what the
+    criterion's acceptance pins (``TestAppendixExactTarget`` extended to these
+    families). What each subsection *carries* follows the module's privacy
+    split — the verdict and the tested-content counts by default, the verbatim
+    formula strings only when the caller opted into the full payload.
+    """
+    from .formal_derivation import (
+        _TOTAL_FORMULA_CAP,
+        formal_axis_ref,
+        scan_tested_content,
+    )
+
+    present = [(family, key) for family, key in _FORMAL_AXES if state.get(key)]
+    if not present:
+        return []
+
+    lines = [
+        "",
+        "### Dérivations formelles (matière de traçabilité)",
+        "",
+        "Une sous-section par axe qui a tourné, sous ancre stable : verdict, et "
+        "ce que l'axe a réellement testé. Les formules verbatim sont matière "
+        "dérivée du corpus — comptées ici, listées uniquement en mode complet.",
+        "",
+    ]
+    for family, key in present:
+        records = state.get(key)
+        real, placeholders = scan_tested_content(
+            records, _FORMAL_VERDICT_READERS[family]
+        )
+        lines.append(f"#### {formal_axis_ref(family)}")
+        lines.append("")
+        lines.append(f"- verdict : {_FORMAL_STATUS_READERS[family](records)}")
+        tested = f"- formules testées : {accord(len(real), 'formule', 'formules')}"
+        if placeholders:
+            tested += (
+                f" (+{accord(placeholders, 'entrée non formulaire', 'entrées non formulaires')} "
+                "— statut ou texte collé, jamais une dérivation)"
+            )
+        lines.append(tested)
+        if include_full and real:
+            for formula in real[:_TOTAL_FORMULA_CAP]:
+                lines.append(f"  - {formula.strip()[:200]}")
+            extra = len(real) - _TOTAL_FORMULA_CAP
+            if extra > 0:
+                lines.append(
+                    f"  - (+{accord(extra, 'autre formule', 'autres formules')})"
+                )
+        lines.append("")
+    return lines
+
+
 # #2046 — pipeline self-diagnosis motifs (the per-act readability self-checks,
 # the historical deterministic-repair note) belong to provenance, not to the
 # reader blockquote. The reader-side drop lives in ``pipeline_adapter`` with
@@ -607,6 +711,13 @@ def render_appendix(
     # #1908: the Dung machinery the narration references — same folded block,
     # after the dimensional table, before any opt-in full dump.
     lines.extend(_dung_machinery_section(state, include_full=include_full_state_json))
+
+    # #1914 criterion 6: the formal axes' tested content — the same folded
+    # block, one citable subsection per axis that ran, verbatim formulas only
+    # under the same opt-in switch as every other corpus-derived payload.
+    lines.extend(
+        _formal_derivation_section(state, include_full=include_full_state_json)
+    )
 
     # #2046: the pipeline's self-diagnosis motifs — provenance, folded.
     lines.extend(_fabrication_notes_section(state))
