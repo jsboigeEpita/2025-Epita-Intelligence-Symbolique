@@ -964,7 +964,8 @@ class TestTrackARegistration:
             "defeasible_logic",
             "qbf_reasoning",
             "asp_reasoning",
-            "answer_set_programming",
+            # "answer_set_programming" — retired #1604: undemanded alias,
+            # same retirement as the #2733 aliases.
         }
         assert registered_caps == expected_caps
 

@@ -848,10 +848,14 @@ def _declare_tweety_slots(
             "Quantified Boolean Formulas (∀/∃ over PL)",
             _invoke_qbf,
         ),
-        # Clingo/ASP solver (#479)
+        # Clingo/ASP solver (#479). #1604: the "answer_set_programming"
+        # alias is retired — zero demanders ever resolved it (census
+        # measured 0 phase literals; retired like the #2733 aliases), and
+        # "asp_reasoning" now carries the stable-extension cross-check
+        # phase in formal_extended.
         (
             "asp_reasoning_handler",
-            ["asp_reasoning", "answer_set_programming"],
+            ["asp_reasoning"],
             "Answer Set Programming via Clingo (JVM or Python)",
             _invoke_asp_reasoning,
         ),

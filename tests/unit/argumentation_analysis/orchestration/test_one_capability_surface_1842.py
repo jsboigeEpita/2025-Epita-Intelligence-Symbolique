@@ -105,8 +105,10 @@ PENDING_TRIAGE: dict[tuple[str, str], str] = {
     ("dung_arbitration_service", "dung_arbitration"): "#1604",
     ("multi_axis_compare_service", "multi_axis_compare"): "#1604",
     ("sat_handler", "sat_solving"): "#1604",
-    ("asp_reasoning_handler", "asp_reasoning"): "#1604",
-    ("asp_reasoning_handler", "answer_set_programming"): "#1604",
+    # ("asp_reasoning_handler", "asp_reasoning") — wired #1604: the ASP
+    # stable-extension cross-check phase in formal_extended demands it.
+    # ("asp_reasoning_handler", "answer_set_programming") — retired #1604:
+    # undemanded alias, same retirement as the #2733 aliases.
 }
 
 
