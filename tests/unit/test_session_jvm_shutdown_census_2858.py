@@ -51,6 +51,13 @@ OUT_OF_SESSION_OWNERS = {
     ),
 }
 
+# The pre-fix revision the born-red control reads: ``bfff7542b``, the main tip
+# this branch rebases on — its tearDown still carried the call. PINNED on
+# purpose (#2859 review): the old ``origin/main`` spelling would redden main
+# the moment this PR lands, because the fix becomes main's own content.
+_PRE_FIX_REVISION = "bfff7542bcadc34b1d8ad0a9ae2650c5d3440fe9"
+_PRE_FIX_PATH = "tests/agents/core/logic/test_tweety_bridge.py"
+
 _SHUTDOWN_NAMES = {"shutdown_jvm", "shutdownJVM"}
 
 
@@ -96,21 +103,30 @@ class TestNoTestShutsTheSessionJvm:
         )
 
     def test_born_red_pre_fix_teardown_reddens(self):
-        """Born-red witness: origin/main's tearDown carried the call.
+        """Born-red witness: the tearDown at the PINNED revision carried the call.
 
         The guard, run on the pre-fix tree, must flag the exact defect #2858
-        repairs. The test job checks out with fetch-depth: 0 and fetches
-        main, so the ref is reachable in CI as well as locally.
+        repairs. The revision is pinned (``_PRE_FIX_REVISION``), never
+        ``origin/main``: the branch is based on that tip, and after the merge
+        ``origin/main`` would *be* the fix — the control would redden main
+        (#2859 review). The test job checks out with fetch-depth: 0 (#2014),
+        so the object is reachable in CI; under a shallow checkout the control
+        fails loudly rather than passing silently — same contract as
+        tests/unit/argumentation_analysis/evaluation/test_production_person_sweep_2349.py.
         """
-        raw = subprocess.run(
-            [
-                "git",
-                "show",
-                "origin/main:tests/agents/core/logic/test_tweety_bridge.py",
-            ],
+        proc = subprocess.run(
+            ["git", "show", f"{_PRE_FIX_REVISION}:{_PRE_FIX_PATH}"],
             capture_output=True,
-            check=True,
-        ).stdout
+        )
+        if proc.returncode != 0:
+            first_stderr = proc.stderr.decode(errors="replace").strip().splitlines()[:1]
+            raise AssertionError(
+                f"git show {_PRE_FIX_REVISION}:{_PRE_FIX_PATH} failed "
+                f"(rc={proc.returncode}) — the born-red control NEEDS history; "
+                "a shallow clone makes it unmeasurable, and it must not pass "
+                f"silently ({first_stderr})"
+            )
+        raw = proc.stdout
         # utf-8-sig: that file carries a BOM on main — a plain utf-8 decode
         # hands ast.parse a leading U+FEFF it rejects (#2851 lesson).
         src = raw.decode("utf-8-sig")
