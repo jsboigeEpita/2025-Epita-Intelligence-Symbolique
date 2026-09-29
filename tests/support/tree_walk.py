@@ -147,6 +147,30 @@ def iter_tracked_files(
         yield path
 
 
+def stage_all_in_git(root: Union[str, Path]) -> None:
+    """Make ``git ls-files`` see every file under ``root`` (#2834).
+
+    A synthetic tree a guard walks must be a real git repository once the
+    walk reads the index. ``git init`` (when ``root`` is not one already)
+    plus ``git add -A`` — the index, not the history, is what ``ls-files``
+    reads, so no commit and no user config are needed. Fails loud on either
+    step: a synthetic tree the walk cannot read would silently empty the
+    population under it.
+    """
+    root_path = Path(root)
+    if not (root_path / ".git").exists():
+        subprocess.run(
+            ["git", "-C", str(root_path), "init", "-q"],
+            check=True,
+            capture_output=True,
+        )
+    subprocess.run(
+        ["git", "-C", str(root_path), "add", "-A"],
+        check=True,
+        capture_output=True,
+    )
+
+
 def prefix_is_skipped_by_collection(pytest_ini, prefix=PROBE_PREFIX):
     """Whether ``pytest.ini``'s ``norecursedirs`` keeps collection out of a
     directory named ``prefix``, so a guard can assert that the prefix a walk
