@@ -255,27 +255,44 @@ class ReasoningEffortTransport(httpx.AsyncBaseTransport):
     sans tools ou un modèle non-reasoning ne doit pas recevoir le paramètre
     (l'API le rejette pour eux).
 
-    #2827 (mesuré 28/09) : la valeur acceptée dépend du modèle. Le 'none'
-    injecté est requis par ``gpt-5.6-luna`` avec tools, mais une génération
-    gpt-5 antérieure le rejette (``« 'reasoning_effort' does not support
-    'none' with this model. Supported values: 'minimal', 'low', 'medium',
-    'high'. »``) — chaque descente d'un siège ainsi configuré se dégradait
-    en one-shot silencieux. Pas de table modèle→valeur (elle mentirait au
-    prochain changement de modèle) : le 400 du fournisseur décide, son
-    message nomme soit la valeur à utiliser (``set reasoning_effort to
-    'X'``) soit les valeurs admises (valeur envoyée absente ⇒ champ retiré,
-    le défaut du fournisseur reprend la main). Un seul rejeu adapté ; un
-    second rejet se propage. Le 400 arrive ici sous deux formes selon la
-    chaîne : exception ``HTTPStatusError`` (chaîne résiliente, où
-    ``LoggingHttpTransport`` lève) ou réponse de statut 400 (chaîne nue de
-    ``build_async_openai_client``) — les deux sont écoutées.
+    #2827 (mesuré 28-29/09) : la valeur acceptée dépend du modèle. Le 'none'
+    injecté est requis par ``gpt-5.6-luna`` avec tools, mais la famille
+    o1/o3 le rejette (``« Unsupported value: 'none' is not supported with
+    the 'o3-mini-2025-01-31' model. Supported values are: 'low', 'medium',
+    and 'high'. »``, mesuré en direct sur la route canonique) alors que
+    l'appel sans le champ passe 200. Le 400 « 'reasoning_effort' does not
+    support 'none' » cité par l'issue venait du garde RA2 qui lisait les
+    variables d'environnement brutes hors résolveur (#2352) : ``gpt-5-mini``
+    y est retiré par ``OBSOLETE_MODEL_SUBSTITUTIONS`` (#1930) et la
+    production n'envoie jamais cet id — mais ``o3-mini``/``o1``, eux, ne
+    sont PAS retirés : un siège qui les configure passe inchangé par le
+    résolveur, reçoit l'injection et la voit rejeter. Pas de table
+    modèle→valeur (elle mentirait au prochain changement de modèle) : le
+    400 du fournisseur décide, son message nomme soit la valeur à
+    utiliser (``set reasoning_effort to 'X'``) soit les valeurs admises
+    (valeur envoyée absente ⇒ champ retiré, le défaut du fournisseur
+    reprend la main). Un seul rejeu adapté ; un second rejet se propage.
+
+    **Provenance** : la correction ne touche qu'un champ que PERSONNE n'a
+    exprimé — injecté par le transport, ou absent d'un modèle hors
+    préfixes reasoning que le fournisseur exige quand même (directive).
+    Une valeur posée par l'appelant se propage telle quelle (#1019 — le
+    transport ne réécrit jamais un choix explicite). Le 400 arrive ici
+    sous deux formes selon la chaîne : exception ``HTTPStatusError``
+    (chaîne résiliente, où ``LoggingHttpTransport`` lève) ou réponse de
+    statut 400 (chaîne nue de ``build_async_openai_client``) — les deux
+    sont écoutées.
     """
 
-    # Les deux 400 réels mesurés (#2827) : le remède nommé…
+    # Les 400 réels mesurés (#2827, #2840) : le remède nommé…
     _DIRECTIVE_RE = re.compile(r"set reasoning_effort to '([^']+)'", re.IGNORECASE)
     # …ou la liste des valeurs admises, épellée de deux façons (« values: »
-    # sur la génération antérieure, « values are: » sur luna).
+    # sur la génération antérieure, « values are: » sur luna et o3).
     _SUPPORTED_RE = re.compile(r"supported values(?: are)?:\s*(.*)", re.IGNORECASE)
+    # Le corps du 400 nomme le champ sous deux orthographes selon la
+    # couche : « reasoning_effort » côté API directe, « reasoning.effort »
+    # dans l'erreur OpenRouter enveloppée (mesuré sur le 400 o3-mini).
+    _FIELD_MARKERS = ("reasoning_effort", "reasoning.effort")
 
     def __init__(self, wrapped_transport: httpx.AsyncBaseTransport):
         self._wrapped_transport = wrapped_transport
@@ -284,19 +301,24 @@ class ReasoningEffortTransport(httpx.AsyncBaseTransport):
     def _effort_retry_value(
         rejection_text: str, sent_value: Optional[str]
     ) -> Tuple[bool, Optional[str]]:
-        """Que faire d'un 400 nommant ``reasoning_effort`` ?
+        """Que faire d'un 400 nommant le champ ``reasoning_effort`` ?
 
         Retourne ``(rejouer, nouvelle_valeur)`` : ``nouvelle_valeur`` à
         ``None`` signifie retirer le champ ; ``(False, None)`` signifie ne
-        pas réagir (le rejet n'offre aucune base de correction).
+        pas réagir (le rejet n'offre aucune base de correction, ou la
+        valeur absente ne donne rien à retirer — un rejeu au corps identique
+        n'est pas une correction).
         """
-        if "reasoning_effort" not in rejection_text:
+        if not any(
+            marker in rejection_text
+            for marker in ReasoningEffortTransport._FIELD_MARKERS
+        ):
             return False, None
         directive = ReasoningEffortTransport._DIRECTIVE_RE.search(rejection_text)
         if directive:
             return True, directive.group(1)
         supported = ReasoningEffortTransport._SUPPORTED_RE.search(rejection_text)
-        if supported:
+        if supported and sent_value is not None:
             values = re.findall(r"'([^']+)'", supported.group(1))
             if sent_value not in values:
                 return True, None
@@ -364,6 +386,7 @@ class ReasoningEffortTransport(httpx.AsyncBaseTransport):
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         body: Optional[Dict[str, Any]] = None
         sent_effort: Optional[str] = None
+        caller_set_effort = False
         if request.method == "POST" and "chat/completions" in request.url.path:
             content_bytes = await request.aread()
             try:
@@ -372,6 +395,9 @@ class ReasoningEffortTransport(httpx.AsyncBaseTransport):
                 parsed = None
             if isinstance(parsed, dict):
                 body = parsed
+                # Provenance notée AVANT l'injection (#2840) : seul un champ
+                # que l'appelant n'a PAS exprimé peut être corrigé au rejeu.
+                caller_set_effort = "reasoning_effort" in body
                 sent_effort = body.get("reasoning_effort")
                 if body.get("tools") and sent_effort is None:
                     from argumentation_analysis.core.llm_service import (
@@ -385,7 +411,11 @@ class ReasoningEffortTransport(httpx.AsyncBaseTransport):
         try:
             response = await self._wrapped_transport.handle_async_request(request)
         except httpx.HTTPStatusError as exc:
-            if exc.response.status_code == 400 and body is not None:
+            if (
+                exc.response.status_code == 400
+                and body is not None
+                and not caller_set_effort
+            ):
                 retry, new_value = self._effort_retry_value(
                     self._rejection_text(exc), sent_effort
                 )
@@ -394,7 +424,7 @@ class ReasoningEffortTransport(httpx.AsyncBaseTransport):
                         request, body, sent_effort, new_value
                     )
             raise
-        if response.status_code == 400 and body is not None:
+        if response.status_code == 400 and body is not None and not caller_set_effort:
             await response.aread()
             retry, new_value = self._effort_retry_value(response.text, sent_effort)
             if retry:

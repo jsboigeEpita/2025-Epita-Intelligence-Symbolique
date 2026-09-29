@@ -308,6 +308,30 @@ _LUNA_REJECTS_MINIMAL = {
     }
 }
 
+# 400 réel mesuré en direct (29/09, route canonique OpenRouter, #2840) :
+# la famille o1/o3 rejette le 'none' injecté et le corps arrive ENVELOPPÉ —
+# l'erreur du fournisseur vit dans metadata.raw, et le paramètre y est
+# épellé « reasoning.effort » (point), pas « reasoning_effort ». Le même
+# appel sans le champ répond 200.
+_O3_MINI_WRAPPED_REJECTS_NONE = {
+    "error": {
+        "message": "Provider returned error",
+        "code": 400,
+        "metadata": {
+            "raw": (
+                '{\n  "error": {\n    "message": "Unsupported value: '
+                "'none' is not supported with the 'o3-mini-2025-01-31' "
+                "model. Supported values are: 'low', 'medium', and "
+                '\'high\'.",\n    "type": "invalid_request_error",\n'
+                '    "param": "reasoning.effort",\n    "code": '
+                '"unsupported_value"\n  }\n}'
+            ),
+            "provider_name": "OpenAI",
+            "provider_error_code": "unsupported_value",
+        },
+    }
+}
+
 _OK_BODY = {"id": "resp", "object": "chat.completion"}
 
 
@@ -363,54 +387,81 @@ async def test_rejected_none_retries_once_without_the_field(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "sent_effort, error_body, spelling",
+    "model, error_body, spelling",
     [
-        ("none", _OLD_GPT5_REJECTS_NONE, "Supported values:"),
-        ("minimal", _LUNA_REJECTS_MINIMAL, "Supported values are:"),
+        ("gpt-5-mini", _OLD_GPT5_REJECTS_NONE, "Supported values:"),
+        ("openai/o3-mini", _O3_MINI_WRAPPED_REJECTS_NONE, "Supported values are:"),
     ],
 )
 async def test_both_supported_values_spellings_drop_the_field(
-    monkeypatch, sent_effort, error_body, spelling
+    monkeypatch, model, error_body, spelling
 ):
     """Le fournisseur épelle sa liste de DEUX façons (« values: » /
-    « values are: » — les deux mesurées) : la valeur envoyée absente de la
-    liste ⇒ rejeu SANS le champ, pour les deux graphies."""
+    « values are: » — les deux mesurées), et le corps peut arriver ENVELOPPÉ
+    (OpenRouter : erreur du fournisseur dans metadata.raw, paramètre épellé
+    « reasoning.effort », avec un point). Champ injecté ('none') absent de
+    la liste ⇒ rejeu SANS le champ — le défaut du fournisseur reprend la
+    main (mesuré 200 sur o3-mini/o1 sans le champ)."""
     client, fake = _scripted_client(monkeypatch, [(400, error_body), (200, _OK_BODY)])
     try:
         response = await client.post(
             _COMPLETIONS_URL,
-            json=_chat_payload(
-                "gpt-5-mini", tools=_TOOLS, extra={"reasoning_effort": sent_effort}
-            ),
+            json=_chat_payload(model, tools=_TOOLS),
         )
     finally:
         await client.aclose()
     assert response.status_code == 200, f"graphie « {spelling} » non reconnue"
     assert len(fake.wire_bodies) == 2
-    assert fake.wire_bodies[0]["reasoning_effort"] == sent_effort
+    # Le champ 'none' est bien parti au premier essai (injection)…
+    assert fake.wire_bodies[0]["reasoning_effort"] == "none"
+    # …et le rejeu l'omet : c'est le corps que le fournisseur accepte.
     assert "reasoning_effort" not in fake.wire_bodies[1]
 
 
-async def test_directive_400_names_the_value_and_it_is_used(monkeypatch):
-    """Le 400 « set reasoning_effort to 'none' » (mesuré gpt-5.6-luna avec
-    tools) NOMME la valeur : le rejeu la porte, au lieu de laisser l'appel
-    mourir alors que le remède était dans le message."""
+async def test_explicit_effort_400_propagates_untouched(monkeypatch):
+    """#2840 (provenance) : une valeur posée par l'APPELANT n'est jamais
+    réécrite — ni à l'aller (contrat #2324) ni au rejeu. Le 400 « set
+    reasoning_effort to 'none' » sur un choix explicite 'low' se propage
+    tel quel, en UN appel : le transport ne sait pas mieux que l'appelant
+    ce que celui-ci voulait (#1019 — jamais de réécriture silencieuse)."""
+    client, fake = _scripted_client(monkeypatch, [(400, _API_400_BODY)])
+    try:
+        with pytest.raises(httpx.HTTPStatusError) as excinfo:
+            await client.post(
+                _COMPLETIONS_URL,
+                json=_chat_payload(
+                    REASONING_MODEL, tools=_TOOLS, extra={"reasoning_effort": "low"}
+                ),
+            )
+    finally:
+        await client.aclose()
+    assert len(fake.wire_bodies) == 1, "un choix explicite ne se rejoue pas"
+    assert fake.wire_bodies[0]["reasoning_effort"] == "low"
+    assert "set reasoning_effort to 'none'" in str(excinfo.value)
+
+
+async def test_directive_400_on_absent_field_uses_named_value(monkeypatch):
+    """Le 400 « set reasoning_effort to 'none' » (mesuré gpt-5.6-luna,
+    champ ABSENT + tools) NOMME la valeur : sur un champ que personne n'a
+    exprimé, le rejeu la porte. C'est le cas luna pré-#2324, couvert en
+    réactif pour un modèle hors préfixes reasoning que le fournisseur
+    exige quand même."""
     client, fake = _scripted_client(
         monkeypatch, [(400, _API_400_BODY), (200, _OK_BODY)]
     )
     try:
         response = await client.post(
             _COMPLETIONS_URL,
-            json=_chat_payload(
-                REASONING_MODEL, tools=_TOOLS, extra={"reasoning_effort": "low"}
-            ),
+            # « custom-effort-required » : hors gpt-5*/o1*/o3* — aucune
+            # injection à l'aller, la directive du 400 décide seule.
+            json=_chat_payload("custom-effort-required", tools=_TOOLS),
         )
     finally:
         await client.aclose()
     assert response.status_code == 200
     assert len(fake.wire_bodies) == 2
-    # Le choix explicite part tel quel au premier essai…
-    assert fake.wire_bodies[0]["reasoning_effort"] == "low"
+    # Rien n'est parti à l'aller (hors préfixes reasoning)…
+    assert "reasoning_effort" not in fake.wire_bodies[0]
     # …et le rejeu porte la valeur nommée par le message du fournisseur.
     assert fake.wire_bodies[1]["reasoning_effort"] == "none"
 

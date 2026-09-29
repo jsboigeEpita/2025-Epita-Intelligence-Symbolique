@@ -30,6 +30,38 @@ pytestmark = [
     pytest.mark.llm_light,
 ]
 
+
+def _build_gate_llm_service():
+    """The gate's LLM service, built through the CANONICAL resolver (#2840).
+
+    #2827 root cause, measured: the fixture used to read ``OPENAI_BASE_URL``
+    and ``OPENAI_CHAT_MODEL_ID`` straight from the environment, outside
+    ``resolve_chat_endpoint`` (#2352 class). On a seat whose ``.env`` names a
+    retired id, the gate then measured a model production never sends —
+    ``OBSOLETE_MODEL_SUBSTITUTIONS`` (#1930) replaces it at every resolution.
+    The gate must measure the model production runs: route, key AND model
+    come from the single resolver.
+    """
+    from semantic_kernel import Kernel
+    from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+
+    from argumentation_analysis.core.llm_service import resolve_chat_endpoint
+    from argumentation_analysis.core.utils.network_utils import (
+        build_async_openai_client,
+    )
+
+    api_key, base_url, model_id = resolve_chat_endpoint()
+    if not api_key:
+        pytest.skip("no API key resolved — value-gates need a real LLM")
+    llm_service = OpenAIChatCompletion(
+        ai_model_id=model_id,
+        async_client=build_async_openai_client(api_key=api_key, base_url=base_url),
+    )
+    kernel = Kernel()
+    kernel.add_service(llm_service)
+    return kernel, llm_service, model_id
+
+
 # Reference cases from EPITA validation
 REFERENCE_CASES = [
     {
@@ -233,34 +265,16 @@ class TestGuidedDescentDepthGate:
         # bare client skipped ReasoningEffortTransport (#2387), so on the
         # default route every descent call got a 400 and the gate stayed red
         # while the pipeline itself was repaired (run 35783217532).
-        import os
-
         try:
-            from semantic_kernel import Kernel
-            from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
-
-            from argumentation_analysis.core.utils.network_utils import (
-                build_async_openai_client,
-            )
             from argumentation_analysis.plugins.fallacy_workflow_plugin import (
                 FallacyWorkflowPlugin,
             )
         except ImportError as exc:
             pytest.skip(f"FallacyWorkflowPlugin stack not importable: {exc}")
 
-        api_key = os.environ.get("OPENAI_API_KEY", "")
-        if not api_key:
-            pytest.skip("OPENAI_API_KEY unset — value-gates need a real LLM")
-
-        base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
-
-        llm_service = OpenAIChatCompletion(
-            ai_model_id=model_id,
-            async_client=build_async_openai_client(api_key=api_key, base_url=base_url),
-        )
-        kernel = Kernel()
-        kernel.add_service(llm_service)
+        # #2840: route, key and model through the canonical resolver — the
+        # gate measures what production sends, not what a raw env var names.
+        kernel, llm_service, model_id = _build_gate_llm_service()
 
         # #2290: every production call site passes a taxonomy source; without
         # one the navigator is empty ("taxonomy_state=none"), the wide-net
@@ -450,3 +464,23 @@ class TestCompareDetectionModes:
         assert (
             "guided" in content.lower() or "workflow" in content.lower()
         ), "Script must reference guided/workflow mode"
+
+
+class TestGateServiceProvenance2840:
+    """#2840 : le service du garde vient du résolveur canonique, pas des
+    variables brutes. Né-rouge de la requalification #2827 : sur un siège
+    configuré sur un id retiré (``gpt-5-mini``), la construction brute
+    mesurait l'id brut — un modèle que la production n'envoie jamais
+    (substitution #1930 à chaque résolution). Le garde doit mesurer le
+    modèle de production, sinon son verdict n'a pas de lecteur."""
+
+    def test_retired_env_id_is_substituted_not_measured(self, monkeypatch):
+        monkeypatch.setenv("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+        _, _, model_id = _build_gate_llm_service()
+        assert model_id != "gpt-5-mini", (
+            "le garde mesure l'id brut de l'environnement — route, clé et "
+            "modèle doivent venir de resolve_chat_endpoint (#2352/#1930)"
+        )
+        assert (
+            "gpt-5.6-luna" in model_id
+        ), f"la substitution du résolveur n'a pas joué : {model_id!r}"
