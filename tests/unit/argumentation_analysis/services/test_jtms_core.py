@@ -429,7 +429,9 @@ class TestTriStateDisplay:
             def write_html(self, path):
                 pass
 
-        monkeypatch.setattr(mod, "Network", FakeNet)
+        # #2855: pyvis is resolved at call time (``_pyvis_network``), so the
+        # fake substitutes the resolver rather than a module attribute.
+        monkeypatch.setattr(mod, "_pyvis_network", lambda: FakeNet)
 
         jtms = JTMS()
         jtms.add_belief("u")  # None
