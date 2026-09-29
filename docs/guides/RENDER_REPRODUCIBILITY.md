@@ -45,6 +45,7 @@ Concretely:
 | Render | Producer | Path exercised |
 |---|---|---|
 | Quality phase, wired vs lexical, per unit | `scripts/analysis/render_quality_phase.py --doc B` | `setup_registry → find_for_capability → invoke` for `fact_extraction` then `argument_quality`; the lexical arm is the phase's own named degraded path on the same units |
+| Zero-shot arm, one call per document, full text | `scripts/dataset/run_zeroshot_arm.py --max-chars 0 --timeout 600` | `expand_corpus` (same population as the corpus batch) → `resolve_chat_endpoint` (canonical resolver, no raw env read) → a single no-tools chat call; the answer is kept verbatim under the gitignored results tree with a provenance header per file (#2841) |
 
 Add a row when a new render gains a producer. A render cited in a PR with no
 row here is the defect #2353 describes.
