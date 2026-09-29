@@ -19,10 +19,15 @@ Ce document documente tous les tests skippés conditionnellement, leurs raisons,
 
 **Erreur** : `OSError: [WinError 182] Le système d'exploitation ne peut pas exécuter %1. Error loading "...\torch\lib\fbgemm.dll" or one of its dependencies.`
 
-**Cause racine** : 
-- `fbgemm.dll` (Facebook's GEMM library) nécessite Visual C++ Redistributable
-- Les dépendances natives Windows (vcruntime140.dll, msvcp140.dll) sont manquantes ou incompatibles
-- Problème spécifique à Windows, les tests fonctionnent sous Linux
+**Cause racine** (réécrite par #2856 — les deux théories précédentes étaient fausses) :
+- `conda-lock.yml` installait DEUX fournisseurs de `Library/bin/libiomp5md.dll` :
+  `intel-openmp` (le pin #1651 — pytorch 2.2.2 importe la DLL par ordinaux
+  703/706/707/900/904/958/961) et `llvm-openmp` (tiré par `mkl`/`libblas`).
+  Avec `path_conflict: clobber`, la copie llvm-openmp survit et
+  `import torch` meurt en `WinError 182` sur `fbgemm.dll`.
+- Ni le runner image (#1651), ni le VC++ Redistributable (théorie initiale
+  ci-dessus) ne sont en cause : le défaut était dans le solve, réparé dans
+  `environment.yml` (#2856 — monde tout-Intel : un seul fournisseur).
 
 ### Condition du skip
 
@@ -38,6 +43,11 @@ Le test est skippé si :
 - ET PyTorch ne peut pas être importé (OSError lors de `import torch`)
 
 ### Conditions de réactivation
+
+**Réparé par #2856** : dans l'env du gate, `import torch` réussit désormais et
+ces tests y tournent. Le skip ne se déclenche plus que sur un env réellement
+cassé (DLL manquante, install incomplète) — le diagnostic ci-dessous reste
+valide pour ce cas.
 
 **Option 1 : Installer Visual C++ Redistributable (recommandé)**
 1. Télécharger : https://aka.ms/vs/17/release/vc_redist.x64.exe

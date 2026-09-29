@@ -15,9 +15,18 @@ dependencies:
   # #1651 : pytorch 2.2.2 (fbgemm.dll) importe libiomp5md.dll par ORDINAUX
   # (703/706/707/900/904/958/961). Les builds intel-openmp 2025.x de conda-forge
   # n'exportent pas 900/904/958/961 -> WinError 182 / 0xc0000138 a l'import torch
-  # (skip-storm silencieux). 2026.1.0 les exporte tous (verifie sur _246/_247/_248).
-  - intel-openmp=2026.1.0
-  - mkl # Force l'utilisation des librairies Intel MKL
+  # (skip-storm silencieux).
+  # #2856 : le pin 2026.1.0 était juste mais écrasé — mkl 2025.x (via libblas
+  # 3.11) tire llvm-openmp, qui livre AUSSI Library/bin/libiomp5md.dll et le
+  # clobber (path_conflict) laisse la copie llvm en place : torch ne charge
+  # JAMAIS dans l'env du gate (le verdict #1651 « image runner » était ce
+  # défaut). Réparé dans le solve : monde tout-Intel, UN seul fournisseur —
+  # mkl 2024.0.0 + intel-openmp 2024.2.1 (mesuré : exporte les 7 ordinaux ;
+  # la régression concernait les builds 2025.x seulement), libblas 3.9.0,
+  # pytorch 2.2.2 et numpy 1.25.0 inchangés. Témoin :
+  # tests/unit/test_gate_env_loads_torch_2856.py.
+  - intel-openmp=2024.2.1
+  - mkl=2024.0.0 # #2856 : le partenaire cohérent d'intel-openmp (2025.x tire llvm-openmp)
   - tbb # Threading Building Blocks, souvent lié à MKL
   - numpy=1.25.0 # Version figée pour la stabilité binaire
   - pandas=2.0.3
@@ -112,5 +121,5 @@ dependencies:
     - diskcache  # #1336: LLM response cache (llm_cache.py CachedChatCompletion). In requirements.txt but not environment.yml — CI provisions via environment.yml, so diskcache was absent on runners → CachedChatCompletion fell back to OFF mode, failing 5 test_llm_cache tests. Same drift class as pyfakefs (#1353) and hypothesis (#1303).
     - ipywidgets>=7.7.0  # #2787: ui/app.py and ui/extract_editor/extract_marker_editor.py import it at module level (run_orchestration --ui, main_orchestrator, the extract tooling). Declared nowhere before, so the gate env lacked it and `import argumentation_analysis.ui.app` died on ModuleNotFoundError. Floor = scripts/setup/test_all_dependencies.py; ai-01 resolves 8.1.9. Same drift class as diskcache above: imported, declared nowhere.
     - jupyter-ui-poll>=0.2.0  # #2787: ui/app.py waits for widget clicks through jupyter_ui_poll.ui_events. Floor = scripts/setup/test_all_dependencies.py; ai-01 resolves 1.1.0.
-    # sentence-transformers deliberately NOT provisioned (#2116 A1): importing it reaches torch, whose DLLs the runner image cannot load (#1651 — probe VERDICT 4/8: torch_cpu/fbgemm/shm/torch_python, winerror 182, deterministic on 3/3 runs 2026-09-15: 35011121202, 35012607442, 35013012989). Provisioning it aborted COLLECTION of two test files (any module-level `from sentence_transformers import ...` → `import torch` → OSError; PR #2267 run 2) — green runs are green only because nothing imports torch at collection and torch-dependent tests skip. The capacity guard (test_embedding_capacity_guard_2116.py) therefore skips in CI with this reason and measures on machines where the stack loads.
+    # sentence-transformers deliberately NOT provisioned (#2116 A1, re-examined by #2856): the ORIGINAL blocker — "the runner image cannot load torch DLLs" (#1651, probe VERDICT 4/8) — was a conda-lock defect, repaired in the solve (one libiomp5md.dll provider): the gate env now imports torch. Provisioning st remains a separate decision: it adds a module-level torch import at collection for two test files and a model download in the gate run (#2116 keeps the follow-up; the skip reason in test_embedding_capacity_guard_2116.py no longer cites the runner).
     - python-sat==1.9.dev7  # #1336 / #1687 / #1696-CI: PySAT is the DEFAULT propositional-logic backend (SATHandler, sat_handler.py). pip-only (NOT on conda-forge). RECURRING drift class #1336 "listed ≠ stays-published": (1) the float broke when 1.9.dev10 shipped NO cp310-win_amd64 wheel → pip source build → cadical MSVC fail (``unistd.h``) → both CI jobs die at Setup Miniconda; #1687 pinned 1.9.dev8. (2) dev8/9/10 were then YANKED from PyPI (maintainer prunes old dev releases) → the pin itself 404s → same Setup-Miniconda death. 1.9.dev7 is the NEWEST 1.9.x survivor below the yank gap WITH a prebuilt cp310-win_amd64 wheel (verified PyPI JSON: dev1..dev7 + dev11/dev12 have wheels; dev8/9/10 absent). Closest behavioral match to the validated dev8. Fallback if dev7 is later yanked: 1.9.dev12. #1369 keeps a degraded-wrap at the orchestration boundary as honest-degraded insurance regardless.
