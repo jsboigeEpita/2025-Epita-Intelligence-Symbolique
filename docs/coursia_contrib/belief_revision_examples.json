@@ -3,7 +3,7 @@
   "issue": 1961,
   "phase": 4,
   "inventory": {
-    "argumentation_analysis/services/jtms/jtms_core.py": 354,
+    "argumentation_analysis/services/jtms/jtms_core.py": 371,
     "argumentation_analysis/services/jtms/atms_core.py": 242,
     "argumentation_analysis/services/jtms/conflict_resolution.py": 305,
     "argumentation_analysis/agents/core/logic/dung_native.py": 308,
