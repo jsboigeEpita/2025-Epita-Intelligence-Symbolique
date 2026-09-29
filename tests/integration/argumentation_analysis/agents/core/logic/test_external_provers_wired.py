@@ -335,13 +335,14 @@ def test_pysat_decides_pl_consistency():
 def test_pl_comparison_backends_each_decide_both_ways():
     """Per-backend sentinel (DoD #1244): every backend in the PL comparison set
     must genuinely DECIDE — correct verdict on a clearly-SAT KB AND a clearly-
-    UNSAT KB. This is what keeps a broken backend (e.g. cryptominisat5, which
-    returns UNSAT on a trivially-SAT formula) out of the comparison: it fails
-    the sentinel here rather than fabricating a comparison point downstream."""
+    UNSAT KB. This keeps a backend that cannot decide (e.g. cryptominisat5 in an
+    env without its ``pycryptosat`` package, #2851: constructor AssertionError,
+    no verdict at all) out of the comparison by reddening here rather than
+    fabricating a comparison point downstream."""
     from argumentation_analysis.agents.core.logic.pl_handler import PLHandler
 
-    sat_kb = "p\nq"          # clearly satisfiable
-    unsat_kb = "p\n!p"       # clearly unsatisfiable
+    sat_kb = "p\nq"  # clearly satisfiable
+    unsat_kb = "p\n!p"  # clearly unsatisfiable
 
     for sname in PLHandler.PL_COMPARISON_PYSAT_BACKENDS:
         from argumentation_analysis.agents.core.logic.sat_handler import SATHandler
@@ -358,13 +359,11 @@ def test_pl_comparison_backends_each_decide_both_ways():
             "backend that cannot recognise an unsatisfiable KB is fabrication."
         )
 
-    # cryptominisat5 is deliberately EXCLUDED — documented firsthand as broken
-    # (returns UNSAT on {P}). Assert it stays out until a probe proves it decides.
-    assert "cryptominisat5" not in PLHandler.PL_COMPARISON_PYSAT_BACKENDS, (
-        "cryptominisat5 was re-added to the comparison set; re-prove firsthand "
-        "that it decides BOTH directions before promoting it (see PL_COMPARISON_"
-        "PYSAT_BACKENDS comment)."
-    )
+    # cryptominisat5 is IN the set since #2851 (pycryptosat pinned in
+    # environment.yml; probe scripts/verify_all_external_solvers_live.py). The
+    # loop above is the guard BOTH ways: an env where it stops deciding (package
+    # absent again) reddens this sentinel naming it, instead of letting a
+    # no-verdict backend ride along as a comparison point (#1019).
     # silence unused-var linters for the KB constants documented above
     assert sat_kb and unsat_kb
 
@@ -379,8 +378,8 @@ def test_pl_backend_comparison_cross_validates():
 
     bridge = TweetyBridge()
 
-    consistent_kb = "p\nq\np && q => q"   # satisfiable
-    inconsistent_kb = "p\n!p"             # unsatisfiable
+    consistent_kb = "p\nq\np && q => q"  # satisfiable
+    inconsistent_kb = "p\n!p"  # unsatisfiable
 
     con_result = asyncio.new_event_loop().run_until_complete(
         bridge.compare_pl_backends(consistent_kb)
@@ -541,9 +540,7 @@ def test_sat_backend_comparison_cross_validates():
 
     from argumentation_analysis.agents.core.logic.sat_handler import compare_pl_backends
 
-    result = asyncio.new_event_loop().run_until_complete(
-        compare_pl_backends(["a"])
-    )
+    result = asyncio.new_event_loop().run_until_complete(compare_pl_backends(["a"]))
 
     assert "backends" in result, f"missing 'backends' key: {result!r}"
     assert "decided" in result, f"missing 'decided' key: {result!r}"
@@ -552,8 +549,12 @@ def test_sat_backend_comparison_cross_validates():
 
     # All PySAT backends must be present (PySAT is available per the skip guard)
     for solver in [
-        "cadical195", "cryptominisat5", "glucose42",
-        "maplechrono", "lingeling", "minisat22",
+        "cadical195",
+        "cryptominisat5",
+        "glucose42",
+        "maplechrono",
+        "lingeling",
+        "minisat22",
     ]:
         key = f"pysat/{solver}"
         assert key in result["backends"], (
