@@ -34,20 +34,25 @@ affirmé à tort qu'aucune mesure récente n'existait.
 | Instrument | Nature | Ce qu'il répond | Dernière mesure firsthand |
 |---|---|---|---|
 | `scripts/measure_both_paths_vs_zeroshot.py` | **externe**, head-to-head sur corpus : DAG `spectacular` / conversationnel / référence zero-shot | quel *chemin d'orchestration* bat l'autre, dimension par dimension | **run : 31/05/2026** ⚠ non re-mesuré · imports revérifiés le 18/09 (3 points d'entrée OK) · référence : `docs/reports/BASELINE_0SHOT_2026-05-16.md` |
-| `reporting/restitution/conclusion_salience.py` (#1914) | **interne**, déterministe, dérivé de l'état, rendu dans l'Acte III | ce que *ce run-ci* a établi qu'une lecture zero-shot forte ne donne pas | **vivant, rendu le 18/09** sur run corpus réel (2 documents) |
+| `scripts/dataset/run_zeroshot_arm.py` (#2841) | **bras zero-shot réel** : un appel par document, même corpus (`expand_corpus`), même modèle (résolveur canonique), même texte intégral ; réponse gardée entière en chemin gitignoré | ce que le modèle **seul** dit du document — l'autre moitié de la lecture côte à côte | **29/09/2026, campagne #2841** : 49/49 complets (~73 s/doc) face à la passe `spectacular` 49/49 (48/49 reader-valid = re-mesure exacte de #2062) |
+| `reporting/restitution/conclusion_salience.py` (#1914) | **interne**, déterministe, dérivé de l'état, rendu dans l'Acte III | ce que *ce run-ci* a établi qu'une lecture zero-shot forte ne donne pas | **vivant, campagne #2841 le 29/09** : 49 documents, surplus non procédural sur **48/49** (décisif_formel=69, structural=136, convergence_non_llm=71) · ⚠ défaut ouvert #2844 (les trouvailles structurelles à résultat vide sont comptées établies — 13/49 docs) |
 
 **Différence à ne pas confondre** : le premier compare des *chemins* entre eux et a besoin
-d'une référence zero-shot enregistrée ; le second déclare un *surplus par run*, sans jamais
+d'une référence zero-shot enregistrée ; le troisième exécute un vrai zero-shot **par run**
+(même corpus, même modèle, même texte) ; le second déclare un *surplus par run*, sans jamais
 exécuter de zero-shot — il dérive le surplus de la nature des trouvailles (réfutations
 formelles, exclusions de Dung, relations structurelles, convergences portant au moins un
 signal non-LLM).
 
-**Trou mesuré le 18/09.** Le surplus #1914 est calculé sur l'objet d'évidence de l'Acte III
-et rendu en prose, mais **il n'est jamais persisté dans l'état** : recherche sur les dumps
-complets de deux documents (≈ 500 Ko chacun) → **0 occurrence** de `surplus` / `salience` /
-`ranked` / `load_bearing`. Conséquence : le surplus est **lisible document par document,
-non agrégeable à l'échelle d'une campagne**. On ne peut pas aujourd'hui répondre « sur N
-documents, combien de fois l'orchestration a-t-elle apporté un surplus non procédural ».
+**Trou mesuré le 18/09 — comblé le 29/09 (campagne #2841).** Le surplus #1914 était calculé
+sur l'objet d'évidence de l'Acte III et rendu en prose, mais jamais persisté (0 occurrence
+de `surplus`/`salience`/`ranked`/`load_bearing` dans les dumps) : lisible document par
+document, non agrégeable. Depuis #2298, chaque signature porte `zero_shot_surplus`
+(`established_items` + `established_by_nature`, sans prose), et le batch runner rend
+l'agrégat de campagne. **Mesuré le 29/09 (#2841)** : surplus non procédural sur **48/49**
+documents (décisif_formel=69, structural=136, convergence_non_llm=71) — avec la réserve
+#2844 : les trouvailles structurelles à résultat vide sont encore comptées (13/49 docs),
+le compte `structural` est donc un majorant.
 
 ---
 
