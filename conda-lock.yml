@@ -13,7 +13,7 @@
 version: 1
 metadata:
   content_hash:
-    win-64: 8ecdff5a4224057d60bf8e0b3925274713d996c85272c8c91735b5f20407722b
+    win-64: 51252b3cbcd4a82d4f3c9638ba0ed6714b022a95bc3817f1a7eb4bd2391b8b74
   channels:
   - url: conda-forge
     used_env_vars: []
@@ -26,19 +26,6 @@ metadata:
   sources:
   - environment.yml
 package:
-- name: _openmp_mutex
-  version: '4.5'
-  manager: conda
-  platform: win-64
-  dependencies:
-    libgomp: '>=7.5.0'
-    libwinpthread: '>=12.0.0.r4.gg4f2fc60ca'
-  url: https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-20_gnu.conda
-  hash:
-    md5: 1626967b574d1784b578b52eaeb071e7
-    sha256: 8a1cee28bd0ee7451ada1cd50b64720e57e17ff994fc62dd8329bef570d382e4
-  category: main
-  optional: false
 - name: _python_abi3_support
   version: '1.0'
   manager: conda
@@ -234,32 +221,15 @@ package:
   category: main
   optional: false
 - name: blas
-  version: '2.306'
+  version: '1.0'
   manager: conda
   platform: win-64
   dependencies:
-    blas-devel: 3.11.0
-  url: https://conda.anaconda.org/conda-forge/win-64/blas-2.306-mkl.conda
+    mkl: ''
+  url: https://conda.anaconda.org/conda-forge/win-64/blas-1.0-mkl.tar.bz2
   hash:
-    md5: 580bc2001cf03a8be6efaac10267e3b3
-    sha256: 92d71a1fb1bb4c2085810d68876202d245b163ed55b0477c4bef27e06cf4f53b
-  category: main
-  optional: false
-- name: blas-devel
-  version: 3.11.0
-  manager: conda
-  platform: win-64
-  dependencies:
-    libblas: 3.11.0
-    libcblas: 3.11.0
-    liblapack: 3.11.0
-    liblapacke: 3.11.0
-    mkl: '>=2025.3.1,<2026.0a0'
-    mkl-devel: 2025.3.*
-  url: https://conda.anaconda.org/conda-forge/win-64/blas-devel-3.11.0-6_h85df5b5_mkl.conda
-  hash:
-    md5: cdea68360073fd749efb76288381f66b
-    sha256: 3c97c32fd56ec25316bd50b7467f3a9ab7f40a6fbcc61fd98e8877e4c1fffab7
+    md5: f621d7bbe874786272e62d72c5a7b4fc
+    sha256: 4d605a266a84dfb4845dcffdca741b26a8e5ec5445254a998bca1fbbc231836f
   category: main
   optional: false
 - name: blinker
@@ -1351,14 +1321,14 @@ package:
   category: main
   optional: false
 - name: intel-openmp
-  version: 2026.1.0
+  version: 2024.2.1
   manager: conda
   platform: win-64
   dependencies: {}
-  url: https://conda.anaconda.org/conda-forge/win-64/intel-openmp-2026.1.0-h57928b3_248.conda
+  url: https://conda.anaconda.org/conda-forge/win-64/intel-openmp-2024.2.1-h57928b3_1083.conda
   hash:
-    md5: 77d5a5d230cc24d0316aba5bfbff90f7
-    sha256: a98f5eec048cca763384c295788673acc12ae4271887aaaebc298e4b854561e9
+    md5: 2d89243bfb53652c182a7c73182cce4f
+    sha256: 0fd2b0b84c854029041b0ede8f4c2369242ee92acc0092f8407b1fe9238a8209
   category: main
   optional: false
 - name: interface_meta
@@ -1594,15 +1564,15 @@ package:
   category: main
   optional: false
 - name: libblas
-  version: 3.11.0
+  version: 3.9.0
   manager: conda
   platform: win-64
   dependencies:
-    mkl: '>=2025.3.1,<2026.0a0'
-  url: https://conda.anaconda.org/conda-forge/win-64/libblas-3.11.0-6_hf2e6a31_mkl.conda
+    m2w64-gcc-libs: ''
+  url: https://conda.anaconda.org/conda-forge/win-64/libblas-3.9.0-1_h8933c1f_netlib.tar.bz2
   hash:
-    md5: 95543eec964b4a4a7ca3c4c9be481aa1
-    sha256: 10c8054f007adca8c780cd8bb9335fa5d990f0494b825158d3157983a25b1ea2
+    md5: 2c5ff3ea7416bb5edc70e67f4ee1ff71
+    sha256: 250eb1a9b62490514a61aa0efc62638f44f6f3b7acd80b4b8eff66bd7319ce2c
   category: main
   optional: false
 - name: libbrotlicommon
@@ -1650,15 +1620,18 @@ package:
   category: main
   optional: false
 - name: libcblas
-  version: 3.11.0
+  version: 3.9.0
   manager: conda
   platform: win-64
   dependencies:
-    libblas: 3.11.0
-  url: https://conda.anaconda.org/conda-forge/win-64/libcblas-3.11.0-6_h2a3cdd5_mkl.conda
+    libblas: 3.9.0.*
+    ucrt: '>=10.0.20348.0'
+    vc: '>=14.3,<15'
+    vc14_runtime: '>=14.44.35208'
+  url: https://conda.anaconda.org/conda-forge/win-64/libcblas-3.9.0-16_hc41557d_netlib.conda
   hash:
-    md5: 9e4bf521c07f4d423cba9296b7927e3c
-    sha256: 02b2a2225f4899c6aaa1dc723e06b3f7a4903d2129988f91fc1527409b07b0a5
+    md5: aa582c5a71c5c0c6e7a5154021dd7edf
+    sha256: 5f61353d7c1a15ae0af7f817d88b238b7c5e7cb1890a3f27565c833fb6da6c37
   category: main
   optional: false
 - name: libclang13
@@ -1749,19 +1722,6 @@ package:
     sha256: cbc650854003e434d4ff6c7b1a2667e38a4242ad8a391a1c5ff89721624065ce
   category: main
   optional: false
-- name: libgcc
-  version: 16.2.0
-  manager: conda
-  platform: win-64
-  dependencies:
-    _openmp_mutex: '>=4.5'
-    libwinpthread: '>=12.0.0.r4.gg4f2fc60ca'
-  url: https://conda.anaconda.org/conda-forge/win-64/libgcc-16.2.0-h110b43a_7.conda
-  hash:
-    md5: bd1e0d06981ae43e35c1ebb50e268c59
-    sha256: 59feb6d16cba13a70f22dae70a44670eb2cc45e652e9a34a014814c2ca871132
-  category: main
-  optional: false
 - name: libglib
   version: 2.90.0
   manager: conda
@@ -1779,18 +1739,6 @@ package:
   hash:
     md5: 29c689012c8a53a0e36a70dfd43227e4
     sha256: 55d9fad9d0884111826500629285dbd35c827e3f2b5fe04b50e3d7d67c71425e
-  category: main
-  optional: false
-- name: libgomp
-  version: 16.2.0
-  manager: conda
-  platform: win-64
-  dependencies:
-    libwinpthread: '>=12.0.0.r4.gg4f2fc60ca'
-  url: https://conda.anaconda.org/conda-forge/win-64/libgomp-16.2.0-h8ee18e1_7.conda
-  hash:
-    md5: 1725e0c19dd2f01de09805536c4f3b51
-    sha256: 4b8a747f047d069ccd2a6cf2f4fdbc6b0c0e4dcd840998d1fe607b8c234e707b
   category: main
   optional: false
 - name: libharfbuzz
@@ -1817,20 +1765,18 @@ package:
   category: main
   optional: false
 - name: libhwloc
-  version: 2.15.0
+  version: 2.13.0
   manager: conda
   platform: win-64
   dependencies:
-    libwinpthread: '>=12.0.0.r4.gg4f2fc60ca'
-    libxml2: ''
-    libxml2-16: '>=2.15.4'
+    libxml2: '>=2.14.6,<2.15.0a0'
     ucrt: '>=10.0.20348.0'
     vc: '>=14.3,<15'
     vc14_runtime: '>=14.44.35208'
-  url: https://conda.anaconda.org/conda-forge/win-64/libhwloc-2.15.0-default_hae90fe0_1001.conda
+  url: https://repo.anaconda.com/pkgs/main/win-64/libhwloc-2.13.0-default_h36647fa_1002.conda
   hash:
-    md5: b679b0f76b152d40294fa4e43cabfd4a
-    sha256: 240368b73a984a1812dab5f7964ed03304950ad97466cd7ee347df9cc707629d
+    md5: da258769b673365afa4d3e359b3c14f9
+    sha256: 01b8750e23941d7f21d12ce45be07cc84bbfdc769513f9bd6f3fc3f6786b0bdd
   category: main
   optional: false
 - name: libiconv
@@ -1874,29 +1820,18 @@ package:
   category: main
   optional: false
 - name: liblapack
-  version: 3.11.0
+  version: 3.9.0
   manager: conda
   platform: win-64
   dependencies:
-    libblas: 3.11.0
-  url: https://conda.anaconda.org/conda-forge/win-64/liblapack-3.11.0-6_hf9ab0e9_mkl.conda
+    libblas: 3.9.0.*
+    ucrt: '>=10.0.20348.0'
+    vc: '>=14.3,<15'
+    vc14_runtime: '>=14.44.35208'
+  url: https://conda.anaconda.org/conda-forge/win-64/liblapack-3.9.0-16_h018ca30_netlib.conda
   hash:
-    md5: 7e9cdaf6f302142bc363bbab3b5e7074
-    sha256: 2e6ac39e456ba13ec8f02fc0787b8a22c89780e24bd5556eaf642177463ffb36
-  category: main
-  optional: false
-- name: liblapacke
-  version: 3.11.0
-  manager: conda
-  platform: win-64
-  dependencies:
-    libblas: 3.11.0
-    libcblas: 3.11.0
-    liblapack: 3.11.0
-  url: https://conda.anaconda.org/conda-forge/win-64/liblapacke-3.11.0-6_h3ae206f_mkl.conda
-  hash:
-    md5: a8edde377728956049bf49da093889d6
-    sha256: a71478e04d5633678a61bd857654daa9e02ff553239cda889893395f7f48c8bb
+    md5: 3188e56da71dcc61e0e3d7d39e703611
+    sha256: 3dc2449f63bce73bf17ccc52ea555797889f2aab73ad3f6fbb444464e20a3643
   category: main
   optional: false
 - name: liblzma
@@ -2004,86 +1939,73 @@ package:
     sha256: 4470d98d3178b0d45492eed4808afe421d2e7808352b8d06c2dc29166b75d94d
   category: main
   optional: false
-- name: libwinpthread
-  version: 12.0.0.r4.gg4f2fc60ca
-  manager: conda
-  platform: win-64
-  dependencies:
-    ucrt: ''
-  url: https://conda.anaconda.org/conda-forge/win-64/libwinpthread-12.0.0.r4.gg4f2fc60ca-h57928b3_10.conda
-  hash:
-    md5: 8a86073cf3b343b87d03f41790d8b4e5
-    sha256: 0fccf2d17026255b6e10ace1f191d0a2a18f2d65088fd02430be17c701f8ffe0
-  category: main
-  optional: false
 - name: libxcb
-  version: 1.17.0
+  version: '1.16'
   manager: conda
   platform: win-64
   dependencies:
-    libgcc: '>=13'
-    libwinpthread: '>=12.0.0.r4.gg4f2fc60ca'
+    m2w64-gcc-libs: ''
+    m2w64-gcc-libs-core: ''
     pthread-stubs: ''
-    ucrt: '>=10.0.20348.0'
-    xorg-libxau: '>=1.0.12,<2.0a0'
-    xorg-libxdmcp: '>=1.1.5,<2.0a0'
-  url: https://conda.anaconda.org/conda-forge/win-64/libxcb-1.17.0-h874e120_2.conda
+    xorg-libxau: '>=1.0.11,<2.0a0'
+    xorg-libxdmcp: ''
+  url: https://conda.anaconda.org/conda-forge/win-64/libxcb-1.16-h013a479_1.conda
   hash:
-    md5: 3658b0201b32da9607ea5e3c1c463c1f
-    sha256: f5932cbcadb67bef9374ee864fed72411af29e88690435c6c7fc5633c89dabee
+    md5: f0b599acdc82d5bc7e3b105833e7c5c8
+    sha256: abae56e12a4c62730b899fdfb82628a9ac171c4ce144fc9f34ae024957a82a0e
   category: main
   optional: false
 - name: libxml2
-  version: 2.15.4
+  version: 2.14.6
   manager: conda
   platform: win-64
   dependencies:
-    icu: '>=78.3,<79.0a0'
+    icu: '>=78.1,<79.0a0'
     libiconv: '>=1.18,<2.0a0'
-    liblzma: '>=5.8.3,<6.0a0'
-    libxml2-16: 2.15.4
-    libzlib: '>=1.3.2,<2.0a0'
+    liblzma: '>=5.8.1,<6.0a0'
+    libxml2-16: 2.14.6
+    libzlib: '>=1.3.1,<2.0a0'
     ucrt: '>=10.0.20348.0'
     vc: '>=14.3,<15'
     vc14_runtime: '>=14.44.35208'
-  url: https://conda.anaconda.org/conda-forge/win-64/libxml2-2.15.4-he095d88_0.conda
+  url: https://conda.anaconda.org/conda-forge/win-64/libxml2-2.14.6-h779ef1b_3.conda
   hash:
-    md5: 3ce54d0f8f24dfab99d82414411640aa
-    sha256: a19bb3821830f6b1281e782844d5dd265f796dfed2e4812b16c9995a8c778c88
+    md5: 4e4feab78252669572eb1b01076d3425
+    sha256: 82c91194a591729b892501ecbc7a511e3fc5b4d1560713fec12a71079c957a81
   category: main
   optional: false
 - name: libxml2-16
-  version: 2.15.4
+  version: 2.14.6
   manager: conda
   platform: win-64
   dependencies:
-    icu: '>=78.3,<79.0a0'
+    icu: '>=78.1,<79.0a0'
     libiconv: '>=1.18,<2.0a0'
-    liblzma: '>=5.8.3,<6.0a0'
-    libzlib: '>=1.3.2,<2.0a0'
+    liblzma: '>=5.8.1,<6.0a0'
+    libzlib: '>=1.3.1,<2.0a0'
     ucrt: '>=10.0.20348.0'
     vc: '>=14.3,<15'
     vc14_runtime: '>=14.44.35208'
-  url: https://conda.anaconda.org/conda-forge/win-64/libxml2-16-2.15.4-h3cfd58e_0.conda
+  url: https://conda.anaconda.org/conda-forge/win-64/libxml2-16-2.14.6-h3cfd58e_3.conda
   hash:
-    md5: bab5489f4bd38494ffaa83d6ab924c1f
-    sha256: 9fa71cec30425c9cc8eda6af3574af1faf4fefa5e239c9e037b1f778ef3ce8ac
+    md5: 7e26d43d6332a42cb31df19150aa4601
+    sha256: 266107b66cfef12b4aae163a56429bd2863495a950a9feefd23d55e3bfdb8b39
   category: main
   optional: false
 - name: libxslt
-  version: 1.1.45
+  version: 1.1.43
   manager: conda
   platform: win-64
   dependencies:
     libxml2: ''
-    libxml2-16: '>=2.15.3'
+    libxml2-16: '>=2.14.6'
     ucrt: '>=10.0.20348.0'
     vc: '>=14.3,<15'
     vc14_runtime: '>=14.44.35208'
-  url: https://conda.anaconda.org/conda-forge/win-64/libxslt-1.1.45-ha5384fd_1.conda
+  url: https://conda.anaconda.org/conda-forge/win-64/libxslt-1.1.43-h0fbe4c1_1.conda
   hash:
-    md5: ea7b3abfe39c180d1dce620867e267d1
-    sha256: 7a2402fa33b7e4a99bba6250ce21c36269a8acbfcb3652057dce0f4a60b7f6bd
+    md5: 46034d9d983edc21e84c0b36f1b4ba61
+    sha256: 13da38939c2c20e7112d683ab6c9f304bfaf06230a2c6a7cf00359da1a003ec7
   category: main
   optional: false
 - name: libzlib
@@ -2100,18 +2022,71 @@ package:
     sha256: 0629c2cc0404d3bb29d6baa7b4ba62da80797015e86de050db81ea5a07050527
   category: main
   optional: false
-- name: llvm-openmp
-  version: 22.1.2
+- name: m2w64-gcc-libgfortran
+  version: 5.3.0
   manager: conda
   platform: win-64
   dependencies:
-    ucrt: '>=10.0.20348.0'
-    vc: '>=14.3,<15'
-    vc14_runtime: '>=14.44.35208'
-  url: https://repo.anaconda.com/pkgs/main/win-64/llvm-openmp-22.1.2-h6bd78e3_1.conda
+    m2w64-gcc-libs-core: ''
+    msys2-conda-epoch: '20160418'
+  url: https://conda.anaconda.org/conda-forge/win-64/m2w64-gcc-libgfortran-5.3.0-6.tar.bz2
   hash:
-    md5: 6ddc4ecb2bfbe058825314c192091c0a
-    sha256: 787b2c31e384a52c6cc104cd89d24a1b2603002595790a8a1dcd631b331b9376
+    md5: 066552ac6b907ec6d72c0ddab29050dc
+    sha256: 9de95a7996d5366ae0808eef2acbc63f9b11b874aa42375f55379e6715845dc6
+  category: main
+  optional: false
+- name: m2w64-gcc-libs
+  version: 5.3.0
+  manager: conda
+  platform: win-64
+  dependencies:
+    m2w64-gcc-libgfortran: ''
+    m2w64-gcc-libs-core: ''
+    m2w64-gmp: ''
+    m2w64-libwinpthread-git: ''
+    msys2-conda-epoch: '20160418'
+  url: https://conda.anaconda.org/conda-forge/win-64/m2w64-gcc-libs-5.3.0-7.tar.bz2
+  hash:
+    md5: fe759119b8b3bfa720b8762c6fdc35de
+    sha256: 3bd1ab02b7c89a5b153a17be03b36d833f1517ff2a6a77ead7c4a808b88196aa
+  category: main
+  optional: false
+- name: m2w64-gcc-libs-core
+  version: 5.3.0
+  manager: conda
+  platform: win-64
+  dependencies:
+    m2w64-gmp: ''
+    m2w64-libwinpthread-git: ''
+    msys2-conda-epoch: '20160418'
+  url: https://conda.anaconda.org/conda-forge/win-64/m2w64-gcc-libs-core-5.3.0-7.tar.bz2
+  hash:
+    md5: 4289d80fb4d272f1f3b56cfe87ac90bd
+    sha256: 58afdfe859ed2e9a9b1cc06bc408720cb2c3a6a132e59d4805b090d7574f4ee0
+  category: main
+  optional: false
+- name: m2w64-gmp
+  version: 6.1.0
+  manager: conda
+  platform: win-64
+  dependencies:
+    msys2-conda-epoch: '20160418'
+  url: https://conda.anaconda.org/conda-forge/win-64/m2w64-gmp-6.1.0-2.tar.bz2
+  hash:
+    md5: 53a1c73e1e3d185516d7e3af177596d9
+    sha256: 7e3cd95f554660de45f8323fca359e904e8d203efaf07a4d311e46d611481ed1
+  category: main
+  optional: false
+- name: m2w64-libwinpthread-git
+  version: 5.0.0.4634.697f757
+  manager: conda
+  platform: win-64
+  dependencies:
+    msys2-conda-epoch: '20160418'
+  url: https://conda.anaconda.org/conda-forge/win-64/m2w64-libwinpthread-git-5.0.0.4634.697f757-2.tar.bz2
+  hash:
+    md5: 774130a326dee16f1ceb05cc687ee4f0
+    sha256: f63a09b2cae7defae0480f1740015d6235f1861afa6fe2e2d3e10bd0d1314ee0
   category: main
   optional: false
 - name: markdown
@@ -2239,43 +2214,16 @@ package:
   category: main
   optional: false
 - name: mkl
-  version: 2025.3.1
+  version: 2024.0.0
   manager: conda
   platform: win-64
   dependencies:
-    llvm-openmp: '>=22.1.1'
-    tbb: '>=2022.3.0'
-    ucrt: '>=10.0.20348.0'
-    vc: '>=14.3,<15'
-    vc14_runtime: '>=14.44.35208'
-  url: https://conda.anaconda.org/conda-forge/win-64/mkl-2025.3.1-hac47afa_11.conda
+    intel-openmp: 2024.*
+    tbb: 2021.*
+  url: https://conda.anaconda.org/conda-forge/win-64/mkl-2024.0.0-h66d3029_49658.conda
   hash:
-    md5: 3fd3009cef89c36e9898a6feeb0f5530
-    sha256: f2c2b2a3c2e7d08d78c10bef7c135a4262c80d1d48c85fb5902ca30d61d645f4
-  category: main
-  optional: false
-- name: mkl-devel
-  version: 2025.3.1
-  manager: conda
-  platform: win-64
-  dependencies:
-    mkl: 2025.3.1
-    mkl-include: 2025.3.1
-  url: https://conda.anaconda.org/conda-forge/win-64/mkl-devel-2025.3.1-h57928b3_11.conda
-  hash:
-    md5: c599bb3df31aec3621d0153348e5b2bc
-    sha256: e9e0911276238f842a23bd52602e1bac4aa54a136fff99f272e32156215b3bea
-  category: main
-  optional: false
-- name: mkl-include
-  version: 2025.3.1
-  manager: conda
-  platform: win-64
-  dependencies: {}
-  url: https://conda.anaconda.org/conda-forge/win-64/mkl-include-2025.3.1-h57928b3_11.conda
-  hash:
-    md5: 58412dd517988db383d81a6698b583b5
-    sha256: bfce869224b691ad963e9503cb73b2c403d872b19fac3df11b5afe9b07c04767
+    md5: 9782703dbc6e14cbc32bc89ec76922c2
+    sha256: 7df43df56b68908c266232d025b4734d12de41f636b8158283c43e40611165e4
   category: main
   optional: false
 - name: more-itertools
@@ -2316,6 +2264,17 @@ package:
   hash:
     md5: aa2629f419d7538c1a981ba6c1c8ab83
     sha256: 2f785131eae7b9c9818092c496cf909c163d8926fad2588fdb15aff84ec5aaff
+  category: main
+  optional: false
+- name: msys2-conda-epoch
+  version: '20160418'
+  manager: conda
+  platform: win-64
+  dependencies: {}
+  url: https://conda.anaconda.org/conda-forge/win-64/msys2-conda-epoch-20160418-1.tar.bz2
+  hash:
+    md5: b0309b72560df66f71a9d5e34a5efdfa
+    sha256: 99358d58d778abee4dca82ad29fb58058571f19b0f86138363c260049d4ac7f1
   category: main
   optional: false
 - name: munkres
@@ -2556,29 +2515,28 @@ package:
   category: main
   optional: false
 - name: pillow
-  version: 12.3.0
+  version: 10.4.0
   manager: conda
   platform: win-64
   dependencies:
-    lcms2: '>=2.19.1,<3.0a0'
-    libfreetype: '>=2.14.3'
-    libfreetype6: '>=2.14.3'
-    libjpeg-turbo: '>=3.1.4.1,<4.0a0'
-    libtiff: '>=4.7.1,<4.8.0a0'
-    libwebp-base: '>=1.6.0,<2.0a0'
-    libxcb: '>=1.17.0,<2.0a0'
-    openjpeg: '>=2.5.4,<3.0a0'
-    python: ''
+    freetype: '>=2.12.1,<3.0a0'
+    lcms2: '>=2.16,<3.0a0'
+    libjpeg-turbo: '>=3.0.0,<4.0a0'
+    libtiff: '>=4.6.0,<4.8.0a0'
+    libwebp-base: '>=1.4.0,<2.0a0'
+    libxcb: '>=1.16,<2.0.0a0'
+    libzlib: '>=1.3.1,<2.0a0'
+    openjpeg: '>=2.5.2,<3.0a0'
+    python: '>=3.10,<3.11.0a0'
     python_abi: 3.10.*
     tk: '>=8.6.13,<8.7.0a0'
     ucrt: '>=10.0.20348.0'
-    vc: '>=14.3,<15'
-    vc14_runtime: '>=14.44.35208'
-    zlib-ng: '>=2.3.3,<2.4.0a0'
-  url: https://conda.anaconda.org/conda-forge/win-64/pillow-12.3.0-py310h712baa7_0.conda
+    vc: '>=14.2,<15'
+    vc14_runtime: '>=14.29.30139'
+  url: https://conda.anaconda.org/conda-forge/win-64/pillow-10.4.0-py310h3e38d90_1.conda
   hash:
-    md5: 2ee78b7f02206da027dff432c26f1a45
-    sha256: 56f87372c1aafd6a0359c4c4b2661713a4c7d4356eb3637d9e24e5e7ee343177
+    md5: d9a32c4725436b99df60fdc9c14545d1
+    sha256: fb730c9510ccf16579762db20383eaee447bda3f5f2f0b0691029c87af462c7a
   category: main
   optional: false
 - name: pip
@@ -2679,13 +2637,11 @@ package:
   manager: conda
   platform: win-64
   dependencies:
-    libgcc: '>=15'
-    libwinpthread: '>=12.0.0.r4.gg4f2fc60ca'
-    ucrt: '>=10.0.20348.0'
-  url: https://conda.anaconda.org/conda-forge/win-64/pthread-stubs-0.4-hfa92662_1004.conda
+    m2w64-gcc-libs: ''
+  url: https://conda.anaconda.org/conda-forge/win-64/pthread-stubs-0.4-hcd874cb_1001.tar.bz2
   hash:
-    md5: fda2f9fedee1b85ba855ea26a9b6bbf8
-    sha256: 2418cf449df76b0da851cb59b7c826a9ade81914eaff799fbfd3f509ba1edf46
+    md5: a1f820480193ea83582b13249a7e7bd9
+    sha256: bb5a6ddf1a609a63addd6d7b488b0f58d05092ea84e9203283409bff539e202a
   category: main
   optional: false
 - name: pure_eval
@@ -3567,18 +3523,18 @@ package:
   category: main
   optional: false
 - name: tbb
-  version: 2023.1.0
+  version: 2021.13.0
   manager: conda
   platform: win-64
   dependencies:
-    libhwloc: '>=2.15.0,<2.15.1.0a0'
+    libhwloc: '>=2.13.0,<2.13.1.0a0'
     ucrt: '>=10.0.20348.0'
     vc: '>=14.3,<15'
     vc14_runtime: '>=14.44.35208'
-  url: https://conda.anaconda.org/conda-forge/win-64/tbb-2023.1.0-h272cf33_2.conda
+  url: https://conda.anaconda.org/conda-forge/win-64/tbb-2021.13.0-h50d9778_7.conda
   hash:
-    md5: 83371bd3f796b3c2d3f0436692d3ea73
-    sha256: 65f5a52eb5250ca0d627e6958e703583dca008988695284fc2181b3a0a790efd
+    md5: 58fbf061d8a7a8893575b03368838828
+    sha256: e3d226dfab1006a30d1a5d2efcb9be4ff0011952950f03e63ba4545570761a1f
   category: main
   optional: false
 - name: threadpoolctl
@@ -4044,31 +4000,28 @@ package:
   category: main
   optional: false
 - name: xorg-libxau
-  version: 1.0.12
+  version: 1.0.11
   manager: conda
   platform: win-64
   dependencies:
-    libgcc: '>=15'
-    libwinpthread: '>=12.0.0.r4.gg4f2fc60ca'
-    ucrt: '>=10.0.20348.0'
-  url: https://conda.anaconda.org/conda-forge/win-64/xorg-libxau-1.0.12-hfa92662_2.conda
+    m2w64-gcc-libs: ''
+    m2w64-gcc-libs-core: ''
+  url: https://conda.anaconda.org/conda-forge/win-64/xorg-libxau-1.0.11-hcd874cb_0.conda
   hash:
-    md5: 68403004c805ce03b71a5889a4c47fa1
-    sha256: b9f063792e4d50ef2669c30dfc4ba14aefb4fdc37e384241a71093bee0493ad1
+    md5: c46ba8712093cb0114404ae8a7582e1a
+    sha256: 8c5b976e3b36001bdefdb41fb70415f9c07eff631f1f0155f3225a7649320e77
   category: main
   optional: false
 - name: xorg-libxdmcp
-  version: 1.1.5
+  version: 1.1.3
   manager: conda
   platform: win-64
   dependencies:
-    libgcc: '>=15'
-    libwinpthread: '>=12.0.0.r4.gg4f2fc60ca'
-    ucrt: '>=10.0.20348.0'
-  url: https://conda.anaconda.org/conda-forge/win-64/xorg-libxdmcp-1.1.5-hfa92662_2.conda
+    m2w64-gcc-libs: ''
+  url: https://conda.anaconda.org/conda-forge/win-64/xorg-libxdmcp-1.1.3-hcd874cb_0.tar.bz2
   hash:
-    md5: 17274cf7d62e029e62653a3e6c80b379
-    sha256: 6265afeeaab391aa245e173dba5e18c8e69ac5a73f60fe20d8057ebadafbb4a4
+    md5: 46878ebb6b9cbd8afcf8088d7ef00ece
+    sha256: f51205d33c07d744ec177243e5d9b874002910c731954f2c8da82459be462b93
   category: main
   optional: false
 - name: yaml
@@ -4110,20 +4063,6 @@ package:
   hash:
     md5: 945092a9bc1d0f250f7d5ecf51ecd471
     sha256: 5a0b55df66ff07b4342e04967cef69f8bf348f6a0fb1cc1eca741c7b015dfe77
-  category: main
-  optional: false
-- name: zlib-ng
-  version: 2.3.3
-  manager: conda
-  platform: win-64
-  dependencies:
-    ucrt: '>=10.0.20348.0'
-    vc: '>=14.3,<15'
-    vc14_runtime: '>=14.44.35208'
-  url: https://conda.anaconda.org/conda-forge/win-64/zlib-ng-2.3.3-h0261ad2_1.conda
-  hash:
-    md5: 46a21c0a4e65f1a135251fc7c8663f83
-    sha256: 71332532332d13b5dbe57074ddcf82ae711bdc132affa5a2982a29ffa06dc234
   category: main
   optional: false
 - name: zstandard
@@ -4995,15 +4934,15 @@ package:
   category: main
   optional: false
 - name: pyjwt
-  version: 2.15.0
+  version: 2.15.1
   manager: pip
   platform: win-64
   dependencies:
     cryptography: '>=3.4.0'
     typing-extensions: '>=4.0'
-  url: https://files.pythonhosted.org/packages/e8/55/40e45bf052ee8ee12a4dfd785519660f8effa7b065442b91646ec6828619/pyjwt-2.15.0-py3-none-any.whl
+  url: https://files.pythonhosted.org/packages/50/ca/44de4e75f8aadc457f0634be3b542815078ded46dca30efb960edeecad6e/pyjwt-2.15.1-py3-none-any.whl
   hash:
-    sha256: 7a3742debf6b879e912dbb9819ceec1594be812452b78c5f2e2dfc56564954f8
+    sha256: 42d59d631f7768a1028a64c7ff581a9bf7519804daf91fc5b6c56e30eec5e193
   category: main
   optional: false
 - name: pylibsrtp
@@ -5337,15 +5276,15 @@ package:
   category: main
   optional: false
 - name: sse-starlette
-  version: 3.4.11
+  version: 3.5.0
   manager: pip
   platform: win-64
   dependencies:
     anyio: '>=4.7.0'
     starlette: '>=0.49.1'
-  url: https://files.pythonhosted.org/packages/98/6a/2ba3ed4a69babf3afdddf7d8314a48d87562c0a442206bbc2a1b50d5efc0/sse_starlette-3.4.11-py3-none-any.whl
+  url: https://files.pythonhosted.org/packages/be/e4/cdda14023c316d71493bc54fdffc3dd006631b88866145c9d3cc33e0f1df/sse_starlette-3.5.0-py3-none-any.whl
   hash:
-    sha256: c7b2244bdff016fe7f64e10075e89a3e6bbf899649cc89b0fe884b5545042453
+    sha256: 3e6e1070df3f0f5d9cea81496de92dbb72f6721871d99748ece67441dd8b7997
   category: main
   optional: false
 - name: tenacity

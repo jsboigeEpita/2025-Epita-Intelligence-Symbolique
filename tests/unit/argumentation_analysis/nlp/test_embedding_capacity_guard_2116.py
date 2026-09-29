@@ -10,14 +10,15 @@ candidate without a red test.
 Real embeddings on synthetic input — no mocks. The model is the module's own
 docstring example (``all-MiniLM-L6-v2``, 384 dimensions).
 
-Where the measurement runs: it needs a working torch stack. CI runners cannot
-load torch DLLs at all (#1651 — probe VERDICT 4/8: torch_cpu/fbgemm/shm/
-torch_python, winerror 182, deterministic on 3/3 runs 2026-09-15), so
-sentence-transformers is deliberately NOT provisioned there — provisioning it
-made this file's and ``test_embedding_utils.py``'s module-level imports reach
-``import torch`` at COLLECTION time and abort the whole run (PR #2267 run 2).
-In CI the capacity tests skip with that reason; on any machine where the
-stack loads (dev boxes) they measure for real.
+Where the measurement runs: it needs a working torch stack. The gate env
+loads torch since #2856 (the #1651 "runner image" verdict was a conda-lock
+defect — two providers of ``libiomp5md.dll`` clobbering each other — repaired
+in the solve), so the old blocker is gone; sentence-transformers is still
+NOT provisioned pending its own CI measurement (#2116: provisioning it adds
+a module-level torch import at collection for this file and
+``test_embedding_utils.py``, and a model download in the gate run). The
+capacity tests therefore skip wherever the package is absent and measure for
+real wherever it is installed (dev boxes).
 """
 
 import importlib.util
@@ -28,10 +29,10 @@ ST_MODEL = "all-MiniLM-L6-v2"
 EXPECTED_DIMS = 384
 
 ST_SKIP_REASON = (
-    "sentence-transformers unavailable: not provisioned in CI because the "
-    "runner image cannot load torch DLLs (#1651 — probe VERDICT 4/8, "
-    "winerror 182, deterministic on 3/3 runs 2026-09-15); the capability "
-    "is measured wherever the stack loads"
+    "sentence-transformers unavailable: not provisioned in the gate env "
+    "(#2116 decision A1, under re-examination since #2856 removed the "
+    "torch-loading blocker); the capability is measured wherever the "
+    "package is installed"
 )
 
 
