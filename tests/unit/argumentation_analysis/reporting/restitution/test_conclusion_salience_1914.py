@@ -429,15 +429,22 @@ class TestBudget:
 
 class TestActsConsumeTheSalience:
     def test_act3_evidence_and_prompt_carry_the_salience(self):
+        """#1914 criterion 5 — the section assertions are anchored on data lines.
+
+        ``HIÉRARCHIE DU VERDICT`` and ``SURPLUS MULTI-AGENTS`` also live in the
+        consigne, and ``ÉTABLI`` is a substring of an unrelated data header
+        (``…ÉTABLISSENT``): all three were measured green with the matching data
+        block deleted (2026-09-29, ``main``). The anchors below are emitted by
+        the blocks themselves.
+        """
         evidence = build_act3_evidence(_violation_state())
         assert evidence.salience is not None
         assert evidence.salience.ranked
         prompt = build_act3_prompt(evidence)
-        assert "HIÉRARCHIE DU VERDICT" in prompt
         assert "- P1 [" in prompt
         assert "[tension]" in prompt
-        assert "SURPLUS MULTI-AGENTS" in prompt
-        assert "ÉTABLI" in prompt
+        assert "ÉTABLI (ce qu'une lecture simple ne peut pas produire)" in prompt
+        assert "PUREMENT PROCÉDURAL (contexte, jamais un surplus)" in prompt
         assert "ancres" in prompt
 
     def test_four_orders_directive_is_rendered(self):
