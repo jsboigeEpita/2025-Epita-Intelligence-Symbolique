@@ -1094,6 +1094,44 @@ def _write_adf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         state.dung_frameworks[df_id]["formalism_specific"] = sidecar
 
 
+def _write_asp_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
+    """Write the ASP stable-extension cross-check to UnifiedAnalysisState (#1604).
+
+    The handler's cross-check re-decides the run's Dung AF with clingo and
+    compares with Tweety's stable extensions. Following the #1178 writer
+    precedent (weighted/social/aba/adf), the entry lands in
+    ``dung_frameworks`` — it documents the SAME framework (same arguments
+    and attacks) — with the agreement as its own field on the
+    ``formalism_specific`` sidecar: ``agreement`` (equal / asp_only /
+    tweety_only / differ), plus the private-extension lists and the solver
+    identity. A disagreement is data the state carries, never an exception
+    (#1019). Skipped or degraded outputs write nothing: the PhaseResult
+    already carries the named reason, and an entry without a verdict would
+    be noise.
+    """
+    if not output or not isinstance(output, dict):
+        return
+    if output.get("status") != "cross_check":
+        return
+    arguments = output.get("arguments", [])
+    attacks = output.get("attacks", [])
+    df_id = state.add_dung_framework(
+        name="asp_cross_check_stable",
+        arguments=arguments,
+        attacks=[list(a) for a in attacks],
+        extensions={"asp_answer_sets": output.get("asp_answer_sets", [])},
+    )
+    state.dung_frameworks[df_id]["formalism_specific"] = {
+        "asp_cross_check": {
+            "agreement": output.get("agreement"),
+            "asp_only_extensions": output.get("asp_only_extensions", []),
+            "tweety_only_extensions": output.get("tweety_only_extensions", []),
+            "tweety_stable_extensions": output.get("tweety_stable_extensions", []),
+            "solver": output.get("solver"),
+        }
+    }
+
+
 # #2315 — cap on per-argument assert trace entries emitted by the extraction
 # writer (prompt-budget discipline; the renderer caps again at 8 for Acte II).
 _EXTRACT_ASSERT_CAP = 12
@@ -2377,6 +2415,7 @@ CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "bipolar_argumentation": _write_bipolar_to_state,
     "aba_reasoning": _write_aba_to_state,
     "adf_reasoning": _write_adf_to_state,
+    "asp_reasoning": _write_asp_to_state,
     "fact_extraction": _write_fact_extraction_to_state,
     "propositional_logic": _write_propositional_to_state,
     "fol_reasoning": _write_fol_to_state,

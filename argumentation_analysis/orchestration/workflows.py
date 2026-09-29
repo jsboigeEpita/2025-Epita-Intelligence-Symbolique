@@ -1154,6 +1154,19 @@ def build_formal_extended_workflow() -> WorkflowDefinition:
             depends_on=["dung_extensions"],
             optional=True,
         )
+        # L8b — ASP stable-extension cross-check (#1604): the run's Dung AF
+        # re-encoded as the standard ASP program, decided by clingo, compared
+        # with Tweety's stable extensions. Two independent solvers, same
+        # framework (#1735 differential). Without an AF in state the phase is
+        # skipped with a named reason — the analysed text is never parsed as
+        # ASP. ``--formal-extension=asp`` now selects something real.
+        .add_phase(
+            "asp_reasoning",
+            capability="asp_reasoning",
+            depends_on=["dung_extensions"],
+            optional=True,
+            timeout_seconds=180,
+        )
         # L9 — Bipolar argumentation (support + attack)
         .add_phase(
             "bipolar",

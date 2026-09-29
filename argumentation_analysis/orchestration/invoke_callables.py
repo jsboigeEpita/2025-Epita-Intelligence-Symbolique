@@ -5643,6 +5643,219 @@ def _clingo_reported_unsatisfiable(output: Optional[str]) -> bool:
     )
 
 
+def _af_to_asp_program(
+    arguments: List[str], attacks: List[Any]
+) -> Tuple[str, Dict[str, str]]:
+    """Encode a Dung AF as the standard ASP stable-extension program (#1604).
+
+    Emits ``arg/1`` and ``att/2`` facts plus the two rules the coordination
+    decision prescribed::
+
+        in(X)  :- arg(X), not out(X).
+        out(X) :- att(Y,X), in(Y).
+
+    Answer sets of this program projected on ``in/1`` are exactly the stable
+    extensions of the framework. Argument names from the pipeline are prose,
+    not ASP constants — each is carried by an injective sanitized-constant
+    mapping (original name -> constant) so the comparison in
+    :func:`_asp_cross_check_from_dung` happens on the ORIGINAL names. Attacks
+    whose endpoints are not among the arguments are dropped: the Dung writer
+    guarantees node membership (#1698) and a stray endpoint would mint an
+    ``att/2`` fact about an argument the framework does not carry.
+
+    Returns ``(program, name_to_const)``.
+    """
+    import re
+
+    name_to_const: Dict[str, str] = {}
+    facts: List[str] = []
+
+    def _const(name: str) -> Optional[str]:
+        base = re.sub(r"[^A-Za-z0-9_]", "_", str(name)).strip("_") or "x"
+        candidate = f"c{len(name_to_const)}_{base}"
+        name_to_const[str(name)] = candidate  # index-prefixed => injective
+        return candidate
+
+    arg_consts: List[str] = []
+    seen_names: set[str] = set()
+    for name in arguments:
+        if name in seen_names:
+            continue  # duplicate names would mint phantom second arguments
+        seen_names.add(name)
+        c = _const(name)
+        if c:
+            arg_consts.append(c)
+            facts.append(f"arg({c}).")
+
+    known = set(arg_consts)
+    for atk in attacks:
+        if isinstance(atk, dict):
+            src, tgt = atk.get("source"), atk.get("target")
+        elif isinstance(atk, (list, tuple)) and len(atk) == 2:
+            src, tgt = atk[0], atk[1]
+        else:
+            continue
+        cs = name_to_const.get(str(src))
+        ct = name_to_const.get(str(tgt))
+        if cs in known and ct in known:
+            facts.append(f"att({cs},{ct}).")
+
+    rules = [
+        "in(X) :- arg(X), not out(X).",
+        "out(X) :- att(Y,X), in(Y).",
+        "#show in/1.",
+    ]
+    return "\n".join(facts + rules), name_to_const
+
+
+def _compare_extension_sets(
+    asp_sets: List[List[str]], tweety_sets: List[List[str]]
+) -> Dict[str, Any]:
+    """Compare ASP answer sets with Tweety stable extensions (#1604).
+
+    Both sides are normalised to sets of frozensets of argument names. The
+    verdict is data, never an exception (#1019 doctrine): a disagreement is
+    a solver output the state carries. ``agreement`` is one of ``equal``,
+    ``asp_only`` (ASP found extensions Tweety did not), ``tweety_only``, or
+    ``differ`` (both sides have private extensions).
+    """
+    asp = {frozenset(s) for s in asp_sets}
+    tweety = {frozenset(s) for s in tweety_sets}
+    asp_only = sorted((sorted(s) for s in asp - tweety), key=tuple)
+    tweety_only = sorted((sorted(s) for s in tweety - asp), key=tuple)
+    if not asp_only and not tweety_only:
+        agreement = "equal"
+    elif asp_only and tweety_only:
+        agreement = "differ"
+    elif asp_only:
+        agreement = "asp_only"
+    else:
+        agreement = "tweety_only"
+    return {
+        "agreement": agreement,
+        "asp_only_extensions": asp_only,
+        "tweety_only_extensions": tweety_only,
+    }
+
+
+def _tweety_stable_extensions(dung_output: Dict[str, Any]) -> Optional[List[List[str]]]:
+    """Extract the stable extensions from a dung_extensions phase output.
+
+    Handles both the enriched per-semantics shape (``extensions["stable"]
+    ["extensions"]``) and a raw list. Returns ``None`` when the run computed
+    no stable semantics at all (degraded Dung run) — the caller skips rather
+    than comparing against a fabricated empty list.
+    """
+    ext = dung_output.get("extensions")
+    if not isinstance(ext, dict):
+        return None
+    stable = ext.get("stable")
+    if isinstance(stable, dict):
+        stable = stable.get("extensions")
+    if not isinstance(stable, list):
+        return None
+    normalized: List[List[str]] = []
+    for e in stable:
+        if isinstance(e, (list, tuple)):
+            normalized.append([str(x) for x in e])
+        else:
+            normalized.append([str(e)])
+    return normalized
+
+
+def _asp_cross_check_from_dung(
+    dung_output: Dict[str, Any], context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """The #1604 claim: two independent solvers, same framework.
+
+    Encodes the run's Dung AF as the standard ASP stable-extension program
+    (:func:`_af_to_asp_program`), decides it with the **Python clingo
+    binding**, and compares the answer sets with Tweety's stable extensions
+    (:func:`_compare_extension_sets`). The JVM ClingoSolver path is
+    deliberately NOT consulted here: its program parser cannot express
+    default negation — ``not out(X)`` becomes an atom literally named
+    ``not out(X)``, the ``in/1`` rule body then never fires, and the phase
+    would report a quiet WRONG verdict (#1019 theatre). The Python binding
+    decides; if it is unavailable the result is a named degradation, never a
+    fabricated answer set.
+    """
+    arguments = dung_output.get("arguments")
+    attacks = dung_output.get("attacks")
+    arguments = [str(a) for a in arguments] if isinstance(arguments, list) else []
+    attacks = attacks if isinstance(attacks, list) else []
+    if not arguments:
+        return {
+            "status": "skipped",
+            "reason": "no_argumentation_framework",
+            "note": (
+                "asp_reasoning cross-checks the run's Dung AF; the upstream "
+                "phase wrote no arguments, so there is nothing to decide — "
+                "the analysed text is never parsed as ASP (#1604)."
+            ),
+        }
+    tweety_stable = _tweety_stable_extensions(dung_output)
+    if tweety_stable is None:
+        return {
+            "status": "skipped",
+            "reason": "no_tweety_stable_extensions",
+            "note": (
+                "the Dung phase computed no stable semantics (degraded or "
+                "absent) — comparing against a fabricated empty list would "
+                "invent agreement (#1019)."
+            ),
+        }
+
+    program, name_to_const = _af_to_asp_program(arguments, attacks)
+    const_to_name = {c: n for n, c in name_to_const.items()}
+
+    try:
+        import clingo as clingo_py  # type: ignore[import-untyped,unused-ignore]
+    except ImportError:
+        return {
+            "status": "degraded",
+            "reason": "no_naf_capable_solver",
+            "note": (
+                "the ASP stable-extension cross-check needs default negation; "
+                "only the Python clingo binding provides it (the JVM parser "
+                "mints 'not x' as an atom). No fabricated answer sets (#1019)."
+            ),
+            "program": program[:500],
+        }
+
+    py_models: List[List[str]] = []
+    ctl = clingo_py.Control(arguments=["--models=0"])
+    ctl.add("base", [], program)
+    ctl.ground([("base", [])])
+
+    def on_model(model: Any) -> None:
+        names = []
+        for sym in model.symbols(shown=True):
+            # sym is in(Const) — the shown predicate's name is "in"; the
+            # framework argument is the CONSTANT inside (first argument).
+            if sym.arguments:
+                const = str(sym.arguments[0])
+            else:
+                const = str(sym)
+            names.append(const_to_name.get(const, const))
+        py_models.append(sorted(names))
+
+    ctl.solve(on_model=on_model)
+
+    verdict = _compare_extension_sets(py_models, tweety_stable)
+    return {
+        "status": "cross_check",
+        "arguments": arguments,
+        "attacks": attacks,
+        "asp_answer_sets": py_models,
+        "tweety_stable_extensions": [list(e) for e in tweety_stable],
+        "num_answer_sets": len(py_models),
+        "satisfiable": bool(py_models),
+        "solver": "clingo_python",
+        "program": program[:500],
+        **verdict,
+    }
+
+
 async def _invoke_asp_reasoning(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -5650,7 +5863,16 @@ async def _invoke_asp_reasoning(
 
     Uses Tweety's ClingoSolver when JVM+Clingo are available.
     Falls back to Python clingo package or pure-Python heuristic.
+
+    #1604 wiring: when the caller supplies no explicit ``program`` but the
+    context carries the upstream ``dung_extensions`` phase output, the
+    handler runs the stable-extension cross-check instead — the analysed
+    prose is never parsed as ASP. An explicit ``program`` keeps the legacy
+    hand-written-caller behaviour unchanged.
     """
+    dung_output = context.get("phase_dung_extensions_output")
+    if "program" not in context and isinstance(dung_output, dict):
+        return _asp_cross_check_from_dung(dung_output, context)
     program = context.get("program", input_text)
     max_models = context.get("max_models", 0)  # 0 = all models
     # Why the JVM result was refused, carried into the fallback's result so

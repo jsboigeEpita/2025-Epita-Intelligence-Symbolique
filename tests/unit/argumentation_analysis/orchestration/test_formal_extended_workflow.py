@@ -32,12 +32,12 @@ class TestFormalExtendedWorkflow:
         assert wf is not None
         assert wf.name == "formal_extended"
 
-    def test_has_15_phases(self):
+    def test_has_16_phases(self):
         from argumentation_analysis.orchestration.workflows import (
             build_formal_extended_workflow,
         )
         wf = build_formal_extended_workflow()
-        assert len(wf.phases) == 15
+        assert len(wf.phases) == 16
 
     def test_phase_names(self):
         from argumentation_analysis.orchestration.workflows import (
@@ -47,7 +47,8 @@ class TestFormalExtendedWorkflow:
         names = [p.name for p in wf.phases]
         expected = [
             "extract", "nl_to_logic", "pl", "fol", "modal",
-            "dung_extensions", "aspic", "aba", "adf", "bipolar",
+            "dung_extensions", "aspic", "aba", "adf", "asp_reasoning",
+            "bipolar",
             "ranking", "probabilistic", "dialogue", "belief_revision",
             "tweety_interpretation",
         ]
