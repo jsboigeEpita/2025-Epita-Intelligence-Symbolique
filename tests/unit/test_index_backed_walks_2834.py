@@ -1,13 +1,17 @@
-"""#2834 — the seven remaining census walks read the git index, not the seat.
+"""#2834 — the eight remaining census walks read the git index, not the seat.
 
 #2821 converted six guards to ``iter_tracked_files``; this file holds the
-born-red witnesses for the seven that remained. Each entry plants a
-gitignored file a guard's population would read under a filesystem walk —
-shaped to flip that guard's verdict — then runs the guard and asserts the
-verdict does not move. Before the conversion every entry reddened: the
-planted file entered the population and tripped the guard. After it, the
-index cannot list what the seat added (#2821: a census that counts what CI
-never runs measures the seat, not the repository).
+born-red witnesses for the walks that remained — the seven #2834
+enumerated, plus #2393's kernel-double census, whose omission was the
+issue's (measured by the coordinator's review: an eighth ``iter_files``
+caller lived under ``tests/unit/argumentation_analysis/``). Each entry
+plants a gitignored file a guard's population would read under a
+filesystem walk — shaped to flip that guard's verdict — then runs the
+guard and asserts the verdict does not move. Before the conversion every
+entry reddened: the planted file entered the population and tripped the
+guard. After it, the index cannot list what the seat added (#2821: a
+census that counts what CI never runs measures the seat, not the
+repository).
 
 Plants live under ``.playwright-mcp/`` — gitignored at any depth
 (``.gitignore``) and skipped by pytest collection (``norecursedirs`` holds
@@ -46,6 +50,11 @@ _SWAP_MOTIF_PLANT = (
 _BARE_DOTENV_PLANT = "from dotenv import load_dotenv\nload_dotenv()\n"
 _EXTRA_RESOLVER_PLANT = "def find_extra_for_capability(capability):\n" "    return []\n"
 _ENV_SEEDER_PLANT = "import os\nos.environ['PROBE_2834'] = '1'\n"
+# #2393 counts Assign targets whose name contains "kernel" bound to an
+# unspecced MagicMock() — one site, enough to trip its census.
+_KERNEL_DOUBLE_PLANT = (
+    "from unittest.mock import MagicMock\n" "kernel_2834 = MagicMock()\n"
+)
 
 
 def _assert_gitignored(target: Path) -> None:
@@ -84,17 +93,28 @@ def _plant_via_exclude(relpath: str, content: str):
     exclude = ROOT / ".git" / "info" / "exclude"
     exclude.parent.mkdir(parents=True, exist_ok=True)
     before = exclude.read_text(encoding="utf-8") if exclude.exists() else None
-    with open(exclude, "a", encoding="utf-8") as handle:
-        handle.write(f"/{relpath}\n")
-    _assert_gitignored(target)
-    target.write_text(content, encoding="utf-8")
 
-    def _cleanup():
-        target.unlink(missing_ok=True)
+    def _restore_exclude():
         if before is None:
             exclude.unlink(missing_ok=True)
         else:
             exclude.write_text(before, encoding="utf-8")
+
+    with open(exclude, "a", encoding="utf-8") as handle:
+        handle.write(f"/{relpath}\n")
+    try:
+        _assert_gitignored(target)
+        target.write_text(content, encoding="utf-8")
+    except BaseException:
+        # The exclude line lives in the REAL checkout's .git — a failure
+        # after the append must not leave it behind (coordinator review:
+        # the cleanup closure is never returned on the raising path).
+        _restore_exclude()
+        raise
+
+    def _cleanup():
+        target.unlink(missing_ok=True)
+        _restore_exclude()
 
     return _cleanup
 
@@ -202,6 +222,22 @@ def test_2486_scan_cannot_flip_the_verdict():
         cleanup()
 
 
+def test_2393_census_cannot_flip_the_verdict():
+    """#2393's guard, run directly: its test declares ``capsys`` only so its
+    prints are captured — the body never touches it — so the witness passes
+    ``None``. An unspecced kernel double in a gitignored file must not
+    enter the census."""
+    from tests.unit.argumentation_analysis.test_kernel_double_spec_guard_2393 import (  # noqa: E501
+        test_no_new_unspecced_kernel_doubles as _guard,
+    )
+
+    cleanup = _plant("tests/unit/.playwright-mcp/f2834_kernel.py", _KERNEL_DOUBLE_PLANT)
+    try:
+        _guard(None)
+    finally:
+        cleanup()
+
+
 def test_the_plants_are_actually_plantable():
     """Negative control on the instrument: each plant site is gitignored
     today. A seat whose ignore rules change must redden HERE, not pass a
@@ -213,5 +249,6 @@ def test_the_plants_are_actually_plantable():
         "argumentation_analysis/.playwright-mcp/f2834_dotenv.py",
         "argumentation_analysis/.playwright-mcp/f2834_resolver.py",
         "tests/unit/.playwright-mcp/test_f2834_seeder.py",
+        "tests/unit/.playwright-mcp/f2834_kernel.py",
     ):
         _assert_gitignored(ROOT / relpath)
