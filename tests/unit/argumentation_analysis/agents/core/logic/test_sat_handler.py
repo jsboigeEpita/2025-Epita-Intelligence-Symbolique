@@ -452,12 +452,31 @@ class TestMaxSAT:
 # ──── MUS/MCS Tests ────
 
 
-@pytest.mark.skipif(
-    not PYSAT_AVAILABLE or not Z3_AVAILABLE,
-    reason="PySAT or Z3 not installed",
-)
 class TestMUSAnalysis:
-    """Tests for MUS (Minimal Unsatisfiable Subset) analysis."""
+    """Tests for MUS (Minimal Unsatisfiable Subset) analysis.
+
+    The ``skipif(not PYSAT_AVAILABLE or not Z3_AVAILABLE)`` that used to sit
+    on this class is REMOVED (#2851 E2): ``environment.yml`` now declares
+    ``z3-solver`` and ``pycryptosat``, so their absence is a provisioning
+    failure, not a reason to skip. That skip was exactly how the gate stayed
+    green without Z3 — measured on main's CI (run 36601189560): all 3 tests
+    skipped with "PySAT or Z3 not installed", so MUS had never been exercised
+    by the gate. The autouse check below fails loudly instead; it is
+    deliberately not a module-level raise, which would error every other
+    test in this file.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _solver_stack_is_provisioned(self):
+        assert PYSAT_AVAILABLE, (
+            "PySAT is not importable — environment.yml declares python-sat; "
+            "its absence here is a provisioning failure (#2851), not a skip"
+        )
+        assert Z3_AVAILABLE, (
+            "Z3 is not importable — environment.yml declares z3-solver "
+            "(#2851 E2); its absence here is a provisioning failure, and the "
+            "skip this replaced is how the gate stayed green without Z3"
+        )
 
     def test_find_mus_on_inconsistent(self):
         handler = SATHandler()
@@ -653,9 +672,7 @@ class TestLargeKBPerformance:
 
         handler = SATHandler()
         # 80 atoms: a_i and !a_i — inconsistent
-        formulas = [f"a{i}" for i in range(1, 41)] + [
-            f"!a{i}" for i in range(1, 41)
-        ]
+        formulas = [f"a{i}" for i in range(1, 41)] + [f"!a{i}" for i in range(1, 41)]
         t0 = time.time()
         is_consistent, _ = handler.check_consistency(formulas)
         elapsed = time.time() - t0
