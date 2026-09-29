@@ -21,28 +21,45 @@ remarks. A contract guarded at the prompt level is a contract on what was
 asked, not on what was written — same class as the #1316 prose theatre this
 package already detects.
 
+## The mirror direction (#1914 criterion 5, post-render half)
+
+Criterion 8's control above polices ONE side of the claim/state relation, by
+construction: an act **selling** a surplus the state does not establish. The
+other side went unread — measured 2026-09-29 on ``main``: the very refusal
+wording the prompt carries when the surplus is empty
+(:data:`.act3_conclusion_plugin`'s « RIEN au-delà d'une lecture attentive …
+NE SONT PAS un surplus interprétatif ») written on a state whose re-derived
+surplus **is** established rendered ``band=PASS``, zero remarks — the reader
+is told nothing was established while the analysis established something.
+That is the same defect class the criterion-8 probe measured (prose
+contradicting the re-derived state), in the opposite direction, and it is the
+second half of criterion 5's gesture (the first half re-anchored the vacuous
+prompt assertions, #2879). Same instrument, same surface, same re-derivation:
+the gap was the un-policed side, not a missing consumer.
+
 ## Approach
 
 After render, re-derive the surplus from the shared-state mapping — the
 same single reader chain the Acte III prompt itself used
 (``build_act3_evidence`` → ``evidence.salience.surplus``), never trusting
-what the act claims. Then:
+what the act claims. The relation is then policed in both directions:
 
-* ``established`` non-empty → the report's surplus claims are grounded:
-  **PASS unconditionally** — no lexical scan at all. This is the
-  anti-pendulum half of the contract: the fixture rejects the *unsupported
-  claim*, never the mention of multi-agent work. A detector that banned the
-  surplus vocabulary would mute Acte III exactly where it has something
-  true to say.
 * ``established`` empty → scan the narrative body for an *affirmative*
   surplus claim (the surplus notion, a beyond-a-plain-reading statement, or
   a changed-conclusion claim) not carried by a negation guard. Each hit is
   unsupported theatre: counters and labels are procedural matter, and the
   report may inventory them but must not sell them as interpretive surplus.
+* ``established`` non-empty → the surplus *claims* are grounded and are not
+  lexically policed at all. This is the anti-pendulum half of the contract:
+  the fixture rejects the *unsupported claim*, never the mention of
+  multi-agent work — a detector that banned the surplus vocabulary would
+  mute Acte III exactly where it has something true to say. The one line
+  still read is the mirror: a **denial** (a cue carried by a negation
+  guard) asserts to the reader the opposite of what the state established.
 
 Honesty contract (#1019): ``state is None`` (no source of truth) or a state
-the salience reader cannot process skips the check (PASS), named rather
-than conflated with a measured-empty surplus.
+the salience reader cannot process skips the check (PASS) in both
+directions, named rather than conflated with a measured-empty surplus.
 """
 
 from __future__ import annotations
@@ -97,8 +114,8 @@ _NEGATION_GUARDS = (
 _APOSTROPHE_NORMALISED = ("’", "'")
 
 
-def _rederived_established_is_empty(state: Mapping[str, Any]) -> bool:
-    """Re-derive the surplus split from the appendix mapping — False when the
+def _rederived_established(state: Mapping[str, Any]) -> Optional[List[str]]:
+    """The re-derived non-procedural surplus statements — ``None`` when the
     check cannot run (no derivable salience: honest skip, not a measured
     empty). Same single reader chain as the Acte III prompt: the mapping is
     adapted back to attribute access (mechanically — every key it carries
@@ -112,8 +129,20 @@ def _rederived_established_is_empty(state: Mapping[str, Any]) -> bool:
     shim = SimpleNamespace(**dict(state))
     evidence = build_act3_evidence(shim)
     if evidence.salience is None:
-        return False
-    return not evidence.salience.surplus.established
+        return None
+    return [item.statement for item in evidence.salience.surplus.established]
+
+
+def _claims_surplus_notion(line: str) -> bool:
+    """Does ``line`` (already lowercased and apostrophe-normalised) invoke the
+    surplus notion? One predicate, two directions: the affirmative claim when
+    the state establishes nothing, the denial when it establishes something.
+    """
+    return bool(
+        _SURPLUS_NOTION_RE.search(line)
+        or _BEYOND_READING_RE.search(line)
+        or _CHANGED_CONCLUSION_RE.search(line)
+    )
 
 
 def _unsupported_surplus_claims(body: str) -> List[str]:
@@ -129,12 +158,7 @@ def _unsupported_surplus_claims(body: str) -> List[str]:
         line = raw_line.lower().replace(*_APOSTROPHE_NORMALISED)
         if any(guard in line for guard in _NEGATION_GUARDS):
             continue
-        hit = (
-            _SURPLUS_NOTION_RE.search(line)
-            or _BEYOND_READING_RE.search(line)
-            or _CHANGED_CONCLUSION_RE.search(line)
-        )
-        if not hit:
+        if not _claims_surplus_notion(line):
             continue
         stripped = raw_line.strip()
         if stripped and stripped not in claims:
@@ -142,11 +166,37 @@ def _unsupported_surplus_claims(body: str) -> List[str]:
     return claims
 
 
+def _denied_surplus_claims(body: str) -> List[str]:
+    """Lines that DENY the surplus notion (stripped, deduplicated).
+
+    The exact complement of :func:`_unsupported_surplus_claims`' predicate —
+    same line scope, same cues, same guards, only the side of the guard
+    flips. Scan this only when the state's re-derived surplus is established:
+    there the denial asserts to the reader the opposite of what the analysis
+    produced. The guards are the canonical refusal vocabulary the Acte III
+    data block itself carries for the empty case, so an ordinary negated
+    sentence about something else (« aucun sophisme localisé n'est resté sans
+    réponse ») is not a denial — the cue must be there too.
+    """
+    denials: List[str] = []
+    for raw_line in body.splitlines():
+        line = raw_line.lower().replace(*_APOSTROPHE_NORMALISED)
+        if not any(guard in line for guard in _NEGATION_GUARDS):
+            continue
+        if not _claims_surplus_notion(line):
+            continue
+        stripped = raw_line.strip()
+        if stripped and stripped not in denials:
+            denials.append(stripped)
+    return denials
+
+
 def check_surplus_grounding(
     body: str,
     state: Optional[Mapping[str, Any]],
 ) -> GateVerdict:
-    """Deterministic post-render grounding of the surplus claim (#1914, c. 8).
+    """Deterministic post-render grounding of the surplus claim (#1914, c. 8
+    and c. 5 mirror).
 
     Args:
         body: the rendered narrative body (the 3 acts concatenated, excluding
@@ -159,15 +209,38 @@ def check_surplus_grounding(
     Returns:
         A :class:`~.readability_gate.GateVerdict` — ``FAIL`` with an
         auditable reason when the prose claims an interpretive surplus the
-        re-derived state does not support (counters/labels theatre);
+        re-derived state does not support (counters/labels theatre), or when
+        it denies one the state does establish (the mirror, #1914 c. 5);
         ``PASS`` otherwise, including whenever the state establishes a real
-        surplus (grounded claims are never lexically policed). Mergeable
-        with the other verdicts via ``GateVerdict.merge``.
+        surplus and the prose does not deny it (grounded claims are never
+        lexically policed). Mergeable with the other verdicts via
+        ``GateVerdict.merge``.
     """
     if state is None:
         return GateVerdict(band="PASS")
-    if not _rederived_established_is_empty(state):
+
+    established = _rederived_established(state)
+    if established is None:
+        # No derivable salience: honest skip either way, never a measured
+        # empty collapsed into a verdict (#1019).
         return GateVerdict(band="PASS")
+
+    if established:
+        denials = _denied_surplus_claims(body)
+        if not denials:
+            return GateVerdict(band="PASS")
+        preview = denials[0][:100]
+        return GateVerdict(
+            band="FAIL",
+            reasons=[
+                f"Surplus démenti (#1914, critère 5) — "
+                f"{accord(len(denials), 'ligne du récit déclare', 'lignes du récit déclarent')} "
+                f"qu'aucun apport interprétatif n'a été établi, alors que la "
+                f"re-dérivation déterministe de l'état en établit "
+                f"{len(established)}. Le lecteur reçoit l'inverse de ce que "
+                f"l'analyse a produit. Ex : « {preview} »."
+            ],
+        )
 
     claims = _unsupported_surplus_claims(body)
     if not claims:
