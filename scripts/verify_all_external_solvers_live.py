@@ -17,7 +17,13 @@ import asyncio
 import sys
 from pathlib import Path
 
-from argumentation_analysis.core.jvm_setup import initialize_jvm, EXTERNAL_TOOL_PATHS
+from argumentation_analysis.core.jvm_setup import (
+    initialize_jvm,
+    EXTERNAL_TOOL_PATHS,
+    EXTERNAL_TOOL_REJECTIONS,
+    EXTERNAL_TOOL_VERSIONS,
+    CLINGO_VERSION,
+)
 from argumentation_analysis.core.config import settings, SolverChoice
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
@@ -59,6 +65,16 @@ def main():
     print("\n=== External binary inventory (firsthand) ===")
     for k in ("eprover", "spass", "clingo"):
         print(f"  EXTERNAL_TOOL_PATHS[{k:8}] = {EXTERNAL_TOOL_PATHS.get(k)}")
+    # #2852: the solver name readable in the gate log — which clingo VERSION
+    # the JVM receives, and what was rejected on the way.
+    print(
+        f"  clingo selected version     = {EXTERNAL_TOOL_VERSIONS.get('clingo')} "
+        f"(wanted {CLINGO_VERSION})"
+    )
+    if EXTERNAL_TOOL_REJECTIONS.get("clingo"):
+        print(
+            f"  clingo rejected             = {EXTERNAL_TOOL_REJECTIONS['clingo'][:200]}"
+        )
     p9 = Path("libs/prover9/bin/prover9.bat")
     print(f"  prover9.bat present       = {p9.is_file()}  ({p9})")
     try:

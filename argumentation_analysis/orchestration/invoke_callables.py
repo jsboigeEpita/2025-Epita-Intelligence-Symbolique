@@ -5884,6 +5884,7 @@ async def _invoke_asp_reasoning(
         from argumentation_analysis.core.jvm_setup import (
             is_jvm_started,
             EXTERNAL_TOOL_PATHS,
+            EXTERNAL_TOOL_REJECTIONS,
         )
 
         # ClingoSolver has NO no-arg constructor in Tweety 1.28+ — the clingo
@@ -5891,6 +5892,13 @@ async def _invoke_asp_reasoning(
         # path there is no honest JVM ASP path; fall through to the explicit
         # Python fallback rather than throwing-and-masking (anti-théâtre #1019).
         clingo_path = EXTERNAL_TOOL_PATHS.get("clingo")
+        if not clingo_path:
+            # #2852: when only incompatible binaries were probed, the named
+            # rejection is in the registry — carry it into the phase output so
+            # the solver switch is counted, not silent.
+            rejection = EXTERNAL_TOOL_REJECTIONS.get("clingo")
+            if rejection:
+                jvm_refusal = f"no compatible clingo binary ({rejection})"
         if is_jvm_started() and clingo_path:
             import jpype
 
