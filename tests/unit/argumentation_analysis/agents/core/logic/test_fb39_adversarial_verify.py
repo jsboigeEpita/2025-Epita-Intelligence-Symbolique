@@ -32,20 +32,22 @@ not fix defects:
     NOT a swallow. Removed from the illegal-logic controls.
 """
 
-import os
-
 import jpype
 import pytest
 
 from argumentation_analysis.agents.core.logic.pl_handler import PLHandler
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
-# FB-39 is deterministic (no LLM). These tests probe REAL Tweety, so they need a
-# JVM and are skipped in CI (which has no JVM / USE_REAL_JPYPE). Run locally:
-#   USE_REAL_JPYPE=true conda run -n projet-is pytest <this file> -m tweety
-_REAL_JVM = os.environ.get("USE_REAL_JPYPE") == "true"
+# FB-39 is deterministic (no LLM). These tests probe REAL Tweety: they ride the
+# session JVM the gate already starts (tests/conftest.py pytest_sessionstart)
+# and skip only when that JVM is unavailable. The old USE_REAL_JPYPE opt-in
+# dated from the mock era — its premise ("CI has no real JVM") stopped being
+# true when the gate started one for the whole session, and the flag kept
+# these instruments out of every gate run (#2858). Evaluated at import time:
+# sessionstart runs before collection, so the gate sees the live JVM.
 skip_no_jvm = pytest.mark.skipif(
-    not _REAL_JVM, reason="needs USE_REAL_JPYPE=true (real Tweety, skipped in CI)"
+    not jpype.isJVMStarted(),
+    reason="session JVM unavailable (real Tweety rides the gate's session JVM, #2858)",
 )
 
 
