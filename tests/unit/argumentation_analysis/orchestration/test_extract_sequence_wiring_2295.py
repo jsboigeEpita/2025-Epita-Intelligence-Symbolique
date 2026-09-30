@@ -111,22 +111,29 @@ class TestHonestAbsence:
 
 
 class TestBound:
-    def test_trace_entries_are_capped_exactly_and_truncation_named(self):
+    def test_every_argument_is_anchored_and_no_truncation_note(self):
+        """#2848 (carried by #2850 slice A) — the anchor is not a budget item.
+
+        The 12-entry writer cap (#2315) made the Act II thread "first 8 of
+        the first 12": on the #2841-measured 94-argument document the
+        narrative covered the opening only. Every extracted argument now
+        gets its assert entry; the PROMPT budget lives at the render (Act II
+        selects k moves stratified and SAYS the truncation — guarded in
+        test_act2_sequence_spans_text_2848.py). The trace's only prompt
+        consumer is that render-capped reader, so #2315's flood concern is
+        answered at the place it bites.
+        """
         args = [{"text": f"argument synthetique {i}"} for i in range(30)]
         state = _run({"arguments": args})
         asserts = [e for e in state.analysis_trace if e.get("move") == "assert"]
-        assert len(asserts) == 12, (
-            "bounded trace growth — a corpus doc must not flood the trace "
-            "that the synthesis prompt reads"
+        assert len(asserts) == 30, (
+            "every argument anchored — a writer cap here re-beheads the "
+            "Act II thread (the budget belongs to the render, #2848)"
         )
-        # All arguments still reach the state — the cap bounds the TRACE,
-        # never the analysis substrate.
         assert len(state.identified_arguments) == 30
-        # The cap is never silent: one legacy-style commentary entry names it.
+        # The truncation note is GONE with the truncation it named — a note
+        # naming a cap that no longer exists would be a lie in the trace.
         notes = [e for e in state.analysis_trace if e.get("move") is None]
-        assert len(notes) == 1
-        assert "tronquée" in notes[0]["summary"]
-        assert "anchor" not in notes[0], (
-            "the truncation note designates no span — it must not leak into "
-            "the sequence reader as a move"
+        assert notes == [], (
+            "no legacy commentary entry: nothing is truncated at write time " "anymore"
         )

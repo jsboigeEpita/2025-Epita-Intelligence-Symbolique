@@ -129,6 +129,15 @@ class Act1Evidence:
     # Game-theoretic
     stakeholders: List[StakeholderInfo] = field(default_factory=list)
     arg_count: int = 0
+    # #2850 slice A — the two-producer split behind the one count. Zero on a
+    # state whose units carry no provenance (pre-slice-A states): the single
+    # figure stays the render, never a guessed split.
+    arg_count_llm: int = 0
+    arg_count_heuristic: int = 0
+    # #2850 slice A — the per-phase coverage figure, rendered ONCE (Act I's
+    # inventory line): {phase: {"k": …, "N": …, "bands_covered": …,
+    # "bands_total": …}}. Empty map → no sentence, never a fabricated one.
+    analysis_coverage: Dict[str, Dict[str, int]] = field(default_factory=dict)
     # DERIVED virtuous flag (spec §5.1) — when the state characterises the text
     # as virtuous, the spectrum framing shifts from "what to watch for" to
     # "what could derail but doesn't" (anticipation that did not materialise).
@@ -358,6 +367,19 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
 
     args = getattr(state, "identified_arguments", {}) or {}
     arg_count = len(args) if isinstance(args, dict) else 0
+    # #2850 slice A — the count now says TWO figures, not one sum: the two
+    # producers under one key were invisible, and "94 extraits" read as one
+    # extraction (#2848's opening finding). Attribution comes from the
+    # provenance side-table; units without a producer entry count in neither
+    # figure (the sum can be < arg_count — that gap is the pre-provenance
+    # population, stated by not guessing it).
+    provenance = getattr(state, "argument_provenance", {}) or {}
+    arg_count_llm = sum(
+        1 for p in provenance.values() if p.get("producer") == "llm_extract"
+    )
+    arg_count_heuristic = sum(
+        1 for p in provenance.values() if p.get("producer") == "kb_heuristic"
+    )
 
     virtuous_mode = detect_virtuous_mode(state)
 
@@ -374,6 +396,9 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
         spectrum_available=spectrum_available,
         stakeholders=stakeholders,
         arg_count=arg_count,
+        arg_count_llm=arg_count_llm,
+        arg_count_heuristic=arg_count_heuristic,
+        analysis_coverage=dict(getattr(state, "analysis_coverage", {}) or {}),
         virtuous_mode=virtuous_mode,
         deanonymized=bool(getattr(state, "deanonymized", True)),
     )
@@ -501,10 +526,32 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         )
     else:
         gt_block = "  (parties engagées non extraites — cadrage stratégique limité)"
-    gt_note = (
-        f"Inventaire argumentatif : "
-        f"{accord(evidence.arg_count, 'argument extrait', 'arguments extraits')}."
-    )
+    # #2850 slice A — the inventory says the TWO figures when provenance
+    # exists (a by LLM extraction, b by heuristic reading), and carries the
+    # coverage sentence ONCE for the whole Acts: each selecting phase's k/N
+    # over its bands. No provenance → the single figure, as before.
+    if evidence.arg_count_llm or evidence.arg_count_heuristic:
+        gt_note = (
+            f"Inventaire argumentatif : "
+            f"{accord(evidence.arg_count, 'argument extrait', 'arguments extraits')} "
+            f"({evidence.arg_count_llm} par extraction LLM, "
+            f"{evidence.arg_count_heuristic} par lecture heuristique du texte)."
+        )
+    else:
+        gt_note = (
+            f"Inventaire argumentatif : "
+            f"{accord(evidence.arg_count, 'argument extrait', 'arguments extraits')}."
+        )
+    coverage_map = evidence.analysis_coverage
+    if coverage_map:
+        coverage_parts = [
+            f"{phase} : {fig['k']}/{fig['N']} unités, "
+            f"{fig['bands_covered']}/{fig['bands_total']} bandes de position"
+            for phase, fig in sorted(coverage_map.items())
+            if isinstance(fig, dict) and "k" in fig
+        ]
+        if coverage_parts:
+            gt_note += " Couverture de l'analyse (" + " ; ".join(coverage_parts) + ")."
 
     opaque_block = f"{_OPAQUE_ID_DIRECTIVE}\n\n" if not evidence.deanonymized else ""
 

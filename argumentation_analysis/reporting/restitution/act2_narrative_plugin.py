@@ -61,6 +61,11 @@ from .specialist_roles import (
     classify_specialist_roles,
 )
 from .readability_gate import GateVerdict, ReadabilityGate
+from argumentation_analysis.orchestration.selection import (
+    SelectableUnit,
+    select_for_budget,
+)
+
 from .text_sequence import MOVE_LABELS_FR, TextSequence, collect_text_sequence
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
 
@@ -354,6 +359,10 @@ class Act2Evidence:
     # Walton-Krabbe moves read from the trace). None when the run carries
     # no anchored move (honest absence — the sequence is not fabricated).
     text_sequence: Optional[TextSequence] = None
+    # #2848 — the source's character length, so the sequence block can say
+    # « couvrant les positions a–b sur L caractères » (the truncation is said
+    # where it is read, with the range it actually covers).
+    source_length: int = 0
 
 
 @dataclass
@@ -681,6 +690,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         global_findings=project_global_findings(state),
         role_assignments=classify_specialist_roles(state),
         text_sequence=collect_text_sequence(state),
+        source_length=len(getattr(state, "raw_text", "") or ""),
     )
 
 
@@ -1375,10 +1385,38 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
     seq_verdict = ""
     if evidence.text_sequence is not None:
         _seq = evidence.text_sequence
-        for _i, m in enumerate(_seq.moves[:_SEQUENCE_RENDER_CAP], start=1):
+        # #2848 — SELECTION SPANS THE TEXT: the k moves handed to the narrated
+        # thread are stratified over the anchored offsets (select_for_budget,
+        # same gesture as #2850 slice A), not the first k in text order. The
+        # budget (8) is unchanged; a bigger head sample would still be a head
+        # sample.
+        # Index-keyed ids: one arg can carry several moves (assert + retract),
+        # so arg_ref is not unique — the position in the sequence is.
+        _move_units = [
+            SelectableUnit(unit_id=f"move_{i}", text="", offset=m.offset)
+            for i, m in enumerate(_seq.moves)
+        ]
+        _move_selection = select_for_budget(_move_units, _SEQUENCE_RENDER_CAP)
+        _chosen_ids = {u.unit_id for u in _move_selection.selected}
+        _chosen_moves = [
+            m for i, m in enumerate(_seq.moves) if f"move_{i}" in _chosen_ids
+        ]
+        for _i, m in enumerate(_chosen_moves, start=1):
             label = MOVE_LABELS_FR.get(m.move, m.move)
             who = m.arg_ref or "coup non référencé"
             seq_lines.append(f"  {_i}. {who} — {label} (offset {m.offset})")
+        # #2848 — the truncation is SAID where it is read: k shown over N
+        # anchored, covering a–b over the source's L characters.
+        if len(_seq.moves) > len(_chosen_moves) and _chosen_moves:
+            _a = min(m.offset for m in _chosen_moves)
+            _b = max(m.offset + m.length for m in _chosen_moves)
+            _k = len(_chosen_moves)
+            _n = len(_seq.moves)
+            _l = evidence.source_length
+            seq_lines.append(
+                f"  ({_k} coups montrés sur {_n} ancrés, couvrant les "
+                f"positions {_a}–{_b} sur {_l} caractères)"
+            )
         if _seq.order_differs is True:
             seq_verdict = (
                 "  L'ordre du TEXTE diffère de l'ordre d'analyse : le récit "
