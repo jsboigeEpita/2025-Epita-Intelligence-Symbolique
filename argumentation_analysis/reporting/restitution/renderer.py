@@ -171,12 +171,14 @@ class RestitutionReportRenderer:
         # (PASS) when no state was provided (no source of truth to check against).
         verdict = verdict.merge(check_factual_consistency(body, state))
 
-        # #1914 criterion 8 — the reader-chair fixture: the surplus claim in
-        # the prose must be grounded in the state's re-derived non-procedural
-        # surplus. Same defense-in-depth shape as the factual cross-check:
-        # the prompt INSTRUCTS the honest refusal, this detector catches any
-        # claim that leaks through anyway; and symmetrically it never polices
-        # a claim the state actually establishes (anti-pendulum).
+        # #1914 criteria 8 + 5 — the reader-chair fixture: the surplus claim
+        # in the prose must be grounded in the state's re-derived
+        # non-procedural surplus. Same defense-in-depth shape as the factual
+        # cross-check: the prompt INSTRUCTS the honest refusal, this detector
+        # catches any claim that leaks through anyway; symmetrically it never
+        # polices a surplus CLAIM the state actually establishes
+        # (anti-pendulum) — but it does reject a DENIAL of one the state
+        # establishes (criterion 5's mirror half).
         verdict = verdict.merge(check_surplus_grounding(body, state))
 
         # #1914 criteria 1+7 — the reader-surface vocabulary: issue numbers,
