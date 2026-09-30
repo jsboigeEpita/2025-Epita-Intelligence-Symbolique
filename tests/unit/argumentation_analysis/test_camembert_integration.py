@@ -5,7 +5,6 @@ Tests the CamemBERTFallacyDetector class, its integration into
 FrenchFallacyAdapter, label mapping, and graceful degradation.
 """
 
-import pytest
 from unittest.mock import MagicMock, patch, PropertyMock
 from pathlib import Path
 
@@ -74,21 +73,19 @@ class TestCamemBERTFallacyDetector:
         results = detector.detect("Cet argument est fallacieux.")
         assert results == []
 
-    @pytest.mark.xfail(
-        reason="stale pre-PR #299: CamemBERTFallacyDetector removed in #299 and "
-        "replaced by self-hosted LLM endpoint (see test_camembert_invoke.py). "
-        "Marking xfail per R565 ATT-1 endgame triage.",
-        strict=False,
-    )
     def test_detect_with_mock_model(self):
         """detect() returns correct FallacyDetection with mocked model.
 
-        Stale pre-PR #299: this test exercises the removed CamemBERT detector's
-        internal API (mocking ``_tokenizer`` / ``_model`` directly). The detector
-        was deleted in PR #299 and replaced by ``_invoke_camembert_fallacy`` which
-        talks to the self-hosted LLM endpoint. The replacement coverage lives in
-        ``tests/unit/argumentation_analysis/orchestration/test_camembert_invoke.py``
-        (PR #1408 cluster). Marked xfail — see R565 triage.
+        #2865: this test used to carry ``xfail(strict=False)`` for a reason that
+        measured false. "CamemBERTFallacyDetector removed in #299" — the class is
+        still defined (``french_fallacy_adapter.py``) and is still constructed by
+        ``FrenchFallacyAdapter`` whenever ``enable_camembert`` is set without the
+        self-hosted tier: #297 *deprecated* it and made the self-hosted LLM the
+        default, it did not delete it. The marker never fired on the real cause
+        either — the test xpassed the moment the gate environment could load
+        torch (#2856 repair, #2861), which is the dependency the mocked-model path
+        actually needs. The marker is gone so that a regression here reddens the
+        gate instead of being absorbed as an expected failure.
         """
         import torch
         from argumentation_analysis.adapters.french_fallacy_adapter import (
