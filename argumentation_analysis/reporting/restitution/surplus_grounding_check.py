@@ -109,33 +109,83 @@ _NEGATION_GUARDS = (
     "sans modifier",
 )
 
-# The SAME negation relation, second member (#2883): the ordinary verbal
-# negation governing a verb — « ne conclut pas », « ne revendique pas ici »,
-# « n'a jamais établi » — which the fixed vocabulary above (être/avoir
-# conjugations, « rien », « sans »…) cannot see. The two members compose in
-# :func:`_carries_negation`, the ONE definition both directions read —
-# never a list for one direction and a regex for the other. Known,
-# pre-existing imprecision, named rather than fixed here: a negation scoped
-# to one object only (« pas un surplus de ce type, mais un autre ») counts
-# as a denial of the whole notion — the fixed vocabulary already had that
-# class, this extends it to a new surface, it does not create it.
+# The SAME negation relation, second member (#2883, governed per the
+# #2889 retouche, review c.5912722961): the ordinary verbal negation —
+# « ne conclut pas », « ne revendique pas ici », « n'a jamais établi » —
+# which the fixed vocabulary above (être/avoir conjugations, « rien »,
+# « sans »…) cannot see. The relation GOVERNS the surplus notion: it must
+# take the cue as its OBJECT, not merely share a line with it —
+#   1. POSITION: the cue occurs after the negation complement. A notion
+#      in subject position (« Le surplus interprétatif ne se limite pas… »)
+#      is being QUALIFIED, not negated;
+#   2. CLAUSE: no proposition break (« : », « ; », « . », « mais »…)
+#      between the complement and the cue — a negation governs its own
+#      clause, never the next one;
+#   3. RESTRICTIVES stay affirmative — « ne se limite pas », « ne se
+#      réduit pas », « pas seulement / uniquement » qualify what the
+#      notion rests on; they do not deny it. (« ne … que » carries no
+#      « pas »/« plus »/« jamais » complement and never matches at all.)
 _VERBAL_NEGATION_RE = re.compile(
-    r"\b(?:ne|n['''])\s+\S+(?:\s+\S+){0,2}\s+(?:pas|plus|jamais)\b"
+    r"\b(?:ne|n')\s+(?P<mid>\S+(?:\s+\S+){0,2})\s+(?P<complement>pas|plus|jamais)\b"
 )
+
+# Rule 2's proposition breaks. The scanned line keeps its accents — the
+# ellipsis below is the typographic one, and « mais » is word-bounded.
+_CLAUSE_BREAK_RE = re.compile(r"[:;.!?…]|\bmais\b")
+
+# Rule 3's restrictive shapes: a restrictive verb between « ne » and the
+# complement, or « seulement / uniquement / exclusivement » right after it.
+_RESTRICTIVE_VERB_STEMS = ("limit", "rédui", "restrein", "résum", "born")
+_RESTRICTIVE_AFTER_RE = re.compile(r"\s*(?:seulement|uniquement|exclusivement)\b")
 
 # French LLM prose writes the typographic apostrophe (U+2019); the guards
 # store the straight one (U+0027) — normalise before matching (#2032 lesson).
 _APOSTROPHE_NORMALISED = ("’", "'")
 
 
-def _carries_negation(line: str) -> bool:
-    """Does ``line`` (already lowercased and apostrophe-normalised) carry a
-    negation of the surplus? ONE definition, both directions (#2883): the
-    canonical refusal vocabulary, plus the verbal negation relation above.
+def _negated_by_fixed_vocabulary(line: str) -> bool:
+    """Does ``line`` (already lowercased and apostrophe-normalised) carry
+    the canonical refusal wording? LINE-scoped, as it has always been
+    (#1914): when a guard matches, every cue in the line is read as
+    negated. Known, pre-existing imprecision, named rather than fixed: the
+    line-scope counts a negation of ONE object (« pas un surplus de ce
+    type, mais un autre ») as a denial of the whole notion.
     """
-    return any(guard in line for guard in _NEGATION_GUARDS) or bool(
-        _VERBAL_NEGATION_RE.search(line)
-    )
+    return any(guard in line for guard in _NEGATION_GUARDS)
+
+
+def _cue_occurrences(line: str) -> List["re.Match[str]"]:
+    """Every cue occurrence the two directions reason over — the surplus
+    notion, the beyond-a-reading, the changed conclusion (one list, both
+    directions: never a cue one side sees and the other does not).
+    """
+    occurrences: List["re.Match[str]"] = []
+    for cue_re in (_SURPLUS_NOTION_RE, _BEYOND_READING_RE, _CHANGED_CONCLUSION_RE):
+        occurrences.extend(cue_re.finditer(line))
+    return occurrences
+
+
+def _verbal_negation_governs(line: str, cue_start: int) -> bool:
+    """Does the verbal negation relation take the cue occurrence starting
+    at ``cue_start`` as its OBJECT? The three governance rules of the
+    #2889 retouche (review c.5912722961): the complement precedes the cue
+    (1), in the same clause (2), and the negation is not restrictive (3).
+    """
+    for match in _VERBAL_NEGATION_RE.finditer(line):
+        if match.end() > cue_start:
+            continue
+        if _CLAUSE_BREAK_RE.search(line, match.end(), cue_start):
+            continue
+        if any(
+            stem in word
+            for word in match.group("mid").split()
+            for stem in _RESTRICTIVE_VERB_STEMS
+        ):
+            continue
+        if _RESTRICTIVE_AFTER_RE.match(line, match.end()):
+            continue
+        return True
+    return False
 
 
 def _rederived_established(state: Mapping[str, Any]) -> Optional[List[str]]:
@@ -158,30 +208,32 @@ def _rederived_established(state: Mapping[str, Any]) -> Optional[List[str]]:
 
 
 def _claims_surplus_notion(line: str) -> bool:
-    """Does ``line`` (already lowercased and apostrophe-normalised) invoke the
-    surplus notion? One predicate, two directions: the affirmative claim when
-    the state establishes nothing, the denial when it establishes something.
+    """Does ``line`` (already lowercased and apostrophe-normalised) invoke
+    the surplus notion as a CLAIM? One definition with its mirror
+    (:func:`_denies_surplus_notion` — the exact complement, same cues,
+    same negation): at least one cue occurrence the negation does not take
+    as its object. The fixed vocabulary is line-scoped; the verbal
+    relation is governed per occurrence (#2889).
     """
-    return bool(
-        _SURPLUS_NOTION_RE.search(line)
-        or _BEYOND_READING_RE.search(line)
-        or _CHANGED_CONCLUSION_RE.search(line)
+    if _negated_by_fixed_vocabulary(line):
+        return False
+    return any(
+        not _verbal_negation_governs(line, occurrence.start())
+        for occurrence in _cue_occurrences(line)
     )
 
 
 def _unsupported_surplus_claims(body: str) -> List[str]:
     """Affirmative surplus claims in ``body`` (stripped lines, deduplicated).
 
-    A line is a claim when any cue matches; a line carrying a negation
-    (the one definition, :func:`_carries_negation`) never is, whatever
-    else it says — the honest refusal and the scoped inventory (« sept
-    sophismes localisés », without the surplus notion) both pass untouched.
+    A line is a claim when at least one cue occurrence escapes the
+    negation (:func:`_claims_surplus_notion`, the one definition) — the
+    honest refusal and the scoped inventory (« sept sophismes localisés »,
+    without the surplus notion) both pass untouched.
     """
     claims: List[str] = []
     for raw_line in body.splitlines():
         line = raw_line.lower().replace(*_APOSTROPHE_NORMALISED)
-        if _carries_negation(line):
-            continue
         if not _claims_surplus_notion(line):
             continue
         stripped = raw_line.strip()
@@ -190,26 +242,41 @@ def _unsupported_surplus_claims(body: str) -> List[str]:
     return claims
 
 
+def _denies_surplus_notion(line: str) -> bool:
+    """The exact complement of :func:`_claims_surplus_notion`, on the same
+    line, the same cue list, the same negation definition: a cue is
+    present and EVERY occurrence is negated — the fixed vocabulary
+    anywhere in the line, or the verbal relation governing the occurrence
+    (#2889). A negated sentence about something else (« aucun sophisme
+    localisé n'est resté sans réponse ») is not a denial — the cue must be
+    there too.
+    """
+    occurrences = _cue_occurrences(line)
+    if not occurrences:
+        return False
+    if _negated_by_fixed_vocabulary(line):
+        return True
+    return all(
+        _verbal_negation_governs(line, occurrence.start()) for occurrence in occurrences
+    )
+
+
 def _denied_surplus_claims(body: str) -> List[str]:
     """Lines that DENY the surplus notion (stripped, deduplicated).
 
-    The exact complement of :func:`_unsupported_surplus_claims`' predicate —
-    same line scope, same cues, same negation definition
-    (:func:`_carries_negation`), only the side of the guard flips. Scan this
-    only when the state's re-derived surplus is established: there the denial
+    The mirror of :func:`_unsupported_surplus_claims` — the two scan
+    functions read the exact complementary predicates, never a negation
+    list for one direction and a regex for the other. Scan this only when
+    the state's re-derived surplus is established: there the denial
     asserts to the reader the opposite of what the analysis produced. The
     negation is the canonical refusal vocabulary the Acte III data block
-    itself carries for the empty case (completed by the verbal relation,
-    #2883), so an ordinary negated sentence about something else (« aucun
-    sophisme localisé n'est resté sans réponse ») is not a denial — the cue
-    must be there too.
+    itself carries for the empty case (completed by the governed verbal
+    relation, #2883/#2889).
     """
     denials: List[str] = []
     for raw_line in body.splitlines():
         line = raw_line.lower().replace(*_APOSTROPHE_NORMALISED)
-        if not _carries_negation(line):
-            continue
-        if not _claims_surplus_notion(line):
+        if not _denies_surplus_notion(line):
             continue
         stripped = raw_line.strip()
         if stripped and stripped not in denials:

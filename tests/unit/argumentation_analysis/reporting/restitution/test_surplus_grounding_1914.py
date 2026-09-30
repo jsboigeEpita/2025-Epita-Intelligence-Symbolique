@@ -376,3 +376,91 @@ class TestVerbalNegation2883:
         )
         thin = check_surplus_grounding(span, state_to_appendix_mapping(_thin_ns()))
         assert thin.band == "PASS"
+
+
+class TestVerbalNegationGovernance2889:
+    """#2889 retouche (review c.5912722961) — the verbal negation must
+    GOVERN the surplus notion as its object, within one clause.
+
+    The line-scoped reading of #2883's first cut let any « ne … pas » in
+    the line exempt a surplus cue found anywhere in it — including
+    affirmations: a surplus in subject position being QUALIFIED (« ne se
+    limite pas »), a restrictive (« pas seulement »), or a cue in another
+    clause. Each witness below is a line the coordinator measured on both
+    sides: **claim on main (`293f13252`), wrongly cleared on `dfcece59a`**
+    (thin direction), **not a denial on main, wrongly « Surplus démenti »
+    on `dfcece59a`** (grounded direction). Born-green on main,
+    born-red on `dfcece59a` — measured before the retouche.
+    """
+
+    # Review table lines 1–3: affirmations of the surplus that main read
+    # as claims (0 denied / 1 claim) and #2883's first cut cleared.
+    _SUBJECT_POSITION = (
+        "Le surplus interprétatif ne se limite pas aux compteurs : "
+        "l'exclusion de Dung modifie la conclusion."
+    )
+    _RESTRICTIVE = (
+        "Ce surplus interprétatif ne repose pas seulement sur le LLM : "
+        "la réfutation formelle le porte."
+    )
+    _OTHER_CLAUSE = (
+        "La lecture ne s'arrête pas au texte : un surplus interprétatif "
+        "décisif apparaît."
+    )
+
+    def test_subject_position_still_claims_on_thin_state(self):
+        """A surplus notion in SUBJECT position is being qualified, not
+        negated — « Le surplus interprétatif ne se limite pas » asserts
+        the surplus. On a thin state this stays an unsupported claim."""
+        verdict = check_surplus_grounding(
+            self._SUBJECT_POSITION, state_to_appendix_mapping(_thin_ns())
+        )
+        assert verdict.band == "FAIL", (
+            "a surplus qualified from subject position is an assertion — "
+            "the verbal negation after it does not govern the notion"
+        )
+        assert any("Surplus non étayé" in r for r in verdict.reasons)
+
+    def test_subject_position_is_not_a_denial_on_grounded_state(self):
+        """Same line, grounded state: it asserts the surplus, so it must
+        not be read as « Surplus démenti »."""
+        verdict = check_surplus_grounding(
+            self._SUBJECT_POSITION, state_to_appendix_mapping(_grounded_ns())
+        )
+        assert verdict.band == "PASS"
+
+    def test_restrictive_still_claims_on_thin_state(self):
+        """Restrictive negations are affirmative — « ne repose pas
+        seulement sur le LLM » says the surplus exists and goes further.
+        Still an unsupported claim on a thin state."""
+        verdict = check_surplus_grounding(
+            self._RESTRICTIVE, state_to_appendix_mapping(_thin_ns())
+        )
+        assert verdict.band == "FAIL"
+        assert any("Surplus non étayé" in r for r in verdict.reasons)
+
+    def test_restrictive_is_not_a_denial_on_grounded_state(self):
+        """Same line, grounded state: a restrictive affirms the surplus,
+        never denies it."""
+        verdict = check_surplus_grounding(
+            self._RESTRICTIVE, state_to_appendix_mapping(_grounded_ns())
+        )
+        assert verdict.band == "PASS"
+
+    def test_other_clause_still_claims_on_thin_state(self):
+        """A negation in one clause does not govern a cue after the colon
+        — « La lecture ne s'arrête pas au texte : un surplus … apparaît »
+        claims the surplus in its own clause."""
+        verdict = check_surplus_grounding(
+            self._OTHER_CLAUSE, state_to_appendix_mapping(_thin_ns())
+        )
+        assert verdict.band == "FAIL"
+        assert any("Surplus non étayé" in r for r in verdict.reasons)
+
+    def test_other_clause_is_not_a_denial_on_grounded_state(self):
+        """Same line, grounded state: the negation stops at the clause
+        break — the second clause's cue is not its object."""
+        verdict = check_surplus_grounding(
+            self._OTHER_CLAUSE, state_to_appendix_mapping(_grounded_ns())
+        )
+        assert verdict.band == "PASS"
