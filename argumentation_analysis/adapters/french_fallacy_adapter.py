@@ -33,6 +33,7 @@ from argumentation_analysis.utils.taxonomy_tree import (
     taxonomy_parent_path,
     taxonomy_root_path,
 )
+from argumentation_analysis.services.llm_cache import cached_raw_chat_completion
 
 logger = logging.getLogger(__name__)
 
@@ -1397,7 +1398,8 @@ class LLMFallacyDetector:
             from argumentation_analysis.core.llm_service import get_determinism_params
 
             det_params = get_determinism_params(model_id=model)
-            response = await client.chat.completions.create(
+            response = await cached_raw_chat_completion(
+                client,
                 model=model,
                 messages=[
                     {"role": "system", "content": self.SYSTEM_PROMPT},

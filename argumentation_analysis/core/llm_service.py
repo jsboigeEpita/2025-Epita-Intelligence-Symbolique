@@ -572,9 +572,9 @@ def _wrap_with_llm_cache(
     # conversational & cluedo orchestration modes, which reach the OpenAI API
     # through the kernel service and BYPASS the direct-path funnel
     # ``_guarded_chat_completion`` wired in PR1) are replayed from the same disk
-    # cache. Inert in off mode (no wrapping, zero behavior change); record
-    # persists the response, replay raises ``LLMCacheMiss`` on a miss (fail-loud
-    # — never a silent live call, anti-théâtre #1019). Mirrors
+    # cache. Record persists the response, replay raises ``LLMCacheMiss`` on a
+    # miss (fail-loud — never a silent live call, anti-théâtre #1019); off is a
+    # passthrough that still accounts usage (#2849, see below). Mirrors
     # ``_guarded_chat_completion`` (PR1, direct path). Both layers share
     # CACHE_DIR, so one record run seeds every call site and one replay run
     # replays every call site (BO-3 determinism DoD).
@@ -584,15 +584,20 @@ def _wrap_with_llm_cache(
     # so both non-streaming entry points are intercepted. Streaming is out of
     # scope (same boundary as the direct path).
     from argumentation_analysis.services.llm_cache import (
-        OFF,
         CachedChatCompletion,
         get_cache_mode,
     )
 
+    # #2849 — the SK service is wrapped in EVERY cache mode, off included. In
+    # off mode (a real paid run — exactly when usage matters most) the wrapper
+    # was previously skipped, so every SK call bypassed the one accounting
+    # point: the #2841 pass logged usage for 44 of its client-direct calls and
+    # none of its SK calls. In off mode ``CachedChatCompletion`` stays an inert
+    # passthrough (no cache, no behavior change) that still counts the live
+    # round-trips and their tokens.
     cache_mode = get_cache_mode()
-    if cache_mode != OFF:
-        llm_instance = CachedChatCompletion(inner=llm_instance, mode=cache_mode)
-        logger.info(f"Service LLM SK wrappé avec cache (mode={cache_mode}).")
+    llm_instance = CachedChatCompletion(inner=llm_instance, mode=cache_mode)
+    logger.info(f"Service LLM SK wrappé avec cache (mode={cache_mode}).")
 
     return llm_instance
 

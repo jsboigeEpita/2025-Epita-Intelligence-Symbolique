@@ -18,8 +18,14 @@ class SemanticArgumentAnalyzer:
         # Correction: Instancier un client AsyncOpenAI pour configurer l'URL de base
         client = build_async_openai_client(base_url=api_base_url, api_key="EMPTY")
 
-        # Migration API Semantic Kernel: add_chat_service -> add_service
-        service = OpenAIChatCompletion(ai_model_id=model_name, async_client=client)
+        # Migration API Semantic Kernel: add_chat_service -> add_service.
+        # #2849 — wrapped so the service passes through the one accounting
+        # point (inert passthrough in off mode, usage still counted).
+        from argumentation_analysis.core.llm_service import _wrap_with_llm_cache
+
+        service = _wrap_with_llm_cache(
+            OpenAIChatCompletion(ai_model_id=model_name, async_client=client)
+        )
         self.kernel.add_service(service)
 
         # No plugin detour (#2145): ToulminPlugin's only function raises

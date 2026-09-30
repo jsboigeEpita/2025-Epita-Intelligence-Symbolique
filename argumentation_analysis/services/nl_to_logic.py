@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from argumentation_analysis.core.llm_service import resolve_chat_endpoint
 from argumentation_analysis.core.reading_window import selected_text
+from argumentation_analysis.services.llm_cache import cached_raw_chat_completion
 
 logger = logging.getLogger(__name__)
 
@@ -423,7 +424,8 @@ class NLToLogicTranslator:
                     )
                     messages.append({"role": "user", "content": retry_msg})
 
-                response = await client.chat.completions.create(
+                response = await cached_raw_chat_completion(
+                    client,
                     model=model_id,
                     messages=messages,
                 )

@@ -24,6 +24,7 @@ from argumentation_analysis.utils.taxonomy_local_overrides import (
     purge_rows,
     render_alias,
 )
+from argumentation_analysis.services.llm_cache import cached_raw_chat_completion
 
 logger = logging.getLogger("fallacy_benchmark")
 
@@ -571,7 +572,8 @@ class FallacyBenchmarkRunner:
         api_key, base_url, model_id = resolve_chat_endpoint()
 
         client = build_async_openai_client(api_key=api_key, base_url=base_url)
-        response = await client.chat.completions.create(
+        response = await cached_raw_chat_completion(
+            client,
             model=model_id,
             messages=[
                 {
@@ -614,7 +616,8 @@ class FallacyBenchmarkRunner:
         taxonomy_text = "\n".join(taxonomy_ref)
 
         client = build_async_openai_client(api_key=api_key, base_url=base_url)
-        response = await client.chat.completions.create(
+        response = await cached_raw_chat_completion(
+            client,
             model=model_id,
             messages=[
                 {
@@ -655,8 +658,12 @@ class FallacyBenchmarkRunner:
         api_key, base_url, model_id = resolve_chat_endpoint()
 
         async_client = build_async_openai_client(api_key=api_key, base_url=base_url)
-        llm_service = OpenAIChatCompletion(
-            ai_model_id=model_id, async_client=async_client
+        from argumentation_analysis.core.llm_service import _wrap_with_llm_cache
+
+        # #2849 — a raw SK service would bypass the one accounting point; the
+        # wrapper is an inert passthrough in off mode that still counts usage.
+        llm_service = _wrap_with_llm_cache(
+            OpenAIChatCompletion(ai_model_id=model_id, async_client=async_client)
         )
         kernel = Kernel()
         kernel.add_service(llm_service)

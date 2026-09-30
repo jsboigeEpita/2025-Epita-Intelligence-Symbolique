@@ -7,7 +7,8 @@ orchestrator, the CLI). PR2 wraps its returned service with
 as the direct path (PR1, ``_guarded_chat_completion``). These tests assert the
 wiring CONTRACT with ``OpenAIChatCompletion`` patched out (no API key needed):
 
-- off mode  → service returned UNWRAPPED (zero behavior change)
+- off mode  → wrapped for usage accounting only (#2849): live-only passthrough,
+              the cache stays inert (no read, no write)
 - record    → wrapped with CachedChatCompletion(mode=record)
 - replay    → wrapped with CachedChatCompletion(mode=replay)
 - mock path → NOT wrapped (mocks are deterministic by nature; they return early)
@@ -17,9 +18,16 @@ fail-loud on miss) lives in
 ``tests/integration/orchestration/test_replay_cache_sk_path.py``.
 """
 
+from typing import List
 from unittest.mock import patch
 
 import pytest
+
+from semantic_kernel.connectors.ai.chat_completion_client_base import (
+    ChatCompletionClientBase,
+)
+from semantic_kernel.contents.chat_history import ChatHistory
+from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
 from argumentation_analysis.services.llm_cache import (
     OFF,
@@ -68,18 +76,23 @@ def _build(monkeypatch, tmp_path, mode):
         )
 
 
-def test_off_mode_no_wrapping(monkeypatch, tmp_path):
+def test_off_mode_wraps_for_accounting_without_caching(monkeypatch, tmp_path):
+    """#2849: off mode wraps too — the envelope is a live-only passthrough
+    that accounts token usage; the old OFF hole meant cache-off runs were paid
+    but never counted. The cache itself stays inert in off mode (no read, no
+    write — pinned end-to-end in test_llm_usage_accounting_2849.py)."""
     service = _build(monkeypatch, tmp_path, OFF)
-    assert not isinstance(service, CachedChatCompletion), (
-        "off mode must NOT wrap the SK service (zero behavior change)"
-    )
+    assert isinstance(
+        service, CachedChatCompletion
+    ), "off mode must wrap the SK service for usage accounting (#2849)"
+    assert service.mode == OFF
 
 
 def test_record_mode_wraps(monkeypatch, tmp_path):
     service = _build(monkeypatch, tmp_path, RECORD)
-    assert isinstance(service, CachedChatCompletion), (
-        "record mode must wrap the SK service with CachedChatCompletion (PR2)"
-    )
+    assert isinstance(
+        service, CachedChatCompletion
+    ), "record mode must wrap the SK service with CachedChatCompletion (PR2)"
     assert service.mode == RECORD
 
 
@@ -98,3 +111,77 @@ def test_mock_path_not_wrapped(monkeypatch):
 
     service = create_llm_service(service_id="test", model_id="m")
     assert not isinstance(service, CachedChatCompletion)
+
+
+# ─── #2853 review item 1 — the wrapper must stream in off mode ────────────
+#
+# Measured offline by the coordinator: ``get_streaming_chat_message_contents``
+# is defined on ``ChatCompletionClientBase``, so it resolves on the wrapper
+# BEFORE ``__getattr__`` and raises NotImplementedError. Real runs stream
+# through it (Sherlock ``kernel.invoke_stream``, the agent channels'
+# ``agent.invoke_stream``) — an "inert passthrough" that cannot stream breaks
+# every off-mode run.
+
+
+class _StreamingFakeInner(ChatCompletionClientBase):
+    """Inner SK service with a measurable streaming implementation."""
+
+    SUPPORTS_FUNCTION_CALLING = True
+
+    def __init__(self, chunks: List[str]) -> None:
+        super().__init__(service_id="fake-streaming", ai_model_id="fake-model")
+        object.__setattr__(self, "_chunks", chunks)
+        object.__setattr__(self, "stream_calls", 0)
+
+    async def get_chat_message_contents(self, chat_history, settings=None, **kwargs):
+        return [ChatMessageContent(role="assistant", content="".join(self._chunks))]
+
+    async def _inner_get_streaming_chat_message_contents(
+        self, chat_history, settings=None, **kwargs
+    ):
+        object.__setattr__(self, "stream_calls", self.stream_calls + 1)
+        for chunk in self._chunks:
+            yield [ChatMessageContent(role="assistant", content=chunk)]
+
+    @classmethod
+    def get_prompt_execution_settings_class(cls):
+        from semantic_kernel.connectors.ai.open_ai.prompt_execution_settings.open_ai_prompt_execution_settings import (
+            OpenAIChatPromptExecutionSettings,
+        )
+
+        return OpenAIChatPromptExecutionSettings
+
+
+async def test_the_wrapper_streams_what_the_inner_streams():
+    """#2853: the streaming override must delegate to the inner service —
+    the call must NOT resolve on the base class and raise NotImplementedError."""
+    inner = _StreamingFakeInner(["chunk-un", "chunk-deux"])
+    wrapper = CachedChatCompletion(inner=inner, mode=OFF)
+
+    from semantic_kernel.connectors.ai.prompt_execution_settings import (
+        PromptExecutionSettings,
+    )
+
+    history = ChatHistory(
+        messages=[ChatMessageContent(role="user", content="question")]
+    )
+    streamed = []
+    async for group in wrapper.get_streaming_chat_message_contents(
+        chat_history=history, settings=PromptExecutionSettings()
+    ):
+        streamed.extend(m.content for m in group)
+
+    assert streamed == ["chunk-un", "chunk-deux"]
+    assert inner.stream_calls == 1, "the inner service must have been streamed"
+
+
+def test_the_wrapper_forwards_the_inner_class_contract():
+    """#2853 item 2: two class-level attributes the agents read must not flip
+    behind the wrapper — ``SUPPORTS_FUNCTION_CALLING`` and the settings class."""
+    inner = _StreamingFakeInner(["x"])
+    wrapper = CachedChatCompletion(inner=inner, mode=OFF)
+    assert wrapper.SUPPORTS_FUNCTION_CALLING is inner.SUPPORTS_FUNCTION_CALLING
+    assert (
+        wrapper.get_prompt_execution_settings_class()
+        is inner.get_prompt_execution_settings_class()
+    )

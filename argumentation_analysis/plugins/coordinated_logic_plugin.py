@@ -18,6 +18,7 @@ from semantic_kernel.functions import kernel_function
 
 from argumentation_analysis.core.llm_service import resolve_chat_endpoint
 from argumentation_analysis.core.reading_window import selected_text
+from argumentation_analysis.services.llm_cache import cached_raw_chat_completion
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +135,8 @@ class CoordinatedLogicPlugin:
         )
 
         try:
-            resp = await client.chat.completions.create(
+            resp = await cached_raw_chat_completion(
+                client,
                 model=model_id,
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -195,7 +197,8 @@ class CoordinatedLogicPlugin:
         )
 
         try:
-            resp = await client.chat.completions.create(
+            resp = await cached_raw_chat_completion(
+                client,
                 model=model_id,
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -276,7 +279,8 @@ class CoordinatedLogicPlugin:
         )
 
         try:
-            resp = await client.chat.completions.create(
+            resp = await cached_raw_chat_completion(
+                client,
                 model=model_id,
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -348,7 +352,8 @@ class CoordinatedLogicPlugin:
         )
 
         try:
-            resp = await client.chat.completions.create(
+            resp = await cached_raw_chat_completion(
+                client,
                 model=model_id,
                 messages=[{"role": "user", "content": prompt}],
             )
@@ -410,7 +415,8 @@ class CoordinatedLogicPlugin:
         )
 
         try:
-            resp = await client.chat.completions.create(
+            resp = await cached_raw_chat_completion(
+                client,
                 model=model_id,
                 messages=[{"role": "user", "content": prompt}],
             )

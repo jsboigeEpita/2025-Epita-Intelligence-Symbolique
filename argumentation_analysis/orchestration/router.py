@@ -23,6 +23,7 @@ from argumentation_analysis.orchestration.workflow_dsl import (
     WorkflowBuilder,
     WorkflowDefinition,
 )
+from argumentation_analysis.services.llm_cache import cached_raw_chat_completion
 
 logger = logging.getLogger(__name__)
 
@@ -258,7 +259,8 @@ class TextAnalysisRouter:
         system_prompt = ROUTING_SYSTEM_PROMPT.format(capability_list=cap_list_str)
         user_prompt = f"Text to analyze:\n\n{text[:LLM_TEXT_LIMIT]}"
 
-        response = await client.chat.completions.create(
+        response = await cached_raw_chat_completion(
+            client,
             model=self._model,
             messages=[
                 {"role": "system", "content": system_prompt},

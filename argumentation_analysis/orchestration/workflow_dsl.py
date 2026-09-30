@@ -927,18 +927,28 @@ class WorkflowExecutor:
             output = None
             attempts = 1
             if provider.invoke is not None:
-                if phase.loop_config is not None:
-                    output = await self._execute_loop(
-                        phase,
-                        provider,
-                        phase_input,
-                        ctx,
-                        phase.loop_config,
-                    )
-                else:
-                    output, attempts = await self._invoke_with_retry(
-                        phase, provider, phase_input, ctx
-                    )
+                # #2849 — every LLM call the provider makes during this phase
+                # is attributed to it in the per-run usage accounting (a call
+                # outside any phase lands under "(unattributed)", never
+                # silently dropped). A context variable, so concurrent phases
+                # each carry their own name into their awaited calls.
+                from argumentation_analysis.services.llm_cache import (
+                    llm_usage_phase,
+                )
+
+                with llm_usage_phase(phase_name):
+                    if phase.loop_config is not None:
+                        output = await self._execute_loop(
+                            phase,
+                            provider,
+                            phase_input,
+                            ctx,
+                            phase.loop_config,
+                        )
+                    else:
+                        output, attempts = await self._invoke_with_retry(
+                            phase, provider, phase_input, ctx
+                        )
             else:
                 logger.warning(
                     f"Phase '{phase_name}': component '{provider.name}' "

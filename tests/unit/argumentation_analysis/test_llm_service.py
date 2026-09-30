@@ -62,8 +62,11 @@ class TestLLMService:
         )
 
         assert service is not None, "Le service LLM ne devrait pas être None."
+        # #2849 : le service authentique est toujours enveloppé par la
+        # comptabilité d'usage ; le type SK vivant est le service interne.
+        inner = getattr(service, "_inner", service)
         assert isinstance(
-            service, OpenAIChatCompletion
+            inner, OpenAIChatCompletion
         ), "Le service devrait être une instance de OpenAIChatCompletion."
 
         # Le modèle attendu dépend du provider actif : en mode OpenRouter

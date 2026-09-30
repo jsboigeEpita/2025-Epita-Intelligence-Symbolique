@@ -73,11 +73,15 @@ def test_an_azure_only_seat_gets_its_service(azure_seat):
     """The seat ``.env.example`` documents for Azure: no OpenAI key at all."""
     service = _azure_service()
 
-    assert isinstance(service, AzureChatCompletion)
-    assert service.service_id == "azure_svc"
-    assert service.client.api_key == AZURE_KEY
-    assert str(service.client.base_url).startswith(AZURE_ENDPOINT)
-    assert service.ai_model_id == AZURE_DEPLOYMENT
+    # #2849: the service is always wrapped in the accounting envelope; the
+    # Azure wiring this test pins lives on the inner SK service (the wrapped
+    # cache test below asserts the envelope half).
+    inner = getattr(service, "_inner", service)
+    assert isinstance(inner, AzureChatCompletion)
+    assert inner.service_id == "azure_svc"
+    assert inner.client.api_key == AZURE_KEY
+    assert str(inner.client.base_url).startswith(AZURE_ENDPOINT)
+    assert inner.ai_model_id == AZURE_DEPLOYMENT
 
 
 def test_the_openai_key_never_reaches_azure(azure_seat):
@@ -155,5 +159,7 @@ def test_the_openai_path_is_unchanged(azure_seat):
 
     service = create_llm_service("openai_svc", force_authentic=True)
 
-    assert isinstance(service, OpenAIChatCompletion)
-    assert service.client.api_key == OPENAI_KEY
+    # #2849: unwrap the always-on accounting envelope (see above).
+    inner = getattr(service, "_inner", service)
+    assert isinstance(inner, OpenAIChatCompletion)
+    assert inner.client.api_key == OPENAI_KEY

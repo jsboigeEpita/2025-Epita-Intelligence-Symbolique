@@ -19,6 +19,7 @@ import logging
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from argumentation_analysis.core.reading_window import selected_text
+from argumentation_analysis.services.llm_cache import cached_raw_chat_completion
 
 logger = logging.getLogger("StakesExtractor")
 
@@ -33,7 +34,7 @@ async def _default_chat_completion(client: Any, **kwargs: Any) -> Any:
     the orchestration layer (no specialist imports the orchestrator) while
     still funnelling through the circuit-breaker in production.
     """
-    return await client.chat.completions.create(**kwargs)
+    return await cached_raw_chat_completion(client, **kwargs)
 
 
 EXTRACTION_PROMPT = (

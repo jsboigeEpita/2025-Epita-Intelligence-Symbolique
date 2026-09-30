@@ -13,6 +13,7 @@ from argumentation_analysis.core.reading_window import selected_text
 from argumentation_analysis.core.utils.llm_completion_guard import (
     assert_not_reasoning_starved,
 )
+from argumentation_analysis.services.llm_cache import cached_raw_chat_completion_sync
 
 
 class LLMValidatorUnavailable(RuntimeError):
@@ -86,7 +87,7 @@ class LLMValidatorLayer(ShieldLayer):
         from openai import OpenAI
 
         client = OpenAI(api_key=self._api_key, base_url=self._base_url)
-        response = client.chat.completions.create(
+        response = cached_raw_chat_completion_sync(client,
             model=self._model,
             messages=[
                 {

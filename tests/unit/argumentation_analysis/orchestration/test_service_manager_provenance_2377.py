@@ -439,8 +439,26 @@ os.environ["OPENAI_API_KEY"] = "sk-not-a-real-key"
 
 service = create_llm_service(service_id="openai")
 
+# #2849 : la fabrique enveloppe désormais TOUJOURS son service dans
+# CachedChatCompletion (point de comptabilité — passthrough inerte en mode
+# off). Le siège mesure le service CONSTRUIT, pas l'enveloppe : dérouler
+# ``_inner`` quand elle est là. Sans elle (fabrique nue), le service est
+# mesuré tel quel — l'assertion de type du test tient dans les deux mondes.
+inner = getattr(service, "_inner", service)
+
+# #2853 review item 2 : garder aussi la mesure de ce que les APPELANTS
+# reçoivent réellement — l'enveloppe. ``service.ai_model_id`` doit déléguer à
+# l'inner via ``__getattr__`` ; c'est le témoin que le type retourné par la
+# fabrique (désormais le wrapper) sert toujours le même contrat.
+wrapper_ai_model_id = service.ai_model_id
+
 Path(os.environ["_SEAT_OUT"]).write_text(
-    json.dumps({"ai_model_id": service.ai_model_id, "type": type(service).__name__}),
+    json.dumps({
+        "ai_model_id": inner.ai_model_id,
+        "type": type(inner).__name__,
+        "wrapper_ai_model_id": wrapper_ai_model_id,
+        "wrapper_type": type(service).__name__,
+    }),
     encoding="utf-8",
 )
 """
@@ -491,6 +509,10 @@ def test_the_factory_fallback_renders_the_same_default(tmp_path):
     # Non-vacuité : la fabrique a bien rendu un service porteur de ce champ
     # (le cache LLM est neutralisé, sinon on mesurerait l'enveloppe).
     assert measured["ai_model_id"], measured
+
+    # #2853 review item 2 : l'enveloppe sert le même contrat que l'inner — les
+    # appelants reçoivent ``service.ai_model_id`` délégué via ``__getattr__``.
+    assert measured["wrapper_ai_model_id"] == measured["ai_model_id"], measured
     assert not measured["type"].startswith("Cached"), measured
     assert measured["ai_model_id"] == DEFAULT_CHAT_MODEL_ID
     assert measured["ai_model_id"] != "default", (

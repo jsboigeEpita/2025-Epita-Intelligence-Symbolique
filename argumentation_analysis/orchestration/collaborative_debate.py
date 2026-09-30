@@ -25,6 +25,7 @@ from argumentation_analysis.core.reading_window import (
     reading_state_from_context,
     selected_text,
 )
+from argumentation_analysis.services.llm_cache import cached_raw_chat_completion
 
 logger = logging.getLogger("CollaborativeDebate")
 
@@ -247,7 +248,8 @@ async def _run_agent_role(
     """Run a single agent role via LLM and parse JSON response."""
     role_def = COLLABORATIVE_ROLES[role]
     try:
-        response = await client.chat.completions.create(
+        response = await cached_raw_chat_completion(
+            client,
             model=model_id,
             messages=[
                 {"role": "system", "content": role_def["system_prompt"]},

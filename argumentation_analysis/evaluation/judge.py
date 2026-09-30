@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from argumentation_analysis.core.reading_window import selected_text
+from argumentation_analysis.services.llm_cache import cached_raw_chat_completion
 
 logger = logging.getLogger("evaluation.judge")
 
@@ -127,7 +128,8 @@ class LLMJudge:
 
             client = build_async_openai_client(api_key=api_key, base_url=base_url)
 
-            response = await client.chat.completions.create(
+            response = await cached_raw_chat_completion(
+                client,
                 model=model_id,
                 messages=[
                     {"role": "system", "content": JUDGE_SYSTEM_PROMPT},
