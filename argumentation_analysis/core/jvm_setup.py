@@ -89,6 +89,15 @@ _jvm_lock = threading.Lock()
 # corresponding Tweety reasoner with the correct constructor argument (#1196).
 EXTERNAL_TOOL_PATHS: dict[str, str] = {}
 
+# Version of the clingo binary actually registered (#2852) — the pin is
+# ``settings.jvm.clingo_version``; PATH order never decides which solver the
+# JVM receives.
+EXTERNAL_TOOL_VERSIONS: dict[str, str] = {}
+# Named rejections when no compatible clingo was found (#2852 "say so"): the
+# incompatible binaries stay installed, but the registry says WHY nothing was
+# wired instead of silently registering the wrong one.
+EXTERNAL_TOOL_REJECTIONS: dict[str, str] = {}
+
 # --- Gestion d'état de la JVM ---
 _JVM_INITIALIZED_THIS_SESSION = False
 _JVM_WAS_SHUTDOWN = False
@@ -326,10 +335,12 @@ def download_clingo(version: str = None, target_dir: Optional[Path] = None) -> b
         logger.info(f"Clingo binary already present: {clingo_exe}")
         return True
 
-    # Check if available in system PATH
+    # Check if available in system PATH — but only when it IS the wanted
+    # version (#2852): a 5.8 binary on PATH is not a 5.4 provision, and the
+    # previous shortcut reported success without provisioning anything.
     system_clingo = shutil.which("clingo") or shutil.which("clingo.exe")
-    if system_clingo:
-        logger.info(f"Clingo found in system PATH: {system_clingo}")
+    if system_clingo and probe_clingo_version(Path(system_clingo)) == version:
+        logger.info(f"Clingo {version} found in system PATH: {system_clingo}")
         return True
 
     logger.info(f"Downloading Clingo {version} for {platform.system()}...")
@@ -711,6 +722,141 @@ def get_jvm_options() -> List[str]:
     return options
 
 
+def probe_clingo_version(binary: Path) -> Optional[str]:
+    """Run ``<binary> --version`` and return the parsed clingo version.
+
+    Returns ``None`` when the binary cannot run or prints no banner: a mute
+    clingo (``--version`` rc 0, zero output — the conda-forge binary measured
+    on po-2025, #2851) decides nothing while appearing present.
+    """
+    try:
+        result = subprocess.run(
+            [str(binary), "--version"],
+            capture_output=True,
+            text=True,
+            timeout=20,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    match = re.search(
+        r"clingo version (\d+\.\d+\.\d+)", (result.stdout or "") + (result.stderr or "")
+    )
+    return match.group(1) if match else None
+
+
+class ClingoSelection:
+    """Outcome of the #2852 version-based clingo selection."""
+
+    __slots__ = ("binary", "version", "rejections", "provisioned")
+
+    def __init__(
+        self,
+        binary: Optional[Path],
+        version: Optional[str],
+        rejections: Sequence[str],
+        provisioned: bool,
+    ):
+        self.binary = binary
+        self.version = version
+        self.rejections = tuple(rejections)
+        self.provisioned = provisioned
+
+
+def enumerate_clingo_candidates(ext_dir: Optional[Path] = None) -> List[Path]:
+    """Candidate clingo binaries, seat-owned first (deterministic), then PATH.
+
+    The order only breaks ties between same-version binaries; the version
+    decides the selection (#2852).
+    """
+    ext_dir = ext_dir or EXT_TOOLS_DIR
+    exe_suffix = ".exe" if platform.system() == "Windows" else ""
+    candidates = [ext_dir / f"clingo/clingo{exe_suffix}"]
+    on_path = shutil.which("clingo")
+    if on_path:
+        candidates.append(Path(on_path))
+    return candidates
+
+
+def select_clingo_binary(
+    candidates: Optional[Sequence[Path]] = None,
+    wanted: Optional[str] = None,
+    ext_dir: Optional[Path] = None,
+    provision: bool = True,
+) -> ClingoSelection:
+    """Pick the clingo binary Tweety receives BY VERSION, not by PATH (#2852).
+
+    Every candidate is probed with ``--version``; the first one reporting
+    ``wanted`` (default ``settings.jvm.clingo_version`` — the version whose
+    output banner Tweety's ClingoSolver parser handles) wins, whatever the
+    PATH order. When none matches and ``provision`` is set, ``download_clingo``
+    provisions the pinned version into ``ext_tools`` and the provisioned
+    binary is re-probed. The return always names what was rejected and why —
+    "say so" when only incompatible binaries exist.
+    """
+    wanted = wanted or CLINGO_VERSION
+    probed = (
+        list(candidates)
+        if candidates is not None
+        else enumerate_clingo_candidates(ext_dir)
+    )
+    rejections: List[str] = []
+    for candidate in probed:
+        if not candidate.exists():
+            continue
+        version = probe_clingo_version(candidate)
+        if version == wanted:
+            return ClingoSelection(candidate.resolve(), version, rejections, False)
+        reason = version or "no version banner"
+        rejections.append(f"{candidate} -> {reason} (wanted {wanted})")
+    if provision and download_clingo(wanted):
+        exe_suffix = ".exe" if platform.system() == "Windows" else ""
+        provisioned = (ext_dir or EXT_TOOLS_DIR) / f"clingo/clingo{exe_suffix}"
+        version = probe_clingo_version(provisioned)
+        if version == wanted:
+            return ClingoSelection(provisioned.resolve(), version, rejections, True)
+        if version:
+            rejections.append(f"{provisioned} -> {version} (wanted {wanted})")
+    return ClingoSelection(None, None, rejections, False)
+
+
+def quarantine_nonpe_clingo_sibling(directory: Path) -> Optional[str]:
+    """Rename a leftover non-Windows ``clingo`` file out of the JVM's way.
+
+    Measured on po-2025 (#2851): a Linux ELF binary named ``clingo`` sat next
+    to ``clingo.exe`` in ``ext_tools/clingo``; the JVM executes
+    ``<dir>/clingo`` verbatim — CreateProcess never appends ``.exe`` to a path
+    that already resolves to a file — and fails with error=193 ("not a valid
+    Win32 application"). The sibling is RENAMED, never deleted: restoring it
+    is one ``mv`` away. Returns the quarantine path, or ``None`` when there
+    was nothing to do.
+    """
+    if platform.system() != "Windows":
+        return None
+    sibling = directory / "clingo"
+    if not sibling.is_file():
+        return None
+    try:
+        with sibling.open("rb") as fh:
+            head = fh.read(2)
+    except OSError:
+        return None
+    if head == b"MZ":
+        return None  # a real Windows executable — leave it alone
+    target = directory / "clingo.nonpe"
+    if target.exists():
+        return None  # already quarantined
+    try:
+        sibling.rename(target)
+    except OSError as exc:
+        logger.warning(f"Could not quarantine non-PE clingo sibling {sibling}: {exc}")
+        return None
+    logger.warning(
+        f"Quarantined {sibling} -> {target}: not a Windows executable, and the "
+        "JVM clingo run executed it verbatim (CreateProcess error=193) (#2852)"
+    )
+    return str(target)
+
+
 def _configure_external_tools():
     """
     Auto-detect and configure external reasoning tools for Tweety.
@@ -744,20 +890,38 @@ def _configure_external_tools():
     tools_found = {}
     exe_suffix = ".exe" if platform.system() == "Windows" else ""
 
-    # Clingo — ASP solver (Tweety expects the DIRECTORY containing the binary)
-    for candidate in [
-        shutil.which("clingo"),
-        str(EXT_TOOLS_DIR / f"clingo/clingo{exe_suffix}"),
-    ]:
-        if candidate and Path(candidate).exists():
-            tools_found["clingo"] = str(Path(candidate).parent.resolve())
-            break
+    # Clingo — ASP solver (Tweety expects the DIRECTORY containing the binary).
+    # #2852: the binary is chosen BY VERSION, not by PATH. PATH order let the
+    # machine's environment decide which solver the JVM received: the conda
+    # 5.8.0 mis-parses through Tweety (ai-01), a mute conda binary decides
+    # nothing while appearing present (po-2025). Every candidate is probed
+    # with ``--version``; the one matching settings.jvm.clingo_version wins;
+    # a missing one is provisioned; an incompatible-only situation is said
+    # (named rejection), never silently registered.
+    selection = select_clingo_binary()
+    if selection.binary is not None:
+        quarantine_nonpe_clingo_sibling(selection.binary.parent)
+        tools_found["clingo"] = str(selection.binary.parent.resolve())
+        EXTERNAL_TOOL_VERSIONS["clingo"] = selection.version or ""
+        logger.info(
+            f"Clingo {selection.version} selected for Tweety "
+            f"(wanted {CLINGO_VERSION}, provisioned={selection.provisioned}): "
+            f"{selection.binary}"
+        )
     else:
-        # Try auto-downloading Clingo if not found
-        if download_clingo():
-            clingo_path = EXT_TOOLS_DIR / f"clingo/clingo{exe_suffix}"
-            if clingo_path.exists():
-                tools_found["clingo"] = str(clingo_path.parent.resolve())
+        # Drop any registration a previous configure wrote in this process —
+        # a stale entry would keep handing the JVM a binary that no longer
+        # matches the pin.
+        EXTERNAL_TOOL_PATHS.pop("clingo", None)
+        EXTERNAL_TOOL_REJECTIONS["clingo"] = (
+            "; ".join(selection.rejections)
+            or f"no candidate found (wanted {CLINGO_VERSION})"
+        )
+        logger.warning(
+            f"No clingo {CLINGO_VERSION} binary available for Tweety — the JVM "
+            f"ClingoSolver will NOT be registered; probed: "
+            f"{EXTERNAL_TOOL_REJECTIONS['clingo']}"
+        )
 
     # SPASS — Modal logic theorem prover.
     # #1234: Tweety 1.29's SPASSMlReasoner emits the DFG special-formulae logic
