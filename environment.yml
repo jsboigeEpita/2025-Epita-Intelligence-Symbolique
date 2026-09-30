@@ -55,6 +55,14 @@ dependencies:
   # flask stays satisfied (>=3.1.0), one provider remains, and the runtime is
   # exactly what CI runs today.
   - werkzeug<3.1.2
+  # #2884: semantic-kernel 1.44.0 (pip section) pins websockets >=13,<16,
+  # while the conda solve serves uvicorn-standard with websockets 16.1.1 —
+  # two providers of one name (CI installs conda then pip, so the pip files
+  # overwrite the conda ones). Pinned conda-side <16: uvicorn-standard's
+  # >=10.4 stays satisfied, one provider remains, and the runtime keeps the
+  # 15.x line CI was effectively running. Guarded by
+  # tests/unit/test_conda_lock_single_provider_2884.py.
+  - websockets<16
   - requests
   - fastapi
   - uvicorn
