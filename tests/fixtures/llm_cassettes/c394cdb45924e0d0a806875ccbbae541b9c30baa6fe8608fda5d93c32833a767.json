@@ -1,0 +1,48 @@
+{
+  "key": "c394cdb45924e0d0a806875ccbbae541b9c30baa6fe8608fda5d93c32833a767",
+  "value": {
+    "id": "chatcmpl-ETpbtVcmTKvxdUqcb32SVS2WET8s1",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"La vaccination est défendue parce que des taux de vaccination élevés protègent indirectement les personnes qui ne peuvent pas être vaccinées grâce à l’immunité collective.\",\"digressions\":\"« L'argument selon lequel les produits pharmaceutiques cachent les effets secondaires est une théorie du complot sans fondement. »\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790778609,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 245,
+      "prompt_tokens": 266,
+      "total_tokens": 511,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 160,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_IX69tGWIcKS5JNazZ2YnZsxX",
-          "name": "Exploration-conclude_no_fallacy",
-          "arguments": "{\"reason\":\"Les arguments reposent principalement sur un appel à l'autorité et l'exclusion de l'avis des non-experts, sans circularité ni prémisse réintroduisant la conclusion.\"}"
+          "id": "call_XbjMkyAg7y2WyTGVBRya31ur",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\":\"700\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETBzah5utpfPDEV3fnayTY5J8RR9b",
-        "created": 1790626318,
+        "id": "chatcmpl-ETpTFtp27AEy2ppSeFb29oAiCwO9a",
+        "created": 1790778073,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1255,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 59,
+          "completion_tokens": 22,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

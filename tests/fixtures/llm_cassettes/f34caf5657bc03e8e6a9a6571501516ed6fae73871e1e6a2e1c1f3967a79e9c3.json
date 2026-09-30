@@ -1,0 +1,48 @@
+{
+  "key": "f34caf5657bc03e8e6a9a6571501516ed6fae73871e1e6a2e1c1f3967a79e9c3",
+  "value": {
+    "id": "chatcmpl-ETpbySuusvxgP9O1b6apZo6aTCCnL",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.2,\"exhibit\":\"La thèse porte sur l'absence de fondement de l'accusation selon laquelle les produits pharmaceutiques cacheraient les effets secondaires des vaccins. Une digression localisée traite des taux de vaccination élevés et de l'immunité collective, sujet distinct qui dilue notablement l'argument.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790778614,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 127,
+      "prompt_tokens": 302,
+      "total_tokens": 429,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 44,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

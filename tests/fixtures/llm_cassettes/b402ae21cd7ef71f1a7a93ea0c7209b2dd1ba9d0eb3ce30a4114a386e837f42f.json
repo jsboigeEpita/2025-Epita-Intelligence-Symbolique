@@ -1,0 +1,48 @@
+{
+  "key": "b402ae21cd7ef71f1a7a93ea0c7209b2dd1ba9d0eb3ce30a4114a386e837f42f",
+  "value": {
+    "id": "chatcmpl-ETpOysRDP3mc4NJp6hRS9TWB600aY",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"obstacle_genuinely_opaque\":true,\"clarity_verdict\":\"opaque_réel\",\"reasoning\":\"Le contexte permet d’inférer le sens de « homme de paille » et d’« appel à l’émotion », mais il ne définit pas suffisamment « PIB », dont la signification reste inaccessible à un lecteur non initié.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790777808,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 263,
+      "prompt_tokens": 407,
+      "total_tokens": 670,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 181,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

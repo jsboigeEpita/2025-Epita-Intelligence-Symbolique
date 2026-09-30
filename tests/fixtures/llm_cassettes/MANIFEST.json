@@ -1,10 +1,10 @@
 {
   "schema": 1,
-  "record_run_id": "36475269283",
-  "record_sha": "dfb90d67cbe8d3797d76da2baeeeb786a9f65795",
+  "record_run_id": "36726341789",
+  "record_sha": "85edf8856c450a2647bd0561561b1fb0dac24d7a",
   "recorded_at": "",
-  "cassette_count": 660,
-  "keys_sha256": "1fc34abf0d59c5cb28a65e9899337c5cc0be6579749393e2f99227aec8379e06",
+  "cassette_count": 691,
+  "keys_sha256": "d623cc60003d57ea8fcc69d7b5a25cb0c0aff1adf9e4bca55c88bc471bd1afbd",
   "env_signature": {
     "spacy": "3.8.14",
     "thinc": "8.3.13",
@@ -12,21 +12,5 @@
     "fr-core-news-sm": "3.8.0",
     "openai": "3.3.0",
     "numpy": "1.25.0"
-  },
-  "sk_patches": [
-    {
-      "note": "rekey #2853: 10 SK cassettes moved to model-aware keys (settings-class forwarding; 5 first-order + 5 unmasked by replaying past the former misses), 10 old model-blind-key files removed, response bytes unchanged",
-      "at": "2026-09-29T23:51:33Z",
-      "recorded_env": {
-        "spacy": "3.8.14",
-        "thinc": "8.3.13",
-        "srsly": "2.5.3",
-        "fr-core-news-sm": "3.8.0",
-        "openai": "3.3.0",
-        "numpy": "1.25.0"
-      },
-      "cassette_count": 660,
-      "keys_sha256": "1fc34abf0d59c5cb28a65e9899337c5cc0be6579749393e2f99227aec8379e06"
-    }
-  ]
+  }
 }

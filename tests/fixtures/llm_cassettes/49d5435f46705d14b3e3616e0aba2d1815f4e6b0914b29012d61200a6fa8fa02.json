@@ -1,0 +1,48 @@
+{
+  "key": "49d5435f46705d14b3e3616e0aba2d1815f4e6b0914b29012d61200a6fa8fa02",
+  "value": {
+    "id": "chatcmpl-ETpcDf4Xnu5x9tRhGxFLXp7bvvgck",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Chaîne reconstruite : « Ceux qui affirment que les vaccins sont dangereux ignorent des décennies de recherche clinique » → « L’affirmation selon laquelle les produits pharmaceutiques cachent les effets secondaires des vaccins est une théorie du… ». Verdict : saut logique ; la prémisse ne permet pas d’inférer cette conclusion.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790778629,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 131,
+      "prompt_tokens": 287,
+      "total_tokens": 418,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 41,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

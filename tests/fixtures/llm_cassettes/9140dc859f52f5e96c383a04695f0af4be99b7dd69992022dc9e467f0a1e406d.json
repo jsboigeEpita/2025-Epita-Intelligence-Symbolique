@@ -1,0 +1,48 @@
+{
+  "key": "9140dc859f52f5e96c383a04695f0af4be99b7dd69992022dc9e467f0a1e406d",
+  "value": {
+    "id": "chatcmpl-ETpWECwUYrbCIfPbB53BAn5H4cLwS",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. L’option A consiste à élargir le fonds de livres jeunesse.\\n2. L’option B consiste à créer un espace numérique avec des ordinateurs en libre accès.\\n3. L’option C consiste à répartir la somme à parts égales entre le fonds de livres et l’espace numérique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790778258,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 156,
+      "prompt_tokens": 217,
+      "total_tokens": 373,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 77,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

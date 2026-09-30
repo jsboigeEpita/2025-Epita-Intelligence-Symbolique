@@ -1,0 +1,48 @@
+{
+  "key": "cee5738234bb9d45360e43fbc2ab8e1d21a0fe37b208f602157b4e64125d0b31",
+  "value": {
+    "id": "chatcmpl-ETpQedBaSIVOntK652QVxr3MaifFT",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"formulas\":[\"Shines(sun)\"],\"predicates\":{\"Shines\":[\"CelestialBody\"]},\"sorts\":{\"CelestialBody\":[\"sun\"]},\"constants\":{\"sun\":\"the Sun\"},\"confidence\":0.99}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790777912,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 106,
+      "prompt_tokens": 285,
+      "total_tokens": 391,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 51,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

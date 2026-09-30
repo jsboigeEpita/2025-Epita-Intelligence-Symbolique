@@ -1,0 +1,48 @@
+{
+  "key": "d777bf716ecc534c0a341437e0c8fbe2e60e9aad7b6deec0716f6b817f64e959",
+  "value": {
+    "id": "chatcmpl-ETpYs64HDqjKX5R0tsnEwVYzJZfDN",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La chaîne pose l’objectif de rechercher un équilibre entre visibilité et pédagogie, puis indique que l’option C répartit équitablement les 2000 euros entre deux volets. Cela suggère un compromis, mais le lien précis entre ces volets et les deux objectifs n’est pas entièrement explicité ; la progression logique est donc présente mais partielle.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790778422,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 177,
+      "prompt_tokens": 296,
+      "total_tokens": 473,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 85,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

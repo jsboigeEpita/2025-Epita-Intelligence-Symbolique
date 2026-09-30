@@ -1,0 +1,40 @@
+{
+  "key": "21ca3b3d346f04a48ed37c3e8b5e01e7893f9b10d40b7c92c30b42d778a37521",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_zg2aA6ZGG6ktybmP6DL2jFcS",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"22\",\"confidence\":\"high\",\"justification\":\"L’énoncé présente comme incontestable le succès de la politique économique sans fournir de raison, de donnée ou d’explication permettant de l’établir ; il demande donc d’accepter cette affirmation comme un acte de foi.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETpRitpNz614aVkrJFaOEovE71kj1",
+        "created": 1790777978,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1274,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1271,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 77,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

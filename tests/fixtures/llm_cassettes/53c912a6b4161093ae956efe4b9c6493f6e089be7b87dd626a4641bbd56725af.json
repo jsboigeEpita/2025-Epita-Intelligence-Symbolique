@@ -1,0 +1,48 @@
+{
+  "key": "53c912a6b4161093ae956efe4b9c6493f6e089be7b87dd626a4641bbd56725af",
+  "value": {
+    "id": "chatcmpl-ETpfBEgG9ERS55NAZH3dFEoT0KyeR",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Les deux points sont distincts mais liés : le premier porte sur l’attribution du changement climatique aux activités humaines, tandis que le second souligne l’omission de la vitesse exceptionnelle du changement actuel. Ils se recoupent partiellement en contestant le scepticisme climatique, tout en apportant deux aspects différents.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790778813,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 135,
+      "prompt_tokens": 292,
+      "total_tokens": 427,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 53,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

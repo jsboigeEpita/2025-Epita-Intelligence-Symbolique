@@ -1,0 +1,48 @@
+{
+  "key": "64a2674b0b3adfeef4d5c40b370fd7d5c5c48dd8d5f2d72d72072e1b23cedf66",
+  "value": {
+    "id": "chatcmpl-ETpdPf6q9t6sLCFcd2HZyJsKrY6Ct",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\":false,\"structure_verdict\":\"saut_logique\",\"reasoning\":\"La prémisse établit un danger permanent chez certains criminels, mais ne suffit pas à démontrer que la peine de mort est moralement ou juridiquement défendable sans une prémisse normative intermédiaire.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790778703,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 154,
+      "prompt_tokens": 402,
+      "total_tokens": 556,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 83,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "key": "4f4f7e8d0a4efb241ce263a3faf2776365b8ee3afe5ea07c28a6164f999ef4fc",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_Rl3t179BRNrZavID35gbpdkD",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"L’énoncé affirme simplement le succès de la politique économique, sans détourner le débat, éviter une question, complexifier la discussion ni discréditer un adversaire. Aucun sous-type de sabotage du débat ne correspond.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETpRgI94ittrrZq8Vea2t9P9s70rF",
+        "created": 1790777976,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1632,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1629,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 68,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

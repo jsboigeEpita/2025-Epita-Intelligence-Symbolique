@@ -1,0 +1,40 @@
+{
+  "key": "579d11332c4ec907ec0170d272e5d08d0897cd0eb6e2f8bcbf78a9ed15bbd205",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_7ZcBRW9Kaa5qfQaTogZWNvkJ",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"Le texte présente plutôt un appel à l'autorité et une disqualification de l'avis des non-experts, pas le fait de désigner un individu ou un groupe comme responsable d'un problème dont il ne serait pas responsable. Le nœud « Bouc émissaire » ne correspond donc pas.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETpSolByJ5kvShIImbEWJ9dNVrMxZ",
+        "created": 1790778046,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 651,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 84,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

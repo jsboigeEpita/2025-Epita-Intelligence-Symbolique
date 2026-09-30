@@ -1,0 +1,48 @@
+{
+  "key": "2acba4764d9cf9dff8b7cba10d831ccc7d02da725c30d8aaf0a1a34f02601f79",
+  "value": {
+    "id": "chatcmpl-ETpOiGz8WhSYnTzNAYSCQ123jYbno",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"La situation financière du système se dégradera jusqu'à atteindre un déficit de 2,3 % du PIB en 2030.\",\"digressions\":\"La dénonciation par les syndicats d'un sophisme naturaliste (« travailler plus longtemps est dans l'ordre des choses ») et l'accusation de l'opposition concernant un homme de paille (personne n'ayant proposé de supprimer les retraites) sont des digressions par rapport à la thèse financière principale.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790777792,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 324,
+      "prompt_tokens": 328,
+      "total_tokens": 652,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 205,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "key": "f8e6edeb14f9d18b4ba6f4b63501ffec6d8e7698120f05abc92ae894d7a77cb5",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"formulas\":[\"it_is_raining => street_is_wet\",\"it_is_raining\"]}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETpbNigU2PP9FRwEukr1cUsvAp1bi",
+        "created": 1790778577,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 385,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 23,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

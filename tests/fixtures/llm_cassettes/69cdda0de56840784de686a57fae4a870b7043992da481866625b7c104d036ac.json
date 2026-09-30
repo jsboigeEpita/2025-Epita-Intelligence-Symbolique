@@ -1,14 +1,14 @@
 {
   "key": "69cdda0de56840784de686a57fae4a870b7043992da481866625b7c104d036ac",
   "value": {
-    "id": "chatcmpl-ETC0wQvQbt17TnCzbqCrXd663klfK",
+    "id": "chatcmpl-ETpV8hBxK8RSWEcEPlYIwvIGFPu3G",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points proposent des usages distincts des 2000 euros : organiser un tournoi inter-villes pour accroître la visibilité du club, ou acheter du matériel pédagogique et de nouveaux échiquiers. Aucune redondance substantielle.\"}",
+          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points présentent des usages distincts des 2000 euros : le premier vise la visibilité du club grâce à un tournoi, un buffet et des prix ; le second concerne l’achat de matériel pédagogique et de nouveaux échiquiers. Aucune redondance substantielle.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1790626402,
+    "created": 1790778190,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -32,7 +32,7 @@
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 35,
+        "reasoning_tokens": 28,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

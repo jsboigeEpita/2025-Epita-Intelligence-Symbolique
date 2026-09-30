@@ -1,0 +1,48 @@
+{
+  "key": "8b1d6c2b7acb4c3ddf3497bbd9c5afe4b0a7a7150d5f2b51def16ce65eaea11a",
+  "value": {
+    "id": "chatcmpl-ETpf21gBSe8scz2QojuaEReFFIgP7",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Les modèles prédictifs convergent vers l’idée que les activités humaines ont un impact sur le changement climatique.\\n2. Les sceptiques reconnaissent que le climat a toujours changé, mais omettent que le changement actuel est d’une vitesse sans précédent.\\n3. Ceux qui minimisent la crise climatique utilisent souvent des données sélectives pour soutenir leur position.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790778804,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 162,
+      "prompt_tokens": 238,
+      "total_tokens": 400,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 72,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

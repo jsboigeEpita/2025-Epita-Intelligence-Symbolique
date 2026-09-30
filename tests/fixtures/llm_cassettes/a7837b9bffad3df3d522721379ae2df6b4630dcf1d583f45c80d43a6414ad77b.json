@@ -1,0 +1,40 @@
+{
+  "key": "a7837b9bffad3df3d522721379ae2df6b4630dcf1d583f45c80d43a6414ad77b",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_SjRRzIuxGRKGlMdYnU7bn71S",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"Le texte ne décrit pas une escalade d’engagement : il s’agit plutôt d’un appel à l’autorité et d’une disqualification de l’avis des non-experts.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETpSxchI29TrIR1FgeSaeWAKosZ5c",
+        "created": 1790778055,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1516,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1513,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 60,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

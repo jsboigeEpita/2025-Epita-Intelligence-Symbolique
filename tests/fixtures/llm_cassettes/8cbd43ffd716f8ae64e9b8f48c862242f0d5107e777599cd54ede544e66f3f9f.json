@@ -1,0 +1,48 @@
+{
+  "key": "8cbd43ffd716f8ae64e9b8f48c862242f0d5107e777599cd54ede544e66f3f9f",
+  "value": {
+    "id": "chatcmpl-ETpd0xCI6Wb5wzJHYl3PRKB8eBSC9",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Anaphore ambiguë : « Elle » peut renvoyer à « la possibilité d’erreurs judiciaires » ou à « la peine de mort », mais seule la seconde interprétation est cohérente avec « sert de dissuasion ». Aucun jargon technique non défini ni phrase excessivement emboîtée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790778678,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 215,
+      "prompt_tokens": 288,
+      "total_tokens": 503,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 130,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
