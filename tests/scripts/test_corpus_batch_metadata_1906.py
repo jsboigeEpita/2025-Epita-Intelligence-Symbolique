@@ -152,10 +152,14 @@ class TestLegacyLabelParsing:
         assert parsed["era"] == "1938"
 
     def test_hyphenated_pair_and_parenthetical_venue(self):
+        """#2877 — the first element of this fixture is, by its own name, **two**
+        speakers, and the parser used to file the pair as one orator. The venue
+        half is unchanged: it comes from a different branch and was never in
+        doubt."""
         parsed = _load_runner().parse_legacy_label(
             "Speaker_A-Speaker_B Genreword_X 1 (Venue_Y)"
         )
-        assert parsed["speaker"] == "Speaker_A-Speaker_B"
+        assert "speaker" not in parsed
         assert parsed["venue"] == "Venue_Y"
 
     def test_genre_keyword_at_start_leaves_speaker_absent(self):
@@ -188,3 +192,50 @@ class TestLegacyLabelParsing:
         corpus definition — precedence order is heuristics < label < explicit."""
         merged = _merge("Speaker_A - Title_X 1940", "", {"speaker": "Explicit_Speaker"})
         assert merged["speaker"] == "Explicit_Speaker"
+
+
+class TestNoSeriesIsFiledAsASpeaker2877:
+    """#2877: a series/debate label is not an orator.
+
+    The parser's last branch filed a bare hyphenated pair at the head of a
+    label as ``speaker`` — the shape a debate or a two-author series takes,
+    where nothing on the label says *which* of the two speaks, nor that a
+    series rather than a person is being named. Traced on the document #2845
+    was opened from: its recorded metadata carries ``speaker`` with neither
+    ``title`` nor ``genre``, which rules out the two branches above it and
+    leaves only this one.
+
+    Removed rather than narrowed: the same regex also matched the first half of
+    a hyphenated given name, so no predicate over the pair recovers a speaker
+    claim the label does not carry. Synthetic labels only — no corpus token.
+    """
+
+    def test_a_bare_hyphenated_pair_yields_no_speaker(self):
+        """Born-red on the removed branch: it asserted the pair as the orator."""
+        parsed = _load_runner().parse_legacy_label("Alpha-Beta Debates 1858")
+        assert "speaker" not in parsed
+        assert parsed["era"] == "1858"  # the label was read, not skipped
+
+    def test_a_hyphenated_given_name_is_not_an_orator_either(self):
+        """The same branch filed the fragment it matched as the whole speaker:
+        on ``Marie-Claire`` the claim was half a person's name."""
+        parsed = _load_runner().parse_legacy_label("Marie-Claire 1956")
+        assert "speaker" not in parsed
+        assert parsed["era"] == "1956"
+
+    def test_a_label_naming_one_person_still_yields_one(self):
+        """The other half of the DoD: removal must not cost the labels that do
+        state a speaker positionally."""
+        parsed = _load_runner().parse_legacy_label(
+            "Primus Secundus - Oration on the Republic 1912"
+        )
+        assert parsed["speaker"] == "Primus Secundus"
+        assert parsed["title"] == "Oration on the Republic"
+        assert parsed["era"] == "1912"
+
+    def test_the_genre_branch_still_attributes_a_speaker(self):
+        """Control on the surviving branch: a genre keyword marks the position
+        of the speaker, and that claim is untouched by the removal."""
+        parsed = _load_runner().parse_legacy_label("Tertius Discours 1899")
+        assert parsed["speaker"] == "Tertius"
+        assert parsed["genre"] == "discours"
