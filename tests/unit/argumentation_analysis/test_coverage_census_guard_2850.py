@@ -636,21 +636,6 @@ REGISTRY = {
         "argument excerpt inside the LLM quality-enrichment prompt",
         "silent — debt #2850",
     ),
-    ("argumentation_analysis/orchestration/invoke_callables.py", "args", "10", 1): (
-        "population_cap",
-        "first 10 in insertion order; rest unanalysed",
-        "silent — debt #2850",
-    ),
-    ("argumentation_analysis/orchestration/invoke_callables.py", "args", "10", 2): (
-        "population_cap",
-        "first 10 in insertion order; rest unanalysed",
-        "silent — debt #2850",
-    ),
-    ("argumentation_analysis/orchestration/invoke_callables.py", "args", "10", 3): (
-        "population_cap",
-        "first 10 in insertion order; rest unanalysed",
-        "silent — debt #2850",
-    ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "args", "4", 1): (
         "population_cap",
         "first 4 in insertion order; rest unanalysed",
@@ -671,24 +656,9 @@ REGISTRY = {
         "first 40 in insertion order; rest unanalysed",
         "silent — debt #2850",
     ),
-    ("argumentation_analysis/orchestration/invoke_callables.py", "args", "6", 1): (
-        "population_cap",
-        "first 6 in insertion order; rest unanalysed",
-        "silent — debt #2850",
-    ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "args", "mid", 1): (
         "population_cap",
         "first mid in insertion order; rest unanalysed",
-        "silent — debt #2850",
-    ),
-    (
-        "argumentation_analysis/orchestration/invoke_callables.py",
-        "arguments",
-        "10",
-        1,
-    ): (
-        "population_cap",
-        "first 10 in insertion order; rest unanalysed",
         "silent — debt #2850",
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "arguments", "6", 1): (
@@ -884,15 +854,13 @@ REGISTRY = {
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "raw_args", "10", 1): (
         "population_cap",
-        "first 10 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "STATELESS FALLBACK ONLY since #2850 slice A: with a merged state "
+        "population the jtms premises are select_for_budget(stratified) at "
+        "the same budget; this head slice survives for contexts carrying "
+        "no state object",
+        "fallback named — #2850 slice A",
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "raw_args", "8", 1): (
-        "population_cap",
-        "first 8 in insertion order; rest unanalysed",
-        "silent — debt #2850",
-    ),
-    ("argumentation_analysis/orchestration/invoke_callables.py", "raw_args", "8", 2): (
         "population_cap",
         "first 8 in insertion order; rest unanalysed",
         "silent — debt #2850",

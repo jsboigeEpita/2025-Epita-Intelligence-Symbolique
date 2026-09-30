@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "[\n  {\n    \"fallacy_name\": \"Non sequitur\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.82\n  },\n  {\n    \"fallacy_name\": \"Généralisation hâtive\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.55\n  },\n  {\n    \"fallacy_name\": \"Affirmation sans preuve\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.78\n  },\n  {\n    \"fallacy_name\": \"Confusion entre corrélation et implication\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.68\n  },\n  {\n    \"fallacy_name\": \"Ambiguïté lexicale sur « beau »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.86\n  },\n  {\n    \"fallacy_name\": \"Subjectivité non signalée\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.72\n  },\n  {\n    \"fallacy_name\": \"Présupposition implicite concernant le lieu et le moment\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.63\n  },\n  {\n    \"fallacy_name\": \"Conclusion non étayée par les prémisses\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.76\n  },\n  {\n    \"fallacy_name\": \"Réduction abusive de la météo à l’ensoleillement\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.8\n  },\n  {\n    \"fallacy_name\": \"Vaguité contextuelle\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.84\n  }\n]",
+      "content": "[]",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETBuVdlKmiWGCWIK01j83yjZksR56",
-        "created": 1790626003,
+        "id": "chatcmpl-ETpQVQBAqJiPZlejLHjeDkR8b0OPy",
+        "created": 1790777903,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 203,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 673,
+          "completion_tokens": 397,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 266,
+            "reasoning_tokens": 387,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

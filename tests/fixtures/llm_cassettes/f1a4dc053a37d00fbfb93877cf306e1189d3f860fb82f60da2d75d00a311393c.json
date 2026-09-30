@@ -1,0 +1,48 @@
+{
+  "key": "f1a4dc053a37d00fbfb93877cf306e1189d3f860fb82f60da2d75d00a311393c",
+  "value": {
+    "id": "chatcmpl-ETpP2saA5t7plmjDGMRp34ToXrnzF",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. La projection repose sur des hypothèses de croissance optimistes, notamment une croissance annuelle de 1,8 %.\\n2. Le gouvernement commet un sophisme naturaliste en prétendant que travailler plus longtemps est « dans l'ordre des choses ».\\n3. Le déficit atteindra 2,3 % du PIB d'ici 2030.\\n4. L'opposition dénonce un homme de paille : personne ne propose de supprimer les retraites, mais seulement de les réformer différemment.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790777812,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 222,
+      "prompt_tokens": 282,
+      "total_tokens": 504,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 101,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

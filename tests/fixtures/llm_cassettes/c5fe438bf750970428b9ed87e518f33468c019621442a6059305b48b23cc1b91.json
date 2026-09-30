@@ -1,0 +1,48 @@
+{
+  "key": "c5fe438bf750970428b9ed87e518f33468c019621442a6059305b48b23cc1b91",
+  "value": {
+    "id": "chatcmpl-ETpW84wksAKxB3eQpXxp7GFJPXhcl",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse porte sur la création d’un espace numérique avec des ordinateurs en libre accès. La présentation des options A et C constitue une digression localisée, sans lien direct avec cette thèse, mais l’ensemble reste partiellement centré sur les différentes options.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790778252,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 132,
+      "prompt_tokens": 309,
+      "total_tokens": 441,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 58,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

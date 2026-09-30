@@ -272,6 +272,48 @@ class TestPrivacy:
         prompt = build_act1_prompt(ev)
         assert "x" * 500 not in prompt
 
+    def test_coverage_sentence_renders_text_thirds_and_span_2887(self):
+        """Review #2887 — the coverage figure must be able to SAY head-bound.
+
+        The bands are fixed text thirds (1/3 « tiers du texte »), and the
+        span — the exact fraction of the source the selected units occupy —
+        rides the same sentence: « couvrant 0,00 à 0,05 du texte ». Without
+        the span key (no selected unit carried an offset) the sentence lends
+        no extent it cannot ground.
+        """
+        state = _state(
+            analysis_coverage={
+                "quality": {
+                    "k": 8,
+                    "N": 94,
+                    "bands_covered": 1,
+                    "bands_total": 3,
+                    "span_start": 0.0,
+                    "span_end": 0.05,
+                }
+            }
+        )
+        ev = build_act1_evidence(state)
+        prompt = build_act1_prompt(ev)
+        assert "1/3 tiers du texte" in prompt
+        assert "couvrant 0,00 à 0,05 du texte" in prompt
+
+    def test_coverage_sentence_without_span_lends_no_extent(self):
+        state = _state(
+            analysis_coverage={
+                "quality": {
+                    "k": 4,
+                    "N": 94,
+                    "bands_covered": 0,
+                    "bands_total": 3,
+                }
+            }
+        )
+        ev = build_act1_evidence(state)
+        prompt = build_act1_prompt(ev)
+        assert "couvrant" not in prompt
+        assert "0/3 tiers du texte" in prompt
+
 
 # ============================================================================
 # weave_act1_framing — fail-loud

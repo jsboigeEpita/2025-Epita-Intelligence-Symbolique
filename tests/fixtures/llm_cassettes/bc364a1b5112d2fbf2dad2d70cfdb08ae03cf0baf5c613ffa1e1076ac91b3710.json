@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_UJhqaGsIqnUHpLnmrXaNNGcA",
-          "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"1360\",\"confidence\":\"high\",\"justification\":\"Le second argument rejette l’avis d’une personne en raison de son absence supposée d’expertise, plutôt que d’examiner le contenu de son argument. Cela vise la personne et relève donc de l’ad hominem.\"}"
+          "id": "call_EKD3ljktwxNtxN6zx9SUq1CK",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\":\"1371\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETBzc6Wt11lbklbz6f2wXpkiwaBS0",
-        "created": 1790626320,
+        "id": "chatcmpl-ETpTWbXM9FwZGnySAzPrDfj2yddwC",
+        "created": 1790778090,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1728,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 79,
+          "completion_tokens": 23,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

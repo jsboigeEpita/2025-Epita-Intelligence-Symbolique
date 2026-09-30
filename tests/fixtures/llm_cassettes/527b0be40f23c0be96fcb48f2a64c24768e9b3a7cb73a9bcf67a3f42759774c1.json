@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_N35SAgUcGxGkvQmMVNOSauRU",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\":\"203\"}"
+          "id": "call_YotCSyBzrvyJ5QcKC1hNBJii",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"177\",\"confidence\":\"high\",\"justification\":\"L’énoncé impose implicitement un cadre favorable en présentant la politique économique comme un « succès incontestable », sans fournir de preuve et en excluant d’emblée toute contestation.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETBvaPxyiQiNvcHDynSjQFjsFu1Ln",
-        "created": 1790626070,
+        "id": "chatcmpl-ETpRnN8BgUt3lYwaXYv6JNrCSCgyY",
+        "created": 1790777983,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1925,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 22,
+          "completion_tokens": 69,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

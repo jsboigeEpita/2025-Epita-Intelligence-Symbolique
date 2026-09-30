@@ -1,0 +1,48 @@
+{
+  "key": "4c9acdc285a38d86f29103ced1414761a81c17a903125fb945fe00fc3c42f68f",
+  "value": {
+    "id": "chatcmpl-ETpWAPAgdQf805hPmTOHFo9354cY4",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":false,\"opposing_claim\":\"\",\"main_thesis\":\"L’option B consiste à créer un espace numérique avec des ordinateurs en libre accès.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790778254,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 114,
+      "prompt_tokens": 265,
+      "total_tokens": 379,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 70,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

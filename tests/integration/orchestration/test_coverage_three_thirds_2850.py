@@ -33,11 +33,12 @@ defect), but no specialist ever touches them: on the birth run,
 below therefore fails for thirds 2 and 3 — audit result 2 (0 of 311),
 reproduced deterministically.
 
-WHY XFAIL-STRICT AND NOT A HARD RED: a hard red would break the gate for
-every unrelated PR until the coverage layer lands. ``xfail(strict=True)``
-keeps the contract in the gate, red at birth inside the xfail, and the day
-the repair makes it pass, strict turns the XPASS into a failure that forces
-this marker — and the debt rows in the census guard — to be revisited.
+HISTORY: born red under ``xfail(strict=True)`` (the marker forced the
+debt's revisiting the day this test passed — #2850 slice A landed it). The
+repair: one merged population with provenance (``argument_provenance``),
+one stratified selector (``select_for_budget``), and the specialist phases
+reading that population — quality was the phase whose repoint greens the
+specialist half, because it touches every unit it scores.
 
 Privacy: the document is invented prose, no dataset content (#2850 DoD).
 """
@@ -235,15 +236,6 @@ def _thirds_in_state(state) -> "dict[str, object]":
     }
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "#2850 coverage debt: the extraction window reads ~3000 chars, so "
-        "thirds 2 and 3 hold no analysed unit and no specialist result — "
-        "red at birth by construction; remove this marker when the coverage "
-        "layer lands and both assertions hold"
-    ),
-)
 async def test_each_third_of_a_long_document_is_analysed(monkeypatch):
     # Dummy key: the phase gate skips every LLM phase when NO key is set
     # (measured: 16 skipped, 1 completed), but a dummy one lets the run

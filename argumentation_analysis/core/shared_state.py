@@ -1,7 +1,7 @@
 # core/shared_state.py
 import json
 from dataclasses import dataclass, field, asdict
-from typing import Dict, List, Any, Optional, cast
+from typing import Dict, List, Any, Optional, Tuple, cast
 import logging
 
 # Logger spécifique pour l'état
@@ -15,6 +15,25 @@ if not state_logger.handlers and not state_logger.propagate:
     handler.setFormatter(formatter)
     state_logger.addHandler(handler)
     state_logger.setLevel(logging.INFO)
+
+
+def locate_unit_offset(unit_key: str, raw_text: str) -> Tuple[Optional[int], str]:
+    """#2850 slice A — THE offset rule for argument provenance.
+
+    Same predicate as the assert anchor (``_record_assert_move``): a unique
+    ``find`` hit gives the offset; anything else is a NAMED absence — never
+    ``0``, which is a real position, and never a guessed one (#1019). The
+    basis string is the provenance's own vocabulary, reused verbatim by the
+    trace writer so one rule serves both readers.
+    """
+    if not unit_key or not raw_text:
+        return None, "sans offset (clé ou texte source absent)"
+    first = raw_text.find(unit_key)
+    if first == -1:
+        return None, "sans offset (introuvable dans le texte source)"
+    if raw_text.count(unit_key) != 1:
+        return None, "sans offset (occurrences multiples, position ambiguë)"
+    return first, f"offset {first}"
 
 
 @dataclass
@@ -153,6 +172,13 @@ class RhetoricalAnalysisState:
         # {site: {"status": ..., "offset": ..., "window": ...}}. Écrit par
         # reading_window.selected_text, lu par le rapport (build_narrative).
         self.reading_window_status: Dict[str, Dict[str, Any]] = {}
+        # #2850 slice A — provenance de chaque unité d'identified_arguments :
+        # {arg_id: {"producer": "llm_extract"|"kb_heuristic", "offset": int|None,
+        #           "offset_basis": str, "source_quote": str}}. Side-table :
+        # la VALEUR d'identified_arguments reste le texte seul (~20 lecteurs
+        # la lisent telle quelle). Écrite par add_argument(producer=...),
+        # lue par le sélecteur de couverture et le rendu des Actes.
+        self.argument_provenance: Dict[str, Dict[str, Any]] = {}
         state_logger.debug(
             f"Nouvelle instance RhetoricalAnalysisState créée (id: {id(self)}) avec texte (longueur: {len(initial_text)})."
         )
@@ -197,10 +223,34 @@ class RhetoricalAnalysisState:
         state_logger.debug(f"État tasks après ajout {task_id}: {self.analysis_tasks}")
         return task_id
 
-    def add_argument(self, description: str) -> str:
-        """Ajoute un argument identifié et retourne son ID."""
+    def add_argument(
+        self,
+        description: str,
+        producer: Optional[str] = None,
+        source_quote: Optional[str] = None,
+    ) -> str:
+        """Ajoute un argument identifié et retourne son ID.
+
+        #2850 slice A — ``producer`` ("llm_extract" | "kb_heuristic") enregistre
+        la provenance dans ``argument_provenance``, avec l'offset calculé par
+        LA règle unique (``locate_unit_offset``) : la clé cherchée est la
+        citation source quand elle existe, le texte sinon. Absence d'offset =
+        nommée (jamais 0). Sans ``producer``, aucun enregistrement : les
+        appelants hors couverture gardent le comportement d'avant.
+        """
         arg_id = self._generate_id("arg", self.identified_arguments)
         self.identified_arguments[arg_id] = description
+        if producer:
+            key = str(source_quote) if source_quote else description
+            offset, basis = locate_unit_offset(key, self.raw_text or "")
+            entry: Dict[str, Any] = {
+                "producer": producer,
+                "offset": offset,
+                "offset_basis": basis,
+            }
+            if source_quote:
+                entry["source_quote"] = str(source_quote)
+            self.argument_provenance[arg_id] = entry
         state_logger.info(f"Argument ajouté: {arg_id} - '{description[:60]}...'")
         state_logger.debug(
             f"État arguments après ajout {arg_id}: {self.identified_arguments}"
@@ -604,6 +654,13 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self.restitution_acts_degraded: Dict[str, Dict[str, str]] = {}
         # PP #715: source-level metadata for qualitative synthesis
         self.source_metadata: Dict[str, str] = {}
+        # #2850 slice A — ce que chaque phase sélectrice a réellement couvert
+        # de la population : {phase: {"k": int, "N": int, "bands_covered": int,
+        # "bands_total": int}}. Écrit par record_analysis_coverage au moment de
+        # la sélection, rendu UNE fois dans les Actes. Les unités sans offset
+        # (absence nommée) comptent dans k/N mais jamais dans bands_covered —
+        # la phrase rendue ne leur prête pas de position.
+        self.analysis_coverage: Dict[str, Dict[str, Any]] = {}
         # Epic #1258 / Track 1 #1259 — déanonymisation du pipeline de travail.
         # True (default for CLI/local) = the working state carries REAL source
         # metadata (speaker, arena, stakes); prompt builders DROP the opaque-ID
@@ -645,6 +702,40 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         # DesignationRecord dataclass is the typed constructor. One spine, no
         # second state object.
         self.deliberation_trace: List[Dict[str, Any]] = []
+
+    def record_analysis_coverage(
+        self,
+        phase: str,
+        k: int,
+        n_total: int,
+        bands_covered: int,
+        bands_total: int,
+        span: Optional[Tuple[float, float]] = None,
+    ) -> None:
+        """#2850 slice A — enregistre la couverture d'une phase sélectrice.
+
+        Un chiffre par phase qui sélectionne ; le rendu des Actes l'agrège
+        en une phrase. Écraser la clé d'une phase = garder la DERNIÈRE
+        sélection (une phase qui re-sélectionne remplace sa propre mesure).
+
+        ``span`` (review #2887) : fraction (début, fin) du TEXTE couverte par
+        les unités sélectionnées portant un offset — c'est lui qui rend une
+        sélection confinée à la tête DITE confinée à la tête : des bandes
+        sur les positions du texte peuvent saturer sur une étendue mince,
+        le span ne peut pas. ``None`` = aucune unité sélectionnée ancrée (ou
+        sélection sans longueur de texte) — la phrase rendue ne prête alors
+        aucune étendue.
+        """
+        entry: Dict[str, Any] = {
+            "k": int(k),
+            "N": int(n_total),
+            "bands_covered": int(bands_covered),
+            "bands_total": int(bands_total),
+        }
+        if span is not None:
+            entry["span_start"] = float(span[0])
+            entry["span_end"] = float(span[1])
+        self.analysis_coverage[phase] = entry
 
     def record_designation(
         self,

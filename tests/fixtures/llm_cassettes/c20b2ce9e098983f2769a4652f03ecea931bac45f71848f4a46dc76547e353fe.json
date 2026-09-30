@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "[\n  {\n    \"fallacy_name\": \"Affirmation gratuite (assertion sans preuve)\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.99\n  },\n  {\n    \"fallacy_name\": \"Déplacement de la charge de la preuve\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.95\n  },\n  {\n    \"fallacy_name\": \"Argument d'autorité\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.9\n  },\n  {\n    \"fallacy_name\": \"Appel au statut ou au prestige\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.88\n  },\n  {\n    \"fallacy_name\": \"Argument d'autorité politique\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.84\n  },\n  {\n    \"fallacy_name\": \"Biais d'intérêt personnel\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.78\n  },\n  {\n    \"fallacy_name\": \"Conflit d'intérêts ignoré\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.72\n  },\n  {\n    \"fallacy_name\": \"Généralisation hâtive\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.82\n  },\n  {\n    \"fallacy_name\": \"Conclusion non étayée\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.94\n  },\n  {\n    \"fallacy_name\": \"Surconfiance dans la conclusion\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.91\n  },\n  {\n    \"fallacy_name\": \"Ambiguïté sur le terme « succès »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.93\n  },\n  {\n    \"fallacy_name\": \"Ambiguïté sur le périmètre de la « politique économique »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.84\n  },\n  {\n    \"fallacy_name\": \"Langage absolu et catégorique\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.92\n  },\n  {\n    \"fallacy_name\": \"Prétention à l'incontestabilité\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.9\n  },\n  {\n    \"fallacy_name\": \"Immunisation contre la réfutation\",\n    \"root_category\": \"Obstruction\",\n    \"confidence\": 0.81\n  },\n  {\n    \"fallacy_name\": \"Sélection implicite d'un seul critère d'évaluation\",\n    \"root_category\": \"Tricherie\",\n    \"confidence\": 0.62\n  }\n]",
+      "content": "[\n  {\n    \"fallacy_name\": \"Assertion gratuite (bare assertion)\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.99\n  },\n  {\n    \"fallacy_name\": \"Appel à l'autorité\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.92\n  },\n  {\n    \"fallacy_name\": \"Argument d'autorité institutionnelle\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.88\n  },\n  {\n    \"fallacy_name\": \"Appel au pouvoir ou au statut\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.84\n  },\n  {\n    \"fallacy_name\": \"Déplacement de la charge de la preuve\",\n    \"root_category\": \"Tricherie\",\n    \"confidence\": 0.86\n  },\n  {\n    \"fallacy_name\": \"Pétition de principe implicite\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.68\n  },\n  {\n    \"fallacy_name\": \"Généralisation hâtive\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.77\n  },\n  {\n    \"fallacy_name\": \"Non sequitur\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.72\n  },\n  {\n    \"fallacy_name\": \"Fausse certitude\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.91\n  },\n  {\n    \"fallacy_name\": \"Hyperbole rhétorique\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.88\n  },\n  {\n    \"fallacy_name\": \"Vaguité du terme « succès »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.95\n  },\n  {\n    \"fallacy_name\": \"Vaguité du terme « politique économique »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.79\n  },\n  {\n    \"fallacy_name\": \"Étiquetage évaluatif non défini\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.86\n  },\n  {\n    \"fallacy_name\": \"Préemption de la contestation\",\n    \"root_category\": \"Obstruction\",\n    \"confidence\": 0.83\n  },\n  {\n    \"fallacy_name\": \"Disqualification implicite du désaccord\",\n    \"root_category\": \"Obstruction\",\n    \"confidence\": 0.76\n  },\n  {\n    \"fallacy_name\": \"Communication propagandiste par généralité valorisante\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.81\n  },\n  {\n    \"fallacy_name\": \"Biais d'intérêt personnel ou d'autojustification\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.74\n  },\n  {\n    \"fallacy_name\": \"Incontestabilité invocable ou thèse difficilement réfutable\",\n    \"root_category\": \"Obstruction\",\n    \"confidence\": 0.63\n  }\n]",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETBvHXBshmFt8tSEdbRYGbewf4qWo",
-        "created": 1790626051,
+        "id": "chatcmpl-ETpRQquDMLAic3ZPnmp4KssYChNTx",
+        "created": 1790777960,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 208,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 1071,
+          "completion_tokens": 1213,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 436,
+            "reasoning_tokens": 512,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

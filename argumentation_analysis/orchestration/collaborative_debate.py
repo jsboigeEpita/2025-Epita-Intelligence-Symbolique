@@ -138,11 +138,39 @@ async def _invoke_collaborative_analysis(
         extract_output.get("claims", []) if isinstance(extract_output, dict) else []
     )
 
-    # Build argument summary for agents
+    # #2850 slice A — the agent brief's budget (8, unchanged) selects
+    # stratified units from the MERGED population (both producers) when the
+    # state carries one, so the debate reads the whole text's positions, not
+    # the extract opening. The extract list, then claims, remain the
+    # stateless fallbacks in their original order.
+    from argumentation_analysis.orchestration.selection import (
+        merged_population_units,
+        select_for_budget,
+        state_text_length,
+    )
+
     arg_lines = []
-    for i, a in enumerate(arguments[:8]):
-        text = a.get("text", str(a)) if isinstance(a, dict) else str(a)
-        arg_lines.append(f"A{i + 1}. {text}")
+    _deb_state = context.get("_state_object")
+    _deb_units = merged_population_units(_deb_state)
+    if _deb_units:
+        _deb_selection = select_for_budget(
+            _deb_units, 8, text_length=state_text_length(_deb_state)
+        )
+        if _deb_state is not None and hasattr(_deb_state, "record_analysis_coverage"):
+            _deb_state.record_analysis_coverage(
+                "collaborative_debate",
+                _deb_selection.k,
+                _deb_selection.n_total,
+                _deb_selection.bands_covered,
+                _deb_selection.bands_total,
+                span=_deb_selection.span,
+            )
+        for i, u in enumerate(_deb_selection.selected):
+            arg_lines.append(f"A{i + 1}. {u.text}")
+    if not arg_lines:
+        for i, a in enumerate(arguments[:8]):
+            text = a.get("text", str(a)) if isinstance(a, dict) else str(a)
+            arg_lines.append(f"A{i + 1}. {text}")
     if not arg_lines:
         for i, c in enumerate(claims[:8]):
             text = c.get("text", str(c)) if isinstance(c, dict) else str(c)
@@ -287,9 +315,26 @@ def _fallback_collaborative(input_text: str, context: Dict[str, Any]) -> Dict[st
         extract_output.get("arguments", []) if isinstance(extract_output, dict) else []
     )
 
+    # #2850 slice A — same gesture on the fallback path: the surviving set
+    # (budget 6, unchanged) selects stratified merged units when present.
+    from argumentation_analysis.orchestration.selection import (
+        merged_population_units,
+        select_for_budget,
+        state_text_length,
+    )
+
+    _fb_state = context.get("_state_object")
+    _fb_units = merged_population_units(_fb_state)
+    _fb_feed = (
+        [u.text for u in select_for_budget(_fb_units, 6).selected]
+        if _fb_units
+        else [
+            a.get("text", str(a)) if isinstance(a, dict) else str(a)
+            for a in arguments[:6]
+        ]
+    )
     surviving = []
-    for a in arguments[:6]:
-        text = a.get("text", str(a)) if isinstance(a, dict) else str(a)
+    for text in _fb_feed:
         surviving.append(
             {"argument": text, "confidence": 0.5, "survived_challenges": []}
         )

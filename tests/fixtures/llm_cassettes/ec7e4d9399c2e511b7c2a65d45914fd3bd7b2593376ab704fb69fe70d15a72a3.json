@@ -1,0 +1,48 @@
+{
+  "key": "ec7e4d9399c2e511b7c2a65d45914fd3bd7b2593376ab704fb69fe70d15a72a3",
+  "value": {
+    "id": "chatcmpl-ETpP9gddRaRgiKLDwkJaS9jpJ00aD",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_digression\":true,\"relevance_verdict\":\"digression_localisée\",\"located_digression\":\"La présentation du déficit à 2,3 % du PIB en 2030, la critique des hypothèses de croissance optimistes de 1,8 % par an et la remarque sur l’appel à l’émotion « pensez à vos enfants » s’éloignent de la thèse selon laquelle le débat porte sur les modalités de réforme et non sur la suppression des retraites.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790777819,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 236,
+      "prompt_tokens": 457,
+      "total_tokens": 693,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 126,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

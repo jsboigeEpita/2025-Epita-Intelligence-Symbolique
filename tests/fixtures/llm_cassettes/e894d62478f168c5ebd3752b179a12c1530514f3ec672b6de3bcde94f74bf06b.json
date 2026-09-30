@@ -1,0 +1,48 @@
+{
+  "key": "e894d62478f168c5ebd3752b179a12c1530514f3ec672b6de3bcde94f74bf06b",
+  "value": {
+    "id": "chatcmpl-ETpfKejJzGPty3GNXUX8eJsfu3Y0T",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points 1 et 2 apportent des éléments distincts : le premier porte sur la vitesse exceptionnelle du changement actuel, le second sur son ampleur mesurée (+1,1 °C). Le point 3 étant tronqué (« Les modèles prédicti… »), aucune redondance ne peut être évaluée à son sujet.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790778822,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 210,
+      "prompt_tokens": 299,
+      "total_tokens": 509,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 121,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

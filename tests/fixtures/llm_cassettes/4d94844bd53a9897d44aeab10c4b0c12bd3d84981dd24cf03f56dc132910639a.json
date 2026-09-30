@@ -1,0 +1,48 @@
+{
+  "key": "4d94844bd53a9897d44aeab10c4b0c12bd3d84981dd24cf03f56dc132910639a",
+  "value": {
+    "id": "chatcmpl-ETpZmewviyQ8xqHSEvDvQuQG3w0J0",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.62,\"fairness_assessment\":\"Les trois options représentent des intérêts légitimes et comparables : visibilité, qualité pédagogique et équilibre budgétaire. Un vote préférentiel ou par classement est plus équitable qu’un simple vote majoritaire, car il permet d’identifier une option acceptable pour plusieurs groupes et de limiter l’effet du faux compromis arbitraire.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"agent_1\",\"position\":\"Favorable à un tournoi inter-villes avec buffet et prix afin d’accroître la visibilité et le recrutement.\",\"influence\":0.33},{\"agent\":\"agent_2\",\"position\":\"Favorable à l’investissement intégral dans le matériel pédagogique et l’amélioration des apprentissages.\",\"influence\":0.33},{\"agent\":\"agent_3\",\"position\":\"Favorable à un format hybride partageant le budget entre tournoi et matériel pédagogique.\",\"influence\":0.34}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"Les objectifs sont en tension mais non incompatibles. Il est recommandé d’utiliser un vote préférentiel social_choice après avoir comparé les coûts, bénéfices attendus et indicateurs de réussite de chaque option. Une solution hybride peut être retenue, mais sa répartition budgétaire devrait être ajustée selon les besoins matériels réels et un budget minimal viable pour la visibilité, plutôt que fixée arbitrairement à 50/50.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790778478,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 383,
+      "prompt_tokens": 651,
+      "total_tokens": 1034,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 70,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

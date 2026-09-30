@@ -1,0 +1,48 @@
+{
+  "key": "26283acdeeed938b37d83df8b273ec548fa57aec5c32a9357a3fac06be777c18",
+  "value": {
+    "id": "chatcmpl-ETpWDrn35ksDht4XMzXdSTUMtMrUf",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"L’option A consiste à élargir le fonds de livres jeunesse.\",\"digressions\":\"La mention des trois usages en concurrence et de l’option B, qui consiste à créer un espace numérique avec des ordinateurs en libre accès, ne servent pas directement à défendre l’option A.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790778257,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 242,
+      "prompt_tokens": 226,
+      "total_tokens": 468,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 163,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

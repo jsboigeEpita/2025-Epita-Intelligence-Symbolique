@@ -1,0 +1,48 @@
+{
+  "key": "f02ca85dc8aba8f89ff47205bc47c4283b53a1a033fb29ee9361ee8f38f1cbe8",
+  "value": {
+    "id": "chatcmpl-ETpPJ34JhDCcKbXV37QQG7vqRqnWJ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse porte sur le caractère émotionnel de l’appel à penser aux enfants et son effet de diversion par rapport aux questions techniques du financement des retraites. Une digression est localisée : l’accusation de procès en homme de paille visant l’opposition, qui conteste une prétendue suppression des retraites alors qu’il s’agirait seulement de réformes différentes. Cette remarque est connexe au débat mais ne démontre pas directement la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790777829,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 242,
+      "prompt_tokens": 309,
+      "total_tokens": 551,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 127,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

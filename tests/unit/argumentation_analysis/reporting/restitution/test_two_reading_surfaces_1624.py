@@ -206,6 +206,16 @@ PROSE_BASELINE = frozenset(
         "interpretive_question",
         "modal_analysis_results",
         "propositional_analysis_results",
+        # #2850 slice A — three deliberate additions:
+        # ``argument_provenance`` (Acte I's two-figure count reads the
+        # producer split), ``analysis_coverage`` (the coverage sentence,
+        # rendered once in Acte I's inventory line), and ``raw_text`` —
+        # Acte II reads its LENGTH ONLY (``source_length`` for the
+        # truncation sentence's « sur L caractères », #2848); no source
+        # content flows through that read.
+        "argument_provenance",
+        "analysis_coverage",
+        "raw_text",
         "source_metadata",
         "stakes_and_stakeholders",
         "structured_arg_status",
@@ -272,6 +282,15 @@ PROSE_ONLY = frozenset(
         # dimension, so an appendix "disponible / mobilisée" row has no
         # meaning for it.
         "interpretive_question",
+        # #2850 slice A — rendering carriers, not analytical dimensions: the
+        # producer split behind Acte I's two-figure count, the per-phase
+        # coverage figure Acte I renders once, and the source's LENGTH Acte
+        # II reads for the truncation sentence (#2848 — length only, no
+        # content). An appendix "disponible / mobilisée" row has no meaning
+        # for any of the three.
+        "argument_provenance",
+        "analysis_coverage",
+        "raw_text",
     }
 )
 

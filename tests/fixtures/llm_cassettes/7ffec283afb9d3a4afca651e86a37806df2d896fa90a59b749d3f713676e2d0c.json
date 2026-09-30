@@ -1,0 +1,48 @@
+{
+  "key": "7ffec283afb9d3a4afca651e86a37806df2d896fa90a59b749d3f713676e2d0c",
+  "value": {
+    "id": "chatcmpl-ETpdCqJYU4jLBhD5x4aLqfsRvlGL7",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La prémisse affirme que la peine de mort a un effet dissuasif contre les crimes les plus graves, tandis que la conclusion la présente comme une sanction nécessaire dans certains cas extrêmes. Le verdict est un saut logique : la dissuasion alléguée ne suffit pas à démontrer la nécessité.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790778690,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 116,
+      "prompt_tokens": 280,
+      "total_tokens": 396,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 34,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

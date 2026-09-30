@@ -6,15 +6,25 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_vyUtk82nBkbYl3NdfjQs7dTI",
-          "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"3\",\"confidence\":\"high\",\"justification\":\"L’énoncé affirme que la politique économique est un « succès incontestable » sans fournir aucun élément, donnée ou raisonnement pour l’étayer. Il s’agit d’une affirmation vide qui n’apporte pas de support argumentatif.\"}"
+          "id": "call_HjYcbLkFz0Oxdip8xTHjh23p",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"4\"}"
+        },
+        {
+          "id": "call_CspvPPL9WRhTuk6tvIwdQTY5",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"22\"}"
+        },
+        {
+          "id": "call_KS1d6fqKQNCxXDPjt5syzyaB",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"26\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETBvVTHr928yHF17R995TssenUCgz",
-        "created": 1790626065,
+        "id": "chatcmpl-ETpRf2Jaf2kIEnzJ572MEfQVcuPXU",
+        "created": 1790777975,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1965,
@@ -25,7 +35,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 78,
+          "completion_tokens": 76,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

@@ -1,0 +1,48 @@
+{
+  "key": "5a2fb3aa6d2fa9948c60bd7900293f78a01e9a035cf4ef57fe5d6b41cbee44ea",
+  "value": {
+    "id": "chatcmpl-ETpWIep3UasydDl7i5mErOUyFVIne",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse porte sur l’élargissement du fonds de livres jeunesse. La mention des trois usages en concurrence et de l’option B, relative à un espace numérique avec ordinateurs en libre accès, constitue une digression localisée qui ne défend pas directement l’option A.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790778262,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 145,
+      "prompt_tokens": 297,
+      "total_tokens": 442,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 67,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

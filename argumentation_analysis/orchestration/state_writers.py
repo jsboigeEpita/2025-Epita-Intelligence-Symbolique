@@ -1192,17 +1192,20 @@ def _write_fact_extraction_to_state(
                     state.extracts.append(entry)
             elif isinstance(claim, str) and claim.strip():
                 state.extracts.append({"type": "claim", "content": claim.strip()})
-    # Populate base identified_arguments from LLM extraction
-    # #2315 — the assert trace is BOUNDED: an unbounded per-argument entry
-    # stream feeding prompts is a debt only a long run exposes (measured on
-    # a 39-phase / 607 s run reaching the 12-entry cap). Arguments beyond
-    # the cap are still added to the state — only their trace entries stop;
-    # one legacy-style commentary entry names the truncation so the cap is
-    # never silent.
+    # Populate base identified_arguments from LLM extraction.
+    # #2848 (carried by #2850 slice A) — THE ANCHOR IS NOT A BUDGET ITEM:
+    # every extracted argument gets its anchored assert entry. The old
+    # 12-entry writer cap (#2315) made the Act II thread "first 8 of the
+    # first 12" — on a 94-argument document the narrative covered the
+    # opening only, and the truncation note said so after the fact. The
+    # prompt budget now lives AT THE RENDER (Act II selects k moves
+    # stratified and SAYS the truncation); the trace itself is data.
+    # Measured before uncapping: collect_text_sequence is the trace's only
+    # prompt-feeding consumer, and it is render-capped — no other prompt
+    # renders the full trace, so #2315's debt does not return.
     arguments = output.get("arguments", [])
     if isinstance(arguments, list):
         raw_text = getattr(state, "raw_text", "") or ""
-        emitted = 0
         for arg in arguments:
             if isinstance(arg, dict):
                 text = arg.get("text", "").strip()
@@ -1211,25 +1214,18 @@ def _write_fact_extraction_to_state(
                     arg_text = text
                     if quote:
                         arg_text = f'{text} [quote: "{quote[:100]}"]'
-                    arg_id = state.add_argument(arg_text)
-                    if emitted < _EXTRACT_ASSERT_CAP:
-                        _record_assert_move(state, arg_id, quote, raw_text)
-                        emitted += 1
+                    # #2850 slice A — provenance: llm_extract, offset from the
+                    # FULL quote (the stored text truncates it at 100 chars; a
+                    # prefix find is still a find).
+                    arg_id = state.add_argument(
+                        arg_text, producer="llm_extract", source_quote=quote or None
+                    )
+                    _record_assert_move(state, arg_id, quote, raw_text)
             elif isinstance(arg, str) and arg.strip():
-                arg_id = state.add_argument(arg.strip())
-                if emitted < _EXTRACT_ASSERT_CAP:
-                    _record_assert_move(state, arg_id, "", raw_text)
-                    emitted += 1
-        if emitted >= _EXTRACT_ASSERT_CAP:
-            state.add_trace_entry(
-                phase="extract",
-                agent="FactExtraction",
-                reacts_to=["extract"],
-                summary=(
-                    f"séquence tronquée à {_EXTRACT_ASSERT_CAP} asserts "
-                    f"(cap writer #2315)"
-                ),
-            )
+                # No quote carried: the description itself is the find key —
+                # usually a named absence, never a guess.
+                arg_id = state.add_argument(arg.strip(), producer="llm_extract")
+                _record_assert_move(state, arg_id, "", raw_text)
     # NOTE: Fallacy detection removed from fact_extraction (issue #179).
     # Fallacies are the sole responsibility of hierarchical_fallacy_detection,
     # which uses deep taxonomy navigation for precise identification.
@@ -2176,7 +2172,18 @@ def _write_text_to_kb_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
                 else str(arg_data)
             )
             if text:
-                add_arg(text)
+                # #2850 slice A — the second producer, named: kb_heuristic
+                # units are whole-text paragraph splits, so their own text is
+                # the find key. Both producers now land in identified_arguments
+                # WITH provenance instead of anonymously under one key.
+                arg_id = add_arg(text, producer="kb_heuristic")
+                # Review #2887 point (a): every unit with a named offset gets
+                # its anchored assert, BOTH producers — before this, the move
+                # population was the LLM head alone (the 3,000-char extract
+                # window), and the Acte II thread read only the head however
+                # it was sampled. The unit's own text is the find key here,
+                # exactly the anchor rule the provenance side-table uses.
+                _record_assert_move(state, arg_id, text, state.raw_text or "")
 
     add_bs = getattr(state, "add_belief_set", None)
     if callable(add_bs):

@@ -1,0 +1,48 @@
+{
+  "key": "2d49083888ffb51b4af7d1e1c095c702921c4c0e2daa2c23b5af2cc6789c3de0",
+  "value": {
+    "id": "chatcmpl-ETpYUjFzipcYns3q25xvbDUrMCxqN",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse propose d’organiser un tournoi inter-villes avec buffet et prix afin d’accroître la visibilité du club et recruter de nouveaux membres. Une digression localisée présente toutefois l’option B, consistant à investir les 2000 euros dans du matériel pédagogique et des équipements, ce qui défend une stratégie distincte.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790778398,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 257,
+      "prompt_tokens": 321,
+      "total_tokens": 578,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 167,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "key": "ca8d63c3d6b80e0120218038ef9cd9632a3d58064d7b683c321b66fd9f76acb9",
+  "value": {
+    "id": "chatcmpl-ETpf428uSzwZG91bjTeMdT4t6I4jT",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Les mesures montrent une hausse de 1,1 °C depuis l’ère préindustrielle, et la vitesse du changement actuel est sans précédent. De plus, les modèles prédictifs sont unanimes quant à l’impact des activités humaines.\",\"conclusion\":\"L’argument selon lequel le climat a toujours changé ne suffit pas à expliquer ni à écarter le changement climatique actuel.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790778806,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 222,
+      "prompt_tokens": 280,
+      "total_tokens": 502,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 125,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

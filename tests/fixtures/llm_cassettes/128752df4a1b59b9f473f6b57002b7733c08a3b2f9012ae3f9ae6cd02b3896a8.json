@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_T8CN5m9gaCDKuSmzuoq9mi26",
+          "id": "call_5S8SLnESsdokMisfkBCYDTfc",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"856\",\"confidence\":\"high\",\"justification\":\"L’assertion « succès incontestable » est extrêmement vague et ne précise ni les critères, ni les données, ni la période permettant d’évaluer le succès de la politique économique. Elle empêche une compréhension et une vérification claires.\"}"
+          "arguments": "{\"node_pk\":\"856\",\"confidence\":\"high\",\"justification\":\"L’expression « succès incontestable » est vague et non définie : aucun critère ni donnée ne précise en quoi la politique économique serait un succès, ce qui empêche une compréhension claire de l’affirmation.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETBvVpdeHQTERjIF8SgVoED0sTUiQ",
-        "created": 1790626065,
+        "id": "chatcmpl-ETpRhEwMK1wp8wCHKlOLuBOiSEOIS",
+        "created": 1790777977,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1280,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 80,
+          "completion_tokens": 74,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

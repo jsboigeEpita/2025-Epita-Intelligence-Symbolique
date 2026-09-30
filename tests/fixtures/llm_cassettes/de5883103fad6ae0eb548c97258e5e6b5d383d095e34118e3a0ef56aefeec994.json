@@ -1,0 +1,48 @@
+{
+  "key": "de5883103fad6ae0eb548c97258e5e6b5d383d095e34118e3a0ef56aefeec994",
+  "value": {
+    "id": "chatcmpl-ETpOKZD6FH5Zakvcy3gIALmQH8E5k",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"L'argument du gouvernement en faveur de l'urgence d'une intervention est fallacieux et ne justifie pas l'action immédiate.\",\"digressions\":\"La remarque selon laquelle les syndicats accusent le gouvernement de commettre un sophisme naturaliste en affirmant que travailler plus longtemps est « dans l'ordre des choses » constitue une digression : elle porte sur un argument distinct de celui de l'effondrement du système dans cinq ans.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790777768,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 255,
+      "prompt_tokens": 297,
+      "total_tokens": 552,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 145,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

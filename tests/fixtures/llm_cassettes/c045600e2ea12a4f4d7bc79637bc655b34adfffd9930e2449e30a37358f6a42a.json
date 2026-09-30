@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_SC0G7z3cJKDn2RI8VDhTf3HD",
+          "id": "call_dYbdnbMjiRJ61PwDAoXozilL",
           "name": "Exploration-conclude_no_fallacy",
-          "arguments": "{\"reason\":\"Le texte invoque l'unanimité des experts et exclut l'avis des non-experts; il ne repose pas principalement sur un concept intrinsèquement contesté ou à interprétations concurrentes. Cette branche ne correspond donc pas à la fallacie identifiée.\"}"
+          "arguments": "{\"reason\":\"Le texte ne repose pas sur un concept intrinsèquement contesté ou interprété selon plusieurs sens. Il affirme plutôt que l'unanimité des experts suffit à établir la vérité et exclut les avis des non-experts, ce qui relève d'un appel inapproprié à l'autorité et d'une disqualification de la source, non de cette catégorie.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETBzvMRNCJtWGM40w2qBrDVVdTUs2",
-        "created": 1790626339,
+        "id": "chatcmpl-ETpTTAw9ZWRsZejzUNo39b7mg5TUI",
+        "created": 1790778087,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 681,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 77,
+          "completion_tokens": 95,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

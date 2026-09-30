@@ -1,0 +1,40 @@
+{
+  "key": "046b67d02eb46db0f9eca617a912cf0b24c5e48a2818caa4e243a8ca6632f21f",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_Wh4nADS551dXJoTx4kNLHsZp",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"357\",\"confidence\":\"high\",\"justification\":\"La formulation « succès incontestable » présente la politique économique comme indiscutable et oriente l’acceptation sans fournir de preuves. Elle impose un cadrage valorisant, sans toutefois instancier une sous-catégorie plus spécifique du conditionnement.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ETpRh19aYmHawFYhFbPLR0THUawtp",
+        "created": 1790777977,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2272,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 2269,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 81,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}
