@@ -108,7 +108,8 @@ def test_an_untracked_file_under_a_tracked_root_is_not_counted(tmp_path):
     DOES report it (asserted below — otherwise this witness would pass for the
     wrong reason), and the gate's population drops it because no index entry
     names it. As a control of the control, a TRACKED file with the same site
-    stays counted.
+    stays counted (asserted by the sibling test below — without it, a filter
+    that dropped everything would pass this witness).
     """
     probe = REPO / "tests" / "_untracked_probe_2873.py"
     try:
@@ -125,6 +126,48 @@ def test_an_untracked_file_under_a_tracked_root_is_not_counted(tmp_path):
             "undefined_name_2873" in walked.stdout
         ), "flake8 walking the root must see the probe — the disk walk is real"
         assert "undefined_name_2873" not in "\n".join(_tracked_sites(walked))
+    finally:
+        probe.unlink()
+    assert not probe.exists()
+
+
+def test_a_tracked_file_with_the_same_site_stays_counted(tmp_path, monkeypatch):
+    """The control of the control the #2873 witness promises: the population
+    follows the index, so once the file is tracked the SAME site is kept.
+
+    Hermetic: the probe is staged into a throwaway index (GIT_INDEX_FILE),
+    seeded from HEAD — the checkout's real index is never written. The
+    helpers inherit the environment, so the gate reads the same index this
+    test staged into.
+    """
+    probe = REPO / "tests" / "_tracked_probe_2873.py"
+    probe.write_text("def f():\n    return undefined_name_2873\n", encoding="utf-8")
+    monkeypatch.setenv("GIT_INDEX_FILE", str(tmp_path / "index-2873"))
+    subprocess.run(
+        ["git", "read-tree", "HEAD"],
+        cwd=REPO,
+        check=True,
+        timeout=120,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "add", "--", "tests/_tracked_probe_2873.py"],
+        cwd=REPO,
+        check=True,
+        timeout=120,
+        capture_output=True,
+    )
+    try:
+        assert (
+            "tests/_tracked_probe_2873.py" in _tracked_python_files()
+        ), "the probe must be in the index the gate reads"
+        walked = _f821("tests")
+        assert (
+            "undefined_name_2873" in walked.stdout
+        ), "the probe is a real site — the walk must see it"
+        assert "undefined_name_2873" in "\n".join(
+            _tracked_sites(walked)
+        ), "a TRACKED file with the same site stays counted"
     finally:
         probe.unlink()
     assert not probe.exists()
