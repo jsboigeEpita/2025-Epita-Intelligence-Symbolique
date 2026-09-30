@@ -54,7 +54,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from .dung_reader import (  # #1908: shared meaning with act2
     REJECTED_MEANS,
@@ -1469,6 +1469,29 @@ def _aspic_attack_statement(scope_counts: Dict[str, int]) -> str:
     )
 
 
+def _degraded_capabilities(state: Any) -> Set[str]:
+    """The axes the honest-absence ledger files as degraded (#2844).
+
+    ``state.structured_arg_status`` is the one ledger ``state_writers.
+    _record_structured_arg_status`` fills, and :func:`_collect_absent_dimensions`
+    already reads it to name the lost axes. This is the same read, for the
+    presence side: an axis whose framework returned only empty result sets is
+    filed ``evaluated_empty`` / degraded there (#1671: it "contributed no
+    analysis and must not be counted as capable"), while its *input* — the
+    weighted sidecar, the degenerate SetAF graph — can still carry data a
+    projector would turn into a statement. Counting that statement as
+    established surplus made the two readers of one run contradict each other.
+    """
+    ledger = getattr(state, "structured_arg_status", None) or {}
+    if not isinstance(ledger, dict):
+        return set()
+    return {
+        str(capability)
+        for capability, info in ledger.items()
+        if isinstance(info, dict) and info.get("degraded")
+    }
+
+
 def _collect_structured_arg_findings(state: Any) -> List[StructuredArgFinding]:
     """Collect the structured-argumentation axes that produced something (#1667).
 
@@ -1476,7 +1499,15 @@ def _collect_structured_arg_findings(state: Any) -> List[StructuredArgFinding]:
     Each projector decides on its own whether its axis has a singular statement
     to make; an axis with nothing to say produces nothing rather than a status
     word.
+
+    #2844: a projector reads the axis's INPUT, which can survive the axis's
+    own failure — the weighted sidecar is written before the framework runs,
+    so weights exist on a run the framework answered with empty sets only.
+    The ledger is the run's own record of that, and the surplus channel now
+    honours it: an axis filed degraded is named by the absence channel and
+    nowhere else, so the two readers of one state agree by construction.
     """
+    degraded = _degraded_capabilities(state)
     out: List[StructuredArgFinding] = []
     for projector in (
         _aspic_finding,
@@ -1491,8 +1522,9 @@ def _collect_structured_arg_findings(state: Any) -> List[StructuredArgFinding]:
         _weighted_finding,
     ):
         finding = projector(state)
-        if finding is not None:
-            out.append(finding)
+        if finding is None or finding.capability in degraded:
+            continue
+        out.append(finding)
     return sorted(out, key=lambda f: f.label)
 
 
