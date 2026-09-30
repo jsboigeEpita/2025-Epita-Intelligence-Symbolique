@@ -283,3 +283,96 @@ class TestTheMirrorDirection2879:
         )
         assert report.verdict.band == "FAIL"
         assert any("Surplus démenti" in r for r in report.verdict.reasons)
+
+
+class TestVerbalNegation2883:
+    """#2883 — the negation relation covers « ne <verbe> pas », both faces.
+
+    The guard vocabulary knew only the canonical refusal wordings (être /
+    avoir conjugations, « rien », « aucun », « sans »…) — the ordinary verbal
+    negation was a hole in BOTH directions of criterion 5, symmetrically,
+    since the two predicates read the same guards: on a thin state an honest
+    refusal was counted as a claim (issue #2883's measure: 2 of 5 fabricated
+    refusals flagged), and on a grounded state the same sentence was not read
+    as a denial. The fix completes the ONE negation definition — the scoped
+    witness below keeps the rule from over-widening.
+    """
+
+    # The two fabricated refusals the issue measured as wrongly flagged
+    # (claim direction): a verb-negated refusal of the surplus notion.
+    _VERBAL_REFUSAL = (
+        "L'analyse ne conclut pas à un surplus interprétatif : les "
+        "compteurs restent du contexte."
+    )
+    _VERBAL_REFUSAL_2 = "Le pipeline ne revendique pas ici un surplus interprétatif."
+
+    def test_verbal_refusal_passes_on_thin_state(self):
+        """Claim direction: « ne conclut pas » is a refusal, not a claim —
+        the issue's first measured line (1 flagged → 0 expected)."""
+        verdict = check_surplus_grounding(
+            self._VERBAL_REFUSAL, state_to_appendix_mapping(_thin_ns())
+        )
+        assert verdict.band == "PASS", (
+            "an honest refusal phrased as ordinary verbal negation must "
+            "pass on a thin state — it was counted as a claim (#2883)"
+        )
+
+    def test_second_verbal_refusal_passes_on_thin_state(self):
+        """The issue's second measured line (1 flagged → 0 expected)."""
+        verdict = check_surplus_grounding(
+            self._VERBAL_REFUSAL_2, state_to_appendix_mapping(_thin_ns())
+        )
+        assert verdict.band == "PASS"
+
+    def test_the_same_refusal_reddens_on_a_grounded_state(self):
+        """Mirror direction, same gesture: the verb-negated refusal of a
+        surplus the state DOES establish tells the reader the opposite of
+        what the analysis produced — previously silent (derived from the
+        shared guards, issue #2883's table)."""
+        verdict = check_surplus_grounding(
+            self._VERBAL_REFUSAL, state_to_appendix_mapping(_grounded_ns())
+        )
+        assert verdict.band == "FAIL", (
+            "the same sentence read as a refusal on thin state must read "
+            "as a denial on a grounded state — the two faces of one hole"
+        )
+        assert any("Surplus démenti" in r for r in verdict.reasons)
+
+    def test_the_discriminator_is_still_the_state(self):
+        """± pair on the verbal refusal: identical body, differing state —
+        PASS where nothing is established, FAIL where something is."""
+        thin = check_surplus_grounding(
+            self._VERBAL_REFUSAL, state_to_appendix_mapping(_thin_ns())
+        )
+        grounded = check_surplus_grounding(
+            self._VERBAL_REFUSAL, state_to_appendix_mapping(_grounded_ns())
+        )
+        assert thin.band == "PASS"
+        assert grounded.band == "FAIL"
+
+    def test_scoped_negation_stays_pass_on_grounded_state(self):
+        """The DoD's scoped witness: denying ONE type of surplus while
+        asserting the conclusion changed is not a denial of the established
+        surplus — if this reddens, the verbal-negation rule is too wide and
+        must be tightened (the issue's guard-fou). The cue must not fire on
+        « l'exclusion modifie la conclusion »: the changed-conclusion cue
+        reads conclusion-first, and the surplus notion needs its pair."""
+        scoped = (
+            "Ce que l'exclusion établit n'est pas un surplus de ce type, "
+            "mais l'exclusion modifie la conclusion."
+        )
+        verdict = check_surplus_grounding(
+            scoped, state_to_appendix_mapping(_grounded_ns())
+        )
+        assert verdict.band == "PASS"
+
+    def test_two_word_verbal_span_is_still_a_negation(self):
+        """The relation spans up to two words between « ne » and the
+        negation complement (« ne peut être lu comme un surplus… jamais ») —
+        pin the span so tightening it later is a measured decision, not a
+        silent regression."""
+        span = (
+            "L'apport ne peut jamais être lu comme un surplus " "interprétatif décisif."
+        )
+        thin = check_surplus_grounding(span, state_to_appendix_mapping(_thin_ns()))
+        assert thin.band == "PASS"

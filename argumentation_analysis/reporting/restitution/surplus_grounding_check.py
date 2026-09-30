@@ -109,9 +109,33 @@ _NEGATION_GUARDS = (
     "sans modifier",
 )
 
+# The SAME negation relation, second member (#2883): the ordinary verbal
+# negation governing a verb — « ne conclut pas », « ne revendique pas ici »,
+# « n'a jamais établi » — which the fixed vocabulary above (être/avoir
+# conjugations, « rien », « sans »…) cannot see. The two members compose in
+# :func:`_carries_negation`, the ONE definition both directions read —
+# never a list for one direction and a regex for the other. Known,
+# pre-existing imprecision, named rather than fixed here: a negation scoped
+# to one object only (« pas un surplus de ce type, mais un autre ») counts
+# as a denial of the whole notion — the fixed vocabulary already had that
+# class, this extends it to a new surface, it does not create it.
+_VERBAL_NEGATION_RE = re.compile(
+    r"\b(?:ne|n['''])\s+\S+(?:\s+\S+){0,2}\s+(?:pas|plus|jamais)\b"
+)
+
 # French LLM prose writes the typographic apostrophe (U+2019); the guards
 # store the straight one (U+0027) — normalise before matching (#2032 lesson).
 _APOSTROPHE_NORMALISED = ("’", "'")
+
+
+def _carries_negation(line: str) -> bool:
+    """Does ``line`` (already lowercased and apostrophe-normalised) carry a
+    negation of the surplus? ONE definition, both directions (#2883): the
+    canonical refusal vocabulary, plus the verbal negation relation above.
+    """
+    return any(guard in line for guard in _NEGATION_GUARDS) or bool(
+        _VERBAL_NEGATION_RE.search(line)
+    )
 
 
 def _rederived_established(state: Mapping[str, Any]) -> Optional[List[str]]:
@@ -149,14 +173,14 @@ def _unsupported_surplus_claims(body: str) -> List[str]:
     """Affirmative surplus claims in ``body`` (stripped lines, deduplicated).
 
     A line is a claim when any cue matches; a line carrying a negation
-    guard never is, whatever else it says — the honest refusal and the
-    scoped inventory (« sept sophismes localisés », without the surplus
-    notion) both pass untouched.
+    (the one definition, :func:`_carries_negation`) never is, whatever
+    else it says — the honest refusal and the scoped inventory (« sept
+    sophismes localisés », without the surplus notion) both pass untouched.
     """
     claims: List[str] = []
     for raw_line in body.splitlines():
         line = raw_line.lower().replace(*_APOSTROPHE_NORMALISED)
-        if any(guard in line for guard in _NEGATION_GUARDS):
+        if _carries_negation(line):
             continue
         if not _claims_surplus_notion(line):
             continue
@@ -170,18 +194,20 @@ def _denied_surplus_claims(body: str) -> List[str]:
     """Lines that DENY the surplus notion (stripped, deduplicated).
 
     The exact complement of :func:`_unsupported_surplus_claims`' predicate —
-    same line scope, same cues, same guards, only the side of the guard
-    flips. Scan this only when the state's re-derived surplus is established:
-    there the denial asserts to the reader the opposite of what the analysis
-    produced. The guards are the canonical refusal vocabulary the Acte III
-    data block itself carries for the empty case, so an ordinary negated
-    sentence about something else (« aucun sophisme localisé n'est resté sans
-    réponse ») is not a denial — the cue must be there too.
+    same line scope, same cues, same negation definition
+    (:func:`_carries_negation`), only the side of the guard flips. Scan this
+    only when the state's re-derived surplus is established: there the denial
+    asserts to the reader the opposite of what the analysis produced. The
+    negation is the canonical refusal vocabulary the Acte III data block
+    itself carries for the empty case (completed by the verbal relation,
+    #2883), so an ordinary negated sentence about something else (« aucun
+    sophisme localisé n'est resté sans réponse ») is not a denial — the cue
+    must be there too.
     """
     denials: List[str] = []
     for raw_line in body.splitlines():
         line = raw_line.lower().replace(*_APOSTROPHE_NORMALISED)
-        if not any(guard in line for guard in _NEGATION_GUARDS):
+        if not _carries_negation(line):
             continue
         if not _claims_surplus_notion(line):
             continue
