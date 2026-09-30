@@ -240,10 +240,17 @@ class TestArgsLimit:
     def test_pl_pass2_args_limit(self):
         """PL pass2: budget 10 via the stratified selector, head-cap gone."""
         import inspect
+        import re
+
         from argumentation_analysis.orchestration import invoke_callables as mod
 
         source = inspect.getsource(mod._invoke_propositional_logic)
-        assert "select_for_budget(_pl_units, 10)" in source
+        # Whitespace-stripped pin: black wraps the call once it grows past
+        # 88 cols (measured: the #2850 review retouche's ``text_length=``
+        # pushed it over, one line at PL depth, one-arg-per-line at FOL
+        # depth) — the pin must survive any re-wrapping, not the layout.
+        compact = re.sub(r"\s+", "", source)
+        assert "select_for_budget(_pl_units,10," in compact
         assert "merged_population_units" in source
         assert "args[:10]" not in source
         assert "args[:6]" not in source
@@ -251,10 +258,13 @@ class TestArgsLimit:
     def test_fol_pass2_args_limit(self):
         """FOL pass2: budget 10 via the stratified selector, head-cap gone."""
         import inspect
+        import re
+
         from argumentation_analysis.orchestration import invoke_callables as mod
 
         source = inspect.getsource(mod._invoke_fol_reasoning)
-        assert "select_for_budget(_fol_units, 10)" in source
+        compact = re.sub(r"\s+", "", source)
+        assert "select_for_budget(_fol_units,10," in compact
         assert "merged_population_units" in source
         assert "args[:10]" not in source
         assert "args[:6]" not in source
