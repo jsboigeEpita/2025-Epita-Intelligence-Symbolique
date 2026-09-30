@@ -13,7 +13,7 @@
 version: 1
 metadata:
   content_hash:
-    win-64: dba14908fc7b9f0265d4966a7baf488b9d731fa67c32fbe4cbafcdcf6c37877e
+    win-64: 15694cb71bb1191d59b58b30ffe6295eded4b3a0001aba341bd89a426efb3b97
   channels:
   - url: conda-forge
     used_env_vars: []
@@ -412,15 +412,20 @@ package:
   category: main
   optional: false
 - name: charset-normalizer
-  version: 3.5.1
+  version: 3.5.2
   manager: conda
   platform: win-64
   dependencies:
-    python: '>=3.10'
-  url: https://conda.anaconda.org/conda-forge/noarch/charset-normalizer-3.5.1-pyhd8ed1ab_0.conda
+    _python_abi3_support: 1.*
+    cpython: '>=3.9'
+    python: ''
+    ucrt: '>=10.0.20348.0'
+    vc: '>=14.3,<15'
+    vc14_runtime: '>=14.44.35208'
+  url: https://conda.anaconda.org/conda-forge/win-64/charset-normalizer-3.5.2-h308a848_0.conda
   hash:
-    md5: e0ac3accc64e23e40969d660e5f58ac8
-    sha256: cb60ef3e0631c8bacb4f7057196dee4496091a22baa3bb4b9bccb12c7e1c921b
+    md5: 9435e7be4c7a58a0baa36d1a96e4eea0
+    sha256: 15ef0ff35f316beeb8d0ab045cb3c29655f0e38ed1ea49c56f5606d2ff2bc3e4
   category: main
   optional: false
 - name: click
@@ -2900,7 +2905,6 @@ package:
     libsqlite: '>=3.53.4,<4.0a0'
     libzlib: '>=1.3.2,<2.0a0'
     openssl: '>=3.5.7,<4.0a0'
-    pip: ''
     tk: '>=8.6.13,<8.7.0a0'
     tzdata: ''
     ucrt: '>=10.0.20348.0'
@@ -3934,16 +3938,16 @@ package:
   category: main
   optional: false
 - name: werkzeug
-  version: 3.1.8
+  version: 3.1.1
   manager: conda
   platform: win-64
   dependencies:
     markupsafe: '>=2.1.1'
-    python: '>=3.10'
-  url: https://conda.anaconda.org/conda-forge/noarch/werkzeug-3.1.8-pyhcf101f3_0.conda
+    python: '>=3.9'
+  url: https://conda.anaconda.org/conda-forge/noarch/werkzeug-3.1.1-pyhd8ed1ab_0.conda
   hash:
-    md5: 3eeca039e7316268627f4116da9df64c
-    sha256: 5108c1bf2f0512e5c9dc8191e31b144c23b7cf0e73423a246173006002368d79
+    md5: 1180d2cfd2aefc04fca2f127fa76d983
+    sha256: 8de7b1b2e5f8a4300088e406cf4ebdac86f76d9986424af5277fb6eaccf384b3
   category: main
   optional: false
 - name: wheel
@@ -4733,7 +4737,7 @@ package:
   category: main
   optional: false
 - name: openapi-core
-  version: 0.19.4
+  version: 0.19.5
   manager: pip
   platform: win-64
   dependencies:
@@ -4744,10 +4748,11 @@ package:
     openapi-schema-validator: '>=0.6.0,<0.7.0'
     openapi-spec-validator: '>=0.7.1,<0.8.0'
     parse: '*'
-    werkzeug: '*'
-  url: https://files.pythonhosted.org/packages/d2/b3/4534adc8bac68a5d743caa786f1443545faed4d7cc7a5650b2d49255adfc/openapi_core-0.19.4-py3-none-any.whl
+    typing-extensions: '>=4.8.0,<5.0.0'
+    werkzeug: <3.1.2
+  url: https://files.pythonhosted.org/packages/27/6f/83ead0e2e30a90445ee4fc0135f43741aebc30cca5b43f20968b603e30b6/openapi_core-0.19.5-py3-none-any.whl
   hash:
-    sha256: 38e8347b6ebeafe8d3beb588214ecf0171874bb65411e9d4efd23cb011687201
+    sha256: ef7210e83a59394f46ce282639d8d26ad6fc8094aa904c9c16eb1bac8908911f
   category: main
   optional: false
 - name: openapi-schema-validator
@@ -5205,14 +5210,14 @@ package:
   category: main
   optional: false
 - name: smart-open
-  version: 8.0.1
+  version: 8.0.2
   manager: pip
   platform: win-64
   dependencies:
     wrapt: '*'
-  url: https://files.pythonhosted.org/packages/c3/96/325b8c507ccecc50421fecc0345a502ee6e4a44785af3c4e6ecbadad624a/smart_open-8.0.1-py3-none-any.whl
+  url: https://files.pythonhosted.org/packages/1c/48/d362978544ab08b385c6222ccb048fab1db3e3b820a07ef652c5d75678ae/smart_open-8.0.2-py3-none-any.whl
   hash:
-    sha256: 3e97f90e92a952cb57863dfe132082c400a52eeeb27c067692fb51dbcc5b0089
+    sha256: 7ff6e4acf454269905db0c747f5d14fdba6056db572c0f8398043676dc91515c
   category: main
   optional: false
 - name: sortedcontainers

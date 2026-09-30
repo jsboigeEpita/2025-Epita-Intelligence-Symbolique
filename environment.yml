@@ -48,6 +48,13 @@ dependencies:
 
   # Web & API
   - flask
+  # #2857 (coordination arbitration, 2026-09-30): openapi-core 0.19.5 (via
+  # semantic-kernel, pip section) requires werkzeug<3.1.2; without this pin
+  # the solve keeps TWO providers (conda 3.1.8 for flask + pip 3.1.1 for
+  # openapi-core) — the shape #2861 repaired for libiomp5md. Pinned conda-side,
+  # flask stays satisfied (>=3.1.0), one provider remains, and the runtime is
+  # exactly what CI runs today.
+  - werkzeug<3.1.2
   - requests
   - fastapi
   - uvicorn
