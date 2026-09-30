@@ -229,22 +229,32 @@ class TestFOLTemplateCounter:
 
 
 class TestArgsLimit:
-    """Args limit increased from 6 to 10."""
+    """Pass-2 target budget: 10, now stratified over the merged population.
+
+    #2850 slice A replaced the head window (``args[:10]``) with
+    ``select_for_budget(units, 10)`` over the merged population — same
+    budget (anti-pendulum), tail units selected too. This guard pins the
+    new shape so the head-cap cannot quietly return.
+    """
 
     def test_pl_pass2_args_limit(self):
-        """Verify PL pass2 loop uses args[:10] not args[:6]."""
+        """PL pass2: budget 10 via the stratified selector, head-cap gone."""
         import inspect
         from argumentation_analysis.orchestration import invoke_callables as mod
 
         source = inspect.getsource(mod._invoke_propositional_logic)
-        assert "args[:10]" in source
+        assert "select_for_budget(_pl_units, 10)" in source
+        assert "merged_population_units" in source
+        assert "args[:10]" not in source
         assert "args[:6]" not in source
 
     def test_fol_pass2_args_limit(self):
-        """Verify FOL pass2 loop uses args[:10] not args[:6]."""
+        """FOL pass2: budget 10 via the stratified selector, head-cap gone."""
         import inspect
         from argumentation_analysis.orchestration import invoke_callables as mod
 
         source = inspect.getsource(mod._invoke_fol_reasoning)
-        assert "args[:10]" in source
+        assert "select_for_budget(_fol_units, 10)" in source
+        assert "merged_population_units" in source
+        assert "args[:10]" not in source
         assert "args[:6]" not in source
