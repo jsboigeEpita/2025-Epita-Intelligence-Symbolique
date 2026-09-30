@@ -131,12 +131,36 @@ _VERBAL_NEGATION_RE = re.compile(
 
 # Rule 2's proposition breaks. The scanned line keeps its accents — the
 # ellipsis below is the typographic one, and « mais » is word-bounded.
-_CLAUSE_BREAK_RE = re.compile(r"[:;.!?…]|\bmais\b")
+# Second cut (review c.5917661086): a COMMA that opens a new clause breaks
+# governance the same way — « , elle … », « , et … » (a subject pronoun or
+# the coordination after the comma starts a clause of its own). A comma
+# followed by anything else (« pas, à ce stade, de surplus ») stays INSIDE
+# the clause: an inserted adverbial does not move the object.
+_CLAUSE_BREAK_RE = re.compile(
+    r"[:;.!?…]|\bmais\b|,\s*(?:il|elle|elles|ils|on|nous|vous|ce|cela|ça)\b|,\s*et\b"
+)
 
 # Rule 3's restrictive shapes: a restrictive verb between « ne » and the
-# complement, or « seulement / uniquement / exclusivement » right after it.
-_RESTRICTIVE_VERB_STEMS = ("limit", "rédui", "restrein", "résum", "born")
-_RESTRICTIVE_AFTER_RE = re.compile(r"\s*(?:seulement|uniquement|exclusivement)\b")
+# complement, or « seulement / uniquement / exclusivement / que » right
+# after it (« ne fait pas que compter » — second cut, c.5917661086).
+_RESTRICTIVE_VERB_STEMS = (
+    "limit",
+    "rédui",
+    "restrein",
+    "résum",
+    "born",
+    "content",  # « ne se contente pas de compter » — restrictive (2nd cut)
+)
+_RESTRICTIVE_AFTER_RE = re.compile(
+    r"\s*(?:seulement|uniquement|exclusivement|que|qu')\b"
+)
+
+# Rule 4 (second cut, c.5917661086): negating a VERB OF DOUBT OR DENIAL
+# AFFIRMS — « on ne peut plus douter d'un surplus » claims it. The verb
+# sits in the mid words (« ne conteste pas ») or right after the
+# complement (« ne peut plus douter de ») — either position flips the
+# sentence to affirmative, exactly like a restrictive.
+_AFFIRMING_VERB_STEMS = ("dout", "nier", "contest")
 
 # French LLM prose writes the typographic apostrophe (U+2019); the guards
 # store the straight one (U+0027) — normalise before matching (#2032 lesson).
@@ -167,22 +191,28 @@ def _cue_occurrences(line: str) -> List["re.Match[str]"]:
 
 def _verbal_negation_governs(line: str, cue_start: int) -> bool:
     """Does the verbal negation relation take the cue occurrence starting
-    at ``cue_start`` as its OBJECT? The three governance rules of the
-    #2889 retouche (review c.5912722961): the complement precedes the cue
-    (1), in the same clause (2), and the negation is not restrictive (3).
+    at ``cue_start`` as its OBJECT? The governance rules of the #2889
+    retouches (c.5912722961, c.5917661086): the complement precedes the
+    cue (1), in the same clause — comma included, when the comma opens a
+    clause (2) — and the negation is neither restrictive (3) nor the
+    negation of a verb of doubt, which affirms (4).
     """
     for match in _VERBAL_NEGATION_RE.finditer(line):
         if match.end() > cue_start:
             continue
-        if _CLAUSE_BREAK_RE.search(line, match.end(), cue_start):
+        between = line[match.end() : cue_start]
+        if _CLAUSE_BREAK_RE.search(between):
+            continue
+        mid_words = match.group("mid").split()
+        if any(stem in word for word in mid_words for stem in _RESTRICTIVE_VERB_STEMS):
             continue
         if any(
             stem in word
-            for word in match.group("mid").split()
-            for stem in _RESTRICTIVE_VERB_STEMS
+            for word in mid_words + between.split()
+            for stem in _AFFIRMING_VERB_STEMS
         ):
             continue
-        if _RESTRICTIVE_AFTER_RE.match(line, match.end()):
+        if _RESTRICTIVE_AFTER_RE.match(between):
             continue
         return True
     return False

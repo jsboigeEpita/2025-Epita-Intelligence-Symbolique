@@ -464,3 +464,75 @@ class TestVerbalNegationGovernance2889:
             self._OTHER_CLAUSE, state_to_appendix_mapping(_grounded_ns())
         )
         assert verdict.band == "PASS"
+
+
+class TestVerbalNegationSecondCut2889:
+    """#2889 second cut (review c.5917661086) — the seven measured lines,
+    each pinned in BOTH directions with its expected column.
+
+    The first cut let four affirmations through: a COMMA opening a new
+    clause (« , elle … », « , et … »), a « pas que » restrictive, a « se
+    contente » idiom, and a negated verb of doubt (« ne peut plus douter
+    ») — which AFFIRMS. The second cut extends the clause-break set with
+    `, <subject pronoun>` and `, et`, the restrictives with « content »
+    and « que », and adds the affirming-verb stems (douter/nier/contester).
+    Deliberate settlement, written here and in the PR body: an inserted
+    adverbial (« pas, à ce stade, de surplus ») does NOT break governance
+    — only a comma that opens a clause does.
+    """
+
+    # (sentence, expected reading: "denial" or "claim")
+    _LINES = [
+        (
+            "Ce rapport ne revendique pas de surplus interprétatif.",
+            "denial",
+        ),
+        (
+            "Il ne se dégage pas, à ce stade, de surplus interprétatif.",
+            "denial",
+        ),
+        (
+            "L'analyse ne se contente pas de compter, elle dégage un "
+            "surplus interprétatif décisif.",
+            "claim",
+        ),
+        (
+            "L'orchestration ne fait pas que compter, elle apporte un "
+            "surplus interprétatif.",
+            "claim",
+        ),
+        (
+            "Nous ne nous arrêtons pas là, et un surplus interprétatif "
+            "se dégage nettement.",
+            "claim",
+        ),
+        (
+            "On ne peut plus douter d'un surplus interprétatif réel.",
+            "claim",
+        ),
+        (
+            "Le pipeline ne compte pas seulement les sophismes, il "
+            "produit un surplus interprétatif.",
+            "claim",
+        ),
+    ]
+
+    def test_the_seven_measured_lines_read_as_expected(self):
+        """Both directions per line, the review's expected column pinned:
+        a denial PASSES thin and reddens grounded (« Surplus démenti »);
+        a claim reddens thin (« Surplus non étayé ») and PASSES grounded."""
+        for sentence, expected in self._LINES:
+            thin = check_surplus_grounding(
+                sentence, state_to_appendix_mapping(_thin_ns())
+            )
+            grounded = check_surplus_grounding(
+                sentence, state_to_appendix_mapping(_grounded_ns())
+            )
+            if expected == "denial":
+                assert thin.band == "PASS", sentence
+                assert grounded.band == "FAIL", sentence
+                assert any("Surplus démenti" in r for r in grounded.reasons), sentence
+            else:
+                assert thin.band == "FAIL", sentence
+                assert any("Surplus non étayé" in r for r in thin.reasons), sentence
+                assert grounded.band == "PASS", sentence
