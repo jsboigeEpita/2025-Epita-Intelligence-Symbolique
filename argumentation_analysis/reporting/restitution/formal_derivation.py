@@ -47,6 +47,17 @@ _MAX_ATOMS = 3
 _ATOM_CHAR_CAP = 56
 _TOTAL_FORMULA_CAP = 12
 
+# #1914 criterion 6 — the folded appendix carries one subsection per formal
+# axis under this stable ref, the twin of ``dung_reader.appendix_ref`` for the
+# derivation material (« Annexe Dung[label] » ⇄ « Annexe FOL[dérivations] »).
+# Produced here, next to the axis vocabulary, so a citer imports one spelling.
+_AXIS_REF_FAMILIES: Tuple[str, ...] = ("FOL", "PL", "modale")
+
+
+def formal_axis_ref(family: str) -> str:
+    """The stable opaque appendix ref of a formal axis (#1914 criterion 6)."""
+    return f"Annexe {family}[dérivations]"
+
 
 def _is_real_formula(text: str) -> bool:
     """A formula string qualifies as tested content unless it is a
@@ -84,6 +95,40 @@ def _records_with_verdict(
     return [r for r in records if isinstance(r, dict) and verdict_reader(r) is verdict]
 
 
+def scan_tested_content(
+    records: Any,
+    verdict_reader: Callable[[Dict[str, Any]], Optional[bool]],
+) -> Tuple[List[str], int]:
+    """The formula strings a DECIDED record set carries, verbatim.
+
+    Returns ``(real, placeholders)``: the strings that qualify as tested
+    content (in record order, duplicates kept — the caller caps and de-dupes),
+    and how many were rejected by :func:`_is_real_formula`. One reader of the
+    ``formulas`` shape, shared by the readable rendering below and by the
+    folded appendix (#1914 criterion 6) — a second loop over the same shape
+    would be a second way to misread it. Undecided records (``None``) are
+    dropped, never collapsed into a verdict (#1019).
+    """
+    real: List[str] = []
+    placeholders = 0
+    for record in records if isinstance(records, list) else []:
+        if not isinstance(record, dict):
+            continue
+        if verdict_reader(record) is None:
+            continue
+        formulas = record.get("formulas")
+        if not isinstance(formulas, list):
+            continue
+        for formula in formulas:
+            if not isinstance(formula, str):
+                continue
+            if _is_real_formula(formula):
+                real.append(formula)
+            else:
+                placeholders += 1
+    return real, placeholders
+
+
 def extract_tested_content(
     records: Any,
     verdict_reader: Callable[[Dict[str, Any]], Optional[bool]],
@@ -97,23 +142,13 @@ def extract_tested_content(
     never a fabricated derivation. ``refuted=True`` selects the REFUTED
     records (the decisive derivation: what failed); ``refuted=False`` the
     verified ones (a sample of what passed)."""
-    decided = _records_with_verdict(records, verdict_reader, verdict=not refuted)
-    atoms: List[str] = []
-    n_formulas = 0
-    for r in decided:
-        formulas = r.get("formulas")
-        if not isinstance(formulas, list):
-            continue
-        for f in formulas:
-            if not isinstance(f, str):
-                continue
-            n_formulas += 1
-            if _is_real_formula(f) and len(atoms) < max_atoms:
-                atoms.append(_readable_atom(f))
+    selected = _records_with_verdict(records, verdict_reader, verdict=not refuted)
+    real, placeholders = scan_tested_content(selected, verdict_reader)
+    atoms = [_readable_atom(f) for f in real[:max_atoms]]
     if not atoms:
         return None
     quoted = ", ".join(f"« {a} »" for a in atoms)
-    extra = n_formulas - len(atoms)
+    extra = len(real) + placeholders - len(atoms)
     suffix = (
         f" (+{accord(extra, 'autre formule', 'autres formules')})" if extra > 0 else ""
     )
