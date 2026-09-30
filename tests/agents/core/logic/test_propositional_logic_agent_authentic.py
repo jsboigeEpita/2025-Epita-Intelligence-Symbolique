@@ -194,6 +194,7 @@ async def test_text_to_belief_set_authentic(authentic_pl_agent):
 @pytest.mark.llm_integration
 @pytest.mark.phase5
 @pytest.mark.propositional
+@pytest.mark.requires_api  # #2832 : real LLM POST now that the test is non-vacuous (egress, run 36627437027)
 async def test_generate_queries_authentic(authentic_pl_agent):
     """Test authentique de génération de requêtes propositionnelles."""
     if not authentic_pl_agent["llm_service_configured"]:
