@@ -171,3 +171,78 @@ class TestCoverageFigure:
         result = select_for_budget(positioned + absent, 4)
         assert result.k == 4
         assert result.bands_covered == 3  # only positioned bands
+
+
+class TestTextBandsAndSpan2887:
+    """Review of #2887 — recorded coverage speaks in TEXT terms.
+
+    Population bands (slice A's default) recompute the checked field from
+    what it checks: a head-only population of 10 units renders « 8/8 bandes »
+    while occupying 0.00–0.05 of the text. With ``text_length``, bands are
+    fixed thirds of ``[0, L]`` — reachable-partial — and ``span`` carries the
+    exact fraction of the text the selected units occupy.
+    """
+
+    def _head_only(self):
+        # 10 units all inside the first 3,000 chars of a 56,430-char text —
+        # the review's measured situation.
+        return [
+            SelectableUnit(unit_id=f"a{i}", text=f"t{i}", offset=100 + i * 280)
+            for i in range(10)
+        ]
+
+    def test_head_only_covers_one_third_and_says_so(self):
+        sel = select_for_budget(self._head_only(), 8, text_length=56430)
+        assert sel.bands_total == 3
+        assert (
+            sel.bands_covered == 1
+        ), "a head-only population covers ONE text third — never 8/8"
+        assert sel.span is not None and sel.span[1] < 1 / 3
+
+    def test_the_paired_population_geometry_is_the_tautology(self):
+        """The control of the control: the SAME population, no text length,
+        saturates its own bands — this is the measured defect the review
+        names, pinned so the two geometries cannot be conflated again."""
+        sel = select_for_budget(self._head_only(), 8)
+        assert sel.bands_covered == sel.bands_total == 8
+
+    def test_span_is_the_fraction_of_the_text(self):
+        units = [
+            SelectableUnit(unit_id="a", text="ta", offset=1200),
+            SelectableUnit(unit_id="b", text="tb", offset=50000),
+        ]
+        sel = select_for_budget(units, 2, text_length=60000)
+        assert sel.span == (1200 / 60000, 50000 / 60000)
+
+    def test_return_is_text_order_even_when_bands_interleave(self):
+        """The review nit: round-robin interleaves bands, the returned
+        selection must not — always offset-ascending, absent last."""
+        units = [
+            SelectableUnit(unit_id=f"a{i}", text=f"t{i}", offset=o)
+            for i, o in enumerate(range(0, 48000, 6000))
+        ]
+        sel = select_for_budget(units, 8, band_count=3, text_length=48000)
+        offsets = [u.offset for u in sel.selected if u.offset is not None]
+        assert offsets == sorted(offsets), (
+            "the returned selection reads in the document's order, not the "
+            "round-robin's"
+        )
+
+    def test_no_text_length_keeps_population_bands_and_no_span(self):
+        units = [
+            SelectableUnit(unit_id=f"a{i}", text=f"t{i}", offset=i * 100)
+            for i in range(6)
+        ]
+        sel = select_for_budget(units, 4)
+        assert sel.span is None
+        assert sel.bands_total == 4  # the slice-A population geometry
+
+    def test_identity_selection_carries_the_span_too(self):
+        units = [
+            SelectableUnit(unit_id="a", text="ta", offset=100),
+            SelectableUnit(unit_id="b", text="tb", offset=20000),
+        ]
+        sel = select_for_budget(units, 5, text_length=40000)
+        assert sel.k == 2
+        assert sel.span == (100 / 40000, 20000 / 40000)
+        assert sel.bands_covered == 2 and sel.bands_total == 3

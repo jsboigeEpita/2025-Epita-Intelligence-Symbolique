@@ -15,6 +15,7 @@ and names the truncation in a legacy-style commentary entry.
 from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 from argumentation_analysis.orchestration.state_writers import (
     _write_fact_extraction_to_state,
+    _write_text_to_kb_to_state,
 )
 
 _TEXT = (
@@ -136,4 +137,53 @@ class TestBound:
         notes = [e for e in state.analysis_trace if e.get("move") is None]
         assert notes == [], (
             "no legacy commentary entry: nothing is truncated at write time " "anymore"
+        )
+
+
+class TestKbAssertMoves2887:
+    """Review #2887 point (a) — the thread stops being the LLM head.
+
+    The one writer of anchored moves was the LLM extraction path (the
+    3,000-char window); kb_heuristic units landed in the population without
+    a move, so on a real document the Act II move population was the head
+    however it was sampled. Every unit with a locatable offset now gets its
+    anchored assert, BOTH producers.
+    """
+
+    def test_kb_units_get_anchored_assert_moves(self):
+        state = UnifiedAnalysisState(initial_text=_TEXT)
+        _write_text_to_kb_to_state(
+            {
+                "arguments": [
+                    "La première prémisse ouvre le débat.",
+                    "Enfin la conclusion ferme.",
+                ]
+            },
+            state,
+            {},
+        )
+        asserts = [e for e in state.analysis_trace if e.get("move") == "assert"]
+        assert len(asserts) == 2, (
+            "kb_heuristic units get their assert moves too — the thread is "
+            "the whole text's, not the extract window's"
+        )
+        anchored = [e for e in asserts if "anchor" in e]
+        assert len(anchored) == 2, (
+            "both kb units are locatable verbatim — both asserts carry an " "anchor"
+        )
+        offsets = sorted(e["anchor"]["offset"] for e in anchored)
+        assert offsets[0] < offsets[1], "the two units sit at distinct positions"
+
+    def test_kb_unit_not_in_text_gets_assert_without_anchor(self):
+        state = UnifiedAnalysisState(initial_text=_TEXT)
+        _write_text_to_kb_to_state(
+            {"arguments": ["paraphrase qui n'est pas dans le texte"]},
+            state,
+            {},
+        )
+        asserts = [e for e in state.analysis_trace if e.get("move") == "assert"]
+        assert len(asserts) == 1
+        assert "anchor" not in asserts[0], (
+            "the tri-state anchor rule is the producers'-shared one: absent "
+            "text means NO anchor, never offset 0"
         )

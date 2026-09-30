@@ -146,13 +146,16 @@ async def _invoke_collaborative_analysis(
     from argumentation_analysis.orchestration.selection import (
         merged_population_units,
         select_for_budget,
+        state_text_length,
     )
 
     arg_lines = []
     _deb_state = context.get("_state_object")
     _deb_units = merged_population_units(_deb_state)
     if _deb_units:
-        _deb_selection = select_for_budget(_deb_units, 8)
+        _deb_selection = select_for_budget(
+            _deb_units, 8, text_length=state_text_length(_deb_state)
+        )
         if _deb_state is not None and hasattr(_deb_state, "record_analysis_coverage"):
             _deb_state.record_analysis_coverage(
                 "collaborative_debate",
@@ -160,6 +163,7 @@ async def _invoke_collaborative_analysis(
                 _deb_selection.n_total,
                 _deb_selection.bands_covered,
                 _deb_selection.bands_total,
+                span=_deb_selection.span,
             )
         for i, u in enumerate(_deb_selection.selected):
             arg_lines.append(f"A{i + 1}. {u.text}")
@@ -316,6 +320,7 @@ def _fallback_collaborative(input_text: str, context: Dict[str, Any]) -> Dict[st
     from argumentation_analysis.orchestration.selection import (
         merged_population_units,
         select_for_budget,
+        state_text_length,
     )
 
     _fb_state = context.get("_state_object")

@@ -704,20 +704,38 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self.deliberation_trace: List[Dict[str, Any]] = []
 
     def record_analysis_coverage(
-        self, phase: str, k: int, n_total: int, bands_covered: int, bands_total: int
+        self,
+        phase: str,
+        k: int,
+        n_total: int,
+        bands_covered: int,
+        bands_total: int,
+        span: Optional[Tuple[float, float]] = None,
     ) -> None:
         """#2850 slice A — enregistre la couverture d'une phase sélectrice.
 
         Un chiffre par phase qui sélectionne ; le rendu des Actes l'agrège
         en une phrase. Écraser la clé d'une phase = garder la DERNIÈRE
         sélection (une phase qui re-sélectionne remplace sa propre mesure).
+
+        ``span`` (review #2887) : fraction (début, fin) du TEXTE couverte par
+        les unités sélectionnées portant un offset — c'est lui qui rend une
+        sélection confinée à la tête DITE confinée à la tête : des bandes
+        sur les positions du texte peuvent saturer sur une étendue mince,
+        le span ne peut pas. ``None`` = aucune unité sélectionnée ancrée (ou
+        sélection sans longueur de texte) — la phrase rendue ne prête alors
+        aucune étendue.
         """
-        self.analysis_coverage[phase] = {
+        entry: Dict[str, Any] = {
             "k": int(k),
             "N": int(n_total),
             "bands_covered": int(bands_covered),
             "bands_total": int(bands_total),
         }
+        if span is not None:
+            entry["span_start"] = float(span[0])
+            entry["span_end"] = float(span[1])
+        self.analysis_coverage[phase] = entry
 
     def record_designation(
         self,

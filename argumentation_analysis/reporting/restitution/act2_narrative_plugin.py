@@ -1396,7 +1396,11 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
             SelectableUnit(unit_id=f"move_{i}", text="", offset=m.offset)
             for i, m in enumerate(_seq.moves)
         ]
-        _move_selection = select_for_budget(_move_units, _SEQUENCE_RENDER_CAP)
+        _move_selection = select_for_budget(
+            _move_units,
+            _SEQUENCE_RENDER_CAP,
+            text_length=evidence.source_length or None,
+        )
         _chosen_ids = {u.unit_id for u in _move_selection.selected}
         _chosen_moves = [
             m for i, m in enumerate(_seq.moves) if f"move_{i}" in _chosen_ids

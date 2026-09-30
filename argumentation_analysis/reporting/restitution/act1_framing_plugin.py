@@ -544,9 +544,28 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         )
     coverage_map = evidence.analysis_coverage
     if coverage_map:
+        # Review #2887: the bands are FIXED TEXT positions (thirds of the
+        # source), so "1/3 tiers du texte" says head-bound, and the span —
+        # the exact (start, end) fraction the selected units occupy — is
+        # what a thin spread cannot saturate. No span key = no selected unit
+        # carried an offset: the sentence lends no extent it cannot ground.
+        def _coverage_fig(phase: str, fig: Any) -> str:
+            part = (
+                f"{phase} : {fig['k']}/{fig['N']} unités, "
+                f"{fig['bands_covered']}/{fig['bands_total']} tiers du texte"
+            )
+            if "span_start" in fig and "span_end" in fig:
+                # French prose reads a comma decimal (« 0,05 »), Python
+                # formats a dot — translate at the render, the state keeps
+                # the float.
+                part += (
+                    f", couvrant {fig['span_start']:.2f} à "
+                    f"{fig['span_end']:.2f} du texte"
+                ).replace(".", ",")
+            return part
+
         coverage_parts = [
-            f"{phase} : {fig['k']}/{fig['N']} unités, "
-            f"{fig['bands_covered']}/{fig['bands_total']} bandes de position"
+            _coverage_fig(phase, fig)
             for phase, fig in sorted(coverage_map.items())
             if isinstance(fig, dict) and "k" in fig
         ]

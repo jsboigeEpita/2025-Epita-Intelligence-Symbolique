@@ -2176,7 +2176,14 @@ def _write_text_to_kb_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
                 # units are whole-text paragraph splits, so their own text is
                 # the find key. Both producers now land in identified_arguments
                 # WITH provenance instead of anonymously under one key.
-                add_arg(text, producer="kb_heuristic")
+                arg_id = add_arg(text, producer="kb_heuristic")
+                # Review #2887 point (a): every unit with a named offset gets
+                # its anchored assert, BOTH producers — before this, the move
+                # population was the LLM head alone (the 3,000-char extract
+                # window), and the Acte II thread read only the head however
+                # it was sampled. The unit's own text is the find key here,
+                # exactly the anchor rule the provenance side-table uses.
+                _record_assert_move(state, arg_id, text, state.raw_text or "")
 
     add_bs = getattr(state, "add_belief_set", None)
     if callable(add_bs):

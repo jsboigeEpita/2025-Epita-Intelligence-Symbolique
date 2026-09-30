@@ -32,6 +32,7 @@ __all__ = [
     "select_for_budget",
     "stratified_position",
     "merged_population_units",
+    "state_text_length",
 ]
 
 
@@ -54,6 +55,15 @@ class SelectionResult:
     ``bands_total`` is the band count the strategy used. Units without an
     offset count in ``k``/``n_total`` but never in ``bands_covered`` — the
     rendered sentence lends them no position.
+
+    ``span`` is the (start, end) FRACTION of the source text covered by the
+    selected positioned units — ``None`` when the strategy has no text
+    length (population bands) or no selected unit carries an offset. It is
+    what makes a head-bound selection SAY head-bound: bands over text
+    positions can saturate on a thin spread, the span cannot (review of
+    #2887: a population anchored in the first 3,000 characters of a 56k text
+    rendered « 8/8 bandes » — bands built over the population itself recompute
+    the checked field from what it checks).
     """
 
     selected: Tuple[SelectableUnit, ...]
@@ -61,20 +71,41 @@ class SelectionResult:
     n_total: int
     bands_covered: int
     bands_total: int
+    span: Optional[Tuple[float, float]] = None
+
+
+def _text_band(offset: int, text_length: int, band_count: int) -> int:
+    """The fixed-width text band of ``offset`` — clamped, never out of range."""
+    width = text_length / band_count
+    return min(int(offset // width), band_count - 1) if width else 0
 
 
 def stratified_position(
-    units: Sequence[SelectableUnit], n: int, band_count: Optional[int] = None
+    units: Sequence[SelectableUnit],
+    n: int,
+    band_count: Optional[int] = None,
+    text_length: Optional[int] = None,
 ) -> SelectionResult:
-    """≥1 unit per position band, then fill; stable within band, stated.
+    """≥1 unit per position band, then fill; returned in text order, stated.
 
-    Bands are equal-count over the offset-sorted positioned population, so a
-    band denotes a position RANGE of this document, not a fixed character
-    constant. Round 1 takes the first unit of each band (stable order within
-    band = insertion order); each further round takes the next unit of each
-    band; absent-offset units fill what remains, last, in insertion order.
-    The returned selection is in TEXT order (offset ascending, absent last):
-    downstream phases read the document's order, not the extraction clock's.
+    Two band geometries, one round-robin:
+
+    * ``text_length`` given (the recorded path, #2887 review): bands are
+      fixed-width bands of ``[0, text_length]`` — thirds by default — so
+      ``bands_covered < bands_total`` is REACHABLE: a head-only population
+      covers one third whatever its size, and ``span`` carries the exact
+      (start, end) fraction of the text the selected units occupy.
+    * ``text_length`` None (stateless fallbacks): bands are equal-count over
+      the offset-sorted positioned population, as in slice A — a band denotes
+      a position range of this document. No span: without the text length a
+      fraction of it would be invented.
+
+    Within a band the order is the offset-ascending one (the positioned list
+    is offset-sorted); round 1 takes each band's first unit, each further
+    round the next; absent-offset units fill what remains, last, in insertion
+    order. The returned selection is ALWAYS in TEXT order (offset ascending,
+    absent last), whatever the round-robin interleaving picked — downstream
+    phases read the document's order, not the extraction clock's.
     """
     if n <= 0:
         return SelectionResult((), 0, len(units), 0, 0)
@@ -88,22 +119,41 @@ def stratified_position(
     )
     absent = [(u, i) for i, u in indexed if u.offset is None]
 
+    if text_length is not None and text_length > 0:
+        bands = band_count if band_count is not None else 3
+        band_of = {
+            i: _text_band(p[0].offset or 0, text_length, bands)
+            for i, p in enumerate(positioned)
+        }
+        band_lists: List[List[int]] = [[] for _ in range(bands)]
+        for i in range(len(positioned)):
+            band_lists[band_of[i]].append(i)
+    else:
+        bands = band_count if band_count is not None else min(n, len(positioned))
+        # Equal-count split, remainder to the earliest bands.
+        base, extra = divmod(len(positioned), bands) if bands else (0, 0)
+        band_lists = []
+        cursor = 0
+        for b in range(bands):
+            size = base + (1 if b < extra else 0)
+            band_lists.append(list(range(cursor, cursor + size)))
+            cursor += size
+
     if n >= len(units):
         # The budget holds the whole population: selection is the identity,
-        # still in text order, and every band is covered by construction.
+        # still in text order, and every populated band is covered by
+        # construction.
         all_ordered = tuple(u for u, _ in positioned) + tuple(u for u, _ in absent)
-        bands = min(n, len(positioned)) if positioned else 0
-        return SelectionResult(all_ordered, len(units), len(units), bands, bands)
-
-    bands = band_count if band_count is not None else min(n, len(positioned))
-    # Equal-count split, remainder to the earliest bands.
-    base, extra = divmod(len(positioned), bands) if bands else (0, 0)
-    band_lists: List[List[int]] = []
-    cursor = 0
-    for b in range(bands):
-        size = base + (1 if b < extra else 0)
-        band_lists.append(list(range(cursor, cursor + size)))
-        cursor += size
+        covered = len({b for b, bl in enumerate(band_lists) if bl}) if bands else 0
+        sel_offsets = [off for u, _ in positioned if (off := u.offset) is not None]
+        span = (
+            (min(sel_offsets) / text_length, max(sel_offsets) / text_length)
+            if text_length and sel_offsets
+            else None
+        )
+        return SelectionResult(
+            all_ordered, len(units), len(units), covered, bands, span
+        )
 
     picked: List[int] = []  # indices into `positioned`
     chosen: Dict[int, bool] = {}
@@ -129,24 +179,47 @@ def stratified_position(
     covered = len(
         {b for b, bl in enumerate(band_lists) if any(i in chosen for i in bl)}
     )
+    # Text order ALWAYS (review nit): the round-robin interleaves bands,
+    # the document does not.
+    selected_positioned.sort(key=lambda u: u.offset or 0)
     ordered = tuple(selected_positioned) + tuple(selected_absent)
-    return SelectionResult(ordered, len(ordered), len(units), covered, bands)
+    sel_offsets = [off for u in selected_positioned if (off := u.offset) is not None]
+    span = (
+        (min(sel_offsets) / text_length, max(sel_offsets) / text_length)
+        if text_length and sel_offsets
+        else None
+    )
+    return SelectionResult(ordered, len(ordered), len(units), covered, bands, span)
 
 
 def select_for_budget(
-    units: Sequence[SelectableUnit], n: int, strategy: str = "stratified_position"
+    units: Sequence[SelectableUnit],
+    n: int,
+    strategy: str = "stratified_position",
+    band_count: Optional[int] = None,
+    text_length: Optional[int] = None,
 ) -> SelectionResult:
     """The dispatch point every budget-bounded population goes through.
 
     One strategy today (``stratified_position``). An unknown name is a loud
-    error, not a silent fallback to the head (#1019).
+    error, not a silent fallback to the head (#1019). ``text_length`` routes
+    the strategy to fixed text bands and yields the coverage span — pass it
+    wherever the source text length is known (every state-backed call site).
     """
     if strategy != "stratified_position":
         raise ValueError(
             f"select_for_budget: unknown strategy {strategy!r} — the only "
             "implemented strategy is 'stratified_position'"
         )
-    return stratified_position(units, n)
+    return stratified_position(units, n, band_count=band_count, text_length=text_length)
+
+
+def state_text_length(state: Any) -> Optional[int]:
+    """``len(state.raw_text)`` when the state carries the source text, else
+    ``None`` — the ONE way call sites hand the text length to the selector,
+    so recorded coverage is always in text terms (#2887 review)."""
+    raw = getattr(state, "raw_text", None)
+    return len(raw) if isinstance(raw, str) and raw else None
 
 
 def merged_population_units(
@@ -165,9 +238,17 @@ def merged_population_units(
     identified = getattr(state, "identified_arguments", None)
     if isinstance(identified, dict) and identified:
         provenance = getattr(state, "argument_provenance", {}) or {}
+        if not isinstance(provenance, dict):
+            # A side-table that is not a mapping is a named absence for every
+            # unit — never a crash in the selector, never a fabricated
+            # position (measured: a MagicMock state reached this line and
+            # sorted MagicMocks).
+            provenance = {}
         units: List[SelectableUnit] = []
         for arg_id, text in identified.items():
             prov = provenance.get(arg_id, {})
+            if not isinstance(prov, dict):
+                prov = {}
             units.append(
                 SelectableUnit(
                     unit_id=str(arg_id),

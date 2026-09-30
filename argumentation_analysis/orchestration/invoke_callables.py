@@ -45,6 +45,7 @@ from argumentation_analysis.orchestration.selection import (
     SelectableUnit,
     merged_population_units,
     select_for_budget,
+    state_text_length,
 )
 from argumentation_analysis.services.argument_ids import (
     ARG_ID_RE as _ARG_ID_RE,
@@ -576,7 +577,9 @@ async def _invoke_quality_evaluator(
     )
     state_obj = context.get("_state_object")
     _population = merged_population_units(state_obj, fallback_args=extract_args)
-    _selection = select_for_budget(_population, 8)
+    _selection = select_for_budget(
+        _population, 8, text_length=state_text_length(state_obj)
+    )
     raw_args = [
         {"text": u.text, "source_quote": u.source_quote, "unit_id": u.unit_id}
         for u in _selection.selected
@@ -588,6 +591,7 @@ async def _invoke_quality_evaluator(
             _selection.n_total,
             _selection.bands_covered,
             _selection.bands_total,
+            span=_selection.span,
         )
 
     # (#289) Read fallacy output to penalize arguments affected by fallacies
@@ -2679,7 +2683,9 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
     _jtms_state = context.get("_state_object")
     _jtms_units = merged_population_units(_jtms_state)
     if _jtms_units:
-        _jtms_selection = select_for_budget(_jtms_units, 10)
+        _jtms_selection = select_for_budget(
+            _jtms_units, 10, text_length=state_text_length(_jtms_state)
+        )
         _raw_arg_texts = [_text({"text": u.text}) for u in _jtms_selection.selected]
         if _jtms_state is not None and hasattr(_jtms_state, "record_analysis_coverage"):
             _jtms_state.record_analysis_coverage(
@@ -2688,6 +2694,7 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
                 _jtms_selection.n_total,
                 _jtms_selection.bands_covered,
                 _jtms_selection.bands_total,
+                span=_jtms_selection.span,
             )
     else:
         _raw_arg_texts = [_text(a) for a in raw_args[:10]]
@@ -7002,7 +7009,9 @@ def _extract_arguments_for_parallel(
                 for u in merged_population_units(state_obj)
                 if len(u.text.strip()) > 20
             ]
-            selection = select_for_budget(population, 10)
+            selection = select_for_budget(
+                population, 10, text_length=state_text_length(state_obj)
+            )
             if hasattr(state_obj, "record_analysis_coverage"):
                 state_obj.record_analysis_coverage(
                     "fallacy_per_argument",
@@ -7010,6 +7019,7 @@ def _extract_arguments_for_parallel(
                     selection.n_total,
                     selection.bands_covered,
                     selection.bands_total,
+                    span=selection.span,
                 )
             result = [(u.unit_id, u.text.strip()) for u in selection.selected]
             if result:
@@ -7510,7 +7520,9 @@ async def _invoke_propositional_logic(
                             SelectableUnit(unit_id=f"arg_{i+1}", text=str(a))
                             for i, a in enumerate(args)
                         ]
-                        _pl_selection = select_for_budget(_pl_units, 10)
+                        _pl_selection = select_for_budget(
+                            _pl_units, 10, text_length=state_text_length(_pl_state)
+                        )
                         _pl_targets = [u.text for u in _pl_selection.selected]
                         if _pl_state is not None and hasattr(
                             _pl_state, "record_analysis_coverage"
@@ -7521,6 +7533,7 @@ async def _invoke_propositional_logic(
                                 _pl_selection.n_total,
                                 _pl_selection.bands_covered,
                                 _pl_selection.bands_total,
+                                span=_pl_selection.span,
                             )
 
                         async def _pl_batch_coro(_batch: list[str]) -> list[str]:
@@ -8021,7 +8034,11 @@ async def _invoke_fol_reasoning(
                                 SelectableUnit(unit_id=f"arg_{i+1}", text=str(a))
                                 for i, a in enumerate(args)
                             ]
-                            _fol_selection = select_for_budget(_fol_units, 10)
+                            _fol_selection = select_for_budget(
+                                _fol_units,
+                                10,
+                                text_length=state_text_length(_fol_state),
+                            )
                             _fol_targets = [u.text for u in _fol_selection.selected]
                             if _fol_state is not None and hasattr(
                                 _fol_state, "record_analysis_coverage"
@@ -8032,6 +8049,7 @@ async def _invoke_fol_reasoning(
                                     _fol_selection.n_total,
                                     _fol_selection.bands_covered,
                                     _fol_selection.bands_total,
+                                    span=_fol_selection.span,
                                 )
 
                             async def _fol_batch_coro(_batch: list[str]) -> list[str]:
@@ -8540,7 +8558,9 @@ async def _invoke_nl_to_logic(
     _ntl_units = merged_population_units(_ntl_state) or [
         SelectableUnit(unit_id=f"arg_{i+1}", text=str(a)) for i, a in enumerate(args)
     ]
-    _ntl_selection = select_for_budget(_ntl_units, 6)
+    _ntl_selection = select_for_budget(
+        _ntl_units, 6, text_length=state_text_length(_ntl_state)
+    )
     if _ntl_state is not None and hasattr(_ntl_state, "record_analysis_coverage"):
         _ntl_state.record_analysis_coverage(
             "nl_to_logic",
@@ -8548,6 +8568,7 @@ async def _invoke_nl_to_logic(
             _ntl_selection.n_total,
             _ntl_selection.bands_covered,
             _ntl_selection.bands_total,
+            span=_ntl_selection.span,
         )
     translator = NLToLogicTranslator(max_retries=3, logic_type=logic_type)
     batch_result = await translator.translate_batch(
