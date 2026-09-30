@@ -52,7 +52,18 @@ def test_act3_evidence_carries_the_salience_channel():
 
 
 def test_act3_prompt_renders_hierarchy_and_surplus_sections():
+    """#1914 criterion 5 — anchor each section on a line only the *data* emits.
+
+    Measured on ``main`` (2026-09-29): deleting either data f-string from
+    ``build_act3_prompt`` left this test **green**, because ``HIÉRARCHIE DU
+    VERDICT`` and ``SURPLUS MULTI-AGENTS`` also appear in the consigne below the
+    data, and ``QUATRE ORDRES DE JUGEMENT`` occurs only there. Naming a section
+    asserted a constant, not its presence — so this file, named for the salience
+    channel, could not detect the channel leaving the prompt. The anchors below
+    are emitted by the blocks themselves.
+    """
     prompt = build_act3_prompt(build_act3_evidence(_state()))
-    assert "HIÉRARCHIE DU VERDICT" in prompt
-    assert "SURPLUS MULTI-AGENTS" in prompt
-    assert "QUATRE ORDRES DE JUGEMENT" in prompt
+    assert "  - P1 [" in prompt, "the ranking itself must reach the Act III prompt"
+    assert "ÉTABLI (ce qu'une lecture simple ne peut pas produire)" in prompt
+    assert "PUREMENT PROCÉDURAL (contexte, jamais un surplus)" in prompt
+    assert "QUATRE ORDRES DE JUGEMENT" in prompt  # the consigne pin, named as such
