@@ -414,8 +414,9 @@ jobs:
           # de 32 à 35, et les 3 gagnés sont ceux-là. Les 13 littéraux citant
           # Tweety/jpype qui restent DEHORS y restent à dessein — "Test
           # nécessite USE_REAL_JPYPE=true", "Real Tweety not available",
-          # "TweetyBridge non disponible" : ce sont des skips d'opt-in, ils
-          # tombent sur un run sain (les 27 du bucket USE_REAL_JPYPE). Les
+          # "TweetyBridge non disponible" : ce sont des skips d'opt-in, un run
+          # sain peut les porter sans panne (bucket USE_REAL_JPYPE : 27 skips
+          # en CI jusqu'à #2859, 0 depuis — run push 36649991360). Les
           # admettre transformerait le garde en taux de skip brut, exactement le
           # pendule que le paragraphe ci-dessus interdit.
           $jvmPattern = '<skipped[^>]*message="[^"]*[Jj][Vv][Mm]'
