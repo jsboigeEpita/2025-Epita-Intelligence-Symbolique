@@ -15,10 +15,23 @@ because ``tests/conftest.py`` loads it on every pytest bootstrap. It must stay
 tolerant of the mock ``session.config`` objects the conftest tests feed to
 ``pytest_sessionstart`` (``test_conftest_jvm_return_1641.py``), returning
 ``False`` for them so that test keeps reaching the JVM-init path unmodified.
+
+#2862 widened the argv it reads: ``--ignore`` and ``--ignore-glob`` prune the
+collection, so a root that reaches ``tests/e2e`` no longer decides an e2e
+session when an ignore equals or contains ``tests/e2e`` — otherwise the most
+natural "everything but e2e" local argv classified the session e2e, the JVM
+never booted, and the run exited 0 having measured nothing. ``--deselect``
+stays out of scope, with its reason: a list of deselected node ids cannot
+PROVE that every e2e item is deselected without collecting them first — the
+very thing this decision runs before. The guard side
+(``tests/conftest.py:_skip_storm_signal``) covers that residue: an argv that
+predicted e2e while the collection found zero e2e items now fails loud
+instead of exempting the session.
 """
 
 from __future__ import annotations
 
+import fnmatch
 import os
 from pathlib import Path
 import re
@@ -45,17 +58,64 @@ def _as_abs_path(raw: str):
         return None
 
 
-def _argv_reaches_e2e(roots) -> bool:
+def _ignore_options(config):
+    """#2862 — the ``--ignore`` paths and ``--ignore-glob`` patterns the argv
+    carries, as pytest will apply them.
+
+    Reads the same two options ``_pytest.main.pytest_ignore_collect`` reads.
+    Tolerant of the MagicMock ``config`` objects the conftest tests pass: an
+    option attribute that is not a list/tuple (a MagicMock) contributes
+    nothing, so those objects keep the pre-#2862 decision."""
+    ignores = []
+    globs = []
+    option = getattr(config, "option", None)
+    if option is None:
+        return ignores, globs
+    for attr, out in (("ignore", ignores), ("ignore_glob", globs)):
+        raw = getattr(option, attr, None)
+        if isinstance(raw, (list, tuple)):
+            out.extend(str(entry) for entry in raw)
+    return ignores, globs
+
+
+def _pruned_by_ignore(path, ignores, globs) -> bool:
+    """True when ``--ignore`` / ``--ignore-glob`` prune ``path``, or an ancestor
+    of it — pytest prunes the whole subtree of an ignored directory.
+
+    Mirrors ``_pytest.main.pytest_ignore_collect``: an ``--ignore`` entry
+    matches a path EXACTLY, after pytest's ``absolutepath``; an
+    ``--ignore-glob`` entry is matched with ``fnmatch`` against the absolute
+    path string — both entries absolutepath'd, both comparisons re-implemented
+    rather than called, because the collector hook loads the conftests of the
+    path it inspects, a side effect this module must not cause at
+    ``pytest_sessionstart`` time."""
+    for candidate in (path, *path.parents):
+        for raw in ignores:
+            if _as_abs_path(raw) == candidate:
+                return True
+        for raw in globs:
+            absolute = _as_abs_path(raw)
+            if absolute is not None and fnmatch.fnmatch(str(candidate), str(absolute)):
+                return True
+    return False
+
+
+def _argv_reaches_e2e(roots, config) -> bool:
     """True if any collected root is ``tests/e2e``, inside it, or an ancestor
-    that CONTAINS it (e.g. ``tests``). A sibling such as ``tests/unit`` does
-    NOT reach it. Pure string/normcase containment — no filesystem calls."""
+    that CONTAINS it (e.g. ``tests``) — and that path is not pruned by
+    ``--ignore`` / ``--ignore-glob`` (#2862). A sibling such as ``tests/unit``
+    does NOT reach it. Pure string/normcase containment — no filesystem calls."""
     e2e = _E2E_DIR
+    ignores, globs = _ignore_options(config)
+    if _pruned_by_ignore(e2e, ignores, globs):
+        return False  # an ignore equal to, or above, tests/e2e prunes it whole
     for raw in roots:
         p = _as_abs_path(raw)
         if p is None:
             continue
         if p == e2e or e2e in p.parents or p in e2e.parents:
-            return True
+            if not _pruned_by_ignore(p, ignores, globs):
+                return True
     return False
 
 
@@ -151,14 +211,14 @@ def _argv_decides_e2e_session(config) -> bool:
     """Decide ``is_e2e_session`` from the collection argv, BEFORE collection.
 
     The session is E2E iff the effective collection roots reach ``tests/e2e``
-    AND the ``-m`` expression does not remove every e2e item. Tolerant of the
-    mock ``session.config`` objects fed to ``pytest_sessionstart`` by the
-    conftest tests: for those it returns ``False`` (reach the JVM-init path),
-    the only value that keeps ``test_conftest_jvm_return_1641.py`` green
-    unmodified."""
+    — not pruned by ``--ignore`` / ``--ignore-glob`` (#2862) — AND the ``-m``
+    expression does not remove every e2e item. Tolerant of the mock
+    ``session.config`` objects fed to ``pytest_sessionstart`` by the conftest
+    tests: for those it returns ``False`` (reach the JVM-init path), the only
+    value that keeps ``test_conftest_jvm_return_1641.py`` green unmodified."""
     roots = _effective_collection_roots(config)
     if not roots:
         return False
-    if not _argv_reaches_e2e(roots):
+    if not _argv_reaches_e2e(roots, config):
         return False
     return not _markexpr_excludes_e2e(config)
