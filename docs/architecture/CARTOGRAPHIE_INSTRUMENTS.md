@@ -35,7 +35,7 @@ affirmé à tort qu'aucune mesure récente n'existait.
 |---|---|---|---|
 | `scripts/measure_both_paths_vs_zeroshot.py` | **externe**, head-to-head sur corpus : DAG `spectacular` / conversationnel / référence zero-shot | quel *chemin d'orchestration* bat l'autre, dimension par dimension | **run : 31/05/2026** ⚠ non re-mesuré · imports revérifiés le 18/09 (3 points d'entrée OK) · référence : `docs/reports/BASELINE_0SHOT_2026-05-16.md` |
 | `scripts/dataset/run_zeroshot_arm.py` (#2841) | **bras zero-shot réel** : un appel par document, même corpus (`expand_corpus`), même modèle (résolveur canonique), même texte intégral ; réponse gardée entière en chemin gitignoré | ce que le modèle **seul** dit du document — l'autre moitié de la lecture côte à côte | **29/09/2026, campagne #2841** : 49/49 complets (~73 s/doc) face à la passe `spectacular` 49/49 (48/49 reader-valid = re-mesure exacte de #2062) |
-| `reporting/restitution/conclusion_salience.py` (#1914) | **interne**, déterministe, dérivé de l'état, rendu dans l'Acte III | ce que *ce run-ci* a établi qu'une lecture zero-shot forte ne donne pas | **vivant, campagne #2841 le 29/09** : 49 documents, surplus non procédural sur **48/49** (décisif_formel=69, structural=136, convergence_non_llm=71) · **portée #2850 : ce surplus est mesuré sur la fenêtre de tête analysée par le pipeline (3 000 caractères), pas sur le texte entier** · ⚠ défaut ouvert #2844 (les trouvailles structurelles à résultat vide sont comptées établies — 13/49 docs) |
+| `reporting/restitution/conclusion_salience.py` (#1914) | **interne**, déterministe, dérivé de l'état, rendu dans l'Acte III | ce que *ce run-ci* a établi qu'une lecture zero-shot forte ne donne pas | **vivant, campagne #2841 le 29/09** : 49 documents, surplus non procédural sur **48/49** (décisif_formel=69, structural=136, convergence_non_llm=71, stockés 29/09) · ré-derivation 30/09 (#2872, #2844 fermé) : **structural=124, convergence_non_llm=81**, 48/49 inchangé · **portée #2850 : ce surplus est mesuré sur la fenêtre de tête analysée par le pipeline (3 000 caractères), pas sur le texte entier** |
 
 **Différence à ne pas confondre** : le premier (`measure_both_paths_vs_zeroshot.py`) compare
 des *chemins* entre eux et a besoin d'une référence zero-shot enregistrée ; le second
@@ -66,11 +66,20 @@ de `surplus`/`salience`/`ranked`/`load_bearing` dans les dumps) : lisible docume
 document, non agrégeable. Depuis #2298, chaque signature porte `zero_shot_surplus`
 (`established_items` + `established_by_nature`, sans prose), et le batch runner rend
 l'agrégat de campagne. **Mesuré le 29/09 (#2841)** : surplus non procédural sur **48/49**
-documents (décisif_formel=69, structural=136, convergence_non_llm=71) — avec la réserve
-#2844 : les trouvailles structurelles à résultat vide sont encore comptées (13/49 docs),
-le compte `structural` est donc un majorant. Portée #2850 : ce surplus est mesuré sur la
-fenêtre de tête que le pipeline analyse, pas sur le texte entier (cf. le paragraphe de
-portée ci-dessus).
+documents (décisif_formel=69, structural=136, convergence_non_llm=71) — chiffres
+**stockés par les runs de ce jour-là** — l'enregistrement de la campagne, conservé. **Ré-derivation
+30/09 (#2872, lecteur réparé #2844)** : `structural` 136 → **124**,
+`convergence_non_llm` 71 → **81**, `decisif_formel` inchangé à 69, 48/49 inchangé,
+0 désaccord de lecteur — commande : `python scripts/dataset/rederive_surplus_aggregate.py
+--signatures-dir <analysis_kb>/signatures --run-started-utc 2026-09-29T04:04:48`.
+
+Les deux chiffres du défaut #2844 (fermé par #2872) ne comptaient pas la même
+question : **23/49** documents comptaient l'axe pondéré comme surplus `structural`
+établi alors que le framework n'avait rien produit (le défaut de comptage lui-même) ;
+**13/49** — sous-ensemble des 23 — sont ceux dont l'Acte III **rendu le même run**
+déclarait simultanément la dimension non concluante : la contradiction visible
+projection/prose. Portée #2850 : ce surplus est mesuré sur la fenêtre de tête que le
+pipeline analyse, pas sur le texte entier (cf. le paragraphe de portée ci-dessus).
 
 ---
 
