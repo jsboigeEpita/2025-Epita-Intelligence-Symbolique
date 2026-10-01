@@ -1381,6 +1381,20 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
             # #2519: registered once this call has started the JVM; runs
             # before jpype's _JTerminate (registered at jpype's import).
             atexit.register(_attach_the_exiting_thread)
+            # #2866: jpype's atexit ``_JTerminate`` calls the native
+            # ``_jpype.shutdown(config.destroy_jvm, ...)``, which never
+            # returned in the lock env once the package inits went lazy —
+            # the eager ``core`` init used to mask it by loading the
+            # ``semantic_kernel.connectors`` chain (measured: ``OpenSSL``
+            # or ``av`` alone prevent the hang; a bare attach does not).
+            # This suite already keeps the JVM running until process death
+            # (see the sessionfinish note "L'arrêt de la JVM est désactivé"),
+            # so the atexit destroy is disabled here: the JVM dies with the
+            # process instead of deadlocking at its exit. An explicit
+            # ``shutdown_jvm()`` still performs the real teardown.
+            from jpype import config as _jpype_config
+
+            _jpype_config.onexit = False
             logger.info("[SUCCESS] JVM démarrée avec succès.")
 
             # Auto-detect and configure external reasoning tools (issue #27)
