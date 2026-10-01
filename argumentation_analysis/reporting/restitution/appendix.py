@@ -440,6 +440,7 @@ def _dung_machinery_section(
     appendix would be a third way to misread an extension shape (#1912).
     """
     from .dung_reader import appendix_ref, backend_provenance
+    from .formal_derivation import is_machine_shaped
     from .native_dung import decode_accepted_members, native_semantics_label
 
     frameworks = state.get("dung_frameworks") or {}
@@ -483,7 +484,12 @@ def _dung_machinery_section(
                 "déductible (#1912)"
             )
         rejected = [str(a) for a in fw_args if str(a) not in accepted]
-        canonical = [a for a in rejected if " " not in a and len(a) <= 40]
+        # #2882: the canonical line reads the ONE shared admission rule —
+        # the previous inline predicate (R1 bare) admits underscore-joined
+        # sentence transcriptions (invisible here only because Dung atoms
+        # keep their spaces: 0/717 real atoms passed it — measured on the
+        # campaign dumps).
+        canonical = [a for a in rejected if is_machine_shaped(a)]
         raw = [a for a in rejected if a not in canonical]
         if canonical:
             lines.append(f"- absents de l'extension : {', '.join(sorted(canonical))}")
@@ -552,6 +558,7 @@ def _formal_derivation_section(
     from .formal_derivation import (
         _TOTAL_FORMULA_CAP,
         formal_axis_ref,
+        is_machine_shaped,
         scan_tested_content,
     )
 
@@ -583,6 +590,24 @@ def _formal_derivation_section(
                 "— statut ou texte collé, jamais une dérivation)"
             )
         lines.append(tested)
+        # #2882 — the machine-shaped subset is citable by default: bounded
+        # (same cap as the full mode), de-duplicated, with the count of what
+        # stayed out. The next-more-permissive rule (R4) measured +688
+        # admissions beyond R1 of which 322 prose-shaped — the fold keeps
+        # those for the opt-in full mode only.
+        admitted = [f.strip() for f in real if is_machine_shaped(f)]
+        if admitted and not include_full:
+            unique_admitted = sorted(set(admitted))
+            citable = f"- formules machine citables : {', '.join(unique_admitted[:_TOTAL_FORMULA_CAP])}"
+            if len(unique_admitted) > _TOTAL_FORMULA_CAP:
+                citable += f" (+{accord(len(unique_admitted) - _TOTAL_FORMULA_CAP, 'autre formule', 'autres formules')})"
+            excluded = len(real) - len(admitted)
+            if excluded:
+                citable += (
+                    f" — {accord(excluded, 'formule écartée', 'formules écartées')} "
+                    "(prose transcrite — mode complet uniquement)"
+                )
+            lines.append(citable)
         if include_full and real:
             for formula in real[:_TOTAL_FORMULA_CAP]:
                 lines.append(f"  - {formula.strip()[:200]}")

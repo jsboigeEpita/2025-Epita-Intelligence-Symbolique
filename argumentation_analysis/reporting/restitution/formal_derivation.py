@@ -28,6 +28,7 @@ Anti-fabrication contract (the #1941 discipline applied to Acte II):
 
 from __future__ import annotations
 
+import re
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from .fr_accord import accord
@@ -46,6 +47,44 @@ _PLACEHOLDER_PREFIXES: Tuple[str, ...] = (
 _MAX_ATOMS = 3
 _ATOM_CHAR_CAP = 56
 _TOTAL_FORMULA_CAP = 12
+
+# #2882 — the one default-mode admission rule, shared by the formal axes'
+# folded subsections and the Dung canonical line. The issue's R1 as issued
+# (« canonique Dung : 1 token, ≤ 40 car. » — the inline predicate
+# ``" " not in a and len(a) <= 40``) cannot be adopted bare: confronted with
+# the strings it admits (90 real campaign dumps, local inspection), 454 of
+# its 519 unique admissions are underscore-joined SENTENCE TRANSCRIPTIONS —
+# the FOL/PL atom naming swaps spaces for underscores, so a whole corpus
+# proposition is one punctuation-free token (« <mot>_<mot>_<mot> », 3-6
+# word-runs, ≤ 40 chars). The Dung side never hits this (its atoms keep
+# their spaces: 0/717 real atoms pass R1), which is why the same predicate
+# looked safe there. The guard: a string that is a word SEQUENCE (≥ 3 runs
+# of ≥ 3 letters) carrying no logic symbol is a transcription whatever its
+# separator — machine atoms carry symbols (``p(a)``, ``¬(p∧q)``, ``a->b``)
+# or stay under three word-runs (``pred_alpha``).
+_CANONICAL_ATOM_CHAR_CAP = 40
+_TRANSCRIBED_WORD_RUNS = 3
+_LOGIC_SYMBOL_RE = re.compile(r"[∧∨¬→←↔⇒⇐∀∃≡⊕⊤⊥()!&|<>=]")
+_WORD_RUN_RE = re.compile(r"[A-Za-zÀ-ÿ]{3,}")
+
+
+def is_machine_shaped(text: str) -> bool:
+    """#2882 — a tested-content string the folded annex may cite by default.
+
+    One definition for both surfaces (the three formal-axis subsections and
+    the Dung machinery's canonical line): the R1 bound (one token, ≤ 40
+    chars) completed by the transcribed-sentence guard measured above. A
+    spaced string never passes (R1's bound — the next-more-permissive rules
+    R2-R4 measured +688 to +1955 admissions beyond R1, of which 322-404
+    prose-shaped); an underscore-joined sentence never passes either.
+    """
+    stripped = text.strip()
+    if " " in stripped or len(stripped) > _CANONICAL_ATOM_CHAR_CAP:
+        return False
+    if _LOGIC_SYMBOL_RE.search(stripped):
+        return True
+    return len(_WORD_RUN_RE.findall(stripped)) < _TRANSCRIBED_WORD_RUNS
+
 
 # #1914 criterion 6 — the folded appendix carries one subsection per formal
 # axis under this stable ref, the twin of ``dung_reader.appendix_ref`` for the

@@ -377,3 +377,133 @@ class TestFormalDerivationAppendix1914:
         assert "Annexe FOL[dérivations]" in appendix
         assert "0 formule" in appendix
         assert "p(a)" not in appendix
+
+
+# --- #2882 — the machine-shaped subset, citable by default -----------------------
+
+
+class TestDefaultAdmission2882:
+    """#2882 — admit a machine-shaped subset of the tested formulas in the
+    folded (default) annex, under the axis anchors.
+
+    Rule chosen by confrontation, not supposition (the issue's DoD): R1 as
+    issued (« 1 token, ≤ 40 car. ») could not be adopted bare — measured on
+    the 90 real campaign dumps, 454 of its 519 unique admissions are
+    underscore-joined sentence transcriptions (the FOL/PL atom naming swaps
+    spaces for underscores), and the DoD's own criterion is « une chaîne qui
+    est un fragment de phrase ne doit pas passer ». The retained rule is the
+    R1 bound completed by a transcribed-sentence guard (≥ 3 word-runs of
+    ≥ 3 letters without any logic symbol), shared with the Dung canonical
+    line — where R1 bare was invisible only because Dung atoms keep their
+    spaces (0/717 real atoms passed it). The next-more-permissive candidate
+    (R4) measured +688 admissions beyond R1, of which 322 prose-shaped: the
+    fold keeps those for the opt-in full mode.
+    """
+
+    def test_machine_formulas_are_listed_by_default(self):
+        """Born red on main: the default mode listed nothing (R0) — a
+        decided record's machine formulas must now appear under the anchor."""
+        state = _formal_state(
+            fol_analysis_results=[
+                {
+                    "consistent": False,
+                    "message": "incoherent",
+                    "formulas": ["p(a)", "!q|r"],
+                }
+            ]
+        )
+        section = _axis_slice(_appendix_of_formal(state), "Annexe FOL[dérivations]")
+        assert "p(a)" in section, "a machine formula must be citable by default"
+        assert "!q|r" in section
+
+    def test_an_underscore_joined_sentence_stays_out(self):
+        """DoD witness, green before AND after: a sentence transcribed with
+        underscores — one token, no punctuation, the exact shape R1 bare
+        admits — is corpus prose and must never be listed by default. The
+        listing and the excluded count are the NEW behaviour (born red in
+        the tests below); this one pins only the exclusion itself."""
+        transcription = "the_harbour_ledger_has_tripled"
+        assert len(transcription) <= 40 and " " not in transcription
+        state = _formal_state(
+            fol_analysis_results=[
+                {
+                    "consistent": False,
+                    "message": "incoherent",
+                    "formulas": [transcription, "p(a)"],
+                }
+            ]
+        )
+        appendix = _appendix_of_formal(state)
+        assert transcription not in appendix
+
+    def test_the_listing_is_bounded_and_deduplicated(self):
+        """The default listing reuses the full mode's cap and de-duplicates
+        (``scan_tested_content`` keeps duplicates by contract — a repeated
+        formula is listed once, the transcription is the excluded count)."""
+        transcription = "the_harbour_ledger_has_tripled"
+        formulas = [f"w{i}" for i in range(13)] + ["w0", transcription]
+        state = _formal_state(
+            fol_analysis_results=[
+                {"consistent": True, "message": "ok", "formulas": formulas}
+            ]
+        )
+        section = _axis_slice(_appendix_of_formal(state), "Annexe FOL[dérivations]")
+        assert section.count("w0") == 1, "a repeated formula is listed once"
+        assert "+1 autre formule" in section, "the 13th unique formula is capped"
+        assert "1 formule écartée" in section, "the transcription is counted out"
+
+    def test_the_full_mode_keeps_the_verbatim_listing(self):
+        """Anti-pendulum: opting in keeps the integral verbatim behaviour —
+        the default admission never narrows the full mode."""
+        transcription = "the_harbour_ledger_has_tripled"
+        state = _formal_state(
+            fol_analysis_results=[
+                {
+                    "consistent": False,
+                    "message": "incoherent",
+                    "formulas": [transcription, "p(a)"],
+                }
+            ]
+        )
+        section = _axis_slice(
+            _appendix_of_formal(state, full=True), "Annexe FOL[dérivations]"
+        )
+        assert transcription in section, "the full mode lists the verbatim string"
+        assert (
+            "formules machine citables" not in section
+        ), "the default-mode line does not duplicate the verbatim listing"
+
+    def test_the_dung_canonical_line_shares_the_admission_rule(self):
+        """Born red on the Dung side: under R1 bare the underscore-joined
+        sentence was canonical and PRINTED — one rule for both sections
+        means the transcription falls to the counted raw class there too."""
+        transcription = "the_harbour_ledger_has_tripled"
+        appendix = render_appendix(
+            {
+                "dung_frameworks": {
+                    "fw1": {
+                        "name": "verification_preferred",
+                        "arguments": [transcription, "atom_x", "in_ext"],
+                        "attacks": [],
+                        "extensions": {"all_members": ["in_ext"]},
+                    }
+                }
+            }
+        )
+        assert "atom_x" in appendix, "the machine atom stays canonical"
+        assert transcription not in appendix
+        assert "1 entrée non canonique" in appendix
+
+    def test_one_admission_definition_not_respelled_inline(self):
+        """The DoD's single-definition clause: the predicate lives once in
+        ``formal_derivation`` — an inline re-spelling in the appendix would
+        be a second way to misread the same matter."""
+        import inspect
+
+        from argumentation_analysis.reporting.restitution import appendix as ax
+
+        source = inspect.getsource(ax)
+        assert '" " not in' not in source, (
+            "the canonical bound is re-spelled inline instead of importing "
+            "is_machine_shaped"
+        )
