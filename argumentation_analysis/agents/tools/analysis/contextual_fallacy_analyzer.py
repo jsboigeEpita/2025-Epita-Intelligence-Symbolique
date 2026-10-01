@@ -14,7 +14,10 @@ import sys
 import json
 from typing import Dict, List, Any, Optional, Tuple
 from pathlib import Path
-import pandas as pd
+
+# ``pandas`` is call-time only (#2867): this module was one of the three
+# module-level pandas importers measured on the ``api.main`` path, and the
+# only body that touches it is ``_load_fallacy_taxonomy`` below.
 
 # Importer les services partagés
 from argumentation_analysis.agents.tools.support.shared_services import (
@@ -29,6 +32,8 @@ from argumentation_analysis.utils.taxonomy_loader import (
 
 def _load_fallacy_taxonomy() -> Any:
     """Charge la taxonomie des sophismes à partir du fichier CSV."""
+    import pandas as pd  # call-time (#2867)
+
     logger = get_configured_logger("ContextualFallacyAnalyzer_TaxonomyLoader")
     try:
         path = get_taxonomy_path()
