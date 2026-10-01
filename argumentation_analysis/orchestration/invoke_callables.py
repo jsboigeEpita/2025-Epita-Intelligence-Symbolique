@@ -2702,7 +2702,8 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
                 span=_jtms_selection.span,
             )
     else:
-        _raw_arg_texts = [_text(a) for a in raw_args[:10]]
+        _fallback_args = raw_args[:10]
+        _raw_arg_texts = [_text(a) for a in _fallback_args]
         # Stateless fallback: the extract order makes index and id coincide,
         # as before #2887 (pattern of :755's own-id-first read).
         _raw_arg_ids = [
@@ -2711,7 +2712,7 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
                 if isinstance(a, dict)
                 else f"arg_{i + 1}"
             )
-            for i, a in enumerate(raw_args[:10])
+            for i, a in enumerate(_fallback_args)
         ]
     claim_beliefs = [_text(c) for c in raw_claims[:6]]
 
