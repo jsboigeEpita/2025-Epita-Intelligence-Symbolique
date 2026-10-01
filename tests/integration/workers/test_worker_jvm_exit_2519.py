@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 """#2519: a process whose main thread never calls Java exits.
 
-Measured on ``main``: ``initialize_jvm`` starts the JVM on an executor thread,
-and jpype's atexit handler ``_JTerminate`` never returns when the thread
-running it was never attached. A process that started the JVM and never
-called Java from its main thread hung forever at exit: the xdist controller,
-a pytest session that runs no test, a script that uses Java from other
-threads only.
+Originally fixed by attaching the exiting thread to the JVM so that jpype's
+``_JTerminate`` could run. Since #2866 ``initialize_jvm`` instead disables
+that native shutdown (``jpype.config.onexit = False``): the JVM dies with the
+process, and the attach is retired with the mechanism it served. The guards
+stay because they witness the guarantee itself, not the mechanism: a process
+that started the JVM and never called Java from its main thread still exits —
+the xdist controller, a pytest session that runs no test, a script that uses
+Java from other threads only.
 
 Each case runs in its own interpreter: the hang is at interpreter exit, which
 the test process cannot reach for itself.

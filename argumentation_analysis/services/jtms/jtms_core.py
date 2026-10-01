@@ -9,6 +9,7 @@ Original author: @ThomasLeguere (student project 1.4.1-JTMS)
 Integrated into argumentation_analysis framework.
 """
 
+import importlib.util
 import logging
 from typing import Dict, List, Optional
 
@@ -23,13 +24,27 @@ except ImportError:
     _HAS_NETWORKX = False
     logger.debug("networkx not available, SCC detection disabled")
 
+# ``pyvis`` is imported at call time in ``JTMS.visualize``: importing it here
+# dragged IPython (111 modules) and jsonpickle into every process that touched
+# the JTMS core, ``api.main`` included (#2855). ``_HAS_PYVIS`` stays a cheap
+# find_spec hint for callers that want to skip early — the authoritative check
+# is the call-time import, which also survives a broken install.
 try:
+    _HAS_PYVIS = importlib.util.find_spec("pyvis") is not None
+except (ImportError, ValueError):
+    _HAS_PYVIS = False
+
+
+def _pyvis_network():
+    """Resolve ``pyvis.network.Network`` at call time (#2855).
+
+    Importing pyvis at module level dragged IPython and jsonpickle into every
+    process that touched the JTMS core. Kept as a module-level seam so tests
+    can substitute a fake without pyvis installed.
+    """
     from pyvis.network import Network
 
-    _HAS_PYVIS = True
-except ImportError:
-    _HAS_PYVIS = False
-    logger.debug("pyvis not available, visualization disabled")
+    return Network
 
 
 def _validity_label(value: Optional[bool]) -> str:
@@ -316,7 +331,9 @@ class JTMS:
 
     def visualize(self, output_file: str = "jtms_graph.html") -> Optional[str]:
         """Generate interactive HTML visualization. Returns output path or None."""
-        if not _HAS_PYVIS:
+        try:
+            Network = _pyvis_network()
+        except ImportError:
             logger.warning("pyvis not installed, cannot visualize")
             return None
 

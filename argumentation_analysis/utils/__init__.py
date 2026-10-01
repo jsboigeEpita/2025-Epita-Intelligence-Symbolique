@@ -1,42 +1,22 @@
-# Make submodules available to the parent package
+# Make submodules available to the parent package — lazily (PEP 562).
 
-from . import analysis_comparison
-from . import async_manager
-from . import cleanup_sensitive_files
-from . import config_utils
-from . import config_validation
-from . import correction_utils
-from . import crypto_workflow
-from . import data_generation
-from . import data_loader
-from . import data_processing_utils
-from . import debug_utils
-from . import error_estimation
-from . import metrics_aggregation
-from . import metrics_calculator
-from . import metrics_extraction
-from . import performance_monitoring
-from . import report_generator
-from . import reporting_utils
-from . import restore_config
-from . import run_extract_editor
-from . import run_verify_extracts_with_llm
-from . import system_utils
-from . import taxonomy_loader
-from . import text_processing
-from . import tweety_error_analyzer
+import importlib
+from typing import Any
+
+# The eager ``from . import <sibling>`` chain this file used to run was pure
+# import-time waste on the ``api.main`` path: ``agents.core.informal`` imports
+# only ``taxonomy_loader``, yet every sibling body ran — ``reporting_utils ->
+# visualization_generator`` reached seaborn and 75 ``scipy.stats`` modules,
+# 719 ms warm for a package touch that needed none of it (#2855).
+# ``__getattr__`` imports a sibling on first attribute access and caches it, so
+# ``from argumentation_analysis.utils import version_validator`` (and any other
+# ``from <package> import <sibling>``) keeps working unchanged.
+#
 # `unified_pipeline` is an archived shim (deprecated 2026-03-24, #217). It is
-# still importable via its explicit path for back-compat, but auto-importing
-# it here fires DeprecationWarning on every `argumentation_analysis.utils`
-# import. Direct callers were migrated to `analysis_config` — see commit
-# f0b8e91d.
-from . import update_encrypted_config
-from . import version_validator
-from . import visualization_generator
-
-from . import dev_tools
-from . import extract_repair
-
+# still importable via its explicit path for back-compat, and it is
+# deliberately NOT in ``__all__`` — auto-importing it fired DeprecationWarning
+# on every `argumentation_analysis.utils` import. Direct callers were migrated
+# to `analysis_config` — see commit f0b8e91d.
 __all__ = [
     "analysis_comparison",
     "async_manager",
@@ -69,3 +49,17 @@ __all__ = [
     "dev_tools",
     "extract_repair",
 ]
+
+
+def __getattr__(name: str) -> Any:
+    if name in __all__:
+        module = importlib.import_module(f".{name}", __name__)
+        globals()[name] = module  # cached; later accesses skip this hook
+        return module
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__() -> list:
+    # PEP 562's companion: without it, dir() would stop listing the siblings
+    # that are no longer imported eagerly.
+    return sorted(set(globals()) | set(__all__))
