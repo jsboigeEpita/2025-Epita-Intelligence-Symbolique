@@ -1,0 +1,48 @@
+{
+  "key": "4065fdad2c2921f49262f861c992473490b86b1fd28a275f46f82fb6c71429d9",
+  "value": {
+    "id": "chatcmpl-EUCBwFY9tCsXVz1LgRHsO7gxw8ir8",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"La peine de mort est justifiée, car elle dissuade les crimes les plus graves, le risque d’erreur judiciaire est réduit par les avancées de l’ADN et certains criminels restent dangereux pour la société.\",\"digressions\":\"\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790865412,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 232,
+      "prompt_tokens": 277,
+      "total_tokens": 509,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 161,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

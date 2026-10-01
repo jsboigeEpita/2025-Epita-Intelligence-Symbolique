@@ -1,0 +1,48 @@
+{
+  "key": "662ffe70e7418a5108167e7b657a58fa2755fc0dee300297c8a4dc7521d5f501",
+  "value": {
+    "id": "chatcmpl-EUBxOEOQaxTnkBBeuOTLypq5Fgyze",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"obstacle_genuinely_opaque\":false,\"clarity_verdict\":\"résolvable_contexte\",\"reasoning\":\"Le contexte explicite suffisamment que l’« homme de paille » consiste à attribuer à l’adversaire une position qu’il n’a pas défendue et que l’« appel à l’émotion » détourne les questions techniques au moyen d’une réaction affective.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790864510,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 166,
+      "prompt_tokens": 347,
+      "total_tokens": 513,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 76,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

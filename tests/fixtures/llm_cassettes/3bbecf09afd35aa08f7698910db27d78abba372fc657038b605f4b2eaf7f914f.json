@@ -1,0 +1,48 @@
+{
+  "key": "3bbecf09afd35aa08f7698910db27d78abba372fc657038b605f4b2eaf7f914f",
+  "value": {
+    "id": "chatcmpl-EUBxEVqhKbeKacsyDRSqJn7npSB6q",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. L’allongement de la durée du travail ne devrait pas être présenté comme une évolution naturellement obligatoire ; le gouvernement commettrait ainsi un sophisme naturaliste.\\n2. Affirmer que le système s’effondrera dans cinq ans si aucune mesure n’est prise constitue un appel classique à la peur.\\n3. La projection d’un déficit de 2,3 % du PIB en 2030 est contestable, car elle repose sur des hypothèses de croissance optimistes de 1,8 % par an.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790864500,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 219,
+      "prompt_tokens": 293,
+      "total_tokens": 512,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 97,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

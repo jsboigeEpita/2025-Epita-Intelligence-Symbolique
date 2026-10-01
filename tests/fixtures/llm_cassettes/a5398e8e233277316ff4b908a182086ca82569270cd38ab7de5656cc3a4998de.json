@@ -1,0 +1,48 @@
+{
+  "key": "a5398e8e233277316ff4b908a182086ca82569270cd38ab7de5656cc3a4998de",
+  "value": {
+    "id": "chatcmpl-EUC7xEbpjiMriEXIWjYNBGDFpFKEj",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Répartir les 2000 euros à parts égales entre un tournoi réduit et du matériel pédagogique permet de combiner visibilité et pédagogie, tout en équilibrant ces deux objectifs.\",\"conclusion\":\"L’option C, qui prévoit cette répartition hybride du budget, est à retenir.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790865165,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 345,
+      "prompt_tokens": 313,
+      "total_tokens": 658,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 268,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

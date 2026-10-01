@@ -6,25 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_yIShugIkenDTuYdHv1DVG7B3",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"1282\"}"
-        },
-        {
-          "id": "call_tEy9Vssx3mADSP5CwQCMW69r",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"1287\"}"
-        },
-        {
-          "id": "call_nVfVIXwCaVYKAY4bld7u2Nx0",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"1297\"}"
+          "id": "call_v7GAc0Wdxcw7pvDJ6UGiYfXE",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1297\",\"confidence\":\"high\",\"justification\":\"L’énoncé se limite à affirmer que la politique économique est un « succès incontestable », sans fournir de preuve ni d’argument. Il s’agit d’une preuve par assertion, plutôt que d’un refus explicite de débattre.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETpRhE8KrFjfzCXBotNiJ5jl7yL9v",
-        "created": 1790777977,
+        "id": "chatcmpl-EUBzk4RBmZ4p8z2PjA8YzPRu8sILS",
+        "created": 1790864656,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1831,
@@ -35,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 79,
+          "completion_tokens": 82,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

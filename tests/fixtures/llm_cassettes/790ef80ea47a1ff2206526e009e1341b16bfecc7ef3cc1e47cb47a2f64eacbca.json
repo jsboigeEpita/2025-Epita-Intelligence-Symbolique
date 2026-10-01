@@ -1,0 +1,48 @@
+{
+  "key": "790ef80ea47a1ff2206526e009e1341b16bfecc7ef3cc1e47cb47a2f64eacbca",
+  "value": {
+    "id": "chatcmpl-EUCDjsNaEBDc175DWnUDAPNZZHBN0",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\":true,\"structure_verdict\":\"progression_logique\",\"reasoning\":\"Les prémisses relient l’augmentation mesurée, sa vitesse sans précédent et l’accord des modèles sur l’impact humain pour soutenir que le changement actuel ne relève pas simplement de la variabilité naturelle.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790865523,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 174,
+      "prompt_tokens": 398,
+      "total_tokens": 572,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 105,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

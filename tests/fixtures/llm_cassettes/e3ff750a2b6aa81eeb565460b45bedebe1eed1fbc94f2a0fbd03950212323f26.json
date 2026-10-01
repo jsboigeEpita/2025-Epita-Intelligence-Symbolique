@@ -1,0 +1,40 @@
+{
+  "key": "e3ff750a2b6aa81eeb565460b45bedebe1eed1fbc94f2a0fbd03950212323f26",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_EtUaga61Mbga8TgxzrsgwkaR",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"26\",\"confidence\":\"high\",\"justification\":\"L’affirmation présente le succès de la politique économique comme « incontestable », une formule toute faite qui tient lieu de preuve sans fournir d’éléments justificatifs.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EUBzjmFFmlKO8TXC3vj7zqjikEUT6",
+        "created": 1790864655,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1414,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1411,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 65,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

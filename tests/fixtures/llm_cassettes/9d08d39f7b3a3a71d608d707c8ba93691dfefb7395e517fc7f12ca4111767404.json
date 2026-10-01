@@ -1,0 +1,48 @@
+{
+  "key": "9d08d39f7b3a3a71d608d707c8ba93691dfefb7395e517fc7f12ca4111767404",
+  "value": {
+    "id": "chatcmpl-EUC4p9mAt5l0PTZt4QKVPX7hNxLDu",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse soutient que l’option B consacre tout le budget au matériel pédagogique et à de nouveaux échiquiers. Une digression localisée est signalée, mais elle n’est pas explicitée dans les éléments fournis.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790864971,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 374,
+      "prompt_tokens": 267,
+      "total_tokens": 641,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 306,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

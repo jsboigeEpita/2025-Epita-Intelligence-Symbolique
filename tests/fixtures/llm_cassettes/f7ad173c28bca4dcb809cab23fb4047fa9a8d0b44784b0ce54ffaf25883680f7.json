@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"Test(test_memoire_numero_7)\",\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La première phrase identifie le test mémoire numéro 7 comme un test. La seconde affirme que tout objet qui est un test est important, ce qui se traduit par une implication universelle.\"\n}",
+      "content": "{\n  \"formulas\": [\n    \"Test(test_memoire_7)\",\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"« Test mémoire numéro 7 » est représenté par le fait que test_memoire_7 est un test. « Tous les tests sont importants » se traduit par : pour tout objet X, si X est un test, alors X est important.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETpXwGrJZkdM8XxBYhVyoe6amwlsG",
-        "created": 1790778364,
+        "id": "chatcmpl-EUC7SAISw2hXxr1Y7QBomsQi1VrzH",
+        "created": 1790865134,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 285,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 405,
+          "completion_tokens": 297,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 277,
+            "reasoning_tokens": 158,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

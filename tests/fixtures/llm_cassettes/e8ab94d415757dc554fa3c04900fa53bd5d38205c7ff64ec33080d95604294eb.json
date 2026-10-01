@@ -1,14 +1,14 @@
 {
   "key": "e8ab94d415757dc554fa3c04900fa53bd5d38205c7ff64ec33080d95604294eb",
   "value": {
-    "id": "chatcmpl-ETpezw1zMN4G1r97dC1HwwnzDNiQE",
+    "id": "chatcmpl-EUCDibwp6a3UK2DtWIOA8GwBLGTy9",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":0.5,\"exhibit\":\"Les deux points sont distincts : le premier affirme la réalité scientifique du changement climatique, tandis que le second fournit une mesure quantitative de son ampleur. Ils se recoupent toutefois partiellement, car l’augmentation de 1,1 °C étaye directement le premier point.\"}",
+          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points sont distincts : le premier affirme la réalité scientifique du changement climatique, tandis que le second fournit une mesure précise de l’augmentation de la température. Aucune redondance substantielle.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1790778801,
+    "created": 1790865522,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 230,
+      "completion_tokens": 111,
       "prompt_tokens": 276,
-      "total_tokens": 506,
+      "total_tokens": 387,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 153,
+        "reasoning_tokens": 50,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

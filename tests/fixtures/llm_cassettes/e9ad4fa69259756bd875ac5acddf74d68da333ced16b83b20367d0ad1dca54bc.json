@@ -1,0 +1,33 @@
+{
+  "key": "e9ad4fa69259756bd875ac5acddf74d68da333ced16b83b20367d0ad1dca54bc",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"formulas\":[\"il_pleut => la_rue_est_mouillee\",\"il_pleut\"]}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EUCA7vwCi6A2RZIDz4rPnxgBtgErN",
+        "created": 1790865299,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 388,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 26,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

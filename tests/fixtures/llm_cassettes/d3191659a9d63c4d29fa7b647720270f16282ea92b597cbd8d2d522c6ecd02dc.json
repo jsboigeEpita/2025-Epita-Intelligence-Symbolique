@@ -1,0 +1,48 @@
+{
+  "key": "d3191659a9d63c4d29fa7b647720270f16282ea92b597cbd8d2d522c6ecd02dc",
+  "value": {
+    "id": "chatcmpl-EUBxJmSlMHejrLxlQAA24zViFWogI",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points sont distincts : le premier avance un argument d’autorité en faveur de la réforme, tandis que le second en conteste la validité en soulignant les différences structurelles entre les systèmes. Aucune redondance substantielle n’est présente.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790864505,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 134,
+      "prompt_tokens": 281,
+      "total_tokens": 415,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 61,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

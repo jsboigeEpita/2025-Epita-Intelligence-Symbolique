@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_Ej0UhXSzvOvw8NB7KWkQlsuy",
+          "id": "call_8H4Kau3Z2MycPxBQHiiGjJTZ",
           "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\":\"300\"}"
+          "arguments": "{\"node_pk\":\"301\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETpSKVdlQdcgn4kjgkg9puQ1awNJU",
-        "created": 1790778016,
+        "id": "chatcmpl-EUC2tADSFW43pn4ITyywBHcT3MM3I",
+        "created": 1790864851,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1748,

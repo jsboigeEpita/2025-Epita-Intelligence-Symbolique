@@ -1,0 +1,40 @@
+{
+  "key": "f6bf0643b7bfc1429f5b4677d3cb0ede443904d18d5b8e095661e0ea3b35422f",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_cMpYzLI5Y8zYdGXGZZPZWa59",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"L’argument ne joue pas sur plusieurs sens d’un même mot ni sur une ambiguïté sémantique. Il relève plutôt d’un appel à l’autorité et d’une disqualification de l’avis selon le statut de la personne, mais pas de l’équivoque.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EUC3vWJpknJYy9c287uOpMyYpCm5f",
+        "created": 1790864915,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1512,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1509,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 81,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

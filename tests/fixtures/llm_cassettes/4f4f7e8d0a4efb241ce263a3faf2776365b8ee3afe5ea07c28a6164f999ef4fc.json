@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_Rl3t179BRNrZavID35gbpdkD",
-          "name": "Exploration-conclude_no_fallacy",
-          "arguments": "{\"reason\":\"L’énoncé affirme simplement le succès de la politique économique, sans détourner le débat, éviter une question, complexifier la discussion ni discréditer un adversaire. Aucun sous-type de sabotage du débat ne correspond.\"}"
+          "id": "call_veNBWMAK5SejhBkyXIZDufPB",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1312\",\"confidence\":\"high\",\"justification\":\"L’énoncé affirme simplement le succès de la politique économique, sans détourner le débat, éviter une question, compliquer la discussion ni discréditer un contradicteur. Il ne manifeste donc pas le sabotage du débat.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETpRgI94ittrrZq8Vea2t9P9s70rF",
-        "created": 1790777976,
+        "id": "chatcmpl-EUBzisJnEk8v1xrhC1nv6XI2m8CKe",
+        "created": 1790864654,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1632,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 68,
+          "completion_tokens": 78,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

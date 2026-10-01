@@ -1,0 +1,48 @@
+{
+  "key": "10d70ee766922e6e7b206a2e2c0c69dc73f53e1f0328b31d6daa116667563977",
+  "value": {
+    "id": "chatcmpl-EUCAajTvHTfQ5WNZWkM5mfxsIXWQr",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\":false,\"structure_verdict\":\"saut_logique\",\"reasoning\":\"Les résultats sur la variole et la polio montrent l’efficacité et l’importance des vaccins, mais ne suffisent pas à établir qu’ils sont indispensables à la santé publique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790865328,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 134,
+      "prompt_tokens": 345,
+      "total_tokens": 479,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 69,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

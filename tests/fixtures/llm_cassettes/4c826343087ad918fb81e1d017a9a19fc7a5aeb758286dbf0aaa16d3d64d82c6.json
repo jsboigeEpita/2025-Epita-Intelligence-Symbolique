@@ -1,14 +1,14 @@
 {
   "key": "4c826343087ad918fb81e1d017a9a19fc7a5aeb758286dbf0aaa16d3d64d82c6",
   "value": {
-    "id": "chatcmpl-ETpdJnSvjY5hgZmlKCvI4PqLTT6lJ",
+    "id": "chatcmpl-EUCCBLgQ7YfiVnMKru3gJjSKlzMDC",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points sont distincts : le premier porte sur la nécessité dans certains cas extrêmes, tandis que le second porte sur la fonction dissuasive contre les crimes graves. Aucune redondance substantielle n'est localisée.\"}",
+          "content": "{\"score\":1.0,\"exhibit\":\"Deux points distincts : le premier invoque la nécessité dans certains cas extrêmes, tandis que le second invoque la fonction dissuasive contre les crimes graves. Aucune redondance substantielle.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1790778697,
+    "created": 1790865427,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 116,
+      "completion_tokens": 108,
       "prompt_tokens": 278,
-      "total_tokens": 394,
+      "total_tokens": 386,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 48,
+        "reasoning_tokens": 46,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

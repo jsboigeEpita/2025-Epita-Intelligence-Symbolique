@@ -1,0 +1,48 @@
+{
+  "key": "df44db2777c2f0e1054f8fe15fc10b9618dee4a8ecd387f45574e48133ddad01",
+  "value": {
+    "id": "chatcmpl-EUCAjURkbtg90IvUkklt0nuXQE4Ik",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\":false,\"engagement_verdict\":\"non_sequitur\",\"reasoning\":\"Les succès historiques de la vaccination établissent son efficacité ou son utilité, mais ne réfutent pas en eux-mêmes l’affirmation qu’elle puisse présenter des dangers.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790865337,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 227,
+      "prompt_tokens": 330,
+      "total_tokens": 557,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 161,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

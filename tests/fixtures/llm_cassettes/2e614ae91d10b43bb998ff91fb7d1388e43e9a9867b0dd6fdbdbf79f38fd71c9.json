@@ -1,0 +1,48 @@
+{
+  "key": "2e614ae91d10b43bb998ff91fb7d1388e43e9a9867b0dd6fdbdbf79f38fd71c9",
+  "value": {
+    "id": "chatcmpl-EUBwk3TOF6tBsqy1ebCaJsVUUzhj5",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"obstacle_genuinely_opaque\":false,\"clarity_verdict\":\"résolvable_contexte\",\"reasoning\":\"Les exemples et le contexte permettent d’inférer qu’il s’agit d’un raisonnement fondé sur la prétendue nécessité naturelle, d’une menace catastrophiste et d’un indicateur économique, même si les termes ne sont pas explicitement définis.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790864470,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 313,
+      "prompt_tokens": 405,
+      "total_tokens": 718,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 228,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

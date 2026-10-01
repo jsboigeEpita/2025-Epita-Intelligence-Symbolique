@@ -1,0 +1,48 @@
+{
+  "key": "59cd3713e84b19d74e0e344e1cb13761d457105638897f726930fd11f0ae0b01",
+  "value": {
+    "id": "chatcmpl-EUCDmqOXOsUdMHqQ3se4C060pJWaY",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les trois points sont distincts : nécessité climatique de la transition, critique de l’usage sélectif des données par ses détracteurs, et avantage économique. Aucune redondance substantielle n’est visible.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790865526,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 108,
+      "prompt_tokens": 284,
+      "total_tokens": 392,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 45,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

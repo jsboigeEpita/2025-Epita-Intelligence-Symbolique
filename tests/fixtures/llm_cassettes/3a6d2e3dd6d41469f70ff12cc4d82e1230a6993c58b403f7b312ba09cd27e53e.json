@@ -6,8 +6,8 @@
       "content": "{\"propositions\":[\"alice_studies\",\"alice_succeeds\"]}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETpbP7JcqzH7wDwVRcFAf7zISuVsY",
-        "created": 1790778579,
+        "id": "chatcmpl-EUCAA6BLzPpuMFX6I75aTo3MZck4Q",
+        "created": 1790865302,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 225,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 73,
+          "completion_tokens": 17,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 50,
+            "reasoning_tokens": 0,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

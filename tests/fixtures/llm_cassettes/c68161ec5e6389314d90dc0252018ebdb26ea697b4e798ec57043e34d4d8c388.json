@@ -1,0 +1,48 @@
+{
+  "key": "c68161ec5e6389314d90dc0252018ebdb26ea697b4e798ec57043e34d4d8c388",
+  "value": {
+    "id": "chatcmpl-EUC7uVZVN3yO8zHsY4BYqIf2Thvk2",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":false,\"opposing_claim\":\"\",\"main_thesis\":\"L’option C, qui répartit les 2000 euros à parts égales entre un tournoi réduit et du matériel pédagogique, constitue le meilleur compromis entre visibilité et pédagogie.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790865162,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 156,
+      "prompt_tokens": 321,
+      "total_tokens": 477,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 94,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

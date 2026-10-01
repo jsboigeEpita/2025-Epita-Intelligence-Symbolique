@@ -1,0 +1,48 @@
+{
+  "key": "50a3c589e0c9cb7307d49849d07d0782a2ab3ee4bd79cdf21f3f5621f7abcfab",
+  "value": {
+    "id": "chatcmpl-EUBwn3O1NR2QAXBuDiT8M9lvQYf8z",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"obstacle_genuinely_opaque\":false,\"clarity_verdict\":\"résolvable_contexte\",\"reasoning\":\"Le contexte permet d’inférer que le PIB désigne un indicateur économique et que « homme de paille » et « appel à l’émotion » caractérisent respectivement une déformation de la position adverse et un recours aux sentiments.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790864473,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 156,
+      "prompt_tokens": 417,
+      "total_tokens": 573,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 73,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "key": "48d7d83c0b3267ef38ba827ef2d21c34b0a905e45502ce74d590c569abc97f6e",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_zLe7jJ1Cr59LZyNaoeCTspcm",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"133\",\"confidence\":\"high\",\"justification\":\"Les énoncés « Le soleil brille » et « Il fait beau » sont des affirmations simples et cohérentes ; ils ne tirent pas de conclusions exagérées et n’instancient aucune sous-catégorie de la surinterprétation.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EUByjCe7TgIZLGwGJB1KzeSr8jkJF",
+        "created": 1790864593,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1682,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 1679,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 85,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

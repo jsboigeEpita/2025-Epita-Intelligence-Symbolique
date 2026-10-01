@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "Bonjour ! Oui, je suis là. Que puis-je faire pour vous ?",
+      "content": "Bonjour ! Oui, je suis là. Comment puis-je vous aider ?",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETpQEvSbrr0rsXqPKMuZ48Q2errzU",
-        "created": 1790777886,
+        "id": "chatcmpl-EUByIWjtpfeMSI4azVsiTM2nXkici",
+        "created": 1790864566,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 12,
@@ -18,7 +18,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 18,
+          "completion_tokens": 17,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

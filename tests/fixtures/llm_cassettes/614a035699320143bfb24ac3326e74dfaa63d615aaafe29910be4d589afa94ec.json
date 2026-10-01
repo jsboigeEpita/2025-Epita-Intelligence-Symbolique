@@ -1,0 +1,40 @@
+{
+  "key": "614a035699320143bfb24ac3326e74dfaa63d615aaafe29910be4d589afa94ec",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_pyMHzIBHhdTJPd0wgRdxK6iz",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"698\",\"confidence\":\"high\",\"justification\":\"L'affirmation du président présente la réussite de la politique économique comme « incontestable », sans fournir de prémisse ou d'élément indépendant permettant de l'établir. La conclusion est simplement présupposée dans sa formulation, ce qui relève de la pétition de principe.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EUBzneSYXKJEquD7swE3ffO57yTwy",
+        "created": 1790864659,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1452,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1449,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 89,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

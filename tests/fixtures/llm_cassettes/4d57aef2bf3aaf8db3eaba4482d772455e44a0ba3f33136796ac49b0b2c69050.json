@@ -1,0 +1,48 @@
+{
+  "key": "4d57aef2bf3aaf8db3eaba4482d772455e44a0ba3f33136796ac49b0b2c69050",
+  "value": {
+    "id": "chatcmpl-EUC6HiSioWGAmisPKJrmBCF8Q5nlZ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les trois points apportent des informations distinctes : l’option A, le contexte de concurrence entre trois usages et l’option B. Aucune redondance substantielle n’est présente.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790865061,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 110,
+      "prompt_tokens": 299,
+      "total_tokens": 409,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 51,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

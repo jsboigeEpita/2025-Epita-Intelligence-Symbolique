@@ -1,0 +1,48 @@
+{
+  "key": "a03d2429e85321bab4cca1b15d9d6e3c1fdca6ce47008fc6e089ade0e100aeca",
+  "value": {
+    "id": "chatcmpl-EUCDaTGt04hTX0zRhx8gD1XYloRG7",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\":true,\"engagement_verdict\":\"engagement_réel\",\"reasoning\":\"La réfutation répond directement à l’idée que le changement actuel ne serait pas exceptionnel ou principalement humain en invoquant sa vitesse sans précédent et les preuves de l’impact des activités humaines.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790865514,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 137,
+      "prompt_tokens": 336,
+      "total_tokens": 473,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 69,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

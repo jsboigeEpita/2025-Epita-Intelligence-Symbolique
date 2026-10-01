@@ -1,0 +1,48 @@
+{
+  "key": "a6e59523a7956eeaeb56bcfab83b44f55fa1edee2ad6de1ba5b540c91813f9c7",
+  "value": {
+    "id": "chatcmpl-EUBx8IyYpcEse43d2UAumcmvcllWf",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Le ministre des finances projette un déficit du système de retraite atteignant 2,3 % du PIB d’ici 2030. Cette projection repose sur des hypothèses de croissance optimistes de 1,8 % par an.\",\"conclusion\":\"La situation du système de retraite exige une réforme, mais la force de cette conclusion dépend de la validité des hypothèses économiques retenues.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790864494,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 458,
+      "prompt_tokens": 339,
+      "total_tokens": 797,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 361,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

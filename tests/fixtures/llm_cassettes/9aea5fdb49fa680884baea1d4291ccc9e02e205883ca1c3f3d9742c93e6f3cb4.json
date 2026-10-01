@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_RBWs2xLKuoJNyS8xGolDaG8K",
-          "name": "Exploration-conclude_no_fallacy",
-          "arguments": "{\"reason\":\"Le texte invoque l'autorité des experts et exclut les avis des non-experts; il ne présuppose pas que sa conclusion est vraie pour établir cette même conclusion. Cela peut relever d'un appel à l'autorité ou d'un argument ad hominem, mais pas du cercle cartésien.\"}"
+          "id": "call_tvFFnA90SmbFDJJ91Ic1n8ns",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"700\",\"confidence\":\"high\",\"justification\":\"Le texte ne constitue pas un cercle cartésien : il invoque l’unanimité des experts comme preuve de vérité et exclut les avis des non-experts. Cela relève plutôt d’un appel à l’autorité et d’un argument ad hominem/invalidité de la source, mais la prémisse ne présuppose pas la conclusion de manière circulaire.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETpTGEkzgHBp9V8dOfJE2LNh9nBNG",
-        "created": 1790778074,
+        "id": "chatcmpl-EUC3kUYZtvE2ZQZQ3oIdybSGhPBfr",
+        "created": 1790864904,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 675,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 85,
+          "completion_tokens": 105,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

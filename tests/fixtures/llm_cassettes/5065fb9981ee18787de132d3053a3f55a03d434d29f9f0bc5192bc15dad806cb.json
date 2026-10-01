@@ -1,0 +1,33 @@
+{
+  "key": "5065fb9981ee18787de132d3053a3f55a03d434d29f9f0bc5192bc15dad806cb",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"query_ideas\":[\"pluie\",\"rue_mouillee\"]}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EUCA9TTUrs5mfOyCGszH03IRmLw52",
+        "created": 1790865301,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 469,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 18,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "key": "3b2d3deaee6d03ddf69051356d97659d66ba57c1628533e8c5736efec7b175b8",
+  "value": {
+    "id": "chatcmpl-EUCC26KjaoK4rhx4aJAUje0qaJrOK",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Le système judiciaire peut se tromper, ce qui constitue un argument contre la peine de mort.\",\"main_thesis\":\"La peine de mort est une sanction nécessaire dans certains cas extrêmes, notamment pour dissuader les crimes les plus graves comme les meurtres de masse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790865418,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 109,
+      "prompt_tokens": 288,
+      "total_tokens": 397,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 32,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
