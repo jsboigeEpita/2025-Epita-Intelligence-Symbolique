@@ -60,16 +60,25 @@ def resolve_target_argument_index(raw_target: Any, count: int) -> Optional[int]:
     return index if 0 <= index < count else None
 
 
-# ``_invoke_jtms`` mints premise belief names as ``f"arg_{i+1}:{text}"`` over
-# the run's argument units — the same 1-based enumeration with a
-# colon-joined text suffix (#2763). The bare-id regex above is anchored to
-# the plain id and deliberately does not match these names; the prefix form
-# has its own pattern so the two conventions cannot be conflated.
+# ``_invoke_jtms`` prefixes premise belief names with the unit's own id —
+# ``f"{unit_id}:{text}"`` — where the id is an ``arg_N`` minted by
+# ``shared_state._generate_id`` over the insertion-ordered population dict,
+# keeping the #2763 colon-joined shape. #2895: the prefix is the unit's ID,
+# not the selection's enumeration index — an index prefixed the names until
+# #2887 stratified the pick, and then named another unit (10/10 beliefs on
+# the #2850 run). The bare-id regex above is anchored to the plain id and
+# deliberately does not match these names; the prefix form has its own
+# pattern so the two conventions cannot be conflated. In the prefix form
+# the ``N`` is the unit's 1-based position in the POPULATION, never its
+# position in the selection that carried the belief.
 ARG_ID_PREFIX_RE = re.compile(r"^arg_(\d+):(.*)$", re.DOTALL)
 
 
 def split_arg_id_prefix(name: str) -> Optional[Tuple[int, str]]:
-    """Split an ``arg_N:<text>`` belief name into ``(N, text)`` — 1-based ``N``.
+    """Split an ``arg_N:<text>`` belief name into ``(N, text)``.
+
+    ``N`` is the unit's id — its 1-based position in the population, not a
+    selection index (#2895).
 
     Returns ``None`` for names without the premise prefix (claims, defeats,
     rebuttals…).

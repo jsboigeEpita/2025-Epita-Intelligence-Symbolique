@@ -2687,6 +2687,11 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             _jtms_units, 10, text_length=state_text_length(_jtms_state)
         )
         _raw_arg_texts = [_text({"text": u.text}) for u in _jtms_selection.selected]
+        # #2895 — the belief name carries the unit's OWN id, never the
+        # selection index: a stratified pick reorders units, so arg_{i+1}
+        # names another argument (10/10 on the #2850 run) and convergence
+        # counts retractions on the wrong units.
+        _raw_arg_ids = [u.unit_id for u in _jtms_selection.selected]
         if _jtms_state is not None and hasattr(_jtms_state, "record_analysis_coverage"):
             _jtms_state.record_analysis_coverage(
                 "jtms",
@@ -2697,28 +2702,48 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
                 span=_jtms_selection.span,
             )
     else:
-        _raw_arg_texts = [_text(a) for a in raw_args[:10]]
+        _fallback_args = raw_args[:10]
+        _raw_arg_texts = [_text(a) for a in _fallback_args]
+        # Stateless fallback: the extract order makes index and id coincide,
+        # as before #2887 (pattern of :755's own-id-first read).
+        _raw_arg_ids = [
+            (
+                str(a.get("unit_id") or f"arg_{i + 1}")
+                if isinstance(a, dict)
+                else f"arg_{i + 1}"
+            )
+            for i, a in enumerate(_fallback_args)
+        ]
     claim_beliefs = [_text(c) for c in raw_claims[:6]]
 
     if not _raw_arg_texts and not claim_beliefs:
         sentences = [s.strip() for s in input_text.split(".") if len(s.strip()) > 10]
         _raw_arg_texts = [s[:73] for s in sentences[:8]]
+        _raw_arg_ids = [f"arg_{i + 1}" for i in range(len(_raw_arg_texts))]
 
-    # Prefix each belief name with its arg_id so compute_argument_convergence
-    # can index JTMS signals by arg_id (startswith "arg_N:").  Without the
-    # prefix, names are raw text excerpts and the arg_id substring check never
-    # matches, silently dropping the JTMS convergence signal for every corpus.
-    arg_beliefs = [f"arg_{i+1}:{t[:66]}" for i, t in enumerate(_raw_arg_texts)]
+    # Prefix each belief name with the unit's id so compute_argument_convergence
+    # can index JTMS signals by arg_id (startswith "arg_N:") — #2895: the N is
+    # the SELECTED UNIT's id, the same key the quality writer scores by, never
+    # the enumeration index. Without the prefix, names are raw text excerpts
+    # and the arg_id substring check never matches, silently dropping the JTMS
+    # convergence signal for every corpus.
+    arg_beliefs = [f"{uid}:{t[:66]}" for uid, t in zip(_raw_arg_ids, _raw_arg_texts)]
 
     # ── Step 1: Add argument and claim beliefs (with ExtendedBelief metadata) ─
     for i, name in enumerate(arg_beliefs + claim_beliefs):
         is_arg = i < len(arg_beliefs)
         belief_type = "premise" if is_arg else "claim"
-        confidence: float = float(
-            per_arg_scores.get(
-                f"arg_{i+1}", per_arg_scores.get(f"argument_{i+1}", {})
-            ).get("note_finale", 0.5)
-        )
+        if is_arg:
+            # #2895 — the confidence is read by the unit's own id (the key
+            # the quality writer emits); the positional key only ever
+            # matched by accident of the pre-#2887 prefix selection.
+            confidence: float = float(
+                per_arg_scores.get(
+                    _raw_arg_ids[i], per_arg_scores.get(f"argument_{i + 1}", {})
+                ).get("note_finale", 0.5)
+            )
+        else:
+            confidence = 0.5
         session.add_belief(
             name,
             agent_source="unified_pipeline",
@@ -2885,12 +2910,18 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
 
     # ── Step 6: Quality scores → annotate belief metadata ────────────
     quality_annotations = {}
+    # #2895 — the score key is the unit's own id: annotate the belief that
+    # carries THAT id. The previous ``arg_id.split("_")[-1] - 1`` index into
+    # ``arg_beliefs`` was the same index-for-id substitution the labels had
+    # — under a stratified selection it annotated another unit's belief,
+    # and every id beyond the budget was silently dropped.
+    _belief_name_by_id = dict(zip(_raw_arg_ids, arg_beliefs))
     for arg_id, scores in per_arg_scores.items():
         if not isinstance(scores, dict):
             continue
-        idx = int(arg_id.split("_")[-1]) - 1 if "_" in arg_id else -1
-        if 0 <= idx < len(arg_beliefs):
-            quality_annotations[arg_beliefs[idx]] = {
+        annotated = _belief_name_by_id.get(arg_id)
+        if annotated is not None:
+            quality_annotations[annotated] = {
                 "quality_score": scores.get("note_finale", 0),
                 "weakest_virtue": min(
                     scores.get("scores_par_vertu", {"?": 0}),
