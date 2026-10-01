@@ -1378,8 +1378,8 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
             # the eager ``core`` init used to mask it by loading the
             # ``semantic_kernel.connectors`` chain (measured: ``OpenSSL``
             # or ``av`` alone prevent the hang; a bare attach does not —
-            # native exit-hang family tracked on its own issue, distinct
-            # from #2005/#2080 by signature). This suite already keeps the
+            # native exit-hang family tracked on #2894, distinct from
+            # #2005/#2080 by signature). This suite already keeps the
             # JVM running until process death (see the sessionfinish note
             # "L'arrêt de la JVM est désactivé"), so the atexit destroy is
             # disabled here: the JVM dies with the process instead of
