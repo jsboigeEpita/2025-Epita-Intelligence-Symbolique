@@ -98,6 +98,10 @@ dependencies:
   - pytest-cov
   - pytest-mock
   - pytest-asyncio==1.4.0  # #2566: CI gate run 36264473973 reports asyncio-1.4.0.
+  - nbformat  # #2864: the 6 spectacular-notebook tests skipped since #519 because no env provided it — including the privacy guard on the tracked notebook. Now a declared dep: absence fails at collection, never skips.
+  - nbconvert  # #2864: executes the notebook headless (subprocess `python -m nbconvert`, hermetic kernelspec pinned to sys.executable — the default python3 spec resolves PATH's python, which on a default Windows seat is the WindowsApps stub and kills the kernel). No `jupyter` metapackage on purpose: nbconvert + ipykernel are the minimal execution set, measured (~4 s, 0 error cells, 0 egress — mock data only).
+  - ipykernel  # #2864: the kernel nbconvert launches (python -m ipykernel_launcher).
+  - referencing<0.37  # #2864: nbformat's conda jsonschema stack pulls referencing 0.37.0 while the pip side's jsonschema-path (API stack) caps it <0.37.0 — two providers of one name (#2884's shape). Pinned conda-side, the solve serves 0.36.2 for everyone and the pip row drops, like websockets #2884. Guarded by tests/unit/test_conda_lock_single_provider_2884.py.
   - coverage
   - unidecode
   - conda-lock
