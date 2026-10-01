@@ -283,3 +283,256 @@ class TestTheMirrorDirection2879:
         )
         assert report.verdict.band == "FAIL"
         assert any("Surplus démenti" in r for r in report.verdict.reasons)
+
+
+class TestVerbalNegation2883:
+    """#2883 — the negation relation covers « ne <verbe> pas », both faces.
+
+    The guard vocabulary knew only the canonical refusal wordings (être /
+    avoir conjugations, « rien », « aucun », « sans »…) — the ordinary verbal
+    negation was a hole in BOTH directions of criterion 5, symmetrically,
+    since the two predicates read the same guards: on a thin state an honest
+    refusal was counted as a claim (issue #2883's measure: 2 of 5 fabricated
+    refusals flagged), and on a grounded state the same sentence was not read
+    as a denial. The fix completes the ONE negation definition — the scoped
+    witness below keeps the rule from over-widening.
+    """
+
+    # The two fabricated refusals the issue measured as wrongly flagged
+    # (claim direction): a verb-negated refusal of the surplus notion.
+    _VERBAL_REFUSAL = (
+        "L'analyse ne conclut pas à un surplus interprétatif : les "
+        "compteurs restent du contexte."
+    )
+    _VERBAL_REFUSAL_2 = "Le pipeline ne revendique pas ici un surplus interprétatif."
+
+    def test_verbal_refusal_passes_on_thin_state(self):
+        """Claim direction: « ne conclut pas » is a refusal, not a claim —
+        the issue's first measured line (1 flagged → 0 expected)."""
+        verdict = check_surplus_grounding(
+            self._VERBAL_REFUSAL, state_to_appendix_mapping(_thin_ns())
+        )
+        assert verdict.band == "PASS", (
+            "an honest refusal phrased as ordinary verbal negation must "
+            "pass on a thin state — it was counted as a claim (#2883)"
+        )
+
+    def test_second_verbal_refusal_passes_on_thin_state(self):
+        """The issue's second measured line (1 flagged → 0 expected)."""
+        verdict = check_surplus_grounding(
+            self._VERBAL_REFUSAL_2, state_to_appendix_mapping(_thin_ns())
+        )
+        assert verdict.band == "PASS"
+
+    def test_the_same_refusal_reddens_on_a_grounded_state(self):
+        """Mirror direction, same gesture: the verb-negated refusal of a
+        surplus the state DOES establish tells the reader the opposite of
+        what the analysis produced — previously silent (derived from the
+        shared guards, issue #2883's table)."""
+        verdict = check_surplus_grounding(
+            self._VERBAL_REFUSAL, state_to_appendix_mapping(_grounded_ns())
+        )
+        assert verdict.band == "FAIL", (
+            "the same sentence read as a refusal on thin state must read "
+            "as a denial on a grounded state — the two faces of one hole"
+        )
+        assert any("Surplus démenti" in r for r in verdict.reasons)
+
+    def test_the_discriminator_is_still_the_state(self):
+        """± pair on the verbal refusal: identical body, differing state —
+        PASS where nothing is established, FAIL where something is."""
+        thin = check_surplus_grounding(
+            self._VERBAL_REFUSAL, state_to_appendix_mapping(_thin_ns())
+        )
+        grounded = check_surplus_grounding(
+            self._VERBAL_REFUSAL, state_to_appendix_mapping(_grounded_ns())
+        )
+        assert thin.band == "PASS"
+        assert grounded.band == "FAIL"
+
+    def test_scoped_negation_stays_pass_on_grounded_state(self):
+        """The DoD's scoped witness: denying ONE type of surplus while
+        asserting the conclusion changed is not a denial of the established
+        surplus — if this reddens, the verbal-negation rule is too wide and
+        must be tightened (the issue's guard-fou). The cue must not fire on
+        « l'exclusion modifie la conclusion »: the changed-conclusion cue
+        reads conclusion-first, and the surplus notion needs its pair."""
+        scoped = (
+            "Ce que l'exclusion établit n'est pas un surplus de ce type, "
+            "mais l'exclusion modifie la conclusion."
+        )
+        verdict = check_surplus_grounding(
+            scoped, state_to_appendix_mapping(_grounded_ns())
+        )
+        assert verdict.band == "PASS"
+
+    def test_two_word_verbal_span_is_still_a_negation(self):
+        """The relation spans up to two words between « ne » and the
+        negation complement (« ne peut être lu comme un surplus… jamais ») —
+        pin the span so tightening it later is a measured decision, not a
+        silent regression."""
+        span = (
+            "L'apport ne peut jamais être lu comme un surplus " "interprétatif décisif."
+        )
+        thin = check_surplus_grounding(span, state_to_appendix_mapping(_thin_ns()))
+        assert thin.band == "PASS"
+
+
+class TestVerbalNegationGovernance2889:
+    """#2889 retouche (review c.5912722961) — the verbal negation must
+    GOVERN the surplus notion as its object, within one clause.
+
+    The line-scoped reading of #2883's first cut let any « ne … pas » in
+    the line exempt a surplus cue found anywhere in it — including
+    affirmations: a surplus in subject position being QUALIFIED (« ne se
+    limite pas »), a restrictive (« pas seulement »), or a cue in another
+    clause. Each witness below is a line the coordinator measured on both
+    sides: **claim on main (`293f13252`), wrongly cleared on `dfcece59a`**
+    (thin direction), **not a denial on main, wrongly « Surplus démenti »
+    on `dfcece59a`** (grounded direction). Born-green on main,
+    born-red on `dfcece59a` — measured before the retouche.
+    """
+
+    # Review table lines 1–3: affirmations of the surplus that main read
+    # as claims (0 denied / 1 claim) and #2883's first cut cleared.
+    _SUBJECT_POSITION = (
+        "Le surplus interprétatif ne se limite pas aux compteurs : "
+        "l'exclusion de Dung modifie la conclusion."
+    )
+    _RESTRICTIVE = (
+        "Ce surplus interprétatif ne repose pas seulement sur le LLM : "
+        "la réfutation formelle le porte."
+    )
+    _OTHER_CLAUSE = (
+        "La lecture ne s'arrête pas au texte : un surplus interprétatif "
+        "décisif apparaît."
+    )
+
+    def test_subject_position_still_claims_on_thin_state(self):
+        """A surplus notion in SUBJECT position is being qualified, not
+        negated — « Le surplus interprétatif ne se limite pas » asserts
+        the surplus. On a thin state this stays an unsupported claim."""
+        verdict = check_surplus_grounding(
+            self._SUBJECT_POSITION, state_to_appendix_mapping(_thin_ns())
+        )
+        assert verdict.band == "FAIL", (
+            "a surplus qualified from subject position is an assertion — "
+            "the verbal negation after it does not govern the notion"
+        )
+        assert any("Surplus non étayé" in r for r in verdict.reasons)
+
+    def test_subject_position_is_not_a_denial_on_grounded_state(self):
+        """Same line, grounded state: it asserts the surplus, so it must
+        not be read as « Surplus démenti »."""
+        verdict = check_surplus_grounding(
+            self._SUBJECT_POSITION, state_to_appendix_mapping(_grounded_ns())
+        )
+        assert verdict.band == "PASS"
+
+    def test_restrictive_still_claims_on_thin_state(self):
+        """Restrictive negations are affirmative — « ne repose pas
+        seulement sur le LLM » says the surplus exists and goes further.
+        Still an unsupported claim on a thin state."""
+        verdict = check_surplus_grounding(
+            self._RESTRICTIVE, state_to_appendix_mapping(_thin_ns())
+        )
+        assert verdict.band == "FAIL"
+        assert any("Surplus non étayé" in r for r in verdict.reasons)
+
+    def test_restrictive_is_not_a_denial_on_grounded_state(self):
+        """Same line, grounded state: a restrictive affirms the surplus,
+        never denies it."""
+        verdict = check_surplus_grounding(
+            self._RESTRICTIVE, state_to_appendix_mapping(_grounded_ns())
+        )
+        assert verdict.band == "PASS"
+
+    def test_other_clause_still_claims_on_thin_state(self):
+        """A negation in one clause does not govern a cue after the colon
+        — « La lecture ne s'arrête pas au texte : un surplus … apparaît »
+        claims the surplus in its own clause."""
+        verdict = check_surplus_grounding(
+            self._OTHER_CLAUSE, state_to_appendix_mapping(_thin_ns())
+        )
+        assert verdict.band == "FAIL"
+        assert any("Surplus non étayé" in r for r in verdict.reasons)
+
+    def test_other_clause_is_not_a_denial_on_grounded_state(self):
+        """Same line, grounded state: the negation stops at the clause
+        break — the second clause's cue is not its object."""
+        verdict = check_surplus_grounding(
+            self._OTHER_CLAUSE, state_to_appendix_mapping(_grounded_ns())
+        )
+        assert verdict.band == "PASS"
+
+
+class TestVerbalNegationSecondCut2889:
+    """#2889 second cut (review c.5917661086) — the seven measured lines,
+    each pinned in BOTH directions with its expected column.
+
+    The first cut let four affirmations through: a COMMA opening a new
+    clause (« , elle … », « , et … »), a « pas que » restrictive, a « se
+    contente » idiom, and a negated verb of doubt (« ne peut plus douter
+    ») — which AFFIRMS. The second cut extends the clause-break set with
+    `, <subject pronoun>` and `, et`, the restrictives with « content »
+    and « que », and adds the affirming-verb stems (douter/nier/contester).
+    Deliberate settlement, written here and in the PR body: an inserted
+    adverbial (« pas, à ce stade, de surplus ») does NOT break governance
+    — only a comma that opens a clause does.
+    """
+
+    # (sentence, expected reading: "denial" or "claim")
+    _LINES = [
+        (
+            "Ce rapport ne revendique pas de surplus interprétatif.",
+            "denial",
+        ),
+        (
+            "Il ne se dégage pas, à ce stade, de surplus interprétatif.",
+            "denial",
+        ),
+        (
+            "L'analyse ne se contente pas de compter, elle dégage un "
+            "surplus interprétatif décisif.",
+            "claim",
+        ),
+        (
+            "L'orchestration ne fait pas que compter, elle apporte un "
+            "surplus interprétatif.",
+            "claim",
+        ),
+        (
+            "Nous ne nous arrêtons pas là, et un surplus interprétatif "
+            "se dégage nettement.",
+            "claim",
+        ),
+        (
+            "On ne peut plus douter d'un surplus interprétatif réel.",
+            "claim",
+        ),
+        (
+            "Le pipeline ne compte pas seulement les sophismes, il "
+            "produit un surplus interprétatif.",
+            "claim",
+        ),
+    ]
+
+    def test_the_seven_measured_lines_read_as_expected(self):
+        """Both directions per line, the review's expected column pinned:
+        a denial PASSES thin and reddens grounded (« Surplus démenti »);
+        a claim reddens thin (« Surplus non étayé ») and PASSES grounded."""
+        for sentence, expected in self._LINES:
+            thin = check_surplus_grounding(
+                sentence, state_to_appendix_mapping(_thin_ns())
+            )
+            grounded = check_surplus_grounding(
+                sentence, state_to_appendix_mapping(_grounded_ns())
+            )
+            if expected == "denial":
+                assert thin.band == "PASS", sentence
+                assert grounded.band == "FAIL", sentence
+                assert any("Surplus démenti" in r for r in grounded.reasons), sentence
+            else:
+                assert thin.band == "FAIL", sentence
+                assert any("Surplus non étayé" in r for r in thin.reasons), sentence
+                assert grounded.band == "PASS", sentence

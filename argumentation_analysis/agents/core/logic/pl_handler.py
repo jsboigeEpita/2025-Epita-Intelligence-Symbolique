@@ -250,7 +250,9 @@ class PLHandler:
     def _sat_available(self) -> bool:
         """True if the SAT handler (PySAT) can be constructed."""
         try:
-            from . import sat_handler as _sh  # local import to avoid hard dep at import time
+            from . import (
+                sat_handler as _sh,
+            )  # local import to avoid hard dep at import time
 
             return bool(_sh.PYSAT_AVAILABLE)
         except Exception:
@@ -519,33 +521,37 @@ class PLHandler:
 
     # ── Multi-backend comparison (FP-20 #1244, mandate R468) ──────────
 
-    # PySAT backends that DECIDE firsthand (probe 2026-06-23, synthetic atoms):
+    # PySAT backends that DECIDE firsthand (probe 2026-06-23, synthetic atoms;
+    # re-probed 2026-09-29 by scripts/verify_all_external_solvers_live.py #2851):
     # each returns the correct verdict on BOTH {P}->SAT and {P,!P}->UNSAT.
-    # ``cryptominisat5`` is EXCLUDED: it returns UNSAT on a trivially-SAT formula
-    # (``AttributeError: 'CryptoMinisat' object has no attribute 'cryptosat'`` —
-    # its native binding is broken in this env). Promoting a backend that emits a
-    # wrong verdict would fabricate a comparison point — worse than absent (#1019).
-    # A future env where cryptominisat5 genuinely decides can re-add it; the
-    # per-backend sentinel test guards the decision both ways.
+    # ``cryptominisat5`` was excluded in 2026-06 because the env carried no
+    # ``pycryptosat`` at all (the constructor AssertionError; the trailing
+    # ``AttributeError: 'CryptoMinisat' object has no attribute 'cryptosat'``
+    # was __del__ noise after that failed construction, not a broken binding).
+    # environment.yml now pins pycryptosat==5.16.0 (cp310 win-64 wheel, #2851),
+    # the backend decides both pairs on every seat, and the per-backend
+    # sentinel test guards the decision both ways — a future env where it
+    # stops deciding reddens that sentinel, not the comparison.
     PL_COMPARISON_PYSAT_BACKENDS: List[str] = [
         "cadical195",
         "glucose42",
         "maplechrono",
         "lingeling",
         "minisat22",
+        "cryptominisat5",
     ]
 
     async def compare_pl_backends(self, knowledge_base_str: str) -> dict:
         """Run ALL available PL/SAT backends on the same KB and compare verdicts.
 
         FP-20 #1244, mandate R468 ("tous les solvers handy … pour comparer les
-        résultats"). Each backend (5 PySAT + Tweety Sat4j) is run INDEPENDENTLY
+        résultats"). Each backend (6 PySAT + Tweety Sat4j) is run INDEPENDENTLY
         on the same KB; verdicts are cross-validated. DISAGREEMENT is surfaced
         explicitly and NEVER silently reconciled — the comparison is the point
         (#1019).
 
         Backend set (firsthand-confirmed to decide, synthetic atoms):
-        * 5 PySAT solvers (``PL_COMPARISON_PYSAT_BACKENDS``) — Tseitin→CNF→CDCL.
+        * 6 PySAT solvers (``PL_COMPARISON_PYSAT_BACKENDS``) — Tseitin→CNF→CDCL.
         * Tweety ``Sat4jSolver`` via ``SatReasoner`` — pure-Java, linear.
         * The ``sat.*.Binding`` JNI API is permanently absent — the libraries
           export no ``Java_org_tweetyproject_sat_*_Binding_*`` symbol at all, so
@@ -555,7 +561,9 @@ class PLHandler:
           ``arg.adf`` JNI API — see ``libs/native/README.md``. PySAT's own
           minisat/lingeling *Python* bindings are independent of both and DO
           decide here.
-        * ``cryptominisat5`` excluded (broken native binding, see class constant).
+        * ``cryptominisat5`` re-added 2026-09 (#2851): its absence was a missing
+          ``pycryptosat`` (now pinned in environment.yml), not a broken binding —
+          see the class constant comment.
 
         Returns a JSON-serialisable dict mirroring ``compare_fol_backends``::
 
@@ -683,9 +691,7 @@ class PLHandler:
         """
         SatReasoner = jpype.JClass("org.tweetyproject.logics.pl.reasoner.SatReasoner")
         PlBeliefSet = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
-        Contradiction = jpype.JClass(
-            "org.tweetyproject.logics.pl.syntax.Contradiction"
-        )
+        Contradiction = jpype.JClass("org.tweetyproject.logics.pl.syntax.Contradiction")
         kb = PlBeliefSet()
         for f in normalized:
             parsed = self._pl_parser.parseFormula(jpype.JString(f))

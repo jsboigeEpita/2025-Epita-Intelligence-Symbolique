@@ -13,7 +13,7 @@
 version: 1
 metadata:
   content_hash:
-    win-64: 51252b3cbcd4a82d4f3c9638ba0ed6714b022a95bc3817f1a7eb4bd2391b8b74
+    win-64: 2afc5cfa7d9d197158d73c46099d1fe354e648daa4dcffed5d59f4605878b963
   channels:
   - url: conda-forge
     used_env_vars: []
@@ -412,15 +412,20 @@ package:
   category: main
   optional: false
 - name: charset-normalizer
-  version: 3.5.1
+  version: 3.5.2
   manager: conda
   platform: win-64
   dependencies:
-    python: '>=3.10'
-  url: https://conda.anaconda.org/conda-forge/noarch/charset-normalizer-3.5.1-pyhd8ed1ab_0.conda
+    _python_abi3_support: 1.*
+    cpython: '>=3.9'
+    python: ''
+    ucrt: '>=10.0.20348.0'
+    vc: '>=14.3,<15'
+    vc14_runtime: '>=14.44.35208'
+  url: https://conda.anaconda.org/conda-forge/win-64/charset-normalizer-3.5.2-h308a848_0.conda
   hash:
-    md5: e0ac3accc64e23e40969d660e5f58ac8
-    sha256: cb60ef3e0631c8bacb4f7057196dee4496091a22baa3bb4b9bccb12c7e1c921b
+    md5: 9435e7be4c7a58a0baa36d1a96e4eea0
+    sha256: 15ef0ff35f316beeb8d0ab045cb3c29655f0e38ed1ea49c56f5606d2ff2bc3e4
   category: main
   optional: false
 - name: click
@@ -1849,7 +1854,7 @@ package:
   category: main
   optional: false
 - name: libpng
-  version: 1.6.58
+  version: 1.6.59
   manager: conda
   platform: win-64
   dependencies:
@@ -1857,10 +1862,10 @@ package:
     ucrt: '>=10.0.20348.0'
     vc: '>=14.3,<15'
     vc14_runtime: '>=14.44.35208'
-  url: https://conda.anaconda.org/conda-forge/win-64/libpng-1.6.58-hdc8cecf_1.conda
+  url: https://conda.anaconda.org/conda-forge/win-64/libpng-1.6.59-hdc8cecf_0.conda
   hash:
-    md5: 5aa7348e73691187c81d51616f17e48a
-    sha256: 8c49c32adf3ba2c59783630b82377f54ab72204ea99e2bafc90a47a8e25c1032
+    md5: 05145e03eb7b7f4ad2e0575454061c87
+    sha256: 36050852deae6edc98d7b71489b8d07254e2753c69bd524bf5784927cd1f0b2c
   category: main
   optional: false
 - name: libsqlite
@@ -3917,7 +3922,7 @@ package:
   category: main
   optional: false
 - name: websockets
-  version: 16.1.1
+  version: 15.0.1
   manager: conda
   platform: win-64
   dependencies:
@@ -3926,23 +3931,23 @@ package:
     ucrt: '>=10.0.20348.0'
     vc: '>=14.3,<15'
     vc14_runtime: '>=14.44.35208'
-  url: https://conda.anaconda.org/conda-forge/win-64/websockets-16.1.1-py310h3b59f23_0.conda
+  url: https://conda.anaconda.org/conda-forge/win-64/websockets-15.0.1-py310h1637853_2.conda
   hash:
-    md5: 63c0ff9aaab80a4ef55cbb4a4874a515
-    sha256: 4ee6e13bf54f51124dafa5109710f1ca83793dbc51d1f8208cc598999a3af909
+    md5: d8fc709ce41dcae20b4c26e795cb48fb
+    sha256: 047eb6feccf88fa69d9e86b5e42d4082d60de1307dadfe9a67f789234c34b9ae
   category: main
   optional: false
 - name: werkzeug
-  version: 3.1.8
+  version: 3.1.1
   manager: conda
   platform: win-64
   dependencies:
     markupsafe: '>=2.1.1'
-    python: '>=3.10'
-  url: https://conda.anaconda.org/conda-forge/noarch/werkzeug-3.1.8-pyhcf101f3_0.conda
+    python: '>=3.9'
+  url: https://conda.anaconda.org/conda-forge/noarch/werkzeug-3.1.1-pyhd8ed1ab_0.conda
   hash:
-    md5: 3eeca039e7316268627f4116da9df64c
-    sha256: 5108c1bf2f0512e5c9dc8191e31b144c23b7cf0e73423a246173006002368d79
+    md5: 1180d2cfd2aefc04fca2f127fa76d983
+    sha256: 8de7b1b2e5f8a4300088e406cf4ebdac86f76d9986424af5277fb6eaccf384b3
   category: main
   optional: false
 - name: wheel
@@ -4254,7 +4259,7 @@ package:
   category: main
   optional: false
 - name: azure-storage-blob
-  version: 12.30.3
+  version: 12.31.0
   manager: pip
   platform: win-64
   dependencies:
@@ -4262,9 +4267,9 @@ package:
     cryptography: '>=2.1.4'
     isodate: '>=0.6.1'
     typing-extensions: '>=4.6.0'
-  url: https://files.pythonhosted.org/packages/ff/20/6530bbc13fea536a1f2c0194034ae3f6880fbc0c1e7c229e3569450f7aef/azure_storage_blob-12.30.3-py3-none-any.whl
+  url: https://files.pythonhosted.org/packages/9b/57/d1f45fbccc0dfbe6b6db7e5fa06199e35219c712f3743677bec1b4e7d78b/azure_storage_blob-12.31.0-py3-none-any.whl
   hash:
-    sha256: 80729a5397e5f0a63dbbdff74da675c5db1eacaf25fd5db0074b7ba6c17e2498
+    sha256: 0c0cb601d3462491d09ea96023cd791bb9dd4b173bf950daf3cff34ff47ba5b5
   category: main
   optional: false
 - name: bidict
@@ -4912,6 +4917,16 @@ package:
     sha256: b4dab4a05195b7f2a64a6c1a6c4ba7a96534ef56ea7210e6bcb59f28897160e0
   category: main
   optional: false
+- name: pycryptosat
+  version: 5.16.0
+  manager: pip
+  platform: win-64
+  dependencies: {}
+  url: https://files.pythonhosted.org/packages/24/89/768b2ab8d85d9132285fe051dec74a5c5d02b8034e2ebf76f0fb39180bbf/pycryptosat-5.16.0-cp310-cp310-win_amd64.whl
+  hash:
+    sha256: 9801e6c9d09e2e6e0192779e3585eff792be70f9a354f5a7653a5aef6ce5cc1e
+  category: main
+  optional: false
 - name: pyee
   version: 13.0.1
   manager: pip
@@ -5195,14 +5210,14 @@ package:
   category: main
   optional: false
 - name: smart-open
-  version: 8.0.1
+  version: 8.0.2
   manager: pip
   platform: win-64
   dependencies:
     wrapt: '*'
-  url: https://files.pythonhosted.org/packages/c3/96/325b8c507ccecc50421fecc0345a502ee6e4a44785af3c4e6ecbadad624a/smart_open-8.0.1-py3-none-any.whl
+  url: https://files.pythonhosted.org/packages/1c/48/d362978544ab08b385c6222ccb048fab1db3e3b820a07ef652c5d75678ae/smart_open-8.0.2-py3-none-any.whl
   hash:
-    sha256: 3e97f90e92a952cb57863dfe132082c400a52eeeb27c067692fb51dbcc5b0089
+    sha256: 7ff6e4acf454269905db0c747f5d14fdba6056db572c0f8398043676dc91515c
   category: main
   optional: false
 - name: sortedcontainers
@@ -5394,27 +5409,6 @@ package:
     sha256: 89518acee027f49d743126c3502d35e6dd14f5768be5c37c9af47c171b6005cc
   category: main
   optional: false
-- name: websockets
-  version: 15.0.1
-  manager: pip
-  platform: win-64
-  dependencies: {}
-  url: https://files.pythonhosted.org/packages/1c/46/aca7082012768bb98e5608f01658ff3ac8437e563eca41cf068bd5849a5e/websockets-15.0.1-cp310-cp310-win_amd64.whl
-  hash:
-    sha256: 39c1fec2c11dc8d89bba6b2bf1556af381611a173ac2b511cf7231622058af41
-  category: main
-  optional: false
-- name: werkzeug
-  version: 3.1.1
-  manager: pip
-  platform: win-64
-  dependencies:
-    markupsafe: '>=2.1.1'
-  url: https://files.pythonhosted.org/packages/ee/ea/c67e1dee1ba208ed22c06d1d547ae5e293374bfc43e0eb0ef5e262b68561/werkzeug-3.1.1-py3-none-any.whl
-  hash:
-    sha256: a71124d1ef06008baafa3d266c02f56e1836a5984afd6dd6c9230669d60d9fb5
-  category: main
-  optional: false
 - name: widgetsnbextension
   version: 4.0.16
   manager: pip
@@ -5447,5 +5441,15 @@ package:
   url: https://files.pythonhosted.org/packages/42/67/cb5ea1baa0c0ac60bda44ce59f601133154af2a2e67722d3517f8793855d/yarl-1.25.1-cp310-cp310-win_amd64.whl
   hash:
     sha256: 3f4d48a6112712973e676bd792121fee470e432d749177162d9949d5c9460a1b
+  category: main
+  optional: false
+- name: z3-solver
+  version: 4.16.0.0
+  manager: pip
+  platform: win-64
+  dependencies: {}
+  url: https://files.pythonhosted.org/packages/86/20/cef4f4d70845df24572d005d19995f92b7f527eb2ffb63a3f5f938a0de2e/z3_solver-4.16.0.0-py3-none-win_amd64.whl
+  hash:
+    sha256: eb5df383cb6a3d6b7767dbdca348ac71f6f41e82f76c9ac42002a1f55e35f462
   category: main
   optional: false

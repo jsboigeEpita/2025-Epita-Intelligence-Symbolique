@@ -36,7 +36,7 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 # below instead of being skipped: a spec this test cannot read is a spec it
 # does not check.
 _CONDA_SPEC = re.compile(
-    r"^(?P<name>[A-Za-z0-9_.\-]+)\s*(?:(?P<op>==|>=|=)\s*(?P<ver>\S+))?$"
+    r"^(?P<name>[A-Za-z0-9_.\-]+)\s*(?:(?P<op>==|>=|<=|=|<)\s*(?P<ver>\S+))?$"
 )
 
 
@@ -82,8 +82,12 @@ def _conda_spec_met(op: str | None, wanted: str | None, locked: str) -> bool:
         return locked == wanted
     if op == "=":  # conda: version prefix, `=1.25.0` means 1.25.0.*
         return locked == wanted or locked.startswith(wanted + ".")
-    # op == ">="
-    return Version(locked) >= Version(wanted)
+    if op == ">=":
+        return Version(locked) >= Version(wanted)
+    if op == "<":  # #2857: the werkzeug single-provider pin
+        return Version(locked) < Version(wanted)
+    # op == "<="
+    return Version(locked) <= Version(wanted)
 
 
 def test_lock_targets_the_ci_platform_from_environment_yml(env, lock):

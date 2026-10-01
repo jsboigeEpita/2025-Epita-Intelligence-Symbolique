@@ -48,6 +48,21 @@ dependencies:
 
   # Web & API
   - flask
+  # #2857 (coordination arbitration, 2026-09-30): openapi-core 0.19.5 (via
+  # semantic-kernel, pip section) requires werkzeug<3.1.2; without this pin
+  # the solve keeps TWO providers (conda 3.1.8 for flask + pip 3.1.1 for
+  # openapi-core) — the shape #2861 repaired for libiomp5md. Pinned conda-side,
+  # flask stays satisfied (>=3.1.0), one provider remains, and the runtime is
+  # exactly what CI runs today.
+  - werkzeug<3.1.2
+  # #2884: semantic-kernel 1.44.0 (pip section) pins websockets >=13,<16,
+  # while the conda solve serves uvicorn-standard with websockets 16.1.1 —
+  # two providers of one name (CI installs conda then pip, so the pip files
+  # overwrite the conda ones). Pinned conda-side <16: uvicorn-standard's
+  # >=10.4 stays satisfied, one provider remains, and the runtime keeps the
+  # 15.x line CI was effectively running. Guarded by
+  # tests/unit/test_conda_lock_single_provider_2884.py.
+  - websockets<16
   - requests
   - fastapi
   - uvicorn
@@ -123,3 +138,5 @@ dependencies:
     - jupyter-ui-poll>=0.2.0  # #2787: ui/app.py waits for widget clicks through jupyter_ui_poll.ui_events. Floor = scripts/setup/test_all_dependencies.py; ai-01 resolves 1.1.0.
     # sentence-transformers deliberately NOT provisioned (#2116 A1, re-examined by #2856): the ORIGINAL blocker — "the runner image cannot load torch DLLs" (#1651, probe VERDICT 4/8) — was a conda-lock defect, repaired in the solve (one libiomp5md.dll provider): the gate env now imports torch. Provisioning st remains a separate decision: it adds a module-level torch import at collection for two test files and a model download in the gate run (#2116 keeps the follow-up; the skip reason in test_embedding_capacity_guard_2116.py no longer cites the runner).
     - python-sat==1.9.dev7  # #1336 / #1687 / #1696-CI: PySAT is the DEFAULT propositional-logic backend (SATHandler, sat_handler.py). pip-only (NOT on conda-forge). RECURRING drift class #1336 "listed ≠ stays-published": (1) the float broke when 1.9.dev10 shipped NO cp310-win_amd64 wheel → pip source build → cadical MSVC fail (``unistd.h``) → both CI jobs die at Setup Miniconda; #1687 pinned 1.9.dev8. (2) dev8/9/10 were then YANKED from PyPI (maintainer prunes old dev releases) → the pin itself 404s → same Setup-Miniconda death. 1.9.dev7 is the NEWEST 1.9.x survivor below the yank gap WITH a prebuilt cp310-win_amd64 wheel (verified PyPI JSON: dev1..dev7 + dev11/dev12 have wheels; dev8/9/10 absent). Closest behavioral match to the validated dev8. Fallback if dev7 is later yanked: 1.9.dev12. #1369 keeps a degraded-wrap at the orchestration boundary as honest-degraded insurance regardless.
+    - z3-solver==4.16.0.0  # #2851 (E2 du gate du run payant) : « Z3 déclaré, MUS décide ». z3 est le solveur de `find_mus` (Z3/MARCO) ; l'env CI installé DEPUIS le lock ne le portait pas (mesuré ai-01 : ModuleNotFoundError), ce qui faisait skipper les 3 tests TestMUSAnalysis de test_sat_handler.py (run 36601189560) — le skip y est devenu un échec depuis que la dépendance est déclarée, sinon le gate resterait vert sans Z3. Wheel mesuré sur PyPI JSON : z3_solver-4.16.0.0-py3-none-win_amd64.whl, yanked=false (py3-none : aucune contrainte abi, s'installe sur cp310). Version = celle que l'env de dev résout (4.16.0), PAS la dernière publiée (5.1.0.0) : on provisionne la version que l'instrument a mesurée, comme pour pycryptosat.
+    - pycryptosat==5.16.0  # #2851: cryptominisat5's Python binding — a python-sat OPTIONAL extra, absent by default, which is why the backend was excluded from PL_COMPARISON_PYSAT_BACKENDS in 2026-06 (constructor AssertionError; the trailing AttributeError was __del__ noise, not a broken binding). Wheel verified on PyPI JSON: 5.16.0-cp310-cp310-win_amd64. Provisioned + re-probed 2026-09-29 (scripts/verify_all_external_solvers_live.py: decides BOTH {P}->SAT and {P,!P}->UNSAT) → re-added to the comparison set. The per-backend sentinel (test_external_provers_wired.py) reddens if a future env resolves a version that stops deciding.

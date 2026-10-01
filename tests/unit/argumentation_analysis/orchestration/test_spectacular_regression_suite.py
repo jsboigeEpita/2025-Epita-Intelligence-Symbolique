@@ -374,9 +374,12 @@ class TestSpectacularWorkflowGolden:
         # `deep_synthesis` now depends on belief_revision + stakes only, which
         # were already satisfied at L4/L2 before L9 existed. The DAG drops
         # from 10 levels to 8.
+        # #2890: the merged-population consumers (quality, per-argument
+        # fallacy, nl_to_logic) gained depends_on text_to_kb — one level
+        # later than the producer, instead of beside it. 8 → 9.
         wf = build_spectacular_workflow()
         levels = wf.get_execution_order()
-        assert len(levels) == 8
+        assert len(levels) == 9
 
     def test_extract_is_sole_entry_point(self):
         wf = build_spectacular_workflow()
@@ -386,14 +389,14 @@ class TestSpectacularWorkflowGolden:
     def test_l1_parallel_phases(self):
         wf = build_spectacular_workflow()
         levels = wf.get_execution_order()
-        # L1 = the 4 fan-out phases after extract, PLUS text_to_kb (#506 KB
-        # extraction depends only on extract) PLUS dl_reasoning (W1 #1169
-        # description_logic depends only on extract). #1115 folded DAG debt.
+        # L1 = the extract fan-out phases that read NO merged population:
+        # text_to_kb (#506, the heuristic whole-text PRODUCER), neural_detect
+        # and dl_reasoning (W1 #1169). #2890 moved quality /
+        # hierarchical_fallacy / nl_to_logic one level later — they select
+        # from the population text_to_kb writes, and the executor applies
+        # state writers only after the level.
         assert set(levels[1]) == {
-            "hierarchical_fallacy",
             "neural_detect",
-            "nl_to_logic",
-            "quality",
             "text_to_kb",
             "dl_reasoning",
         }
@@ -401,8 +404,17 @@ class TestSpectacularWorkflowGolden:
     def test_l2_includes_formal_logic_and_counter(self):
         wf = build_spectacular_workflow()
         levels = wf.get_execution_order()
-        assert {"fol", "modal", "pl"}.issubset(set(levels[2]))
-        assert "counter" in levels[2]
+        # #2890: L2 is the merged-population consumer level (quality,
+        # hierarchical_fallacy, nl_to_logic — ordered after text_to_kb) plus
+        # kb_to_tweety (already after its producer). Formal logic and counter
+        # follow one level later, after their L2 inputs.
+        assert {
+            "quality",
+            "hierarchical_fallacy",
+            "nl_to_logic",
+        }.issubset(set(levels[2]))
+        assert {"fol", "modal", "pl"}.issubset(set(levels[3]))
+        assert "counter" in levels[3]
 
     def test_counter_depends_on_quality(self):
         wf = build_spectacular_workflow()
@@ -440,10 +452,11 @@ class TestSpectacularWorkflowGolden:
         assert "modal" in synth.depends_on
         assert "aspic_analysis" in synth.depends_on
         levels = wf.get_execution_order()
-        # formal_synthesis runs in the formal-aggregation level (5 of 0..7); the
-        # terminal level is act3_conclusion (R4 #1138, depends on act2_narrative
+        # formal_synthesis runs in the formal-aggregation level (6 of 0..8
+        # after #2890 added the population-consumer level); the terminal
+        # level is act3_conclusion (R4 #1138, depends on act2_narrative
         # which depends on deep_synthesis #534).
-        assert "formal_synthesis" in levels[5]
+        assert "formal_synthesis" in levels[6]
         assert levels[-1] == ["act3_conclusion"]
 
     @pytest.mark.asyncio
