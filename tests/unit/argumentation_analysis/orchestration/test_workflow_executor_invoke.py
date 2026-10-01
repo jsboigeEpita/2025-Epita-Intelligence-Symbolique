@@ -632,6 +632,40 @@ class TestOptionalPhases:
         assert results["p1"].status == PhaseStatus.SKIPPED
 
     @pytest.mark.asyncio
+    async def test_no_provider_skip_does_not_block_dependent(self):
+        """#2890 — the composition the population ordering relies on: a
+        ``depends_on`` an optional phase SKIPPED for no provider still lets
+        the consumer run (a no-provider skip is not terminal). The wiring
+        that orders population consumers after ``text_to_kb`` must not
+        degrade to "specialists never run" on a seat where the KB producer
+        has no provider."""
+        consumer_calls = []
+
+        async def consumer(text, ctx):
+            consumer_calls.append(True)
+            return {"done": True}
+
+        registry = CapabilityRegistry()
+        registry.register(
+            "consumer",
+            ComponentType.AGENT,
+            capabilities=["consumer_cap"],
+            invoke=consumer,
+        )
+        workflow = (
+            WorkflowBuilder("skip_dependent")
+            .add_phase("producer", capability="nonexistent_cap", optional=True)
+            .add_phase("downstream", capability="consumer_cap", depends_on=["producer"])
+            .build()
+        )
+
+        results = await WorkflowExecutor(registry).execute(workflow, "test")
+
+        assert results["producer"].status == PhaseStatus.SKIPPED
+        assert results["downstream"].status == PhaseStatus.COMPLETED
+        assert consumer_calls == [True]
+
+    @pytest.mark.asyncio
     async def test_required_phase_no_provider_fails(self):
         """Required phase without provider FAILS."""
         registry = CapabilityRegistry()

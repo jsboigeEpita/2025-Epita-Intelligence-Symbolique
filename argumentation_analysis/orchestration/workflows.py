@@ -177,16 +177,25 @@ def build_standard_workflow() -> WorkflowDefinition:
             depends_on=["extract"],
             optional=True,
         )
+        # #2890 — the merged-population consumers (quality, the per-argument
+        # fallacy pass, nl_to_logic) must run AFTER every producer of that
+        # population. They used to sit one DAG level BESIDE text_to_kb (the
+        # heuristic whole-text producer); the executor gathers a level and
+        # applies state writers only after it, so these phases read a
+        # population holding the LLM extract alone (measured N=1/8 where the
+        # state held 95). depends_on orders them one level later; a skipped
+        # text_to_kb (optional, no provider) still completes its level, so
+        # the consumers keep running on whatever population exists.
         .add_phase(
             "hierarchical_fallacy",
             capability="hierarchical_fallacy_detection",
-            depends_on=["extract"],
+            depends_on=["extract", "text_to_kb"],
             optional=True,
         )
         .add_phase(
             "nl_to_logic",
             capability="nl_to_logic_translation",
-            depends_on=["extract"],
+            depends_on=["extract", "text_to_kb"],
             optional=True,
         )
         .add_phase(
@@ -231,7 +240,14 @@ def build_standard_workflow() -> WorkflowDefinition:
             depends_on=["dung_extensions"],
             optional=True,
         )
-        .add_phase("quality", capability="argument_quality", depends_on=["extract"])
+        # #2890 — see the hierarchical_fallacy comment above: quality reads
+        # the merged population, so it runs after text_to_kb's writer, not
+        # beside the producer.
+        .add_phase(
+            "quality",
+            capability="argument_quality",
+            depends_on=["extract", "text_to_kb"],
+        )
         .add_phase(
             "counter",
             capability="counter_argument_generation",
@@ -728,11 +744,25 @@ def build_spectacular_workflow() -> WorkflowDefinition:
         # L0 — extraction
         .add_phase("extract", capability="fact_extraction")
         # L1 — parallel after extraction
-        .add_phase("quality", capability="argument_quality", depends_on=["extract"])
+        # #2890 — quality / nl_to_logic / hierarchical_fallacy read the MERGED
+        # population (LLM extract + text_to_kb's heuristic whole-text units).
+        # They used to sit here, one level BESIDE text_to_kb (declared below):
+        # the executor gathers a level and applies state writers only after
+        # it, so each read a population holding the LLM extract alone
+        # (measured on the paid-run document: N=8, 1 band of 3, span
+        # 0.00–0.05). Ordered after the producer, they select stratified over
+        # the whole text. A skipped text_to_kb (optional, no provider) still
+        # completes its level — the consumers keep running on whatever
+        # population exists.
+        .add_phase(
+            "quality",
+            capability="argument_quality",
+            depends_on=["extract", "text_to_kb"],
+        )
         .add_phase(
             "nl_to_logic",
             capability="nl_to_logic_translation",
-            depends_on=["extract"],
+            depends_on=["extract", "text_to_kb"],
             optional=True,
         )
         .add_phase(
@@ -744,7 +774,7 @@ def build_spectacular_workflow() -> WorkflowDefinition:
         .add_phase(
             "hierarchical_fallacy",
             capability="hierarchical_fallacy_detection",
-            depends_on=["extract"],
+            depends_on=["extract", "text_to_kb"],
             optional=True,
         )
         # L2 — formal logic (parallel, from nl_to_logic)
