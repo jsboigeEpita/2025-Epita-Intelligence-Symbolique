@@ -1,14 +1,14 @@
 {
   "key": "ebef7f1a5d105216a0ae51ea9f92a2d59bbe86f7eeb5604d2ac82b8442119b01",
   "value": {
-    "id": "chatcmpl-ETpboJswt5JwaB1zDTzXNikWoDwKm",
+    "id": "chatcmpl-EUCASJun5KShA0toMg8GUfkNzkXKs",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_thesis\":true,\"thesis\":\"Les vaccins ne sont pas dangereux et leur efficacité est étayée par les recherches scientifiques et leurs résultats historiques.\",\"digressions\":\"\"}",
+          "content": "{\"has_thesis\":true,\"thesis\":\"Les vaccins ne sont pas dangereux et leur innocuité est étayée par des décennies de recherche clinique ainsi que par leurs bénéfices démontrés.\",\"digressions\":\"\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1790778604,
+    "created": 1790865320,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 127,
+      "completion_tokens": 136,
       "prompt_tokens": 254,
-      "total_tokens": 381,
+      "total_tokens": 390,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 79,
+        "reasoning_tokens": 80,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

@@ -1,0 +1,48 @@
+{
+  "key": "8db449e960932cc2837e52e64c31bab5a48c0538d0fbd9e85324257caa2b8d29",
+  "value": {
+    "id": "chatcmpl-EUC7o6invSrj6ldFagEnyLyA252r6",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"L’option C, qui répartit équitablement les 2000 euros entre un tournoi réduit et du matériel pédagogique, est le meilleur choix pour combiner visibilité et pédagogie.\",\"digressions\":\"La proposition de l’option B d’investir les 2000 euros uniquement dans du matériel pédagogique constitue une digression par rapport à la thèse en faveur de l’option C.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790865156,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 144,
+      "prompt_tokens": 300,
+      "total_tokens": 444,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 45,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

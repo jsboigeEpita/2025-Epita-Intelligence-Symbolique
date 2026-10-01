@@ -1,0 +1,48 @@
+{
+  "key": "50cb37e5348c903cedd39eb6c2db147cbc9d022590049a1322eb0e261cc72c0c",
+  "value": {
+    "id": "chatcmpl-EUCCaaYjwWvfx6xd0AerZGGKlZjf9",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points 1 et 2 développent deux idées distinctes : l’irréversibilité du châtiment et le danger permanent de certains criminels. Le point 3 étant tronqué (« coût des appels et des p... »), aucune redondance sémantique ne peut être localisée dans l’extrait fourni.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790865452,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 218,
+      "prompt_tokens": 298,
+      "total_tokens": 516,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 130,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

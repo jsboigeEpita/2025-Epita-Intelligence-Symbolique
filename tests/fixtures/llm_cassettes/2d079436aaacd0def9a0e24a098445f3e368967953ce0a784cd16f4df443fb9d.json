@@ -1,0 +1,48 @@
+{
+  "key": "2d079436aaacd0def9a0e24a098445f3e368967953ce0a784cd16f4df443fb9d",
+  "value": {
+    "id": "chatcmpl-EUCCFoQCH4nWW0IT53q0DyM054a3J",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"Le coût des appels et des procédures liés à la peine de mort peut être supérieur à celui de l’emprisonnement à vie, ce qui constitue un argument économique contre cette sanction.\",\"digressions\":\"La proposition « Cependant, il faut reconnaître que la peine de mort est irréversible, ce qui rend toute erreur fatale » s’écarte de la thèse économique principale en introduisant un argument moral et juridique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790865431,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 190,
+      "prompt_tokens": 261,
+      "total_tokens": 451,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 86,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

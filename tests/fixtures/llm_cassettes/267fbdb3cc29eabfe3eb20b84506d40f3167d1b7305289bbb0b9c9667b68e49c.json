@@ -1,0 +1,48 @@
+{
+  "key": "267fbdb3cc29eabfe3eb20b84506d40f3167d1b7305289bbb0b9c9667b68e49c",
+  "value": {
+    "id": "chatcmpl-EUC88Ns6ZZQcWYnvXK22I44PtOvdV",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. L’option B consiste à investir les 2 000 euros dans du matériel pédagogique neuf, notamment des échiquiers, des horloges et des supports de cours.\\n2. Cet investissement est justifié par l’usure des échiquiers actuels.\\n3. L’option A consiste à organiser un tournoi inter-villes avec buffet et prix pour 2 000 euros.\\n4. Ce tournoi augmenterait la visibilité du club et permettrait de recruter de nouveaux membres.\\n5. L’option C consiste à adopter un format hybride, avec 1 000 euros pour un tournoi réduit et 1 000 euros pour du matériel pédagogique.\\n6. Ce format hybride offrirait un équilibre entre visibilité et pédagogie.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790865176,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 249,
+      "prompt_tokens": 321,
+      "total_tokens": 570,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 81,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

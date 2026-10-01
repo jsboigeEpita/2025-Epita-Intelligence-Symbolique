@@ -1,0 +1,48 @@
+{
+  "key": "82dc18ef2fb7e38537cc529032fed22a779fd08e69e1389b6319313ab0159632",
+  "value": {
+    "id": "chatcmpl-EUCAcG2ANGodeivhpQEks5o9r7tAW",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne reconstruite relie la prémisse selon laquelle la vaccination a éradiqué la variole et réduit la polio à la conclusion que les vaccins sont indispensables à la santé publique. Le verdict est un saut logique net : la conclusion ne découle pas suffisamment des prémisses.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790865330,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 112,
+      "prompt_tokens": 275,
+      "total_tokens": 387,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 34,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

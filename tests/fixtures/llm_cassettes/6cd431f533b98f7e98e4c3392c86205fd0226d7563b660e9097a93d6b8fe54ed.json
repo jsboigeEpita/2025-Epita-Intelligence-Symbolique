@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_UlLmQDUWhSxoHfXQ1mJrMggn",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\":\"19\"}"
+          "id": "call_xxz8tFSv5mEUNGETwKCSxdFe",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"4\",\"confidence\":\"high\",\"justification\":\"L’énoncé se limite à une affirmation d’autorité selon laquelle la politique économique serait un succès, sans invoquer l’absence de réfutation ou de preuve contraire. Il ne constitue donc pas un appel à l’ignorance.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETpRkZpHQWkva5gMK7u9QDbj77nJ2",
-        "created": 1790777980,
+        "id": "chatcmpl-EUBzlTjx57JtLgfU7yKQOjFAuX6bP",
+        "created": 1790864657,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1754,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 22,
+          "completion_tokens": 78,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

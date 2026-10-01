@@ -1,0 +1,48 @@
+{
+  "key": "7672626582f44f407d0f15bbce8135d2bdd8b2576417a53e162ea9f6781548e8",
+  "value": {
+    "id": "chatcmpl-EUCDl625kDUQoBpC6AqxpA59WEzqH",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les prémisses reconnaissent la variabilité passée tout en établissant une hausse actuelle de 1,1 °C et une vitesse sans précédent ; elles conduisent à la conclusion que le changement climatique actuel ne s’explique pas simplement par la variabilité naturelle et qu’il est exceptionnel. Verdict : progression logique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790865525,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 188,
+      "prompt_tokens": 301,
+      "total_tokens": 489,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 106,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

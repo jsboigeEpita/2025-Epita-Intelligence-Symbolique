@@ -1,0 +1,40 @@
+{
+  "key": "764e994e6dd81a1b6a345327ac3d0f626017fdb5c891e6bcc89aff3f2200ae67",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_smSppvdtcybwbMZBAGbkyALY",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"856\",\"confidence\":\"high\",\"justification\":\"L’affirmation utilise des termes vagues et non définis (« succès incontestable » et « politique économique »), sans critères ni données permettant de comprendre précisément ce qui est affirmé.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EUBzhdv2ATWiUbvGkNlWNiO41odP3",
+        "created": 1790864653,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1280,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1277,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 69,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

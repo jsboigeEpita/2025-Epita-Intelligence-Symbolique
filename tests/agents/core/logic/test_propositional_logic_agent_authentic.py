@@ -171,13 +171,11 @@ async def test_text_to_belief_set_authentic(authentic_pl_agent):
     start_time = time.time()
     test_text = "Si il pleut alors la rue est mouillée. Il pleut."
 
-    try:
-        belief_set, message = await agent.text_to_belief_set(test_text)
-    except Exception as e:
-        pytest.skip(f"LLM text_to_belief_set failed: {e}")
+    # #2832 : un échec du fournisseur fait ÉCHOUER ce test, il ne le saute pas ;
+    # le skip reste réservé au chemin « service non configuré » ci-dessus.
+    belief_set, message = await agent.text_to_belief_set(test_text)
 
-    if belief_set is None:
-        pytest.skip(f"LLM returned None belief set: {message}")
+    assert belief_set is not None, f"LLM returned no belief set: {message}"
 
     assert isinstance(belief_set, PropositionalBeliefSet)
     assert belief_set.content is not None
@@ -196,6 +194,7 @@ async def test_text_to_belief_set_authentic(authentic_pl_agent):
 @pytest.mark.llm_integration
 @pytest.mark.phase5
 @pytest.mark.propositional
+@pytest.mark.requires_api  # #2832 : real LLM POST now that the test is non-vacuous (egress, run 36627437027)
 async def test_generate_queries_authentic(authentic_pl_agent):
     """Test authentique de génération de requêtes propositionnelles."""
     if not authentic_pl_agent["llm_service_configured"]:
@@ -203,13 +202,16 @@ async def test_generate_queries_authentic(authentic_pl_agent):
 
     agent = authentic_pl_agent["agent"]
     start_time = time.time()
-    belief_set = PropositionalBeliefSet("pluie => rue_mouillee & pluie")
+    # #2832 : sans propositions déclarées, ``generate_queries`` rend [] AVANT
+    # d'appeler le LLM (propositional_logic_agent.py:640-647) : ce test passait
+    # à vide, y compris sous une clé refusée.
+    belief_set = PropositionalBeliefSet(
+        "pluie => rue_mouillee & pluie", propositions=["pluie", "rue_mouillee"]
+    )
     test_text = "Analyse des implications de la pluie"
 
-    try:
-        queries = await agent.generate_queries(test_text, belief_set)
-    except Exception as e:
-        pytest.skip(f"LLM generate_queries failed: {e}")
+    # #2832 : un échec du fournisseur fait échouer le test, il ne le saute pas.
+    queries = await agent.generate_queries(test_text, belief_set)
 
     assert isinstance(queries, list)
     print(f"[AUTHENTIC] Requêtes générées: {queries}")
@@ -278,21 +280,16 @@ async def test_full_propositional_reasoning_workflow_authentic(authentic_pl_agen
     test_text = "Si Alice étudie alors elle réussit. Alice étudie. Donc Alice réussit."
 
     # Step 1: Text to belief set
-    try:
-        belief_set, conversion_msg = await agent.text_to_belief_set(test_text)
-    except Exception as e:
-        pytest.skip(f"Workflow step 1 (text_to_belief_set) failed: {e}")
+    # #2832 : chaque étape LLM du workflow fait échouer le test si le
+    # fournisseur échoue ; le skip ne couvre que l'absence de clé, ci-dessus.
+    belief_set, conversion_msg = await agent.text_to_belief_set(test_text)
 
     print(f"[AUTHENTIC] Conversion: {conversion_msg}")
 
-    if belief_set is None:
-        pytest.skip(f"LLM returned None belief set: {conversion_msg}")
+    assert belief_set is not None, f"LLM returned no belief set: {conversion_msg}"
 
     # Step 2: Generate queries
-    try:
-        queries = await agent.generate_queries(test_text, belief_set)
-    except Exception as e:
-        pytest.skip(f"Workflow step 2 (generate_queries) failed: {e}")
+    queries = await agent.generate_queries(test_text, belief_set)
 
     print(f"[AUTHENTIC] Requêtes: {queries}")
 
@@ -306,12 +303,10 @@ async def test_full_propositional_reasoning_workflow_authentic(authentic_pl_agen
         print(f"[AUTHENTIC] Requête '{query}' -> {result}")
 
     # Step 4: Interpret results
-    try:
-        interpretation = await agent.interpret_results(
-            test_text, belief_set, queries, results
-        )
-    except Exception as e:
-        pytest.skip(f"Workflow step 4 (interpret_results) failed: {e}")
+    # #2832 : dernière étape LLM du workflow — même contrat que les étapes 1 et 2.
+    interpretation = await agent.interpret_results(
+        test_text, belief_set, queries, results
+    )
 
     print(f"[AUTHENTIC] Interprétation: {interpretation}")
 

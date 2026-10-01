@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"Test(test9)\",\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"Le texte indique que le test numéro 9 existe, ce qui est représenté par Test(test9). La phrase « Tous les tests sont importants » se traduit par une implication universelle : pour tout objet X, si X est un test, alors X est important.\"\n}",
+      "content": "{\n  \"formulas\": [\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La phrase « Tous les tests sont importants » se traduit par une implication universelle : pour tout individu X, si X est un test, alors X est important. « Test mémoire numéro 9 » est interprété comme un titre ou un identifiant du texte, et non comme une proposition logique supplémentaire.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETpY5omnodOL8pGWUt4T3XpM6FQPL",
-        "created": 1790778373,
+        "id": "chatcmpl-EUC7b1vBZyv9PUNixR4RPdwcLspsD",
+        "created": 1790865143,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 285,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 382,
+          "completion_tokens": 308,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 244,
+            "reasoning_tokens": 169,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

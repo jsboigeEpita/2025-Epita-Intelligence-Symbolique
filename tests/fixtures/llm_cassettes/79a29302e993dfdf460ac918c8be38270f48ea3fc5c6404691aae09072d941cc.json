@@ -1,0 +1,48 @@
+{
+  "key": "79a29302e993dfdf460ac918c8be38270f48ea3fc5c6404691aae09072d941cc",
+  "value": {
+    "id": "chatcmpl-EUCAuvybHQa2yb132FhALQBIYabmy",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne reconstruite invoque l’ignorance de la recherche clinique par les opposants aux vaccins et la protection offerte par des taux de vaccination élevés, puis conclut que l’idée d’une dissimulation des effets secondaires par les entreprises pharmaceutiques est une théorie du complot sans fondement. Le verdict est un saut logique, car les prémisses ne permettent pas directement cette conclusion.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790865348,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 131,
+      "prompt_tokens": 297,
+      "total_tokens": 428,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 32,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

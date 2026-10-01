@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_sn8rF0qLIvQcgWbVlTMigAuo",
+          "id": "call_GSkFg9KwBFBGP9VzKVxg3S9x",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"133\",\"confidence\":\"low\",\"justification\":\"L’affirmation présente la politique économique comme un « succès incontestable » sans fournir d’éléments permettant de justifier une conclusion aussi catégorique, ce qui relève d’une surinterprétation.\"}"
+          "arguments": "{\"node_pk\":\"133\",\"confidence\":\"high\",\"justification\":\"L’énoncé présente comme un succès incontestable une affirmation politique sans fournir d’éléments justificatifs, ce qui constitue une conclusion exagérée par rapport aux informations disponibles.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETpRgXph5Fznjt8Hh3X50geZ9AzkI",
-        "created": 1790777976,
+        "id": "chatcmpl-EUBzirJWkKQUEcl9agkqufNdV7lTQ",
+        "created": 1790864654,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1687,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 72,
+          "completion_tokens": 67,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

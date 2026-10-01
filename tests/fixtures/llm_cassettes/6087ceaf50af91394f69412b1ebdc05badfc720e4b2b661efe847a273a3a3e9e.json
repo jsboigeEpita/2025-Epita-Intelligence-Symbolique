@@ -1,0 +1,40 @@
+{
+  "key": "6087ceaf50af91394f69412b1ebdc05badfc720e4b2b661efe847a273a3a3e9e",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_tBbSm8wdmzbPFcJ7Rk0Idu3d",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1386\",\"confidence\":\"high\",\"justification\":\"L'argument 2 écarte l'avis d'une personne uniquement parce qu'elle n'est pas experte, ce qui correspond directement à l'appel à la réussite décrit ici. L'argument 1 invoque en outre l'unanimité des experts comme preuve de vérité, mais dans la branche actuelle, le rejet de l'avis des non-experts relève bien de ce nœud général.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EUC3yaArIy8HXW4ZWA8N4LvaihFuH",
+        "created": 1790864918,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1423,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1420,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 112,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

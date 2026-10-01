@@ -28,6 +28,7 @@ from semantic_kernel.connectors.ai.prompt_execution_settings import (
 )
 from pydantic import Field, PrivateAttr
 
+from argumentation_analysis.core.llm_errors import provider_failure
 from ..abc.agent_bases import BaseLogicAgent
 from ..semantic_setup import prompt_settings, register_prompt_function
 from .belief_set import BeliefSet, ModalBeliefSet
@@ -533,6 +534,15 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
 
         except Exception as e:
             # Catches jpype.JException and any other unexpected errors
+            # #2832: a provider failure (rejected key, rate limit, transport) is
+            # not "the model said nothing". Letting it out keeps it readable by
+            # the caller; only a genuine output problem degrades (#1019).
+            if provider_failure(e) is not None:
+                self.logger.error(
+                    f"Échec du fournisseur LLM lors de la conversion: {e}",
+                    exc_info=True,
+                )
+                raise
             error_msg = f"Erreur inattendue lors de la conversion: {str(e)}"
             self.logger.error(error_msg, exc_info=True)
             return None, error_msg
@@ -662,6 +672,14 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
             self.logger.error(enriched_error)
             raise ValueError(enriched_error) from e
         except Exception as e:
+            # #2832: same contract as text_to_belief_set — an empty list is a
+            # model-output verdict, never a provider verdict.
+            if provider_failure(e) is not None:
+                self.logger.error(
+                    f"Échec du fournisseur LLM lors de la génération des requêtes: {e}",
+                    exc_info=True,
+                )
+                raise
             self.logger.error(
                 f"Erreur inattendue lors de la génération des requêtes: {e}",
                 exc_info=True,

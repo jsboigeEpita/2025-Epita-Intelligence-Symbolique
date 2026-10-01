@@ -1,0 +1,48 @@
+{
+  "key": "aca0ea1c354609eea277f2cca0808e62492f48758e01a3cafbc786cdfe4f8895",
+  "value": {
+    "id": "chatcmpl-EUC83wO0k5YBOjFoBwWZqfpEzBrXU",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Organiser un tournoi inter-villes avec buffet et prix augmenterait la visibilité du club et permettrait de recruter de nouveaux membres.\",\"conclusion\":\"Il faut consacrer les 2000 euros à l'organisation de ce tournoi (option A).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790865171,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 202,
+      "prompt_tokens": 330,
+      "total_tokens": 532,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 134,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

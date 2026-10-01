@@ -1,14 +1,14 @@
 {
   "key": "ed94d67b1a6f579ff8e01c2dd09322278eaccc72b1f1d553a8957be35c542332",
   "value": {
-    "id": "chatcmpl-ETpW34jAwb5Jy2c1bGZDGAun9bedt",
+    "id": "chatcmpl-EUC5wb3GvuS78GVgxDitWaEXElfsP",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_thesis\":true,\"thesis\":\"L’option C consiste à partager la subvention à parts égales entre le fonds de livres et l’espace numérique.\",\"digressions\":\"« Option B : créer un espace numérique avec des ordinateurs en libre accès. »\"}",
+          "content": "{\"has_thesis\":true,\"thesis\":\"L’option C consiste à partager la subvention à parts égales entre le fonds de livres et l’espace numérique.\",\"digressions\":\"La proposition « Option B : créer un espace numérique avec des ordinateurs en libre accès » est hors sujet par rapport à la thèse sur l’option C.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1790778247,
+    "created": 1790865040,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 159,
+      "completion_tokens": 142,
       "prompt_tokens": 240,
-      "total_tokens": 399,
+      "total_tokens": 382,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 94,
+        "reasoning_tokens": 61,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

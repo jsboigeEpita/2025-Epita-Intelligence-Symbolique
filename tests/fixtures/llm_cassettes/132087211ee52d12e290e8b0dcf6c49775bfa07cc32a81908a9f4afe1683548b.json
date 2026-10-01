@@ -1,0 +1,48 @@
+{
+  "key": "132087211ee52d12e290e8b0dcf6c49775bfa07cc32a81908a9f4afe1683548b",
+  "value": {
+    "id": "chatcmpl-EUCDXWDt4GoWJ3HLOdFDCaxnWROlX",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Le climat a toujours changé, ce qui est utilisé pour minimiser ou contester l'importance de la crise climatique actuelle et l'impact des activités humaines.\",\"main_thesis\":\"Les activités humaines sont la cause principale du changement climatique actuel, dont la vitesse est sans précédent, selon les modèles prédictifs.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790865511,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 131,
+      "prompt_tokens": 286,
+      "total_tokens": 417,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 47,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

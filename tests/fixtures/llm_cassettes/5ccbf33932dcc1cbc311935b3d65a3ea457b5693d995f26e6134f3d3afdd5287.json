@@ -1,14 +1,14 @@
 {
   "key": "5ccbf33932dcc1cbc311935b3d65a3ea457b5693d995f26e6134f3d3afdd5287",
   "value": {
-    "id": "chatcmpl-ETpeh5ehcdzUdUd8hzuIYVXMBJqTH",
+    "id": "chatcmpl-EUCDRQ2kI5rNqMdllhI3HhQSCrYVT",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_thesis\":true,\"thesis\":\"Le changement climatique constitue une réalité scientifique incontestable.\",\"digressions\":\"\"}",
+          "content": "{\"has_thesis\":true,\"thesis\":\"Le changement climatique est une réalité scientifique incontestable.\",\"digressions\":\"\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1790778783,
+    "created": 1790865505,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 64,
+      "completion_tokens": 68,
       "prompt_tokens": 220,
-      "total_tokens": 284,
+      "total_tokens": 288,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 29,
+        "reasoning_tokens": 33,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

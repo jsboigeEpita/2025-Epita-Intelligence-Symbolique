@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_zg2aA6ZGG6ktybmP6DL2jFcS",
+          "id": "call_WLFPaWimaewx5Z7o94A8Ij9r",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"22\",\"confidence\":\"high\",\"justification\":\"L’énoncé présente comme incontestable le succès de la politique économique sans fournir de raison, de donnée ou d’explication permettant de l’établir ; il demande donc d’accepter cette affirmation comme un acte de foi.\"}"
+          "arguments": "{\"node_pk\":\"22\",\"confidence\":\"high\",\"justification\":\"La phrase présente comme incontestable le succès de la politique économique sans fournir de raison, donnée ou explication logique permettant de l’établir. Elle demande donc d’accepter une affirmation sans justification.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-ETpRitpNz614aVkrJFaOEovE71kj1",
-        "created": 1790777978,
+        "id": "chatcmpl-EUBzjnUVlyy335tEccrS6I47vO0tB",
+        "created": 1790864655,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1274,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 77,
+          "completion_tokens": 71,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

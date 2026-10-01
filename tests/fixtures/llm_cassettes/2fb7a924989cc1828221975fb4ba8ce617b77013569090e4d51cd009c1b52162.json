@@ -1,0 +1,40 @@
+{
+  "key": "2fb7a924989cc1828221975fb4ba8ce617b77013569090e4d51cd009c1b52162",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_8F3jV3A9SmDPkDowOeIkmQqn",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"Les arguments reposent sur un appel à l'autorité et l'exclusion de l'avis des non-experts, pas sur le charme personnel, la flatterie ou la séduction.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EUC3ARYwVQUJr61LiOxPygEIh1cRR",
+        "created": 1790864868,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1456,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1453,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 60,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "key": "95b41c2eb989f76cbe39bc13919fb8aba7d218ce8ff5c2643cd14ab61b4c6ab5",
+  "value": {
+    "id": "chatcmpl-EUBxKN1bla8LuQskZVzbfSkjPQMWk",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Les deux points critiquent l’usage des comparaisons européennes pour justifier la réforme. Le point 1 expose la limite générale liée aux différences structurelles entre systèmes, tandis que le point 2 cible plus précisément le raisonnement consistant à invoquer le fait que tous les pays auraient déjà réformé leurs retraites. Le second illustre donc en partie le premier, tout en ajoutant une critique du lien logique entre constat international et nécessité de la réforme.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790864506,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 215,
+      "prompt_tokens": 288,
+      "total_tokens": 503,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 100,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
