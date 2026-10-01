@@ -26,6 +26,7 @@ import re
 import requests
 import shutil
 import subprocess
+import tempfile
 import zipfile
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from pathlib import Path
@@ -1189,24 +1190,6 @@ def _resolve_effective_tweety_version() -> str:
     return local
 
 
-def _attach_the_exiting_thread() -> None:
-    """Attach the thread that runs the atexit handlers to the JVM (#2519).
-
-    jpype's own atexit handler, ``_JTerminate``, never returns when the
-    thread running it was never attached. ``initialize_jvm`` starts the JVM
-    on an executor thread (the startup timeout), so a process whose main
-    thread never calls Java hung forever at exit: every xdist controller,
-    every pytest session that runs no test, any script that uses Java from
-    other threads only.
-
-    atexit runs its handlers on the main thread, last registered first.
-    jpype registers ``_JTerminate`` when it is imported (``jpype/_core.py``),
-    and this module imports jpype first, so this handler runs before it.
-    """
-    if jpype.isJVMStarted():
-        jpype.JClass("java.lang.Thread").currentThread()
-
-
 def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
     """
     Démarre la JVM avec le CLASSPATH configuré, en s'assurant qu'elle n'est démarrée qu'une seule fois.
@@ -1332,6 +1315,17 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
 
             jvm_options = get_jvm_options()
 
+            # #2866: without ``DestroyJavaVM`` at exit (``onexit`` disabled
+            # below), Java's shutdown hooks never run, so Tweety's
+            # ``deleteOnExit`` files outlived the process (measured: 3 left
+            # on 3, versus 1 on 3 with the destroy). The JVM now writes its
+            # temporaries in a per-process directory that a Python atexit
+            # handler removes — the sweep no longer depends on the native
+            # shutdown this module disables.
+            process_tmp_dir = tempfile.mkdtemp(prefix="jvm-tmp-")
+            atexit.register(shutil.rmtree, process_tmp_dir, True)
+            jvm_options.append(f"-Djava.io.tmpdir={process_tmp_dir}")
+
             logger.info("--- Paramètres de Démarrage JVM ---")
             logger.info(f"  Chemin JVM: {jvm_path_explicit}")
             logger.info(f"  Options: {jvm_options}")
@@ -1378,20 +1372,22 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
                 f"Appel à jpype.startJVM terminé (Thread ID: {current_thread_id})."
             )
             _JVM_INITIALIZED_THIS_SESSION = True
-            # #2519: registered once this call has started the JVM; runs
-            # before jpype's _JTerminate (registered at jpype's import).
-            atexit.register(_attach_the_exiting_thread)
             # #2866: jpype's atexit ``_JTerminate`` calls the native
             # ``_jpype.shutdown(config.destroy_jvm, ...)``, which never
             # returned in the lock env once the package inits went lazy —
             # the eager ``core`` init used to mask it by loading the
             # ``semantic_kernel.connectors`` chain (measured: ``OpenSSL``
-            # or ``av`` alone prevent the hang; a bare attach does not).
-            # This suite already keeps the JVM running until process death
-            # (see the sessionfinish note "L'arrêt de la JVM est désactivé"),
-            # so the atexit destroy is disabled here: the JVM dies with the
-            # process instead of deadlocking at its exit. An explicit
-            # ``shutdown_jvm()`` still performs the real teardown.
+            # or ``av`` alone prevent the hang; a bare attach does not —
+            # native exit-hang family tracked on its own issue, distinct
+            # from #2005/#2080 by signature). This suite already keeps the
+            # JVM running until process death (see the sessionfinish note
+            # "L'arrêt de la JVM est désactivé"), so the atexit destroy is
+            # disabled here: the JVM dies with the process instead of
+            # deadlocking at its exit. The #2519 exit attach is retired
+            # with it: it only ever ran to keep that native shutdown
+            # alive, and removing it changes nothing on this head (7/7
+            # guards pass). An explicit ``shutdown_jvm()`` still performs
+            # the real teardown.
             from jpype import config as _jpype_config
 
             _jpype_config.onexit = False
