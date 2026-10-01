@@ -40,6 +40,16 @@ one stratified selector (``select_for_budget``), and the specialist phases
 reading that population — quality was the phase whose repoint greens the
 specialist half, because it touches every unit it scores.
 
+#2890 (second cut): the specialist half had greened on BOOKKEEPING —
+``argument_provenance`` carries every unit id by construction, so the
+old any-field scan could not fail; and the specialists still sat one DAG
+level BESIDE ``text_to_kb`` (the executor applies state writers only
+after the whole level), selecting from the LLM unit alone (N=1, measured
+on ff2f854d8). The assertions now read an explicit specialist-field
+allowlist plus quality's own recorded population size
+(``analysis_coverage['quality']['N']``), and the workflow wiring orders
+every population consumer after every population producer.
+
 Privacy: the document is invented prose, no dataset content (#2850 DoD).
 """
 
@@ -201,9 +211,25 @@ class _FakeSkChatCompletion(ChatCompletionClientBase):
 
 def _thirds_in_state(state) -> "dict[str, object]":
     """The measured coverage: which thirds hold an identified argument, and
-    which thirds any specialist field reaches — a specialist touches a unit
-    when a state field carries the unit's id (``"arg_N"`` quoted, so
-    ``arg_1`` cannot match inside ``arg_10``)."""
+    which thirds a SPECIALIST RESULT FIELD reaches (#2890).
+
+    The pre-#2890 helper counted ANY state field carrying a unit id — and
+    two bookkeeping fields carry every id by construction
+    (``argument_provenance`` records each unit's producer/offset;
+    ``analysis_trace`` journals every phase; ``analysis_coverage`` counts
+    without analysing), so the specialist assertion could not fail and the
+    test greened while the specialists saw N=1. The explicit allowlist
+    below names the fields a specialist writes when it has actually
+    analysed a unit, and nothing else:
+
+    * ``argument_quality_scores`` — quality, keyed by the unit id it scored
+      (``"arg_N"`` quoted, so ``arg_1`` cannot match inside ``arg_10```);
+    * ``identified_fallacies`` — hierarchical fallacy, per record
+      ``target_argument_id``;
+    * ``nl_to_logic_translations`` — nl_to_logic, per record
+      ``original_text`` (no id carried: the third's MARKER in the
+      translated text is the reach evidence).
+    """
     identified = getattr(state, "identified_arguments", None) or {}
     if isinstance(identified, dict):
         id_to_text = {str(k): str(v) for k, v in identified.items()}
@@ -214,20 +240,24 @@ def _thirds_in_state(state) -> "dict[str, object]":
         for t in ("1", "2", "3"):
             if f"ARGT{t}" in text:
                 third_of_unit[t].append(unit_id)
+    fields = {
+        "argument_quality_scores": getattr(state, "argument_quality_scores", None),
+        "identified_fallacies": getattr(state, "identified_fallacies", None),
+        "nl_to_logic_translations": getattr(state, "nl_to_logic_translations", None),
+    }
     touched: "dict[str, list[str]]" = {t: [] for t in ("1", "2", "3")}
-    for attr in dir(state):
-        if attr.startswith("_") or attr == "identified_arguments":
-            continue
-        try:
-            value = getattr(state, attr)
-        except Exception:  # noqa: BLE001 — state properties may compute
-            continue
-        if callable(value) or not isinstance(value, (dict, list, tuple)):
+    for field_name, value in fields.items():
+        if not isinstance(value, (dict, list, tuple)) or not value:
             continue
         serialized = json.dumps(value, default=str)
         for t, unit_ids in third_of_unit.items():
-            if any(f'"{uid}"' in serialized for uid in unit_ids):
-                touched[t].append(attr)
+            reached = any(f'"{uid}"' in serialized for uid in unit_ids)
+            if field_name == "nl_to_logic_translations":
+                # No id in a translation record — the marker of the third
+                # inside an original_text IS the reach evidence.
+                reached = reached or f"ARGT{t}" in serialized
+            if reached:
+                touched[t].append(field_name)
     return {
         "units": {t: third_of_unit[t] for t in ("1", "2", "3")},
         "touched_by": {t: touched[t] for t in ("1", "2", "3")},
@@ -236,7 +266,11 @@ def _thirds_in_state(state) -> "dict[str, object]":
     }
 
 
-async def test_each_third_of_a_long_document_is_analysed(monkeypatch):
+@pytest.mark.parametrize(
+    "workflow_name",
+    ["standard", "spectacular"],
+)
+async def test_each_third_of_a_long_document_is_analysed(workflow_name, monkeypatch):
     # Dummy key: the phase gate skips every LLM phase when NO key is set
     # (measured: 16 skipped, 1 completed), but a dummy one lets the run
     # reach the intercepted call — and an invalid key bills nothing. Every
@@ -332,7 +366,7 @@ async def test_each_third_of_a_long_document_is_analysed(monkeypatch):
             new=AsyncMock(return_value=False),
         ),
     ):
-        result = await run_unified_analysis(document, workflow_name="standard")
+        result = await run_unified_analysis(document, workflow_name=workflow_name)
 
     state = result.get("unified_state")
     assert state is not None, "state tracking must stay on for the coverage read"
@@ -346,3 +380,29 @@ async def test_each_third_of_a_long_document_is_analysed(monkeypatch):
             f"the reading window are produced (heuristic) but never analysed "
             f"(measured: {measured})"
         )
+    # The production coverage statement (#2890): quality's own recorded N
+    # must equal the merged population size (both producers), not the LLM
+    # extract alone — and its stratified selection must have covered every
+    # band of the text. On main (ff2f854d8) this read N=1 with a merged
+    # population of 13: the phase ran BEFORE text_to_kb's writer was
+    # applied, so the population it selected from held the LLM unit alone.
+    from argumentation_analysis.orchestration.selection import (
+        merged_population_units,
+    )
+
+    population_size = len(merged_population_units(state))
+    quality_coverage = (getattr(state, "analysis_coverage", None) or {}).get("quality")
+    assert quality_coverage is not None, (
+        "quality must record its selection (analysis_coverage['quality']) — "
+        "the production coverage statement is part of the contract (#2887)"
+    )
+    assert quality_coverage.get("N") == population_size, (
+        f"analysis_coverage['quality']['N'] == {quality_coverage.get('N')} but "
+        f"the merged population holds {population_size} units — quality "
+        f"selected from a partial population (#2890)"
+    )
+    assert quality_coverage.get("bands_covered") == 3, (
+        f"analysis_coverage['quality']['bands_covered'] == "
+        f"{quality_coverage.get('bands_covered')} (expected 3) — the "
+        f"selection did not span the text (#2890)"
+    )
