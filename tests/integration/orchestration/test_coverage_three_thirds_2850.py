@@ -406,3 +406,23 @@ async def test_each_third_of_a_long_document_is_analysed(workflow_name, monkeypa
         f"{quality_coverage.get('bands_covered')} (expected 3) — the "
         f"selection did not span the text (#2890)"
     )
+    # #2896 (a): « 3/3 bands » stayed true on the paid run while a 0.41
+    # stretch held 15 located units nobody read — bands alone cannot fail.
+    # The stretch (bords compris) can. On THIS document it measures 0.490
+    # (measured, fixed selector) and that is the population's own floor:
+    # the fillers are non-argumentative by design, so the units cluster at
+    # the three markers (~500, ~30k, ~55k over 60k) and the ~29k hole
+    # between markers 1 and 2 is irreducible for ANY selection — which is
+    # why the bound sits just above the floor (a regression to head-of-band
+    # picks is discriminated by the unit-level witness, 0.312 → 0.205, in
+    # test_spread_within_bands_2896.py, whose population fills its bands).
+    stretch = quality_coverage.get("largest_uncovered_stretch")
+    assert stretch is not None, (
+        "analysis_coverage['quality'] carries no largest_uncovered_stretch "
+        "— the metric that can fail is part of the coverage contract (#2896)"
+    )
+    assert stretch <= 0.495, (
+        f"largest_uncovered_stretch == {stretch:.3f} > 0.495 — beyond this "
+        f"document's population floor, so the selection (or the metric) "
+        f"regressed (#2896)"
+    )

@@ -64,6 +64,13 @@ class SelectionResult:
     #2887: a population anchored in the first 3,000 characters of a 56k text
     rendered « 8/8 bandes » — bands built over the population itself recompute
     the checked field from what it checks).
+
+    ``largest_uncovered_stretch`` (#2896 a) is the largest FRACTION of the
+    source text no selected unit covers — the gaps between consecutive
+    selected offsets, the text's start and end included. It is the number
+    that can FAIL: « 3/3 bands » stayed true on the paid run while a 0.41
+    stretch (0.01 → 0.42) held 15 located units nobody read. ``None`` under
+    the same conditions as ``span``.
     """
 
     selected: Tuple[SelectableUnit, ...]
@@ -72,12 +79,57 @@ class SelectionResult:
     bands_covered: int
     bands_total: int
     span: Optional[Tuple[float, float]] = None
+    largest_uncovered_stretch: Optional[float] = None
 
 
 def _text_band(offset: int, text_length: int, band_count: int) -> int:
     """The fixed-width text band of ``offset`` — clamped, never out of range."""
     width = text_length / band_count
     return min(int(offset // width), band_count - 1) if width else 0
+
+
+def _spread_indices(m: int, q: int) -> List[int]:
+    """#2896 (b) — ``q`` evenly spaced INTERIOR positions over a band's
+    ``m`` offset-sorted units: ``(k+1)·m/(q+1)`` for ``k = 0..q-1``,
+    clamped, deduped.
+
+    Interior quantiles, not the edges: a band's edges adjoin its
+    neighbours' picks, so an edge pick spends a slot re-covering ground
+    the next band already reads and leaves the band's own middle
+    uncovered (``q=2`` at 0 %/100 % of the band ≈ the head-bias this
+    replaces). Identity when the grant holds the whole band; a single
+    grant takes the band's middle — a lone head pick is the head-bias
+    this replaces. ``m > q`` makes the step exceed 1, so positions are
+    strictly increasing and the dedup never fires in that range.
+    """
+    if q <= 0 or m <= 0:
+        return []
+    if q >= m:
+        return list(range(m))
+    seen: Dict[int, None] = {}  # dict-as-ordered-set
+    for k in range(1, q + 1):
+        seen[min(round(k * m / (q + 1)), m - 1)] = None
+    return list(seen)
+
+
+def _largest_uncovered_stretch(
+    selected_offsets: Sequence[int], text_length: Optional[int]
+) -> Optional[float]:
+    """#2896 (a) — the largest text fraction no selected unit covers.
+
+    Edges count: the gap from the text's start to the first selected
+    offset, the gaps between consecutive selected offsets, and the gap
+    from the last to the text's end. ``None`` without a text length or
+    without a positioned pick (the same honesty conditions as ``span`` —
+    an invented fraction would defeat the metric that exists to fail).
+    """
+    if not text_length or not selected_offsets:
+        return None
+    offsets = sorted(selected_offsets)
+    edges = [offsets[0]]
+    edges += [b - a for a, b in zip(offsets, offsets[1:])]
+    edges.append(text_length - offsets[-1])
+    return max(edges) / text_length
 
 
 def stratified_position(
@@ -100,12 +152,16 @@ def stratified_position(
       a position range of this document. No span: without the text length a
       fraction of it would be invented.
 
-    Within a band the order is the offset-ascending one (the positioned list
-    is offset-sorted); round 1 takes each band's first unit, each further
-    round the next; absent-offset units fill what remains, last, in insertion
-    order. The returned selection is ALWAYS in TEXT order (offset ascending,
-    absent last), whatever the round-robin interleaving picked — downstream
-    phases read the document's order, not the extraction clock's.
+    Within a band the picks are SPREAD over the band's extent (#2896 b):
+    the round-robin's grant allocation runs first (counts only), then each
+    band's ``q`` grants go to its evenly spaced interior quantile positions
+    (``_spread_indices``) — the paid run showed head-of-band picks leaving a
+    0.41 stretch nobody reads while the band carried located units
+    throughout. ``k`` and the bands are unchanged; only the inner order
+    moved. Absent-offset units fill what remains, last, in insertion order.
+    The returned selection is ALWAYS in TEXT order (offset ascending,
+    absent last), whatever the interleaving picked — downstream phases read
+    the document's order, not the extraction clock's.
     """
     if n <= 0:
         return SelectionResult((), 0, len(units), 0, 0)
@@ -152,23 +208,37 @@ def stratified_position(
             else None
         )
         return SelectionResult(
-            all_ordered, len(units), len(units), covered, bands, span
+            all_ordered,
+            len(units),
+            len(units),
+            covered,
+            bands,
+            span,
+            _largest_uncovered_stretch(sel_offsets, text_length),
         )
 
-    picked: List[int] = []  # indices into `positioned`
-    chosen: Dict[int, bool] = {}
+    # #2896 (b) — pass 1: the round-robin's grant allocation, counts only
+    # (identical walk to the pre-spread picker, so each band's share and
+    # the absent-fill budget are unchanged); pass 2: each band's grants go
+    # to its spread positions instead of its head.
+    grants: List[int] = [0] * len(band_lists)
+    remaining = n
     round_idx = 0
-    while len(picked) < n and round_idx < max(
-        (len(bl) for bl in band_lists), default=0
-    ):
-        for bl in band_lists:
-            if len(picked) >= n:
+    while remaining > 0 and round_idx < max((len(bl) for bl in band_lists), default=0):
+        for b, bl in enumerate(band_lists):
+            if remaining <= 0:
                 break
             if round_idx < len(bl):
-                idx = bl[round_idx]
-                picked.append(idx)
-                chosen[idx] = True
+                grants[b] += 1
+                remaining -= 1
         round_idx += 1
+    picked: List[int] = []  # indices into `positioned`
+    chosen: Dict[int, bool] = {}
+    for b, bl in enumerate(band_lists):
+        for j in _spread_indices(len(bl), grants[b]):
+            idx = bl[j]
+            picked.append(idx)
+            chosen[idx] = True
     # Leftover budget → absent-offset units, stable insertion order.
     absent_picked = 0
     while len(picked) + absent_picked < n and absent_picked < len(absent):
@@ -189,7 +259,15 @@ def stratified_position(
         if text_length and sel_offsets
         else None
     )
-    return SelectionResult(ordered, len(ordered), len(units), covered, bands, span)
+    return SelectionResult(
+        ordered,
+        len(ordered),
+        len(units),
+        covered,
+        bands,
+        span,
+        _largest_uncovered_stretch(sel_offsets, text_length),
+    )
 
 
 def select_for_budget(

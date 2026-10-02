@@ -711,6 +711,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         bands_covered: int,
         bands_total: int,
         span: Optional[Tuple[float, float]] = None,
+        largest_uncovered_stretch: Optional[float] = None,
     ) -> None:
         """#2850 slice A — enregistre la couverture d'une phase sélectrice.
 
@@ -725,6 +726,12 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         le span ne peut pas. ``None`` = aucune unité sélectionnée ancrée (ou
         sélection sans longueur de texte) — la phrase rendue ne prête alors
         aucune étendue.
+
+        ``largest_uncovered_stretch`` (#2896 a) : la plus grande fraction du
+        texte qu'AUCUNE unité sélectionnée ne couvre (bords compris) — le
+        chiffre qui peut ÉCHOUER : « 3/3 bandes » est resté vrai sur le run
+        payé pendant qu'une lacune de 0,41 tenait 15 unités localisées.
+        ``None`` = pas d'ancrés (ou pas de longueur de texte).
         """
         entry: Dict[str, Any] = {
             "k": int(k),
@@ -735,6 +742,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         if span is not None:
             entry["span_start"] = float(span[0])
             entry["span_end"] = float(span[1])
+        if largest_uncovered_stretch is not None:
+            entry["largest_uncovered_stretch"] = float(largest_uncovered_stretch)
         self.analysis_coverage[phase] = entry
 
     def record_designation(

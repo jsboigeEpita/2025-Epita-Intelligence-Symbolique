@@ -592,6 +592,7 @@ async def _invoke_quality_evaluator(
             _selection.bands_covered,
             _selection.bands_total,
             span=_selection.span,
+            largest_uncovered_stretch=_selection.largest_uncovered_stretch,
         )
 
     # (#289) Read fallacy output to penalize arguments affected by fallacies
@@ -1560,6 +1561,31 @@ async def _invoke_counter_argument(
                 else []
             )
 
+            # #2896 (c): the counter reads the merged population through the
+            # coverage layer, not the extraction alone — the extraction reads
+            # the first 3,000 chars, so on the paid run every counter target
+            # sat at 0.00–0.05 while the population carried located units
+            # across the text. k=10 = the layer's standard unit budget (the
+            # same population and budget the fallacy phase selects over, so
+            # both phases see the same units); the positional arg_{i+1} key
+            # the old sweep minted is replaced by the unit's own id.
+            _ca_state = context.get("_state_object")
+            _ca_selection = select_for_budget(
+                merged_population_units(_ca_state, fallback_args=arguments),
+                10,
+                text_length=state_text_length(_ca_state),
+            )
+            if _ca_state is not None and hasattr(_ca_state, "record_analysis_coverage"):
+                _ca_state.record_analysis_coverage(
+                    "counter",
+                    _ca_selection.k,
+                    _ca_selection.n_total,
+                    _ca_selection.bands_covered,
+                    _ca_selection.bands_total,
+                    span=_ca_selection.span,
+                    largest_uncovered_stretch=_ca_selection.largest_uncovered_stretch,
+                )
+
             # (#289) Read quality scores to prioritize weakest arguments
             quality_output = context.get("phase_quality_output", {})
             per_arg_scores = (
@@ -1568,11 +1594,13 @@ async def _invoke_counter_argument(
                 else {}
             )
 
-            # Build targets: ALL fallacious arguments + ALL arguments by quality.
-            # GG #696: the previous top-3 fallacies + 5-total caps held output to
-            # <=5 counter-arguments, losing to the zero-shot baseline on volume.
-            # Sweep every target; _generate_counters_for_targets batches the
-            # LLM calls so coverage stays reliable on dense corpora.
+            # Build targets: ALL fallacious arguments + the SELECTED units by
+            # quality. GG #696: the previous top-3 fallacies + 5-total caps
+            # held output to <=5 counter-arguments, losing to the zero-shot
+            # baseline on volume; the sweep keeps every target the budgeted
+            # selection carries, and _generate_counters_for_targets batches
+            # the LLM calls so coverage stays reliable on dense corpora.
+            # Fallacy-first priority kept (#2896): fallacious targets lead.
             targets = []
             for f in fallacies:
                 if isinstance(f, dict):
@@ -1581,18 +1609,16 @@ async def _invoke_counter_argument(
                         f"{f.get('explanation', '')[:100]}"
                     )
 
-            # Sort arguments by quality score (ascending = weakest first)
+            # Sort the SELECTED units by quality score (weakest first)
             scored_args = []
-            for i, a in enumerate(arguments):
-                text = a.get("text", str(a)) if isinstance(a, dict) else str(a)
-                score_key = f"arg_{i+1}"
+            for u in _ca_selection.selected:
                 # #1907: rank on the share of the reachable ceiling, not on
                 # the raw sum — otherwise an argument that happened to be
                 # evaluated on more dimensions always outranks a shorter one
                 # regardless of merit. Unmeasured arguments sort last and say
                 # so, instead of being handed a fabricated middling 5.0.
-                frac = _quality_fraction(per_arg_scores.get(score_key, {}))
-                scored_args.append((frac, text))
+                frac = _quality_fraction(per_arg_scores.get(u.unit_id, {}))
+                scored_args.append((frac, u.text))
             scored_args.sort(key=lambda x: (x[0] is None, x[0]))  # weakest first
 
             for frac, text in scored_args:
@@ -2700,6 +2726,7 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
                 _jtms_selection.bands_covered,
                 _jtms_selection.bands_total,
                 span=_jtms_selection.span,
+                largest_uncovered_stretch=_jtms_selection.largest_uncovered_stretch,
             )
     else:
         _fallback_args = raw_args[:10]
@@ -3035,11 +3062,36 @@ async def _invoke_atms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
         ]
 
     # ── Step 1: Arguments → assumptions ──────────────────────────────
+    # #2896 (c): the assumptions come from the merged population through
+    # the coverage layer (k=8, the phase's unchanged budget), not the
+    # extraction's opening window — same defect as the counter phase: the
+    # window only ever made the document's first units into assumptions.
+    # The ids travel with the names so hypothesis quality lookup keys by
+    # the unit's own id (the extract-era positional arg_{i+1} key named
+    # another unit under a stratified pick — the #2895 family).
+    _atms_state = context.get("_state_object")
+    _atms_selection = select_for_budget(
+        merged_population_units(_atms_state, fallback_args=raw_args[:8]),
+        8,
+        text_length=state_text_length(_atms_state),
+    )
+    if _atms_state is not None and hasattr(_atms_state, "record_analysis_coverage"):
+        _atms_state.record_analysis_coverage(
+            "atms",
+            _atms_selection.k,
+            _atms_selection.n_total,
+            _atms_selection.bands_covered,
+            _atms_selection.bands_total,
+            span=_atms_selection.span,
+            largest_uncovered_stretch=_atms_selection.largest_uncovered_stretch,
+        )
     arg_names: list[str] = []
-    for a in raw_args[:8]:
-        name = _text(a)
+    arg_ids: list[str] = []
+    for u in _atms_selection.selected:
+        name = u.text[:60]
         atms.add_assumption(name)
         arg_names.append(name)
+        arg_ids.append(u.unit_id)
 
     if not arg_names:
         sentences = [s.strip() for s in input_text.split(".") if len(s.strip()) > 10]
@@ -3094,7 +3146,11 @@ async def _invoke_atms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
 
     # ── Step 5: Multi-context hypothesis testing (#349) ──────────────
     hypotheses = _generate_hypotheses(
-        arg_names, claim_names, detected_fallacies, per_arg_scores
+        arg_names,
+        claim_names,
+        detected_fallacies,
+        per_arg_scores,
+        arg_ids=arg_ids,
     )
 
     atms_contexts = []
@@ -3151,12 +3207,20 @@ def _generate_hypotheses(
     claim_names: List[str],
     fallacies: List[Any],
     per_arg_scores: Dict[str, Any],
+    arg_ids: Optional[List[str]] = None,
 ) -> List[Dict[str, Any]]:
     """Generate 3-4 testable hypotheses from analysis data for ATMS multi-context.
 
     Each hypothesis is a named set of assumptions representing a possible
     world. Hypotheses vary in which arguments they accept as true, producing
     contexts where some beliefs are coherent and others are not.
+
+    ``arg_ids`` (#2896, optional, keyword at the production call site)
+    carries each assumption's unit id alongside its name: quality scores
+    are keyed by the unit's own id, so hypothesis 3 reads them through
+    ``arg_ids`` — the positional ``arg_{idx+1}`` key the extract-era
+    signature implied named another unit under a stratified pick (the
+    #2895 family).
     """
     hypotheses = []
 
@@ -3207,10 +3271,13 @@ def _generate_hypotheses(
     # Hypothesis 3: Only high-quality arguments (if quality data available)
     if per_arg_scores:
         high_quality = []
-        # Build positional mapping: arg_names[i] -> canonical key "arg_{i+1}"
-        # per_arg_scores is keyed by canonical arg_id, arg_names are free text.
+        # Own-id-first (#2896, the :755 pattern): the score key is the
+        # unit's id; the free-text name stays as the last fallback for
+        # score tables emitted before any id convention existed.
         for idx, arg_name in enumerate(arg_names):
-            canonical = f"arg_{idx + 1}"
+            canonical = (
+                arg_ids[idx] if arg_ids and idx < len(arg_ids) else f"arg_{idx + 1}"
+            )
             scores = per_arg_scores.get(canonical)
             if not isinstance(scores, dict):
                 scores = per_arg_scores.get(arg_name)
@@ -7051,6 +7118,7 @@ def _extract_arguments_for_parallel(
                     selection.bands_covered,
                     selection.bands_total,
                     span=selection.span,
+                    largest_uncovered_stretch=selection.largest_uncovered_stretch,
                 )
             result = [(u.unit_id, u.text.strip()) for u in selection.selected]
             if result:
@@ -7565,6 +7633,9 @@ async def _invoke_propositional_logic(
                                 _pl_selection.bands_covered,
                                 _pl_selection.bands_total,
                                 span=_pl_selection.span,
+                                largest_uncovered_stretch=(
+                                    _pl_selection.largest_uncovered_stretch
+                                ),
                             )
 
                         async def _pl_batch_coro(_batch: list[str]) -> list[str]:
@@ -8081,6 +8152,9 @@ async def _invoke_fol_reasoning(
                                     _fol_selection.bands_covered,
                                     _fol_selection.bands_total,
                                     span=_fol_selection.span,
+                                    largest_uncovered_stretch=(
+                                        _fol_selection.largest_uncovered_stretch
+                                    ),
                                 )
 
                             async def _fol_batch_coro(_batch: list[str]) -> list[str]:
@@ -8600,6 +8674,7 @@ async def _invoke_nl_to_logic(
             _ntl_selection.bands_covered,
             _ntl_selection.bands_total,
             span=_ntl_selection.span,
+            largest_uncovered_stretch=_ntl_selection.largest_uncovered_stretch,
         )
     translator = NLToLogicTranslator(max_retries=3, logic_type=logic_type)
     batch_result = await translator.translate_batch(
