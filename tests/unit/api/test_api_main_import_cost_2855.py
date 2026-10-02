@@ -13,6 +13,12 @@ and ``services.jtms.jtms_core``'s module-level pyvis import dragged IPython
 Two fresh-subprocess witnesses: the #2855 DoD end-to-end claim, and the cheap
 mechanism pin. Both are born red on ``main`` (seaborn and IPython sit in
 ``sys.modules`` after the import).
+
+#2867 slice 2 adds ``matplotlib`` to the watch: the only module-level import
+on the ``api.main`` path is ``rhetorical_result_visualizer`` (139 ms measured
+warm on po-2025), and its three plot methods touch ``plt`` only at call time,
+so the import moved there — same mechanism as pyvis in ``jtms_core`` (#2866).
+The mechanism pin below extends with it.
 """
 
 import os
@@ -21,7 +27,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-HEAVY = ("seaborn", "IPython", "ipywidgets")
+HEAVY = ("seaborn", "IPython", "ipywidgets", "matplotlib")
 
 _PROBE = """
 import importlib
@@ -77,3 +83,16 @@ def test_taxonomy_loader_alone_stays_light():
     import-time waste."""
     present = _heavy_modules_after("argumentation_analysis.utils.taxonomy_loader")
     assert present == "", f"taxonomy_loader alone dragged {present} in (#2855)"
+
+
+def test_rhetorical_result_visualizer_alone_stays_light():
+    """#2867 slice 2 mechanism: the enhanced visualizer defines its class
+    without matplotlib — only its three plot methods touch ``plt``, at call
+    time."""
+    present = _heavy_modules_after(
+        "argumentation_analysis.plugins.analysis_tools.logic."
+        "rhetorical_result_visualizer"
+    )
+    assert (
+        present == ""
+    ), f"rhetorical_result_visualizer alone dragged {present} in (#2867)"

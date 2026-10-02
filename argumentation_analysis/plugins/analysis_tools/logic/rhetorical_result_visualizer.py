@@ -15,7 +15,11 @@ import json
 import logging
 from typing import Dict, List, Any, Optional, Tuple
 from pathlib import Path
-import matplotlib.pyplot as plt
+
+# ``matplotlib`` is call-time only here (#2867): the module-level import was
+# the only matplotlib puller on the ``api.main`` path (139 ms measured warm on
+# po-2025). Each of the three plot methods below imports ``plt`` locally.
+
 import networkx as nx
 import numpy as np
 from datetime import datetime
@@ -65,6 +69,8 @@ class EnhancedRhetoricalResultVisualizer(RhetoricalResultVisualizer):
         Returns:
             Chemin vers l'image générée ou message d'erreur
         """
+        import matplotlib.pyplot as plt  # call-time (#2867)
+
         self.logger.info(
             "Génération d'un graphe des arguments et des sophismes avec networkx"
         )
@@ -170,6 +176,8 @@ class EnhancedRhetoricalResultVisualizer(RhetoricalResultVisualizer):
         Returns:
             Chemin vers l'image générée ou message d'erreur
         """
+        import matplotlib.pyplot as plt  # call-time (#2867)
+
         self.logger.info(
             "Génération d'un diagramme circulaire de la distribution des sophismes"
         )
@@ -238,6 +246,8 @@ class EnhancedRhetoricalResultVisualizer(RhetoricalResultVisualizer):
         Returns:
             Chemin vers l'image générée ou message d'erreur
         """
+        import matplotlib.pyplot as plt  # call-time (#2867)
+
         self.logger.info("Génération d'une heatmap de la qualité des arguments")
 
         # Extraire les informations pertinentes de l'état
