@@ -203,6 +203,12 @@ async def run_deliberation_workflow(
     """Execute a deliberation workflow asynchronously.
 
     Tries to use UnifiedPipeline if available, falls back to a simple summary.
+
+    #2902 — the terminal states are written once, AFTER the verdict is read:
+    a vote phase that failed outright is the deliberation's own failure (named
+    after the phase), and a run that produced no verdict completes the
+    deliberation without deciding the proposal (PENDING is the store's
+    existing "awaiting decision" status) — never DECIDED-then-reverted.
     """
     store.update_deliberation(delib_id, DeliberationStatus.RUNNING)
     proposal_id = store.get_deliberation(delib_id).proposal_id
@@ -222,11 +228,31 @@ async def run_deliberation_workflow(
     try:
         # Try to run via UnifiedPipeline
         results = await _run_pipeline(proposal_text, workflow, options)
+        vote_phase = _vote_phase_of(results)
+        if vote_phase.get("status") == "failed" and not vote_phase.get("degraded"):
+            # A degraded vote phase (optional, orchestrator continued —
+            # DT-1 #1499) is the honest no-verdict shape below; a plain
+            # failure is the deliberation's own failure, named after the
+            # phase that caused it.
+            phase_error = vote_phase.get("error") or "no error detail"
+            error = f"vote phase 'democratic_vote' failed: {phase_error}"
+            logger.error(f"Deliberation {delib_id} failed: {error}")
+            store.update_deliberation(delib_id, DeliberationStatus.FAILED, error=error)
+            store.update_status(proposal_id, ProposalStatus.PENDING)
+            await _broadcast_ws(delib_id, lambda m: m.broadcast_error(delib_id, error))
+            await _broadcast_ws(
+                delib_id, lambda m: m.broadcast_status(delib_id, "failed")
+            )
+            return
         store.update_deliberation(
             delib_id, DeliberationStatus.COMPLETED, results=results
         )
         store.set_analysis_results(proposal_id, results)
-        store.update_status(proposal_id, ProposalStatus.DECIDED)
+        decided = bool(_verdict_of(vote_phase))
+        store.update_status(
+            proposal_id,
+            ProposalStatus.DECIDED if decided else ProposalStatus.PENDING,
+        )
         logger.info(f"Deliberation {delib_id} completed successfully")
         await _broadcast_ws_deliberation_result(delib_id, proposal_id, results)
         await _broadcast_ws(
@@ -257,17 +283,35 @@ async def _broadcast_ws(delib_id: str, emit: Callable[[Any], Awaitable[None]]) -
         logger.warning(f"WS broadcast failed for deliberation {delib_id}: {e}")
 
 
+def _vote_phase_of(results: Dict[str, Any]) -> Dict[str, Any]:
+    """The sanitized ``democratic_vote`` phase dict, ``{}`` when absent.
+
+    #2902 — a failed phase carries ``output: None``, so every read below must
+    tolerate a present-but-None value: ``.get(key, default)`` returns ``None``
+    (not the default) when the key exists with a ``None`` value.
+    """
+    return (results.get("phases") or {}).get("democratic_vote") or {}
+
+
+def _verdict_of(vote_phase: Dict[str, Any]) -> Dict[str, Any]:
+    """The governance verdict of a vote phase, ``{}`` when it did not decide."""
+    return ((vote_phase.get("output") or {}).get("governance_verdict")) or {}
+
+
 async def _broadcast_ws_deliberation_result(
     delib_id: str, proposal_id: str, results: Dict[str, Any]
 ) -> None:
     """Extract the governance verdict from sanitized results and broadcast it.
 
     ``results`` is already JSON-safe (``sanitize_workflow_result``), so the
-    democratic_vote phase output is a plain dict. A missing/degraded verdict is
-    broadcast honestly (``decided_firsthand=False``) rather than fabricated.
+    democratic_vote phase output is a plain dict. A missing, degraded or
+    failed verdict is broadcast honestly (``decided_firsthand=False``, with
+    the phase's status in the summary) rather than fabricated — the failed
+    shape (``output: None``) raises nowhere (#2902).
     """
-    gov_output = results.get("phases", {}).get("democratic_vote", {}).get("output", {})
-    verdict = gov_output.get("governance_verdict") or {}
+    vote_phase = _vote_phase_of(results)
+    gov_output = vote_phase.get("output") or {}
+    verdict = _verdict_of(vote_phase)
     await _broadcast_ws(
         delib_id,
         lambda m: m.broadcast_deliberation_result(
@@ -284,6 +328,7 @@ async def _broadcast_ws_deliberation_result(
             summary={
                 "governance_verdict": verdict,
                 "capabilities_degraded": results.get("capabilities_degraded", []),
+                "democratic_vote_status": vote_phase.get("status"),
             },
         ),
     )
