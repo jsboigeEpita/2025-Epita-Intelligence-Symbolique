@@ -7,11 +7,11 @@ gesture the coverage repair applies wherever a population meets a budget.
 A unit is any addressable item carrying an offset in the source text — an
 extracted argument (either producer) or a text segment. Selection is
 stratified over the offset range: at least one unit per position band, then
-fill. The within-band order is the stable insertion order — stated, because
-no upstream signal exists at every selection point (measured: quality scores
-exist only after quality runs, fallacy hits only after the fallacy pass; a
-salience variant can come later, per phase, where a signal already exists
-upstream).
+fill. Within a band the picks sit at evenly spaced interior POSITION
+targets (R1053): a target lands where the text needs reading and takes the
+nearest unit to it — rank quantiles were measured following unit DENSITY
+instead (a tier dense in its first 5 % spent every pick there, and the
+central thesis passage was never taken at any budget).
 
 The budget is real and unchanged: ``select_for_budget`` picks N units where
 the call site used to take the first N — it never raises the cap
@@ -89,18 +89,15 @@ def _text_band(offset: int, text_length: int, band_count: int) -> int:
 
 
 def _spread_indices(m: int, q: int) -> List[int]:
-    """#2896 (b) — ``q`` evenly spaced INTERIOR positions over a band's
-    ``m`` offset-sorted units: ``(k+1)·m/(q+1)`` for ``k = 0..q-1``,
-    clamped, deduped.
+    """The RANK variant of the interior spread: ``q`` evenly spaced
+    indices over a band's ``m`` offset-sorted units.
 
-    Interior quantiles, not the edges: a band's edges adjoin its
-    neighbours' picks, so an edge pick spends a slot re-covering ground
-    the next band already reads and leaves the band's own middle
-    uncovered (``q=2`` at 0 %/100 % of the band ≈ the head-bias this
-    replaces). Identity when the grant holds the whole band; a single
-    grant takes the band's middle — a lone head pick is the head-bias
-    this replaces. ``m > q`` makes the step exceed 1, so positions are
-    strictly increasing and the dedup never fires in that range.
+    Kept as the fallback for a degenerate band extent (co-located units,
+    where no target geometry exists) — and as the measured lesson: rank
+    quantiles follow unit DENSITY (the paid run's tier 1, dense in its
+    first 5 %, spent every pick there; the thesis at offset fraction
+    0.107 was never taken), which is why the recorded path reads
+    POSITION targets instead (``_pick_by_targets``).
     """
     if q <= 0 or m <= 0:
         return []
@@ -110,6 +107,70 @@ def _spread_indices(m: int, q: int) -> List[int]:
     for k in range(1, q + 1):
         seen[min(round(k * m / (q + 1)), m - 1)] = None
     return list(seen)
+
+
+def _pick_by_targets(
+    positioned: Sequence[Tuple[SelectableUnit, int]],
+    band: Sequence[int],
+    q: int,
+    start: float,
+    end: float,
+) -> List[int]:
+    """#2896 (b) retouch (R1053) — ``q`` interior POSITION targets over
+    the band's ``[start, end]`` extent: ``start + j·(end-start)/(q+1)`` for
+    ``j = 1..q``; each target takes the not-yet-taken unit closest to it,
+    ties to the lower offset.
+
+    Position, not rank: a target lands where the TEXT needs reading and
+    grabs the nearest unit, so a band dense at its head still sends its
+    later targets across its extent. ``band`` is offset-ascending
+    (``positioned`` is offset-sorted and band lists preserve that order),
+    so the strict ``<`` below breaks distance ties toward the lower
+    offset by construction.
+    """
+    picked: List[int] = []
+    taken: Dict[int, bool] = {}
+    for j in range(1, q + 1):
+        target = start + j * (end - start) / (q + 1)
+        best = -1
+        best_d = -1.0
+        for idx in band:
+            if idx in taken:
+                continue
+            d = abs(float(positioned[idx][0].offset or 0) - target)
+            if best < 0 or d < best_d:
+                best, best_d = idx, d
+        if best >= 0:
+            taken[best] = True
+            picked.append(best)
+    return picked
+
+
+def _band_extent(
+    b: int,
+    band_lists: Sequence[Sequence[int]],
+    positioned: Sequence[Tuple[SelectableUnit, int]],
+    text_length: Optional[int],
+    band_count: int,
+) -> Tuple[float, float]:
+    """The band's OFFSET extent the position targets live in.
+
+    Text bands (``text_length`` given): the fixed-width slice
+    ``[b·width, (b+1)·width]`` — the same geometry ``_text_band`` assigns
+    units by. Equal-count bands (the stateless fallback): from the band's
+    first unit's offset to the next band's first unit's offset (its own
+    last unit for the final band) — a boundary at real data, never an
+    invented one.
+    """
+    if text_length:
+        width = text_length / band_count
+        return (b * width, (b + 1) * width)
+    start = float(positioned[band_lists[b][0]][0].offset or 0)
+    if b + 1 < len(band_lists) and band_lists[b + 1]:
+        end = float(positioned[band_lists[b + 1][0]][0].offset or 0)
+    else:
+        end = float(positioned[band_lists[b][-1]][0].offset or 0)
+    return (start, end)
 
 
 def _largest_uncovered_stretch(
@@ -152,13 +213,18 @@ def stratified_position(
       a position range of this document. No span: without the text length a
       fraction of it would be invented.
 
-    Within a band the picks are SPREAD over the band's extent (#2896 b):
-    the round-robin's grant allocation runs first (counts only), then each
-    band's ``q`` grants go to its evenly spaced interior quantile positions
-    (``_spread_indices``) — the paid run showed head-of-band picks leaving a
-    0.41 stretch nobody reads while the band carried located units
-    throughout. ``k`` and the bands are unchanged; only the inner order
-    moved. Absent-offset units fill what remains, last, in insertion order.
+    Within a band the picks sit at interior POSITION targets (#2896 b,
+    R1053 retouch): the round-robin's grant allocation runs first (counts
+    only), then each band's ``q`` grants go to its targets
+    ``start_b + j·width_b/(q+1)`` — each target takes the nearest
+    not-yet-taken unit (``_pick_by_targets``). The measured reason: rank
+    quantiles follow unit DENSITY — on the paid-run population a tier
+    dense in its first 5 % spent every pick there and the thesis passage
+    (offset fraction 0.107) was never taken, while position targets took
+    it; the largest uncovered stretch measured 0.342/0.288/0.285 (rank)
+    vs 0.224/0.193/0.174 (position) at k=6/8/10. ``k``, the grant
+    allocation and the bands are unchanged; only the inner rule moved.
+    Absent-offset units fill what remains, last, in insertion order.
     The returned selection is ALWAYS in TEXT order (offset ascending,
     absent last), whatever the interleaving picked — downstream phases read
     the document's order, not the extraction clock's.
@@ -217,10 +283,11 @@ def stratified_position(
             _largest_uncovered_stretch(sel_offsets, text_length),
         )
 
-    # #2896 (b) — pass 1: the round-robin's grant allocation, counts only
-    # (identical walk to the pre-spread picker, so each band's share and
-    # the absent-fill budget are unchanged); pass 2: each band's grants go
-    # to its spread positions instead of its head.
+    # #2896 (b, R1053 retouch) — pass 1: the round-robin's grant
+    # allocation, counts only (identical walk to the pre-spread picker, so
+    # each band's share and the absent-fill budget are unchanged); pass 2:
+    # each band's grants go to its interior POSITION targets — the nearest
+    # unit to each target — instead of its rank quantiles.
     grants: List[int] = [0] * len(band_lists)
     remaining = n
     round_idx = 0
@@ -235,8 +302,22 @@ def stratified_position(
     picked: List[int] = []  # indices into `positioned`
     chosen: Dict[int, bool] = {}
     for b, bl in enumerate(band_lists):
-        for j in _spread_indices(len(bl), grants[b]):
-            idx = bl[j]
+        q = grants[b]
+        if q <= 0 or not bl:
+            continue
+        if q >= len(bl):
+            picked.extend(bl)
+            for idx in bl:
+                chosen[idx] = True
+            continue
+        start, end = _band_extent(b, band_lists, positioned, text_length, bands)
+        if end > start:
+            picks = _pick_by_targets(positioned, bl, q, start, end)
+        else:
+            # Degenerate extent (co-located units): no target geometry
+            # exists — the rank spread is the stated fallback.
+            picks = [bl[j] for j in _spread_indices(len(bl), q)]
+        for idx in picks:
             picked.append(idx)
             chosen[idx] = True
     # Leftover budget → absent-offset units, stable insertion order.

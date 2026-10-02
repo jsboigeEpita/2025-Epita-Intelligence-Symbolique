@@ -3088,7 +3088,10 @@ async def _invoke_atms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
     arg_names: list[str] = []
     arg_ids: list[str] = []
     for u in _atms_selection.selected:
-        name = u.text[:60]
+        # 80 chars, like the JTMS sibling's unit-text truncation (R1053):
+        # the legacy ATMS 60 was the raw-args era; selected units follow
+        # the sibling convention.
+        name = u.text[:80]
         atms.add_assumption(name)
         arg_names.append(name)
         arg_ids.append(u.unit_id)
