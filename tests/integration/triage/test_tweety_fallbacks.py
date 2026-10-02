@@ -556,8 +556,25 @@ class TestQualityToRankingChain:
         assert isinstance(ranking_output, dict)
         assert "method" in ranking_output
 
-    async def test_full_chain_quality_then_ranking_state_snapshot(self, fresh_state):
-        """Full chain: quality → ranking → write to state → snapshot."""
+    async def test_full_chain_quality_then_ranking_state_snapshot(
+        self, fresh_state, monkeypatch
+    ):
+        """Full chain: quality → ranking → write to state → snapshot.
+
+        #2904: the quality step builds a real sync OpenAI client whenever
+        ``_resolve_llm_route`` resolves a key (#2331: ``no_route`` → NAMED
+        lexical fallback). On a machine with a full .env that meant 12 real
+        POSTs per run — an egress the #1879 translator short-circuits never
+        covered (they guard the translators, not the agentic quality layer).
+        This test validates the chain plumbing, not the LLM scores, so the
+        agentic callable is forced to the documented degraded path: the chain
+        must never leave the machine.
+        """
+        import argumentation_analysis.orchestration.invoke_callables as ic
+
+        monkeypatch.setattr(
+            ic, "_make_agentic_llm_callable", lambda: (None, "no_route", "")
+        )
         # Step 1: Quality evaluation (no JVM needed)
         quality_output = await _invoke_quality_evaluator(SAMPLE_TEXT, {})
         assert isinstance(quality_output, dict)
