@@ -42,12 +42,14 @@ from argumentation_analysis.core.interfaces.fallacy_detector import (
 # Importations pour les modèles de langage avancés
 from argumentation_analysis.paths import DATA_DIR
 
-# Importations pour les modèles de langage avancés, avec fallback
+# Importations pour les modèles de langage avancés, avec fallback.
+# #2867 : ``sklearn.metrics.pairwise.cosine_similarity`` était importé ici sans
+# aucun consommateur — il tirait scipy et pandas dans ``import api.main`` pour
+# rien ; l'import mort est retiré, pas différé.
 try:
     import torch
     import transformers
     from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
-    from sklearn.metrics.pairwise import cosine_similarity
 
     HAS_TRANSFORMERS = True
 except (ImportError, OSError):

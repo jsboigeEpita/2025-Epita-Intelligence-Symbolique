@@ -19,12 +19,20 @@ Il contient trois éléments principaux :
     module pour réaliser des tâches d'analyse rhétorique.
 """
 
+from __future__ import annotations
+
+# ``pandas`` is call-time only here (#2867): this module was the measured
+# first importer of pandas on the ``api.main`` path (541 ms of a 13.4 s
+# import). Every body that needs it imports it locally below; the signatures
+# stay lazy via the future import, and the @kernel_function surface is
+# str/int only — nothing Semantic Kernel introspects ever mentioned pandas.
+
 import os
 import sys
 import json
 import logging
-import pandas as pd
 import requests
+from typing import TYPE_CHECKING
 import semantic_kernel as sk
 from semantic_kernel.functions.kernel_arguments import KernelArguments
 from semantic_kernel.kernel import Kernel
@@ -48,6 +56,9 @@ from argumentation_analysis.utils.taxonomy_local_overrides import purge_datafram
 from argumentation_analysis.paths import DATA_DIR
 
 logger = logging.getLogger("InformalDefinitions")
+
+if TYPE_CHECKING:
+    import pandas as pd  # annotations only — the runtime import is call-time (#2867)
 
 # Import des prompts (V3 - Tool Use)
 from .prompts import (
@@ -96,6 +107,8 @@ def _cell_text(row: pd.Series, column: str) -> str:
     ``row.get(col, default)`` ne rend le défaut que si la colonne est absente :
     une cellule vide rend ``NaN``, qui part tel quel dans le JSON (#2412).
     """
+    import pandas as pd  # call-time (#2867)
+
     value = row.get(column)
     if value is None or (isinstance(value, float) and pd.isna(value)):
         return ""
@@ -120,6 +133,8 @@ def rows_matching_fallacy_name(df: pd.DataFrame, fallacy_name: str) -> pd.DataFr
     sous-chaîne reste le repli, puisque le prompt de l'agent cherche aussi par
     mots-clés. Plusieurs lignes rendues = un nom qui ne désigne pas un nœud.
     """
+    import pandas as pd  # call-time (#2867)
+
     query = str(fallacy_name or "").strip().casefold()
     if not query:
         return df.iloc[0:0]
@@ -157,6 +172,8 @@ def child_rows(df: pd.DataFrame, pk: Any, path: Any, depth: Any):
     ``None`` quand la relation lue ne permet pas de le dire. L'explorateur et
     les détails lisaient chacun leur copie de cette cascade (#2345).
     """
+    import pandas as pd  # call-time (#2867)
+
     if "FK_Parent" in df.columns:
         keys = set(df["FK_Parent"].dropna())
         return df[df["FK_Parent"] == pk], lambda child: child.name in keys
@@ -222,6 +239,8 @@ class InformalAnalysisPlugin:
         """
         Charge et prépare le DataFrame de la taxonomie.
         """
+        import pandas as pd  # call-time (#2867)
+
         self._logger.info(
             f"Chargement et préparation du DataFrame de taxonomie depuis: {self._current_taxonomy_path}..."
         )
@@ -301,6 +320,8 @@ class InformalAnalysisPlugin:
     def _internal_explore_hierarchy(
         self, current_pk: int, df: pd.DataFrame, max_children: int = 15
     ) -> Dict[str, Any]:
+        import pandas as pd  # call-time (#2867)
+
         self._logger.debug(
             f"DEBUG: Entering _internal_explore_hierarchy with pk={current_pk}"
         )
@@ -362,6 +383,8 @@ class InformalAnalysisPlugin:
         """
         Logique interne pour récupérer les détails complets d'un nœud.
         """
+        import pandas as pd  # call-time (#2867)
+
         self._logger.debug(f"DEBUG: Entering _internal_get_node_details with pk={pk}")
         result = {"pk": pk, "error": None}
 

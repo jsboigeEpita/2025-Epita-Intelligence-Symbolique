@@ -11,9 +11,15 @@ Ce module implémente un mécanisme unifié de détection de sophismes qui :
 - Remplace les mécanismes éparpillés et les mocks
 """
 
+from __future__ import annotations
+
+# ``pandas`` is call-time only here (#2867): this module was one of the three
+# module-level pandas importers measured on the ``api.main`` path. The only
+# body that touches it is ``_clean_cell`` below; the signatures stay lazy via
+# the future import.
+
 import logging
-import pandas as pd
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Any, Optional, Tuple, TYPE_CHECKING
 from pathlib import Path
 
 # Import de l'InformalAnalysisPlugin pour accéder à la taxonomie
@@ -22,6 +28,9 @@ from argumentation_analysis.utils.taxonomy_local_overrides import render_alias
 from argumentation_analysis.utils.taxonomy_tree import taxonomy_parent_paths
 
 logger = logging.getLogger("TaxonomySophismDetector")
+
+if TYPE_CHECKING:
+    import pandas as pd  # annotations only — the runtime import is call-time (#2867)
 
 
 def _clean_cell(value: Any) -> str:
@@ -35,6 +44,8 @@ def _clean_cell(value: Any) -> str:
 
     ``None`` et ``NaN`` valent donc cellule absente, pas motif textuel.
     """
+    import pandas as pd  # call-time (#2867)
+
     if value is None:
         return ""
     if not isinstance(value, str) and pd.isna(value):
