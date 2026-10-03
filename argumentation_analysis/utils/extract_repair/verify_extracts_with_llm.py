@@ -20,7 +20,10 @@ from html import escape
 from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional, Union
 
-from argumentation_analysis.core.reading_window import selected_text
+from argumentation_analysis.core.reading_window import (
+    WIDE_NET_WINDOW,
+    selected_text,
+)
 
 from argumentation_analysis.core.plaintext_destination import (
     check_plaintext_destination,
@@ -161,7 +164,9 @@ async def evaluate_extract(
     # (the selection is offset 0 and byte-identical there), and an extract
     # over 8000 chars is itself the truncation signal that criterion exists
     # to name.
-    windowed_text = selected_text(extracted_text, 8000, "verify_extracts_evaluation")
+    windowed_text = selected_text(
+        extracted_text, WIDE_NET_WINDOW, "verify_extracts_evaluation"
+    )
     evaluation_prompt = f"""
     Évaluez la qualité de cet extrait de texte.
     

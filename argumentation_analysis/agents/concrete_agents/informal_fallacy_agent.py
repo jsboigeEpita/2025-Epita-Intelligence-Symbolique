@@ -9,7 +9,10 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSetti
 from semantic_kernel.contents.chat_history import ChatHistory
 
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
-from argumentation_analysis.core.reading_window import selected_text
+from argumentation_analysis.core.reading_window import (
+    WIDE_NET_WINDOW,
+    selected_text,
+)
 from argumentation_analysis.agents.plugins.taxonomy_display_plugin import (
     TaxonomyDisplayPlugin,
 )
@@ -159,7 +162,7 @@ class InformalFallacyAgent(BaseAgent):
         # the selector's text.strip().
         final_prompt = (
             f'{self.system_prompt}\n\nTexte à analyser:\n"""\n'
-            f'{selected_text(str(text_to_analyze), 8000, "informal_agent_text")}\n"""'
+            f'{selected_text(str(text_to_analyze), WIDE_NET_WINDOW, "informal_agent_text")}\n"""'
         )
 
         # Convert ChatHistory to string to avoid SK 1.37 encoding error

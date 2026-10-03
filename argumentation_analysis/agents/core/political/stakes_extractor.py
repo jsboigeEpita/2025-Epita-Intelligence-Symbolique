@@ -18,7 +18,10 @@ import json
 import logging
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
-from argumentation_analysis.core.reading_window import selected_text
+from argumentation_analysis.core.reading_window import (
+    LLM_EXTRACTION_WINDOW,
+    selected_text,
+)
 from argumentation_analysis.services.llm_cache import cached_raw_chat_completion
 
 logger = logging.getLogger("StakesExtractor")
@@ -121,7 +124,9 @@ class StakesExtractor:
             "\n".join(args_lines) if args_lines else "(no arguments extracted)"
         )
 
-        excerpt = selected_text(raw_text or "", 3000, "stakes_extractor")
+        excerpt = selected_text(
+            raw_text or "", LLM_EXTRACTION_WINDOW, "stakes_extractor"
+        )
 
         # Epic #1258 / Track 1 #1259 — when the working state is deanonymized,
         # instruct the LLM to emit REAL stakeholder names (from source metadata);

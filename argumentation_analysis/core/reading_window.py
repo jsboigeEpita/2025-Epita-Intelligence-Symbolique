@@ -45,6 +45,30 @@ STATUS_NO_PUNCTUATED_SPAN = "no_punctuated_span_found"
 STATUS_EMPTY_INPUT = "empty_input"
 STATUS_SHORT_INPUT = "short_input"
 
+# --- #2915: window widths, one named constant per MEANING, not per
+# --- value. A meaning shared across modules lives here; a file-local
+# --- meaning stays in its file (leading underscore). These are the
+# --- values the call sites already passed — #2915 only names them.
+
+#: The wide-net window — the pipeline's widest reader. #2913 named it
+#: in the fallacy plugin for that file's two readers; #2914's five
+#: off-pipeline sites meant the same bound, so the constant moved
+#: here (#2915).
+WIDE_NET_WINDOW = 8000
+#: The LLM extraction window — the excerpt of source text an
+#: extraction/detection prompt reads on (#2850's measured 3000).
+LLM_EXTRACTION_WINDOW = 3000
+#: The logic reading window — the document excerpt a logic phase
+#: translates (atoms, signature, reasoning).
+LOGIC_READING_WINDOW = 4000
+#: The logic per-argument window — the excerpt of ONE argument's
+#: text inside batched/formula logic calls (a unit cap, not a
+#: document cap).
+LOGIC_ARGUMENT_WINDOW = 2000
+#: The debate fallback window — debate material when no structured
+#: parts exist.
+DEBATE_FALLBACK_WINDOW = 1500
+
 
 @dataclass(frozen=True)
 class WindowSelection:

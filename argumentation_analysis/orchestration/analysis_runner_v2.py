@@ -56,7 +56,10 @@ from semantic_kernel.connectors.ai.function_choice_behavior import (
 # ===== IMPORTS DU PROJET D'ANALYSE D'ARGUMENTATION =====
 
 # --- Core ---
-from argumentation_analysis.core.reading_window import selected_text
+from argumentation_analysis.core.reading_window import (
+    WIDE_NET_WINDOW,
+    selected_text,
+)
 from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 
 # --- Agents ---
@@ -252,7 +255,12 @@ class AnalysisRunnerV2:
         # bound as the conversational mode's extraction prompt; byte-identical
         # for texts at or under the bound.
         windowed_text = selected_text(
-            self.shared_state.raw_text, 8000, "conversational_v2_phase1"
+            self.shared_state.raw_text,
+            WIDE_NET_WINDOW,
+            "conversational_v2_phase1",
+            # #2915 item 5: the runner holds the shared state, so the
+            # selection is recorded like the pipeline sites.
+            state=self.shared_state,
         )
         initial_prompt = f"Phase 1: Analyse informelle. PM, veuillez initier l'analyse du texte suivant:\n\n---\n{windowed_text}\n---"
         self.chat_history.add_user_message(initial_prompt)

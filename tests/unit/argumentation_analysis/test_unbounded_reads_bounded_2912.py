@@ -255,15 +255,22 @@ def test_rows45_extraction_prompt_byte_identical_under_the_bound():
 # ─── row 3: AnalysisRunnerV2 Phase-1 PM prompt (chat history) ─────────────
 
 
-def _phase1_prompt(text: str) -> str:
+def _phase1_prompt(text: str):
     import logging
 
     import argumentation_analysis.orchestration.analysis_runner_v2 as arv
 
+    recorded = []
     runner = arv.AnalysisRunnerV2.__new__(arv.AnalysisRunnerV2)
     runner.phase_counter = 0
     runner.chat_history = ChatHistory()
-    runner.shared_state = SimpleNamespace(raw_text=text)
+    # #2915 item 5: the runner passes its shared state, and selected_text's
+    # contract is fail-loud when the state cannot record — the stub carries
+    # the recorder.
+    runner.shared_state = SimpleNamespace(
+        raw_text=text,
+        record_reading_window=lambda site, sel, _r=recorded: _r.append((site, sel)),
+    )
     runner.logger = logging.getLogger("probe2912")
 
     async def _cap_exec(*args, **kwargs):
@@ -273,19 +280,22 @@ def _phase1_prompt(text: str) -> str:
         arv, "start_pm_orchestration_phase", lambda **kw: None
     ), um.patch.object(arv.AnalysisRunnerV2, "_execute_conversation_phase", _cap_exec):
         asyncio.run(runner._run_phase_1_informal_analysis())
-    return str(runner.chat_history.messages[-1].content)
+    return str(runner.chat_history.messages[-1].content), recorded
 
 
 def test_row3_runner_v2_phase1_prompt_is_bounded_at_8000():
-    prompt = _phase1_prompt(_prose(10_000))
+    prompt, recorded = _phase1_prompt(_prose(10_000))
     section = prompt.split("\n\n---\n", 1)[1].rsplit("\n---", 1)[0]
     assert len(section) == BOUND
     assert section == _prose(10_000)[:BOUND]
+    # #2915 item 5: the selection is recorded through the shared state.
+    assert [site for site, _ in recorded] == ["conversational_v2_phase1"]
 
 
 def test_row3_runner_v2_phase1_prompt_byte_identical_under_the_bound():
     text = _prose(7_000)
-    assert _phase1_prompt(text) == (
+    prompt, _ = _phase1_prompt(text)
+    assert prompt == (
         "Phase 1: Analyse informelle. PM, veuillez initier l'analyse du texte "
         f"suivant:\n\n---\n{text}\n---"
     )

@@ -21,6 +21,9 @@ from argumentation_analysis.orchestration.hierarchical.strategic.state import (
     StrategicState,
 )
 from argumentation_analysis.core.reading_window import selected_text
+
+# The privacy-guarded text preview the objectives LLM reads (#2915).
+_OBJECTIVES_PREVIEW_WINDOW = 2000
 from argumentation_analysis.core.communication import (
     MessageMiddleware,
     create_default_middleware,
@@ -348,7 +351,10 @@ class StrategicManager:
             return self._fallback_objectives()
 
         text_preview = selected_text(
-            text, 2000, "strategic_objectives", state=self._unified_state
+            text,
+            _OBJECTIVES_PREVIEW_WINDOW,
+            "strategic_objectives",
+            state=self._unified_state,
         )
 
         # Epic #1258 / Track 1 #1259 — the opaque-ID discipline (lines below) is

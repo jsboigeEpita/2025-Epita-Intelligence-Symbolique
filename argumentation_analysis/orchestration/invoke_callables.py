@@ -29,9 +29,18 @@ from typing import (
 )
 
 from argumentation_analysis.core.reading_window import (
+    DEBATE_FALLBACK_WINDOW,
+    LLM_EXTRACTION_WINDOW,
+    LOGIC_ARGUMENT_WINDOW,
+    LOGIC_READING_WINDOW,
     reading_state_from_context,
     selected_text,
 )
+
+# File-local window meanings (#2915): fallback excerpts used only by
+# this module's phase runners — no other module shares them.
+_COUNTER_ARGUMENT_FALLBACK_WINDOW = 500
+_GOVERNANCE_DELIBERATION_WINDOW = 2000
 from argumentation_analysis.core.llm_service import (
     classify_route,
     get_determinism_params as _get_determinism_params,
@@ -1608,7 +1617,7 @@ async def _invoke_counter_argument(
                 targets = [
                     selected_text(
                         input_text,
-                        500,
+                        _COUNTER_ARGUMENT_FALLBACK_WINDOW,
                         "counter_argument",
                         state=reading_state_from_context(context),
                     )
@@ -1980,7 +1989,7 @@ async def _invoke_debate_analysis(
                 if debate_parts
                 else selected_text(
                     input_text,
-                    1500,
+                    DEBATE_FALLBACK_WINDOW,
                     "debate_analysis",
                     state=reading_state_from_context(context),
                 )
@@ -2484,7 +2493,7 @@ async def _invoke_governance(
                 if context_parts
                 else selected_text(
                     input_text,
-                    2000,
+                    _GOVERNANCE_DELIBERATION_WINDOW,
                     "governance",
                     state=reading_state_from_context(context),
                 )
@@ -7227,7 +7236,7 @@ async def _invoke_fact_extraction(
                             "role": "user",
                             "content": selected_text(
                                 input_text,
-                                3000,
+                                LLM_EXTRACTION_WINDOW,
                                 "fact_extraction",
                                 state=reading_state_from_context(context),
                             ),
@@ -7489,7 +7498,7 @@ async def _invoke_propositional_logic(
                     # feeds (pass 1 inventory + whole-text pass below).
                     pl_reading = selected_text(
                         input_text,
-                        4000,
+                        LOGIC_READING_WINDOW,
                         "propositional_logic",
                         state=reading_state_from_context(context),
                     )
@@ -7569,7 +7578,7 @@ async def _invoke_propositional_logic(
 
                         async def _pl_batch_coro(_batch: list[str]) -> list[str]:
                             if len(_batch) == 1:
-                                _texts_block = f"Text:\n{selected_text(_batch[0], 2000, 'propositional_batch_atoms')}"
+                                _texts_block = f"Text:\n{selected_text(_batch[0], LOGIC_ARGUMENT_WINDOW, 'propositional_batch_atoms')}"
                             else:
                                 _parts = [
                                     f"Text {_i+1}:\n{_a[:1500]}"
@@ -7989,7 +7998,7 @@ async def _invoke_fol_reasoning(
                     # directive-prepended input_text).
                     fol_reading = selected_text(
                         _doc_text_fol,
-                        4000,
+                        LOGIC_READING_WINDOW,
                         "fol_reasoning",
                         state=reading_state_from_context(context),
                     )
@@ -8085,7 +8094,7 @@ async def _invoke_fol_reasoning(
 
                             async def _fol_batch_coro(_batch: list[str]) -> list[str]:
                                 if len(_batch) == 1:
-                                    _texts_block = f"Text:\n{selected_text(_batch[0], 2000, 'fol_batch_signature')}"
+                                    _texts_block = f"Text:\n{selected_text(_batch[0], LOGIC_ARGUMENT_WINDOW, 'fol_batch_signature')}"
                                 else:
                                     _parts = [
                                         f"Text {_i+1}:\n{_a[:1500]}"
