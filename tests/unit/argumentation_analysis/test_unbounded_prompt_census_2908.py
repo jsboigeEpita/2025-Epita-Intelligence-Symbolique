@@ -171,75 +171,12 @@ def census():
 # is a row (named debt / bounded upstream / not a prompt) instead of a fix.
 # Generated from the census at guard birth (post-#2908 fix: the one-shot row
 # is gone — it now reads selected_text(argument_text, 8000, ...) and is
-# censused by the #2850 guard as a window).
+# censused by the #2850 guard as a window). Post-#2912: the seven named-debt
+# rows are gone too — every one of them now interpolates a selected_text(...)
+# call (the wide-net's 8000, or the file's own 3000 for the self-hosted
+# tier), so the #2850 guard holds them as window rows and this census holds
+# none.
 ALLOWED = {
-    # --- named debt: real unbounded document reads, OFF the pipeline path ---
-    (
-        "argumentation_analysis/adapters/french_fallacy_adapter.py",
-        "fstring",
-        "text",
-        1,
-    ): (
-        "line 1130 — self-hosted LLM tier prompt; the pipeline instantiates "
-        "the adapter with every LLM tier OFF (_invoke_hybrid_fallacy) — "
-        "named debt #2908"
-    ),
-    (
-        "argumentation_analysis/agents/concrete_agents/informal_fallacy_agent.py",
-        "fstring",
-        "text_to_analyze",
-        1,
-    ): (
-        "line 151 — concrete agent's prompt; fed by the conversational/"
-        "hierarchical adapters, not the pipeline path — named debt #2908"
-    ),
-    (
-        "argumentation_analysis/orchestration/analysis_runner_v2.py",
-        "fstring",
-        "raw_text",
-        1,
-    ): (
-        "line 248 — conversational-v2 Phase-1 prompt embeds the WHOLE "
-        "document — real unbounded reader, off the pipeline path — named "
-        "debt #2908"
-    ),
-    (
-        "argumentation_analysis/orchestration/conversational_orchestrator.py",
-        "fstring",
-        "text",
-        1,
-    ): (
-        "line 1191 — conversational mode's extraction prompt embeds the "
-        "whole document — real unbounded reader, off the pipeline path — "
-        "named debt #2908"
-    ),
-    (
-        "argumentation_analysis/orchestration/conversational_orchestrator.py",
-        "fstring",
-        "text",
-        2,
-    ): (
-        "line 1203 — German-variant extraction prompt, same whole-document "
-        "read — named debt #2908"
-    ),
-    (
-        "argumentation_analysis/orchestration/hierarchical/operational/adapters/informal_agent_adapter.py",
-        "fstring",
-        "text_to_analyze",
-        1,
-    ): (
-        "line 177 — hierarchical adapter prompt over extract texts — off the "
-        "pipeline path — named debt #2908"
-    ),
-    (
-        "argumentation_analysis/utils/extract_repair/verify_extracts_with_llm.py",
-        "fstring",
-        "extracted_text",
-        1,
-    ): (
-        "line 163 — LLM prompt over an extract; maintenance utility, off the "
-        "analysis path — named debt #2908"
-    ),
     # --- bounded upstream: the interpolated value is already a slice/unit ---
     (
         "argumentation_analysis/orchestration/invoke_callables.py",

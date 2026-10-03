@@ -1186,9 +1186,19 @@ async def _run_conversational_analysis_inner(
     # meta — never deduced from metrics (anti-#1019 / leçon #1531).
     phase_execution_paths: List[str] = []
 
+    # #2912: the extraction phase's opening prompt read the WHOLE document —
+    # the census's strongest unbounded row (the API's POST /workflow/custom
+    # reaches it with arbitrary-length text, and the AgentGroupChat history
+    # re-sends the opening prompt on every turn). The agents now open on the
+    # #1737 window at the wide-net's own 8000 bound — the pipeline path's
+    # widest reader — so a conversational run sees the same span the widest
+    # pipeline reader would. Texts at or under the bound reproduce the legacy
+    # prompt byte for byte; longer texts keep tail coverage through the
+    # parent harness (texts > 5000 chars already route there, below).
+    windowed_text = selected_text(text, 8000, "conversational_extraction")
     extraction_prompt = (
         f"Analysez ce texte argumentatif. Identifiez les arguments, "
-        f"claims et sophismes.\n\nTexte:\n{text}"
+        f"claims et sophismes.\n\nTexte:\n{windowed_text}"
     )
     if detected_lang == "de":
         extraction_prompt = (
@@ -1200,7 +1210,7 @@ async def _run_conversational_analysis_inner(
             f"conservez IMPERATIVEMENT le texte original allemand — ne traduisez "
             f"jamais les citations. Les arguments doivent etre extraits en anglais "
             f"avec citations en allemand.\n\n"
-            f"Texte:\n{text}"
+            f"Texte:\n{windowed_text}"
         )
 
     phase_configs = [
