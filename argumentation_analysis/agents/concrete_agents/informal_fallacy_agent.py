@@ -9,6 +9,7 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatPromptExecutionSetti
 from semantic_kernel.contents.chat_history import ChatHistory
 
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
+from argumentation_analysis.core.reading_window import selected_text
 from argumentation_analysis.agents.plugins.taxonomy_display_plugin import (
     TaxonomyDisplayPlugin,
 )
@@ -147,8 +148,18 @@ class InformalFallacyAgent(BaseAgent):
         if history is None:
             history = ChatHistory()
 
+        # #2912: census row — the concrete agent's prompt embedded its whole
+        # input (reached by the hierarchical adapter and the demo scripts).
+        # Windowed at the wide-net's 8000 via the shared #1737 selector;
+        # inputs at or under the bound reproduce the legacy prompt byte for
+        # byte, so no replay key can miss. str() is the identity for str
+        # inputs; the generic invoke() path (agent_bases.py:227) passes a
+        # ChatHistory here, which the legacy f-string embedded as str(...)
+        # — the coercion reproduces those exact bytes instead of crashing
+        # the selector's text.strip().
         final_prompt = (
-            f'{self.system_prompt}\n\nTexte à analyser:\n"""\n{text_to_analyze}\n"""'
+            f'{self.system_prompt}\n\nTexte à analyser:\n"""\n'
+            f'{selected_text(str(text_to_analyze), 8000, "informal_agent_text")}\n"""'
         )
 
         # Convert ChatHistory to string to avoid SK 1.37 encoding error

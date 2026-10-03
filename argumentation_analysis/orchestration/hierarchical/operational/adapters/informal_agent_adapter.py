@@ -17,6 +17,7 @@ from semantic_kernel.agents.chat_completion.chat_completion_agent import (
 )
 from semantic_kernel.functions.function_result import FunctionResult
 
+from argumentation_analysis.core.reading_window import selected_text
 from argumentation_analysis.orchestration.hierarchical.operational.agent_interface import (
     OperationalAgent,
 )
@@ -174,7 +175,18 @@ class InformalAgentAdapter(OperationalAgent):
             # Construire un prompt simple pour l'agent
             # Note: C'est une simplification. Une approche robuste construirait
             # un input structuré que le prompt de l'agent saurait interpréter.
-            prompt = f"Analyze the following text for fallacies: '{text_to_analyze}'"
+            # #2912: the joined extracts rode this prompt unbounded (census
+            # row — the hierarchical delegation path reaches it via
+            # POST /workflow/custom and --mode hierarchical). Windowed at the
+            # wide-net's 8000 via the shared #1737 selector, inlined so the
+            # #2908 census reads a bounded call, not a bare name; the
+            # stratified alternative would need a per-mode budget constant
+            # that does not exist, so the window reuses the pipeline's widest
+            # bound.
+            prompt = (
+                f"Analyze the following text for fallacies: '"
+                f"{selected_text(text_to_analyze, 8000, 'hierarchical_informal_extracts')}'"
+            )
 
             # BaseAgent.invoke yields the result of invoke_single as an async stream.
             final_response = None
