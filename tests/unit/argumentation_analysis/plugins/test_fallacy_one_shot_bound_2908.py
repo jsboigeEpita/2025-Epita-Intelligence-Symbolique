@@ -6,7 +6,9 @@ text (wide-net ``[:8000]``, navigation and leaf ``[:500]``), but the one-shot
 put the whole ``argument_text`` into its prompt — on the corpus's longest
 document that single call would carry ~600k prompt tokens (#2907 reduction
 5). The fix reads the text through the #1737 shared window
-(``selected_text``) at the wide-net's own bound (8000): no new constant, and
+(``selected_text``) at the wide-net's own bound — ONE named module constant,
+``_WIDE_NET_WINDOW``, shared by both readers (R1058 review: two literals
+with the same value could drift apart), and
 for texts at or under the bound the selection is offset 0 by construction (a
 run of ceil(window/stride) passing segments inside a window-sized text must
 start at segment 0), so the prompt is BYTE-IDENTICAL to the unbounded form —
@@ -26,12 +28,13 @@ from semantic_kernel.contents import AuthorRole
 
 from argumentation_analysis.plugins.fallacy_workflow_plugin import (
     FallacyWorkflowPlugin,
+    _WIDE_NET_WINDOW,
 )
 
 TAXONOMY = os.path.join(
     "argumentation_analysis", "data", "argumentum_fallacies_taxonomy.csv"
 )
-BOUND = 8000  # the wide-net's own window (fallacy_workflow_plugin line 617)
+BOUND = _WIDE_NET_WINDOW  # the wide-net's own window, defined once (R1058)
 
 # Punctuated French prose: ~4 sub-clause marks per 100 chars — far above the
 # #1737 selector's 4/kchar threshold, so every stride segment passes and the
@@ -151,3 +154,44 @@ def test_the_window_is_the_shared_1737_mechanism_not_a_new_constant():
     assert sel.offset == 0 and sel.window == BOUND
     sel_short = select_reading_head(_prose(100), BOUND)
     assert sel_short.offset == 0, "texts under the window never shift offset"
+
+
+def test_the_bound_is_one_named_constant_shared_with_the_wide_net():
+    """R1058 review: the wide-net Phase-1 slice and the one-shot window must
+    cite ONE module constant — two literals with the same value could drift
+    apart, and the one-shot bound would silently stop being 'the wide-net's
+    own'. Born red on the two-literal form the review measured."""
+    import ast as _ast
+    import importlib as _importlib
+    from pathlib import Path as _Path
+
+    mod = _importlib.import_module(
+        "argumentation_analysis.plugins.fallacy_workflow_plugin"
+    )
+    tree = _ast.parse(_Path(mod.__file__).read_text(encoding="utf-8-sig"))
+    defs = [
+        n
+        for n in tree.body
+        if isinstance(n, _ast.Assign)
+        and len(n.targets) == 1
+        and isinstance(n.targets[0], _ast.Name)
+        and isinstance(n.value, _ast.Constant)
+        and n.value.value == BOUND
+    ]
+    assert [n.targets[0].id for n in defs] == ["_WIDE_NET_WINDOW"], (
+        f"the {BOUND}-char window must be defined exactly once, as "
+        f"_WIDE_NET_WINDOW at module level — found "
+        f"{[n.targets[0].id for n in defs]}"
+    )
+    def_targets = {id(n.targets[0]) for n in defs}
+    uses = [
+        n.lineno
+        for n in _ast.walk(tree)
+        if isinstance(n, _ast.Name)
+        and n.id == "_WIDE_NET_WINDOW"
+        and id(n) not in def_targets
+    ]
+    assert len(uses) == 2, (
+        f"_WIDE_NET_WINDOW must back exactly two reads (the wide-net slice "
+        f"and the one-shot window) — found {len(uses)} at lines {uses}"
+    )
