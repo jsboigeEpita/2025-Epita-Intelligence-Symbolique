@@ -308,26 +308,6 @@ REGISTRY = {
         "4000",
         1,
     ): ("window", "first 4000 chars of the source text", "silent — debt #2850"),
-    (
-        "argumentation_analysis/agents/core/synthesis/deep_synthesis_agent.py",
-        "args",
-        "max_items_per_field",
-        1,
-    ): (
-        "population_cap",
-        "first max_items_per_field in insertion order; rest unanalysed",
-        "silent — debt #2850",
-    ),
-    (
-        "argumentation_analysis/agents/core/synthesis/deep_synthesis_agent.py",
-        "fallacies",
-        "max_items_per_field",
-        1,
-    ): (
-        "population_cap",
-        "first max_items_per_field in insertion order; rest unanalysed",
-        "silent — debt #2850",
-    ),
     ("argumentation_analysis/agents/sherlock_jtms_agent.py", "context", "100", 1): (
         "display",
         "first 100 chars of an already-produced string",
