@@ -23,6 +23,8 @@ import asyncio
 import logging
 import json
 import random
+
+from argumentation_analysis.core.reading_window import selected_text
 import argparse
 from typing import List, Optional, Union, Any, Dict
 
@@ -245,7 +247,15 @@ class AnalysisRunnerV2:
             assigned_agents=self.PHASE_CASTING["phase_1"],
         )
 
-        initial_prompt = f"Phase 1: Analyse informelle. PM, veuillez initier l'analyse du texte suivant:\n\n---\n{self.shared_state.raw_text}\n---"
+        # #2912: Phase-1's opening prompt embedded the WHOLE raw_text (census
+        # row) and the AgentGroupChat history re-sent it every turn. Windowed
+        # at the wide-net's own 8000 via the shared #1737 selector — the same
+        # bound as the conversational mode's extraction prompt; byte-identical
+        # for texts at or under the bound.
+        windowed_text = selected_text(
+            self.shared_state.raw_text, 8000, "conversational_v2_phase1"
+        )
+        initial_prompt = f"Phase 1: Analyse informelle. PM, veuillez initier l'analyse du texte suivant:\n\n---\n{windowed_text}\n---"
         self.chat_history.add_user_message(initial_prompt)
 
         await self._execute_conversation_phase(

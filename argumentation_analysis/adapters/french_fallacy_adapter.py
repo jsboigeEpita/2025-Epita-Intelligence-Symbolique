@@ -1127,7 +1127,13 @@ class SelfHostedLLMFallacyDetector:
             + "\n\nRéponds UNIQUEMENT en JSON:\n"
             '{"fallacies": [{"type": "...", "confidence": 0.XX, "explanation": "..."}]}\n'
             'Si aucun sophisme: {"fallacies": []}\n\n'
-            f"Texte à analyser:\n{text}"
+            f"Texte à analyser:\n"
+            # #2912: census row — the self-hosted tier (ON by default,
+            # env-gated) read the whole text. Windowed at the same 3000 as
+            # the sibling LLM tier of this very file (line ~1391); the
+            # selection is offset 0 for texts at or under the bound, so the
+            # payload is byte-identical there.
+            f"{selected_text(text, 3000, 'french_fallacy_self_hosted')}"
         )
 
         payload = {

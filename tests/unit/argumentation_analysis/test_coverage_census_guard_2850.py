@@ -174,6 +174,67 @@ REGISTRY = {
         "3000-char window from the selected offset",
         "record_reading_window; Acts silent — #2850",
     ),
+    # --- #2912: the seven off-pipeline unbounded readers enter as windows ---
+    (
+        "argumentation_analysis/adapters/french_fallacy_adapter.py",
+        "selected_text",
+        "3000",
+        2,
+    ): (
+        "window",
+        "self-hosted tier prompt reads the selected 3000, not the whole text",
+        "silent — debt #2850 (was census debt #2908, bounded #2912)",
+    ),
+    (
+        "argumentation_analysis/agents/concrete_agents/informal_fallacy_agent.py",
+        "selected_text",
+        "8000",
+        1,
+    ): (
+        "window",
+        "concrete agent's prompt reads the selected 8000 of its input",
+        "silent — debt #2850 (was census debt #2908, bounded #2912)",
+    ),
+    (
+        "argumentation_analysis/orchestration/analysis_runner_v2.py",
+        "selected_text",
+        "8000",
+        1,
+    ): (
+        "window",
+        "conversational-v2 Phase-1 PM prompt reads the selected 8000",
+        "silent — debt #2850 (was census debt #2908, bounded #2912)",
+    ),
+    (
+        "argumentation_analysis/orchestration/conversational_orchestrator.py",
+        "selected_text",
+        "8000",
+        1,
+    ): (
+        "window",
+        "extraction opening prompt reads the selected 8000 (FR and DE variants)",
+        "silent — debt #2850 (was census debt #2908, bounded #2912)",
+    ),
+    (
+        "argumentation_analysis/orchestration/hierarchical/operational/adapters/informal_agent_adapter.py",
+        "selected_text",
+        "8000",
+        1,
+    ): (
+        "window",
+        "hierarchical adapter prompt reads the selected 8000 of the joined extracts",
+        "silent — debt #2850 (was census debt #2908, bounded #2912)",
+    ),
+    (
+        "argumentation_analysis/utils/extract_repair/verify_extracts_with_llm.py",
+        "selected_text",
+        "8000",
+        1,
+    ): (
+        "window",
+        "extract-evaluation prompt reads the selected 8000 of the extract",
+        "silent — debt #2850 (was census debt #2908, bounded #2912)",
+    ),
     ("argumentation_analysis/adapters/french_fallacy_adapter.py", "target", "200", 1): (
         "display",
         "first 200 of the rendered collection",
