@@ -1307,6 +1307,17 @@ REGISTRY = {
         "silent — debt #2850",
     ),
     (
+        "argumentation_analysis/reporting/restitution/act_reader_contract_check.py",
+        "sentence",
+        "117",
+        1,
+    ): (
+        "display",
+        "first 117 chars of an already-diagnosed rendered-act sentence — "
+        "the finding's appendix excerpt (#1914 criteria 2-4, #2916)",
+        "display only",
+    ),
+    (
         "argumentation_analysis/reporting/restitution/act3_conclusion_plugin.py",
         "args",
         "_MAX_CLAIM_EXCERPTS",
