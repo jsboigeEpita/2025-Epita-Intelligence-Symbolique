@@ -1245,21 +1245,91 @@ class DeepSynthesisAgent(BaseAgent):
             summary = " ".join(str(summary).split())[:max_chars_per_item]
             lines.append(f"[artifact:{field_name}.{key}] {summary}")
 
-        args = getattr(state, "identified_arguments", {}) or {}
-        for arg_id, desc in list(args.items())[:max_items_per_field]:
-            _add("identified_arguments", arg_id, desc)
+        # #2850 §3.3: the per-field budget spends STRATIFIED over the text
+        # (select_for_budget on the merged population), not on the first
+        # items in insertion order — the same wiring as the invoke-layer
+        # sites. Fallacies inherit their TARGET argument's offset; a fallacy
+        # without a resolvable target is a named-absence unit that fills
+        # leftover budget, never a band. A non-empty args dict always yields
+        # a population, so the old head slices are dead code, removed.
+        from argumentation_analysis.orchestration.selection import (
+            SelectableUnit,
+            merged_population_units,
+            select_for_budget,
+            state_text_length,
+        )
+
+        _syn_units = merged_population_units(state)
+        if _syn_units:
+            _syn_args_selection = select_for_budget(
+                _syn_units, max_items_per_field, text_length=state_text_length(state)
+            )
+            for u in _syn_args_selection.selected:
+                _add("identified_arguments", u.unit_id, u.text)
+            if hasattr(state, "record_analysis_coverage"):
+                state.record_analysis_coverage(
+                    "synthesis_args",
+                    _syn_args_selection.k,
+                    _syn_args_selection.n_total,
+                    _syn_args_selection.bands_covered,
+                    _syn_args_selection.bands_total,
+                    span=_syn_args_selection.span,
+                )
 
         fallacies = getattr(state, "identified_fallacies", {}) or {}
-        for fid, fdata in list(fallacies.items())[:max_items_per_field]:
-            ftype = fdata.get("type", "unknown")
-            family = fdata.get("family") or DeepSynthesisAgent._fallacy_family(ftype)
-            target = fdata.get("target_argument_id", "")
-            _add(
-                "identified_fallacies",
-                fid,
-                f"type={ftype} family={family} target={target or 'n/a'} "
-                f"— {fdata.get('justification', '')}",
+        if fallacies:
+            _prov = getattr(state, "argument_provenance", {}) or {}
+            if not isinstance(_prov, dict):
+                _prov = {}
+            _f_units = []
+            for fid, fdata in fallacies.items():
+                _target = (
+                    fdata.get("target_argument_id", "")
+                    if isinstance(fdata, dict)
+                    else ""
+                )
+                _tprov = _prov.get(_target, {}) if _target else {}
+                _f_units.append(
+                    SelectableUnit(
+                        unit_id=str(fid),
+                        text=str(
+                            (
+                                fdata.get("justification", "")
+                                if isinstance(fdata, dict)
+                                else ""
+                            )
+                            or fid
+                        ),
+                        offset=(
+                            _tprov.get("offset") if isinstance(_tprov, dict) else None
+                        ),
+                    )
+                )
+            _syn_fall_selection = select_for_budget(
+                _f_units, max_items_per_field, text_length=state_text_length(state)
             )
+            for u in _syn_fall_selection.selected:
+                fdata = fallacies[u.unit_id]
+                ftype = fdata.get("type", "unknown")
+                family = fdata.get("family") or DeepSynthesisAgent._fallacy_family(
+                    ftype
+                )
+                target = fdata.get("target_argument_id", "")
+                _add(
+                    "identified_fallacies",
+                    u.unit_id,
+                    f"type={ftype} family={family} target={target or 'n/a'} "
+                    f"— {fdata.get('justification', '')}",
+                )
+            if hasattr(state, "record_analysis_coverage"):
+                state.record_analysis_coverage(
+                    "synthesis_fallacies",
+                    _syn_fall_selection.k,
+                    _syn_fall_selection.n_total,
+                    _syn_fall_selection.bands_covered,
+                    _syn_fall_selection.bands_total,
+                    span=_syn_fall_selection.span,
+                )
 
         for i, r in enumerate(
             (getattr(state, "propositional_analysis_results", []) or [])[
