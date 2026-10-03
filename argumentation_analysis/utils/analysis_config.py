@@ -25,6 +25,10 @@ from enum import Enum
 
 from argumentation_analysis.core.reading_window import selected_text
 
+# The pipeline informal agent's text excerpt ("Limite pour
+# performance", #2915).
+_INFORMAL_ANALYSIS_WINDOW = 1000
+
 
 class AuthenticAnalysisUnavailable(RuntimeError):
     """The authentic analysis cannot run: no API key, or a module failed to import.
@@ -327,7 +331,7 @@ class UnifiedAnalysisPipeline:
             # Analyse selon le mode - utiliser la méthode appropriée
             # #1737: reading window instead of a fixed head slice
             analysis_result = await agent.analyze_text(
-                selected_text(text, 1000, "analysis_informal")
+                selected_text(text, _INFORMAL_ANALYSIS_WINDOW, "analysis_informal")
             )  # Limite pour performance
             # #2485 : une analyse échouée n'est pas un résultat authentique. Elle
             # passe par le chemin d'échec du pipeline : retry, puis fallback

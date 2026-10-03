@@ -17,7 +17,10 @@ from semantic_kernel.agents.chat_completion.chat_completion_agent import (
 )
 from semantic_kernel.functions.function_result import FunctionResult
 
-from argumentation_analysis.core.reading_window import selected_text
+from argumentation_analysis.core.reading_window import (
+    WIDE_NET_WINDOW,
+    selected_text,
+)
 from argumentation_analysis.orchestration.hierarchical.operational.agent_interface import (
     OperationalAgent,
 )
@@ -185,7 +188,7 @@ class InformalAgentAdapter(OperationalAgent):
             # bound.
             prompt = (
                 f"Analyze the following text for fallacies: '"
-                f"{selected_text(text_to_analyze, 8000, 'hierarchical_informal_extracts')}'"
+                f"{selected_text(text_to_analyze, WIDE_NET_WINDOW, 'hierarchical_informal_extracts')}'"
             )
 
             # BaseAgent.invoke yields the result of invoke_single as an async stream.

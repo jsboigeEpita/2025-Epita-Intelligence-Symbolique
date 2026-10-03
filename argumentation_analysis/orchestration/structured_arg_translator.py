@@ -44,7 +44,10 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Tuple
 
-from argumentation_analysis.core.reading_window import selected_text
+from argumentation_analysis.core.reading_window import (
+    LLM_EXTRACTION_WINDOW,
+    selected_text,
+)
 
 logger = logging.getLogger("UnifiedPipeline")
 
@@ -309,7 +312,7 @@ async def _llm_extract_relations(
     )
     user_content = (
         f"Source text (excerpt):\n"
-        f"{selected_text(input_text, 3000, 'structured_arg_relations')}\n\n"
+        f"{selected_text(input_text, LLM_EXTRACTION_WINDOW, 'structured_arg_relations')}\n\n"
         f"Arguments (id → text):\n[{inventory_json}]\n\n"
         f"Return the {relation_kind} JSON."
     )

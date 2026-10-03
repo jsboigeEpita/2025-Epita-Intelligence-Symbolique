@@ -10,6 +10,9 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from argumentation_analysis.core.reading_window import selected_text
+
+# The excerpt of input text the judge prompt carries (#2915).
+_JUDGE_INPUT_WINDOW = 2000
 from argumentation_analysis.services.llm_cache import cached_raw_chat_completion
 
 logger = logging.getLogger("evaluation.judge")
@@ -102,7 +105,7 @@ class LLMJudge:
             results_str = results_str[:12000] + "\n... [summarized]"
 
         user_msg = JUDGE_USER_TEMPLATE.format(
-            input_text=selected_text(input_text, 2000, "judge"),
+            input_text=selected_text(input_text, _JUDGE_INPUT_WINDOW, "judge"),
             workflow_name=workflow_name,
             analysis_results=results_str,
         )

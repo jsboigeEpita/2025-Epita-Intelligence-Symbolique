@@ -30,7 +30,10 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import semantic_kernel as sk
 from semantic_kernel.agents import ChatCompletionAgent
 
-from argumentation_analysis.core.reading_window import selected_text
+from argumentation_analysis.core.reading_window import (
+    WIDE_NET_WINDOW,
+    selected_text,
+)
 from argumentation_analysis.orchestration.invoke_callables import (
     LLMBudgetExceeded,
     _bump_sk_budget,
@@ -93,13 +96,19 @@ class WallClockBudget:
         return deadline is not None and now >= deadline
 
 
+# The language probe feeds a REGEX detector, not an LLM — its sample
+# window is its own meaning (#2915: same value as the LLM extraction
+# window, different name, per the one-constant-per-meaning rule).
+_LANGUAGE_PROBE_WINDOW = 3000
+
+
 def _detect_language(text: str) -> str:
     """Detect text language using heuristic word-frequency analysis.
 
     Distinguishes DE, FR, EN based on common function words and articles.
     Returns ISO 639-1 code: 'de', 'fr', 'en', or 'unknown'.
     """
-    sample = selected_text(text, 3000, "detect_language").lower()
+    sample = selected_text(text, _LANGUAGE_PROBE_WINDOW, "detect_language").lower()
     scores: Dict[str, int] = {"de": 0, "fr": 0, "en": 0}
 
     de_markers = [
@@ -1195,7 +1204,7 @@ async def _run_conversational_analysis_inner(
     # pipeline reader would. Texts at or under the bound reproduce the legacy
     # prompt byte for byte; longer texts keep tail coverage through the
     # parent harness (texts > 5000 chars already route there, below).
-    windowed_text = selected_text(text, 8000, "conversational_extraction")
+    windowed_text = selected_text(text, WIDE_NET_WINDOW, "conversational_extraction")
     extraction_prompt = (
         f"Analysez ce texte argumentatif. Identifiez les arguments, "
         f"claims et sophismes.\n\nTexte:\n{windowed_text}"

@@ -22,6 +22,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 from argumentation_analysis.core.reading_window import (
+    DEBATE_FALLBACK_WINDOW,
     reading_state_from_context,
     selected_text,
 )
@@ -186,7 +187,7 @@ async def _invoke_collaborative_analysis(
         if arg_lines
         else selected_text(
             input_text,
-            1500,
+            DEBATE_FALLBACK_WINDOW,
             "collaborative_debate",
             state=reading_state_from_context(context),
         )

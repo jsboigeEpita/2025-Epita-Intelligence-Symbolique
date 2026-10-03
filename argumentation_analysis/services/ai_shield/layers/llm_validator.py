@@ -10,6 +10,9 @@ from typing import Any, Dict, Optional
 from argumentation_analysis.core.llm_service import resolve_chat_endpoint
 from argumentation_analysis.services.ai_shield.shield import ShieldLayer, LayerResult
 from argumentation_analysis.core.reading_window import selected_text
+
+# The excerpt the shield's threat validator scores (#2915).
+_SHIELD_VALIDATION_WINDOW = 2000
 from argumentation_analysis.core.utils.llm_completion_guard import (
     assert_not_reasoning_starved,
 )
@@ -87,7 +90,8 @@ class LLMValidatorLayer(ShieldLayer):
         from openai import OpenAI
 
         client = OpenAI(api_key=self._api_key, base_url=self._base_url)
-        response = cached_raw_chat_completion_sync(client,
+        response = cached_raw_chat_completion_sync(
+            client,
             model=self._model,
             messages=[
                 {
@@ -106,7 +110,9 @@ class LLMValidatorLayer(ShieldLayer):
                 },
                 {
                     "role": "user",
-                    "content": selected_text(text, 2000, "ai_shield_llm_validator"),
+                    "content": selected_text(
+                        text, _SHIELD_VALIDATION_WINDOW, "ai_shield_llm_validator"
+                    ),
                 },  # Cap input length
             ],
             max_completion_tokens=200,

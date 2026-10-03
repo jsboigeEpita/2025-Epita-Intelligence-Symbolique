@@ -22,6 +22,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from argumentation_analysis.core.llm_service import resolve_chat_endpoint
 from argumentation_analysis.core.reading_window import selected_text
+
+# The NL-to-logic translation excerpts (#2915): the retry pass reads
+# a deliberately smaller sample than the first attempt.
+_NL_TO_LOGIC_WINDOW = 2000
+_NL_TO_LOGIC_RETRY_WINDOW = 1000
 from argumentation_analysis.services.llm_cache import cached_raw_chat_completion
 
 logger = logging.getLogger(__name__)
@@ -412,13 +417,17 @@ class NLToLogicTranslator:
                     messages.append(
                         {
                             "role": "user",
-                            "content": selected_text(text, 2000, "nl_to_logic"),
+                            "content": selected_text(
+                                text, _NL_TO_LOGIC_WINDOW, "nl_to_logic"
+                            ),
                         }
                     )
                 else:
                     retry_msg = retry_template.format(
                         error=last_error,
-                        original=selected_text(text, 1000, "nl_to_logic_retry"),
+                        original=selected_text(
+                            text, _NL_TO_LOGIC_RETRY_WINDOW, "nl_to_logic_retry"
+                        ),
                         formula=last_formula,
                         formulas=last_formula,
                     )

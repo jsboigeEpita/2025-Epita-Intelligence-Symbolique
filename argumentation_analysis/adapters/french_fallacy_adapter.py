@@ -28,7 +28,10 @@ from typing import Any, Dict, List, Optional
 from argumentation_analysis.core.interfaces.fallacy_detector import (
     AbstractFallacyDetector,
 )
-from argumentation_analysis.core.reading_window import selected_text
+from argumentation_analysis.core.reading_window import (
+    LLM_EXTRACTION_WINDOW,
+    selected_text,
+)
 from argumentation_analysis.utils.taxonomy_tree import (
     taxonomy_parent_path,
     taxonomy_root_path,
@@ -1133,7 +1136,7 @@ class SelfHostedLLMFallacyDetector:
             # the sibling LLM tier of this very file (line ~1391); the
             # selection is offset 0 for texts at or under the bound, so the
             # payload is byte-identical there.
-            f"{selected_text(text, 3000, 'french_fallacy_self_hosted')}"
+            f"{selected_text(text, LLM_EXTRACTION_WINDOW, 'french_fallacy_self_hosted')}"
         )
 
         payload = {
@@ -1394,7 +1397,7 @@ class LLMFallacyDetector:
 
             user_prompt = (
                 "Analyse ce texte pour detecter les sophismes:\n\n"
-                + selected_text(text, 3000, "french_fallacy_llm")
+                + selected_text(text, LLM_EXTRACTION_WINDOW, "french_fallacy_llm")
             )
 
             # #1936: sampling params come from the central policy, not from a

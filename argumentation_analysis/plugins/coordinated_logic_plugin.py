@@ -17,7 +17,11 @@ from typing import List
 from semantic_kernel.functions import kernel_function
 
 from argumentation_analysis.core.llm_service import resolve_chat_endpoint
-from argumentation_analysis.core.reading_window import selected_text
+from argumentation_analysis.core.reading_window import (
+    LOGIC_ARGUMENT_WINDOW,
+    LOGIC_READING_WINDOW,
+    selected_text,
+)
 from argumentation_analysis.services.llm_cache import cached_raw_chat_completion
 
 logger = logging.getLogger(__name__)
@@ -131,7 +135,7 @@ class CoordinatedLogicPlugin:
             "Output a JSON object with a single key 'propositions' mapping to a "
             "list of strings. Each string is an atomic proposition name in "
             "lowercase snake_case (e.g. 'is_mortal', 'foreign_threat').\n\n"
-            f"Text:\n{selected_text(full_text, 4000, 'coordinated_pl_atoms')}"
+            f"Text:\n{selected_text(full_text, LOGIC_READING_WINDOW, 'coordinated_pl_atoms')}"
         )
 
         try:
@@ -193,7 +197,7 @@ class CoordinatedLogicPlugin:
             "- Predicates: CamelCase, list arg sorts\n"
             "- Constants: lowercase\n"
             '- If unsure about sort, use "Thing"\n\n'
-            f"Text:\n{selected_text(full_text, 4000, 'coordinated_fol_signature')}"
+            f"Text:\n{selected_text(full_text, LOGIC_READING_WINDOW, 'coordinated_fol_signature')}"
         )
 
         try:
@@ -347,7 +351,7 @@ class CoordinatedLogicPlugin:
             "- Operators: ! (not), && (and), || (or), => (implies), <=> (iff)\n"
             "- Output a JSON object with a single key 'formulas' mapping to a "
             "list of formula strings.\n\n"
-            f"Text:\n{selected_text(argument_text, 2000, 'coordinated_pl_formulas')}\n\n"
+            f"Text:\n{selected_text(argument_text, LOGIC_ARGUMENT_WINDOW, 'coordinated_pl_formulas')}\n\n"
             f"Allowed propositions:\n{atoms_json}"
         )
 
@@ -410,7 +414,7 @@ class CoordinatedLogicPlugin:
             "- Quantifiers: forall X: (...), exists X: (...)\n"
             "- Operators: ! (not), && (and), || (or), => (implies)\n"
             "- Output JSON with key 'formulas' (list of formula strings)\n\n"
-            f"Text:\n{selected_text(argument_text, 2000, 'coordinated_fol_formulas')}\n\n"
+            f"Text:\n{selected_text(argument_text, LOGIC_ARGUMENT_WINDOW, 'coordinated_fol_formulas')}\n\n"
             f"Signature:\n{sig_json}"
         )
 
