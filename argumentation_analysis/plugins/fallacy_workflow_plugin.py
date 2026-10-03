@@ -52,6 +52,14 @@ from argumentation_analysis.plugins.identification_models import (
 
 logger = logging.getLogger(__name__)
 
+# The wide-net Phase-1 window, in characters — ONE constant for both readers
+# (the Phase-1 slice and the #2908 one-shot window below): the one-shot bound
+# is "the wide-net's own bound", and two separate literals could drift apart
+# (R1058 review). At or under this bound the #1737 selection is offset 0 by
+# construction, so the one-shot prompt is byte-identical to the unbounded
+# form — no replay key can miss.
+_WIDE_NET_WINDOW = 8000
+
 
 class FallacyWorkflowPlugin:
     """Plugin orchestrating hierarchical taxonomy-guided fallacy detection.
@@ -615,7 +623,7 @@ class FallacyWorkflowPlugin:
 
         prompt = (
             f"Analyze this text exhaustively for logical fallacies:\n\n"
-            f"--- TEXT ---\n{argument_text[:8000]}\n--- END ---\n\n"
+            f"--- TEXT ---\n{argument_text[:_WIDE_NET_WINDOW]}\n--- END ---\n\n"
             "List EVERY fallacy you can find. For each, respond with a JSON object:\n"
             '{"fallacy_name": "...", "root_category": "...", "confidence": 0.0-1.0}\n\n'
             "Respond with a JSON array of objects. Be thorough — aim for 10-20 fallacies.\n"
@@ -1685,11 +1693,14 @@ class FallacyWorkflowPlugin:
         # #2908: this was the analysis path's only UNBOUNDED reader — the
         # whole document went into this single call (on the corpus's longest
         # document, ~600k prompt tokens; #2907 reduction 5). Read through the
-        # #1737 shared window at the wide-net's own bound (8000, the Phase-1
-        # prompt above): no new constant, and at or under the bound the
-        # selection is offset 0 by construction, so the prompt is
-        # byte-identical to the unbounded form — no replay key can miss.
-        windowed_text = selected_text(argument_text, 8000, "fallacy_one_shot")
+        # #1737 shared window at _WIDE_NET_WINDOW (the Phase-1 prompt's own
+        # bound, defined once at module top): no new constant, and at or
+        # under the bound the selection is offset 0 by construction, so the
+        # prompt is byte-identical to the unbounded form — no replay key can
+        # miss.
+        windowed_text = selected_text(
+            argument_text, _WIDE_NET_WINDOW, "fallacy_one_shot"
+        )
         prompt = (
             f"Analyze the following text:\n--- TEXT ---\n{windowed_text}\n--- END TEXT ---\n\n"
             "Identify the single most relevant fallacy from the taxonomy below. "

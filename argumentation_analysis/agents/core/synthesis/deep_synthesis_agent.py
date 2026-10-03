@@ -1309,6 +1309,10 @@ class DeepSynthesisAgent(BaseAgent):
                 _f_units, max_items_per_field, text_length=state_text_length(state)
             )
             for u in _syn_fall_selection.selected:
+                # Contract: identified_fallacies is keyed by str ids
+                # (add_fallacy's "fallacy_N"), and unit_id was built as
+                # str(fid) above — str(fid) is the identity on those keys, so
+                # this lookup cannot meet a non-str key (R1058 review note).
                 fdata = fallacies[u.unit_id]
                 ftype = fdata.get("type", "unknown")
                 family = fdata.get("family") or DeepSynthesisAgent._fallacy_family(
