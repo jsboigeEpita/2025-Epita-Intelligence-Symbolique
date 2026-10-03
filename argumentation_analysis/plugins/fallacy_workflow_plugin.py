@@ -42,6 +42,7 @@ from argumentation_analysis.core.plaintext_destination import (
     PlaintextDestinationError,
     check_plaintext_destination,
 )
+from argumentation_analysis.core.reading_window import selected_text
 from argumentation_analysis.plugins.exploration_plugin import ExplorationPlugin
 from argumentation_analysis.utils.taxonomy_local_overrides import purge_rows
 from argumentation_analysis.plugins.identification_models import (
@@ -1678,11 +1679,19 @@ class FallacyWorkflowPlugin:
         self.logger.info("Running one-shot fallback analysis")
 
         kernel, settings = self._create_one_shot_kernel()
-        # Use compact taxonomy (depth ≤ 4) to stay within token limits
+        # Compact taxonomy at depth ≤ 6 (the call below) to bound the prompt.
         compact_taxonomy = self._build_compact_taxonomy(max_depth=6)
 
+        # #2908: this was the analysis path's only UNBOUNDED reader — the
+        # whole document went into this single call (on the corpus's longest
+        # document, ~600k prompt tokens; #2907 reduction 5). Read through the
+        # #1737 shared window at the wide-net's own bound (8000, the Phase-1
+        # prompt above): no new constant, and at or under the bound the
+        # selection is offset 0 by construction, so the prompt is
+        # byte-identical to the unbounded form — no replay key can miss.
+        windowed_text = selected_text(argument_text, 8000, "fallacy_one_shot")
         prompt = (
-            f"Analyze the following text:\n--- TEXT ---\n{argument_text}\n--- END TEXT ---\n\n"
+            f"Analyze the following text:\n--- TEXT ---\n{windowed_text}\n--- END TEXT ---\n\n"
             "Identify the single most relevant fallacy from the taxonomy below. "
             "CRITICAL: Choose the MOST SPECIFIC (deepest) node that matches — "
             "generic labels like 'Ad hominem' or 'Appel à l'autorité' are too shallow. "
