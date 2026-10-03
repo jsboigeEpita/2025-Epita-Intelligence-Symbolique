@@ -665,11 +665,39 @@ def _fabrication_notes_section(state: Mapping[str, Any]) -> List[str]:
     ]
 
 
+def _reader_contract_section(findings: List[Any]) -> List[str]:
+    """The #1914 criteria-2/3/4 act diagnostics, folded (dispatch R1059):
+    the controls OBSERVE the rendered acts, they never modify them and never
+    fail the render — so their findings are appendix material, not verdict
+    reasons. ``findings`` is a list of
+    :class:`~.act_reader_contract_check.ContractFinding` (typed as ``Any``
+    here to keep the import graph acyclic)."""
+    lines = [
+        "### Contrôles de contrat lecteur (#1914, critères 2-4)",
+        "",
+        "Constats déterministes sur le texte des actes rendus — audit seul : "
+        "ils n'ont ni modifié ni fait échouer le rendu.",
+        "",
+    ]
+    if not findings:
+        lines.append(
+            "Aucun constat : citations formelles dérivées, procédés "
+            "porteurs de leur fonction, priorisation visible."
+        )
+        lines.append("")
+        return lines
+    for f in findings:
+        lines.append(f"- **Acte** {f.act}, ligne {f.line} — {f.kind} : {f.note}")
+    lines.append("")
+    return lines
+
+
 def render_appendix(
     state: Optional[Mapping[str, Any]],
     *,
     include_full_state_json: bool = False,
     gate_block: Optional[str] = None,
+    contract_findings: Optional[List[Any]] = None,
 ) -> str:
     """Render the dimensional appendix as a folded Markdown ``<details>`` block.
 
@@ -683,6 +711,9 @@ def render_appendix(
             verdict block). #1914: gate diagnostics are appendix material —
             folded in as the first content on unfold, never on the reader
             surface. The auditability is intact, only the position changes.
+        contract_findings: optional #1914 criteria-2/3/4 act diagnostics
+            (dispatch R1059) — observations on the rendered acts, folded in
+            the same way. Never a verdict, never a render failure.
 
     Returns:
         A Markdown string beginning with ``<details>``. Empty string when
@@ -693,6 +724,11 @@ def render_appendix(
         return (
             "\n<details>\n<summary>Annexe — provenance dimensionnelle</summary>\n\n"
             + (gate_block + "\n\n" if gate_block else "")
+            + (
+                "\n".join(_reader_contract_section(contract_findings or [])) + "\n"
+                if contract_findings is not None
+                else ""
+            )
             + "Annexe indisponible (shared-state non fourni au renderer). "
             "La narration ci-dessus se suffit à elle-même ; cette annexe n'aurait "
             "contenu que des agrégats de traçabilité.\n\n"
@@ -709,6 +745,8 @@ def render_appendix(
     if gate_block:
         lines.append(gate_block)
         lines.append("")
+    if contract_findings is not None:
+        lines.extend(_reader_contract_section(contract_findings))
     lines.extend(
         [
             "Agrégats de traçabilité uniquement — pas de contenu de corpus.",
