@@ -23,8 +23,6 @@ import asyncio
 import logging
 import json
 import random
-
-from argumentation_analysis.core.reading_window import selected_text
 import argparse
 from typing import List, Optional, Union, Any, Dict
 
@@ -58,6 +56,7 @@ from semantic_kernel.connectors.ai.function_choice_behavior import (
 # ===== IMPORTS DU PROJET D'ANALYSE D'ARGUMENTATION =====
 
 # --- Core ---
+from argumentation_analysis.core.reading_window import selected_text
 from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 
 # --- Agents ---

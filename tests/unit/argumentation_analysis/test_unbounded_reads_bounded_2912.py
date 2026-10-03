@@ -151,6 +151,27 @@ def test_row2_concrete_agent_prompt_byte_identical_under_the_bound():
     assert _invoke_single_prompt(text) == f'SYS\n\nTexte à analyser:\n"""\n{text}\n"""'
 
 
+def test_row2_invoke_path_passes_a_chat_history_legacy_bytes_survive():
+    # BaseAgent.invoke (agent_bases.py:227) forwards its ChatHistory argument
+    # into invoke_single's text_to_analyze slot — the band's authentic tests
+    # ride exactly that path (measured: run 37129976306). The legacy f-string
+    # embedded str(history); the window must reproduce those bytes rather than
+    # call .strip() on the object (the pre-fix AttributeError).
+    history = ChatHistory()
+    history.add_user_message("Analyse ce texte: les experts affirment, croyez-nous.")
+    prompt = _invoke_single_prompt(history)
+    assert prompt == f'SYS\n\nTexte à analyser:\n"""\n{str(history)}\n"""'
+
+
+def test_row2_invoke_path_chat_history_is_bounded_at_8000():
+    history = ChatHistory()
+    history.add_user_message(_prose(10_000))
+    prompt = _invoke_single_prompt(history)
+    section = prompt.split('Texte à analyser:\n"""\n', 1)[1].split('\n"""', 1)[0]
+    assert len(section) == BOUND
+    assert section == str(history)[:BOUND]
+
+
 # ─── rows 4+5: run_conversational_analysis extraction prompt (FR + DE) ────
 
 
