@@ -1132,11 +1132,6 @@ def _write_asp_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     }
 
 
-# #2315 — cap on per-argument assert trace entries emitted by the extraction
-# writer (prompt-budget discipline; the renderer caps again at 8 for Acte II).
-_EXTRACT_ASSERT_CAP = 12
-
-
 def _record_assert_move(state: Any, arg_id: str, quote: str, raw_text: str) -> None:
     """#2295 — per-argument ``assert`` trace entry, anchored when measurable.
 

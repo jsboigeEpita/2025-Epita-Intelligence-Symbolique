@@ -1405,9 +1405,25 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         _chosen_moves = [
             m for i, m in enumerate(_seq.moves) if f"move_{i}" in _chosen_ids
         ]
+        # #2896 (d): the thread's ACTORS are never raw ``arg_N`` ids. The
+        # paid run's Act II printed « Plus loin, ``arg_40`` tente de… » —
+        # the narrator received the machine id as an actor name and echoed
+        # it verbatim into the prose. Each distinct arg_ref now gets a
+        # stable letter (same letter = same argument across its moves, so
+        # the assert-then-retract thread stays readable). Opaque ids stay
+        # legitimate in the STRUCTURED data blocks (the Dung trace anchors,
+        # #1280); this is the narrative thread, not a data block.
+        _actor_letters = {}
         for _i, m in enumerate(_chosen_moves, start=1):
             label = MOVE_LABELS_FR.get(m.move, m.move)
-            who = m.arg_ref or "coup non référencé"
+            if m.arg_ref:
+                if m.arg_ref not in _actor_letters:
+                    _actor_letters[m.arg_ref] = "αβγδεζηθικλμνξοπρστυφχψω"[
+                        len(_actor_letters)
+                    ]
+                who = f"l'argument {_actor_letters[m.arg_ref]}"
+            else:
+                who = "coup non référencé"
             seq_lines.append(f"  {_i}. {who} — {label} (offset {m.offset})")
         # #2848 — the truncation is SAID where it is read: k shown over N
         # anchored, covering a–b over the source's L characters.
