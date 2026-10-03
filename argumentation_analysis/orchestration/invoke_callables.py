@@ -11311,7 +11311,27 @@ async def _invoke_stakes_extractor(
     # list-of-dicts the consumer's contract specifies (anti-pendule: feed the
     # consumer what it asked for, no counterweight).
     raw_args = getattr(state, "identified_arguments", {}) or {}
-    if isinstance(raw_args, dict):
+    # #2850 §3.3: the stakes budget (30) spends STRATIFIED over the text
+    # (select_for_budget), not on the first 30 in insertion order — the same
+    # wiring as jtms/quality/PL/FOL/NL→logic. The extractor's own ``[:30]``
+    # stays as a stateless no-op guard: with a population the selection
+    # happens here, once, and records its coverage under "stakes".
+    _stakes_units = merged_population_units(state)
+    if _stakes_units:
+        _stakes_selection = select_for_budget(
+            _stakes_units, 30, text_length=state_text_length(state)
+        )
+        arguments = [{"text": u.text} for u in _stakes_selection.selected]
+        if hasattr(state, "record_analysis_coverage"):
+            state.record_analysis_coverage(
+                "stakes",
+                _stakes_selection.k,
+                _stakes_selection.n_total,
+                _stakes_selection.bands_covered,
+                _stakes_selection.bands_total,
+                span=_stakes_selection.span,
+            )
+    elif isinstance(raw_args, dict):
         arguments = [
             {"text": desc} for desc in raw_args.values() if isinstance(desc, str)
         ]
