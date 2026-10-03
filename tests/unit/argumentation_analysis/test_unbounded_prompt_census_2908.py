@@ -11,12 +11,17 @@ what the site reads and why it is a row (named debt) instead of a fix.
 
 Census boundary, stated rather than hidden: an interpolation counts when the
 expression is a bare Name/Attribute (or an unbounded-upper Subscript —
-``text[start:]``) whose name is one of ``_DOC_TEXT_NAMES``. Sliced (``[:N]``)
-and derived (``selected_text(...)``, ``.lower()``) expressions are bounded by
-construction and are NOT this census's population; short labels, ids, counts
-and pks (``fallacy_type``, ``arg_id``, …) are outside the name set — the
-boundary is held by the negative-control test below, so it is a documented
-limit, not an unknown one.
+``text[start:]``) whose name is one of ``_DOC_TEXT_NAMES``. Bare names are
+resolved through single-assignment aliases of the enclosing function —
+whatever the alias is called (``windowed = argument_text`` then ``f"{windowed}"`` reads as
+``argument_text`` — R1058); a name assigned more than once, or aliased from
+a non-document source, is NOT tracked — both limits are held by the
+alias-control test below, so they are documented limits, not unknown ones.
+Sliced (``[:N]``) and derived (``selected_text(...)``, ``.lower()``)
+expressions are bounded by construction and are NOT this census's
+population; short labels, ids, counts and pks (``fallacy_type``, ``arg_id``,
+…) are outside the name set — the boundary is held by the negative-control
+test below, so it is a documented limit, not an unknown one.
 
 Keys are semantic — ``(relpath, kind, name, ordinal)`` in ``ast.walk`` order
 (the #2850 pattern) — so a moved line stays green while a renamed variable, a
@@ -104,9 +109,96 @@ def _bare_text_expr(node: ast.expr):
     return None
 
 
+def _single_assign_aliases(fn: ast.AST) -> dict:
+    """alias name -> root doc-text name, for aliases assigned exactly once
+    in ``fn``'s subtree (R1058: ``windowed = argument_text`` then
+    ``f"{windowed}"`` must not slip past the census).
+
+    A name assigned more than once is NOT tracked — its later value may not
+    be the document; a source outside ``_DOC_TEXT_NAMES`` is not a document
+    read. Chains (``a = argument_text; b = a``) resolve to the root, with a
+    cycle guard (``a = b; b = a`` is two single assignments and would loop).
+    """
+    assigns: dict = {}
+    for node in ast.walk(fn):
+        pairs = []
+        if isinstance(node, ast.Assign):
+            pairs = [
+                (t.id, _name_of(node.value))
+                for t in node.targets
+                if isinstance(t, ast.Name)
+            ]
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            src = _name_of(node.value) if node.value is not None else None
+            pairs = [(node.target.id, src)]
+        for target, src in pairs:
+            assigns.setdefault(target, []).append(src)
+    # every single-assignment name-to-name binding (the chain's middle links
+    # have a non-document source and must enter the map to be walkable)
+    singles = {
+        t: srcs[0]
+        for t, srcs in assigns.items()
+        if len(srcs) == 1 and srcs[0] is not None
+    }
+    # walk each chain to its root; keep the name only if the root is a
+    # document-text name (cycle-guarded: ``a = b; b = a`` is two single
+    # assignments and would loop)
+    aliases = {}
+    for t in singles:
+        root, seen, hop = singles[t], {t}, 0
+        while root in singles and root not in seen and hop < 32:
+            seen.add(root)
+            root = singles[root]
+            hop += 1
+        if root in _DOC_TEXT_NAMES and root != t:
+            aliases[t] = root
+    return aliases
+
+
+def _parent_map(tree: ast.Module) -> dict:
+    parents = {}
+    for node in ast.walk(tree):
+        for child in ast.iter_child_nodes(node):
+            parents[child] = node
+    return parents
+
+
+def _enclosing_function(node: ast.AST, parents: dict):
+    """The innermost FunctionDef/AsyncFunctionDef above ``node`` (None at
+    module level) — the scope whose aliases govern the site."""
+    n = node
+    while n in parents:
+        n = parents[n]
+        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            return n
+    return None
+
+
 def _sites_in_tree(tree: ast.Module):
     """(kind, name, lineno) for every unbounded text-bearing interpolation,
-    in ``ast.walk`` order (the ordinal scheme below depends on it)."""
+    in ``ast.walk`` order (the ordinal scheme below depends on it).
+
+    A bare Name is resolved through the single-assignment aliases of its
+    innermost enclosing function BEFORE the text-token check — the alias can
+    be called anything (``x = argument_text`` reads as ``argument_text``) —
+    and the ROOT name is the census key: an aliased read lands on the root's
+    ordinal series, so introducing an alias reddens the census instead of
+    hiding behind a local name.
+    """
+    parents = _parent_map(tree)
+    alias_maps: dict = {}
+
+    def _text_name_of(expr: ast.expr, site: ast.AST):
+        if isinstance(expr, ast.Name):
+            fn = _enclosing_function(site, parents)
+            if fn is not None:
+                if fn not in alias_maps:
+                    alias_maps[fn] = _single_assign_aliases(fn)
+                root = alias_maps[fn].get(expr.id)
+                if root is not None:
+                    return root
+        return _bare_text_expr(expr)
+
     found = []
     for node in ast.walk(tree):
         if isinstance(node, ast.JoinedStr):
@@ -117,7 +209,7 @@ def _sites_in_tree(tree: ast.Module):
                 if sub:
                     found.append(("fstring", sub, fv.value.lineno))
                     continue
-                bare = _bare_text_expr(fv.value)
+                bare = _text_name_of(fv.value, fv)
                 if bare:
                     found.append(("fstring", bare, fv.value.lineno))
         elif (
@@ -130,7 +222,7 @@ def _sites_in_tree(tree: ast.Module):
                 if sub:
                     found.append(("format-arg", sub, a.lineno))
                     continue
-                bare = _bare_text_expr(a)
+                bare = _text_name_of(a, a)
                 if bare:
                     found.append(("format-arg", bare, a.lineno))
             for kw in node.keywords:
@@ -138,7 +230,7 @@ def _sites_in_tree(tree: ast.Module):
                 if sub:
                     found.append(("format-kwarg", sub, kw.value.lineno))
                     continue
-                bare = _bare_text_expr(kw.value)
+                bare = _text_name_of(kw.value, kw)
                 if bare:
                     found.append(("format-kwarg", bare, kw.value.lineno))
     return found
@@ -633,4 +725,43 @@ def test_positive_control_a_planted_interpolation_is_found():
     assert not any(k[2] == "fallacy_id" for k in keys), (
         "a non-doc-text name entered the census — update the boundary "
         "docstring and _DOC_TEXT_NAMES"
+    )
+
+
+def test_alias_control_single_assignment_is_followed():
+    """R1058: a single-assignment alias does not hide a document read — the
+    census keys it by the ROOT name, so the read lands on the root's ordinal
+    series. The two limits are asserted, not silent: a name assigned more
+    than once is not an alias (its later value may not be the document), and
+    an alias of a non-document name is not a document read."""
+    snippet = (
+        "def f(argument_text, other):\n"
+        "    windowed_text = argument_text\n"
+        "    a = f'prompt {windowed_text}'\n"  # alias — the R1058 measured blindness
+        "    snippet_text = argument_text\n"
+        "    snippet_text = other\n"
+        "    b = f'prompt {snippet_text}'\n"  # assigned twice — NOT an alias
+        "    label = other\n"
+        "    c = f'prompt {label}'\n"  # non-doc source — not a document read
+        "    chained = argument_text\n"
+        "    second = chained\n"
+        "    d = f'prompt {second}'\n"  # alias chain — resolves to the root
+        "    return a, b, c, d\n"
+    )
+    ordinal_of = {}
+    keys = set()
+    for kind, name, lineno in _sites_in_tree(ast.parse(snippet)):
+        if name.replace("[…:]", "") not in _DOC_TEXT_NAMES:
+            continue
+        key3 = (kind, name)
+        ordinal_of[key3] = ordinal_of.get(key3, 0) + 1
+        keys.add(("synthetic", kind, name, ordinal_of[key3], lineno))
+    assert keys == {
+        ("synthetic", "fstring", "argument_text", 1, 3),
+        ("synthetic", "fstring", "argument_text", 2, 11),
+    }, (
+        "the census must see through windowed_text (line 3) and the chain "
+        "second/chained (line 11) as argument_text — and ONLY those: the "
+        "twice-assigned snippet_text (line 6) and the non-doc label (line 8) "
+        "stay outside"
     )

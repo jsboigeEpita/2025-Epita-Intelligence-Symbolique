@@ -1151,19 +1151,25 @@ REGISTRY = {
     (
         "argumentation_analysis/plugins/fallacy_workflow_plugin.py",
         "argument_text",
-        "8000",
-        1,
-    ): ("window", "first 8000 chars of the source text", "silent — debt #2850"),
-    (
-        "argumentation_analysis/plugins/fallacy_workflow_plugin.py",
-        "selected_text",
-        "8000",
+        "_WIDE_NET_WINDOW",
         1,
     ): (
         "window",
-        "8000-char window from the selected offset — the one-shot fallback's "
-        "text, bound by #2908 (was the pipeline's only unbounded reader); "
-        "drops the rest of the document",
+        "the wide-net Phase-1 window — first _WIDE_NET_WINDOW (= 8000) chars "
+        "of the source text",
+        "silent — debt #2850",
+    ),
+    (
+        "argumentation_analysis/plugins/fallacy_workflow_plugin.py",
+        "selected_text",
+        "_WIDE_NET_WINDOW",
+        1,
+    ): (
+        "window",
+        "_WIDE_NET_WINDOW-char window (= 8000, the constant shared with the "
+        "wide-net slice above — R1058: one constant, two readers) from the "
+        "selected offset — the one-shot fallback's text, bound by #2908 (was "
+        "the pipeline's only unbounded reader); drops the rest of the document",
         "stateless call — the plugin holds no shared state, so nothing "
         "records it; Acts silent — #2850",
     ),
