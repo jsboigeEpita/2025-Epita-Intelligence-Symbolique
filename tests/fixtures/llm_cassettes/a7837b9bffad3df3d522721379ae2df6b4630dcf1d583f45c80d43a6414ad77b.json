@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_cqoiseJ2GRLajSbzKUUwfsyR",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\":\"427\"}"
+          "id": "call_Wot7BdQrczrwYXlPFnwPDv98",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"Le texte ne décrit pas une escalade progressive de demandes ni un engagement croissant. Il présente plutôt un appel à l'autorité et une disqualification de l'avis des non-experts, qui relèvent d'autres branches taxonomiques.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EUC3QhSydFege0QFQeTAfLiPvW4ef",
-        "created": 1790864884,
+        "id": "chatcmpl-EVO7t3dzFXMvZsHLRsFWZkmvmrDw9",
+        "created": 1791149617,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1516,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 22,
+          "completion_tokens": 72,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

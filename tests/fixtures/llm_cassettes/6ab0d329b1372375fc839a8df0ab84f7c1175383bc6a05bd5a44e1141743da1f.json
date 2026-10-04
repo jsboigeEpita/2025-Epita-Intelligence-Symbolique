@@ -1,0 +1,48 @@
+{
+  "key": "6ab0d329b1372375fc839a8df0ab84f7c1175383bc6a05bd5a44e1141743da1f",
+  "value": {
+    "id": "chatcmpl-EVO5amLP0p6u4oNqFyH1HcEIhDmTz",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points portent sur des défauts distincts : le premier identifie un homme de paille concernant la position sur les retraites ; le second critique un appel à l’émotion qui détourne l’examen du fond. Aucune redondance substantielle n’est localisée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149474,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 115,
+      "prompt_tokens": 303,
+      "total_tokens": 418,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 37,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -6,8 +6,8 @@
       "content": "{\"propositions\":[\"il_pleut\",\"la_rue_est_mouillee\"]}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EUCA6UbDxre2xbXRIWN1qmscNeZ4E",
-        "created": 1790865298,
+        "id": "chatcmpl-EVODnHjcRppm1XT6XNUGV6oSbso9U",
+        "created": 1791149983,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 220,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 78,
+          "completion_tokens": 108,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 51,
+            "reasoning_tokens": 81,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

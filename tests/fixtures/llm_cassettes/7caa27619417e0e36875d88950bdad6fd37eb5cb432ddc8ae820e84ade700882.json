@@ -1,0 +1,40 @@
+{
+  "key": "7caa27619417e0e36875d88950bdad6fd37eb5cb432ddc8ae820e84ade700882",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_8oB46VKkAEH5jfnC1z62vXF8",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\":\"457\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EVO7kODAyJqQI5I8J7RprDiVa2NUI",
+        "created": 1791149608,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1926,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1923,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 22,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

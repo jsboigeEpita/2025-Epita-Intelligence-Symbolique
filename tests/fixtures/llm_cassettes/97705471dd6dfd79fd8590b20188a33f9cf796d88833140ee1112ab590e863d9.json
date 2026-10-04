@@ -1,0 +1,40 @@
+{
+  "key": "97705471dd6dfd79fd8590b20188a33f9cf796d88833140ee1112ab590e863d9",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_k3SUXSMDp71fD694lcMVPAnb",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"497\",\"confidence\":\"high\",\"justification\":\"Le second argument exerce un conditionnement social fondé sur le rôle/statut (« si vous n’êtes pas expert, votre avis ne compte pas ») plutôt que sur l’examen des raisons. Le premier invoque aussi l’unanimité des experts, mais l’ensemble correspond ici au rejet de la parole selon le statut social ou professionnel.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EVO7jYnJx1P3txYrYTwVRsEVMUhIT",
+        "created": 1791149607,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1653,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1650,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 100,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

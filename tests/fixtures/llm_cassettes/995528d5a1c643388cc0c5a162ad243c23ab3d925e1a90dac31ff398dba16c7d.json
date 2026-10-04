@@ -1,0 +1,48 @@
+{
+  "key": "995528d5a1c643388cc0c5a162ad243c23ab3d925e1a90dac31ff398dba16c7d",
+  "value": {
+    "id": "chatcmpl-EVOEDCKk646ZdoKtdojCH4aW7Zl6Q",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La thèse porte sur la sécurité et l’efficacité globales de la vaccination, ainsi que sur la réfutation de l’idée que les vaccins seraient dangereux ou que leurs effets secondaires seraient excessifs. Aucune digression n’est identifiée : l’ensemble reste centré sur cette thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791150009,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 116,
+      "prompt_tokens": 273,
+      "total_tokens": 389,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 37,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

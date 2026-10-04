@@ -1,0 +1,48 @@
+{
+  "key": "860401df56926719dcc8f74d62f39592ceb7394474e9b3c7a48d77f58f6a1414",
+  "value": {
+    "id": "chatcmpl-EVO4eyryz8rfHcyk4IurRjAN9rBxK",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"Le déficit des finances du système atteindra 2,3 % du PIB d’ici 2030.\",\"digressions\":\"Les syndicats accusent le gouvernement de commettre un sophisme naturaliste en affirmant que travailler plus longtemps est « dans l’ordre des choses » ; l’opposition dénonce un homme de paille, puisque personne n’a proposé de supprimer les retraites, seulement de les réformer différemment.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149416,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 310,
+      "prompt_tokens": 325,
+      "total_tokens": 635,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 201,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

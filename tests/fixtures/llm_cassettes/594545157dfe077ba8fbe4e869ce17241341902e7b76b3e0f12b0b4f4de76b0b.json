@@ -1,0 +1,48 @@
+{
+  "key": "594545157dfe077ba8fbe4e869ce17241341902e7b76b3e0f12b0b4f4de76b0b",
+  "value": {
+    "id": "chatcmpl-EVOBzXDEcwmMAtooht1LcJ2GJGKjk",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.2,\"exhibit\":\"La thèse défend l’investissement intégral des 2000 euros dans du matériel pédagogique pour répondre à l’usure. La présentation détaillée de l’option A (tournoi inter-villes) et de l’option C (répartition du budget) constitue des digressions notables qui diluent l’argument central.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149871,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 183,
+      "prompt_tokens": 326,
+      "total_tokens": 509,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 95,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

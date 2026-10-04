@@ -6,15 +6,25 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_cMpYzLI5Y8zYdGXGZZPZWa59",
-          "name": "Exploration-conclude_no_fallacy",
-          "arguments": "{\"reason\":\"L’argument ne joue pas sur plusieurs sens d’un même mot ni sur une ambiguïté sémantique. Il relève plutôt d’un appel à l’autorité et d’une disqualification de l’avis selon le statut de la personne, mais pas de l’équivoque.\"}"
+          "id": "call_6d5nKCSZCGnVuHRzvCmUcH1c",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"856\"}"
+        },
+        {
+          "id": "call_9r5IVPVZYXVwlhMlVTHdVfJY",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"860\"}"
+        },
+        {
+          "id": "call_pfaFaxmcbVbmfKXlp0UTsb6c",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"865\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EUC3vWJpknJYy9c287uOpMyYpCm5f",
-        "created": 1790864915,
+        "id": "chatcmpl-EVO8Ln1PFJEpfZC3MiKa3DxvSwEtc",
+        "created": 1791149645,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1512,
@@ -25,7 +35,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 81,
+          "completion_tokens": 76,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

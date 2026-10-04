@@ -1,0 +1,48 @@
+{
+  "key": "2f114e361f3b8c165e56557c420f5893812c31213c3d773459a716b7dae58d73",
+  "value": {
+    "id": "chatcmpl-EVO4lQh4pipA3yZo7lqQYFfyXPg4w",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Si nous n’agissons pas maintenant, le système des retraites s’effondrera dans cinq ans, et travailler plus longtemps serait dans l’ordre des choses.\",\"main_thesis\":\"L’argument du gouvernement en faveur de l’action est fallacieux, car il repose sur un argument d’autorité, ignore les différences structurelles entre les systèmes et recourt à un appel à la peur.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149423,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 181,
+      "prompt_tokens": 314,
+      "total_tokens": 495,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 79,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

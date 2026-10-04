@@ -1,0 +1,48 @@
+{
+  "key": "b31b51a814dda9e8cc67b3f2263b1c5b0402beedb0ea8ea710e1207e191171b7",
+  "value": {
+    "id": "chatcmpl-EVO4jojfJj8EowdtV47Zqqw1xES7n",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Le gouvernement soutient qu'il est naturel et nécessaire de travailler plus longtemps, faute de quoi le système s'effondrerait dans cinq ans.\",\"main_thesis\":\"Les justifications du gouvernement en faveur du recul de l'âge de la retraite sont fallacieuses ou fragiles : elles reposent sur un sophisme naturaliste, un appel à la peur et des projections fondées sur des hypothèses de croissance optimistes.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149421,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 199,
+      "prompt_tokens": 332,
+      "total_tokens": 531,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 92,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

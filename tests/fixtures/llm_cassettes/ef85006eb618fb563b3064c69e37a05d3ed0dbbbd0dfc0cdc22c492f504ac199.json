@@ -6,8 +6,8 @@
       "content": "{\"propositions\":[\"all_men_are_mortal\",\"socrates_is_wise\"],\"modal_formulas\":[\"[](all_men_are_mortal)\",\"<>(socrates_is_wise)\"]}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EUC9tzXAUcE3O2ovXRGli4MthzUay",
-        "created": 1790865285,
+        "id": "chatcmpl-EVODfRuKGryl3mCiqVGstDr3K2zdw",
+        "created": 1791149975,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 307,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 117,
+          "completion_tokens": 123,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 66,
+            "reasoning_tokens": 72,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

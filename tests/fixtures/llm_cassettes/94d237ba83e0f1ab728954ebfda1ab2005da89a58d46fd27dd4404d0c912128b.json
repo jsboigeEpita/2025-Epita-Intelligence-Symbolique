@@ -1,0 +1,48 @@
+{
+  "key": "94d237ba83e0f1ab728954ebfda1ab2005da89a58d46fd27dd4404d0c912128b",
+  "value": {
+    "id": "chatcmpl-EVOFVGIW7kS2g5Hp17SG0nSYwavio",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse affirme que les appels et procédures liés à la peine de mort coûtent souvent plus cher que l’emprisonnement à vie. Une digression localisée porte sur son irréversibilité et le caractère fatal des erreurs judiciaires ; elle est liée au débat sur la peine de mort, mais ne soutient pas directement l’argument financier.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791150089,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 147,
+      "prompt_tokens": 292,
+      "total_tokens": 439,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 56,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

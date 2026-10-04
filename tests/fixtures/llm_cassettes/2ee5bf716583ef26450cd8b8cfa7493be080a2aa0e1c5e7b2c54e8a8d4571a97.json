@@ -1,0 +1,48 @@
+{
+  "key": "2ee5bf716583ef26450cd8b8cfa7493be080a2aa0e1c5e7b2c54e8a8d4571a97",
+  "value": {
+    "id": "chatcmpl-EVOFIPvI403uP0UfDNXNfB7Glonxn",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Le système judiciaire peut commettre des erreurs, ce qui constitue un argument contre la peine de mort.\",\"main_thesis\":\"La peine de mort est justifiée parce qu’elle dissuade les crimes les plus graves, que les avancées de l’ADN réduisent le risque d’erreur judiciaire et que certains criminels restent irrécupérables et dangereux pour la société.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791150076,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 151,
+      "prompt_tokens": 295,
+      "total_tokens": 446,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 51,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

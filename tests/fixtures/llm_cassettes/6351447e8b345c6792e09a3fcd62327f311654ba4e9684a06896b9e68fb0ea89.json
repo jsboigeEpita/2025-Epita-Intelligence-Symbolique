@@ -1,0 +1,48 @@
+{
+  "key": "6351447e8b345c6792e09a3fcd62327f311654ba4e9684a06896b9e68fb0ea89",
+  "value": {
+    "id": "chatcmpl-EVO4cfLVW4Z0i8oSL5BbpMO9g8lDj",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"L’argument du gouvernement en faveur d’une réforme immédiate des retraites repose sur des raisonnements fallacieux et ne tient pas suffisamment compte des différences structurelles entre les systèmes.\",\"digressions\":\"La remarque selon laquelle les syndicats accusent le gouvernement de sophisme naturaliste en affirmant que travailler plus longtemps est « dans l’ordre des choses » constitue une digression : elle porte sur un argument distinct de celui de l’effondrement du système dans cinq ans.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149414,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 358,
+      "prompt_tokens": 293,
+      "total_tokens": 651,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 242,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

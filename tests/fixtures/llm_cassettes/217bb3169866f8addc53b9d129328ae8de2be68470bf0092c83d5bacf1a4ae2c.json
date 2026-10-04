@@ -1,0 +1,40 @@
+{
+  "key": "217bb3169866f8addc53b9d129328ae8de2be68470bf0092c83d5bacf1a4ae2c",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_RQgF1RlE6LryIdfd1d9MfbwI",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"Le texte invoque l'unanimité des experts et exclut les non-experts, ce qui relève d'un appel à l'autorité ou d'un argument ad hominem/circumstantiel, pas de l'ingénierie sociale en sécurité. Il n'y a ni manipulation visant à obtenir une action ni demande d'informations confidentielles.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EVO7pH5zl7SGf2rcVmaHcngc4LTnI",
+        "created": 1791149613,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 658,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 94,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

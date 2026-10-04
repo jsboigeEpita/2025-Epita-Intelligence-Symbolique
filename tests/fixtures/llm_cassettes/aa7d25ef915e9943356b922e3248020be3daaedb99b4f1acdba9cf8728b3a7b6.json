@@ -1,0 +1,48 @@
+{
+  "key": "aa7d25ef915e9943356b922e3248020be3daaedb99b4f1acdba9cf8728b3a7b6",
+  "value": {
+    "id": "chatcmpl-EVOACUJ72Ry3iFekE0aCNGrw1lWIq",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse propose de répartir la subvention à parts égales entre le fonds de livres et l’espace numérique. La digression localisée est la mention de l’option B, consacrée à la création d’un espace numérique avec des ordinateurs en libre accès.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149760,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 201,
+      "prompt_tokens": 280,
+      "total_tokens": 481,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 126,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

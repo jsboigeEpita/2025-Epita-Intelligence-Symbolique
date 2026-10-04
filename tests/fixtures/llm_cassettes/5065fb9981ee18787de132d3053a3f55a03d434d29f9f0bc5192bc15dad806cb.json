@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\"query_ideas\":[\"pluie\",\"rue_mouillee\"]}",
+      "content": "{\"query_ideas\":[\"rue_mouillee\",\"pluie\"]}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EUCA9TTUrs5mfOyCGszH03IRmLw52",
-        "created": 1790865301,
+        "id": "chatcmpl-EVODqsLkMisC8RyQFptpMamm6bVfI",
+        "created": 1791149986,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 469,

@@ -1,0 +1,48 @@
+{
+  "key": "af968464ca8ec3ea6043d3357f6a6073d3291daa4b74a164dec26fc592398dc6",
+  "value": {
+    "id": "chatcmpl-EVOEQtzrmGucHc5zErWZccQ7ZPIyl",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne reconstruite invoque les succès historiques de la vaccination et semble mentionner les personnes affirmant que les vaccins sont dangereux, puis conclut que cette affirmation n’est pas fondée. Le verdict est « saut logique » : la conclusion ne découle pas suffisamment des prémisses fournies.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791150022,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 123,
+      "prompt_tokens": 291,
+      "total_tokens": 414,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 43,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

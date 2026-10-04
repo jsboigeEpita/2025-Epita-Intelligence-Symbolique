@@ -1,0 +1,48 @@
+{
+  "key": "66bfe5e98ecfb1c71bee9bfea562c468422b9b8daa7229bb56f73252539b16bf",
+  "value": {
+    "id": "chatcmpl-EVO99gIr5hKoxlGY4gkiI7DdfUmI5",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"L'option B défend l'investissement de la totalité du budget dans du matériel pédagogique et des échiquiers neufs.\",\"digressions\":\"La description de l'option A (organiser un tournoi inter-villes avec buffet et prix pour augmenter la visibilité du club) et la description de l'option C (format hybride avec 1000 euros pour un tournoi réduit et 1000 euros pour du matériel) sont hors sujet par rapport à la thèse sur l'option B.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149695,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 171,
+      "prompt_tokens": 282,
+      "total_tokens": 453,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 51,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_ajuLgMsEYM7MD0S17QsFLis6",
+          "id": "call_r2JELmSa1MKwcO4PlxuBtkSz",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"73\",\"confidence\":\"high\",\"justification\":\"Les deux énoncés traitent l’unanimité des experts comme une preuve suffisante de vérité et disqualifient tout avis non expert sans examen des raisons. Il s’agit d’une soumission aveugle à une autorité jugée suprême.\"}"
+          "arguments": "{\"node_pk\":\"73\",\"confidence\":\"high\",\"justification\":\"Les deux arguments traitent l’unanimité des experts comme preuve suffisante de vérité et excluent tout avis non expert, accordant ainsi une autorité suprême aux experts sans justification indépendante.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EUC3p96uSsuZyB9szc7ByCTsKscF2",
-        "created": 1790864909,
+        "id": "chatcmpl-EVO8Bjm2EGbDucpJ4eqM48VeMt4wk",
+        "created": 1791149635,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1271,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 85,
+          "completion_tokens": 70,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

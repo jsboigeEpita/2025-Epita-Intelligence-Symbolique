@@ -1,0 +1,48 @@
+{
+  "key": "0763fb81e3d10874e8b106df871722dc1d3e4b59bfeb42818bd087c1f0502874",
+  "value": {
+    "id": "chatcmpl-EVO4xBKWv6SZcenzv3yds8R2IsIN6",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La chaîne relie l’hypothèse de croissance optimiste de 1,8 % par an à la contestabilité ou à l’incertitude de la projection de déficit à 2,3 % du PIB en 2030. Le verdict indique une progression logique, mais l’inférence reste partielle : le caractère optimiste des hypothèses ne suffit pas à lui seul à démontrer que la projection est effectivement incertaine.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149435,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 160,
+      "prompt_tokens": 305,
+      "total_tokens": 465,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 51,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

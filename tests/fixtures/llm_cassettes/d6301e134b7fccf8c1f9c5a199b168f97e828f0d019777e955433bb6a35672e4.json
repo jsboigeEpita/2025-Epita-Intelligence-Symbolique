@@ -1,0 +1,48 @@
+{
+  "key": "d6301e134b7fccf8c1f9c5a199b168f97e828f0d019777e955433bb6a35672e4",
+  "value": {
+    "id": "chatcmpl-EVO4u8WCIQT8I5j1qrwCDnArvFtpW",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"« PIB » est un terme technique non défini (produit intérieur brut). « Homme de paille » est un terme d’argumentation employé sans explication accessible. Aucun pronom n’a d’antécédent ambigu et aucune phrase n’est excessivement emboîtée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149432,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 287,
+      "prompt_tokens": 347,
+      "total_tokens": 634,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 206,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

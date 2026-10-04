@@ -1,0 +1,48 @@
+{
+  "key": "ef2ef0bcb5b3b016033403f9d6b9c0e01b7ba32ff08ba0b7b8856c9c205c6a77",
+  "value": {
+    "id": "chatcmpl-EVOALWbvEXJD9ozk8ex9hby2CaUy9",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Deux idées distinctes : répartir la subvention à parts égales et créer un espace numérique avec ordinateurs en libre accès. Redondance localisée : le second point précise le volet numérique déjà mentionné dans le premier, sans répéter l’idée de répartition budgétaire.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149769,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 269,
+      "prompt_tokens": 276,
+      "total_tokens": 545,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 191,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

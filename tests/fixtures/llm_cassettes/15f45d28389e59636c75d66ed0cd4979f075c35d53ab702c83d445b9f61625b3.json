@@ -1,0 +1,40 @@
+{
+  "key": "15f45d28389e59636c75d66ed0cd4979f075c35d53ab702c83d445b9f61625b3",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_d0tXFxtccs1hR6WaJY0DtDwj",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"704\",\"confidence\":\"0.95\",\"justification\":\"L’énoncé présente la politique économique comme un succès incontestable sans fournir d’éléments établissant cette conclusion. Il s’agit d’un soutien infondé, plutôt que d’une explication d’un phénomène dont l’existence serait explicitement non prouvée.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EVO7CA90Y1XV1AHhO96JprhA2WiE5",
+        "created": 1791149574,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 689,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 87,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

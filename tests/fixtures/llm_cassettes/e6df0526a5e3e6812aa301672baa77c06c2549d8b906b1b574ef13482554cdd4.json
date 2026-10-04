@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_Bu5ppaTyiwqhptIpjS7pWnAS",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\":\"700\"}"
+          "id": "call_5WZdfAUQtOUoAOnHNGF8u4Br",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"699\",\"confidence\":\"high\",\"justification\":\"Les deux énoncés invoquent l’autorité des experts et excluent l’avis des non-experts, mais ne réinjectent pas la conclusion comme prémisse ni ne forment un cercle logique. L’argument circulaire ne correspond donc pas au raisonnement présenté.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EUC3iKjAVSqnHkV9TIjNbzfwSgo7W",
-        "created": 1790864902,
+        "id": "chatcmpl-EVO86zZSdgYKPrgE8Yaww3pbDGlE1",
+        "created": 1791149630,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1255,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 22,
+          "completion_tokens": 88,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

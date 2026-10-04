@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\"query_ideas\":[{\"formula\":\"[](p)\"},{\"formula\":\"<>(p)\"},{\"formula\":\"[](q)\"},{\"formula\":\"<>(q)\"}]}",
+      "content": "{\"query_ideas\":[{\"formula\":\"[](p)\"},{\"formula\":\"<>(q)\"},{\"formula\":\"<>(p)\"},{\"formula\":\"[](q)\"}]}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EUC9wSGcFUuHg8LNERwUvIrXdjcCC",
-        "created": 1790865288,
+        "id": "chatcmpl-EVODi2PmdeA7G2xMKXrMygrHdEDDL",
+        "created": 1791149978,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 176,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 111,
+          "completion_tokens": 120,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 71,
+            "reasoning_tokens": 80,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

@@ -1,0 +1,40 @@
+{
+  "key": "313ff7ef5d728a15f2e52cdaab666c7f304bdc8ac1f90fc7892ead4a8a7d3cf5",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_uUiCdmnsnpSL69GEqxc6sGZw",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"211\",\"confidence\":0.98,\"justification\":\"Le texte invoque l’unanimité supposée des experts pour conférer une autorité décisive à la conclusion, puis exclut tout avis non expert. Cela correspond à un référencement pléthorique : l’accumulation ou l’appel au nombre de sources/experts sert de substitut à une justification réelle.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EVO81LHlc2cby4sWxcWdn4hL7NsYK",
+        "created": 1791149625,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 628,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 99,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "key": "6485bacb0ee45aaed9d182121deaaaf994d1c0d06b49bfa983276a5eef21d556",
+  "value": {
+    "id": "chatcmpl-EVOEEExpRrwNn0lWu8x8XQua0G2bc",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Les vaccins sont dangereux et la vaccination présente des risques importants, les entreprises pharmaceutiques cachant leurs effets secondaires.\",\"main_thesis\":\"Les preuves scientifiques montrent que la vaccination a éradiqué la variole et fortement réduit la polio; les affirmations sur le danger des vaccins ignorent les recherches cliniques et la thèse d'une dissimulation des effets secondaires est infondée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791150010,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 171,
+      "prompt_tokens": 286,
+      "total_tokens": 457,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 68,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

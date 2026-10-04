@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_8H4Kau3Z2MycPxBQHiiGjJTZ",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\":\"301\"}"
+          "id": "call_yn90nSXLX9ZNLBgzccxYXw2R",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"Le texte repose sur un appel à l’autorité et une disqualification de l’avis des non-experts, non sur une émotion comme opérateur principal.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EUC2tADSFW43pn4ITyywBHcT3MM3I",
-        "created": 1790864851,
+        "id": "chatcmpl-EVO7fPuKJ3loDrtr9NLAY7bOtfNJ0",
+        "created": 1791149603,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1748,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 22,
+          "completion_tokens": 55,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

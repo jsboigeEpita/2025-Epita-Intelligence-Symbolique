@@ -6,8 +6,8 @@
       "content": "{\"formulas\":[\"il_pleut => la_rue_est_mouillee\",\"il_pleut\"]}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EUCA7vwCi6A2RZIDz4rPnxgBtgErN",
-        "created": 1790865299,
+        "id": "chatcmpl-EVODpjs8E3SG8odug9eZTzmrXwy7z",
+        "created": 1791149985,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 388,

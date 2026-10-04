@@ -1,0 +1,48 @@
+{
+  "key": "90c9767a58f1801c6d346a0aec79fe80209ab09fafc4f89c8aafeec0d07376a7",
+  "value": {
+    "id": "chatcmpl-EVOFVD2dNn6Lchgn5DEEELcUXaoKN",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne reconstruit deux prémisses — effet dissuasif et réduction du risque d’erreur judiciaire — puis conclut que la peine de mort est justifiée malgré la possibilité d’erreur. Le verdict est « saut logique », car ces prémisses ne suffisent pas à établir cette justification.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791150089,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 111,
+      "prompt_tokens": 296,
+      "total_tokens": 407,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 30,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

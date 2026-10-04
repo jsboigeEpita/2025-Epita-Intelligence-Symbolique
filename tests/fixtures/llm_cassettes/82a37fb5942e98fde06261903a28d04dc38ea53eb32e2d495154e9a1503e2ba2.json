@@ -1,0 +1,48 @@
+{
+  "key": "82a37fb5942e98fde06261903a28d04dc38ea53eb32e2d495154e9a1503e2ba2",
+  "value": {
+    "id": "chatcmpl-EVOEU8WMkW6cWG2SuPDLcguvoXqgF",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. L’accumulation de décennies de recherches cliniques constitue un argument en faveur de la sécurité et de l’efficacité des vaccins.\\n2. La vaccination a éradiqué la variole et considérablement réduit la polio.\\n3. L’affirmation selon laquelle les entreprises pharmaceutiques cachent les effets secondaires est une théorie du complot sans fondement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791150026,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 243,
+      "prompt_tokens": 237,
+      "total_tokens": 480,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 151,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

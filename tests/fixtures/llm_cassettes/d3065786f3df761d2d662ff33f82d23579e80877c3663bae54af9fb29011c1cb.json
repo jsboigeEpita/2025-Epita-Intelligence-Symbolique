@@ -1,0 +1,48 @@
+{
+  "key": "d3065786f3df761d2d662ff33f82d23579e80877c3663bae54af9fb29011c1cb",
+  "value": {
+    "id": "chatcmpl-EVOEa9nz1AoJgwJjIwxk8enCB2H3d",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points visibles sont distincts : le point 1 invoque l’accumulation de recherches cliniques pour soutenir la sécurité et l’efficacité, tandis que le point 2 s’appuie sur les résultats historiques de la vaccination (éradication de la variole et réduction de la polio). Le point 3 étant tronqué, aucune redondance supplémentaire ne peut être évaluée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791150032,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 224,
+      "prompt_tokens": 298,
+      "total_tokens": 522,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 124,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

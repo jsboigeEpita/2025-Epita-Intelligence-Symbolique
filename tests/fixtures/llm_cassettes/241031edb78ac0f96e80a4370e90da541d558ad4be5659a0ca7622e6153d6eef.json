@@ -1,0 +1,48 @@
+{
+  "key": "241031edb78ac0f96e80a4370e90da541d558ad4be5659a0ca7622e6153d6eef",
+  "value": {
+    "id": "chatcmpl-EVOCLw21CA7WmBkypcUBPYv9Uxg7D",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Le point 1 présente une idée complète et spécifique : un compromis budgétaire entre visibilité externe et amélioration pédagogique. Le point 2 étant tronqué (« L’option B recomman… »), aucune redondance avec le point 1 ne peut être établie.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149893,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 151,
+      "prompt_tokens": 297,
+      "total_tokens": 448,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 74,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
