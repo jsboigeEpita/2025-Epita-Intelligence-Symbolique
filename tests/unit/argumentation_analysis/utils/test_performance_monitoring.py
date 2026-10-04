@@ -146,11 +146,21 @@ class TestMonitorPerformanceOnCoroutines:
 
         `performance_logger` a `propagate = False` : `caplog` (branché sur le
         logger racine) ne le voit pas. On pose donc un handler sur ce logger-là.
+
+        Le seuil est tiré du plancher garanti, pas du dernier mesuré (#2925) :
+        la CI a mesuré 36,14 ms pour un `sleep(0.05)` — la boucle d'événements
+        Windows peut réveiller en avance d'un tick timer (~15,6 ms), et un seuil
+        à 4 ms sous la demande laisse moins de marge qu'un tick. Ici on demande
+        200 ms et on exige 100 ms : la marge (100 ms ≈ 6 ticks) absorbe tout
+        réveil anticipé légitime, tandis que la régression #2340 (le wrapper
+        synchrone ne chronomètre que la *création* de la coroutine) mesure ~0 ms
+        et reste deux ordres de grandeur sous le seuil. Baisser le seuil au
+        lieu de l'ancrer sur le plancher réintroduirait le flake.
         """
 
         @monitor_performance()
         async def slow():
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(0.2)
 
         records = []
 
@@ -168,4 +178,4 @@ class TestMonitorPerformanceOnCoroutines:
 
         durations = [json.loads(message)["execution_time_ms"] for message in records]
         assert durations, "le logger de performance n'a rien émis"
-        assert max(durations) >= 40.0, durations
+        assert max(durations) >= 100.0, durations
