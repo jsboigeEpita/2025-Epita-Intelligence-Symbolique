@@ -1,0 +1,48 @@
+{
+  "key": "ebf2ef3361d9a63fa53963bcb85dbcf0f132438616786d81fb1a775534146aa2",
+  "value": {
+    "id": "chatcmpl-EVOAqUVqWaM09wCMtnps39yHrVQMN",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.55,\"fairness_assessment\":\"La méthode est équitable si les trois options sont évaluées selon des critères transparents — besoins des usagers, coûts initiaux et récurrents, accessibilité et impact — avec un poids égal pour chaque position. L'avantage de l'option B ne suffit pas à justifier une décision sans données complémentaires.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"Agent A\",\"position\":\"Privilégier l'élargissement du fonds de livres jeunesse pour répondre aux besoins de lecture des enfants.\",\"influence\":0.3},{\"agent\":\"Agent B\",\"position\":\"Créer un espace numérique avec des ordinateurs en libre accès, option ayant remporté le débat avec une bonne qualité argumentative.\",\"influence\":0.4},{\"agent\":\"Agent C\",\"position\":\"Répartir la subvention à parts égales entre les livres jeunesse et l'espace numérique afin de diversifier les bénéfices.\",\"influence\":0.3}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"Les trois options répondent à des besoins légitimes et les objections portent surtout sur la demande réelle, les coûts récurrents et le risque de sous-financement. Un vote social-choice permet de classer les options plutôt que de dépendre du seul débatteur dominant. Il est recommandé de collecter rapidement les besoins des usagers, d'estimer les coûts complets, puis d'adopter une solution progressive ou un financement hybride ajusté aux résultats, plutôt qu'un partage égal automatique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149800,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 448,
+      "prompt_tokens": 517,
+      "total_tokens": 965,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 116,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "key": "eb5018311dfcba9382478ffd238624f8841c30fa472263fe7714da9a80f5bc3d",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_6iTLc8KFCtoEgCP5WbiJrCv6",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"Le texte invoque l'unanimité des experts et exclut l'avis des non-experts; il ne déstabilise pas l'interlocuteur pour ensuite reformuler une demande plus acceptable. Cela ne correspond pas à la perturbation-recadrage.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EVO7oNMcmnXP6mEgu3jjZE8c0KjFQ",
+        "created": 1791149612,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 654,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 75,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

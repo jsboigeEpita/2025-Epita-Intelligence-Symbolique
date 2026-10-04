@@ -1,0 +1,48 @@
+{
+  "key": "8fb45780b19d8f38a983c203b151fddc90f45b2bce15c2be56082fa86a236d65",
+  "value": {
+    "id": "chatcmpl-EVOEdor3U9o8PI8YWDqg3VkPNR552",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\":true,\"redundancy_verdict\":\"redondance_sémantique\",\"located_redundancy\":\"Points 1 et 3\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791150035,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 253,
+      "prompt_tokens": 412,
+      "total_tokens": 665,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 206,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

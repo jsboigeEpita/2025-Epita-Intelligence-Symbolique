@@ -1,0 +1,48 @@
+{
+  "key": "f36e7e15425805cf7ce7741a751d9157d22eb4d34dac1bd223c3dfe5211aac51",
+  "value": {
+    "id": "chatcmpl-EVOFeawo6sQILZthkmp0WwT2KDEn6",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Le point 1 avance le risque d’erreurs judiciaires, tandis que le point 3 semble traiter des progrès de l’ADN qui réduisent ces erreurs : il y a donc une redondance partielle, le point 3 pouvant préciser ou nuancer le premier. Le point 2, sur l’effet dissuasif de la peine de mort, apporte une idée distincte.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791150098,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 206,
+      "prompt_tokens": 307,
+      "total_tokens": 513,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 105,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

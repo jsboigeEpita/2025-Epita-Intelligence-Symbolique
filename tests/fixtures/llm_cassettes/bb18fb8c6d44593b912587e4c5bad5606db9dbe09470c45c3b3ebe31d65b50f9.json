@@ -1,0 +1,48 @@
+{
+  "key": "bb18fb8c6d44593b912587e4c5bad5606db9dbe09470c45c3b3ebe31d65b50f9",
+  "value": {
+    "id": "chatcmpl-EVOEJ1nxIFpetdIjlM5T3SX8YSiFt",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Les études scientifiques montrent que la vaccination a éradiqué la variole et considérablement réduit la polio. L’accumulation de décennies de recherches cliniques constitue un argument en faveur de la sécurité et de l’efficacité des vaccins. Les affirmations selon lesquelles les vaccins sont dangereux ou que les produits pharmaceutiques cachent leurs effets secondaires ignorent ces recherches et reposent sur une théorie du complot sans fondement.\",\"conclusion\":\"Les vaccins sont sûrs et efficaces.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791150015,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 206,
+      "prompt_tokens": 277,
+      "total_tokens": 483,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 87,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

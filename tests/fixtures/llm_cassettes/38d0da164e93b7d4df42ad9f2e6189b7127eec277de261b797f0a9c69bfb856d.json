@@ -1,14 +1,14 @@
 {
   "key": "38d0da164e93b7d4df42ad9f2e6189b7127eec277de261b797f0a9c69bfb856d",
   "value": {
-    "id": "chatcmpl-EUBzryMPUcE53fRS2hBnZ7CN6nx4o",
+    "id": "chatcmpl-EVO7FULtlctHFOPt3WdHx0FkwS68m",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"formulas\":[\"Affirms(president, economicPolicySuccessClaim) && About(economicPolicySuccessClaim, economicPolicy) && IsSuccess(economicPolicySuccessClaim) && IsIncontestable(economicPolicySuccessClaim)\"],\"predicates\":{\"Affirms\":[\"Person\",\"Claim\"],\"About\":[\"Claim\",\"Policy\"],\"IsSuccess\":[\"Claim\"],\"IsIncontestable\":[\"Claim\"]},\"sorts\":{\"Person\":[\"president\"],\"Policy\":[\"economicPolicy\"],\"Claim\":[\"economicPolicySuccessClaim\"]},\"constants\":{\"president\":\"the president\",\"economicPolicy\":\"the economic policy\",\"economicPolicySuccessClaim\":\"the claim that the economic policy is an indisputable success\"},\"confidence\":0.93}",
+          "content": "{\"formulas\":[\"AffirmsSuccess(president, politiqueEconomique)\",\"Indisputable(politiqueEconomique)\"],\"predicates\":{\"AffirmsSuccess\":[\"Person\",\"Policy\"],\"Indisputable\":[\"Policy\"]},\"sorts\":{\"Person\":[\"president\"],\"Policy\":[\"politiqueEconomique\"]},\"constants\":{\"president\":\"the president\",\"politiqueEconomique\":\"the economic policy\"},\"confidence\":0.93}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1790864663,
+    "created": 1791149577,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 972,
+      "completion_tokens": 535,
       "prompt_tokens": 295,
-      "total_tokens": 1267,
+      "total_tokens": 830,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 816,
+        "reasoning_tokens": 440,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

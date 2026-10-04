@@ -1,0 +1,48 @@
+{
+  "key": "37ce9ff106253f3cfd0fd741805359a9a3e5f1dede8ba4572b5ef52a8526e926",
+  "value": {
+    "id": "chatcmpl-EVOFMbCkSM71KmxXlc9WyKApcGnN1",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Le système judiciaire peut se tromper, ce qui rend l'application de la peine de mort dangereuse.\",\"main_thesis\":\"Les avancées en ADN réduisent considérablement le risque d'erreur judiciaire et certains criminels irrécupérables représentent un danger permanent pour la société, mais la peine de mort demeure irréversible et toute erreur serait fatale.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791150080,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 254,
+      "prompt_tokens": 301,
+      "total_tokens": 555,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 160,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "key": "4fda0c30f1e1ae98f352c2b94f1c707ed26ae03ba6de1b285d8988bb84f1761f",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"fallacy_name\":\"Lapalissade\",\"taxonomy_pk\":\"31\",\"explanation\":\"Le texte énonce des affirmations banales et évidentes, sans fournir de raisonnement ou d’information substantielle.\",\"confidence\":0.86}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EVO6NOPh06zm1n5F3wNGpmI5BTZg7",
+        "created": 1791149523,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 22905,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 22902,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 315,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 258,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

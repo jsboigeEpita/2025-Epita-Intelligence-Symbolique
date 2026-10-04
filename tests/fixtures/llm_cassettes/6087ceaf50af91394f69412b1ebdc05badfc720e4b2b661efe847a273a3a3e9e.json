@@ -6,15 +6,25 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_tBbSm8wdmzbPFcJ7Rk0Idu3d",
-          "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"1386\",\"confidence\":\"high\",\"justification\":\"L'argument 2 écarte l'avis d'une personne uniquement parce qu'elle n'est pas experte, ce qui correspond directement à l'appel à la réussite décrit ici. L'argument 1 invoque en outre l'unanimité des experts comme preuve de vérité, mais dans la branche actuelle, le rejet de l'avis des non-experts relève bien de ce nœud général.\"}"
+          "id": "call_9CkEtBwMGQ3rxNAABptHAEPJ",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"1389\"}"
+        },
+        {
+          "id": "call_Q9JiWjuZVf7RJWXwAPyCXHG9",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"1391\"}"
+        },
+        {
+          "id": "call_AJi5CedpHm3VL93tdhlHn7gh",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"1386\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EUC3yaArIy8HXW4ZWA8N4LvaihFuH",
-        "created": 1790864918,
+        "id": "chatcmpl-EVO8GkvcxCw0vc8zMS3WiY4yX44mV",
+        "created": 1791149640,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1423,
@@ -25,7 +35,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 112,
+          "completion_tokens": 79,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

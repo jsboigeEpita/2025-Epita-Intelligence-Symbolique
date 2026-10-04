@@ -1,0 +1,48 @@
+{
+  "key": "8b7c6d3012e53fee946ba8356aa74e0cc2cd2a3bec75ec1d3b7af02f2550ea6b",
+  "value": {
+    "id": "chatcmpl-EVOGFWxmKyvLZ7W0j1VwFeOxkImlL",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"obstacle_genuinely_opaque\":false,\"clarity_verdict\":\"résolvable_contexte\",\"reasoning\":\"Le contexte climatique et la mention des impacts anticipés permettent d’inférer qu’il s’agit de modèles utilisés pour prévoir l’évolution du climat, même si leur définition technique n’est pas précisée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791150135,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 240,
+      "prompt_tokens": 332,
+      "total_tokens": 572,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 166,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

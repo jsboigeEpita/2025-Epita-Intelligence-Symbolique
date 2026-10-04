@@ -1,0 +1,40 @@
+{
+  "key": "a2af3842676bac3969cc818104426ecae1874a46a6d83e86dc75622e270dff8e",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_h9pUaEoi4qYoxJGNRZc9UhDe",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"865\",\"confidence\":\"low\",\"justification\":\"La phrase affirme simplement que la politique économique est un succès incontestable, sans indice d’un changement historique du sens d’un terme ni d’une autre confusion sémantique décrite par ce nœud.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EVO798NlBx56y2jHWDi9ezcBeSmgY",
+        "created": 1791149571,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1408,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1405,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 73,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

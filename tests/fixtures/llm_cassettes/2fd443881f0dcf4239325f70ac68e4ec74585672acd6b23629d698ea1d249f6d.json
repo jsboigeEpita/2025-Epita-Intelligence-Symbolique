@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"forall X: (Homme(X) => Mortel(X))\",\n    \"Homme(socrate)\"\n  ],\n  \"predicates\": {\n    \"Homme\": \"est un homme\",\n    \"Mortel\": \"est mortel\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La première phrase signifie que tout humain est mortel. La seconde affirme que Socrate est un humain.\"\n}",
+      "content": "{\n  \"formulas\": [\n    \"forall X: (Homme(X) => Mortel(X))\",\n    \"Homme(socrate)\"\n  ],\n  \"predicates\": {\n    \"Homme\": \"est un humain\",\n    \"Mortel\": \"est mortel\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La phrase « Todos los humanos sont mortales » signifie que tout humain est mortel. La phrase « Sócrates es un humano » affirme que Socrate est un humain. La constante « socrate » est écrite en minuscules conformément à la syntaxe demandée.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EUC7f2PUfUSZRxhDAPqugxLt5SvEO",
-        "created": 1790865147,
+        "id": "chatcmpl-EVOBiysmwIdHbrXQt8YoyhLvLRDEy",
+        "created": 1791149854,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 287,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 141,
+          "completion_tokens": 179,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 29,
+            "reasoning_tokens": 32,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

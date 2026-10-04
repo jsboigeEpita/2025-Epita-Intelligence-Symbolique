@@ -1,0 +1,48 @@
+{
+  "key": "1a80a41a159e5da6f04fbaf583375b7bac906fc7124774655f9ad8409d5ce322",
+  "value": {
+    "id": "chatcmpl-EVO57UA5EjrZhzvS8Jzr47RKyI94i",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_digression\":true,\"relevance_verdict\":\"digression_localisée\",\"located_digression\":\"La présentation du déficit à 2,3 % du PIB en 2030, la critique des hypothèses de croissance optimistes de 1,8 % par an et le recours à l'argument « pensez à vos enfants », présenté comme un appel à l'émotion, s'écartent de la thèse principale sur la déformation de la position de l'opposition.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149445,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 179,
+      "prompt_tokens": 475,
+      "total_tokens": 654,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 69,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

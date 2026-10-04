@@ -1,0 +1,48 @@
+{
+  "key": "633cf46e009b780e377b88bb0ed532c884913c803f5ec4e5682222f6f3ded6da",
+  "value": {
+    "id": "chatcmpl-EVOGT3WakwISb6oVNtRcIJUiTKXbG",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Les modèles prédictifs sont unanimes sur l’impact des activités humaines. Les sceptiques omettent la vitesse sans précédent du changement actuel et les personnes qui minimisent la crise utilisent souvent des données sélectives.\",\"conclusion\":\"Les activités humaines sont la cause principale des impacts climatiques anticipés par les modèles prédictifs.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791150149,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 171,
+      "prompt_tokens": 279,
+      "total_tokens": 450,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 85,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

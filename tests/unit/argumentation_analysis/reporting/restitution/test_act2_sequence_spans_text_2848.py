@@ -3,8 +3,9 @@ the text, born-red guard.
 
 The measured defect (#2841 pass, document 8fa89437_ext1): Act I announces 94
 extracted arguments, Act II narrates 6 movements — all mapping onto arguments
-1-3; the writer anchored only the first 12 asserts (_EXTRACT_ASSERT_CAP) and
-the renderer took the first 8 of those. The narrative covered the opening.
+1-3; the writer anchored only the first 12 asserts (a cap #2887 removed — the
+writer now emits every assert) and the renderer took the first 8 of those.
+The narrative covered the opening.
 
 This guard builds a synthetic 94-argument state through the PRODUCTION
 writer (``_write_fact_extraction_to_state``), then the Act II prompt through

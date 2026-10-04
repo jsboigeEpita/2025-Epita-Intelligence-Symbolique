@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_GSkFg9KwBFBGP9VzKVxg3S9x",
+          "id": "call_g3ogwxEcN8Krm8lDauwREhEq",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"133\",\"confidence\":\"high\",\"justification\":\"L’énoncé présente comme un succès incontestable une affirmation politique sans fournir d’éléments justificatifs, ce qui constitue une conclusion exagérée par rapport aux informations disponibles.\"}"
+          "arguments": "{\"node_pk\":\"133\",\"confidence\":\"high\",\"justification\":\"L’énoncé tire une conclusion catégorique (« succès incontestable ») à partir de la seule affirmation du président, sans fournir d’éléments suffisants pour l’étayer. Il s’agit d’une conclusion exagérée par rapport aux informations disponibles.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EUBzirJWkKQUEcl9agkqufNdV7lTQ",
-        "created": 1790864654,
+        "id": "chatcmpl-EVO79SttYp3sIlDaRiQHoE0tcgZes",
+        "created": 1791149571,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1687,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 67,
+          "completion_tokens": 83,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

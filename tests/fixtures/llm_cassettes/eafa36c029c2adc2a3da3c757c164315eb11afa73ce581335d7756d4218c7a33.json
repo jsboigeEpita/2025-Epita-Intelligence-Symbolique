@@ -1,0 +1,48 @@
+{
+  "key": "eafa36c029c2adc2a3da3c757c164315eb11afa73ce581335d7756d4218c7a33",
+  "value": {
+    "id": "chatcmpl-EVOELfwe4Wn8ca8BOPmWoodHveo9V",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. La vaccination est indispensable à la protection de la santé publique.\\n2. Les études scientifiques montrent que la vaccination a éradiqué la variole et considérablement réduit la polio.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791150017,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 96,
+      "prompt_tokens": 194,
+      "total_tokens": 290,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 43,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

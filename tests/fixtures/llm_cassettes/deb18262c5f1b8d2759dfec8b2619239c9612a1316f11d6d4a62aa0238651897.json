@@ -1,0 +1,48 @@
+{
+  "key": "deb18262c5f1b8d2759dfec8b2619239c9612a1316f11d6d4a62aa0238651897",
+  "value": {
+    "id": "chatcmpl-EVOA8shfRkNJnzxD9e5l1VT7auGhB",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"Répartir la subvention à parts égales entre le fonds de livres et l'espace numérique.\",\"digressions\":\"« Option B : créer un espace numérique avec des ordinateurs en libre accès. »\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149756,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 105,
+      "prompt_tokens": 236,
+      "total_tokens": 341,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 44,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

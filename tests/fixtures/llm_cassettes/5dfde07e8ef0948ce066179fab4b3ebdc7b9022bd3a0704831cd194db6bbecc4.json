@@ -1,0 +1,40 @@
+{
+  "key": "5dfde07e8ef0948ce066179fab4b3ebdc7b9022bd3a0704831cd194db6bbecc4",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_RHMYWOSAuC89ay2Ptzkv0HFR",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"953\",\"confidence\":\"high\",\"justification\":\"L’affirmation présente la politique économique comme un succès « incontestable » sans fournir de faits ni mentionner d’éventuels éléments contradictoires, ce qui correspond à une sélection unilatérale des éléments favorables.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EVO7BYiUTIFH7UHW0i0ad4CA26es0",
+        "created": 1791149573,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1437,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1434,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 76,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

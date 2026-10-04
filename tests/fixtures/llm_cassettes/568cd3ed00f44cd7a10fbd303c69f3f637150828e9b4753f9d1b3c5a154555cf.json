@@ -1,0 +1,48 @@
+{
+  "key": "568cd3ed00f44cd7a10fbd303c69f3f637150828e9b4753f9d1b3c5a154555cf",
+  "value": {
+    "id": "chatcmpl-EVOEIlbvDeRrqVjBFGwUT36mSj38o",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Les produits pharmaceutiques cachent les effets secondaires.\",\"main_thesis\":\"Les taux élevés de vaccination protègent indirectement les personnes qui ne peuvent pas être vaccinées grâce à l’immunité collective, et l’idée que les effets secondaires sont cachés est une théorie du complot sans fondement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791150014,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 373,
+      "prompt_tokens": 283,
+      "total_tokens": 656,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 289,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

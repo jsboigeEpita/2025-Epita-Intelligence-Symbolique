@@ -1,14 +1,14 @@
 {
   "key": "f34acae564d5be12974993f39b1727818ff73c925003e92d7ed647d0479d5892",
   "value": {
-    "id": "chatcmpl-EUCB5k3TzaJairMhoIUxYuu3xfaQP",
+    "id": "chatcmpl-EVOEP3yj4pDNL4LrUIQbUA2Kdx47r",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":1.0,\"exhibit\":\"La position adverse — « les produits pharmaceutiques cachent les effets secondaires » — est explicitement identifiée et fait l’objet d’un engagement réel.\"}",
+          "content": "{\"score\":1.0,\"exhibit\":\"La position adverse — « les produits pharmaceutiques cachent les effets secondaires » — est identifiée et fait l’objet d’un engagement réel.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1790865359,
+    "created": 1791150021,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 83,
+      "completion_tokens": 88,
       "prompt_tokens": 255,
-      "total_tokens": 338,
+      "total_tokens": 343,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 32,
+        "reasoning_tokens": 39,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

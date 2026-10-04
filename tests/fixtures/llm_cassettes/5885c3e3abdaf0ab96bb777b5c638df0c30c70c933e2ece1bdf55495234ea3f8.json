@@ -1,0 +1,48 @@
+{
+  "key": "5885c3e3abdaf0ab96bb777b5c638df0c30c70c933e2ece1bdf55495234ea3f8",
+  "value": {
+    "id": "chatcmpl-EVOGaiE5z6m46ENEQKRs7ExLMkASQ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Les activités humaines sont présentées comme la cause principale des impacts climatiques anticipés par les modèles prédictifs.\\n2. Les sceptiques reconnaissent que le climat a toujours changé, mais omettent la vitesse sans précédent du changement actuel.\\n3. Les personnes qui minimisent la crise climatique utilisent souvent des données sélectives pour soutenir leur position.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791150156,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 151,
+      "prompt_tokens": 239,
+      "total_tokens": 390,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 62,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

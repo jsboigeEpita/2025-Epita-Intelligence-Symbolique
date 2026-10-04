@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_n0KEOwZUkKMZsdKchQE3207m",
-          "name": "Exploration-conclude_no_fallacy",
-          "arguments": "{\"reason\":\"Le texte contient un appel à l'autorité et une exclusion de l'avis des non-experts, mais ne discrédite pas une partie adverse par des informations préjudiciables ; la branche « empoisonnement du puits » ne correspond pas.\"}"
+          "id": "call_OIsCB3JULE12nrhlkko4MMCe",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1352\",\"confidence\":\"high\",\"justification\":\"Le deuxième argument discrédite directement l’interlocuteur non expert (« votre avis ne compte pas ») au lieu d’examiner son raisonnement, ce qui correspond à l’empoisonnement du puits. Le premier argument constitue aussi un appel à l’autorité, mais dans la branche actuelle le second relève clairement de cette catégorie.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EUC40pQ7Rr8NcELw3HO3C6lG69LgX",
-        "created": 1790864920,
+        "id": "chatcmpl-EVO8J1SryBpT4DuEFK3joMAe9n1mm",
+        "created": 1791149643,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1479,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 75,
+          "completion_tokens": 101,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

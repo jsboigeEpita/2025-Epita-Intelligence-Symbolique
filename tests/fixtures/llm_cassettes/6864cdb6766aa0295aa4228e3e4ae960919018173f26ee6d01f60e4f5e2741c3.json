@@ -1,0 +1,40 @@
+{
+  "key": "6864cdb6766aa0295aa4228e3e4ae960919018173f26ee6d01f60e4f5e2741c3",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_Wnu0qNi42jDHWxEuCvWRK3Fo",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"889\",\"confidence\":\"low\",\"justification\":\"La phrase affirme seulement que le président qualifie la politique économique de succès; elle ne fournit pas d’élément établissant que cette affirmation est fausse ou que le président la sait fausse. Le mensonge n’est donc pas suffisamment démontré.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EVO7CaJZAeMUWYAzKpJ8NDJgmqODk",
+        "created": 1791149574,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1948,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1945,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 82,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "key": "0d7a87522d369a4c6c731897d9b4d0a8128f2bc09af0b9e0ae6f369d59af939b",
+  "value": {
+    "id": "chatcmpl-EVOFbDrtmdTlDW4elCIlqNJ5cRmJS",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les trois points apportent des idées distinctes : danger permanent de certains criminels, possibilité d’erreurs judiciaires, puis réduction de ces erreurs grâce aux avancées de l’ADN. Les points 2 et 3 sont liés, mais le troisième précise une évolution corrective plutôt qu’une répétition.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791150095,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 159,
+      "prompt_tokens": 300,
+      "total_tokens": 459,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 77,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

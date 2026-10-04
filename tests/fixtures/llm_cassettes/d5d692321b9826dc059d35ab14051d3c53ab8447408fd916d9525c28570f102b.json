@@ -1,0 +1,48 @@
+{
+  "key": "d5d692321b9826dc059d35ab14051d3c53ab8447408fd916d9525c28570f102b",
+  "value": {
+    "id": "chatcmpl-EVOCpXHGjgqan1lTMtJNYNeO5i2gr",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.68,\"fairness_assessment\":\"Une agrégation des préférences entre les trois options permet de comparer équitablement visibilité, recrutement et amélioration pédagogique, mais l’absence de données sur l’urgence du matériel et l’impact réel du tournoi limite la précision.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"Agent A\",\"position\":\"Privilégie un tournoi inter-villes avec buffet et prix afin d’accroître la visibilité et le recrutement.\",\"influence\":0.62},{\"agent\":\"Agent B\",\"position\":\"Privilégie l’investissement intégral dans du matériel pédagogique pour répondre à l’usure des équipements et renforcer les ressources internes.\",\"influence\":0.82},{\"agent\":\"Agent C\",\"position\":\"Propose un partage égal du budget entre un tournoi réduit et le renouvellement du matériel.\",\"influence\":0.7}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"Les trois options répondent à des besoins légitimes et les désaccords portent sur les priorités et les effets attendus, non sur des principes incompatibles. Une procédure de vote préférentiel ou de classement, complétée par des critères communs d’urgence, d’impact et de coût, devrait favoriser une décision légitime. Le compromis peut être retenu, éventuellement sous forme d’un financement prioritaire du matériel et d’une action de communication plus ciblée, plutôt qu’un partage strictement égal.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149923,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 446,
+      "prompt_tokens": 640,
+      "total_tokens": 1086,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 133,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

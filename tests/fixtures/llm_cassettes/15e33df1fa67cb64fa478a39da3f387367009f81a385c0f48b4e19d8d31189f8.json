@@ -1,0 +1,48 @@
+{
+  "key": "15e33df1fa67cb64fa478a39da3f387367009f81a385c0f48b4e19d8d31189f8",
+  "value": {
+    "id": "chatcmpl-EVO5ZDBU1dgixwIsKrXX6vLO43V4i",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points portent sur des idées distinctes : la position de l’opposition, la projection du déficit et un troisième point seulement amorcé (« Cette projection »). Aucune redondance substantielle n’est démontrée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149473,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 140,
+      "prompt_tokens": 299,
+      "total_tokens": 439,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 75,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

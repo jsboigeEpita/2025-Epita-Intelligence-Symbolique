@@ -10,6 +10,7 @@ difference is the whole point of #2295 (the state currently flattens the
 argumentative construction; the sequence is what restores it).
 """
 
+import re
 from types import SimpleNamespace
 
 from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
@@ -125,7 +126,13 @@ class TestPromptRendering:
         )
         prompt = build_act2_prompt(self._evidence(collect_text_sequence(state)))
         assert "SÉQUENCE DU TEXTE" in prompt
-        assert "arg_2" in prompt and "arg_1" in prompt
+        # #2896 (d): the thread's actors are stable letters, one per
+        # distinct arg_ref — two moves by two arguments render as two
+        # letters; a raw ``arg_N`` never reaches the narrator (the paid
+        # run's Act II printed « ``arg_40`` tente de… »).
+        assert "l'argument α" in prompt and "l'argument β" in prompt
+        _seq_part = prompt.split("SÉQUENCE DU TEXTE")[1].split("RÔLES DES")[0]
+        assert not re.search(r"arg_\d+", _seq_part)
         # the honest verdict: the reader is told the two orders differ
         assert "diffère" in prompt
 

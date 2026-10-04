@@ -1,0 +1,48 @@
+{
+  "key": "e6ec6f8c7cd94fcf34d5a8ff61375ab454bfdb20df919321fbb34d90fa202e0d",
+  "value": {
+    "id": "chatcmpl-EVOC9d45f0yLNO1ljy9ldqV9T0AJ8",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Investir intégralement les 2000 euros dans du matériel pédagogique neuf (échiquiers, horloges et supports de cours) afin de remplacer les échiquiers usés et d’améliorer les ressources internes.\\n2. Organiser un tournoi inter-villes avec buffet et prix pour 2000 euros afin d’accroître la visibilité du club et de recruter de nouveaux membres.\\n3. Adopter un format hybride en consacrant 1000 euros à un tournoi réduit et 1000 euros au matériel pédagogique, afin d’équilibrer visibilité et pédagogie.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149881,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 312,
+      "prompt_tokens": 319,
+      "total_tokens": 631,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 177,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "key": "3ce798b715c00f7dc02162b56f6a1cae972e386cd84170efb41ed890e7815303",
+  "value": {
+    "id": "chatcmpl-EVO4qmis6FqnbgdKHD9yBfzqEiaFO",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La position adverse est clairement identifiée : le gouvernement prévoit un déficit de 2,3 % du PIB d’ici 2030. Le verdict indique un engagement réel avec cette thèse adverse, ce qui constitue une réfutation constructive pleinement démontrée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149428,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 99,
+      "prompt_tokens": 274,
+      "total_tokens": 373,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 28,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

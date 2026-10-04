@@ -1,0 +1,40 @@
+{
+  "key": "ca6b807997c70612274bd600205e8ae3a31477d8a7390c5df17f9f0c854b8cf6",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_mfz2Og0xAFP4QCkuIWVGqMDD",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"860\",\"confidence\":\"low\",\"justification\":\"La phrase affirme un succès « incontestable » sans fournir de justification, mais elle ne présente pas clairement un glissement de sens lexical polysémique. Ce nœud est donc au mieux un rapprochement faible.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EVO79jcxbtZMkQiauMalPhsdXJXf8",
+        "created": 1791149571,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1308,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1305,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 74,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "key": "9c007667ee2fedc05328c727a5358d4c3598afef5a33221b9b8693703df3c5df",
+  "value": {
+    "id": "chatcmpl-EVO551RipBy6u6GFskik7VPbtiGrB",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Les points 1 et 3 reprennent vraisemblablement la même projection d’un déficit de 2,3 % du PIB d’ici 2030, créant une redondance sémantique. Le point 2 apporte en revanche une idée distincte sur le sophisme naturaliste.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149443,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 199,
+      "prompt_tokens": 305,
+      "total_tokens": 504,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 117,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

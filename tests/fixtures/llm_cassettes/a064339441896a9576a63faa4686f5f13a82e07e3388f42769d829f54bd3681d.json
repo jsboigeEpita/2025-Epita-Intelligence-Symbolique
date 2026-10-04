@@ -1,0 +1,48 @@
+{
+  "key": "a064339441896a9576a63faa4686f5f13a82e07e3388f42769d829f54bd3681d",
+  "value": {
+    "id": "chatcmpl-EVO9w2AWx5rkOjOcUbYQex6M3HOKX",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.62,\"fairness_assessment\":\"A ranked social-choice process fairly compares visibility, educational value, sustainability, and budget sufficiency rather than privileging a single objective. A deliberative scoring or ranked-choice vote is preferable to a simple majority because all three options have meaningful trade-offs.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"Agent A\",\"position\":\"Favors spending the full budget on an inter-city tournament with prizes and a buffet to maximize the club's visibility.\",\"influence\":0.33},{\"agent\":\"Agent B\",\"position\":\"Favors spending the full budget on educational materials and new chessboards to strengthen the club's long-term instructional capacity.\",\"influence\":0.4},{\"agent\":\"Agent C\",\"position\":\"Favors dividing the budget equally between a smaller tournament and new equipment as a balanced alternative.\",\"influence\":0.27}],\"recommended_resolution\":\"collaborative\",\"governance_reasoning\":\"The three positions reflect competing but legitimate goals, and none has an overwhelming evidentiary advantage. Use collaborative deliberation to establish weighted criteria, require each option to address cost-effectiveness and measurable outcomes, then apply a ranked or scored social-choice vote. A data-informed hybrid allocation may emerge, but it should not be imposed as an arbitrary 50/50 compromise.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149744,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 370,
+      "prompt_tokens": 563,
+      "total_tokens": 933,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 85,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,14 +1,14 @@
 {
   "key": "857548bf8c6b74b1216684e46ab7aea88fb5c1418320bfe2274d47191fe3ca66",
   "value": {
-    "id": "chatcmpl-EUC41e2ApXnjb3LyZPjsvWe4Lnnow",
+    "id": "chatcmpl-EVO8OiQ1YnWXUwEViZDrPsMVNxmZl",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\n  \"sorts\": {\n    \"Person\": [],\n    \"Proposition\": [],\n    \"Opinion\": []\n  },\n  \"predicates\": {\n    \"Expert\": [\"Person\"],\n    \"Unanimous\": [\"Person\"],\n    \"True\": [\"Proposition\"],\n    \"HasOpinion\": [\"Person\", \"Opinion\"],\n    \"Counts\": [\"Opinion\"]\n  },\n  \"constants\": {}\n}",
+          "content": "{\n  \"sorts\": {\n    \"Person\": [],\n    \"Opinion\": [],\n    \"Proposition\": []\n  },\n  \"predicates\": {\n    \"Expert\": [\"Person\"],\n    \"Unanimous\": [\"Person\"],\n    \"True\": [\"Proposition\"],\n    \"HasOpinion\": [\"Person\", \"Opinion\"],\n    \"Counts\": [\"Opinion\"]\n  },\n  \"constants\": {}\n}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1790864921,
+    "created": 1791149648,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,

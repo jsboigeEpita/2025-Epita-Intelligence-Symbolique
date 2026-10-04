@@ -1,14 +1,14 @@
 {
   "key": "dd428c49c0ed3ac61e6f7382ff32e78aec47fcdb1be175f2f4de9fc1ef6b580c",
   "value": {
-    "id": "chatcmpl-EUBzNcCMRrFb3n4NagZWHCtQDfPBL",
+    "id": "chatcmpl-EVO6rWFBnJTHdEUUDXE4mRknR70M9",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[{\"text\":\"Le président soutient que la politique économique constitue un succès incontestable.\",\"source_quote\":\"la politique economique est un succes incontestable\"}],\"claims\":[{\"text\":\"Le président affirme publiquement que la politique économique est un succès incontestable.\",\"source_quote\":\"Le president affirme que la politique economique est un succes incontestable.\"}],\"summary\":\"Le texte présente une affirmation catégorique attribuée au président, sans fournir d’éléments permettant de vérifier le succès de la politique économique.\"}",
+          "content": "{\"arguments\":[{\"text\":\"Le président soutient que la politique économique constitue un succès incontestable.\",\"source_quote\":\"Le president affirme que la politique economique est un succes incontestable.\"},{\"text\":\"Position opposée citée : la politique économique est un succès incontestable.\",\"source_quote\":\"la politique economique est un succes incontestable\"}],\"claims\":[{\"text\":\"Le président affirme que la politique économique est un succès incontestable.\",\"source_quote\":\"Le president affirme que la politique economique est un succes incontestable.\"}],\"summary\":\"Le texte rapporte l’affirmation présidentielle selon laquelle la politique économique serait incontestablement réussie, sans fournir d’éléments permettant de vérifier cette évaluation.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1790864633,
+    "created": 1791149553,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 243,
+      "completion_tokens": 148,
       "prompt_tokens": 317,
-      "total_tokens": 560,
+      "total_tokens": 465,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 127,
+        "reasoning_tokens": 0,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

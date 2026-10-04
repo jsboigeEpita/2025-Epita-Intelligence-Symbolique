@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_f6O93vwSaiWzPSrtZpPwNdUl",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\":\"74\"}"
+          "id": "call_8mcMHQOXeozrXUkKvT5dRe20",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"73\",\"confidence\":\"high\",\"justification\":\"Le président affirme que la politique économique est un succès uniquement en raison de son statut d’autorité, sans fournir de justification ni d’éléments probants. Cela correspond à l’obéissance aveugle à une autorité jugée supérieure.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EUBzmenyJyvFNIJb4JqpiwHES8mvD",
-        "created": 1790864658,
+        "id": "chatcmpl-EVO7D4V4No6tLK7i3Wvs8D7SYGk3X",
+        "created": 1791149575,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1251,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 22,
+          "completion_tokens": 81,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

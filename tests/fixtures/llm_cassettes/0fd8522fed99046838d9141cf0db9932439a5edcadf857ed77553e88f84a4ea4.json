@@ -1,0 +1,48 @@
+{
+  "key": "0fd8522fed99046838d9141cf0db9932439a5edcadf857ed77553e88f84a4ea4",
+  "value": {
+    "id": "chatcmpl-EVOERcb8KgZgxbH1j8xril6WRazHr",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Prémisses : les études scientifiques montrent que la vaccination a éradiqué la variole et considérablement réduit la polio, ainsi que d’autres éléments de recherche. Conclusion : les vaccins sont sûrs et efficaces. Verdict : saut logique, car l’efficacité est partiellement étayée, mais la sécurité ne découle pas directement des prémisses fournies.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791150023,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 136,
+      "prompt_tokens": 283,
+      "total_tokens": 419,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 42,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

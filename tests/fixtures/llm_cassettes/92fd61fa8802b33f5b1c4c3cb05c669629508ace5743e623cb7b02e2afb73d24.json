@@ -1,0 +1,48 @@
+{
+  "key": "92fd61fa8802b33f5b1c4c3cb05c669629508ace5743e623cb7b02e2afb73d24",
+  "value": {
+    "id": "chatcmpl-EVOBxo2M99N617S7FkQwab499briy",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_digression\":true,\"relevance_verdict\":\"digression_localisée\",\"located_digression\":\"La présentation de l’option A (organiser un tournoi inter-villes avec buffet et prix pour accroître la visibilité et recruter des membres) et de l’option C (partager les 2000 euros entre un tournoi réduit et le matériel pédagogique), car ces options alternatives ne servent pas directement la thèse en faveur de l’option B.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149869,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 166,
+      "prompt_tokens": 492,
+      "total_tokens": 658,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 61,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "key": "e57175c03330105ec86702f3a05efcb74137e4def221b3210e2968ff64d51745",
+  "value": {
+    "id": "chatcmpl-EVO5RVDVSZpXIydFW3arbjdHvxRPI",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. L’opposition accuse le gouvernement de déformer sa position : elle ne demande pas la suppression des retraites, mais une réforme différente.\\n2. Le ministre des Finances prévoit que le déficit atteindra 2,3 % du PIB d’ici 2030.\\n3. Cette projection repose sur une hypothèse de croissance jugée optimiste, à 1,8 % par an.\\n4. L’argument « pensez à vos enfants » est un appel à l’émotion qui détourne le débat des questions techniques de financement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149465,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 297,
+      "prompt_tokens": 301,
+      "total_tokens": 598,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 171,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

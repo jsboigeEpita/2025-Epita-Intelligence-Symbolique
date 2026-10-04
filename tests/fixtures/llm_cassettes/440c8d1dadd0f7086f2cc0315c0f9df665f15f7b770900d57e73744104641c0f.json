@@ -1,0 +1,48 @@
+{
+  "key": "440c8d1dadd0f7086f2cc0315c0f9df665f15f7b770900d57e73744104641c0f",
+  "value": {
+    "id": "chatcmpl-EVO5FotJ2RlrucxJbZFcW3FwVNDgG",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Il faudrait supprimer les retraites, alors que personne ne propose leur suppression mais seulement une réforme différente.\",\"main_thesis\":\"L’appel à « penser aux enfants » est un appel à l’émotion qui détourne le débat des aspects techniques du financement et s’appuie sur un homme de paille.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149453,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 355,
+      "prompt_tokens": 293,
+      "total_tokens": 648,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 273,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "key": "71e4936fb5420ba11321e012e07d7d1b99b5b756b2913046a5ba337a57b91045",
+  "value": {
+    "id": "chatcmpl-EVO5Aq46LgH2pY1L2YCmjng0dvLWH",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse soutient que le gouvernement déforme la position de l’opposition en prétendant qu’elle veut supprimer les retraites, alors qu’elle propose seulement une réforme. Des digressions sont localisées dans la présentation du déficit à 2,3 % du PIB en 2030, la critique d’hypothèses de croissance optimistes de 1,8 % par an et le reproche d’un appel à l’émotion.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791149448,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 205,
+      "prompt_tokens": 327,
+      "total_tokens": 532,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 94,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

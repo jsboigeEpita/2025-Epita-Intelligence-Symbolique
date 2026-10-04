@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_WLFPaWimaewx5Z7o94A8Ij9r",
+          "id": "call_Rp6N52wKvCu55Tdt8yPip1wQ",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"22\",\"confidence\":\"high\",\"justification\":\"La phrase présente comme incontestable le succès de la politique économique sans fournir de raison, donnée ou explication logique permettant de l’établir. Elle demande donc d’accepter une affirmation sans justification.\"}"
+          "arguments": "{\"node_pk\":\"22\",\"confidence\":\"high\",\"justification\":\"Le président affirme que la politique économique est un succès incontestable sans fournir aucun élément, raison ou explication pour étayer cette conclusion. Il demande donc implicitement d’accepter cette affirmation comme un fait établi.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EUBzjnUVlyy335tEccrS6I47vO0tB",
-        "created": 1790864655,
+        "id": "chatcmpl-EVO7AboaYYVF6vppkbmU6rtHIc6Dn",
+        "created": 1791149572,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1274,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 71,
+          "completion_tokens": 73,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

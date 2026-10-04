@@ -1,0 +1,40 @@
+{
+  "key": "e4f6c9156bf9f3269934b7d5de4256e1b20e6b056ba3698c92b261bbb1f12524",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_H9iHnIMcS53ubuvOOQr7SLji",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"846\",\"confidence\":\"high\",\"justification\":\"L’énoncé est ambigu en raison de termes vagues et non définis comme « succès » et « incontestable », mais il ne présente pas de structure correspondant clairement à une sous-catégorie plus spécifique affichée.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EVO79G8i2cPXhADhGSOWPkU8AMSYK",
+        "created": 1791149571,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1667,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1664,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 76,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

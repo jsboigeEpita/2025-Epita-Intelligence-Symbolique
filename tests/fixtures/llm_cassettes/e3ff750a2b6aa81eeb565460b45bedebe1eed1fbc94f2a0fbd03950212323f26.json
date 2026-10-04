@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_EtUaga61Mbga8TgxzrsgwkaR",
+          "id": "call_RDAJ882TVviM5KN8PpO0ZvVy",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"26\",\"confidence\":\"high\",\"justification\":\"L’affirmation présente le succès de la politique économique comme « incontestable », une formule toute faite qui tient lieu de preuve sans fournir d’éléments justificatifs.\"}"
+          "arguments": "{\"node_pk\":\"26\",\"confidence\":\"high\",\"justification\":\"L’assertion « succès incontestable » est une formule toute faite et catégorique présentée sans preuve ni éléments concrets, ce qui correspond à une pensée clichée.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EUBzjmFFmlKO8TXC3vj7zqjikEUT6",
-        "created": 1790864655,
+        "id": "chatcmpl-EVO7BIrg7Jf9SkNO1XPaxVvPvYObL",
+        "created": 1791149573,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1414,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 65,
+          "completion_tokens": 66,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
