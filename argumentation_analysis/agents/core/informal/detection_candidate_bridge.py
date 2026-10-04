@@ -2,7 +2,9 @@
 
 The arbitration stage (:mod:`dung_arbitration_stage`) consumes
 :class:`SophismCandidate` atoms. The neural/ML side already produces them
-(:func:`neuro_symbolic_arbitrator.llm_neural_detect_async`, from #1429 PR3). This
+(:func:`neuro_symbolic_arbitrator.llm_neural_detect_async`, from #1429 PR3 —
+currently 0 production callers, parked with this stage as its named consumer,
+owner record #2928). This
 module supplies the **rule side** and a combiner, so the stage can arbitrate
 across detector provenances (rule taxonomy vs ML) — the "rule-vs-ML" dimension
 the #1501 dispatch asks for.

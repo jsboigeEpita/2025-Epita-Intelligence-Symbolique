@@ -96,7 +96,6 @@ PENDING_TRIAGE: dict[tuple[str, str], str] = {
     # declared inside `for name, caps, ... in <rows>:` loops, which the census
     # could not read before #1604: silence the tree already carried, made
     # visible here rather than created.
-    ("multi_axis_compare_service", "multi_axis_compare"): "#1604",
     # dung_arbitration owner -> #1649 (arbitration c.5976719576, reaffirmed by
     # #2920's offline re-measure). #2920 repaired the stage's input ROUTE
     # (R1063 shape): the bridge anchors on target_argument (same-target
@@ -124,13 +123,17 @@ PENDING_TRIAGE: dict[tuple[str, str], str] = {
     # could carry is carried by a phase-resolved capability. The plugin stays
     # mounted by speciality ("logic_agents") — declaration exits, not the
     # component.
-    # ("multi_axis_compare_service", "multi_axis_compare") — row RESTORED at
-    # #1604 review: the registration is its ONLY production route (the MCP
-    # invoke_capability resolves it by name and calls its invoke), and
-    # _invoke_multi_axis_compare has no other production caller. Retiring it
-    # leaves the function with zero production callers — a function
-    # retirement under the Cleanup Gate, not a declaration-only change. The
-    # pair is back in PENDING_TRIAGE above pending that decision.
+    # ("multi_axis_compare_service", "multi_axis_compare") — RETIRED #1604
+    # (Cleanup Gate, R1062 step 4): zero production demanders (no phase
+    # literal, no capability table, no router entry, not in the MCP
+    # advertised tools table) and no downstream reader of the comparison
+    # differential — the retirement stands on demand alone. Function +
+    # registration + its handler tests removed together. Two functions
+    # lost their last caller in the cut, both decided explicitly (R1063
+    # review): compare_all_axes stays as the 0-caller harness owning the
+    # #2491 defect witnesses and the user-gated ATT-3 run (owner record
+    # #2929), and llm_neural_detect_async stays parked with a named
+    # consumer — the Dung stage's second provenance (owner record #2928).
     # ("sat_handler", "sat_solving") — wired #1604 (arbitration): the named
     # MCP tool solve_sat (specialized_tools.py) demands the capability
     # through _invoke_by_capability("sat_solving", ...), which this census

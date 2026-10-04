@@ -251,10 +251,10 @@ not carry.
 | Dung | `_compare_dung_backends` (`invoke_callables.py:6847`) | Tweety/student | ✅ #1432-#1436 |
 | Sophism | `compare_sophism_backends` (`neuro_symbolic_arbitrator.py:526`) | neural/neuro-symbolic | ✅ #1433/#1435 |
 
-### 7c. Unified harness + pipeline-selectable capability — ✅ CLOSED
+### 7c. Unified harness + pipeline-selectable capability — harness ✅, capability RETIRED
 
-- `compare_all_axes` (`invoke_callables.py:7186`) — router + uniform aggregator over the 3 axes, zero re-implementation. ✅ #1438
-- `_invoke_multi_axis_compare` (`invoke_callables.py:7333`) → capability `multi_axis_compare`, registered `multi_axis_compare_service` (`registry_setup.py:470`). Selectable, NOT forced into presets; default honest-absent. ✅ #1439
+- `compare_all_axes` (`invoke_callables.py:7186`) — router + uniform aggregator over the 3 axes, zero re-implementation. ✅ #1438. After the capability's retirement it has 0 production callers; it stays as the harness owning the #2491 defect witnesses and the user-gated ATT-3 run (§7d) — owner record #2929.
+- ~~`_invoke_multi_axis_compare` → capability `multi_axis_compare`, registered `multi_axis_compare_service`~~ — **RETIRED #1604** (Cleanup Gate, R1062 step 4): zero production demanders (no phase, no capability table, no router entry, not in the MCP advertised tools) and no downstream reader of the comparison differential — the retirement stands on demand alone. The retirement also left `llm_neural_detect_async` with 0 production callers: kept deliberately, parked with a named consumer (the Dung stage's second provenance) — owner record #2928.
 
 ### 7d. ⏳ STILL OPEN — real-corpus multi-axis run (ATT-3)
 
