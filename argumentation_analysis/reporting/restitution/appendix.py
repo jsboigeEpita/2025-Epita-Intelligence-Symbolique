@@ -686,6 +686,13 @@ def _reader_contract_section(findings: List[Any]) -> List[str]:
         )
         lines.append("")
         return lines
+    envelope = [f for f in findings if f.criterion == 0]
+    if envelope and len(envelope) == len(findings):
+        # criterion-0 envelope alone: a zero that says it was NOT evaluated
+        # (R1060 silent zeros) — never read as "compliant".
+        lines.append(f"⚠️ {envelope[0].note}.")
+        lines.append("")
+        return lines
     for f in findings:
         lines.append(f"- **Acte** {f.act}, ligne {f.line} — {f.kind} : {f.note}")
     lines.append("")

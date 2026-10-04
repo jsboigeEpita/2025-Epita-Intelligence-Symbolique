@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""#1914 (criteria 2, 3, 4 — dispatch R1059) — post-render act controls.
+"""#1914 (criteria 2, 3, 4 — dispatch R1059, rework R1060) — post-render act
+controls.
 
 The card (c.5969933470) measured the shared gap: the three contracts are
 held at prompt + evidence level, and NO test reads a rendered act. These
@@ -7,6 +8,13 @@ witnesses pin the mechanical half — each control finds its planted defect on
 a synthetic faulty act (positive control), stays silent on a compliant one
 (negative control), and the mutation test proves the witness depends on the
 control.
+
+R1060 (review c.5974319482) adds the false-positive-class witnesses: each
+structural guard (negation scope, withdrawal, judgment step, virtue names,
+badge counting shapes, Dung consigne formula, discourse citations, meta
+axis enumeration, reader guidance, heading lines, uppercase act headings,
+the not-evaluated envelope) has its own ± pair, so a future lexicon change
+that quietly widens a guard reddens here.
 
 Synthetic French acts only — no corpus content (privacy HARD). The controls
 are diagnostics for the folded appendix: they never fail a render, so the
@@ -31,14 +39,22 @@ _GOOD_ACT2 = (
     "plutôt que par la preuve, fragilise le passage.\n"
 )
 
-# The faulty shapes, one per criterion — the badge without derivation (2),
-# the piled labels without function (3), the flat unranked replay (4).
+# The faulty shapes — the badge without derivation (2), the piled labels
+# without function (3).
 _BAD_ACT2 = (
     "## Acte II — Récit dialectique\n\n"
-    "La lisibilité formelle du propos est confirmée par les solveurs : "
+    "La preuve formelle du mouvement est rappelée ici : "
     '"[pl] 3 inférence(s) PL consistantes — ancrage : solveur Tweety".\n\n'
     "L'orateur cumule la « généralité flatteuse », l'« ingratiation » et le "
     "« sophisme d'autorité » dans ce mouvement.\n"
+)
+
+# Change stated, tested not: the consigne's consistency formula around a raw
+# badge — still a finding (the reader receives a counter, not a content).
+_BAD_ACT2_CONFIRMED = (
+    "## Acte II — Récit dialectique\n\n"
+    "La cohérence du mouvement est confirmée par les solveurs : "
+    '"[pl] 3 inférence(s) PL consistantes — ancrage : solveur Tweety".\n'
 )
 
 _BAD_ACT3_FLAT = "## Acte III — Conclusion actionnable\n\n" + "".join(
@@ -47,8 +63,8 @@ _BAD_ACT3_FLAT = "## Acte III — Conclusion actionnable\n\n" + "".join(
 
 _GOOD_ACT3 = (
     "## Acte III — Conclusion actionnable\n\n"
-    "Trouver décisif (P1) : la réfutation formelle de l'attribution, qui "
-    "change le jugement porté sur la thèse.\n\n"
+    "Trouver décisif (P1) : la réfutation formelle des propositions "
+    "d'attribution, qui change le jugement porté sur la thèse.\n\n"
     "En second, la répétition du slogan fragilise la conclusion inverse.\n"
 )
 
@@ -68,6 +84,14 @@ class TestCriterion2FormalCitation:
         assert c2[0].kind == "formal_citation_without_derivation"
         assert c2[0].act == "Acte II"
         assert "solveur" in c2[0].excerpt.lower()
+
+    def test_change_without_tested_is_found(self):
+        """R1060: the consigne's confirm formula around a raw badge is still
+        a finding — the badge's counting shape is not a tested content."""
+        findings = check_act_reader_contract(_body(_BAD_ACT2_CONFIRMED, _GOOD_ACT3))
+        c2 = [f for f in findings if f.criterion == 2]
+        assert c2, "confirmée + badge must still produce a criterion-2 finding"
+        assert c2[0].kind == "formal_citation_without_tested"
 
     def test_compliant_derivation_is_clean(self):
         findings = check_act_reader_contract(_body(_GOOD_ACT2, _GOOD_ACT3))
@@ -93,6 +117,42 @@ class TestCriterion2FormalCitation:
         findings = check_act_reader_contract(_body(_GOOD_ACT2, _GOOD_ACT3, act1))
         assert not [f for f in findings if f.criterion == 2 and f.act == "Acte I"]
 
+    def test_dung_consigne_formula_is_clean(self):
+        """R1060: « le cadre de Dung isole cette revendication comme
+        rejetée » is the Act III consigne's own derivation formula — tested
+        (revendication) and change (isolée comme rejetée) both carried."""
+        act2 = (
+            "## Acte II — Récit dialectique\n\n"
+            "Le cadre de Dung isole cette revendication comme rejetée, ce "
+            "qui oblige à reconsidérer la thèse centrale du mouvement.\n"
+        )
+        findings = check_act_reader_contract(_body(act2, _GOOD_ACT3))
+        assert not [f for f in findings if f.criterion == 2]
+
+    def test_virtue_names_are_not_formal_citations(self):
+        """R1060: the nine quality virtues are not solver verdicts —
+        « réfutation constructive » (and its snake_case leak) must not arm
+        the citation control."""
+        act2 = (
+            "## Acte II — Récit dialectique\n\n"
+            "L'argument montre de la clarté, de la pertinence et une "
+            "réfutation constructive, avec un score refutation_constructive "
+            "élevé sur ce mouvement.\n"
+        )
+        findings = check_act_reader_contract(_body(act2, _GOOD_ACT3))
+        assert not [f for f in findings if f.criterion == 2]
+
+    def test_prose_inférence_is_tested_but_the_badge_count_is_not(self):
+        """R1060: « inférence » in prose names the tested object; the badge
+        counting shape (« 3 inférence(s) ») does not."""
+        act2 = (
+            "## Acte II — Récit dialectique\n\n"
+            "Le solveur Tweety confirme la consistance des inférences issues "
+            "de ces soutiens, ce qui valide qu'ils tiennent ensemble.\n"
+        )
+        findings = check_act_reader_contract(_body(act2, _GOOD_ACT3))
+        assert not [f for f in findings if f.criterion == 2]
+
 
 class TestCriterion3LabelWithoutFunction:
     def test_piled_labels_are_found(self):
@@ -103,6 +163,84 @@ class TestCriterion3LabelWithoutFunction:
 
     def test_function_clause_is_clean(self):
         findings = check_act_reader_contract(_body(_GOOD_ACT2, _GOOD_ACT3))
+        assert not [f for f in findings if f.criterion == 3]
+
+    def test_negated_cue_is_compliant(self):
+        """R1060: « sans procédé identifiable » DENIES a device — the cue
+        under a negation is not a label."""
+        act2 = (
+            "## Acte II — Récit dialectique\n\n"
+            "Ce passage reste descriptif, sans procédé identifiable ni "
+            "figure marquée.\n"
+        )
+        findings = check_act_reader_contract(_body(act2, _GOOD_ACT3))
+        assert not [f for f in findings if f.criterion == 3]
+
+    def test_withdrawal_is_compliant(self):
+        """R1060: withdrawing labels (« ne sont pas établies ») is the honest
+        move the issue praises, not a pile."""
+        act2 = (
+            "## Acte II — Récit dialectique\n\n"
+            "Les étiquettes « pente glissante » et « homme de paille » ne "
+            "sont pas établies par les vérifications de ce run.\n"
+        )
+        findings = check_act_reader_contract(_body(act2, _GOOD_ACT3))
+        assert not [f for f in findings if f.criterion == 3]
+
+    def test_judgment_step_is_compliant(self):
+        """R1060: judging whether the device weakens the reasoning is the
+        consigne's SECOND step — a judging sentence is not a bare label."""
+        act2 = (
+            "## Acte II — Récit dialectique\n\n"
+            "Le contre-argument borne la portée de ce procédé et juge s'il "
+            "fragilise le raisonnement du mouvement.\n"
+        )
+        findings = check_act_reader_contract(_body(act2, _GOOD_ACT3))
+        assert not [f for f in findings if f.criterion == 3]
+
+    def test_discourse_quotes_are_not_a_label_pile(self):
+        """R1060: quotes carried by a discourse verb / a discourse subject
+        are citations of what was said, not device labels."""
+        act2 = (
+            "## Acte II — Récit dialectique\n\n"
+            "Le discours présente « la victoire finale » et « la renaissance "
+            "nationale » comme promesses centrales du programme.\n"
+        )
+        findings = check_act_reader_contract(_body(act2, _GOOD_ACT3))
+        assert not [f for f in findings if f.criterion == 3]
+
+    def test_meta_axis_enumeration_is_compliant(self):
+        """R1060: enumerating the analysis's own axes describes the
+        analysis, not the discourse."""
+        act3 = (
+            "## Acte III — Conclusion actionnable\n\n"
+            "D'abord, le point décisif : l'analyse croise sophismes, "
+            "qualité et contre-arguments pour ce corpus, et cela change le "
+            "jugement.\n"
+        )
+        findings = check_act_reader_contract(_body(_GOOD_ACT2, act3))
+        assert not [f for f in findings if f.criterion == 3]
+
+    def test_reader_guidance_imperative_is_compliant(self):
+        """R1060: the third beat's reader guidance (« recevez avec prudence
+        ... ») is the asked-for shape, not a label pile."""
+        act3 = (
+            "## Acte III — Conclusion actionnable\n\n"
+            "D'abord le point décisif du jugement. Recevez avec prudence les "
+            "passages « flatteur » et « alarmiste » du discours.\n"
+        )
+        findings = check_act_reader_contract(_body(_GOOD_ACT2, act3))
+        assert not [f for f in findings if f.criterion == 3]
+
+    def test_heading_label_line_is_not_prose(self):
+        """R1060: a subsection heading naming a movement is structure, not a
+        piling sentence."""
+        act2 = (
+            "## Acte II — Récit dialectique\n\n"
+            "### Le mouvement « sophisme d'origine »\n\n"
+            "Le propos tient ici par la filiation qu'il instaure.\n"
+        )
+        findings = check_act_reader_contract(_body(act2, _GOOD_ACT3))
         assert not [f for f in findings if f.criterion == 3]
 
 
@@ -118,6 +256,21 @@ class TestCriterion4RankedShape:
         findings = check_act_reader_contract(_body(_GOOD_ACT2, _GOOD_ACT3))
         assert not [f for f in findings if f.criterion == 4]
 
+    def test_consigne_ranking_markers_are_clean(self):
+        """R1060: the Act III consigne's own order vocabulary — « les P1
+        d'abord », « l'argument arrivé en tête », the P1 superlative —
+        counts as a ranking marker."""
+        for marker in (
+            "Les P1 d'abord, puis les tensions accompagnent le jugement.",
+            "L'argument arrivé en tête porte le verdict de ce run.",
+            "Le point le plus sérieux concerne la causalité affirmée.",
+        ):
+            act3 = "## Acte III — Conclusion actionnable\n\n" + marker + "\n"
+            findings = check_act_reader_contract(_body(_GOOD_ACT2, act3))
+            assert not [
+                f for f in findings if f.kind == "no_ranked_marker"
+            ], f"marker {marker!r} must count as ranking"
+
     def test_no_acte_three_skips_honestly(self):
         """A missing Act III is the renderer's own loud degradation — the
         control does not pile a finding on it."""
@@ -125,6 +278,37 @@ class TestCriterion4RankedShape:
             "## Acte I — Mise en situation\n\nLe contexte.\n\n" + _GOOD_ACT2
         )
         assert not [f for f in findings if f.criterion == 4]
+
+
+class TestEnvelope:
+    """R1060 silent zeros: a body without act headings must SAY it was not
+    evaluated — never look compliant."""
+
+    def test_no_act_heading_yields_one_envelope_finding(self):
+        findings = check_act_reader_contract(
+            "# Rapport de restitution\n\nCorps sans titre d'acte.\n"
+        )
+        assert len(findings) == 1
+        assert findings[0].criterion == 0
+        assert findings[0].kind == "not_evaluated_no_act_heading"
+        assert "aucun titre d'acte" in findings[0].note
+
+    def test_uppercase_act_headings_split(self):
+        """A real seat render writes « ## ACTE I — » — the split is
+        case-insensitive and findings land in the right act."""
+        body = (
+            "## ACTE I — Mise en situation\n\nLe contexte.\n\n"
+            "## ACTE II — Récit dialectique\n\n"
+            'La preuve est rappelée : "[pl] 3 inférence(s) PL consistantes — '
+            'ancrage : solveur Tweety".\n\n'
+            "## ACTE III — Conclusion actionnable\n\n"
+            "D'abord le point décisif, puis l'accompagnement.\n"
+        )
+        findings = check_act_reader_contract(body)
+        c2 = [f for f in findings if f.criterion == 2]
+        assert (
+            c2 and c2[0].act == "Acte II"
+        ), "the uppercase heading must still place findings in Acte II"
 
 
 class TestPositions:
@@ -194,9 +378,9 @@ class TestRendererWiring:
             "mêmes relations. Le slogan rythmé, procédé visant à créer "
             "l'adhésion par la répétition, fragilise le passage.",
             act3_conclusion="Trouver décisif (P1) : la réfutation formelle "
-            "de l'attribution, qui change le jugement porté sur la thèse. "
-            "En second, la répétition du slogan fragilise la conclusion "
-            "inverse.",
+            "des propositions d'attribution, qui change le jugement porté "
+            "sur la thèse. En second, la répétition du slogan fragilise la "
+            "conclusion inverse.",
             source_id="corpus_anonyme",
         )
         renderer = RestitutionReportRenderer()
@@ -249,3 +433,19 @@ class TestRendererWiring:
     def test_compliant_acts_say_no_findings(self):
         report = self._render(body_check=None)  # the real control runs
         assert "Aucun constat" in report.markdown
+
+    def test_envelope_renders_as_not_evaluated(self):
+        """R1060: the criterion-0 envelope is rendered as an explicit
+        not-evaluated line — never as « Aucun constat »."""
+        envelope = ContractFinding(
+            criterion=0,
+            kind="not_evaluated_no_act_heading",
+            act="—",
+            line=1,
+            excerpt="(aucun titre d'acte)",
+            note="non évalué : aucun titre d'acte dans le corps rendu — "
+            "les contrôles des critères 2-4 ne s'appliquent pas",
+        )
+        report = self._render(body_check=[envelope])
+        assert "non évalué : aucun titre d'acte" in report.markdown
+        assert "Aucun constat" not in report.markdown
