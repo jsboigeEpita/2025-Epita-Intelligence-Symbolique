@@ -434,7 +434,7 @@ def setup_registry(
         (
             "dung_arbitration_service",
             ["dung_arbitration"],
-            "Selectable Dung grounded arbitration over sophism candidates (Walton-Krabbe)",
+            "Selectable Dung grounded arbitration over sophism candidates (same-span rivalry)",
             _invoke_dung_arbitration,
         ),
         # multi_axis_compare_service — RETIRED #1604 (Cleanup Gate): zero

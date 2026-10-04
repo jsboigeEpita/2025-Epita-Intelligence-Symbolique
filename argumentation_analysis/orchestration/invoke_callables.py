@@ -9990,8 +9990,9 @@ async def _invoke_dung_arbitration(
 
     A PRODUCTION STAGE — distinct from ``_invoke_dung_extensions`` (which computes
     extensions over the global argument AF). This stage consumes
-    sophism CANDIDATES, derives attacks from DECLARED Walton-Krabbe relations +
-    same-span rivalry, and lets the grounded extension decide which candidates
+    sophism CANDIDATES, derives attacks from same-span rivalry (the declared
+    Walton-Krabbe relations channel was retired — no producer ever fed it; see
+    below), and lets the grounded extension decide which candidates
     survive — ALTERING the detection verdict when ``dung_arbitration`` is selected.
 
     Selectable (default OFF, backward-compat): gated by ``context["dung_arbitration"]``.
