@@ -17,13 +17,17 @@ unit-testable with synthetic atoms.
 
 Provenance, not a direct attack channel
 ---------------------------------------
-Rule and ML detections generally do not share a textual span (the taxonomy
-detector is lexical over the whole passage, the ML detector returns span text),
-so cross-source rivalry is NOT derived from span overlap here. Cross-source
-disagreement surfaces through the declared Walton-Krabbe relations (the stage's
-:func:`walton_krabbe_conflict_policy`) and the same-span rivalry within a single
-source (the #1429 ``default_conflict_policy``). Provenance is recorded on each
-candidate so a downstream report can attribute each atom to its detector.
+The anchor a detection carries decides its rivalry group (#2920). An ANCHORED
+detection (``target_argument`` — the per-argument hierarchical tier writes it)
+shares a span with every other candidate on the same target, across families
+AND across detector provenances, so cross-source disagreement CAN surface
+through the same-span rivalry there. An ANCHORLESS detection (the lexical
+taxonomy detector scans the whole passage) keeps the ``(detector, family)``
+anchor, where same-span groups are always same-family and the rivalry policy
+never fires. Declared Walton-Krabbe relations (the stage's
+:func:`walton_krabbe_conflict_policy`) remain the second, explicit attack
+channel either way. Provenance is recorded on each candidate so a downstream
+report can attribute each atom to its detector.
 
 Privacy HARD
 ------------
@@ -63,6 +67,22 @@ def _opaque_span_id(family: str, detector: str) -> str:
     return "span_" + hashlib.md5(raw).hexdigest()[:8]
 
 
+def _anchored_span_id(target_argument: str) -> str:
+    """Deterministic opaque span anchor for a detection that CARRIES a target.
+
+    #2920: the per-argument hierarchical tier grounds each fallacy on an
+    argument identifier (``target_argument``, #1633). Anchoring on the target
+    ALONE — detector and family are NOT hash inputs — puts every candidate on
+    the same argument into one rivalry group, whatever produced it: the
+    same-span different-family policy can finally fire, across families and
+    across detector provenances (the #1501 rule-vs-ML dimension). The value is
+    an opaque id (never the raw text of the target).
+    """
+
+    raw = f"anchored::{target_argument}".encode("utf-8")
+    return "span_" + hashlib.md5(raw).hexdigest()[:8]
+
+
 def _coerce_confidence(value: Any, default: float = 0.5) -> float:
     """Clamp a detection confidence into [0, 1], defaulting on bad/missing input."""
 
@@ -85,14 +105,27 @@ def taxonomy_detection_to_candidate(
 
     ``family`` is the detection's family/name (opaque label — the stage never
     interprets it); ``confidence`` is clamped to ``[0, 1]`` (defaults to 0.5 if
-    missing or malformed); ``span_id`` is a deterministic opaque anchor derived
-    from ``(detector, family)`` (the rule detector carries no text span).
+    missing or malformed).
+
+    ``span_id`` — the anchor the rivalry policy groups by — is derived from the
+    anchor the detection ACTUALLY carries (#2920):
+
+    * a detection with ``target_argument`` (the per-argument hierarchical tier
+      writes it — an argument IDENTIFIER, #1633: never text-match it) is
+      anchored on that target alone: two candidates share the span iff they
+      target the same argument, whatever their family or detector, so the
+      same-span different-family rivalry CAN fire — including across detector
+      provenances (the #1501 rule-vs-ML dimension);
+    * an anchorless detection (the lexical taxonomy detector scans the whole
+      passage) falls back to the ``(detector, family)`` hash, where the
+      same-span-same-family grouping never attacks by construction.
 
     Args:
-        detection: One row of ``detect_sophisms_from_taxonomy`` output.
+        detection: One row of a detector output (rule taxonomy rows or
+            hierarchical-phase fallacies).
         index: Position in the source batch — used to mint a unique opaque id.
-        detector: Provenance label embedded in the id and span anchor so a rule
-            detection never collides with an ML detection of the same family.
+        detector: Provenance label embedded in the id (and in the fallback span
+            anchor) so a rule detection never collides with an ML detection.
     """
 
     # Tolerant family lookup: the rule detector (TaxonomySophismDetector) emits
@@ -111,10 +144,15 @@ def taxonomy_detection_to_candidate(
         or "unknown"
     )
     confidence = _coerce_confidence(detection.get("confidence", 0.5))
+    target = str(detection.get("target_argument") or "").strip()
+    if target:
+        span_id = _anchored_span_id(target)
+    else:
+        span_id = _opaque_span_id(family, detector)
     return SophismCandidate(
         candidate_id=f"{detector}_{index}",
         family=family,
-        span_id=_opaque_span_id(family, detector),
+        span_id=span_id,
         confidence=confidence,
     )
 

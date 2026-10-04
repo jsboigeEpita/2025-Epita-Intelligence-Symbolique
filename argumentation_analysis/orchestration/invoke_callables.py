@@ -6311,6 +6311,15 @@ async def _invoke_hierarchical_fallacy(
             per_arg_fallacies = per_arg_result.get("fallacies", [])
             merged = _merge_fallacy_results(wide_fallacies, per_arg_fallacies)
             result["fallacies"] = merged
+            # #2920 (R1063 review): the merged list above stays EXACTLY as on
+            # main (pk-only dedup) — 11 handlers, the state writer and the
+            # sherlock orchestrator consume it on every real run. The
+            # per-argument detections ALSO leave under their own key so a
+            # consumer that needs the per-argument locations (the Dung
+            # arbitration stage) can read them without touching the merged
+            # list's shape or counts. Absent key = no targeted detections
+            # (honest-absent for that consumer).
+            result["per_argument_fallacies"] = per_arg_fallacies
             # FB-36 (#1123): label honestly. When the per-argument pass was
             # skipped fail-loud (no extractable arguments — recursion fix), this
             # is wide-net-only, NOT a union; surface the skip at the result
@@ -9889,12 +9898,25 @@ async def _invoke_dung_arbitration(
     Selectable (default OFF, backward-compat): gated by ``context["dung_arbitration"]``.
     OFF ⇒ passthrough verdict (surviving == input). ON ⇒ grounded arbitration.
 
-    Rule-vs-ML provenance: candidates are collected from the rule taxonomy phase
-    (``phase_taxonomy_sophisms_output``) and the ML/hierarchical phase
-    (``phase_hierarchical_fallacy_output``), bridged to opaque ``SophismCandidate``
-    atoms. Provenance is preserved on each atom; cross-source disagreement surfaces
-    via declared Walton-Krabbe relations (``walton_krabbe_relations``) and same-span
-    rivalry, NOT span overlap (the rule detector carries no text span).
+    Rule-vs-ML provenance: candidates are collected from the hierarchical
+    fallacy phase (``phase_hierarchical_fallacy_output``), reading ONLY its
+    ``per_argument_fallacies`` field — the per-argument detections that carry
+    ``target_argument``, i.e. the only ones that can anchor into a rivalry
+    group. The phase's merged ``fallacies`` list is deliberately NOT a source
+    (R1063 review): it is consumed on every real run by 11 handlers, the state
+    writer and the sherlock orchestrator, and its pk-only shape stays
+    byte-identical to main. #2920 retired the former ``rule_taxonomy``
+    source: it read a rule-taxonomy phase key naming a phase
+    (``taxonomy_sophisms``) that no workflow defines — the taxonomy tier runs
+    INSIDE ``hierarchical_fallacy`` — a reader with no writer. The source
+    label names the tier that really produced the batch
+    (``per_argument::<extraction_method>``); detections are bridged to opaque
+    ``SophismCandidate`` atoms. A detection carrying ``target_argument``
+    is anchored on its target, so same-target
+    different-family rivalry CAN fire — across families and provenances; an
+    anchorless detection (lexical taxonomy tier, wide-net) cannot rival by
+    construction. Declared Walton-Krabbe relations
+    (``walton_krabbe_relations``) remain the explicit cross-candidate channel.
 
     Honest-absent (anti-#1019): with no declared refutations and no same-span
     rivalry, the enabled stage returns surviving == input (no fabricated attack).
@@ -9912,15 +9934,23 @@ async def _invoke_dung_arbitration(
     enabled = bool(context.get("dung_arbitration", False))
 
     sources: Dict[str, List[Any]] = {}
-    rule_detections = context.get("phase_taxonomy_sophisms_output") or []
-    if rule_detections:
-        sources["rule_taxonomy"] = taxonomy_detections_to_candidates(rule_detections)
     hierarchical = context.get("phase_hierarchical_fallacy_output") or {}
     if isinstance(hierarchical, dict):
-        ml_fallacies = hierarchical.get("fallacies") or []
-        if ml_fallacies:
-            sources["ml_llm"] = taxonomy_detections_to_candidates(
-                ml_fallacies, detector="ml_llm"
+        per_arg = hierarchical.get("per_argument_fallacies") or []
+        if per_arg:
+            # #2920 (R1063 review): the stage reads ONLY the per-argument
+            # detections — the ones carrying ``target_argument``, i.e. the
+            # only ones that can anchor into a rivalry group. The merged
+            # ``fallacies`` list (pk-only, consumed by 11 handlers + the
+            # state writer + sherlock on every real run) is deliberately NOT
+            # a source: feeding it here would re-introduce the anchorless
+            # whole-text detections that cannot rival by construction.
+            # The label names the tier that produced the batch; the phase's
+            # ``extraction_method`` says which method ran. Provenance rides
+            # the candidate ids.
+            method = str(hierarchical.get("extraction_method") or "per_argument")
+            sources[f"per_argument::{method}"] = taxonomy_detections_to_candidates(
+                per_arg, detector="per_argument"
             )
 
     candidates = combine_candidate_sources(sources) if sources else []

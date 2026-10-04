@@ -223,6 +223,9 @@ class TestInvokeHierarchicalFallacyEnrichment:
             mock_per_arg.assert_called_once()
             assert len(result["fallacies"]) == 3
             assert result["extraction_method"] == "widenet+perarg_union"
+            # #2920 (R1063 review): the per-argument detections ALSO leave
+            # under their own key, byte-for-byte — the Dung stage's source.
+            assert result["per_argument_fallacies"] == per_arg_result["fallacies"]
 
     @pytest.mark.asyncio
     async def test_enrichment_failure_keeps_wide_net(self):
@@ -249,3 +252,108 @@ class TestInvokeHierarchicalFallacyEnrichment:
             result = await invoke_mod._invoke_hierarchical_fallacy("test text", {})
             assert len(result["fallacies"]) == 1
             assert result["extraction_method"] == "guided"
+            # Per-argument pass failed: the key stays ABSENT (honest-absent
+            # for the Dung stage — no fabricated targeted detections).
+            assert "per_argument_fallacies" not in result
+
+
+class TestMergeKeyStaysPkOnly:
+    """R1063 review: the merged ``fallacies`` list is byte-identical to main.
+
+    11 handlers, the state writer and the sherlock orchestrator consume this
+    list on every real run; #2920's first route (key = (pk, target)) changed
+    its counts and re-introduced wide-net/per-argument duplicates, so it was
+    sent back. The per-argument detections now leave the phase under their
+    own key (``per_argument_fallacies`` — see TestInvokeHierarchicalFallacy-
+    Enrichment) and the Dung stage reads THAT. These tests pin the pk-only
+    merge so the key cannot move again by accident: any change to the key or
+    the output shape reddens here.
+    """
+
+    def test_same_pk_two_arguments_collapses_to_main_output(self):
+        """The review's witness: same pk on two arguments, merged unchanged.
+
+        Byte-identical to main's pk-only behavior: one entry, the wide-net
+        floor (higher confidence), in the wide-net position.
+        """
+        wide = [
+            {"fallacy_type": "ad hominem", "taxonomy_pk": "AH.01", "confidence": 0.9},
+        ]
+        per_arg = [
+            {
+                "fallacy_type": "ad hominem",
+                "taxonomy_pk": "AH.01",
+                "target_argument": "arg_2",
+                "confidence": 0.7,
+            },
+            {
+                "fallacy_type": "ad hominem",
+                "taxonomy_pk": "AH.01",
+                "target_argument": "arg_5",
+                "confidence": 0.6,
+            },
+        ]
+        result = _merge_fallacy_results(wide, per_arg)
+        assert result == [wide[0]]
+
+    def test_same_pk_two_arguments_no_wide_floor(self):
+        per_arg = [
+            {
+                "fallacy_type": "ad hominem",
+                "taxonomy_pk": "AH.01",
+                "target_argument": "arg_2",
+                "confidence": 0.7,
+            },
+            {
+                "fallacy_type": "ad hominem",
+                "taxonomy_pk": "AH.01",
+                "target_argument": "arg_5",
+                "confidence": 0.95,
+            },
+        ]
+        result = _merge_fallacy_results([], per_arg)
+        assert len(result) == 1
+        assert result[0]["confidence"] == 0.95
+
+    def test_wide_net_floor_and_per_arg_same_pk_make_one_entry(self):
+        """The (pk, target) route kept both — a duplicate in every narrative
+        prompt. Main's semantics: one entry, the higher-confidence dict."""
+        wide = [
+            {
+                "fallacy_type": "slippery slope",
+                "taxonomy_pk": "SS.01",
+                "confidence": 0.8,
+            },
+        ]
+        per_arg = [
+            {
+                "fallacy_type": "slippery slope",
+                "taxonomy_pk": "SS.01",
+                "target_argument": "arg_1",
+                "confidence": 0.5,
+            },
+        ]
+        result = _merge_fallacy_results(wide, per_arg)
+        assert result == [wide[0]]
+
+    def test_distinct_pks_union_shape_pinned(self):
+        wide = [
+            {"fallacy_type": "ad hominem", "taxonomy_pk": "AH.01", "confidence": 0.9},
+        ]
+        per_arg = [
+            {
+                "fallacy_type": "slippery slope",
+                "taxonomy_pk": "SS.01",
+                "target_argument": "arg_1",
+                "confidence": 0.85,
+            },
+            {
+                "fallacy_type": "false dilemma",
+                "taxonomy_pk": "FD.01",
+                "target_argument": "arg_2",
+                "confidence": 0.7,
+            },
+        ]
+        result = _merge_fallacy_results(wide, per_arg)
+        # Wide-net floor first, per-argument extras in source order.
+        assert [f["taxonomy_pk"] for f in result] == ["AH.01", "SS.01", "FD.01"]
