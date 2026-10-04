@@ -847,10 +847,11 @@ class TestMCPServiceListTools:
         svc = _make_mcp_service()
         result = await svc.list_available_tools()
         assert result["version"] == "2.0.0"
-        assert result["total_tools"] == 23
+        assert result["total_tools"] == 24  # solve_sat joined the table (#1604)
         assert "health_check" in result["tools"]
         assert "run_workflow" in result["tools"]
         assert "evaluate_quality" in result["tools"]
+        assert "solve_sat" in result["tools"]
 
 
 class TestMCPServiceRegistryAndSession:
@@ -944,7 +945,11 @@ class TestCapabilityToolsRegistration:
 class TestSpecializedToolsRegistration:
     """Tests for specialized_tools.register_specialized_tools."""
 
-    def test_registers_four_tools(self):
+    def test_registers_five_tools(self):
+        # Five since #1604: solve_sat joined evaluate_quality,
+        # generate_counter_argument, run_debate_analysis and
+        # run_governance_analysis — it is the named demander of the
+        # sat_solving capability.
         from argumentation_analysis.services.mcp_server.tools.specialized_tools import (
             register_specialized_tools,
         )
@@ -952,7 +957,7 @@ class TestSpecializedToolsRegistration:
         mock_mcp = MagicMock()
         mock_mcp.tool.return_value = lambda fn: fn
         register_specialized_tools(mock_mcp, MagicMock())
-        assert mock_mcp.tool.call_count == 4
+        assert mock_mcp.tool.call_count == 5
 
 
 class TestConversationToolsRegistration:

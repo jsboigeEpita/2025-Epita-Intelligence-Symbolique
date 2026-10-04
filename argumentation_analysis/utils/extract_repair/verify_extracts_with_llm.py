@@ -20,6 +20,11 @@ from html import escape
 from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional, Union
 
+from argumentation_analysis.core.reading_window import (
+    WIDE_NET_WINDOW,
+    selected_text,
+)
+
 from argumentation_analysis.core.plaintext_destination import (
     check_plaintext_destination,
 )
@@ -152,6 +157,16 @@ async def evaluate_extract(
     )
 
     # Préparation du prompt pour l'agent d'évaluation
+    # #2912: census row — the evaluation prompt embedded the whole extract.
+    # Windowed at the widest existing bound (the wide-net's 8000, #1737
+    # selector). Trade: the "intégrité: l'extrait est-il complet ?" criterion
+    # now reads the selected span; realistic extracts sit far under the bound
+    # (the selection is offset 0 and byte-identical there), and an extract
+    # over 8000 chars is itself the truncation signal that criterion exists
+    # to name.
+    windowed_text = selected_text(
+        extracted_text, WIDE_NET_WINDOW, "verify_extracts_evaluation"
+    )
     evaluation_prompt = f"""
     Évaluez la qualité de cet extrait de texte.
     
@@ -160,7 +175,7 @@ async def evaluate_extract(
     SUJET: {extract_subject}
     
     TEXTE EXTRAIT:
-    {extracted_text}
+    {windowed_text}
     
     Analysez cet extrait selon les critères suivants:
     1. Cohérence interne: l'extrait a-t-il un sens complet?

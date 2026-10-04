@@ -30,7 +30,10 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import semantic_kernel as sk
 from semantic_kernel.agents import ChatCompletionAgent
 
-from argumentation_analysis.core.reading_window import selected_text
+from argumentation_analysis.core.reading_window import (
+    WIDE_NET_WINDOW,
+    selected_text,
+)
 from argumentation_analysis.orchestration.invoke_callables import (
     LLMBudgetExceeded,
     _bump_sk_budget,
@@ -93,13 +96,19 @@ class WallClockBudget:
         return deadline is not None and now >= deadline
 
 
+# The language probe feeds a REGEX detector, not an LLM — its sample
+# window is its own meaning (#2915: same value as the LLM extraction
+# window, different name, per the one-constant-per-meaning rule).
+_LANGUAGE_PROBE_WINDOW = 3000
+
+
 def _detect_language(text: str) -> str:
     """Detect text language using heuristic word-frequency analysis.
 
     Distinguishes DE, FR, EN based on common function words and articles.
     Returns ISO 639-1 code: 'de', 'fr', 'en', or 'unknown'.
     """
-    sample = selected_text(text, 3000, "detect_language").lower()
+    sample = selected_text(text, _LANGUAGE_PROBE_WINDOW, "detect_language").lower()
     scores: Dict[str, int] = {"de": 0, "fr": 0, "en": 0}
 
     de_markers = [
@@ -1186,9 +1195,19 @@ async def _run_conversational_analysis_inner(
     # meta — never deduced from metrics (anti-#1019 / leçon #1531).
     phase_execution_paths: List[str] = []
 
+    # #2912: the extraction phase's opening prompt read the WHOLE document —
+    # the census's strongest unbounded row (the API's POST /workflow/custom
+    # reaches it with arbitrary-length text, and the AgentGroupChat history
+    # re-sends the opening prompt on every turn). The agents now open on the
+    # #1737 window at the wide-net's own 8000 bound — the pipeline path's
+    # widest reader — so a conversational run sees the same span the widest
+    # pipeline reader would. Texts at or under the bound reproduce the legacy
+    # prompt byte for byte; longer texts keep tail coverage through the
+    # parent harness (texts > 5000 chars already route there, below).
+    windowed_text = selected_text(text, WIDE_NET_WINDOW, "conversational_extraction")
     extraction_prompt = (
         f"Analysez ce texte argumentatif. Identifiez les arguments, "
-        f"claims et sophismes.\n\nTexte:\n{text}"
+        f"claims et sophismes.\n\nTexte:\n{windowed_text}"
     )
     if detected_lang == "de":
         extraction_prompt = (
@@ -1200,7 +1219,7 @@ async def _run_conversational_analysis_inner(
             f"conservez IMPERATIVEMENT le texte original allemand — ne traduisez "
             f"jamais les citations. Les arguments doivent etre extraits en anglais "
             f"avec citations en allemand.\n\n"
-            f"Texte:\n{text}"
+            f"Texte:\n{windowed_text}"
         )
 
     phase_configs = [

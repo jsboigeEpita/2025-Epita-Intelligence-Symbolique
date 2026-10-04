@@ -150,3 +150,90 @@ class TestCombineCandidateSources:
 
     def test_empty_sources_returns_empty(self) -> None:
         assert combine_candidate_sources({}) == []
+
+
+class TestTargetArgumentAnchor:
+    """#2920: a detection carrying ``target_argument`` anchors on the TARGET.
+
+    Pre-#2920 the span anchor was always md5(detector::family), so two
+    candidates shared a span only when they shared a family — and the rivalry
+    policy skips same-family pairs, making the same-span channel dead for ANY
+    input. These witnesses are born-red against that bridge: same target,
+    different families must rival.
+    """
+
+    def test_same_target_different_families_share_span(self) -> None:
+        a = taxonomy_detection_to_candidate(
+            {"fallacy_type": "appeal_to_authority", "target_argument": "arg_3"},
+            index=0,
+            detector="hierarchical",
+        )
+        b = taxonomy_detection_to_candidate(
+            {"fallacy_type": "hasty_generalization", "target_argument": "arg_3"},
+            index=1,
+            detector="hierarchical",
+        )
+        assert a.span_id == b.span_id
+        assert a.family != b.family
+
+    def test_anchorless_falls_back_to_family_hash(self) -> None:
+        a = taxonomy_detection_to_candidate(
+            {"fallacy_type": "appeal_to_authority"}, index=0, detector="hierarchical"
+        )
+        b = taxonomy_detection_to_candidate(
+            {"fallacy_type": "hasty_generalization"}, index=1, detector="hierarchical"
+        )
+        # No target ⇒ the (detector, family) hash: different families never
+        # share a span (the pre-#2920 behavior, unchanged for anchorless).
+        assert a.span_id != b.span_id
+
+    def test_cross_detector_same_target_shares_span(self) -> None:
+        # The #1501 rule-vs-ML dimension: the target alone anchors, so a rule
+        # detection and an ML detection of the SAME target are rivals.
+        rule = taxonomy_detection_to_candidate(
+            {"famille": "Ad Hominem", "target_argument": "arg_7"},
+            index=0,
+            detector="rule_taxonomy",
+        )
+        ml = taxonomy_detection_to_candidate(
+            {"fallacy_type": "straw_man", "target_argument": "arg_7"},
+            index=0,
+            detector="hierarchical",
+        )
+        assert rule.span_id == ml.span_id
+
+    def test_same_target_different_families_attack_through_stage(self) -> None:
+        """DoD #2920 witness: the attack fires through the REAL bridge.
+
+        Two different families grounded on the same argument, bridged by
+        ``taxonomy_detections_to_candidates`` (not hand-built atoms), must
+        produce a rivalry attack under the enabled arbitration stage — the
+        more confident candidate eliminates the lesser.
+        """
+        from argumentation_analysis.agents.core.informal.dung_arbitration_stage import (
+            arbitrate_detections,
+        )
+
+        detections = [
+            {
+                "fallacy_type": "appeal_to_authority",
+                "target_argument": "arg_3",
+                "confidence": 0.9,
+            },
+            {
+                "fallacy_type": "hasty_generalization",
+                "target_argument": "arg_3",
+                "confidence": 0.5,
+            },
+        ]
+        candidates = taxonomy_detections_to_candidates(
+            detections, detector="hierarchical"
+        )
+        verdict = arbitrate_detections(candidates, dung_arbitration=True)
+        assert verdict.honest_absent is False
+        assert len(verdict.attacks) == 1
+        survivor_id, eliminated_id = next(iter(verdict.attacks))
+        eliminated = dict(verdict.eliminated_ids)
+        assert eliminated_id in eliminated
+        assert eliminated[eliminated_id] == "defeated_by_rival_candidate"
+        assert verdict.surviving_count == 1

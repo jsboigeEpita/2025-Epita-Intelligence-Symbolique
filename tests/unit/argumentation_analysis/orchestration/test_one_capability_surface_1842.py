@@ -92,19 +92,52 @@ IN_SCOPE_COMPONENTS = {
 # so retiring the names retires the component: that is a wire-or-retire
 # decision, not a vocabulary trim.
 PENDING_TRIAGE: dict[tuple[str, str], str] = {
-    # #1604 — plugin-only providers: AgentFactory mounts them by speciality,
-    # no phase resolves them by capability.
-    ("logic_agent_plugin", "propositional_reasoning"): "#1604",
-    ("logic_agent_plugin", "first_order_reasoning"): "#1604",
-    ("logic_agent_plugin", "modal_reasoning"): "#1604",
-    ("tweety_logic_plugin", "tweety_logic"): "#1604",
     # #1604 — live invoke callables that no phase requests. They were
     # declared inside `for name, caps, ... in <rows>:` loops, which the census
     # could not read before #1604: silence the tree already carried, made
     # visible here rather than created.
-    ("dung_arbitration_service", "dung_arbitration"): "#1604",
     ("multi_axis_compare_service", "multi_axis_compare"): "#1604",
-    ("sat_handler", "sat_solving"): "#1604",
+    # dung_arbitration owner -> #1649 (arbitration c.5976719576, reaffirmed by
+    # #2920's offline re-measure). #2920 repaired the stage's input ROUTE
+    # (R1063 shape): the bridge anchors on target_argument (same-target
+    # different-family rivalry fires, born-red witness on the REAL bridge),
+    # the stage reads the hierarchical phase's per_argument_fallacies field
+    # (targeted detections only — the merged fallacies list stays
+    # byte-identical to main, its per-(argument, pk) counting question is
+    # parked in its own issue), and the dead rule-taxonomy source key is
+    # retired. The offline CI-safe tier stays honest-absent BY NATURE
+    # (lexical detections carry no target): re-measured 25 candidates over 4
+    # docs, 0 attacks, 0 eliminations. Real-run eliminations now hinge on (a)
+    # declared Walton-Krabbe relations, producer #1649 (open), and (b) the
+    # per-argument LLM tier actually feeding the stage — the wiring decision
+    # loop lives in #2920.
+    ("dung_arbitration_service", "dung_arbitration"): "#1649",
+    # ("tweety_logic_plugin", "tweety_logic") — retired #1604 (coordinator
+    # arbitration): the plugin registration carries no invoke callable, so the
+    # MCP invoke_capability route never reached it — only the list readers
+    # (list_capabilities, get_registry_summary, proposal_endpoints) lost a
+    # name. The plugin stays mounted by name ("tweety_logic") through
+    # AgentFactory. Declaration exits, not the component.
+    # ("logic_agent_plugin", "propositional_reasoning"/"first_order_reasoning"/
+    # "modal_reasoning") — retired #1604: the trio had zero demanders on every
+    # surface (no phase, no table, not on the PM map) and every claim they
+    # could carry is carried by a phase-resolved capability. The plugin stays
+    # mounted by speciality ("logic_agents") — declaration exits, not the
+    # component.
+    # ("multi_axis_compare_service", "multi_axis_compare") — row RESTORED at
+    # #1604 review: the registration is its ONLY production route (the MCP
+    # invoke_capability resolves it by name and calls its invoke), and
+    # _invoke_multi_axis_compare has no other production caller. Retiring it
+    # leaves the function with zero production callers — a function
+    # retirement under the Cleanup Gate, not a declaration-only change. The
+    # pair is back in PENDING_TRIAGE above pending that decision.
+    # ("sat_handler", "sat_solving") — wired #1604 (arbitration): the named
+    # MCP tool solve_sat (specialized_tools.py) demands the capability
+    # through _invoke_by_capability("sat_solving", ...), which this census
+    # reads. Born-red both ways: delete the tool and the declaration is an
+    # orphan again; delete the declaration and the tool answers "not
+    # available". The registration is _invoke_sat's only production route
+    # besides a maintenance script.
     # ("asp_reasoning_handler", "asp_reasoning") — wired #1604: the ASP
     # stable-extension cross-check phase in formal_extended demands it.
     # ("asp_reasoning_handler", "answer_set_programming") — retired #1604:
@@ -303,7 +336,12 @@ def _production_demanded_capabilities(root: Path = PROD_ROOT) -> set[str]:
                 capability = _phase_capability(node)
                 if isinstance(capability, ast.Constant):
                     demanded.add(capability.value)
-            elif "for_capability" in callee:
+            elif "for_capability" in callee or callee == "_invoke_by_capability":
+                # _invoke_by_capability("<cap>", ...) is how a named MCP tool
+                # in specialized_tools.py reaches a capability (#1604): its
+                # literal first arg is demand, the same way a resolver call's
+                # is. The generic invoke_capability(name) route stays
+                # intentionally unread — a client-chosen name is not demand.
                 if node.args and isinstance(node.args[0], ast.Constant):
                     demanded.add(node.args[0].value)
     for capabilities in _capability_tables(root).values():
@@ -671,6 +709,30 @@ def test_capability_table_census_follows_an_import(tmp_path):
     demanded = _production_demanded_capabilities(tmp_path)
     assert "table_carried_capability" in demanded
     assert "not_a_capability" not in demanded
+
+
+def test_demand_census_reads_named_tool_helpers(tmp_path):
+    """#1604: a named MCP tool's helper call is demand the census reads.
+
+    ``_invoke_by_capability("sat_solving", ...)`` — the form ``solve_sat``
+    uses — must count like a resolver call's literal, or the tool that gives
+    ``sat_solving`` its one visible demander would be invisible again. The
+    generic ``invoke_capability(name)`` route stays unread on purpose: a
+    client-chosen name is not demand.
+    """
+    (tmp_path / "tools.py").write_text(
+        "def tool(text):\n"
+        "    return _invoke_by_capability('sat_solving', text, 'solve_sat')\n",
+        encoding="utf-8",
+    )
+    assert "sat_solving" in _production_demanded_capabilities(root=tmp_path)
+
+
+def test_sat_solving_has_a_named_production_demander():
+    """Born-red both ways (#1604): the solve_sat tool's literal is the pair's
+    demander — delete the tool and this reddens; the pair then sits
+    undemanded again with no PENDING_TRIAGE entry to silence it."""
+    assert "sat_solving" in _production_demanded_capabilities()
 
 
 def test_table_carried_demand_resolves():

@@ -42,6 +42,10 @@ from argumentation_analysis.core.plaintext_destination import (
     PlaintextDestinationError,
     check_plaintext_destination,
 )
+from argumentation_analysis.core.reading_window import (
+    WIDE_NET_WINDOW,
+    selected_text,
+)
 from argumentation_analysis.plugins.exploration_plugin import ExplorationPlugin
 from argumentation_analysis.utils.taxonomy_local_overrides import purge_rows
 from argumentation_analysis.plugins.identification_models import (
@@ -50,6 +54,11 @@ from argumentation_analysis.plugins.identification_models import (
 )
 
 logger = logging.getLogger(__name__)
+
+# The wide-net window is WIDE_NET_WINDOW, imported from the shared #1737
+# module — #2915 moved it there: five off-pipeline readers (#2914) meant
+# the same bound, and a copy of a constant drifts (#2913's lesson,
+# reopened across modules, closed again).
 
 
 class FallacyWorkflowPlugin:
@@ -614,7 +623,7 @@ class FallacyWorkflowPlugin:
 
         prompt = (
             f"Analyze this text exhaustively for logical fallacies:\n\n"
-            f"--- TEXT ---\n{argument_text[:8000]}\n--- END ---\n\n"
+            f"--- TEXT ---\n{argument_text[:WIDE_NET_WINDOW]}\n--- END ---\n\n"
             "List EVERY fallacy you can find. For each, respond with a JSON object:\n"
             '{"fallacy_name": "...", "root_category": "...", "confidence": 0.0-1.0}\n\n'
             "Respond with a JSON array of objects. Be thorough — aim for 10-20 fallacies.\n"
@@ -1678,11 +1687,22 @@ class FallacyWorkflowPlugin:
         self.logger.info("Running one-shot fallback analysis")
 
         kernel, settings = self._create_one_shot_kernel()
-        # Use compact taxonomy (depth ≤ 4) to stay within token limits
+        # Compact taxonomy at depth ≤ 6 (the call below) to bound the prompt.
         compact_taxonomy = self._build_compact_taxonomy(max_depth=6)
 
+        # #2908: this was the analysis path's only UNBOUNDED reader — the
+        # whole document went into this single call (on the corpus's longest
+        # document, ~600k prompt tokens; #2907 reduction 5). Read through the
+        # #1737 shared window at WIDE_NET_WINDOW (the Phase-1 prompt's own
+        # bound, defined once at module top): no new constant, and at or
+        # under the bound the selection is offset 0 by construction, so the
+        # prompt is byte-identical to the unbounded form — no replay key can
+        # miss.
+        windowed_text = selected_text(
+            argument_text, WIDE_NET_WINDOW, "fallacy_one_shot"
+        )
         prompt = (
-            f"Analyze the following text:\n--- TEXT ---\n{argument_text}\n--- END TEXT ---\n\n"
+            f"Analyze the following text:\n--- TEXT ---\n{windowed_text}\n--- END TEXT ---\n\n"
             "Identify the single most relevant fallacy from the taxonomy below. "
             "CRITICAL: Choose the MOST SPECIFIC (deepest) node that matches — "
             "generic labels like 'Ad hominem' or 'Appel à l'autorité' are too shallow. "

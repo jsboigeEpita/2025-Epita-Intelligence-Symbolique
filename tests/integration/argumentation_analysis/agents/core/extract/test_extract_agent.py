@@ -52,6 +52,7 @@ def mock_load_source_text(mocker):
     return mock_func
 
 
+@pytest.mark.requires_api
 def test_extract_from_name_success_authentic(
     authentic_extract_agent, mock_load_source_text
 ):
@@ -98,6 +99,7 @@ def test_extract_from_name_success_authentic(
     asyncio.run(run_test())
 
 
+@pytest.mark.requires_api
 @pytest.mark.xfail(
     reason="Large text extraction is inherently unreliable - LLM may fail to find needle in haystack",
     strict=False,

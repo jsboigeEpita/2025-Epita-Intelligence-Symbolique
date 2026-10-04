@@ -26,9 +26,10 @@ itself is agnostic (file-disjoint lane, per the coordinator dispatch).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Mapping, Optional
+from typing import Any, List, Mapping, Optional
 
 from .acts import ACT_TITLES, RestitutionActs
+from .act_reader_contract_check import check_act_reader_contract
 from .appendix import render_appendix
 from .factual_consistency_check import check_factual_consistency
 from .readability_gate import GateVerdict, ReadabilityGate
@@ -188,8 +189,19 @@ class RestitutionReportRenderer:
         # (criterion 6), so the boundary of the scan is itself the ± pair.
         verdict = verdict.merge(check_reader_vocabulary(body))
 
+        # #1914 criteria 2-4 (dispatch R1059) — deterministic post-render
+        # observations on the acts: formal citations without derivation,
+        # labels without function, Act III ranked shape. DIAGNOSTICS ONLY:
+        # the findings ride into the folded appendix (audit side) and never
+        # touch the verdict — the prose is a model output, one degrades in
+        # the state, one does not raise. The acts themselves are never
+        # modified: the appendix section is the only thing this adds.
+        contract_findings = check_act_reader_contract(body)
+
         # assemble the final document
-        doc = self._assemble(acts, body, verdict, state, include_full_state_json)
+        doc = self._assemble(
+            acts, body, verdict, state, include_full_state_json, contract_findings
+        )
         return RenderedReport(markdown=doc, verdict=verdict)
 
     # -- assembly -------------------------------------------------------------
@@ -201,6 +213,7 @@ class RestitutionReportRenderer:
         verdict: GateVerdict,
         state: Optional[Mapping[str, Any]],
         include_full_state_json: bool,
+        contract_findings: Optional[List[Any]] = None,
     ) -> str:
         source = (acts.source_id or "corpus_anonyme").strip()
         parts: list[str] = []
@@ -231,6 +244,7 @@ class RestitutionReportRenderer:
                 state,
                 include_full_state_json=include_full_state_json,
                 gate_block=self._render_verdict_block(verdict),
+                contract_findings=contract_findings,
             )
         )
 

@@ -167,12 +167,75 @@ REGISTRY = {
     (
         "argumentation_analysis/adapters/french_fallacy_adapter.py",
         "selected_text",
-        "3000",
+        "LLM_EXTRACTION_WINDOW",
         1,
     ): (
         "window",
         "3000-char window from the selected offset",
         "record_reading_window; Acts silent — #2850",
+    ),
+    # --- #2912: the seven off-pipeline unbounded readers enter as windows ---
+    (
+        "argumentation_analysis/adapters/french_fallacy_adapter.py",
+        "selected_text",
+        "LLM_EXTRACTION_WINDOW",
+        2,
+    ): (
+        "window",
+        "self-hosted tier prompt reads the selected 3000, not the whole text",
+        "silent — debt #2850 (was census debt #2908, bounded #2912)",
+    ),
+    (
+        "argumentation_analysis/agents/concrete_agents/informal_fallacy_agent.py",
+        "selected_text",
+        "WIDE_NET_WINDOW",
+        1,
+    ): (
+        "window",
+        "concrete agent's prompt reads the selected 8000 of its input",
+        "silent — debt #2850 (was census debt #2908, bounded #2912)",
+    ),
+    (
+        "argumentation_analysis/orchestration/analysis_runner_v2.py",
+        "selected_text",
+        "WIDE_NET_WINDOW",
+        1,
+    ): (
+        "window",
+        "conversational-v2 Phase-1 PM prompt reads the selected 8000",
+        "recorded via state= (#2915 item 5); Acts silent — #2850 "
+        "(was census debt #2908, bounded #2912)",
+    ),
+    (
+        "argumentation_analysis/orchestration/conversational_orchestrator.py",
+        "selected_text",
+        "WIDE_NET_WINDOW",
+        1,
+    ): (
+        "window",
+        "extraction opening prompt reads the selected 8000 (FR and DE variants)",
+        "stateless — no shared state reachable in run_conversational_analysis "
+        "(#2915 item 5); Acts silent — #2850 (was census debt #2908, bounded #2912)",
+    ),
+    (
+        "argumentation_analysis/orchestration/hierarchical/operational/adapters/informal_agent_adapter.py",
+        "selected_text",
+        "WIDE_NET_WINDOW",
+        1,
+    ): (
+        "window",
+        "hierarchical adapter prompt reads the selected 8000 of the joined extracts",
+        "silent — debt #2850 (was census debt #2908, bounded #2912)",
+    ),
+    (
+        "argumentation_analysis/utils/extract_repair/verify_extracts_with_llm.py",
+        "selected_text",
+        "WIDE_NET_WINDOW",
+        1,
+    ): (
+        "window",
+        "extract-evaluation prompt reads the selected 8000 of the extract",
+        "silent — debt #2850 (was census debt #2908, bounded #2912)",
     ),
     ("argumentation_analysis/adapters/french_fallacy_adapter.py", "target", "200", 1): (
         "display",
@@ -285,7 +348,7 @@ REGISTRY = {
     (
         "argumentation_analysis/agents/core/political/stakes_extractor.py",
         "selected_text",
-        "3000",
+        "LLM_EXTRACTION_WINDOW",
         1,
     ): (
         "window",
@@ -308,26 +371,6 @@ REGISTRY = {
         "4000",
         1,
     ): ("window", "first 4000 chars of the source text", "silent — debt #2850"),
-    (
-        "argumentation_analysis/agents/core/synthesis/deep_synthesis_agent.py",
-        "args",
-        "max_items_per_field",
-        1,
-    ): (
-        "population_cap",
-        "first max_items_per_field in insertion order; rest unanalysed",
-        "silent — debt #2850",
-    ),
-    (
-        "argumentation_analysis/agents/core/synthesis/deep_synthesis_agent.py",
-        "fallacies",
-        "max_items_per_field",
-        1,
-    ): (
-        "population_cap",
-        "first max_items_per_field in insertion order; rest unanalysed",
-        "silent — debt #2850",
-    ),
     ("argumentation_analysis/agents/sherlock_jtms_agent.py", "context", "100", 1): (
         "display",
         "first 100 chars of an already-produced string",
@@ -462,7 +505,12 @@ REGISTRY = {
         "first 5 of the rendered collection",
         "display only",
     ),
-    ("argumentation_analysis/evaluation/judge.py", "selected_text", "2000", 1): (
+    (
+        "argumentation_analysis/evaluation/judge.py",
+        "selected_text",
+        "_JUDGE_INPUT_WINDOW",
+        1,
+    ): (
         "window",
         "2000-char window from the selected offset",
         "record_reading_window; Acts silent — #2850",
@@ -515,7 +563,7 @@ REGISTRY = {
     (
         "argumentation_analysis/orchestration/collaborative_debate.py",
         "selected_text",
-        "1500",
+        "DEBATE_FALLBACK_WINDOW",
         1,
     ): (
         "window",
@@ -569,7 +617,7 @@ REGISTRY = {
     (
         "argumentation_analysis/orchestration/conversational_orchestrator.py",
         "selected_text",
-        "3000",
+        "_LANGUAGE_PROBE_WINDOW",
         1,
     ): (
         "window",
@@ -584,7 +632,7 @@ REGISTRY = {
     (
         "argumentation_analysis/orchestration/hierarchical/strategic/manager.py",
         "selected_text",
-        "2000",
+        "_OBJECTIVES_PREVIEW_WINDOW",
         1,
     ): (
         "window",
@@ -918,7 +966,7 @@ REGISTRY = {
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
         "selected_text",
-        "1500",
+        "DEBATE_FALLBACK_WINDOW",
         1,
     ): (
         "window",
@@ -928,7 +976,7 @@ REGISTRY = {
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
         "selected_text",
-        "2000",
+        "_GOVERNANCE_DELIBERATION_WINDOW",
         1,
     ): (
         "window",
@@ -938,7 +986,17 @@ REGISTRY = {
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
         "selected_text",
-        "2000",
+        "LOGIC_ARGUMENT_WINDOW",
+        1,
+    ): (
+        "window",
+        "2000-char window from the selected offset",
+        "record_reading_window; Acts silent — #2850",
+    ),
+    (
+        "argumentation_analysis/orchestration/invoke_callables.py",
+        "selected_text",
+        "LOGIC_ARGUMENT_WINDOW",
         2,
     ): (
         "window",
@@ -948,17 +1006,7 @@ REGISTRY = {
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
         "selected_text",
-        "2000",
-        3,
-    ): (
-        "window",
-        "2000-char window from the selected offset",
-        "record_reading_window; Acts silent — #2850",
-    ),
-    (
-        "argumentation_analysis/orchestration/invoke_callables.py",
-        "selected_text",
-        "3000",
+        "LLM_EXTRACTION_WINDOW",
         1,
     ): (
         "window",
@@ -968,7 +1016,7 @@ REGISTRY = {
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
         "selected_text",
-        "4000",
+        "LOGIC_READING_WINDOW",
         1,
     ): (
         "window",
@@ -978,7 +1026,7 @@ REGISTRY = {
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
         "selected_text",
-        "4000",
+        "LOGIC_READING_WINDOW",
         2,
     ): (
         "window",
@@ -988,7 +1036,7 @@ REGISTRY = {
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
         "selected_text",
-        "500",
+        "_COUNTER_ARGUMENT_FALLBACK_WINDOW",
         1,
     ): (
         "window",
@@ -1069,7 +1117,7 @@ REGISTRY = {
     (
         "argumentation_analysis/orchestration/structured_arg_translator.py",
         "selected_text",
-        "3000",
+        "LLM_EXTRACTION_WINDOW",
         1,
     ): (
         "window",
@@ -1101,7 +1149,7 @@ REGISTRY = {
     (
         "argumentation_analysis/plugins/coordinated_logic_plugin.py",
         "selected_text",
-        "2000",
+        "LOGIC_ARGUMENT_WINDOW",
         1,
     ): (
         "window",
@@ -1111,7 +1159,7 @@ REGISTRY = {
     (
         "argumentation_analysis/plugins/coordinated_logic_plugin.py",
         "selected_text",
-        "2000",
+        "LOGIC_ARGUMENT_WINDOW",
         2,
     ): (
         "window",
@@ -1121,7 +1169,7 @@ REGISTRY = {
     (
         "argumentation_analysis/plugins/coordinated_logic_plugin.py",
         "selected_text",
-        "4000",
+        "LOGIC_READING_WINDOW",
         1,
     ): (
         "window",
@@ -1131,7 +1179,7 @@ REGISTRY = {
     (
         "argumentation_analysis/plugins/coordinated_logic_plugin.py",
         "selected_text",
-        "4000",
+        "LOGIC_READING_WINDOW",
         2,
     ): (
         "window",
@@ -1171,9 +1219,28 @@ REGISTRY = {
     (
         "argumentation_analysis/plugins/fallacy_workflow_plugin.py",
         "argument_text",
-        "8000",
+        "WIDE_NET_WINDOW",
         1,
-    ): ("window", "first 8000 chars of the source text", "silent — debt #2850"),
+    ): (
+        "window",
+        "the wide-net Phase-1 window — first WIDE_NET_WINDOW (= 8000) chars "
+        "of the source text",
+        "silent — debt #2850",
+    ),
+    (
+        "argumentation_analysis/plugins/fallacy_workflow_plugin.py",
+        "selected_text",
+        "WIDE_NET_WINDOW",
+        1,
+    ): (
+        "window",
+        "WIDE_NET_WINDOW-char window (= 8000, the constant shared with the "
+        "wide-net slice above — R1058: one constant, two readers) from the "
+        "selected offset — the one-shot fallback's text, bound by #2908 (was "
+        "the pipeline's only unbounded reader); drops the rest of the document",
+        "stateless call — the plugin holds no shared state, so nothing "
+        "records it; Acts silent — #2850",
+    ),
     (
         "argumentation_analysis/plugins/kb_to_tweety_plugin.py",
         "belief_text",
@@ -1240,6 +1307,17 @@ REGISTRY = {
         "silent — debt #2850",
     ),
     (
+        "argumentation_analysis/reporting/restitution/act_reader_contract_check.py",
+        "sentence",
+        "117",
+        1,
+    ): (
+        "display",
+        "first 117 chars of an already-diagnosed rendered-act sentence — "
+        "the finding's appendix excerpt (#1914 criteria 2-4, #2916)",
+        "display only",
+    ),
+    (
         "argumentation_analysis/reporting/restitution/act3_conclusion_plugin.py",
         "args",
         "_MAX_CLAIM_EXCERPTS",
@@ -1267,7 +1345,7 @@ REGISTRY = {
     (
         "argumentation_analysis/services/ai_shield/layers/llm_validator.py",
         "selected_text",
-        "2000",
+        "_SHIELD_VALIDATION_WINDOW",
         1,
     ): (
         "window",
@@ -1294,12 +1372,22 @@ REGISTRY = {
         "first 10 in insertion order; rest unanalysed",
         "silent — debt #2850",
     ),
-    ("argumentation_analysis/services/nl_to_logic.py", "selected_text", "1000", 1): (
+    (
+        "argumentation_analysis/services/nl_to_logic.py",
+        "selected_text",
+        "_NL_TO_LOGIC_RETRY_WINDOW",
+        1,
+    ): (
         "window",
         "1000-char window from the selected offset",
         "record_reading_window; Acts silent — #2850",
     ),
-    ("argumentation_analysis/services/nl_to_logic.py", "selected_text", "2000", 1): (
+    (
+        "argumentation_analysis/services/nl_to_logic.py",
+        "selected_text",
+        "_NL_TO_LOGIC_WINDOW",
+        1,
+    ): (
         "window",
         "2000-char window from the selected offset",
         "record_reading_window; Acts silent — #2850",
@@ -1385,7 +1473,12 @@ REGISTRY = {
         "first position_in_visible chars of an already-produced string",
         "display only",
     ),
-    ("argumentation_analysis/utils/analysis_config.py", "selected_text", "1000", 1): (
+    (
+        "argumentation_analysis/utils/analysis_config.py",
+        "selected_text",
+        "_INFORMAL_ANALYSIS_WINDOW",
+        1,
+    ): (
         "window",
         "1000-char window from the selected offset",
         "record_reading_window; Acts silent — #2850",
