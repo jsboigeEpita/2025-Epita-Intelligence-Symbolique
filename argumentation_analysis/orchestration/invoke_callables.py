@@ -202,7 +202,6 @@ __all__ = [
     "_python_dung_fallback",
     "_compare_dung_backends",
     "compare_all_axes",
-    "_invoke_multi_axis_compare",
     "_invoke_formal_synthesis",
     "_invoke_narrative_synthesis",
     "_invoke_text_to_kb",
@@ -9889,8 +9888,7 @@ async def _invoke_dung_arbitration(
     """Pipeline-selectable Dung-arbitration stage over fallacy candidates (I1 #1501 PR2).
 
     A PRODUCTION STAGE — distinct from ``_invoke_dung_extensions`` (which computes
-    extensions over the global argument AF) and from ``_invoke_multi_axis_compare``
-    (which runs the #1429 sophism-axis comparison harness). This stage consumes
+    extensions over the global argument AF). This stage consumes
     sophism CANDIDATES, derives attacks from DECLARED Walton-Krabbe relations +
     same-span rivalry, and lets the grounded extension decide which candidates
     survive — ALTERING the detection verdict when ``dung_arbitration`` is selected.
@@ -9978,124 +9976,6 @@ async def _invoke_dung_arbitration(
         "dung_arbitration": enabled,
         "candidate_count": len(candidates),
         "degraded": False,
-    }
-
-
-async def _invoke_multi_axis_compare(
-    input_text: str, context: Dict[str, Any]
-) -> Dict[str, Any]:
-    """Pipeline-selectable wrapper over :func:`compare_all_axes` (I6 #1437 PR2).
-
-    Exposes the unified multi-axis comparison as a SELECTABLE pipeline
-    capability, mirroring how ``_invoke_dung_extensions`` wires
-    ``dung_mode=compare`` (I5 #1434). The handler extracts per-axis inputs from
-    the context and routes to :func:`compare_all_axes`; it never re-implements
-    it and never invents a cross-axis translation (each axis keeps its own input
-    shape, per #1438).
-
-    Per-axis inputs are read from ``context["multi_axis"]`` (a dict):
-
-    * ``axes``            — optional explicit subset of {"fol","dung","sophism"}.
-      Defaults to every axis whose input was supplied.
-    * ``fol_belief_set``  — FOL belief set (string or Java object) for the fol
-      axis. If absent, the fol axis is reported available=False (honest-absent).
-    * ``dung_arguments`` / ``dung_attacks`` — explicit Dung arguments/attacks.
-      If absent, derived from upstream extraction via the same helpers
-      ``_invoke_dung_extensions`` uses (``_extract_arguments_from_context`` /
-      ``_generate_attacks_from_args``).
-    * ``sophism_candidates`` / ``sophism_span_text_for`` — candidates + bridge
-      span-text accessor. If absent, the sophism axis is honest-absent.
-    * ``sophism_kwargs``  — extra kwargs forwarded to the sophism comparator
-      (classifier / cq_evaluator / solver / semantics / conflict_policy).
-    * ``*_compare_fn``    — injected per-axis comparators (DI; for JVM/LLM-free
-      tests).
-
-    The default behaviour when ``context["multi_axis"]`` is absent or empty is
-    honest-absent: the report lists no decided axis and returns
-    ``agreement=None`` (NEVER a fabricated agreement — anti-théâtre #1019).
-
-    Returns ``{semantics: "multi_axis_compare", comparison: <uniform report>,
-    note: <anti-pendule statement>}``.
-    """
-    cfg = context.get("multi_axis") or {}
-
-    # Dung inputs are derived from upstream extraction ONLY when the caller
-    # explicitly opted into the dung axis (listed in cfg["axes"] or supplied an
-    # explicit dung input). We do NOT auto-activate dung from any input text —
-    # that would run an axis the caller did not ask for (anti-pendule: a
-    # capability must be selectable, not imposed).
-    dung_arguments = cfg.get("dung_arguments")
-    dung_attacks = cfg.get("dung_attacks")
-    explicit_axes = cfg.get("axes")
-    wants_dung = (
-        (explicit_axes is not None and "dung" in explicit_axes)
-        or dung_arguments is not None
-        or dung_attacks is not None
-        or cfg.get("dung_compare_fn") is not None
-    )
-    if wants_dung and dung_arguments is None and dung_attacks is None:
-        _args = _extract_arguments_from_context(input_text, context)
-        if _args:
-            dung_arguments = _args
-            dung_attacks = _generate_attacks_from_args(_args, context)
-
-    # GE-3 (#1456): the sophism axis is genuinely bilateral only when the NEURAL
-    # tier decides. When the caller opted into the sophism axis but supplied no
-    # explicit candidates (and no test-injected comparator), auto-derive them
-    # from a genuine LLM neural detection — mirroring how the dung axis auto-
-    # derives from upstream extraction. The tier is reachable wherever the main
-    # LLM is (it routes through ``_get_openai_client``); if no key is configured
-    # or the call fails, ``neural_reachable=False`` propagates through the
-    # sophism kwargs so the axis surfaces as ``degraded`` (never as a fake
-    # comparison — anti-théâtre #1019).
-    sophism_candidates = cfg.get("sophism_candidates")
-    sophism_span_text_for = cfg.get("sophism_span_text_for")
-    sophism_compare_fn = cfg.get("sophism_compare_fn")
-    wants_sophism = (
-        (explicit_axes is not None and "sophism" in explicit_axes)
-        or sophism_candidates is not None
-        or sophism_compare_fn is not None
-    )
-    sophism_kwargs: Optional[Dict[str, Any]] = cfg.get("sophism_kwargs")
-    if wants_sophism and sophism_candidates is None and sophism_compare_fn is None:
-        from argumentation_analysis.agents.core.informal.neuro_symbolic_arbitrator import (
-            llm_neural_detect_async,
-        )
-
-        sophism_candidates, sophism_span_text_for, _neural_reachable = (
-            await llm_neural_detect_async(input_text)
-        )
-        sophism_kwargs = dict(sophism_kwargs or {})
-        sophism_kwargs["neural_reachable"] = _neural_reachable
-
-    comparison = await compare_all_axes(
-        axes=cfg.get("axes"),
-        fol_belief_set=cfg.get("fol_belief_set"),
-        fol_compare_fn=cfg.get("fol_compare_fn"),
-        dung_arguments=dung_arguments,
-        dung_attacks=dung_attacks,
-        dung_compare_fn=cfg.get("dung_compare_fn"),
-        sophism_candidates=sophism_candidates,
-        sophism_span_text_for=sophism_span_text_for,
-        sophism_compare_fn=sophism_compare_fn,
-        sophism_kwargs=sophism_kwargs,
-    )
-
-    logger.info(
-        "Multi-axis comparison run (%d axis/axes) — any_disagreement=%s",
-        len(comparison["overall"]["axes_run"]),
-        comparison["overall"]["any_disagreement"],
-    )
-
-    return {
-        "semantics": "multi_axis_compare",
-        "comparison": comparison,
-        "note": (
-            "I6 #1437: unified multi-axis comparison. Disagreements are surfaced "
-            "per axis and NEVER auto-reconciled (anti-pendule #1019); an axis or "
-            "backend that cannot run is reported available=False (fail-loud), "
-            "never omitted."
-        ),
     }
 
 

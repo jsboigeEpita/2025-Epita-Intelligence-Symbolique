@@ -251,10 +251,10 @@ not carry.
 | Dung | `_compare_dung_backends` (`invoke_callables.py:6847`) | Tweety/student | ✅ #1432-#1436 |
 | Sophism | `compare_sophism_backends` (`neuro_symbolic_arbitrator.py:526`) | neural/neuro-symbolic | ✅ #1433/#1435 |
 
-### 7c. Unified harness + pipeline-selectable capability — ✅ CLOSED
+### 7c. Unified harness + pipeline-selectable capability — harness ✅, capability RETIRED
 
 - `compare_all_axes` (`invoke_callables.py:7186`) — router + uniform aggregator over the 3 axes, zero re-implementation. ✅ #1438
-- `_invoke_multi_axis_compare` (`invoke_callables.py:7333`) → capability `multi_axis_compare`, registered `multi_axis_compare_service` (`registry_setup.py:470`). Selectable, NOT forced into presets; default honest-absent. ✅ #1439
+- ~~`_invoke_multi_axis_compare` → capability `multi_axis_compare`, registered `multi_axis_compare_service`~~ — **RETIRED #1604** (Cleanup Gate, R1062 step 4): zero production demanders (no phase, no capability table, no router entry, not in the MCP advertised tools) and a wire price measured prohibitive (JVM + the student Dung backend's 27 min/doc at N=20, #2921, + an LLM pass per document for the sophism axis, no differential reader downstream). The harness and its #2491 defect witnesses stay.
 
 ### 7d. ⏳ STILL OPEN — real-corpus multi-axis run (ATT-3)
 

@@ -153,12 +153,13 @@ backend indisponible = `available=False` fail-loud, jamais omis.
 ré-implémentation** (chaque axe garde sa shape d'entrée native).
 
 Exposé comme **capability pipeline-sélectionnable** `multi_axis_compare` via le
-handler `_invoke_multi_axis_compare` (`invoke_callables.py:7333`), registered
-`multi_axis_compare_service` (`registry_setup.py:470`). Dung dérivé de l'amont
-**seulement si le caller opte pour l'axe** (selectable, not imposed) ; default
-honest-absent `agreement=None` (jamais un accord fabriqué). Mirrors le wiring
-`dung_mode=compare` de `_invoke_dung_extensions` (`invoke_callables.py:6478`,
-I5 #1434).
+handler `_invoke_multi_axis_compare` — **RETRAIT #1604** (Cleanup Gate, R1062
+étape 4) : zéro demandeur de production (aucune phase, aucune table de
+capability, aucune entrée router, absent de la table MCP advertised) et prix de
+câblage mesuré prohibitif (JVM + 27 min/doc du backend Dung étudiant à N=20
+— #2921 — + un passage LLM par document pour l'axe sophisme, sans lecteur du
+différentiel en aval). Handler + registration + tests handler retirés
+ensemble ; le harness `compare_all_axes` et ses témoins #2491 restent.
 
 ### F.4 Reste ouvert (ATT-3)
 

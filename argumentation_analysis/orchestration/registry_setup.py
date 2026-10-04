@@ -32,7 +32,6 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_modal_logic,
     _invoke_dung_extensions,
     _invoke_dung_arbitration,
-    _invoke_multi_axis_compare,
     _invoke_formal_synthesis,
     _invoke_nl_to_logic,
     _invoke_sat,
@@ -438,19 +437,10 @@ def setup_registry(
             "Selectable Dung grounded arbitration over sophism candidates (Walton-Krabbe)",
             _invoke_dung_arbitration,
         ),
-        # multi_axis_compare_service: row restored (#1604 review). The
-        # registration is its ONLY production route — the MCP tool
-        # invoke_capability(name) resolves it by name and calls invoke
-        # (capability_tools.py), and _invoke_multi_axis_compare has no other
-        # production caller. Retiring it here would leave the function with
-        # zero production callers, which is a function-retirement decision
-        # under the Cleanup Gate, not a declaration-only change.
-        (
-            "multi_axis_compare_service",
-            ["multi_axis_compare"],
-            "Unified multi-axis comparison (fol/dung/sophism) via compare_all_axes",
-            _invoke_multi_axis_compare,
-        ),
+        # multi_axis_compare_service — RETIRED #1604 (Cleanup Gate): zero
+        # production demanders and a prohibitive wire price (see the census
+        # comment in test_one_capability_surface_1842.py); function +
+        # registration + handler tests removed together.
         (
             "formal_synthesis_service",
             ["formal_synthesis"],
