@@ -104,3 +104,19 @@ def register_specialized_tools(mcp: Any, get_registry: Any) -> None:
         return await _invoke_by_capability(
             "governance_simulation", text, "run_governance_analysis"
         )
+
+    @mcp.tool()
+    async def solve_sat(text: str) -> Dict[str, Any]:
+        """Decide a propositional formula with the SAT handler (PySAT + Z3).
+
+        The text is the formula to decide, in the handler's infix syntax
+        (``p && q``); it runs in solve mode and returns the verdict — a
+        satisfiable input comes back SAT with a model, an unsatisfiable one
+        UNSAT. This name makes the demand for the ``sat_solving`` capability
+        explicit, where the generic ``invoke_capability(name)`` route was
+        invisible to any census (#1604 arbitration).
+
+        Args:
+            text: The formula text to decide.
+        """
+        return await _invoke_by_capability("sat_solving", text, "solve_sat")
