@@ -847,10 +847,11 @@ class TestMCPServiceListTools:
         svc = _make_mcp_service()
         result = await svc.list_available_tools()
         assert result["version"] == "2.0.0"
-        assert result["total_tools"] == 23
+        assert result["total_tools"] == 24  # solve_sat joined the table (#1604)
         assert "health_check" in result["tools"]
         assert "run_workflow" in result["tools"]
         assert "evaluate_quality" in result["tools"]
+        assert "solve_sat" in result["tools"]
 
 
 class TestMCPServiceRegistryAndSession:
