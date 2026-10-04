@@ -457,18 +457,18 @@ class TestErrorHandling:
 
 
 class TestRegistryIntegration:
-    """LogicAgentPlugin is registered in CapabilityRegistry."""
+    """The LogicAgentPlugin registry declaration is retired (#1604): the
+    (propositional_reasoning, first_order_reasoning, modal_reasoning) trio had
+    zero demanders on every surface. The plugin itself stays alive through the
+    factory mounting — see TestFactoryIntegration below."""
 
-    def test_plugin_registered_in_setup_registry(self):
+    def test_plugin_not_registered_in_setup_registry(self):
         from argumentation_analysis.orchestration.registry_setup import setup_registry
 
         registry = setup_registry(include_optional=False)
-        reg = registry._registrations.get("logic_agent_plugin")
-        assert reg is not None
-        caps = reg.capabilities
-        assert "propositional_reasoning" in caps
-        assert "first_order_reasoning" in caps
-        assert "modal_reasoning" in caps
+        # Born-red witness: re-adding the registration without a demander
+        # reddens here (and in the #1842 census guard).
+        assert registry._registrations.get("logic_agent_plugin") is None
 
 
 class TestFactoryIntegration:

@@ -323,47 +323,24 @@ def setup_registry(
     slots_declared.extend(tweety_slots)
     skipped.extend(tweety_skipped)
 
-    # --- TweetyLogicPlugin: SK wrapper for all handlers (#91) ---
-    try:
-        from argumentation_analysis.plugins.tweety_logic_plugin import TweetyLogicPlugin
+    # --- TweetyLogicPlugin: retired as a registry declaration #1604 (arbitration) ---
+    # The plugin registration carried no invoke callable, so the MCP
+    # invoke_capability(name) route never reached it and no phase ever
+    # resolved "tweety_logic" — only the list readers (list_capabilities,
+    # get_registry_summary, api/proposal_endpoints) carried the name. The
+    # plugin itself stays alive: AgentFactory mounts it by name
+    # ("tweety_logic") through a direct module import. Declaration exits,
+    # not the component.
 
-        registry.register_plugin(
-            name="tweety_logic_plugin",
-            plugin_class=TweetyLogicPlugin,
-            capabilities=["tweety_logic"],
-            metadata={
-                "description": (
-                    "SK plugin exposing all Tweety logic handlers as "
-                    "@kernel_function methods for LLM agents (#91)"
-                )
-            },
-        )
-        registered.append("tweety_logic_plugin")
-    except ImportError as e:
-        skipped.append(("tweety_logic_plugin", str(e)))
-
-    # --- LogicAgentPlugin: PL/FOL/Modal @kernel_function methods (#477) ---
-    try:
-        from argumentation_analysis.plugins.logic_agent_plugin import LogicAgentPlugin
-
-        registry.register_plugin(
-            name="logic_agent_plugin",
-            plugin_class=LogicAgentPlugin,
-            capabilities=[
-                "propositional_reasoning",
-                "first_order_reasoning",
-                "modal_reasoning",
-            ],
-            metadata={
-                "description": (
-                    "SK plugin exposing PL/FOL/Modal logic operations as "
-                    "@kernel_function methods for LLM agents (#477)"
-                )
-            },
-        )
-        registered.append("logic_agent_plugin")
-    except ImportError as e:
-        skipped.append(("logic_agent_plugin", str(e)))
+    # --- LogicAgentPlugin: retired as a registry declaration #1604 ---
+    # The trio (propositional_reasoning, first_order_reasoning,
+    # modal_reasoning) had zero demanders on every surface: no phase, no
+    # resolver table, no PM-map line (no keyword hit), and every claim they
+    # could carry is already carried by a phase-resolved capability
+    # (propositional_logic, the FOL family, modal_logic). The plugin itself
+    # stays alive: AgentFactory mounts it by speciality ("logic_agents",
+    # factory.py) through a direct module import, and the real-verdict test
+    # exercises it. The declaration exits, not the component.
 
     # --- TweetyResultInterpretationPlugin: formal results to NL (#476) ---
     try:
@@ -461,6 +438,13 @@ def setup_registry(
             "Selectable Dung grounded arbitration over sophism candidates (Walton-Krabbe)",
             _invoke_dung_arbitration,
         ),
+        # multi_axis_compare_service: row restored (#1604 review). The
+        # registration is its ONLY production route — the MCP tool
+        # invoke_capability(name) resolves it by name and calls invoke
+        # (capability_tools.py), and _invoke_multi_axis_compare has no other
+        # production caller. Retiring it here would leave the function with
+        # zero production callers, which is a function-retirement decision
+        # under the Cleanup Gate, not a declaration-only change.
         (
             "multi_axis_compare_service",
             ["multi_axis_compare"],
