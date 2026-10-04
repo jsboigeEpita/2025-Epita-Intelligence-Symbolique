@@ -681,7 +681,7 @@ def _reader_contract_section(findings: List[Any]) -> List[str]:
     ]
     if not findings:
         lines.append(
-            "Aucun constat : citations formelles dérivées, priorisation " "visible."
+            "Aucun constat : citations formelles dérivées, priorisation visible."
         )
         lines.append("")
         return lines
@@ -695,6 +695,10 @@ def _reader_contract_section(findings: List[Any]) -> List[str]:
     # Criterion 3 ships as a measured-weak diagnostic (R1061 (d)): its
     # findings ride under their own line, with both seats' measured
     # precision, so the appendix never reads them as a settled constat.
+    # Precision figures below were measured 2026-10-04 on main b36022465
+    # (11 renders po-2025, 2 renders ai-01, truth tables by seat) —
+    # RE-MEASURE BOTH when a c3 lexicon entry moves, or the number
+    # silently rots (R1062).
     for f in (x for x in findings if x.criterion != 3):
         lines.append(f"- **Acte** {f.act}, ligne {f.line} — {f.kind} : {f.note}")
     weak = [f for f in findings if f.criterion == 3]
@@ -702,7 +706,7 @@ def _reader_contract_section(findings: List[Any]) -> List[str]:
         lines.append("")
         lines.append(
             "Critère 3 — diagnostic faible mesuré, à vérifier à la lecture "
-            "(précision mesurée sur deux sièges : ~4/17 po-2025, 0/8 ai-01) :"
+            "(précision mesurée le 2026-10-04 : ~4/17 po-2025, 0/5 ai-01) :"
         )
         for f in weak:
             lines.append(f"- **Acte** {f.act}, ligne {f.line} — {f.kind} : {f.note}")

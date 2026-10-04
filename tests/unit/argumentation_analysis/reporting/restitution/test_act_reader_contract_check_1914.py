@@ -506,12 +506,18 @@ class TestRendererWiring:
             "diagnostic faible mesuré" in md
         ), "c3 findings must render under their own measured-weak line"
         assert (
-            "0/8" in md and "4/17" in md
-        ), "the weak line states both seats' measured precision"
+            "0/5" in md and "4/17" in md
+        ), "the weak line states both seats' re-measured precision (R1062)"
+        assert md.count("label_without_function") == 1, (
+            "the c3 kind appears exactly once: rendered twice means the c3 "
+            "bullet also sits in the unreserved list above the banner — the "
+            "exact regression R1062's mutation measured (rindex only read "
+            "the LAST occurrence)"
+        )
         banner_at = md.index("diagnostic faible mesuré")
-        c3_at = md.rindex("label_without_function")
+        c3_at = md.index("label_without_function")
         c2_at = md.index("formal_citation_without_derivation")
-        assert c3_at > banner_at, "the c3 bullet sits under its banner"
+        assert c3_at > banner_at, "the FIRST c3 occurrence sits under its banner"
         assert c2_at < banner_at, "the c2 bullet stays above the banner"
 
     def test_empty_case_no_longer_claims_the_weak_control(self):
