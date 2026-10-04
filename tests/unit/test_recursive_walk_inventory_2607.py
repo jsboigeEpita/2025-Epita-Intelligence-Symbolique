@@ -37,6 +37,9 @@ ROOTS_BY_WALK = {
     "unit/argumentation_analysis/core/test_one_openai_client_constructor_2391.py": [
         "REPO_ROOT/root (production roots)"
     ],
+    "unit/argumentation_analysis/orchestration/test_dung_arbitration_wiring.py": [
+        "orchestration_dir (production orchestration package)"
+    ],
     "unit/argumentation_analysis/orchestration/test_one_capability_surface_1842.py": [
         "root (PROD_ROOT or synthetic)"
     ]
