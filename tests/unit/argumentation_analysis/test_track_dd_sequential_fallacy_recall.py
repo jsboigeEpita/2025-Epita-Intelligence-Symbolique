@@ -249,3 +249,76 @@ class TestInvokeHierarchicalFallacyEnrichment:
             result = await invoke_mod._invoke_hierarchical_fallacy("test text", {})
             assert len(result["fallacies"]) == 1
             assert result["extraction_method"] == "guided"
+
+
+class TestMergeKeepsPerArgumentLocations:
+    """#2920: one candidate per (argument, fallacy) survives the merge.
+
+    Pre-#2920 the dedup key was the taxonomy_pk alone, so two arguments
+    surfacing the same fallacy collapsed into one candidate and the location
+    was lost before any downstream consumer (the Dung stage's rivalry groups,
+    the state writer's arg links) could see it.
+    """
+
+    def test_same_fallacy_different_arguments_both_survive(self):
+        wide = [
+            {"fallacy_type": "ad hominem", "taxonomy_pk": "AH.01", "confidence": 0.9},
+        ]
+        per_arg = [
+            {
+                "fallacy_type": "ad hominem",
+                "taxonomy_pk": "AH.01",
+                "target_argument": "arg_2",
+                "confidence": 0.7,
+            },
+            {
+                "fallacy_type": "ad hominem",
+                "taxonomy_pk": "AH.01",
+                "target_argument": "arg_5",
+                "confidence": 0.6,
+            },
+        ]
+        result = _merge_fallacy_results(wide, per_arg)
+        assert len(result) == 3
+        targets = {f.get("target_argument") for f in result}
+        assert targets == {None, "arg_2", "arg_5"}
+
+    def test_same_fallacy_same_argument_dedups(self):
+        per_arg = [
+            {
+                "fallacy_type": "ad hominem",
+                "taxonomy_pk": "AH.01",
+                "target_argument": "arg_2",
+                "confidence": 0.7,
+            },
+            {
+                "fallacy_type": "ad hominem",
+                "taxonomy_pk": "AH.01",
+                "target_argument": "arg_2",
+                "confidence": 0.95,
+            },
+        ]
+        result = _merge_fallacy_results([], per_arg)
+        assert len(result) == 1
+        assert result[0]["confidence"] == 0.95
+
+    def test_wide_net_floor_and_anchored_extra_coexist(self):
+        wide = [
+            {
+                "fallacy_type": "slippery slope",
+                "taxonomy_pk": "SS.01",
+                "confidence": 0.8,
+            },
+        ]
+        per_arg = [
+            {
+                "fallacy_type": "slippery slope",
+                "taxonomy_pk": "SS.01",
+                "target_argument": "arg_1",
+                "confidence": 0.5,
+            },
+        ]
+        result = _merge_fallacy_results(wide, per_arg)
+        # The wide-net floor (whole text, no target) and the grounded
+        # per-argument detection are distinct evidence, both kept.
+        assert len(result) == 2

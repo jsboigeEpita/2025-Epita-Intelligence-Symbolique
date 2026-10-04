@@ -26,11 +26,13 @@ from argumentation_analysis.orchestration.state_writers import (
 
 
 def _ctx(*, enabled: bool, with_refutation: bool) -> dict:
-    """Build a synthetic pipeline context with two ML-detected candidates.
+    """Build a synthetic pipeline context with two hierarchical-detected candidates.
 
-    The bridge mints ``ml_llm_<index>`` ids in stable order, so candidate 0
-    (``ml_llm_0``) is declared to refute candidate 1 (``ml_llm_1``) when
-    ``with_refutation`` is set — a genuine unidirectional attack.
+    #2920: the stage's sole source is the hierarchical phase, so the bridge
+    mints ``hierarchical_<index>`` ids in stable order — candidate 0
+    (``hierarchical_0``) is declared to refute candidate 1
+    (``hierarchical_1``) when ``with_refutation`` is set — a genuine
+    unidirectional attack.
     """
     fallacies = [
         {"fallacy_type": "appeal_to_authority", "confidence": 0.7},
@@ -42,7 +44,9 @@ def _ctx(*, enabled: bool, with_refutation: bool) -> dict:
     }
     if with_refutation:
         # WaltonKrabbeRelations = {challenger_id: frozenset({target_id})}.
-        ctx["walton_krabbe_relations"] = {"ml_llm_0": frozenset({"ml_llm_1"})}
+        ctx["walton_krabbe_relations"] = {
+            "hierarchical_0": frozenset({"hierarchical_1"})
+        }
     return ctx
 
 
@@ -71,9 +75,9 @@ class TestDungArbitrationWiring:
         assert out_on["verdict"]["enabled"] is True
         assert out_on["verdict"]["honest_absent"] is False
         assert out_on["verdict"]["surviving_count"] == 1
-        assert "ml_llm_1" in out_on["verdict"]["eliminated_ids"]
-        # The attack edge (ml_llm_0 → ml_llm_1) is surfaced for auditability.
-        assert ["ml_llm_0", "ml_llm_1"] in out_on["verdict"]["attacks"]
+        assert "hierarchical_1" in out_on["verdict"]["eliminated_ids"]
+        # The attack edge (hierarchical_0 → hierarchical_1) is surfaced for auditability.
+        assert ["hierarchical_0", "hierarchical_1"] in out_on["verdict"]["attacks"]
 
     async def test_on_without_refutation_is_honest_absent(self) -> None:
         out = await _invoke_dung_arbitration(
@@ -99,12 +103,12 @@ class TestDungArbitrationWiring:
         ext = arbitration[0]["extensions"]
         assert ext["enabled"] is True
         assert ext["honest_absent"] is False
-        assert "ml_llm_1" in ext["eliminated_ids"]
+        assert "hierarchical_1" in ext["eliminated_ids"]
         assert ext["surviving_count"] == 1
         assert ext["input_count"] == 2
         # The AF's arguments/attacks are the opaque candidate ids / pairs.
-        assert "ml_llm_0" in arbitration[0]["arguments"]
-        assert ["ml_llm_0", "ml_llm_1"] in arbitration[0]["attacks"]
+        assert "hierarchical_0" in arbitration[0]["arguments"]
+        assert ["hierarchical_0", "hierarchical_1"] in arbitration[0]["attacks"]
 
     async def test_writer_handles_passthrough_verdict(self) -> None:
         # A passthrough (OFF) verdict is still recorded — the stage RAN.
@@ -120,3 +124,39 @@ class TestDungArbitrationWiring:
         ext = arbitration[0]["extensions"]
         assert ext["enabled"] is False
         assert ext["honest_absent"] is True
+
+
+class TestSourceKeysHaveProducers:
+    """DoD #2920 witness: every phase-output key the stage reads is written
+    by a phase that exists.
+
+    Pre-#2920 the stage read ``phase_taxonomy_sophisms_output`` — no workflow
+    defines a phase named ``taxonomy_sophisms`` (the taxonomy tier runs INSIDE
+    ``hierarchical_fallacy``), a reader with no writer (#1019 shape). This
+    witness parses the handler's own source for ``phase_<name>_output`` reads
+    and requires each ``<name>`` to appear as a quoted phase name somewhere in
+    the orchestration package, outside the handler's own module.
+    """
+
+    def test_every_phase_key_read_has_a_real_phase(self) -> None:
+        import inspect
+        import re
+        from pathlib import Path
+
+        src = inspect.getsource(_invoke_dung_arbitration)
+        key_names = set(re.findall(r"phase_([a-z_]+)_output", src))
+        assert key_names, "the witness must find at least one phase key read"
+
+        orchestration_dir = Path(
+            _invoke_dung_arbitration.__module__.replace(".", "/")
+        ).parent
+        corpus = ""
+        for py in sorted(orchestration_dir.rglob("*.py")):
+            if py.name == "invoke_callables.py":
+                continue  # the reader's own module is not a producer
+            corpus += py.read_text(encoding="utf-8", errors="replace")
+
+        missing = {name for name in key_names if f'"{name}"' not in corpus}
+        assert (
+            not missing
+        ), f"the stage reads phase keys with no producing phase: {sorted(missing)}"

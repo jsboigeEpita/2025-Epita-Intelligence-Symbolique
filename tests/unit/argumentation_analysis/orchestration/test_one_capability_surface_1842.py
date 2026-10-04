@@ -97,15 +97,17 @@ PENDING_TRIAGE: dict[tuple[str, str], str] = {
     # could not read before #1604: silence the tree already carried, made
     # visible here rather than created.
     ("multi_axis_compare_service", "multi_axis_compare"): "#1604",
-    # dung_arbitration owner -> #1649 (arbitration c.5976719576: "0 eliminations
-    # => PENDING_TRIAGE owner -> #1649"). Measured offline, 0 LLM, real corpus
-    # (22 docs): 88 candidates, 0 attacks, 0 eliminations, honest_absent on
-    # every doc. Structural root: the bridge derives span_id from
-    # (detector, family), so same-span groups are always same-family and the
-    # rivalry policy skips same-family pairs — zero rivalry edges are
-    # derivable for ANY input; the bridge never populates failed critical
-    # questions; the only live attack channel is declared Walton-Krabbe
-    # relations, whose producer is #1649 (open).
+    # dung_arbitration owner -> #1649 (arbitration c.5976719576, reaffirmed by
+    # #2920's offline re-measure). #2920 repaired the stage's inputs — the
+    # bridge anchors on target_argument (same-target different-family rivalry
+    # now fires, born-red witness on the REAL bridge), the merge keeps one
+    # candidate per (argument, fallacy), and the dead rule-taxonomy source key
+    # is retired — yet the offline CI-safe tier stays honest-absent BY NATURE
+    # (lexical detections carry no target): re-measured 25 candidates over 22
+    # docs, 0 attacks, 0 eliminations. Real-run eliminations now hinge on (a)
+    # declared Walton-Krabbe relations, producer #1649 (open), and (b) the
+    # per-argument LLM tier actually feeding the stage — the wiring decision
+    # loop lives in #2920.
     ("dung_arbitration_service", "dung_arbitration"): "#1649",
     ("sat_handler", "sat_solving"): "#1604",
     # ("tweety_logic_plugin", "tweety_logic") — retired #1604 (coordinator

@@ -6457,32 +6457,47 @@ def _merge_fallacy_results(
     wide_fallacies: List[Dict[str, Any]],
     per_arg_fallacies: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
-    """Merge wide-net and per-argument fallacy results, deduplicating by taxonomy_pk.
+    """Merge wide-net and per-argument fallacy results, deduplicating by
+    (taxonomy_pk, target).
 
-    Keeps the highest-confidence entry for each unique taxonomy_pk.
+    #2920: the key includes the detection's ``target_argument`` when it carries
+    one. Deduping on the taxonomy_pk alone collapsed two arguments surfacing
+    the same fallacy into one candidate and dropped the location before any
+    downstream consumer (the Dung stage's rivalry groups, the state writer's
+    arg links) could see it. One candidate per (argument, fallacy) survives;
+    anchorless detections (wide-net whole-text) keep the pk-only key, so the
+    historical behavior is unchanged for them.
+
+    Keeps the highest-confidence entry for each unique key.
     Wide-net results are kept as the floor; per-argument extras are added
-    only if their taxonomy_pk is not already present.
+    only if their key is not already present.
     """
     seen: Dict[str, Dict[str, Any]] = {}
+
+    def _key(f: Dict[str, Any]) -> str:
+        pk = str(f.get("taxonomy_pk") or f.get("fallacy_type") or "")
+        target = str(f.get("target_argument") or "").strip()
+        return f"{pk}::{target}" if target else pk
+
     for f in wide_fallacies:
         if not isinstance(f, dict):
             continue
-        pk = str(f.get("taxonomy_pk") or f.get("fallacy_type") or "")
-        if pk and pk not in seen:
-            seen[pk] = f
-        elif pk and f.get("confidence", 0) > seen.get(pk, {}).get("confidence", 0):
-            seen[pk] = f
+        k = _key(f)
+        if k and k not in seen:
+            seen[k] = f
+        elif k and f.get("confidence", 0) > seen.get(k, {}).get("confidence", 0):
+            seen[k] = f
 
     for f in per_arg_fallacies:
         if not isinstance(f, dict):
             continue
-        pk = str(f.get("taxonomy_pk") or f.get("fallacy_type") or "")
-        if not pk:
+        k = _key(f)
+        if not k:
             continue
-        if pk not in seen:
-            seen[pk] = f
-        elif f.get("confidence", 0) > seen.get(pk, {}).get("confidence", 0):
-            seen[pk] = f
+        if k not in seen:
+            seen[k] = f
+        elif f.get("confidence", 0) > seen.get(k, {}).get("confidence", 0):
+            seen[k] = f
 
     return list(seen.values())
 
@@ -9889,12 +9904,20 @@ async def _invoke_dung_arbitration(
     Selectable (default OFF, backward-compat): gated by ``context["dung_arbitration"]``.
     OFF ⇒ passthrough verdict (surviving == input). ON ⇒ grounded arbitration.
 
-    Rule-vs-ML provenance: candidates are collected from the rule taxonomy phase
-    (``phase_taxonomy_sophisms_output``) and the ML/hierarchical phase
-    (``phase_hierarchical_fallacy_output``), bridged to opaque ``SophismCandidate``
-    atoms. Provenance is preserved on each atom; cross-source disagreement surfaces
-    via declared Walton-Krabbe relations (``walton_krabbe_relations``) and same-span
-    rivalry, NOT span overlap (the rule detector carries no text span).
+    Rule-vs-ML provenance: candidates are collected from the hierarchical
+    fallacy phase (``phase_hierarchical_fallacy_output``) — the ONE producer
+    that exists. #2920 retired the former ``rule_taxonomy`` source: it read a
+    rule-taxonomy phase key naming a phase (``taxonomy_sophisms``) that no
+    workflow defines — the taxonomy tier runs INSIDE
+    ``hierarchical_fallacy`` — a reader with no writer. The source label names
+    the tier that really produced the batch
+    (``hierarchical::<extraction_method>``); detections are bridged to opaque
+    ``SophismCandidate`` atoms. A detection carrying ``target_argument``
+    (per-argument tier) is anchored on its target, so same-target
+    different-family rivalry CAN fire — across families and provenances; an
+    anchorless detection (lexical taxonomy tier, wide-net) cannot rival by
+    construction. Declared Walton-Krabbe relations
+    (``walton_krabbe_relations``) remain the explicit cross-candidate channel.
 
     Honest-absent (anti-#1019): with no declared refutations and no same-span
     rivalry, the enabled stage returns surviving == input (no fabricated attack).
@@ -9912,15 +9935,17 @@ async def _invoke_dung_arbitration(
     enabled = bool(context.get("dung_arbitration", False))
 
     sources: Dict[str, List[Any]] = {}
-    rule_detections = context.get("phase_taxonomy_sophisms_output") or []
-    if rule_detections:
-        sources["rule_taxonomy"] = taxonomy_detections_to_candidates(rule_detections)
     hierarchical = context.get("phase_hierarchical_fallacy_output") or {}
     if isinstance(hierarchical, dict):
-        ml_fallacies = hierarchical.get("fallacies") or []
-        if ml_fallacies:
-            sources["ml_llm"] = taxonomy_detections_to_candidates(
-                ml_fallacies, detector="ml_llm"
+        hier_fallacies = hierarchical.get("fallacies") or []
+        if hier_fallacies:
+            # The label names the tier that really produced this batch
+            # (#2920): the hierarchical phase is the sole producer, and its
+            # ``extraction_method`` (taxonomy / widenet+perarg_union / ...)
+            # says which tier ran. Provenance rides the candidate ids.
+            method = str(hierarchical.get("extraction_method") or "hierarchical")
+            sources[f"hierarchical::{method}"] = taxonomy_detections_to_candidates(
+                hier_fallacies, detector="hierarchical"
             )
 
     candidates = combine_candidate_sources(sources) if sources else []
