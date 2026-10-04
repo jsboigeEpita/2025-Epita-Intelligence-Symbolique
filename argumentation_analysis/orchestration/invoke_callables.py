@@ -201,6 +201,7 @@ __all__ = [
     "_invoke_dung_extensions",
     "_python_dung_fallback",
     "_compare_dung_backends",
+    "DungAttacksNotMaterializedError",
     "compare_all_axes",
     "_invoke_multi_axis_compare",
     "_invoke_formal_synthesis",
@@ -9222,6 +9223,18 @@ _COMPARE_DUNG_SEMANTICS: Tuple[str, ...] = (
 _DungBackendFn = Callable[[List[str], List[List[str]]], Awaitable[Dict[str, Any]]]
 
 
+class DungAttacksNotMaterializedError(ValueError):
+    """``attacks`` reached the Dung comparator as ``None`` (#2921).
+
+    ``None`` means the attack relations were never materialized upstream —
+    it is NOT "no attacks": ``[]`` is a materially different (and valid)
+    framework where every argument is accepted. Silent coercion of ``None``
+    to ``[]`` would present that degenerate AF as a genuine comparison, so
+    the comparator refuses before any backend runs, naming where the list
+    must be derived (``_derive_dung_attacks``).
+    """
+
+
 def _normalize_extensions(raw: Any, semantics: Tuple[str, ...]) -> List[List[str]]:
     """Coerce a backend's per-semantics extension payload to a flat list.
 
@@ -9388,6 +9401,16 @@ async def _compare_dung_backends(
         }
     """
     sem_tuple = semantics if semantics is not None else _COMPARE_DUNG_SEMANTICS
+
+    # #2921: a None attacks list is a missing input, not an empty AF — refuse
+    # it with the named error before any backend runs (the previous shape was
+    # a bare ``TypeError`` from ``len(NoneType)`` deep inside a backend).
+    if attacks is None:
+        raise DungAttacksNotMaterializedError(
+            "attacks is None: the Dung comparison needs a materialized attack "
+            "list — derive it upstream (e.g. _derive_dung_attacks) or pass [] "
+            "explicitly for a no-attack framework. None is not 'no attacks'."
+        )
 
     if backends is None:
         backends = {

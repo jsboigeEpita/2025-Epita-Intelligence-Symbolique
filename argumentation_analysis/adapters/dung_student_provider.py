@@ -34,6 +34,92 @@ SUPPORTED_SEMANTICS = [
 ]
 
 
+# Adapter-local agent class, built lazily (importing abs_arg_dung at module
+# import time would require a running JVM; the module itself stays importable
+# JVM-free — see test_dung_student_provider.py).
+_LAZY_AGENT_CLS = None
+
+
+def _lazy_agent_class():
+    """Return the adapter-local EnhancedDungAgent subclass (#2921).
+
+    The sanctuary's eager ``_compute_extensions_if_needed`` pays SEVEN
+    semantics on the first getter call; this adapter consumes FOUR. Of the
+    three unconsumed ones, measured on sparse synthetic AFs (a0..aN-1, no
+    attacks; per-semantics timings, po-2025 2026-10-04):
+
+    - ``SimpleIdealReasoner.getModel`` enumerates subsets internally,
+      Java-side: 41.7 s at N=15; killed at the 420 s process cap at N=20
+      (the dominant term of the issue's 27-minute run);
+    - ``SimpleAdmissibleReasoner.getModels`` returns 2^N extensions (1 048
+      576 at N=20), each then converted argument-by-argument through the
+      JPype bridge by ``_format_extensions``: 362 s total at N=20 (213 s
+      Java + 149 s conversion), 4.3 s at N=15.
+
+    The four consumed semantics (grounded/preferred/stable/complete) measure
+    <= 9.3 ms each at every N in {5, 10, 15, 20} on sparse AFs. The subclass
+    computes exactly those four, formatting each exactly like the sanctuary
+    branch it replaces; the EnhancedDungAgent corrections (perfect cycle,
+    self-attack) apply unchanged on top of the cache. The sanctuary branch's
+    ``print("(Calcul des extensions en cours...)")`` is deliberately not
+    reproduced: it is a stdout side-effect, not part of the value contract.
+
+    BOUNDARY — what this repair does NOT bound (#2930). On a DENSE AF the
+    remaining cost is the framework's own combinatorics, paid by BOTH engines
+    through Tweety's ``Simple*Reasoner``, and therefore not reachable from this
+    adapter. Measured on N/2 mutual pairs (2^(N/2) preferred extensions),
+    po-2025 2026-10-04, fresh process per row:
+
+    ============  ==================  ===========  ============
+    N             preferred exts      tweety       student
+    ============  ==================  ===========  ============
+    12            64                  0.6 s        1.6 s
+    16            256                 2.3 s        2.8 s
+    18            512                 2.7 s        2.7 s
+    20            1024                78.2 s       46.7 s
+    ============  ==================  ===========  ============
+
+    At N=20 the dominant term is ``SimplePreferredReasoner`` alone (34.5 s
+    Java, internal 2^N enumeration); ``complete`` returns 59 049 = 3^10
+    extensions (the correct count, 2.2 s Java + 1.8 s bridge conversion).
+    The student is FASTER than the native engine on this family — the residual
+    is the field's arithmetic, not a student defect. ``_compare_dung_backends``
+    reports every backend's ``elapsed_ms`` but bounds nothing (a naive
+    ``asyncio.wait_for`` would be a false fix: the JPype thread is not
+    killable and ``asyncio.run()`` teardown blocks on it) — see #2930.
+    """
+    global _LAZY_AGENT_CLS
+    if _LAZY_AGENT_CLS is None:
+        from abs_arg_dung.enhanced_agent import EnhancedDungAgent
+
+        class _LazyFourSemanticsAgent(EnhancedDungAgent):
+            """Computes only the 4 semantics the comparison consumes (#2921)."""
+
+            def _compute_extensions_if_needed(self):
+                if not self._cache_valid:
+                    self._cached_extensions = {
+                        "grounded": sorted(
+                            [
+                                str(arg.getName())
+                                for arg in self.grounded_reasoner.getModel(self.af)
+                            ]
+                        ),
+                        "preferred": self._format_extensions(
+                            self.preferred_reasoner.getModels(self.af)
+                        ),
+                        "stable": self._format_extensions(
+                            self.stable_reasoner.getModels(self.af)
+                        ),
+                        "complete": self._format_extensions(
+                            self.complete_reasoner.getModels(self.af)
+                        ),
+                    }
+                    self._cache_valid = True
+
+        _LAZY_AGENT_CLS = _LazyFourSemanticsAgent
+    return _LAZY_AGENT_CLS
+
+
 class DungStudentProvider:
     """Wraps abs_arg_dung.EnhancedDungAgent as a selectable Dung provider.
 
@@ -90,11 +176,9 @@ class DungStudentProvider:
             return False
 
     def _get_agent(self):
-        """Lazily create the EnhancedDungAgent."""
+        """Lazily create the agent (adapter-local lazy subclass, #2921)."""
         if self._agent is None:
-            from abs_arg_dung.enhanced_agent import EnhancedDungAgent
-
-            self._agent = EnhancedDungAgent()
+            self._agent = _lazy_agent_class()()
         return self._agent
 
     def _build_framework(
