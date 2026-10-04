@@ -255,7 +255,7 @@ jobs:
           # Glob the 6 substantive files explicitly so the 6 empty shells do
           # not bloat the argv and so a future empty stub cannot sneak into a
           # lane named after it.
-          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ tests/agents/ tests/test_fact_checking_integration.py tests/test_integration_success_validation.py tests/test_orchestration_integration.py tests/test_readme_quickstart.py tests/test_regression_golden.py -m "not slow and not requires_api" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
+          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ tests/integration/triage/ tests/integration/argumentation_analysis/ tests/agents/ tests/test_fact_checking_integration.py tests/test_integration_success_validation.py tests/test_orchestration_integration.py tests/test_readme_quickstart.py tests/test_regression_golden.py -m "not slow and not requires_api" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
           #
           # #1867 (d), user decision 2026-09-28: tests/agents/ admitted. Measured on
           # ai-01 under the gate filter: 143 passed, 0 skipped, 3 deselected in 117 s
@@ -263,6 +263,14 @@ jobs:
           # requires_api, so the gate deselects them (guard:
           # tests/unit/test_gate_deselects_egress_leakers_1872.py). The comment sits
           # below the command so the pytest line keeps its line number.
+          #
+          # #1867 (a), user decision 2026-10-04: tests/integration/triage/ and
+          # tests/integration/argumentation_analysis/ admitted, 331 tests under the
+          # gate filter (282 + 49). Measured in position by po-2025 on 2026-10-02
+          # at the end of the full gate argv: 0 failed, and 14 real LLM calls from
+          # 3 unmarked tests, repaired by #2906 before this admission.
+          # tests/integration/webapp/ (14 tests, ~2 min 30) and the 14 files at
+          # the root of tests/integration/ were not chosen.
 
       - name: Generate test summary
         if: always()
