@@ -32,6 +32,7 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_modal_logic,
     _invoke_dung_extensions,
     _invoke_dung_arbitration,
+    _invoke_multi_axis_compare,
     _invoke_formal_synthesis,
     _invoke_nl_to_logic,
     _invoke_sat,
@@ -322,24 +323,14 @@ def setup_registry(
     slots_declared.extend(tweety_slots)
     skipped.extend(tweety_skipped)
 
-    # --- TweetyLogicPlugin: SK wrapper for all handlers (#91) ---
-    try:
-        from argumentation_analysis.plugins.tweety_logic_plugin import TweetyLogicPlugin
-
-        registry.register_plugin(
-            name="tweety_logic_plugin",
-            plugin_class=TweetyLogicPlugin,
-            capabilities=["tweety_logic"],
-            metadata={
-                "description": (
-                    "SK plugin exposing all Tweety logic handlers as "
-                    "@kernel_function methods for LLM agents (#91)"
-                )
-            },
-        )
-        registered.append("tweety_logic_plugin")
-    except ImportError as e:
-        skipped.append(("tweety_logic_plugin", str(e)))
+    # --- TweetyLogicPlugin: retired as a registry declaration #1604 (arbitration) ---
+    # The plugin registration carried no invoke callable, so the MCP
+    # invoke_capability(name) route never reached it and no phase ever
+    # resolved "tweety_logic" — only the list readers (list_capabilities,
+    # get_registry_summary, api/proposal_endpoints) carried the name. The
+    # plugin itself stays alive: AgentFactory mounts it by name
+    # ("tweety_logic") through a direct module import. Declaration exits,
+    # not the component.
 
     # --- LogicAgentPlugin: retired as a registry declaration #1604 ---
     # The trio (propositional_reasoning, first_order_reasoning,
@@ -447,11 +438,19 @@ def setup_registry(
             "Selectable Dung grounded arbitration over sophism candidates (Walton-Krabbe)",
             _invoke_dung_arbitration,
         ),
-        # multi_axis_compare_service retired as a registration #1604: zero
-        # demanders (no phase, no table, not on the PM map), while its
-        # function keeps its one live consumer — the direct call from
-        # _invoke_dung_arbitration (invoke_callables.py). The declaration
-        # exits, the function stays.
+        # multi_axis_compare_service: row restored (#1604 review). The
+        # registration is its ONLY production route — the MCP tool
+        # invoke_capability(name) resolves it by name and calls invoke
+        # (capability_tools.py), and _invoke_multi_axis_compare has no other
+        # production caller. Retiring it here would leave the function with
+        # zero production callers, which is a function-retirement decision
+        # under the Cleanup Gate, not a declaration-only change.
+        (
+            "multi_axis_compare_service",
+            ["multi_axis_compare"],
+            "Unified multi-axis comparison (fol/dung/sophism) via compare_all_axes",
+            _invoke_multi_axis_compare,
+        ),
         (
             "formal_synthesis_service",
             ["formal_synthesis"],

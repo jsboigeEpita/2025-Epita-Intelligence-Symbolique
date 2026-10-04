@@ -92,24 +92,32 @@ IN_SCOPE_COMPONENTS = {
 # so retiring the names retires the component: that is a wire-or-retire
 # decision, not a vocabulary trim.
 PENDING_TRIAGE: dict[tuple[str, str], str] = {
-    # #1604 — plugin-only providers: AgentFactory mounts them by speciality,
-    # no phase resolves them by capability.
-    ("tweety_logic_plugin", "tweety_logic"): "#1604",
     # #1604 — live invoke callables that no phase requests. They were
     # declared inside `for name, caps, ... in <rows>:` loops, which the census
     # could not read before #1604: silence the tree already carried, made
     # visible here rather than created.
+    ("multi_axis_compare_service", "multi_axis_compare"): "#1604",
     ("dung_arbitration_service", "dung_arbitration"): "#1604",
     ("sat_handler", "sat_solving"): "#1604",
+    # ("tweety_logic_plugin", "tweety_logic") — retired #1604 (coordinator
+    # arbitration): the plugin registration carries no invoke callable, so the
+    # MCP invoke_capability route never reached it — only the list readers
+    # (list_capabilities, get_registry_summary, proposal_endpoints) lost a
+    # name. The plugin stays mounted by name ("tweety_logic") through
+    # AgentFactory. Declaration exits, not the component.
     # ("logic_agent_plugin", "propositional_reasoning"/"first_order_reasoning"/
     # "modal_reasoning") — retired #1604: the trio had zero demanders on every
     # surface (no phase, no table, not on the PM map) and every claim they
     # could carry is carried by a phase-resolved capability. The plugin stays
     # mounted by speciality ("logic_agents") — declaration exits, not the
     # component.
-    # ("multi_axis_compare_service", "multi_axis_compare") — retired #1604:
-    # zero demanders; its function keeps its live direct caller
-    # (_invoke_dung_arbitration). Declaration exits, function stays.
+    # ("multi_axis_compare_service", "multi_axis_compare") — row RESTORED at
+    # #1604 review: the registration is its ONLY production route (the MCP
+    # invoke_capability resolves it by name and calls its invoke), and
+    # _invoke_multi_axis_compare has no other production caller. Retiring it
+    # leaves the function with zero production callers — a function
+    # retirement under the Cleanup Gate, not a declaration-only change. The
+    # pair is back in PENDING_TRIAGE above pending that decision.
     # ("asp_reasoning_handler", "asp_reasoning") — wired #1604: the ASP
     # stable-extension cross-check phase in formal_extended demands it.
     # ("asp_reasoning_handler", "answer_set_programming") — retired #1604:

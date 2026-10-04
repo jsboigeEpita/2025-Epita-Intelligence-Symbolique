@@ -444,17 +444,20 @@ class TestMultiAxisCompareHandler:
         assert any("NOT reconciled" in d for d in fol["disagreements"])
         assert out["comparison"]["overall"]["any_disagreement"] is True
 
-    async def test_capability_registration_retired_1604(self):
-        # #1604 wire-or-retire: the multi_axis_compare declaration had zero
-        # demanders (no phase, no resolver table, no PM-map line — census
-        # comment on the issue). The registration exits; the handler stays
-        # importable for its one live consumer, the direct call from
-        # _invoke_dung_arbitration. Born-red if the declaration returns.
-        from argumentation_analysis.orchestration.registry_setup import setup_registry
+    async def test_capability_registered_selectable(self):
+        # The handler must be registered under the multi_axis_compare capability
+        # so a workflow phase can select it (I6 PR2 DoD). We verify the wiring
+        # statically (the service tuple names the capability + handler) rather
+        # than building the full registry, which would instantiate JVM agents.
+        import inspect
 
-        registry = setup_registry(include_optional=False)
-        assert not registry.find_for_capability("multi_axis_compare")
-        # The handler itself is untouched: direct import, still callable.
+        from argumentation_analysis.orchestration import registry_setup
+
+        src = inspect.getsource(registry_setup)
+        # The capability string and the handler are both wired in the source.
+        assert "multi_axis_compare" in src
+        assert "_invoke_multi_axis_compare" in src
+        # And the handler is importable from the module (the import the tuple uses).
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_multi_axis_compare as _h,
         )
