@@ -10014,11 +10014,12 @@ async def _invoke_dung_arbitration(
     is anchored on its target, so same-target
     different-family rivalry CAN fire — across families and provenances; an
     anchorless detection (lexical taxonomy tier, wide-net) cannot rival by
-    construction. Declared Walton-Krabbe relations
-    (``walton_krabbe_relations``) remain the explicit cross-candidate channel.
+    construction. The declared Walton-Krabbe relations channel was retired
+    (#1649 R1065): no production writer ever fed ``walton_krabbe_relations``,
+    so the stage arbitrates on same-span rivalry alone.
 
-    Honest-absent (anti-#1019): with no declared refutations and no same-span
-    rivalry, the enabled stage returns surviving == input (no fabricated attack).
+    Honest-absent (anti-#1019): with no same-span rivalry, the enabled stage
+    returns surviving == input (no fabricated attack).
     """
     # Lazy imports — mirror the camembert handler pattern to avoid churning the
     # top-level import block of this large module.
@@ -10057,7 +10058,6 @@ async def _invoke_dung_arbitration(
     verdict = arbitrate_detections(
         candidates,
         dung_arbitration=enabled,
-        walton_krabbe_relations=context.get("walton_krabbe_relations"),
     )
 
     surviving = sorted(verdict.surviving_ids)

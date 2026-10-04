@@ -26,9 +26,9 @@ AND across detector provenances, so cross-source disagreement CAN surface
 through the same-span rivalry there. An ANCHORLESS detection (the lexical
 taxonomy detector scans the whole passage) keeps the ``(detector, family)``
 anchor, where same-span groups are always same-family and the rivalry policy
-never fires. Declared Walton-Krabbe relations (the stage's
-:func:`walton_krabbe_conflict_policy`) remain the second, explicit attack
-channel either way. Provenance is recorded on each candidate so a downstream
+never fires. The declared Walton-Krabbe relations channel — once the second,
+explicit attack dimension — was retired (#1649 R1065): its producer never
+existed. Provenance is recorded on each candidate so a downstream
 report can attribute each atom to its detector.
 
 Privacy HARD
