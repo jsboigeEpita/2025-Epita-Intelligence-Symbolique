@@ -242,3 +242,80 @@ class TestRunGovernanceAnalysis:
 
         result = await tools["run_governance_analysis"](text="Test")
         assert "error" in result
+
+
+class TestSolveSat:
+    """Tests for solve_sat tool (#1604 — the sat_solving demander)."""
+
+    @pytest.mark.asyncio
+    async def test_success(self):
+        mcp_mock, tools = _setup_tools()
+        invoke_fn = AsyncMock(
+            return_value={"mode": "solve", "satisfiable": False, "model": None}
+        )
+        registry = _make_registry(
+            [
+                MockComponentRegistration(
+                    "sat_handler",
+                    MockComponentType.AGENT,
+                    ["sat_solving"],
+                    invoke=invoke_fn,
+                )
+            ]
+        )
+
+        from argumentation_analysis.services.mcp_server.tools.specialized_tools import (
+            register_specialized_tools,
+        )
+
+        register_specialized_tools(mcp_mock, lambda: registry)
+
+        result = await tools["solve_sat"](text="p && !p")
+        assert result["tool"] == "solve_sat"
+        assert result["capability"] == "sat_solving"
+        assert result["provider"] == "sat_handler"
+        assert result["result"]["satisfiable"] is False
+
+    @pytest.mark.asyncio
+    async def test_not_available(self):
+        mcp_mock, tools = _setup_tools()
+        registry = _make_registry([])
+
+        from argumentation_analysis.services.mcp_server.tools.specialized_tools import (
+            register_specialized_tools,
+        )
+
+        register_specialized_tools(mcp_mock, lambda: registry)
+
+        result = await tools["solve_sat"](text="p && q")
+        assert "error" in result
+        assert "not available" in result["error"]
+
+
+class TestSolveSatRealPath:
+    """The arbitration witness (#1604): through the production registry,
+    solve_sat DECIDES — an unsatisfiable formula returns UNSAT (no model), a
+    satisfiable one returns SAT with a model. No LLM anywhere on the route;
+    PySAT is pinned in the CI env (python-sat, #1336), so a failure here is
+    a real env drift, not noise."""
+
+    @pytest.mark.asyncio
+    async def test_unsat_and_sat_verdicts(self):
+        from argumentation_analysis.orchestration.registry_setup import setup_registry
+        from argumentation_analysis.services.mcp_server.tools.specialized_tools import (
+            register_specialized_tools,
+        )
+
+        mcp_mock, tools = _setup_tools()
+        registry = setup_registry(include_optional=False)
+        register_specialized_tools(mcp_mock, lambda: registry)
+
+        unsat = await tools["solve_sat"](text="p && !p")
+        sat = await tools["solve_sat"](text="p && q")
+
+        assert unsat["tool"] == "solve_sat"
+        assert unsat["provider"] == "sat_handler"
+        assert unsat["result"]["satisfiable"] is False
+        assert unsat["result"]["model"] is None
+        assert sat["result"]["satisfiable"] is True
+        assert sat["result"]["model"] == {"p": True, "q": True}

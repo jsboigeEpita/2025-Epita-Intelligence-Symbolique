@@ -65,7 +65,7 @@ class TestListAvailableTools:
             result = await service.list_available_tools()
 
         assert result["version"] == "2.0.0"
-        assert result["total_tools"] == 23
+        assert result["total_tools"] == 24  # solve_sat joined the table (#1604)
 
         # V1 tools present
         assert "health_check" in result["tools"]

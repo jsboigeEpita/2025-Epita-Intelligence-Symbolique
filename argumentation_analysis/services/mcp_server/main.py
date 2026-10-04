@@ -649,6 +649,9 @@ class MCPService:
             "run_governance_analysis": {
                 "description": "Analyse pour prise de décision collective : 5 scrutins (majority, plurality, Borda, Condorcet, quadratic) + 2 protocoles de consensus distribué (Byzantine, Raft) + 8 fonctions de choix social (approval, STV, Copeland, Kemeny-Young + safe, Schulze, Condorcet winner, pairwise matrix). Byzantine et Raft sont des protocoles de tolérance aux pannes, pas des scrutins (#1981)."
             },
+            "solve_sat": {
+                "description": "Décide une formule propositionnelle avec le handler SAT (PySAT + Z3) : une formule satisfaisable retourne SAT avec un modèle, une insatisfaisable retourne UNSAT (#1604)."
+            },
         }
 
         return {
