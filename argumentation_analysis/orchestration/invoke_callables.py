@@ -9469,12 +9469,15 @@ def _provable_preferred_extension_floor(
 
     The preferred extensions of an AF are the cartesian product of its weakly
     connected components' preferred extensions, and a component that is exactly
-    one mutual pair ``a <-> b`` has exactly two of them (``{a}``, ``{b}``). So
-    ``p`` disjoint mutual-pair components PROVE at least ``2**p`` preferred
-    extensions — the family that measured minutes (#2921, #2930). Shapes the
-    argument does not prove leave the floor at 1 (a complete graph is a single
-    component with a single preferred extension), so the ceiling refuses only
-    what it can prove, never a cheap framework.
+    one mutual pair ``a <-> b`` has exactly two of them (``{a}``, ``{b}``) —
+    unless one of the two attacks itself: a self-attacking argument enters no
+    conflict-free set, so the pair then has a single preferred extension and
+    proves nothing (the engines keep self-attacks; the floor must too, #2935
+    R1065). So ``p`` disjoint mutual-pair components free of self-attacks PROVE
+    at least ``2**p`` preferred extensions — the family that measured minutes
+    (#2921, #2930). Shapes the argument does not prove leave the floor at 1 (a
+    complete graph is a single component with a single preferred extension), so
+    the ceiling refuses only what it can prove, never a cheap framework.
     """
     index = {arg: i for i, arg in enumerate(arguments)}
     parent = list(range(len(arguments)))
@@ -9491,11 +9494,15 @@ def _provable_preferred_extension_floor(
             parent[max(ra, rb)] = min(ra, rb)
 
     directed: set[Tuple[int, int]] = set()
+    self_attacking: set[int] = set()
     for attack in attacks:
         if len(attack) < 2:
             continue
         src, dst = index.get(attack[0]), index.get(attack[1])
-        if src is None or dst is None or src == dst:
+        if src is None or dst is None:
+            continue
+        if src == dst:
+            self_attacking.add(src)
             continue
         directed.add((src, dst))
         union(src, dst)
@@ -9507,7 +9514,13 @@ def _provable_preferred_extension_floor(
 
     pairs = 0
     for src, dst in directed:
-        if src < dst and (dst, src) in directed and sizes[find(src)] == 2:
+        if (
+            src < dst
+            and (dst, src) in directed
+            and sizes[find(src)] == 2
+            and src not in self_attacking
+            and dst not in self_attacking
+        ):
             pairs += 1
     # 2**62 is far past any framework whose cost a wall clock could hold; cap
     # the shift so a pathological input cannot build an enormous integer.

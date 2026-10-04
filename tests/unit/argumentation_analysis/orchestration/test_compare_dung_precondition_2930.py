@@ -10,6 +10,8 @@ Every backend below is an injected sentinel: the witnesses measure the guard,
 not the engines, so no JVM is needed and the suite stays fast.
 """
 
+import itertools
+
 import pytest
 
 from argumentation_analysis.orchestration.invoke_callables import (
@@ -132,6 +134,79 @@ class TestCeilingRefusesBeforePaying:
 
         assert len(sentinels["tweety"].calls) == 1
         assert len(sentinels["student"].calls) == 1
+
+
+class TestSelfAttackInsideAPairDoesNotDoubleTheCount:
+    """R1065 correction on #2935: the engines KEEP self-attacks (``a -> a`` puts
+    ``a`` in no conflict-free set), so ``{a <-> b, a -> a}`` has ONE preferred
+    extension (``{b}``), not two. A pair carrying a self-attack proves nothing."""
+
+    def test_a_self_attack_on_one_member_leaves_the_floor_at_one(self):
+        attacks = [["a", "b"], ["b", "a"], ["a", "a"]]
+        assert _provable_preferred_extension_floor(["a", "b"], attacks) == 1
+
+    def test_a_self_attack_on_each_member_leaves_the_floor_at_one(self):
+        attacks = [["a", "b"], ["b", "a"], ["a", "a"], ["b", "b"]]
+        assert _provable_preferred_extension_floor(["a", "b"], attacks) == 1
+
+    def test_a_clean_pair_beside_a_self_attacking_stranger_still_proves_two(self):
+        """Control: the exclusion is local to the pair that carries it, not global."""
+        attacks = [["a", "b"], ["b", "a"], ["c", "c"]]
+        assert _provable_preferred_extension_floor(["a", "b", "c"], attacks) == 2
+
+    @pytest.mark.asyncio
+    async def test_ten_pairs_each_carrying_a_self_attack_reach_the_backends(self):
+        """The wrongly-refused shape: 10 mutual pairs, one self-attack each —
+        ONE preferred extension in reality, instant to compute."""
+        args, attacks = mutual_pairs(10)
+        attacks += [[f"a{2 * i}", f"a{2 * i}"] for i in range(10)]
+        sentinels = {"tweety": Sentinel("tweety"), "student": Sentinel("student")}
+
+        result = await _compare_dung_backends(args, attacks, backends=sentinels)
+
+        assert len(sentinels["tweety"].calls) == 1
+        assert len(sentinels["student"].calls) == 1
+        assert result["statistics"]["provable_preferred_floor"] == 1
+        assert result["statistics"]["precondition_refused"] is False
+
+
+class TestFloorIsSoundByBruteForce:
+    """Property guard: on EVERY AF up to three arguments (self-loops included),
+    the floor stays at or below the real preferred-extension count, computed by
+    brute force on the definition. Covers the shapes no named witness targets.
+    Control enumeration shared by the coordinator's review of #2935 (R1065)."""
+
+    @staticmethod
+    def _real_preferred_count(arguments, attack_set):
+        def conflict_free(s):
+            return not any((x, y) in attack_set for x in s for y in s)
+
+        def defends_its_members(s):
+            for attacker, target in attack_set:
+                if target in s and not any((d, attacker) in attack_set for d in s):
+                    return False
+            return True
+
+        admissible = [
+            frozenset(combo)
+            for r in range(len(arguments) + 1)
+            for combo in itertools.combinations(arguments, r)
+            if conflict_free(combo) and defends_its_members(combo)
+        ]
+        return sum(1 for s in admissible if not any(s < t for t in admissible))
+
+    def test_floor_never_exceeds_the_real_count_up_to_three_arguments(self):
+        violations = []
+        for n in range(1, 4):
+            arguments = [f"x{i}" for i in range(n)]
+            edges = [(a, b) for a in arguments for b in arguments]
+            for mask in range(1 << len(edges)):
+                chosen = {edges[k] for k in range(len(edges)) if mask >> k & 1}
+                attacks = [list(edge) for edge in chosen]
+                floor = _provable_preferred_extension_floor(arguments, attacks)
+                if floor > self._real_preferred_count(arguments, chosen):
+                    violations.append((n, sorted(chosen)))
+        assert violations == []
 
 
 class TestNoFalseRefusalOnRealLoadShapes:
