@@ -126,12 +126,14 @@ PENDING_TRIAGE: dict[tuple[str, str], str] = {
     # ("multi_axis_compare_service", "multi_axis_compare") — RETIRED #1604
     # (Cleanup Gate, R1062 step 4): zero production demanders (no phase
     # literal, no capability table, no router entry, not in the MCP
-    # advertised tools table) and the wire price measured prohibitive
-    # (JVM + the student Dung backend's 27 min/doc at N=20, #2921, + an
-    # LLM pass per document for the sophism axis, with no differential
-    # reader downstream). Function + registration + its handler tests
-    # removed together; compare_all_axes (the JVM/LLM-free harness and
-    # its #2491 defect witnesses) stays.
+    # advertised tools table) and no downstream reader of the comparison
+    # differential — the retirement stands on demand alone. Function +
+    # registration + its handler tests removed together. Two functions
+    # lost their last caller in the cut, both decided explicitly (R1063
+    # review): compare_all_axes stays as the 0-caller harness owning the
+    # #2491 defect witnesses and the user-gated ATT-3 run (owner record
+    # #2929), and llm_neural_detect_async stays parked with a named
+    # consumer — the Dung stage's second provenance (owner record #2928).
     # ("sat_handler", "sat_solving") — wired #1604 (arbitration): the named
     # MCP tool solve_sat (specialized_tools.py) demands the capability
     # through _invoke_by_capability("sat_solving", ...), which this census

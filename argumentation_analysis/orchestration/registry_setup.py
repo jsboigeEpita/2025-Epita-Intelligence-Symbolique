@@ -438,9 +438,9 @@ def setup_registry(
             _invoke_dung_arbitration,
         ),
         # multi_axis_compare_service — RETIRED #1604 (Cleanup Gate): zero
-        # production demanders and a prohibitive wire price (see the census
-        # comment in test_one_capability_surface_1842.py); function +
-        # registration + handler tests removed together.
+        # production demanders and no reader of the comparison differential
+        # (see the census comment in test_one_capability_surface_1842.py);
+        # function + registration + handler tests removed together.
         (
             "formal_synthesis_service",
             ["formal_synthesis"],

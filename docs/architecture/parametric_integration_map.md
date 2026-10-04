@@ -155,11 +155,15 @@ ré-implémentation** (chaque axe garde sa shape d'entrée native).
 Exposé comme **capability pipeline-sélectionnable** `multi_axis_compare` via le
 handler `_invoke_multi_axis_compare` — **RETRAIT #1604** (Cleanup Gate, R1062
 étape 4) : zéro demandeur de production (aucune phase, aucune table de
-capability, aucune entrée router, absent de la table MCP advertised) et prix de
-câblage mesuré prohibitif (JVM + 27 min/doc du backend Dung étudiant à N=20
-— #2921 — + un passage LLM par document pour l'axe sophisme, sans lecteur du
-différentiel en aval). Handler + registration + tests handler retirés
-ensemble ; le harness `compare_all_axes` et ses témoins #2491 restent.
+capability, aucune entrée router, absent de la table MCP advertised) et
+**aucun lecteur du différentiel en aval** — le retrait tient sur la demande
+seule. Handler + registration + tests handler retirés ensemble. Le harness
+`compare_all_axes` reste avec **0 appelant de production** après le retrait :
+gardé pour ses témoins de défaut #2491 (niveau harness) et le run ATT-3 gated
+user (§F.4) — fiche propriétaire #2929. Le retrait laisse aussi
+`llm_neural_detect_async` sans appelant de production : gardé délibérément,
+parqué avec un consommateur nommé (la seconde provenance de l'étage Dung) —
+fiche propriétaire #2928.
 
 ### F.4 Reste ouvert (ATT-3)
 
