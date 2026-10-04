@@ -35,6 +35,14 @@ any lexicon (« associent », « laisse », « transforme ») — see
 ``_FUNCTION_RE``; criterion 3 ships as a measured-weak diagnostic for that
 shape, and the calibration says so.
 
+R1061 (d) closes three holes the consigne itself names: the function verb
+in the PLURAL (``accomplissent``), the withdrawal with an adverb (« pas
+davantage établi ») and the second-step judgment « pas fallacieux » (the
+elided « n' » escapes the negation guard — the judgment lexicon carries
+it). The appendix renders criterion-3 findings under their own
+measured-weak line with both seats' precision, and the empty case no
+longer claims the weak control as passed.
+
 What each control reads:
 
 * **criterion 2** — a sentence citing a formal result (solver name, axis
@@ -313,9 +321,10 @@ _LABEL_CUE_RE = re.compile(
     re.IGNORECASE,
 )
 _FUNCTION_RE = re.compile(
-    r"accomplit|visant|vise [àa]|cherche [àa] obtenir|afin de|en vue de"
-    r"|de sorte [àa]|l[ée]gitim|cr[ée]e|cr[ée]dibilis|installe|instaur"
-    r"|permet de|rassure|s[ée]duit|endoctrin|d[ée]responsabilis|fonction",
+    r"accomplit|accomplissent|visant|vise [àa]|cherche [àa] obtenir"
+    r"|afin de|en vue de|de sorte [àa]|l[ée]gitim|cr[ée]e|cr[ée]dibilis"
+    r"|installe|instaur|permet de|rassure|s[ée]duit|endoctrin"
+    r"|d[ée]responsabilis|fonction",
     re.IGNORECASE,
 )
 
@@ -323,10 +332,15 @@ _FUNCTION_RE = re.compile(
 # s'il FRAGILISE le raisonnement : ... une figure (ce qui fait avancer le
 # discours) avec une faute (ce qui le CASSE) » — a sentence that judges,
 # withdraws or denies establishment is compliant (R1060: judgment-of-device
-# and withdrawal classes). Honest withdrawal: « ne sont pas établies ».
+# and withdrawal classes). Honest withdrawal: « ne sont pas établies », and
+# with an adverb « ne sont pas davantage établies » (R1061 (d): the adverb
+# must not break the withdrawal). « n'est pas fallacieux/fallacieuse » is
+# the judgment itself (R1061 (d)) — the elided « n' » escapes the negation
+# guard below, so the judgment lexicon carries it.
 _JUDGMENT_RE = re.compile(
     r"\bjuge\b|jug[ée]e?|fragilis|casse|adouc|suffit pas|suffisent pas"
     r"|pas suffisan|ne tient pas|tiennent pas|pas [ée]tabli|non [ée]tabli"
+    r"|pas (?:davantage|plus|jamais|guère)\s+[ée]tabli|pas fallacieu"
     r"|d[ée]montre|ne prouve|peu d'appui|sans appui|pas des preuves"
     r"|pas une preuve|pas des preuves juridiques|garde son verdict"
     r"|[ée]tablit une faute|ne d[ée]montre",

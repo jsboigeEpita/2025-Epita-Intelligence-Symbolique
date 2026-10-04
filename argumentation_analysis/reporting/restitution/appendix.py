@@ -681,8 +681,7 @@ def _reader_contract_section(findings: List[Any]) -> List[str]:
     ]
     if not findings:
         lines.append(
-            "Aucun constat : citations formelles dérivées, procédés "
-            "porteurs de leur fonction, priorisation visible."
+            "Aucun constat : citations formelles dérivées, priorisation " "visible."
         )
         lines.append("")
         return lines
@@ -693,8 +692,20 @@ def _reader_contract_section(findings: List[Any]) -> List[str]:
         lines.append(f"⚠️ {envelope[0].note}.")
         lines.append("")
         return lines
-    for f in findings:
+    # Criterion 3 ships as a measured-weak diagnostic (R1061 (d)): its
+    # findings ride under their own line, with both seats' measured
+    # precision, so the appendix never reads them as a settled constat.
+    for f in (x for x in findings if x.criterion != 3):
         lines.append(f"- **Acte** {f.act}, ligne {f.line} — {f.kind} : {f.note}")
+    weak = [f for f in findings if f.criterion == 3]
+    if weak:
+        lines.append("")
+        lines.append(
+            "Critère 3 — diagnostic faible mesuré, à vérifier à la lecture "
+            "(précision mesurée sur deux sièges : ~4/17 po-2025, 0/8 ai-01) :"
+        )
+        for f in weak:
+            lines.append(f"- **Acte** {f.act}, ligne {f.line} — {f.kind} : {f.note}")
     lines.append("")
     return lines
 

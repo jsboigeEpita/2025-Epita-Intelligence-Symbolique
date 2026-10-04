@@ -232,6 +232,52 @@ class TestCriterion3LabelWithoutFunction:
         findings = check_act_reader_contract(_body(_GOOD_ACT2, act3))
         assert not [f for f in findings if f.criterion == 3]
 
+    def test_plural_accomplissent_carries_the_function(self):
+        """R1061 (d): the consigne's own function verb in the PLURAL — « ces
+        procédés accomplissent... » — states the function as surely as the
+        singular the lexicon carries; a plural must not arm the control."""
+        act2 = (
+            "## Acte II — Récit dialectique\n\n"
+            "Ces procédés accomplissent un déplacement de l'attention vers "
+            "le passé du locuteur.\n"
+        )
+        findings = check_act_reader_contract(_body(act2, _GOOD_ACT3))
+        assert not [f for f in findings if f.criterion == 3], (
+            "« accomplissent » is the consigne's function verb in the plural — "
+            "the sentence carries its function, no finding"
+        )
+
+    def test_withdrawal_with_adverb_is_compliant(self):
+        """R1061 (d): the honest withdrawal survives an adverb — « ne sont
+        pas davantage établies » withdraws exactly like « ne sont pas
+        établies »."""
+        act2 = (
+            "## Acte II — Récit dialectique\n\n"
+            "Les étiquettes « pente glissante » et « homme de paille » ne "
+            "sont pas davantage établies par les vérifications de ce run.\n"
+        )
+        findings = check_act_reader_contract(_body(act2, _GOOD_ACT3))
+        assert not [f for f in findings if f.criterion == 3], (
+            "withdrawal with an adverb is still the honest withdrawal the "
+            "issue praises, not a pile"
+        )
+
+    def test_not_fallacieux_judgment_is_compliant(self):
+        """R1061 (d): « n'est pas fallacieux » is the consigne's second step
+        (judging whether the device weakens) — a negated judgment, not a
+        label; the elided « n' » escapes the negation guard, so the judgment
+        lexicon must carry it."""
+        act2 = (
+            "## Acte II — Récit dialectique\n\n"
+            "La répétition soulignée par l'analyse n'est pas fallacieuse au "
+            "sens strict du terme.\n"
+        )
+        findings = check_act_reader_contract(_body(act2, _GOOD_ACT3))
+        assert not [f for f in findings if f.criterion == 3], (
+            "a sentence that judges « pas fallacieux » is the consigne's "
+            "second step, not a piling label"
+        )
+
     def test_heading_label_line_is_not_prose(self):
         """R1060: a subsection heading naming a movement is structure, not a
         piling sentence."""
@@ -433,6 +479,50 @@ class TestRendererWiring:
     def test_compliant_acts_say_no_findings(self):
         report = self._render(body_check=None)  # the real control runs
         assert "Aucun constat" in report.markdown
+
+    def test_c3_findings_render_under_their_own_weak_line(self):
+        """R1061 (d): criterion-3 findings ride under their own line — a
+        measured-weak diagnostic to be checked by reading, with both seats'
+        precision stated — never as an unqualified constat."""
+        c2_finding = ContractFinding(
+            criterion=2,
+            kind="formal_citation_without_derivation",
+            act="Acte II",
+            line=7,
+            excerpt="badge",
+            note="constat de test",
+        )
+        c3_finding = ContractFinding(
+            criterion=3,
+            kind="label_without_function",
+            act="Acte II",
+            line=9,
+            excerpt="étiquette",
+            note="constat",
+        )
+        report = self._render(body_check=[c2_finding, c3_finding])
+        md = report.markdown
+        assert (
+            "diagnostic faible mesuré" in md
+        ), "c3 findings must render under their own measured-weak line"
+        assert (
+            "0/8" in md and "4/17" in md
+        ), "the weak line states both seats' measured precision"
+        banner_at = md.index("diagnostic faible mesuré")
+        c3_at = md.rindex("label_without_function")
+        c2_at = md.index("formal_citation_without_derivation")
+        assert c3_at > banner_at, "the c3 bullet sits under its banner"
+        assert c2_at < banner_at, "the c2 bullet stays above the banner"
+
+    def test_empty_case_no_longer_claims_the_weak_control(self):
+        """R1061 (d): the empty case may not assert « procédés porteurs de
+        leur fonction » — that is the control whose precision is measured
+        weak; a zero must not read as its compliance."""
+        report = self._render(body_check=[])
+        assert "Aucun constat" in report.markdown
+        assert "porteurs de leur fonction" not in report.markdown, (
+            "the empty case must not claim the measured-weak control as " "passed"
+        )
 
     def test_envelope_renders_as_not_evaluated(self):
         """R1060: the criterion-0 envelope is rendered as an explicit
