@@ -236,7 +236,8 @@ async def test_counter_records_the_response_status():
 
 
 async def test_counter_records_a_transport_error_and_lets_it_propagate():
-    """An exception in the send is recorded by type, and still reaches the caller."""
+    """An exception in the send is recorded by type AND message (#2936), and
+    still reaches the caller."""
     counter = _session_counter()
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -249,8 +250,29 @@ async def test_counter_records_a_transport_error_and_lets_it_propagate():
     entries = _this_test_llm_entries(
         counter, "test_counter_records_a_transport_error_and_lets_it_propagate"
     )
-    assert [r.get("error") for r in entries] == ["ConnectError"], entries
+    # #2936: the type alone left record-run errors undiagnosable
+    # (error:RuntimeError×3 with no way to name the trigger).
+    assert [r.get("error") for r in entries] == [
+        "ConnectError: egress control"
+    ], entries
     assert all("status" not in r for r in entries)
+
+
+def test_error_outcome_label_keeps_type_when_message_is_empty():
+    """A message-less exception degrades to the bare type, never to ': '."""
+    counter = _session_counter()
+    entry = counter.observe_request(f"{FAKE_OPENAI_HOST}/chat/completions", "POST")
+    counter.observe_outcome(entry, error=RuntimeError())
+    assert entry["error"] == "RuntimeError", entry
+
+
+def test_error_outcome_label_caps_the_message():
+    """A huge exception message cannot flood the census/report (300-char cap)."""
+    counter = _session_counter()
+    entry = counter.observe_request(f"{FAKE_OPENAI_HOST}/chat/completions", "POST")
+    counter.observe_outcome(entry, error=RuntimeError("x" * 5_000))
+    assert entry["error"] == f"RuntimeError: {'x' * 300}", entry
+    assert len(entry["error"]) == len("RuntimeError: ") + 300
 
 
 async def test_a_successful_llm_response_is_not_counted_as_not_ok():
