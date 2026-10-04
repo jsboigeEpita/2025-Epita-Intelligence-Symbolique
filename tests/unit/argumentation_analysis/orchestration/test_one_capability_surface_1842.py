@@ -98,12 +98,15 @@ PENDING_TRIAGE: dict[tuple[str, str], str] = {
     # visible here rather than created.
     ("multi_axis_compare_service", "multi_axis_compare"): "#1604",
     # dung_arbitration owner -> #1649 (arbitration c.5976719576, reaffirmed by
-    # #2920's offline re-measure). #2920 repaired the stage's inputs — the
-    # bridge anchors on target_argument (same-target different-family rivalry
-    # now fires, born-red witness on the REAL bridge), the merge keeps one
-    # candidate per (argument, fallacy), and the dead rule-taxonomy source key
-    # is retired — yet the offline CI-safe tier stays honest-absent BY NATURE
-    # (lexical detections carry no target): re-measured 25 candidates over 22
+    # #2920's offline re-measure). #2920 repaired the stage's input ROUTE
+    # (R1063 shape): the bridge anchors on target_argument (same-target
+    # different-family rivalry fires, born-red witness on the REAL bridge),
+    # the stage reads the hierarchical phase's per_argument_fallacies field
+    # (targeted detections only — the merged fallacies list stays
+    # byte-identical to main, its per-(argument, pk) counting question is
+    # parked in its own issue), and the dead rule-taxonomy source key is
+    # retired. The offline CI-safe tier stays honest-absent BY NATURE
+    # (lexical detections carry no target): re-measured 25 candidates over 4
     # docs, 0 attacks, 0 eliminations. Real-run eliminations now hinge on (a)
     # declared Walton-Krabbe relations, producer #1649 (open), and (b) the
     # per-argument LLM tier actually feeding the stage — the wiring decision

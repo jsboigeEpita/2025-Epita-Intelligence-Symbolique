@@ -6311,6 +6311,15 @@ async def _invoke_hierarchical_fallacy(
             per_arg_fallacies = per_arg_result.get("fallacies", [])
             merged = _merge_fallacy_results(wide_fallacies, per_arg_fallacies)
             result["fallacies"] = merged
+            # #2920 (R1063 review): the merged list above stays EXACTLY as on
+            # main (pk-only dedup) — 11 handlers, the state writer and the
+            # sherlock orchestrator consume it on every real run. The
+            # per-argument detections ALSO leave under their own key so a
+            # consumer that needs the per-argument locations (the Dung
+            # arbitration stage) can read them without touching the merged
+            # list's shape or counts. Absent key = no targeted detections
+            # (honest-absent for that consumer).
+            result["per_argument_fallacies"] = per_arg_fallacies
             # FB-36 (#1123): label honestly. When the per-argument pass was
             # skipped fail-loud (no extractable arguments — recursion fix), this
             # is wide-net-only, NOT a union; surface the skip at the result
@@ -6457,47 +6466,32 @@ def _merge_fallacy_results(
     wide_fallacies: List[Dict[str, Any]],
     per_arg_fallacies: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
-    """Merge wide-net and per-argument fallacy results, deduplicating by
-    (taxonomy_pk, target).
+    """Merge wide-net and per-argument fallacy results, deduplicating by taxonomy_pk.
 
-    #2920: the key includes the detection's ``target_argument`` when it carries
-    one. Deduping on the taxonomy_pk alone collapsed two arguments surfacing
-    the same fallacy into one candidate and dropped the location before any
-    downstream consumer (the Dung stage's rivalry groups, the state writer's
-    arg links) could see it. One candidate per (argument, fallacy) survives;
-    anchorless detections (wide-net whole-text) keep the pk-only key, so the
-    historical behavior is unchanged for them.
-
-    Keeps the highest-confidence entry for each unique key.
+    Keeps the highest-confidence entry for each unique taxonomy_pk.
     Wide-net results are kept as the floor; per-argument extras are added
-    only if their key is not already present.
+    only if their taxonomy_pk is not already present.
     """
     seen: Dict[str, Dict[str, Any]] = {}
-
-    def _key(f: Dict[str, Any]) -> str:
-        pk = str(f.get("taxonomy_pk") or f.get("fallacy_type") or "")
-        target = str(f.get("target_argument") or "").strip()
-        return f"{pk}::{target}" if target else pk
-
     for f in wide_fallacies:
         if not isinstance(f, dict):
             continue
-        k = _key(f)
-        if k and k not in seen:
-            seen[k] = f
-        elif k and f.get("confidence", 0) > seen.get(k, {}).get("confidence", 0):
-            seen[k] = f
+        pk = str(f.get("taxonomy_pk") or f.get("fallacy_type") or "")
+        if pk and pk not in seen:
+            seen[pk] = f
+        elif pk and f.get("confidence", 0) > seen.get(pk, {}).get("confidence", 0):
+            seen[pk] = f
 
     for f in per_arg_fallacies:
         if not isinstance(f, dict):
             continue
-        k = _key(f)
-        if not k:
+        pk = str(f.get("taxonomy_pk") or f.get("fallacy_type") or "")
+        if not pk:
             continue
-        if k not in seen:
-            seen[k] = f
-        elif f.get("confidence", 0) > seen.get(k, {}).get("confidence", 0):
-            seen[k] = f
+        if pk not in seen:
+            seen[pk] = f
+        elif f.get("confidence", 0) > seen.get(pk, {}).get("confidence", 0):
+            seen[pk] = f
 
     return list(seen.values())
 
@@ -9905,15 +9899,20 @@ async def _invoke_dung_arbitration(
     OFF ⇒ passthrough verdict (surviving == input). ON ⇒ grounded arbitration.
 
     Rule-vs-ML provenance: candidates are collected from the hierarchical
-    fallacy phase (``phase_hierarchical_fallacy_output``) — the ONE producer
-    that exists. #2920 retired the former ``rule_taxonomy`` source: it read a
-    rule-taxonomy phase key naming a phase (``taxonomy_sophisms``) that no
-    workflow defines — the taxonomy tier runs INSIDE
-    ``hierarchical_fallacy`` — a reader with no writer. The source label names
-    the tier that really produced the batch
-    (``hierarchical::<extraction_method>``); detections are bridged to opaque
+    fallacy phase (``phase_hierarchical_fallacy_output``), reading ONLY its
+    ``per_argument_fallacies`` field — the per-argument detections that carry
+    ``target_argument``, i.e. the only ones that can anchor into a rivalry
+    group. The phase's merged ``fallacies`` list is deliberately NOT a source
+    (R1063 review): it is consumed on every real run by 11 handlers, the state
+    writer and the sherlock orchestrator, and its pk-only shape stays
+    byte-identical to main. #2920 retired the former ``rule_taxonomy``
+    source: it read a rule-taxonomy phase key naming a phase
+    (``taxonomy_sophisms``) that no workflow defines — the taxonomy tier runs
+    INSIDE ``hierarchical_fallacy`` — a reader with no writer. The source
+    label names the tier that really produced the batch
+    (``per_argument::<extraction_method>``); detections are bridged to opaque
     ``SophismCandidate`` atoms. A detection carrying ``target_argument``
-    (per-argument tier) is anchored on its target, so same-target
+    is anchored on its target, so same-target
     different-family rivalry CAN fire — across families and provenances; an
     anchorless detection (lexical taxonomy tier, wide-net) cannot rival by
     construction. Declared Walton-Krabbe relations
@@ -9937,15 +9936,21 @@ async def _invoke_dung_arbitration(
     sources: Dict[str, List[Any]] = {}
     hierarchical = context.get("phase_hierarchical_fallacy_output") or {}
     if isinstance(hierarchical, dict):
-        hier_fallacies = hierarchical.get("fallacies") or []
-        if hier_fallacies:
-            # The label names the tier that really produced this batch
-            # (#2920): the hierarchical phase is the sole producer, and its
-            # ``extraction_method`` (taxonomy / widenet+perarg_union / ...)
-            # says which tier ran. Provenance rides the candidate ids.
-            method = str(hierarchical.get("extraction_method") or "hierarchical")
-            sources[f"hierarchical::{method}"] = taxonomy_detections_to_candidates(
-                hier_fallacies, detector="hierarchical"
+        per_arg = hierarchical.get("per_argument_fallacies") or []
+        if per_arg:
+            # #2920 (R1063 review): the stage reads ONLY the per-argument
+            # detections — the ones carrying ``target_argument``, i.e. the
+            # only ones that can anchor into a rivalry group. The merged
+            # ``fallacies`` list (pk-only, consumed by 11 handlers + the
+            # state writer + sherlock on every real run) is deliberately NOT
+            # a source: feeding it here would re-introduce the anchorless
+            # whole-text detections that cannot rival by construction.
+            # The label names the tier that produced the batch; the phase's
+            # ``extraction_method`` says which method ran. Provenance rides
+            # the candidate ids.
+            method = str(hierarchical.get("extraction_method") or "per_argument")
+            sources[f"per_argument::{method}"] = taxonomy_detections_to_candidates(
+                per_arg, detector="per_argument"
             )
 
     candidates = combine_candidate_sources(sources) if sources else []
