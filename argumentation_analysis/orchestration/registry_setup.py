@@ -32,7 +32,6 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_modal_logic,
     _invoke_dung_extensions,
     _invoke_dung_arbitration,
-    _invoke_multi_axis_compare,
     _invoke_formal_synthesis,
     _invoke_nl_to_logic,
     _invoke_sat,
@@ -342,28 +341,15 @@ def setup_registry(
     except ImportError as e:
         skipped.append(("tweety_logic_plugin", str(e)))
 
-    # --- LogicAgentPlugin: PL/FOL/Modal @kernel_function methods (#477) ---
-    try:
-        from argumentation_analysis.plugins.logic_agent_plugin import LogicAgentPlugin
-
-        registry.register_plugin(
-            name="logic_agent_plugin",
-            plugin_class=LogicAgentPlugin,
-            capabilities=[
-                "propositional_reasoning",
-                "first_order_reasoning",
-                "modal_reasoning",
-            ],
-            metadata={
-                "description": (
-                    "SK plugin exposing PL/FOL/Modal logic operations as "
-                    "@kernel_function methods for LLM agents (#477)"
-                )
-            },
-        )
-        registered.append("logic_agent_plugin")
-    except ImportError as e:
-        skipped.append(("logic_agent_plugin", str(e)))
+    # --- LogicAgentPlugin: retired as a registry declaration #1604 ---
+    # The trio (propositional_reasoning, first_order_reasoning,
+    # modal_reasoning) had zero demanders on every surface: no phase, no
+    # resolver table, no PM-map line (no keyword hit), and every claim they
+    # could carry is already carried by a phase-resolved capability
+    # (propositional_logic, the FOL family, modal_logic). The plugin itself
+    # stays alive: AgentFactory mounts it by speciality ("logic_agents",
+    # factory.py) through a direct module import, and the real-verdict test
+    # exercises it. The declaration exits, not the component.
 
     # --- TweetyResultInterpretationPlugin: formal results to NL (#476) ---
     try:
@@ -461,12 +447,11 @@ def setup_registry(
             "Selectable Dung grounded arbitration over sophism candidates (Walton-Krabbe)",
             _invoke_dung_arbitration,
         ),
-        (
-            "multi_axis_compare_service",
-            ["multi_axis_compare"],
-            "Unified multi-axis comparison (fol/dung/sophism) via compare_all_axes",
-            _invoke_multi_axis_compare,
-        ),
+        # multi_axis_compare_service retired as a registration #1604: zero
+        # demanders (no phase, no table, not on the PM map), while its
+        # function keeps its one live consumer — the direct call from
+        # _invoke_dung_arbitration (invoke_callables.py). The declaration
+        # exits, the function stays.
         (
             "formal_synthesis_service",
             ["formal_synthesis"],

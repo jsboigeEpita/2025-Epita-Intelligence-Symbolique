@@ -94,17 +94,22 @@ IN_SCOPE_COMPONENTS = {
 PENDING_TRIAGE: dict[tuple[str, str], str] = {
     # #1604 — plugin-only providers: AgentFactory mounts them by speciality,
     # no phase resolves them by capability.
-    ("logic_agent_plugin", "propositional_reasoning"): "#1604",
-    ("logic_agent_plugin", "first_order_reasoning"): "#1604",
-    ("logic_agent_plugin", "modal_reasoning"): "#1604",
     ("tweety_logic_plugin", "tweety_logic"): "#1604",
     # #1604 — live invoke callables that no phase requests. They were
     # declared inside `for name, caps, ... in <rows>:` loops, which the census
     # could not read before #1604: silence the tree already carried, made
     # visible here rather than created.
     ("dung_arbitration_service", "dung_arbitration"): "#1604",
-    ("multi_axis_compare_service", "multi_axis_compare"): "#1604",
     ("sat_handler", "sat_solving"): "#1604",
+    # ("logic_agent_plugin", "propositional_reasoning"/"first_order_reasoning"/
+    # "modal_reasoning") — retired #1604: the trio had zero demanders on every
+    # surface (no phase, no table, not on the PM map) and every claim they
+    # could carry is carried by a phase-resolved capability. The plugin stays
+    # mounted by speciality ("logic_agents") — declaration exits, not the
+    # component.
+    # ("multi_axis_compare_service", "multi_axis_compare") — retired #1604:
+    # zero demanders; its function keeps its live direct caller
+    # (_invoke_dung_arbitration). Declaration exits, function stays.
     # ("asp_reasoning_handler", "asp_reasoning") — wired #1604: the ASP
     # stable-extension cross-check phase in formal_extended demands it.
     # ("asp_reasoning_handler", "answer_set_programming") — retired #1604:
