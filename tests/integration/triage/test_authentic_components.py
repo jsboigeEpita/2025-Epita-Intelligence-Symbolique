@@ -17,6 +17,7 @@ import asyncio
 import tempfile
 import json
 import time
+import unicodedata
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from unittest.mock import patch
@@ -39,6 +40,31 @@ except ImportError as e:
     pytest.skip(f"Modules requis non disponibles: {e}", allow_module_level=True)
 
 
+def _names_a_correct_diagnosis(response: str) -> bool:
+    """#2938 review (R1066): the accepted diagnoses are written from the
+    sentence under analysis, never from the response being judged.
+
+    ``'Tous les politiciens mentent, donc Pierre ment.'`` — the premise
+    "tous les politiciens mentent" is an absolute (hasty) generalization,
+    and "donc Pierre ment" skips the premise "Pierre est un politicien":
+    a non sequitur (enthymème, missing premise). Those two families are
+    what a correct analysis of THIS sentence names, in fixed FR/EN
+    vocabulary. Case- and accent-insensitive.
+
+    Not accepted: ``ad hominem`` (the sentence attacks no author), a bare
+    ``sophisme``/``fallacy`` (names no defect — the case the old lexical
+    assertion let pass), or a verdict of validity.
+    """
+    decomposed = unicodedata.normalize("NFKD", response.lower())
+    normalized = "".join(c for c in decomposed if not unicodedata.combining(c)).replace(
+        "-", " "
+    )
+    return any(
+        term in normalized
+        for term in ("non sequitur", "generalisation", "generalization")
+    )
+
+
 class TestAuthenticGPTIntegration:
     """Tests d'intégration avec GPT-4o-mini authentique."""
 
@@ -52,42 +78,67 @@ class TestAuthenticGPTIntegration:
     @pytest.mark.skipif(
         not os.getenv("OPENAI_API_KEY"), reason="Clé API OpenAI requise"
     )
+    @pytest.mark.requires_api
     def test_real_gpt_response_quality(self):
-        """Test de qualité des réponses GPT authentiques."""
-        try:
-            # Initialiser le service LLM réel via la factory
-            llm_service = create_llm_service(
-                service_id="test_real_gpt_quality",
-                model_id="gpt-5-mini",
-                force_authentic=True,
+        """Test de qualité des réponses GPT authentiques.
+
+        #2934: no catch-all around the body. The ``skipif`` above already owns
+        the only legitimate skip (no key); everything else the body raises is a
+        real failure the report must show. The former ``except Exception ->
+        skip`` swallowed the assertions with it, so this test could pass-or-
+        skip but never redden — one of the gate's tests carrying no signal.
+        The ``requires_api`` marker moves it out of the gate (331 -> 330) and
+        into the band, where a full-band dispatch measures this path for real:
+        green if the response holds its assertions, red on a genuine cause.
+        Two offline witnesses enter the gate in its place
+        (TestSettingsIsRequiredInSK and TestNamesACorrectDiagnosis below), so
+        the gate nets 331 -> 332 (283 + 49), re-measured in collect-only.
+
+        #2938 review (R1066, arbitration): the final assertions are a named
+        predicate, ``_names_a_correct_diagnosis`` — its accepted diagnoses
+        are written from the sentence under analysis (a hasty generalization
+        plus a non sequitur), so it can redden offline in the gate instead
+        of only on a paid call.
+
+        #2938 review (R1066): the call passes a real settings object — SK 1.44
+        REQUIRES ``settings``, and ``settings=None`` dies inside
+        ``PromptExecutionSettings.from_prompt_execution_settings`` with the
+        cryptic ``'NoneType' object has no attribute 'pack_extension_data'``.
+        That crash is the caller's own input failing, not the service (pinned
+        offline by TestSettingsIsRequiredInSK below).
+        """
+        # Initialiser le service LLM réel via la factory
+        llm_service = create_llm_service(
+            service_id="test_real_gpt_quality",
+            model_id="gpt-5-mini",
+            force_authentic=True,
+        )
+
+        # Test de réponse authentique via SK 1.37 API
+        from semantic_kernel.connectors.ai.prompt_execution_settings import (
+            PromptExecutionSettings,
+        )
+        from semantic_kernel.contents import ChatHistory
+
+        chat_history = ChatHistory()
+        chat_history.add_user_message(self.test_prompt)
+        results = asyncio.run(
+            llm_service.get_chat_message_contents(
+                chat_history=chat_history, settings=PromptExecutionSettings()
             )
+        )
+        response = str(results[0]) if results else ""
 
-            # Test de réponse authentique via SK 1.37 API
-            from semantic_kernel.contents import ChatHistory
+        # Validations de qualité
+        assert isinstance(response, str)
+        assert len(response) > 50  # Réponse substantielle
+        assert _names_a_correct_diagnosis(
+            response
+        ), "la réponse ne nomme aucun défaut que la phrase porte réellement"
 
-            chat_history = ChatHistory()
-            chat_history.add_user_message(self.test_prompt)
-            results = asyncio.run(
-                llm_service.get_chat_message_contents(
-                    chat_history=chat_history, settings=None
-                )
-            )
-            response = str(results[0]) if results else ""
-
-            # Validations de qualité
-            assert isinstance(response, str)
-            assert len(response) > 50  # Réponse substantielle
-            assert "sophisme" in response.lower() or "fallacy" in response.lower()
-            assert (
-                "ad hominem" in response.lower() or "généralisation" in response.lower()
-            )
-
-            # Vérifier que ce n'est pas une réponse mock
-            assert "mock" not in response.lower()
-            assert "simulé" not in response.lower()
-
-        except Exception as e:
-            pytest.skip(f"Service LLM réel non disponible: {e}")
+        # Vérifier que ce n'est pas une réponse mock
+        assert "mock" not in response.lower()
+        assert "simulé" not in response.lower()
 
     @pytest.mark.skipif(
         not os.getenv("OPENAI_API_KEY"), reason="Clé API OpenAI requise"
@@ -114,6 +165,64 @@ class TestAuthenticGPTIntegration:
         # Une vraie réponse devrait contenir ces éléments
         for pattern in expected_real_response_patterns:
             assert pattern not in mock_response.lower()
+
+
+class TestSettingsIsRequiredInSK:
+    """#2938 review (R1066): pin WHY the quality test passes a real settings
+    object and never ``settings=None`` again.
+
+    semantic_kernel 1.44 (the lock's version) requires ``settings``: ``None``
+    dies inside ``PromptExecutionSettings.from_prompt_execution_settings``
+    with the cryptic ``'NoneType' object has no attribute
+    'pack_extension_data'`` — the CALLER's own input failing, not the
+    service. Offline: dummy key, client construction only, zero network.
+    """
+
+    def test_none_settings_is_the_callers_own_failure(self):
+        from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+        from semantic_kernel.connectors.ai.prompt_execution_settings import (
+            PromptExecutionSettings,
+        )
+
+        service = OpenAIChatCompletion(ai_model_id="pin", api_key="dummy")
+        with pytest.raises(AttributeError, match="pack_extension_data"):
+            service.get_prompt_execution_settings_from_settings(None)
+
+        converted = service.get_prompt_execution_settings_from_settings(
+            PromptExecutionSettings()
+        )
+        assert type(converted).__name__ == "OpenAIChatPromptExecutionSettings"
+
+
+class TestNamesACorrectDiagnosis:
+    """#2938 review (R1066): the quality test's final assertion is a named
+    predicate whose accepted diagnoses are written from the sentence under
+    analysis. This witness reddens it offline, here in the gate, on
+    hand-written responses — it does not need a paid call to exist.
+
+    ``ad hominem`` is deliberately absent from the accepted families: the
+    sentence attacks no author. A bare ``sophisme`` is absent too: it names
+    no defect, and the old lexical assertion let exactly that pass.
+    """
+
+    def test_accepts_only_a_diagnosis_the_sentence_bears(self):
+        # The live answer measured on this PR (abbreviated): it names both
+        # defects the sentence carries — a hasty generalization and a
+        # non sequitur.
+        measured_live_answer = (
+            "La prémisse « tous les politiciens mentent » est une "
+            "généralisation hâtive, et conclure que Pierre ment est une "
+            "erreur de non sequitur : il manque la prémisse « Pierre est un "
+            "politicien »."
+        )
+        assert _names_a_correct_diagnosis(measured_live_answer)
+
+        # Wrong family: ad hominem misdescribes this sentence.
+        assert not _names_a_correct_diagnosis("Il s'agit d'un ad hominem.")
+        # No defect named at all.
+        assert not _names_a_correct_diagnosis("Le raisonnement est valide.")
+        # "Sophisme" alone names no defect — the old assertion let this pass.
+        assert not _names_a_correct_diagnosis("C'est un sophisme.")
 
 
 @pytest.mark.jpype
