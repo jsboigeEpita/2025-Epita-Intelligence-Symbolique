@@ -273,10 +273,12 @@ jobs:
           # the root of tests/integration/ were not chosen.
           # #2934 (2026-10-05): test_real_gpt_response_quality marked
           # requires_api (its catch-all skip could hide anything, so it carried
-          # no signal), moving it to the band — one test out, one offline
-          # witness in (TestSettingsIsRequiredInSK), so the gate count stays
-          # 331 under the gate filter (282 + 49), as re-measured in
-          # collect-only on main and on this head.
+          # no signal), moving it to the band — one test out, two offline
+          # witnesses in (TestSettingsIsRequiredInSK, then
+          # TestNamesACorrectDiagnosis when the lexical word assertions became
+          # the named predicate _names_a_correct_diagnosis, R1066
+          # arbitration), so the gate count goes 331 -> 332 under the gate
+          # filter (283 + 49), re-measured in collect-only on this head.
 
       - name: Generate test summary
         if: always()
