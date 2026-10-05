@@ -92,7 +92,7 @@ class TestAuthenticGPTIntegration:
         green if the response holds its assertions, red on a genuine cause.
         Two offline witnesses enter the gate in its place
         (TestSettingsIsRequiredInSK and TestNamesACorrectDiagnosis below), so
-        the gate nets 331 -> 332 (282 + 50), re-measured in collect-only.
+        the gate nets 331 -> 332 (283 + 49), re-measured in collect-only.
 
         #2938 review (R1066, arbitration): the final assertions are a named
         predicate, ``_names_a_correct_diagnosis`` — its accepted diagnoses
