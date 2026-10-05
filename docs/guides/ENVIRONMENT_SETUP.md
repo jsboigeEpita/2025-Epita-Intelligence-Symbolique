@@ -51,7 +51,7 @@ $env:PYTHONIOENCODING = "utf-8"
 ### Script de diagnostic rapide
 
 ```bash
-python scripts/setup/validate_environment.py
+python scripts/setup/test_all_dependencies.py
 ```
 
 ### Nouveau script de diagnostic complet
@@ -84,7 +84,7 @@ cd 2025-Epita-Intelligence-Symbolique
 conda env create -f environment.yml
 
 # 3. Tester l'installation
-.\setup_project_env.ps1 -CommandToRun "python scripts/setup/validate_environment.py"
+.\setup_project_env.ps1 -CommandToRun "python scripts/setup/test_all_dependencies.py"
 ```
 
 ### 2. Utilisation quotidienne

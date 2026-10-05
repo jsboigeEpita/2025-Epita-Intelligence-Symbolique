@@ -53,11 +53,8 @@ Les modules prioritaires pour les tests d'intégration sont :
 L'approche recommandée est de résoudre les problèmes de dépendances (numpy, pandas, jpype) en utilisant des versions spécifiques connues pour être compatibles avec notre environnement de test.
 
 ```bash
-# Windows (PowerShell)
-.\scripts\setup\fix_dependencies.ps1
-
-# Linux/macOS
-python scripts/setup/fix_dependencies.py
+# fix_dependencies.ps1 / .py ont été retirés en #1803 étape 3 : la logique vit dans le verbe fix-deps
+python -m project_core.core_from_scripts.project_setup fix-deps --package numpy --package pandas --package jpype1 --strategy aggressive
 ```
 
 ### Approche avec Mocks

@@ -108,7 +108,7 @@ try {
         # Vérifier que l'installation a réussi
         if (Check-BuildTools) {
             Log-Message -Level "INFO" -Message "Visual Studio Build Tools avec les outils C++ est maintenant correctement installé."
-            Log-Message -Level "INFO" -Message "Vous pouvez maintenant exécuter le script fix_all_dependencies.ps1 pour installer les dépendances Python."
+            Log-Message -Level "INFO" -Message "Vous pouvez maintenant créer l'environnement Python avec setup_project_env.ps1 (ou 'conda-lock install --name projet-is conda-lock.yml', cf. CLAUDE.md)."
         } else {
             Log-Message -Level "WARNING" -Message "L'installation semble avoir réussi, mais Visual Studio Build Tools n'a pas été détecté."
             Log-Message -Level "WARNING" -Message "Veuillez redémarrer votre ordinateur et réexécuter ce script si nécessaire."

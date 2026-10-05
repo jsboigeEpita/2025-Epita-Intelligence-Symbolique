@@ -8,8 +8,6 @@ Ce script teste toutes les dépendances nécessaires pour le projet, y compris n
 cryptography, pytest et leurs plugins.
 """
 
-import argumentation_analysis.core.environment
-
 import sys
 import os
 import logging
@@ -22,6 +20,12 @@ from pathlib import Path
 project_root_path_setup = Path(__file__).resolve().parent.parent.parent
 if str(project_root_path_setup) not in sys.path:
     sys.path.insert(0, str(project_root_path_setup))
+
+# #1803: after the sys.path bootstrap, not before it. Run by path
+# (``python scripts/setup/test_all_dependencies.py``) the script's own
+# directory is sys.path[0] and the project root is absent, so importing the
+# package first raised ModuleNotFoundError and the checker could never start.
+import argumentation_analysis.core.environment
 
 # Configuration du logging
 logging.basicConfig(
@@ -37,7 +41,7 @@ DEPENDENCIES = [
     {"name": "numpy", "min_version": "1.24.0"},
     {"name": "pandas", "min_version": "2.0.0"},
     {"name": "matplotlib", "min_version": "3.5.0"},
-    {"name": "jpype", "min_version": "1.4.0", "import_name": "jpype"},
+    {"name": "jpype", "min_version": "1.7.1", "import_name": "jpype"},  # #2538 pin
     {"name": "cryptography", "min_version": "37.0.0"},
     {"name": "cffi", "min_version": "1.15.0"},
     # Dépendances pour l'intégration Java
@@ -54,7 +58,7 @@ DEPENDENCIES = [
     },
     {"name": "pytest_cov", "min_version": "3.0.0", "import_name": "pytest_cov"},
     # Dépendances pour l'analyse de données
-    {"name": "sklearn", "min_version": "1.0.0", "import_name": "scikit-learn"},
+    {"name": "scikit-learn", "min_version": "1.0.0", "import_name": "sklearn"},
     {"name": "networkx", "min_version": "2.6.0"},
     # Dépendances pour l'IA et le ML
     {"name": "torch", "min_version": "2.0.0"},
@@ -428,11 +432,11 @@ if __name__ == "__main__":
                 "Exécutez d'abord le script install_build_tools.ps1 pour installer les outils de compilation."
             )
             logger.error(
-                "Puis exécutez le script fix_all_dependencies.py pour résoudre les problèmes."
+                "Puis installez les dépendances manquantes : python -m project_core.core_from_scripts.project_setup fix-deps --package <paquet>"
             )
         else:
             logger.error(
-                "Exécutez le script fix_all_dependencies.py pour résoudre les problèmes."
+                "Installez les dépendances manquantes : python -m project_core.core_from_scripts.project_setup fix-deps --package <paquet>"
             )
 
         sys.exit(1)

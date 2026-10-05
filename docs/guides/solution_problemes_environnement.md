@@ -78,7 +78,7 @@ Pour résoudre ces problèmes, nous avons:
 
 2. **Créé des scripts pour configurer un environnement de test propre**:
    - `setup_test_env.py`: Script Python pour configurer un environnement virtuel et installer les dépendances (supprimé par #2532 : son import visait un pipeline qui n'existe plus ; l'environnement se crée avec `setup_project_env.ps1` / `environment.yml`)
-   - `setup_test_env.ps1`: Script PowerShell pour les utilisateurs Windows
+   - `setup_test_env.ps1`: Script PowerShell pour les utilisateurs Windows (retiré par #1803 étape 3 : ses trois étapes — recherche du JDK, `JAVA_HOME`, classpath Tweety — vivent dans `argumentation_analysis/core/jvm_setup.py`)
 
 3. **Créé un environnement virtuel et installé les dépendances**:
    ```powershell
@@ -126,4 +126,4 @@ Pour résoudre complètement les problèmes d'environnement, nous recommandons:
 
 La solution mise en place a permis de résoudre une grande partie des problèmes d'environnement, mais certains problèmes persistent. Une analyse plus approfondie et des ajustements supplémentaires pourraient être nécessaires pour résoudre complètement tous les problèmes.
 
-Les scripts et fichiers de configuration créés (`requirements-test.txt`, `setup_test_env.py`, `setup_test_env.ps1`) fournissent une base solide pour configurer un environnement de test propre et reproductible.
+Les scripts et fichiers de configuration créés (`requirements-test.txt`, `setup_test_env.py`, `setup_test_env.ps1`) ont été retirés depuis (#2532 pour le `.py`, #1803 étape 3 pour le `.ps1`) : l'environnement de test se configure aujourd'hui avec `setup_project_env.ps1` / `environment.yml`.
