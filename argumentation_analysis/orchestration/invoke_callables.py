@@ -9304,6 +9304,16 @@ _COMPARE_DUNG_SEMANTICS: Tuple[str, ...] = (
     "complete",
 )
 
+# #2930 — the ceiling that stops the measured blow-up. On an AF whose
+# preferred-extension count provably explodes, BOTH engines cost minutes and
+# nothing stopped them: the measurement (po-2025, 2026-10-04) puts the knee
+# between 512 and 1024 preferred extensions on the disjoint-mutual-pair family
+# (512 -> 2.7 s, 1024 -> 46.7 s student / 78.2 s tweety at N=20). The ceiling
+# therefore sits AT the measured blow-up, and the 2.7 s case is deliberately
+# left to run. Raise it (pass the parameter) to run a bigger framework anyway —
+# the refusal names itself either way.
+_DUNG_PROVABLE_EXTENSION_CEILING = 1024
+
 # A backend fn: (arguments, attacks) -> {"extensions": {sem: [[arg,...],...]},
 # "available": bool, "note": str}. Fakes injected for unit tests (no JVM).
 _DungBackendFn = Callable[[List[str], List[List[str]]], Awaitable[Dict[str, Any]]]
@@ -9452,12 +9462,78 @@ async def _default_student_dung_backend(
         }
 
 
+def _provable_preferred_extension_floor(
+    arguments: List[str], attacks: List[List[str]]
+) -> int:
+    """Lower bound on the preferred-extension count, proved from the AF's shape.
+
+    The preferred extensions of an AF are the cartesian product of its weakly
+    connected components' preferred extensions, and a component that is exactly
+    one mutual pair ``a <-> b`` has exactly two of them (``{a}``, ``{b}``) —
+    unless one of the two attacks itself: a self-attacking argument enters no
+    conflict-free set, so the pair then has a single preferred extension and
+    proves nothing (the engines keep self-attacks; the floor must too, #2935
+    R1065). So ``p`` disjoint mutual-pair components free of self-attacks PROVE
+    at least ``2**p`` preferred extensions — the family that measured minutes
+    (#2921, #2930). Shapes the argument does not prove leave the floor at 1 (a
+    complete graph is a single component with a single preferred extension), so
+    the ceiling refuses only what it can prove, never a cheap framework.
+    """
+    index = {arg: i for i, arg in enumerate(arguments)}
+    parent = list(range(len(arguments)))
+
+    def find(x: int) -> int:
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a: int, b: int) -> None:
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[max(ra, rb)] = min(ra, rb)
+
+    directed: set[Tuple[int, int]] = set()
+    self_attacking: set[int] = set()
+    for attack in attacks:
+        if len(attack) < 2:
+            continue
+        src, dst = index.get(attack[0]), index.get(attack[1])
+        if src is None or dst is None:
+            continue
+        if src == dst:
+            self_attacking.add(src)
+            continue
+        directed.add((src, dst))
+        union(src, dst)
+
+    sizes: Dict[int, int] = {}
+    for i in range(len(arguments)):
+        root = find(i)
+        sizes[root] = sizes.get(root, 0) + 1
+
+    pairs = 0
+    for src, dst in directed:
+        if (
+            src < dst
+            and (dst, src) in directed
+            and sizes[find(src)] == 2
+            and src not in self_attacking
+            and dst not in self_attacking
+        ):
+            pairs += 1
+    # 2**62 is far past any framework whose cost a wall clock could hold; cap
+    # the shift so a pathological input cannot build an enormous integer.
+    return 1 << min(pairs, 62)
+
+
 async def _compare_dung_backends(
     arguments: List[str],
     attacks: List[List[str]],
     *,
     backends: Optional[Dict[str, _DungBackendFn]] = None,
     semantics: Optional[Tuple[str, ...]] = None,
+    max_provable_preferred_extensions: Optional[int] = _DUNG_PROVABLE_EXTENSION_CEILING,
 ) -> Dict[str, Any]:
     """Run every available Dung backend on the same AF and compare (I5 #1430).
 
@@ -9470,6 +9546,16 @@ async def _compare_dung_backends(
     student ``DungStudentProvider``); inject fakes (``{name: async_fn}``) for
     JVM-free unit tests. Each backend fn returns ``{"extensions": {sem: [...]},
     "available": bool, "note": str}``.
+
+    ``max_provable_preferred_extensions`` (#2930) is a ceiling on the number of
+    preferred extensions the framework PROVABLY admits, computed from the AF's
+    shape before any engine runs. At or above it, every backend is reported
+    ``available=False`` with a note naming the ceiling, ``elapsed_ms`` 0.0, and
+    **no engine is called at all** — the only bound that cuts the measured cost
+    instead of hiding it (an in-thread ``asyncio.wait_for`` would leave the
+    JPype thread running and hang the process at exit, family #2080). Pass
+    ``None`` to run such a framework anyway; the measured basis of the default
+    is on the constant above.
 
     Returns::
 
@@ -9504,8 +9590,32 @@ async def _compare_dung_backends(
             "abs_arg_dung_student": _default_student_dung_backend,
         }
 
+    # #2930 — refuse before paying, when the shape proves the blow-up. The
+    # floor is a LOWER bound on the preferred-extension count, so a framework
+    # whose cost is not proved (complete graph, sparse creux) is never refused.
+    provable_floor = _provable_preferred_extension_floor(arguments, attacks)
+    precondition_refused = (
+        max_provable_preferred_extensions is not None
+        and provable_floor >= max_provable_preferred_extensions
+    )
+    refusal_note = (
+        f"refused before running (#2930): the framework provably admits at "
+        f"least {provable_floor} preferred extensions, at or above the ceiling "
+        f"{max_provable_preferred_extensions} — the measured blow-up (1024 -> "
+        f"46.7 s student / 78.2 s tweety, po-2025 2026-10-04). Raise "
+        f"max_provable_preferred_extensions to run it anyway."
+    )
+
     backend_results: Dict[str, Dict[str, Any]] = {}
     for name, fn in backends.items():
+        if precondition_refused:
+            backend_results[name] = {
+                "extensions": {},
+                "available": False,
+                "note": refusal_note,
+                "elapsed_ms": 0.0,
+            }
+            continue
         try:
             res = await fn(arguments, attacks)
         except Exception as e:  # a buggy backend never poisons the comparison
@@ -9571,6 +9681,8 @@ async def _compare_dung_backends(
             "arguments_count": len(arguments),
             "attacks_count": len(attacks),
             "backends_count": len(backend_results),
+            "provable_preferred_floor": provable_floor,
+            "precondition_refused": precondition_refused,
         },
     }
 
