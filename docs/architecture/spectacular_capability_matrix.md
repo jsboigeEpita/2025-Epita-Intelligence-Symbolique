@@ -42,8 +42,8 @@
 | 22 | ATMSPlugin | Assumption-based truth maintenance | spectacular (atms) | None | P1 |
 | 23 | RankingPlugin | Argument ranking/credibility evaluation | spectacular (ranking), formal_extended (ranking) | None | P0 |
 | 24 | BeliefRevisionPlugin | Belief revision operations | formal_extended (belief_revision) | Not in spectacular | P1 |
-| 25 | GovernancePlugin | 4 `@kernel_function` for voting, conflict, consensus | spectacular (governance) via GovernanceAgent | None | P1 |
-| 26 | QualityScoringPlugin | 3 `@kernel_function` wrapping ArgumentQualityEvaluator | spectacular (quality) | None | P0 |
+| 25 | GovernancePlugin | 6 `@kernel_function` for voting, conflict, consensus, social choice | spectacular (governance) via GovernanceAgent | None | P1 |
+| 26 | QualityScoringPlugin | 4 `@kernel_function` wrapping ArgumentQualityEvaluator | spectacular (quality) | None | P0 |
 | 27 | TextToKBPlugin | NL → KB extraction (structured knowledge base) | formal_extended (extract→KB path) | Not standalone in spectacular | P1 |
 | 28 | KBToTweetyPlugin | KB → Tweety formula translation | formal_extended (KB→formula path) | Not standalone in spectacular | P1 |
 | 29 | TweetyResultInterpretationPlugin | Formal results → natural language synthesis | formal_extended (tweety_interpretation) | Not in spectacular | P1 |
