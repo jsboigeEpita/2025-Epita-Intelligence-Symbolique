@@ -13,11 +13,11 @@
 
 | # | Component | Purpose | Wired in | Gap | Priority |
 |---|-----------|---------|----------|-----|----------|
-| 1 | FactExtractionAgent | Extract verifiable claims from text | spectacular (extract), formal_extended (extract), light/standard/full/iterative | None | P0 |
+| 1 | ExtractAgent | Extract verifiable claims from text | spectacular (extract), formal_extended (extract), light/standard/full/iterative | None | P0 |
 | 2 | InformalFallacyAgent | Hybrid fallacy detection (8 families, symbolic+NLI+LLM) | spectacular (hierarchical_fallacy, neural_detect) | None | P0 |
 | 3 | CounterArgumentAgent | Generate counter-arguments via 5 rhetorical strategies | spectacular (counter), standard/full/iterative/quality_gated | None | P0 |
 | 4 | DebateAgent | Multi-personality adversarial debate (argument scoring) | spectacular (debate), debate_governance | None | P1 |
-| 5 | SynthesisAgent | Aggregate analysis results into coherent output | standard/full | Not in spectacular (no synthesis phase) | P2 |
+| 5 | DeepSynthesisAgent | 9-section state-grounded synthesis report (mandatory L10 phase) | spectacular (deep_synthesis) | None | P2 |
 | 6 | PropositionalLogicAgent | PL reasoning via Tweety | spectacular (pl), formal_extended (pl), nl_to_logic | None | P0 |
 | 7 | FOLLogicAgent | First-order logic reasoning with N-to-1 sanitization | spectacular (fol), formal_extended (fol) | None | P0 |
 | 8 | ModalLogicAgent | Modal logic (necessity/possibility) reasoning | spectacular (modal), formal_extended (modal) | None | P0 |
@@ -51,7 +51,7 @@
 | 31 | ToulminPlugin | Toulmin model argumentation structure | AGENT_SPECIALITY_MAP (informal_fallacy, extract) | Not a dedicated workflow phase | P2 |
 | 32 | FallacyWorkflowPlugin | Complex fallacy detection workflow | InformalFallacyAgent internal | None | P1 |
 | 33 | ComplexFallacyAnalyzer | Enhanced fallacy analysis tools | Part of analysis pipeline | None | P2 |
-| 34 | RhetoricalResultAnalyzer | Rhetorical result analysis | Analysis pipeline | None | P2 |
+| 34 | EnhancedRhetoricalResultAnalyzer | Rhetorical result analysis | Analysis pipeline | None | P2 |
 | 35 | RhetoricalResultVisualizer | Visualization tools for analysis results | Analysis pipeline | None | P2 |
 
 ## Tweety Extensions & Semantics (11)

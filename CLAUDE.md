@@ -171,7 +171,7 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 
 - **`abc/agent_bases.py`** — `BaseAgent(ChatCompletionAgent, ABC)` and `BaseLogicAgent`. All agents inherit from `BaseAgent` which extends Semantic Kernel's `ChatCompletionAgent` (required for `AgentGroupChat` compatibility). Uses Pydantic V2 — private attributes use `PrivateAttr`; the logger is `_agent_logger` (private, `PrivateAttr`), read through the public `logger` property.
 - **`logic/`** — FOL, Modal, Propositional logic agents + `TweetyBridge` (Java/JPype bridge to Tweety reasoner)
-- **`extract/`** — `FactExtractionAgent` for extracting verifiable claims
+- **`extract/`** — `ExtractAgent` for extracting verifiable claims
 - **`informal/`** — Informal logic + `TaxonomySophismDetector` (8-family fallacy classification)
 - **`synthesis/`** — `DeepSynthesisAgent`: 9-section state-grounded synthesis report (the former inert `SynthesisAgent` was removed, #2140)
 - **`oracle/`** — Cluedo dataset + `MoriartyInterrogatorAgent`
