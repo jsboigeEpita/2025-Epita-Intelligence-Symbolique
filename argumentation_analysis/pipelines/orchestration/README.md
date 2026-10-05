@@ -47,7 +47,7 @@ réexports associés.
 
 ## Frères et parent
 
-- à ne pas confondre avec [`orchestration/`](../../../orchestration/README.md),
+- à ne pas confondre avec [`orchestration/`](../../orchestration/README.md),
   le système vivant (`unified_pipeline.py`, `workflow_dsl.py`, registre de
   capabilities) ;
 - parent : [`pipelines/`](../README.md).

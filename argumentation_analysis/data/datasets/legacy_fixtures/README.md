@@ -34,7 +34,7 @@ Sans objet (aucun code ne les charge ; le scénario Cluedo opérationnel actuel 
 
 ## Frères et parent
 
-Parent : `data/datasets/` (sans README). Sœur canonique : `data/extract_sources.json.gz.enc` (dataset chiffré, discipline privacy — cf. le [`README racine`](../../../README.md) et `CLAUDE.md` § Dataset Privacy Discipline).
+Parent : `data/datasets/` (coquille légère, sans README à dessein). Grand-parent : [`data/`](../../README.md) — rôles et lecteurs réels de chaque fichier de données. Sœur canonique : `data/extract_sources.json.gz.enc` (dataset chiffré, discipline privacy — cf. le [`README racine`](../../../README.md) et `CLAUDE.md` § Dataset Privacy Discipline).
 
 ## Limites connues
 
