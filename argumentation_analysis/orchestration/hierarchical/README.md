@@ -2,6 +2,8 @@
 
 Ce répertoire contient l'implémentation d'une architecture d'orchestration à trois niveaux, conçue pour gérer des tâches d'analyse complexes en décomposant le problème. Cette approche favorise la séparation des préoccupations, la modularité et la scalabilité.
 
+Parent : [`orchestration/README.md`](../README.md) — les cinq familles vivantes et les points d'entrée mesurés (cette architecture = famille hiérarchique, sous-modes `bridge` et `delegation`).
+
 ## Les Trois Couches
 
 L'architecture est divisée en trois couches de responsabilité distinctes :
