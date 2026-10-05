@@ -50,6 +50,14 @@ try:
     import torch
     import transformers
     from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
+    from transformers.utils import is_torch_available
+
+    # #2946: same honesty gate as nlp_model_manager — the imports above
+    # succeed even when transformers disabled torch, and the failure was
+    # deferred to the first model use. Report the capability only when
+    # transformers can actually use its torch backend.
+    if not is_torch_available():
+        raise ImportError("transformers is installed but disabled its torch backend")
 
     HAS_TRANSFORMERS = True
 except (ImportError, OSError):

@@ -43,7 +43,16 @@ dependencies:
   # With conda spacy gone, nothing installs srsly but pip, whose 2.5.3 wheel
   # vendors msgpack (1.0 semantics) exactly like the recording env.
   - pytorch
-  - transformers
+  # #2946: transformers<5, measured. Unpinned, the solve served 5.17.0 with
+  # pytorch 2.2.2, and transformers 5.x disables a torch that old at import
+  # ("PyTorch >= 2.5 is required but found 2.2.2"): is_torch_available()
+  # returns False and every model class becomes a placeholder raising
+  # ImportError at first use, while `from transformers import pipeline`
+  # still succeeds — import-based probes reported the capability as present.
+  # Raising pytorch instead reopens #1651/#2856's DLL contract. With <5 the
+  # solve serves 4.57.6, measured to accept torch 2.2.2 (witness:
+  # tests/unit/test_gate_env_transformers_uses_torch_2946.py).
+  - transformers<5
   - sympy=1.13.1
 
   # Web & API

@@ -648,12 +648,23 @@ class NLIFallacyDetector:
     def is_available(self) -> bool:
         if self._available is None:
             try:
-                from transformers import pipeline
+                from transformers import pipeline  # noqa: F401
+                from transformers.utils import is_torch_available
 
+                # #2946: "importable" is not "usable". In the lock env that
+                # served transformers 5.x with torch 2.2.2, this import
+                # succeeded while every model class was a placeholder that
+                # raised at first use — the failure moved to _get_classifier.
+                # Ask the real question: can transformers use its torch?
+                if not is_torch_available():
+                    raise ImportError(
+                        "transformers is installed but disabled its torch "
+                        "backend (torch too old for this transformers line)"
+                    )
                 self._available = True
             except ImportError:
                 self._available = False
-                logger.warning("transformers not installed — NLI tier unavailable")
+                logger.warning("transformers/torch backend unavailable — NLI tier off")
         return self._available
 
     def _get_classifier(self):
@@ -943,6 +954,16 @@ class CamemBERTFallacyDetector:
                 CamembertTokenizer,
                 CamembertForSequenceClassification,
             )
+
+            # #2946: same honesty as the NLI tier — importing the model
+            # classes succeeds even when transformers has disabled torch,
+            # and the deferred failure surfaced only at from_pretrained.
+            from transformers.utils import is_torch_available
+
+            if not is_torch_available():
+                raise ImportError(
+                    "transformers is installed but disabled its torch backend"
+                )
         except ImportError:
             logger.debug("CamemBERT dependencies not available (torch/transformers)")
             self._available = False

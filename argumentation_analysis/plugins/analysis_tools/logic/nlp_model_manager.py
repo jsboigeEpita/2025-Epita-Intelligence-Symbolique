@@ -28,14 +28,23 @@ pipeline = None
 
 try:
     from transformers import pipeline as hf_pipeline
+    from transformers.utils import is_torch_available
+
+    # #2946: "importable" is not "usable" — in an env where transformers
+    # disabled torch (5.x with an older torch), the import above succeeds
+    # while every model class raises at first use. Report the capability
+    # only when transformers can actually use its torch backend.
+    if not is_torch_available():
+        raise ImportError("transformers is installed but disabled its torch backend")
 
     pipeline = hf_pipeline
     HAS_TRANSFORMERS = True
     logger.info("Bibliothèque Transformers chargée avec succès.")
 except (ImportError, OSError):
+    pipeline = None
     logger.warning(
-        "Bibliothèque 'transformers' non trouvée. "
-        "Les fonctionnalités NLP avancées seront désactivées."
+        "Bibliothèque 'transformers' inutilisable (absente ou backend torch "
+        "désactivé). Les fonctionnalités NLP avancées seront désactivées."
     )
 
 # --- Modèles standardisés pour l'application ---
