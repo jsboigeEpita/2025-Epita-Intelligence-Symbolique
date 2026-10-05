@@ -103,6 +103,9 @@ ABSENT_BY_DESIGN = {
     # is a tracked suffix elsewhere. Only these are wholly gone:
     "core/pm/pm_agent.py": "retired by #2699",
     "pm_definitions.py": "retired by #2699",
+    # retired by #1649 with the Walton-Krabbe relations channel (the README
+    # records which import used to live in dung_arbitration_stage.py).
+    "WALTON_KRABBE_ATTACKING_ACTS": "retired by #1649 with the WK channel",
 }
 
 
