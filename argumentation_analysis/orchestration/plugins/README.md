@@ -55,7 +55,7 @@ conda run -n projet-is-roo-new --no-capture-output pytest tests/orchestration/pl
 
 ## Frères et parent
 
-Parent : [`../README.md`](../README.md) — ne mentionne ni `plugins/`, ni le mode Cluedo. À distinguer de [`../../plugins/`](../../plugins/) (famille SK principale).
+Parent : [`../README.md`](../README.md) (famille plugins = ligne du tableau §1, mode Cluedo = §1.4). À distinguer de [`../../plugins/`](../../plugins/) (famille SK principale).
 
 ## Limites connues
 
