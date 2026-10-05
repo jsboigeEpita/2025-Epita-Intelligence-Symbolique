@@ -22,21 +22,50 @@ from threading import Lock
 # Configuration du logging
 logger = logging.getLogger(__name__)
 
-# Variable pour suivre l'état de l'importation de transformers
+# État du backend transformers, résolu au PREMIER USAGE, jamais à l'import
+# du module (#2946 + #2867) : transformers 4.x traîne sklearn — donc pandas
+# (sklearn.utils.fixes) — dans tout import module-level, et ce module est sur
+# le chemin d'``import api.main``, qui doit rester libre de pandas (#2867,
+# mesuré 13.4 s -> 11.5 s). Les témoins gèlent l'état via ``_backend_resolved``
+# avant d'injecter une valeur.
 HAS_TRANSFORMERS = False
 pipeline = None
+_backend_resolved = False
 
-try:
-    from transformers import pipeline as hf_pipeline
 
-    pipeline = hf_pipeline
-    HAS_TRANSFORMERS = True
-    logger.info("Bibliothèque Transformers chargée avec succès.")
-except (ImportError, OSError):
-    logger.warning(
-        "Bibliothèque 'transformers' non trouvée. "
-        "Les fonctionnalités NLP avancées seront désactivées."
-    )
+def _resolve_transformers_backend() -> bool:
+    """Importe transformers et répond à la vraie question (#2946) : le backend
+    torch est-il vivant ?
+
+    Un import qui réussit ne prouve rien : dans un env où transformers a
+    désactivé torch (5.x avec un torch plus vieux), l'import réussit et chaque
+    classe modèle lève au premier usage. La capacité n'est rapportée que si
+    transformers peut réellement utiliser son backend torch.
+    """
+    global HAS_TRANSFORMERS, pipeline, _backend_resolved
+    if _backend_resolved:
+        return HAS_TRANSFORMERS
+    _backend_resolved = True
+    try:
+        from transformers import pipeline as hf_pipeline
+        from transformers.utils import is_torch_available
+
+        if not is_torch_available():
+            raise ImportError(
+                "transformers is installed but disabled its torch backend"
+            )
+
+        pipeline = hf_pipeline
+        HAS_TRANSFORMERS = True
+        logger.info("Bibliothèque Transformers chargée avec succès.")
+    except (ImportError, OSError):
+        pipeline = None
+        logger.warning(
+            "Bibliothèque 'transformers' inutilisable (absente ou backend torch "
+            "désactivé). Les fonctionnalités NLP avancées seront désactivées."
+        )
+    return HAS_TRANSFORMERS
+
 
 # --- Modèles standardisés pour l'application ---
 TEXT_CLASSIFICATION_MODEL = "distilbert-base-uncased-finetuned-sst-2-english"
@@ -94,7 +123,7 @@ class NLPModelManager:
         - **Idempotente :** Si les modèles sont déjà chargés, la méthode retourne
           immédiatement sans rien faire.
         """
-        if self._models_loaded or not HAS_TRANSFORMERS:
+        if self._models_loaded or not _resolve_transformers_backend():
             if self._models_loaded:
                 logger.info("Modèles déjà chargés (appel synchrone).")
             else:

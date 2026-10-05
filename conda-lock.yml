@@ -13,7 +13,7 @@
 version: 1
 metadata:
   content_hash:
-    win-64: 2004eca984486f9b2a5961ed097791cffaa8690f1c6385065a3c8fc7727eccb4
+    win-64: 809795b88bc0806c2c3d7b0316440eff1cc50fd9a63ff489cdf7d28105334e59
   channels:
   - url: conda-forge
     used_env_vars: []
@@ -1309,24 +1309,24 @@ package:
   category: main
   optional: false
 - name: huggingface_hub
-  version: 1.29.0
+  version: 0.36.0
   manager: conda
   platform: win-64
   dependencies:
-    click: '>=8.4.2,<9.0.0'
-    filelock: '>=3.10.0'
+    filelock: ''
     fsspec: '>=2023.5.0'
-    hf-xet: '>=1.5.2,<2.0.0'
-    httpx: '>=0.23.0,<1'
+    hf-xet: '>=1.1.3,<2.0.0'
     packaging: '>=20.9'
     python: '>=3.10'
     pyyaml: '>=5.1'
+    requests: ''
     tqdm: '>=4.42.1'
-    typing_extensions: '>=4.1.0'
-  url: https://conda.anaconda.org/conda-forge/noarch/huggingface_hub-1.29.0-pyhcf101f3_0.conda
+    typing-extensions: '>=3.7.4.3'
+    typing_extensions: '>=3.7.4.3'
+  url: https://conda.anaconda.org/conda-forge/noarch/huggingface_hub-0.36.0-pyhd8ed1ab_0.conda
   hash:
-    md5: 0d1383e552c1e0becec387c5faa469dd
-    sha256: 14254b1a7ce5ea0a3201e56953f139f35a9f3cec93d67dc2d4d185a60f5813f9
+    md5: 39e591c87bc60fcf0944f5b878ed3e27
+    sha256: 7ba53c55530b8bbbd64805b5820a9f4dd35b3d749cdd57092b09f07f71447da6
   category: main
   optional: false
 - name: hyperframe
@@ -2071,10 +2071,10 @@ package:
     ucrt: '>=10.0.20348.0'
     vc: '>=14.3,<15'
     vc14_runtime: '>=14.44.35208'
-  url: https://conda.anaconda.org/conda-forge/win-64/libsqlite-3.53.4-hf5d6505_1.conda
+  url: https://conda.anaconda.org/conda-forge/win-64/libsqlite-3.53.4-hf5d6505_102.conda
   hash:
-    md5: a72d495965b144bb7da033642d389047
-    sha256: 0a45d7c0f20146fff787a106f8fa187872e309c70975ff8f0936e188914c26ad
+    md5: 2a9a36fa168f4238720a0b7d61a2bc1a
+    sha256: 2e4ab073b2cccdd3301d2e00b38215fea71aa544305d9250d67868fa0383a3de
   category: main
   optional: false
 - name: libtiff
@@ -2712,7 +2712,7 @@ package:
   category: main
   optional: false
 - name: openssl
-  version: 3.6.4
+  version: 3.6.5
   manager: conda
   platform: win-64
   dependencies:
@@ -2720,10 +2720,10 @@ package:
     ucrt: '>=10.0.20348.0'
     vc: '>=14.3,<15'
     vc14_runtime: '>=14.44.35208'
-  url: https://conda.anaconda.org/conda-forge/win-64/openssl-3.6.4-hf411b9b_0.conda
+  url: https://conda.anaconda.org/conda-forge/win-64/openssl-3.6.5-hf411b9b_0.conda
   hash:
-    md5: 73cb1783f47c452be4c309430fbef89f
-    sha256: 9dddb559ba49744d5d94092d8d13cb0567f5c3b3f439f3acf28433d1f4256acc
+    md5: f002ec2237836867bfd3d1299a6005da
+    sha256: bc44625e0c6d83f3e02b5f6adc01e0e3ca7001d3d94e24959591a57f5a011b9a
   category: main
   optional: false
 - name: packaging
@@ -3986,7 +3986,7 @@ package:
   category: main
   optional: false
 - name: tokenizers
-  version: 0.23.1
+  version: 0.22.2
   manager: conda
   platform: win-64
   dependencies:
@@ -3996,10 +3996,10 @@ package:
     ucrt: '>=10.0.20348.0'
     vc: '>=14.3,<15'
     vc14_runtime: '>=14.44.35208'
-  url: https://conda.anaconda.org/conda-forge/win-64/tokenizers-0.23.1-py310h1657867_0.conda
+  url: https://conda.anaconda.org/conda-forge/win-64/tokenizers-0.22.2-py310h1657867_0.conda
   hash:
-    md5: 814bc6c7f4e2b19d271cc4f5f651297e
-    sha256: 1968e54380ac11a8e304f9e89c098751f23bd9f266156595f7f1db2e0e8ef65b
+    md5: d385b202049ecd78f3e575bb254fc4be
+    sha256: 605c69865d20caa6673856f8563a7b065f7a2f04a51cbad7044d258898172439
   category: main
   optional: false
 - name: tomli
@@ -4069,24 +4069,25 @@ package:
   category: main
   optional: false
 - name: transformers
-  version: 5.17.0
+  version: 4.57.6
   manager: conda
   platform: win-64
   dependencies:
-    huggingface_hub: '>=1.5.0,<2.0'
+    filelock: ''
+    huggingface_hub: '>=0.34.0,<1.0'
     numpy: '>=1.17'
     packaging: '>=20.0'
     python: '>=3.10'
     pyyaml: '>=5.1'
-    regex: '>=2025.10.22'
-    safetensors: '>=0.8.0'
-    tokenizers: '>=0.23.1,<0.24.0'
-    tqdm: '>=4.60'
-    typer: ''
-  url: https://conda.anaconda.org/conda-forge/noarch/transformers-5.17.0-pyhcf101f3_0.conda
+    regex: '!=2019.12.17'
+    requests: ''
+    safetensors: '>=0.4.1'
+    tokenizers: '>=0.22,<=0.23'
+    tqdm: '>=4.27'
+  url: https://conda.anaconda.org/conda-forge/noarch/transformers-4.57.6-pyhd8ed1ab_1.conda
   hash:
-    md5: 93af23e5ec81d2928b81940d30f3cdf7
-    sha256: b6450d377039758c52bfb40c81158db630f61522861273080382b381c7fa8f37
+    md5: 38e994a6794f2904fd903956eca814fa
+    sha256: f9d90fd9ebf2005b3e38e51da57a43213dba4595d834fdeff438646ff8d8111e
   category: main
   optional: false
 - name: trove-classifiers
