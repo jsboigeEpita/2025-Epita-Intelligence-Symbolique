@@ -273,8 +273,10 @@ jobs:
           # the root of tests/integration/ were not chosen.
           # #2934 (2026-10-05): test_real_gpt_response_quality marked
           # requires_api (its catch-all skip could hide anything, so it carried
-          # no signal), moving it to the band — 330 under the gate filter
-          # (282 + 48).
+          # no signal), moving it to the band — one test out, one offline
+          # witness in (TestSettingsIsRequiredInSK), so the gate count stays
+          # 331 under the gate filter (282 + 49), as re-measured in
+          # collect-only on main and on this head.
 
       - name: Generate test summary
         if: always()
