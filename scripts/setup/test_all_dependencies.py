@@ -180,6 +180,8 @@ def test_dependency(dependency):
             test_cryptography(module)
         elif name == "pytest":
             test_pytest(module)
+        elif name == "transformers":
+            test_transformers(module)
 
         logger.info(f"{name} est correctement installé et fonctionnel.")
         return True
@@ -307,6 +309,39 @@ def test_pytest(pytest):
     # Vérifier que les plugins sont installés
     plugins = pytest.config.getini("plugins") if hasattr(pytest, "config") else []
     logger.info(f"pytest plugins: {plugins}")
+
+
+def test_transformers(module):
+    """
+    Teste que transformers peut réellement UTILISER son backend torch (#2946).
+
+    Import + version ne prouvent rien : transformers 5.x servi avec un torch
+    plus vieux importe proprement puis désactive torch — chaque classe modèle
+    devient un placeholder qui lève au premier usage. La sonde répond à la
+    vraie question en construisant un mini-modèle depuis une config seule
+    (zéro réseau). C'est la sonde du témoin de gate
+    ``tests/unit/test_gate_env_transformers_uses_torch_2946.py``, importée
+    et rejouée en sous-processus (transformers met en cache sa décision de
+    backend à l'import), pas une copie locale.
+
+    Args:
+        module: Module transformers importé (déjà vérifié par test_dependency)
+    """
+    try:
+        from tests.unit.test_gate_env_transformers_uses_torch_2946 import _PROBE
+    except ImportError as e:
+        raise RuntimeError(
+            "sonde partagée introuvable "
+            f"(tests.unit.test_gate_env_transformers_uses_torch_2946): {e}"
+        ) from e
+    returncode, stdout, stderr = run_command([sys.executable, "-c", _PROBE])
+    if returncode != 0 or "BUILT" not in stdout:
+        raise RuntimeError(
+            "transformers est installé mais ne peut pas construire un modèle "
+            "dans cet env (#2946) — il a probablement désactivé son backend "
+            f"torch. stdout: {stdout[-300:]} stderr: {stderr[-500:]}"
+        )
+    logger.info(f"transformers probe: {stdout.strip()[-120:]}")
 
 
 def check_build_tools():

@@ -16,6 +16,12 @@ each site answers *unavailable* instead of deferring a crash.
   transformers-free). The monkeypatch must land before that first use, so
   each witness runs in a fresh subprocess that patches first, imports
   second, triggers the resolver third.
+- A process that disables the NLP models (``DISABLE_NLP_MODELS=1``) must
+  never import transformers at all: the resolver read the flag only AFTER
+  importing (the init sequence resolved first, then refused), so a disabled
+  process paid the full transformers import — and its sklearn/pandas trail
+  on 4.x — for nothing. The witness constructs the analyzer in a fresh
+  subprocess and holds transformers out of ``sys.modules``.
 """
 
 import subprocess
@@ -67,9 +73,41 @@ print("HONEST", probe.__name__)
 """
 
 
-def _run_honesty_subprocess(module: str) -> subprocess.CompletedProcess:
+_DISABLED_SUBPROCESS_TEMPLATE = """
+import importlib
+import os
+import sys
+
+os.environ["DISABLE_NLP_MODELS"] = "1"
+
+probe = importlib.import_module({module!r})
+
+# The #2867 seam is untouched: importing the module resolves nothing.
+assert probe._backend_resolved is False, (
+    "#2867: importing the module resolved the transformers backend — "
+    "the resolution belongs to first use"
+)
+
+analyzer = probe.EnhancedContextualFallacyAnalyzer(fallacy_detector=None)
+
+assert "transformers" not in sys.modules, (
+    "#2946: a process with DISABLE_NLP_MODELS=1 still imported transformers "
+    "during the analyzer init — the flag must be read BEFORE the resolver "
+    "runs, a disabled process must not pay the import"
+)
+assert analyzer.nlp_models == {{}}, (
+    "#2946: a process with DISABLE_NLP_MODELS=1 initialized NLP models anyway"
+    f" ({{analyzer.nlp_models}})"
+)
+print("CLEAN", probe.__name__)
+"""
+
+
+def _run_honesty_subprocess(
+    module: str, template: str = _HONESTY_SUBPROCESS_TEMPLATE
+) -> subprocess.CompletedProcess:
     return subprocess.run(
-        [sys.executable, "-c", _HONESTY_SUBPROCESS_TEMPLATE.format(module=module)],
+        [sys.executable, "-c", template.format(module=module)],
         capture_output=True,
         text=True,
         timeout=300,
@@ -134,3 +172,18 @@ class TestContextualAnalyzerFlagIsHonest:
             f"stderr: {proc.stderr[-800:]}"
         )
         assert "HONEST" in proc.stdout, proc.stdout
+
+
+class TestDisabledProcessNeverImportsTransformers:
+    def test_disabled_flag_skips_the_import_entirely(self):
+        proc = _run_honesty_subprocess(
+            "argumentation_analysis.plugins.analysis_tools.logic"
+            ".contextual_fallacy_analyzer",
+            template=_DISABLED_SUBPROCESS_TEMPLATE,
+        )
+        assert proc.returncode == 0, (
+            "#2946: a DISABLE_NLP_MODELS=1 process still imported "
+            "transformers during the analyzer init:\n"
+            f"stdout: {proc.stdout[-400:]}\nstderr: {proc.stderr[-800:]}"
+        )
+        assert "CLEAN" in proc.stdout, proc.stdout

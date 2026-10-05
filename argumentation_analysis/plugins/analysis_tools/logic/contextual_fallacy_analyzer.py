@@ -72,6 +72,16 @@ def _resolve_transformers_backend() -> bool:
     global AutoTokenizer, AutoModelForSequenceClassification, _backend_resolved
     if _backend_resolved:
         return HAS_TRANSFORMERS
+    # #2946 (suite #2948) : le drapeau se lit AVANT la résolution. Résoudre,
+    # c'est importer transformers — et sa traîne sklearn/pandas en 4.x —
+    # pour un process qui vient de déclarer qu'il n'en veut pas. Le
+    # résolveur précédait la lecture du drapeau : un process
+    # ``DISABLE_NLP_MODELS=1`` payait l'import complet, puis ignorait le
+    # résultat. Le témoin (sous-processus frais) tient transformers hors de
+    # ``sys.modules`` tant que le drapeau est posé.
+    if os.environ.get("DISABLE_NLP_MODELS", "0") == "1":
+        _backend_resolved = True
+        return HAS_TRANSFORMERS  # False : jamais résolu, donc jamais importé
     _backend_resolved = True
     try:
         from transformers import AutoTokenizer as _auto_tokenizer
