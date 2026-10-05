@@ -8,16 +8,19 @@ name: requires_api band (scheduled real-LLM lane)
 # stayed invisible: CI was green certifying code-without-keys while the
 # keys-without-CI side drifted. This lane is the missing half of the pair.
 #
-# SCOPE, re-measured 2026-10-04 (collect-only, main 707349ed2) after #1867
-# option (a) admitted tests/integration/triage/ and
-# tests/integration/argumentation_analysis/ to the gate argv and to this
-# lane's argv (option (d) admitted tests/agents/ on 2026-09-28):
+# SCOPE, re-measured 2026-10-05 (collect-only, after #2934 marked
+# test_real_gpt_response_quality requires_api — the one test that moved from
+# the gate to this lane) on top of #1867 option (a) admitted
+# tests/integration/triage/ and tests/integration/argumentation_analysis/ to
+# the gate argv and to this lane's argv (option (d) admitted tests/agents/
+# on 2026-09-28):
 #   -m "requires_api and llm_light", this argv .... 10 tests  (scheduled)
-#   -m "requires_api",               this argv .... 96 tests  (full-band dispatch)
-#   -m "requires_api",               tests/ whole .. 110 tests
+#   -m "requires_api",               this argv .... 97 tests  (full-band dispatch)
+#   -m "requires_api",               tests/ whole .. 111 tests
 # (First measured 2026-09-18 on a clean collection: 8 / 59 / 90; 2026-09-28:
 # 9 / 80 / 106. On main's argv the same day the figures were 10 / 82: the
-# admission adds 0 scheduled tests and 14 full-band ones.) The 14 this lane
+# admission adds 0 scheduled tests and 14 full-band ones; 2026-10-04 on main
+# 707349ed2: 10 / 96 / 110; #2934 adds the 97th full-band test.) The 14 this lane
 # does NOT see live in 3 files outside the argv --
 # tests/bench/test_spectacular_perf.py (11, excluded by design, 15+ min LLM),
 # tests/integration/test_api_connectivity.py (1),

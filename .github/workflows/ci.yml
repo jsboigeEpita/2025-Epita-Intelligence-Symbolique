@@ -266,11 +266,15 @@ jobs:
           #
           # #1867 (a), user decision 2026-10-04: tests/integration/triage/ and
           # tests/integration/argumentation_analysis/ admitted, 331 tests under the
-          # gate filter (282 + 49). Measured in position by po-2025 on 2026-10-02
-          # at the end of the full gate argv: 0 failed, and 14 real LLM calls from
-          # 3 unmarked tests, repaired by #2906 before this admission.
+          # gate filter (282 + 49) at admission. Measured in position by po-2025 on
+          # 2026-10-02 at the end of the full gate argv: 0 failed, and 14 real LLM
+          # calls from 3 unmarked tests, repaired by #2906 before this admission.
           # tests/integration/webapp/ (14 tests, ~2 min 30) and the 14 files at
           # the root of tests/integration/ were not chosen.
+          # #2934 (2026-10-05): test_real_gpt_response_quality marked
+          # requires_api (its catch-all skip could hide anything, so it carried
+          # no signal), moving it to the band — 330 under the gate filter
+          # (282 + 48).
 
       - name: Generate test summary
         if: always()
