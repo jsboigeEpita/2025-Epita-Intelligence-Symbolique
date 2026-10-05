@@ -37,15 +37,18 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[3]
 MATRIX = REPO / "docs" / "architecture" / "spectacular_capability_matrix.md"
 
-# Les 6 tables numérotées que couvre le census. Une disparition = une
-# population qui rétrécit en silence : la garde le voit.
+# Les 6 tables numérotées que couvre le census, SANS le compte entre
+# parenthèses : ajouter une 16e ligne d'agents et mettre le titre à jour
+# est une croissance légitime (les planchers la couvrent), pas une
+# disparition de table. Une disparition réelle = une population qui
+# rétrécit en silence : la garde le voit.
 EXPECTED_TABLES = (
-    "Agents (15)",
-    "Semantic Kernel Plugins (20)",
-    "Tweety Extensions & Semantics (11)",
-    "External Solvers (4)",
-    "Workflows (12)",
-    "Services & Infrastructure (10)",
+    "Agents",
+    "Semantic Kernel Plugins",
+    "Tweety Extensions & Semantics",
+    "External Solvers",
+    "Workflows",
+    "Services & Infrastructure",
 )
 # Planchers, juste sous le compte mesuré à la naissance (72 lignes,
 # 43 noms) : la matrice peut grandir, pas fondre.
@@ -107,8 +110,15 @@ def _production_defs() -> frozenset[str]:
             continue
         try:
             tree = ast.parse((REPO / path).read_text(encoding="utf-8-sig"))
-        except SyntaxError:
-            continue
+        except SyntaxError as e:
+            # Jamais d'exclusion silencieuse : un fichier que le census ne
+            # parse pas disparaît de la population résolue, et ses symboles
+            # vivants comptent comme morts (leçon du BOM de
+            # fol_logic_agent.py, mesuré à la naissance de la garde).
+            raise AssertionError(
+                f"#2943: {path} ne parse pas ({e}) — le census ne doit "
+                "aucun fichier exclure en silence"
+            ) from e
         for node in ast.walk(tree):
             if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
                 defs.add(node.name)
@@ -122,7 +132,10 @@ def _production_defs() -> frozenset[str]:
 
 def test_population_couverte_ne_fond_pas():
     """Les 6 tables numérotées existent, et les planchers tiennent."""
-    tables = {table for table, _ in _numbered_rows()}
+    # Le compte entre parenthèses ne participe pas à l'identité de la
+    # table : la croissance d'une table est mesurée par les planchers,
+    # pas par son titre.
+    tables = {re.sub(r"\s*\(\d+\)$", "", table) for table, _ in _numbered_rows()}
     missing = [t for t in EXPECTED_TABLES if t not in tables]
     assert not missing, f"tables disparues de la matrice : {missing}"
     assert len(_numbered_rows()) >= MIN_NUMBERED_ROWS, (

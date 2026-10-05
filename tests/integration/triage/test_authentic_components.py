@@ -59,9 +59,20 @@ def _names_a_correct_diagnosis(response: str) -> bool:
     normalized = "".join(c for c in decomposed if not unicodedata.combining(c)).replace(
         "-", " "
     )
+    # The terms carry the docstring's own vocabulary: "non sequitur
+    # (enthymème, missing premise)" — a correct answer naming only the
+    # enthymeme was rejected before. Bare "prémisse" stays out: it names
+    # no defect.
     return any(
         term in normalized
-        for term in ("non sequitur", "generalisation", "generalization")
+        for term in (
+            "non sequitur",
+            "generalisation",
+            "generalization",
+            "enthymeme",
+            "premisse manquante",
+            "missing premise",
+        )
     )
 
 
@@ -223,6 +234,17 @@ class TestNamesACorrectDiagnosis:
         assert not _names_a_correct_diagnosis("Le raisonnement est valide.")
         # "Sophisme" alone names no defect — the old assertion let this pass.
         assert not _names_a_correct_diagnosis("C'est un sophisme.")
+
+        # The docstring's own vocabulary, FR and EN: a correct answer that
+        # names only the enthymeme (or the missing premise) was rejected
+        # before — the terms list did not carry what the docstring accepts.
+        assert _names_a_correct_diagnosis("La conclusion repose sur un enthymème.")
+        assert _names_a_correct_diagnosis("C'est un cas de prémisse manquante.")
+        assert _names_a_correct_diagnosis(
+            "The argument is an enthymeme: a missing premise."
+        )
+        # Bare "prémisse" is not a diagnosis — no widening past the defect.
+        assert not _names_a_correct_diagnosis("Il manque une prémisse.")
 
 
 @pytest.mark.jpype
