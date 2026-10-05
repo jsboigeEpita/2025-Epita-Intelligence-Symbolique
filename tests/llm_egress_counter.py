@@ -424,7 +424,7 @@ class LLMEgressCounter:
 
 
 def _outcome_label(entry: Dict[str, Any]) -> str:
-    """``"200"``, ``"400"``… ; ``"error:<Type>"`` ; ``"none"`` if no outcome was seen."""
+    """``"200"``, ``"400"``… ; ``"error:<Type[: message]>"`` ; ``"none"`` if no outcome was seen."""
     if "status" in entry:
         return str(entry["status"])
     if "error" in entry:
