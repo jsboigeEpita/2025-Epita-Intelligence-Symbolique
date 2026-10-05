@@ -46,32 +46,63 @@ from argumentation_analysis.paths import DATA_DIR
 # #2867 : ``sklearn.metrics.pairwise.cosine_similarity`` était importé ici sans
 # aucun consommateur — il tirait scipy et pandas dans ``import api.main`` pour
 # rien ; l'import mort est retiré, pas différé.
-try:
-    import torch
-    import transformers
-    from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
-    from transformers.utils import is_torch_available
+# #2946 + #2867 : la résolution est passée au PREMIER USAGE, jamais à l'import
+# du module — transformers 4.x traîne sklearn, donc pandas
+# (``sklearn.utils.fixes``), à son propre import, et ce module est sur le
+# chemin d'``import api.main``, qui doit rester libre de pandas. Les témoins
+# gèlent l'état via ``_backend_resolved`` avant d'injecter une valeur.
+HAS_TRANSFORMERS = False
+pipeline = None  # Assurer que 'pipeline' existe toujours pour le patching
+AutoTokenizer = None
+AutoModelForSequenceClassification = None
+_backend_resolved = False
 
-    # #2946: same honesty gate as nlp_model_manager — the imports above
-    # succeed even when transformers disabled torch, and the failure was
-    # deferred to the first model use. Report the capability only when
-    # transformers can actually use its torch backend.
-    if not is_torch_available():
-        raise ImportError("transformers is installed but disabled its torch backend")
 
-    HAS_TRANSFORMERS = True
-except (ImportError, OSError):
-    pipeline = None  # Assurer que 'pipeline' existe toujours pour le patching
-    HAS_TRANSFORMERS = False
+def _resolve_transformers_backend() -> bool:
+    """Importe transformers au premier usage et répond à la vraie question
+    (#2946) : le backend torch est-il vivant ?
+
+    Un import qui réussit ne prouve rien : dans un env où transformers a
+    désactivé torch (5.x avec un torch plus vieux), l'import réussit et chaque
+    classe modèle lève au premier usage. La capacité n'est rapportée que si
+    transformers peut réellement utiliser son backend torch. Quand cette
+    résolution s'exécute, torch est déjà en ``sys.modules`` (dll_guard).
+    """
+    global HAS_TRANSFORMERS, pipeline
+    global AutoTokenizer, AutoModelForSequenceClassification, _backend_resolved
+    if _backend_resolved:
+        return HAS_TRANSFORMERS
+    _backend_resolved = True
+    try:
+        from transformers import AutoTokenizer as _auto_tokenizer
+        from transformers import (
+            AutoModelForSequenceClassification as _auto_model_for_classification,
+        )
+        from transformers import pipeline as _hf_pipeline
+        from transformers.utils import is_torch_available
+
+        if not is_torch_available():
+            raise ImportError(
+                "transformers is installed but disabled its torch backend"
+            )
+
+        AutoTokenizer = _auto_tokenizer
+        AutoModelForSequenceClassification = _auto_model_for_classification
+        pipeline = _hf_pipeline
+        HAS_TRANSFORMERS = True
+    except (ImportError, OSError):
+        pipeline = None
+        HAS_TRANSFORMERS = False
+    return HAS_TRANSFORMERS
 
 
 # Fonction d'importation paresseuse (simplifiée)
 def _lazy_imports():
     """
     Vérifie et logue la disponibilité des dépendances NLP.
-    Les importations principales sont maintenant globales au module.
+    La résolution des dépendances est différée au premier usage.
     """
-    if not HAS_TRANSFORMERS:
+    if not _resolve_transformers_backend():
         logging.warning(
             "Les bibliothèques transformers et/ou torch ne sont pas installées. "
             "L'analyseur fonctionnera en mode dégradé."
@@ -136,7 +167,10 @@ class EnhancedContextualFallacyAnalyzer:
         Returns:
             Dictionnaire contenant les modèles de langage initialisés
         """
-        if not HAS_TRANSFORMERS or os.environ.get("DISABLE_NLP_MODELS", "0") == "1":
+        if (
+            not _resolve_transformers_backend()
+            or os.environ.get("DISABLE_NLP_MODELS", "0") == "1"
+        ):
             self.logger.info(
                 "NLP models disabled (HAS_TRANSFORMERS=%s, DISABLE_NLP_MODELS=%s).",
                 HAS_TRANSFORMERS,

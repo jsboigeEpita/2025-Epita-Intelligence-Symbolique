@@ -11,9 +11,11 @@ each site answers *unavailable* instead of deferring a crash.
 - The two adapter tiers are lazy (``is_available()``): an in-process
   monkeypatch on the source module attribute is enough — the method binds
   ``is_torch_available`` at call time.
-- The two plugin flags are set at import: the monkeypatch must land before
-  the probe module is imported, so each witness runs in a fresh subprocess
-  that patches first, imports second.
+- The two plugin flags resolve on FIRST USE, not at import (#2867: the
+  modules sit on the ``api.main`` import path, which must stay
+  transformers-free). The monkeypatch must land before that first use, so
+  each witness runs in a fresh subprocess that patches first, imports
+  second, triggers the resolver third.
 """
 
 import subprocess
@@ -31,8 +33,8 @@ import sys
 import transformers.utils
 import transformers.utils.import_utils as iu
 
-# Report torch absent BEFORE the probe module binds its imports: the flags
-# under test are set at module import, so the patch must precede it.
+# Report torch absent BEFORE the probe resolves its backend: the flag under
+# test is set on first use, so the patch must precede that use.
 def _torch_absent():
     return False
 
@@ -44,6 +46,16 @@ transformers.utils.is_torch_available = _torch_absent
 # shadows the submodule on attribute access.
 probe = importlib.import_module({module!r})
 
+# Import alone must not resolve anything (the #2867 seam): the first use
+# is what asks the question.
+assert probe._backend_resolved is False, (
+    "#2867: importing the module resolved the transformers backend — "
+    "the resolution belongs to first use"
+)
+
+assert probe._resolve_transformers_backend() is False, (
+    "#2946: the probe still reports available with torch absent"
+)
 assert probe.HAS_TRANSFORMERS is False, (
     "#2946: the probe still reports available with torch absent "
     f"(HAS_TRANSFORMERS={{probe.HAS_TRANSFORMERS}})"

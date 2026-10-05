@@ -98,15 +98,20 @@ class TestLoadModelsSync:
         original_loaded = NLPModelManager._models_loaded
         original_has = mod.HAS_TRANSFORMERS
         original_models = NLPModelManager._models.copy()
+        original_resolved = mod._backend_resolved
         try:
             NLPModelManager._models_loaded = False
             NLPModelManager._models = {}
+            # Geler le resolver (#2946) : l'injection doit survivre à l'appel,
+            # pas être écrasée par une résolution réelle.
+            mod._backend_resolved = True
             mod.HAS_TRANSFORMERS = False
             manager.load_models_sync()
             assert manager.are_models_loaded() is False
         finally:
             NLPModelManager._models_loaded = original_loaded
             mod.HAS_TRANSFORMERS = original_has
+            mod._backend_resolved = original_resolved
             NLPModelManager._models = original_models
 
     def test_load_already_loaded_does_nothing(self):
@@ -130,6 +135,7 @@ class TestLoadModelsSync:
         original_has = mod.HAS_TRANSFORMERS
         original_models = NLPModelManager._models.copy()
         original_pipeline = mod.pipeline
+        original_resolved = mod._backend_resolved
         # Save instance-level attr if it exists
         had_instance_attr = "_models_loaded" in manager.__dict__
         try:
@@ -137,6 +143,9 @@ class TestLoadModelsSync:
             # Clear instance-level shadow if present
             manager.__dict__.pop("_models_loaded", None)
             NLPModelManager._models = {}
+            # Geler le resolver (#2946) : l'injection doit survivre à l'appel,
+            # pas être écrasée par une résolution réelle.
+            mod._backend_resolved = True
             mod.HAS_TRANSFORMERS = True
             mock_pipeline = MagicMock(side_effect=lambda task, model: f"mock_{task}")
             mod.pipeline = mock_pipeline
@@ -149,6 +158,7 @@ class TestLoadModelsSync:
             manager.__dict__.pop("_models_loaded", None)
             NLPModelManager._models_loaded = original_loaded
             mod.HAS_TRANSFORMERS = original_has
+            mod._backend_resolved = original_resolved
             NLPModelManager._models = original_models
             mod.pipeline = original_pipeline
 
@@ -159,11 +169,15 @@ class TestLoadModelsSync:
         original_has = mod.HAS_TRANSFORMERS
         original_models = NLPModelManager._models.copy()
         original_pipeline = mod.pipeline
+        original_resolved = mod._backend_resolved
         try:
             NLPModelManager._models_loaded = False
             # Clear instance-level shadow if present from previous tests
             manager.__dict__.pop("_models_loaded", None)
             NLPModelManager._models = {}
+            # Geler le resolver (#2946) : l'injection doit survivre à l'appel,
+            # pas être écrasée par une résolution réelle.
+            mod._backend_resolved = True
             mod.HAS_TRANSFORMERS = True
             mod.pipeline = MagicMock(side_effect=RuntimeError("download fail"))
             manager.load_models_sync()
@@ -172,6 +186,7 @@ class TestLoadModelsSync:
             manager.__dict__.pop("_models_loaded", None)
             NLPModelManager._models_loaded = original_loaded
             mod.HAS_TRANSFORMERS = original_has
+            mod._backend_resolved = original_resolved
             NLPModelManager._models = original_models
             mod.pipeline = original_pipeline
 
