@@ -36,6 +36,27 @@ logging.basicConfig(
 logger = logging.getLogger("test_all_dependencies")
 
 # Liste des dépendances à tester
+#
+# #1803 (R1066): every row is declared in environment.yml or imported under
+# argumentation_analysis/ — measured per entry before this list was touched.
+# Five rows failed that predicate and were dropped, each with its reason:
+#   tika, jina      — not declared, not imported, absent from the lock. The
+#                     extract tooling reaches those services over HTTP
+#                     (fetch_service.py:68-69: r.jina.ai prefix, Tika server
+#                     URL), never through the Python packages.
+#   jupyter         — not declared, not imported, absent from the lock.
+#                     environment.yml:102 says so on purpose (#2864): nbconvert
+#                     + ipykernel are the minimal execution set, measured.
+#   notebook        — same as jupyter: nbformat/nbconvert/ipykernel are the
+#                     chosen set; the `notebook` server is not provisioned.
+#   cffi            — not declared, not imported; provisioned transitively
+#                     (lock cffi 2.1.1, via cryptography) and already exercised
+#                     by test_cryptography()'s Fernet round-trip.
+# The jpype row stayed but stopped checking a path the project does not take
+# (R1067): it resolves the JDK through find_existing_jdk() — the portable
+# JDK under portable_jdk/, JAVA_HOME ignored on purpose — and then the same
+# JVM-library candidates initialize_jvm uses. No download from here; a seat
+# without JAVA_HOME now measures what the project actually runs on.
 DEPENDENCIES = [
     # Dépendances principales
     {"name": "numpy", "min_version": "1.24.0"},
@@ -43,12 +64,8 @@ DEPENDENCIES = [
     {"name": "matplotlib", "min_version": "3.5.0"},
     {"name": "jpype", "min_version": "1.7.1", "import_name": "jpype"},  # #2538 pin
     {"name": "cryptography", "min_version": "37.0.0"},
-    {"name": "cffi", "min_version": "1.15.0"},
     # Dépendances pour l'intégration Java
     {"name": "psutil", "min_version": "5.9.0"},
-    # Dépendances pour le traitement de texte
-    {"name": "tika", "min_version": "1.24.0", "import_name": "tika"},
-    {"name": "jina", "min_version": "3.0.0"},
     # Dépendances pour les tests
     {"name": "pytest", "min_version": "7.0.0"},
     {
@@ -64,8 +81,6 @@ DEPENDENCIES = [
     {"name": "torch", "min_version": "2.0.0"},
     {"name": "transformers", "min_version": "4.20.0"},
     # Dépendances pour l'interface utilisateur
-    {"name": "jupyter", "min_version": "1.0.0"},
-    {"name": "notebook", "min_version": "6.4.0"},
     {"name": "jupyter_ui_poll", "min_version": "0.2.0"},
     {"name": "ipywidgets", "min_version": "7.7.0"},
 ]
@@ -214,12 +229,52 @@ def test_jpype(jpype):
     """
     Teste les fonctionnalités de base de jpype.
 
+    #1803 (R1067): le projet ne résout jamais sa JVM par JAVA_HOME —
+    ``jpype.getDefaultJVMPath()`` lit JAVA_HOME ou le registre, un chemin
+    que le projet n'emprunte pas (et qui échoue sur tout siège sans
+    JAVA_HOME exporté). La voie réelle est le JDK portable de
+    ``jvm_setup`` : résolution par ``find_existing_jdk()`` (lecture seule,
+    aucun téléchargement), puis la même liste de candidats de librairie
+    JVM qu'``initialize_jvm`` (jvm_setup.py:1281-1290).
+
     Args:
         jpype: Module jpype importé
     """
-    # Tester quelques fonctionnalités de base (sans initialiser la JVM)
+    from argumentation_analysis.core.jvm_setup import find_existing_jdk
+
+    jdk = find_existing_jdk()
+    if jdk is None:
+        raise FileNotFoundError(
+            "Aucun JDK portable valide sous portable_jdk/. C'est la voie du "
+            "projet : initialize_jvm() le provisionne à la première "
+            "initialisation (JDK mis en cache par la CI, #1874). Le "
+            "provisionner puis relancer ce vérificateur."
+        )
+
+    java_home_path = Path(jdk)
+    if platform.system() == "Windows":
+        candidates = [
+            java_home_path / "bin" / "server" / "jvm.dll",
+            java_home_path / "bin" / "client" / "jvm.dll",
+            java_home_path / "bin" / "jvm.dll",
+        ]
+    else:
+        candidates = [
+            java_home_path / "lib" / "server" / "libjvm.so",
+            java_home_path / "lib" / "amd64" / "server" / "libjvm.so",
+            java_home_path / "jre" / "lib" / "amd64" / "server" / "libjvm.so",
+            java_home_path / "lib" / "libjvm.so",
+        ]
+    jvm_lib = next((c for c in candidates if c.exists()), None)
+    if jvm_lib is None:
+        raise FileNotFoundError(
+            f"JDK portable trouvé ({jdk}) mais aucune librairie JVM du "
+            f"projet n'y existe (candidats : {[c.name for c in candidates]})."
+        )
+
     logger.info(f"jpype.isJVMStarted(): {jpype.isJVMStarted()}")
-    logger.info(f"jpype.getDefaultJVMPath(): {jpype.getDefaultJVMPath()}")
+    logger.info(f"JDK portable du projet: {jdk}")
+    logger.info(f"librairie JVM résolue: {jvm_lib}")
 
 
 def test_cryptography(crypto):
