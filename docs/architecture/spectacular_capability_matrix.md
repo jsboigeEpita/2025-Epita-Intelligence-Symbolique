@@ -16,7 +16,7 @@
 | 1 | FactExtractionAgent | Extract verifiable claims from text | spectacular (extract), formal_extended (extract), light/standard/full/iterative | None | P0 |
 | 2 | InformalFallacyAgent | Hybrid fallacy detection (8 families, symbolic+NLI+LLM) | spectacular (hierarchical_fallacy, neural_detect) | None | P0 |
 | 3 | CounterArgumentAgent | Generate counter-arguments via 5 rhetorical strategies | spectacular (counter), standard/full/iterative/quality_gated | None | P0 |
-| 4 | DebateAgent | Multi-personality adversarial debate (Walton-Krabbe protocols) | spectacular (debate), debate_governance | None | P1 |
+| 4 | DebateAgent | Multi-personality adversarial debate (argument scoring) | spectacular (debate), debate_governance | None | P1 |
 | 5 | SynthesisAgent | Aggregate analysis results into coherent output | standard/full | Not in spectacular (no synthesis phase) | P2 |
 | 6 | PropositionalLogicAgent | PL reasoning via Tweety | spectacular (pl), formal_extended (pl), nl_to_logic | None | P0 |
 | 7 | FOLLogicAgent | First-order logic reasoning with N-to-1 sanitization | spectacular (fol), formal_extended (fol) | None | P0 |

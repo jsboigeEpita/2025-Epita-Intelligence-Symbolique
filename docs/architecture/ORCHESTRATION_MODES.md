@@ -81,7 +81,7 @@ _write_X_to_state() → updates UnifiedAnalysisState
 | InformalAgent | FrenchFallacyPlugin + StateManager | Sophism detection (8 families) |
 | FormalAgent | TweetyLogicPlugin + StateManager | Propositional/FOL validation |
 | QualityAgent | QualityScoringPlugin + StateManager | 9-virtue argument quality |
-| DebateAgent | DebatePlugin + StateManager | Adversarial Walton-Krabbe debate |
+| DebateAgent | DebatePlugin + StateManager | Adversarial debate with argument scoring |
 | CounterAgent | CounterArgumentPlugin + StateManager | 5-strategy counter-arguments |
 | GovernanceAgent | GovernancePlugin + StateManager | 7 voting methods, consensus |
 
