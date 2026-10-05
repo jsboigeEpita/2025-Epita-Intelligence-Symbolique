@@ -196,7 +196,7 @@ class LLMEgressCounter:
         response: Any = None,
         error: Optional[BaseException] = None,
     ) -> None:
-        """Attach the send's outcome to its entry: HTTP status, or the error type.
+        """Attach the send's outcome: HTTP status, or the error type AND message.
 
         #2391: without it the report said *that* a request left, never *how*
         it came back. A 400 answered to every tool-carrying call was visible
@@ -204,13 +204,25 @@ class LLMEgressCounter:
         passing test (or a record run) the same 400s were silent, and a
         degraded fallback looked exactly like a healthy call. Must never
         raise into a test.
+
+        #2936: the type alone could not name a failure. Two record runs
+        (36873874437, 37235591899) left ``error:RuntimeError×3`` — the
+        openai client's retry loop heals such client-side errors silently
+        (``except Exception`` → sleep → retry), so the passing tests never
+        surface them and the census was the ONLY trace; a type with no
+        message is a dead end. The message rides along now (capped), so the
+        next record run names the trigger instead of re-opening the mystery.
         """
         if entry is None:
             return
         try:
             with self._lock:
                 if error is not None:
-                    entry["error"] = type(error).__name__
+                    label = type(error).__name__
+                    msg = str(error).strip()
+                    if msg:
+                        label = f"{label}: {msg[:300]}"
+                    entry["error"] = label
                 else:
                     entry["status"] = int(response.status_code)
         except Exception:  # noqa: BLE001 — instrument must not break the measured run
