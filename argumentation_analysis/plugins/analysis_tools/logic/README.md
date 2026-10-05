@@ -40,7 +40,7 @@ Doc technique : `docs/technical/complex_fallacy_analyzer.md:8` (humains).
 conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentation_analysis/plugins/analysis_tools/logic/ -v
 ```
 
-4 fichiers, **180 `def test_`** (55 contextual + 37 severity + 12 nlp_manager + 76 rhetorical_analyzer). ⚠ Une seconde suite, partielle et non collectée, vit dans [`../tests/`](../tests/README.md) — voir sa fiche.
+4 fichiers, **180 `def test_`** (55 contextual + 37 severity + 12 nlp_manager + 76 rhetorical_analyzer). ⚠ Une seconde suite, partielle et non collectée, vit dans `../tests/` (répertoire léger, sans fiche).
 
 ## Frères et parent
 

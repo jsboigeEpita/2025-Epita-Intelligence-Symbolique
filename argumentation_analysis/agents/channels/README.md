@@ -36,5 +36,5 @@ Parent : [`../README.md`](../README.md). Consommateur : [`../core/`](../core/REA
 ## Limites connues
 
 - zéro test dédié ;
-- sans `__init__.py` — namespace implicite, découvert par le packaging (cf. le précédent mesuré sur [`../../integrations/`](../../integrations/README.md)) ;
+- sans `__init__.py` — namespace implicite, découvert par le packaging (cf. le précédent mesuré sur `integrations/`, répertoire léger sans fiche) ;
 - la classe suppose que `agent.invoke(history)` existe sur l'agent passé — contrat non vérifié statiquement (typage `"Agent"` string).

@@ -21,12 +21,12 @@ Ce README sert de point d'entrée pour une instance VSCode dédiée au développ
 ### Outils et Utilitaires
 
 * **[`tools/`](./tools/README.md)** 🛠️ : Outils et utilitaires utilisés par les agents
-  * **[`tools/optimization/`](./tools/optimization/README.md)** ⚙️ : Outils d'optimisation des agents
+  * **`tools/optimization/`** ⚙️ : Outils d'optimisation des agents
   * **[`tools/analysis/`](./tools/analysis/README.md)** 📊 : Outils d'analyse des résultats des agents
 
 ### Scripts d'Exécution
 
-* **[`runners/`](./runners/README.md)** 🚀 : Scripts d'exécution pour les agents
+* **`runners/`** 🚀 : Scripts d'exécution pour les agents
 
 ### Données et Bibliothèques
 
@@ -36,11 +36,11 @@ Ce README sert de point d'entrée pour une instance VSCode dédiée au développ
 ### Documentation et Traces
 
 * **[`docs/`](./docs/README.md)** 📚 : Documentation du projet
-  * **[`docs/reports/`](./docs/reports/README.md)** 📝 : Rapports d'analyse et de test
+  * **`docs/reports/`** 📝 : Rapports d'analyse et de test
 
-* **[`traces/`](./traces/README.md)** 📝 : Traces d'exécution des agents (séparées du code)
-  * **[`traces/informal/`](./traces/informal/README.md)** 🧐 : Traces de l'agent d'analyse informelle
-  * **[`traces/orchestration/`](./traces/orchestration/README.md)** 🎮 : Traces de l'orchestration
+* **`traces/`** 📝 : Traces d'exécution des agents (séparées du code)
+  * **`traces/informal/`** 🧐 : Traces de l'agent d'analyse informelle
+  * **`traces/orchestration/`** 🎮 : Traces de l'orchestration
 
 ### Templates
 

@@ -39,9 +39,9 @@ conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentati
 
 ## Frères et parent
 
-Parent : [`../README.md`](../README.md) (outils). Frère : [`../analysis/`](../analysis/README.md) (les consommateurs). Frère documenté : [`../encryption/`](../encryption/README.md).
+Parent : [`../README.md`](../README.md) (outils). Frère : [`../analysis/`](../analysis/README.md) (les consommateurs). Frère retiré : `../encryption/` (répertoire disparu).
 
 ## Limites connues
 
 - état global mutable de niveau classe, pour tout le processus. Les tests ne le partagent plus : la fixture `reset_shared_services` de `tests/conftest.py` appelle les deux `reset()` après chaque test (#2346) ;
-- sans `__init__.py` — namespace implicite, découvert par le packaging (mesuré sur un cas analogue : [`../../../integrations/README.md`](../../../integrations/README.md)).
+- sans `__init__.py` — namespace implicite, découvert par le packaging (mesuré sur un cas analogue : `integrations/`, répertoire léger sans fiche).

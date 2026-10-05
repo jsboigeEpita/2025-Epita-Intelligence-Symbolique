@@ -18,7 +18,7 @@ Le répertoire contient également des versions améliorées et de nouveaux outi
 
 ### Outils améliorés
 
-Les [outils améliorés](./enhanced/README.md) offrent des fonctionnalités plus avancées et une meilleure précision par rapport aux versions de base :
+Les outils améliorés (dans ce répertoire même) offrent des fonctionnalités plus avancées et une meilleure précision par rapport aux versions de base :
 - `EnhancedComplexFallacyAnalyzer` - Version améliorée de l'analyseur de sophismes complexes
 - `EnhancedContextualFallacyAnalyzer` - Version améliorée de l'analyseur contextuel de sophismes
 - `EnhancedFallacySeverityEvaluator` - Version améliorée de l'évaluateur de gravité des sophismes
@@ -96,7 +96,7 @@ Pour étendre ces outils ou en créer de nouveaux, suivez ces principes:
 
 ## Voir aussi
 
-- [Documentation des outils améliorés](./enhanced/README.md)
+- Documentation des outils améliorés (`enhanced/`, consolidés dans ce répertoire)
 - [Documentation des nouveaux outils](./new/README.md)
-- [Documentation des tests des outils](../../tests/tools/README.md)
+- Documentation des tests des outils (`../../tests/tools/`, répertoire retiré)
 - [Documentation de l'architecture hiérarchique](../../../orchestration/hierarchical/README.md)

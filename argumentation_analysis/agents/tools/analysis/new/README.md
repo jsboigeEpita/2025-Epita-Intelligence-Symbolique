@@ -174,6 +174,6 @@ Pour étendre ces nouveaux outils :
 ## Voir aussi
 
 - [Documentation des outils d'analyse rhétorique de base](../README.md)
-- [Documentation des outils d'analyse rhétorique améliorés](../enhanced/README.md)
+- Documentation des outils d'analyse rhétorique améliorés (`../analysis/`)
 - [Documentation de l'analyseur sémantique d'arguments](./semantic_argument_analyzer.py)
 - [Documentation de l'architecture hiérarchique](../../../../orchestration/hierarchical/README.md)

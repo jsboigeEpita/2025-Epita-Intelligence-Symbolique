@@ -84,4 +84,4 @@ Les interfaces utilisent le système de communication core pour structurer les �
 - [Documentation du niveau stratégique](../strategic/README.md)
 - [Documentation du niveau tactique](../tactical/README.md)
 - [Documentation du niveau opérationnel](../operational/README.md)
-- [Documentation du système de communication](../../../../core/communication/README.md)
+- [Documentation du système de communication](../../../core/communication/README.md)

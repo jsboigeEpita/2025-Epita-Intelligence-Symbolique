@@ -40,7 +40,7 @@ conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentati
 
 ## Frères et parent
 
-Parent : `plugins/` (sans README propre — décrits dans le [`README racine`](../../README.md)). Services amont : [`../../services/jtms/`](../../services/jtms/README.md). Faux frère : [`../../integrations/`](../../integrations/README.md) (résiduel).
+Parent : `plugins/` (sans README propre — décrits dans le [`README racine`](../../README.md)). Services amont : [`../../services/jtms/`](../../services/jtms/README.md). Faux frère : `../../integrations/` (résiduel, répertoire léger sans fiche).
 
 ## Limites connues
 
