@@ -36,6 +36,22 @@ logging.basicConfig(
 logger = logging.getLogger("test_all_dependencies")
 
 # Liste des dépendances à tester
+#
+# #1803 (R1066): every row is declared in environment.yml or imported under
+# argumentation_analysis/ — measured per entry before this list was touched.
+# Five rows failed that predicate and were dropped, each with its reason:
+#   tika, jina      — not declared, not imported, absent from the lock. The
+#                     extract tooling reaches those services over HTTP
+#                     (fetch_service.py:68-69: r.jina.ai prefix, Tika server
+#                     URL), never through the Python packages.
+#   jupyter         — not declared, not imported, absent from the lock.
+#                     environment.yml:102 says so on purpose (#2864): nbconvert
+#                     + ipykernel are the minimal execution set, measured.
+#   notebook        — same as jupyter: nbformat/nbconvert/ipykernel are the
+#                     chosen set; the `notebook` server is not provisioned.
+#   cffi            — not declared, not imported; provisioned transitively
+#                     (lock cffi 2.1.1, via cryptography) and already exercised
+#                     by test_cryptography()'s Fernet round-trip.
 DEPENDENCIES = [
     # Dépendances principales
     {"name": "numpy", "min_version": "1.24.0"},
@@ -43,12 +59,8 @@ DEPENDENCIES = [
     {"name": "matplotlib", "min_version": "3.5.0"},
     {"name": "jpype", "min_version": "1.7.1", "import_name": "jpype"},  # #2538 pin
     {"name": "cryptography", "min_version": "37.0.0"},
-    {"name": "cffi", "min_version": "1.15.0"},
     # Dépendances pour l'intégration Java
     {"name": "psutil", "min_version": "5.9.0"},
-    # Dépendances pour le traitement de texte
-    {"name": "tika", "min_version": "1.24.0", "import_name": "tika"},
-    {"name": "jina", "min_version": "3.0.0"},
     # Dépendances pour les tests
     {"name": "pytest", "min_version": "7.0.0"},
     {
@@ -64,8 +76,6 @@ DEPENDENCIES = [
     {"name": "torch", "min_version": "2.0.0"},
     {"name": "transformers", "min_version": "4.20.0"},
     # Dépendances pour l'interface utilisateur
-    {"name": "jupyter", "min_version": "1.0.0"},
-    {"name": "notebook", "min_version": "6.4.0"},
     {"name": "jupyter_ui_poll", "min_version": "0.2.0"},
     {"name": "ipywidgets", "min_version": "7.7.0"},
 ]
