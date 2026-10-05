@@ -1,5 +1,7 @@
 # Couche Tactique
 
+Parent : [`hierarchical/README.md`](../README.md) — l'architecture à trois niveaux (cette couche = le niveau tactique).
+
 ## Rôle et Responsabilités
 
 La couche tactique est le "chef de chantier" de l'orchestration. Elle fait le lien entre la vision de haut niveau de la couche stratégique et l'exécution concrète de la couche opérationnelle.

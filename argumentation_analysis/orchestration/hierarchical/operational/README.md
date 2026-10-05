@@ -1,5 +1,7 @@
 # Couche Opérationnelle
 
+Parent : [`hierarchical/README.md`](../README.md) — l'architecture à trois niveaux (cette couche = le niveau opérationnel).
+
 ## Rôle et Responsabilités
 
 La couche opérationnelle est la couche d'**exécution** de l'architecture. C'est ici que le travail concret est effectué par les agents spécialisés. Elle est responsable du "Faire".

@@ -1,5 +1,7 @@
 # Couche Stratégique
 
+Parent : [`hierarchical/README.md`](../README.md) — l'architecture à trois niveaux (cette couche = le niveau stratégique).
+
 ## Rôle et Responsabilités
 
 La couche stratégique est le "cerveau" de l'orchestration hiérarchique. Elle opère au plus haut niveau d'abstraction et est responsable de la **planification à long terme** et de l'**allocation des ressources macro**.

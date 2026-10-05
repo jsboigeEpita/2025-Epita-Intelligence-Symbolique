@@ -8,16 +8,16 @@ Parent : [`orchestration/README.md`](../README.md) — les cinq familles vivante
 
 L'architecture est divisée en trois couches de responsabilité distinctes :
 
-1.  **Stratégique (`strategic/`)**
+1.  **Stratégique ([`strategic/`](./strategic/README.md))**
     *   **Rôle** : Planification à long terme et définition des objectifs de haut niveau. Le `StrategicManager` interprète la requête initiale, la décompose en grands objectifs (ex: "Analyser la structure logique", "Évaluer la crédibilité des sources") et définit les contraintes globales.
     *   **Focalisation** : Le "Quoi" et le "Pourquoi".
 
-2.  **Tactique (`tactical/`)**
+2.  **Tactique ([`tactical/`](./tactical/README.md))**
     *   **Rôle** : Coordination à moyen terme. Le `TacticalCoordinator` reçoit les objectifs stratégiques et les traduit en une séquence de tâches concrètes et ordonnancées. Il gère les dépendances entre les tâches, alloue les groupes d'agents nécessaires et supervise la progression.
     *   **Focalisation** : Le "Comment" et le "Quand".
 
-3.  **Opérationnel (`operational/`)**
-    *   **Rôle** : Exécution à court terme. L'`OperationalManager` reçoit des tâches individuelles de la couche tactique et les exécute. Il gère la communication directe avec les agents via des **Adaptateurs** (`adapters/`), qui traduisent une commande générique (ex: "analyse informelle") en l'appel spécifique attendu par l'agent correspondant.
+3.  **Opérationnel ([`operational/`](./operational/README.md))**
+    *   **Rôle** : Exécution à court terme. L'`OperationalManager` reçoit des tâches individuelles de la couche tactique et les exécute. Il gère la communication directe avec les agents via des **Adaptateurs** ([`adapters/`](./operational/adapters/README.md)), qui traduisent une commande générique (ex: "analyse informelle") en l'appel spécifique attendu par l'agent correspondant.
     *   **Focalisation** : Le "Faire".
 
 ## Flux de Contrôle et de Données
@@ -69,9 +69,24 @@ sequenceDiagram
 -   **Flux descendant (Top-Down)** : La requête du client est progressivement décomposée à chaque niveau. La couche stratégique définit la vision, la tactique crée le plan d'action, et l'opérationnelle exécute chaque étape.
 -   **Flux ascendant (Bottom-Up)** : Les résultats produits par les agents sont collectés par la couche opérationnelle, agrégés et synthétisés par la couche tactique, et finalement utilisés par la couche stratégique pour construire la réponse finale et, si nécessaire, ajuster le plan.
 
-## Interfaces (`interfaces/`)
+## Interfaces ([`interfaces/`](./interfaces/README.md))
 
 Pour garantir un couplage faible entre les couches, des interfaces formelles sont définies dans ce répertoire. Elles agissent comme des contrats, spécifiant les données et les méthodes que chaque couche expose à ses voisines.
 
 -   [`strategic_tactical.py`](./interfaces/strategic_tactical.py:0) : Définit la structure de communication entre la stratégie et la tactique.
 -   [`tactical_operational.py`](./interfaces/tactical_operational.py:0) : Définit la structure de communication entre la tactique et l'opérationnel.
+
+## Templates ([`templates/`](./templates/README.md))
+
+Les gabarits de planification et de rapport partagés par les couches (le contenu réel est décrit dans [son README](./templates/README.md)).
+
+## READMEs des sous-répertoires
+
+Chaque sous-répertoire porte son propre README ; le lien parent → enfant et le lien retour enfant → parent sont tenus par la garde #2949 (Epic #2088) :
+
+- [`strategic/`](./strategic/README.md) — planification stratégique (`StrategicManager`).
+- [`tactical/`](./tactical/README.md) — coordination tactique (`TacticalCoordinator`).
+- [`operational/`](./operational/README.md) — exécution opérationnelle (`OperationalManager`).
+- [`operational/adapters/`](./operational/adapters/README.md) — adaptateurs vers les agents.
+- [`interfaces/`](./interfaces/README.md) — contrats inter-couches.
+- [`templates/`](./templates/README.md) — gabarits partagés.

@@ -1,5 +1,7 @@
 # Interfaces de l'Architecture Hiérarchique
 
+Parent : [`hierarchical/README.md`](../README.md) — l'architecture à trois niveaux (ce répertoire = les contrats inter-couches).
+
 Ce répertoire contient les composants responsables de la communication entre les différents niveaux de l'architecture hiérarchique (stratégique, tactique, opérationnel), y compris les mécanismes de délégation, de reporting et d'escalade.
 
 ## Vue d'ensemble
