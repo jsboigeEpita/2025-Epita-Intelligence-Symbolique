@@ -100,9 +100,12 @@ Consultez également la [FAQ générale de développement](../projets/sujets/aid
    python -m project_core.core_from_scripts.project_setup fix-deps --package jpype1 --strategy msvc-build
    ```
 
-3. Pour les environnements sans possibilité d'installation de JPype, utilisez le mock :
-   ```bash
-   python scripts/setup/setup_jpype_mock.ps1
+3. Pour les environnements sans possibilité d'installation de JPype, le mock s'active par
+   `from tests.mocks import jpype_mock` — c'est tout ce que faisait `activate_jpype_mock.py`,
+   et la suite de tests le charge elle-même (`setup_jpype_mock.ps1` a été retiré en #1803
+   étape 3 : il ne servait que sous Python ≥ 3.12, que le lock ne résout pas) :
+   ```python
+   from tests.mocks import jpype_mock  # avant tout import de jpype
    ```
 
 4. Vérifiez l'installation avec :
@@ -540,14 +543,15 @@ Cette erreur indique un problème avec l'intégration Java via JPype.
    echo %JAVA_HOME%  # Windows
    echo $JAVA_HOME   # Linux/macOS
    ```
-3. Réinstallez JPype avec les options appropriées :
+3. Réinstallez JPype avec les options appropriées (la version du pin #2538) :
    ```bash
    pip uninstall -y JPype1
-   pip install JPype1==1.4.1
+   pip install JPype1==1.7.1
    ```
-4. Si le problème persiste, utilisez le mock JPype :
-   ```bash
-   python scripts/setup/setup_jpype_mock.ps1
+4. Si le problème persiste, le mock s'active par import (le script `setup_jpype_mock.ps1`
+   a été retiré en #1803 étape 3) :
+   ```python
+   from tests.mocks import jpype_mock
    ```
 5. Vérifiez l'installation :
    ```bash

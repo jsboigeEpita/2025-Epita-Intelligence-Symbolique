@@ -74,27 +74,28 @@ Si vous préférez installer manuellement les outils de compilation :
 
 ## Installation des dépendances Python après l'installation des outils de compilation
 
-Une fois les outils de compilation installés, vous pouvez installer les dépendances Python en utilisant le script `fix_all_dependencies.ps1` :
+Une fois les outils de compilation installés, installez les dépendances Python avec l'outil unifié
+(`fix_all_dependencies.ps1` a été retiré en #1803 étape 3 ; sa logique vit désormais dans
+`EnvironmentManager.fix_dependencies`, exposée par le verbe `fix-deps`) :
 
 ```powershell
-.\scripts\setup\fix_all_dependencies.ps1
+python -m project_core.core_from_scripts.project_setup fix-deps --package numpy --package pandas --package jpype1 --strategy msvc-build
 ```
 
-Ce script va :
-- Vérifier si Visual Studio Build Tools est installé
-- Configurer l'environnement pour utiliser les outils de compilation
-- Installer les versions spécifiques de numpy, pandas et jpype
-- Vérifier que les installations ont réussi
+L'environnement complet se crée avec `setup_project_env.ps1`, ou depuis le lock avec
+`conda-lock install --name projet-is conda-lock.yml` (cf. CLAUDE.md).
 
 ## Vérification de l'installation des dépendances
 
-Pour vérifier que les dépendances sont correctement installées, vous pouvez utiliser le script `test_all_dependencies.ps1` :
+Pour vérifier que les dépendances sont correctement installées, utilisez le script Python
+(le `.ps1` a été retiré en #1803 étape 3 : chaque vérification qu'il menait est menée par le `.py`,
+qui contrôle en plus les versions minimales) :
 
 ```powershell
-.\scripts\setup\test_all_dependencies.ps1
+python scripts/setup/test_all_dependencies.py
 ```
 
-Ce script va tester l'importation et les fonctionnalités de base de toutes les dépendances, y compris numpy, pandas et jpype.
+Ce script teste l'importation et les fonctionnalités de base de toutes les dépendances, y compris numpy, pandas et jpype.
 
 ## Problèmes connus et solutions
 

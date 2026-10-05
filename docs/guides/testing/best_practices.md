@@ -81,26 +81,19 @@ L'ancienne classe utilitaire `AsyncTestCase` est obsolète et a été retirée d
 
 ### Approche de Résolution des Dépendances
 
-L'approche recommandée est de résoudre les problèmes de dépendances (numpy, pandas, jpype) en utilisant des versions spécifiques connues pour être compatibles avec notre environnement de test.
+L'approche recommandée est de laisser l'environnement conda porter les versions (il est créé depuis `environment.yml` / `conda-lock.yml`) et de réparer un paquet précis avec le verbe `fix-deps` de l'outil unifié — `fix_dependencies.ps1` / `fix_dependencies.py` ont été retirés en #1803 étape 3, leur logique vit dans `EnvironmentManager.fix_dependencies` :
 
 ```bash
-# Windows (PowerShell)
-.\scripts\setup\fix_dependencies.ps1
-
-# Linux/macOS
-python scripts/setup/fix_dependencies.py
+# Un paquet précis ; --strategy choisit la cascade de repli (ex. msvc-build sous Windows)
+python -m project_core.core_from_scripts.project_setup fix-deps --package numpy --strategy aggressive
 ```
 
 ### Vérification des Dépendances
 
-Avant d'exécuter les tests, vérifiez que les dépendances sont correctement installées :
+Avant d'exécuter les tests, vérifiez que les dépendances sont correctement installées (`test_dependencies.ps1` / `.py` ont été retirés en #1803 étape 3 : le second était un sous-ensemble strict du premier) :
 
 ```bash
-# Windows (PowerShell)
-.\scripts\setup\test_dependencies.ps1
-
-# Linux/macOS
-python scripts/setup/test_dependencies.py
+python scripts/setup/test_all_dependencies.py
 ```
 
 ### Utilisation des Mocks
@@ -354,11 +347,7 @@ Si vous rencontrez des problèmes avec les dépendances, essayez les solutions s
 1. **Réinstaller les dépendances** :
 
 ```bash
-# Windows (PowerShell)
-.\scripts\setup\fix_dependencies.ps1
-
-# Linux/macOS
-python scripts/setup/fix_dependencies.py
+python -m project_core.core_from_scripts.project_setup fix-deps --package numpy --strategy aggressive
 ```
 
 2. **Utiliser les mocks** :

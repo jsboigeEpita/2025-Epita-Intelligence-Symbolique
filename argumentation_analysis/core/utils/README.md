@@ -66,7 +66,7 @@ Mesure résolue par `ast` sur tout le dépôt, hors `libs/` (vendored), en disti
 | `network_utils` | **20** | aa 14, scripts 5, project_core 1 | `core/llm_service.py:23` (`get_resilient_async_client`), `services/fetch_service.py:19` (`retry_on_network_error`, `network_breaker`) ; les 18 autres importent `build_async_openai_client`, souvent en import paresseux dans le corps d'une fonction (`evaluation/judge.py:91`, `orchestration/router.py:240`) |
 | `logging_utils` | **9** | aa 5, scripts 4 | `pipelines/analysis_pipeline.py:37`, `agents/core/logic/tweety_initializer.py:22` |
 | `cli_utils` | **5** | aa 2, scripts 3 | `scripts/orchestration/run_extract_repair.py:38` |
-| `shell_utils` | **5** | project_core 4, scripts 1 | `project_core/core_from_scripts/environment_manager.py:14`, `.../validation_engine.py:6`, `.../strategies/base_strategy.py:4`, `project_core/managers/repository_manager.py:8`, `scripts/setup/fix_dependencies.py:24` |
+| `shell_utils` | **4** | project_core 4 | `project_core/core_from_scripts/environment_manager.py:14`, `.../validation_engine.py:6`, `.../strategies/base_strategy.py:4`, `project_core/managers/repository_manager.py:8` |
 | `file_utils` (façade) | **2** | aa 1, scripts 1 | `pipelines/reporting_pipeline.py:74`, `scripts/reporting/compare_rhetorical_agents_simple.py:32` |
 | `file_loaders` | 2 (+4 noms via façade) | aa 1, scripts 1 | `agents/core/informal/informal_definitions.py:44` (`load_csv_file`), `scripts/data_preparation/generate_taxonomy_subsets.py:11` |
 | `reporting_utils` | 2 | aa 1, scripts 1 | `pipelines/reporting_pipeline.py:80-82`, `scripts/reporting/compare_rhetorical_agents_simple.py:41` |

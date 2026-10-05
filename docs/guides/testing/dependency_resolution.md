@@ -24,30 +24,17 @@ Au lieu d'utiliser des mocks pour ces dépendances, nous avons opté pour l'util
 
 Nous avons créé des scripts pour installer automatiquement les versions compatibles des dépendances :
 
-#### Sous Windows (PowerShell)
-
-```powershell
-# Exécuter le script PowerShell
-.\scripts\setup\fix_dependencies.ps1
-```
-
-Ce script :
-1. Vérifie si Python est installé
-2. Installe les versions spécifiques de numpy, pandas et jpype1
-3. Crée un environnement virtuel pour les tests si nécessaire
-4. Installe toutes les dépendances de test dans l'environnement virtuel
-
-#### Sous Linux/macOS (Bash)
+Les scripts `fix_dependencies.ps1` / `fix_dependencies.py` ont été retirés en #1803 étape 3 :
+leur logique vit dans `EnvironmentManager.fix_dependencies`, exposée par le verbe `fix-deps`
+de l'outil unifié. La même commande vaut sur les trois plateformes :
 
 ```bash
-# Exécuter le script Python directement
-python scripts/setup/fix_dependencies.py
-
-# Ou créer un environnement virtuel et installer les dépendances
-python -m venv venv_test
-source venv_test/bin/activate  # Linux/macOS
-pip install -r requirements-test.txt
+# Réparer un ou plusieurs paquets précis, avec une cascade de repli
+python -m project_core.core_from_scripts.project_setup fix-deps --package numpy --package pandas --package jpype1 --strategy aggressive
 ```
+
+Le projet n'utilise pas de `venv` : l'environnement est conda, créé depuis `environment.yml`
+(ou installé depuis le lock avec `conda-lock install --name projet-is conda-lock.yml`, cf. CLAUDE.md).
 
 ### Méthode Manuelle
 
