@@ -287,7 +287,11 @@ def test_sanitize_topology_survives(examples):
     assert len(fw["attacks"][0]) == 2
     assert fw["extensions"]["count"] == 1 and fw["extensions"]["sizes"] == [1]
     assert fw["name"] == "dung_grounded"
-    assert fw["formalism_specific"]["criterion"] == "generalized_specificity"
+    # #2952: ``criterion`` belongs to the retired DeLP sidecar — the export
+    # boundary drops it from a stale pre-retirement state instead of passing
+    # it through (hardened on cross-review of #2956).
+    assert stored["criterion_dropped"] is True
+    assert "criterion" not in fw["formalism_specific"]
     assert fw["formalism_specific"]["attack_weights"][0]["weight"] == 0.7
     # No plaintext claim text survives anywhere in the sanitized state
     assert "le premier argument en clair" not in json.dumps(san, ensure_ascii=False)

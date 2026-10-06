@@ -4,7 +4,7 @@
   "phase": 6,
   "inventory": {
     "argumentation_analysis/evaluation/opaque_id.py": 65,
-    "argumentation_analysis/evaluation/sanitize_state.py": 702,
+    "argumentation_analysis/evaluation/sanitize_state.py": 717,
     "argumentation_analysis/evaluation/pattern_mining.py": 512
   },
   "opaque_cases": [
@@ -76,7 +76,7 @@
       ],
       "extensions_members_opaque": true,
       "name_kept": "dung_grounded",
-      "criterion_kept": "generalized_specificity",
+      "criterion_dropped": true,
       "weight_kept": 0.7,
       "contraries_keys_opaque": [
         "f72b5fab"
