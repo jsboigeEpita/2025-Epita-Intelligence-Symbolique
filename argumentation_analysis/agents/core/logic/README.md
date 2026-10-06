@@ -1,4 +1,5 @@
 # Module des Agents Logiques (`argumentation_analysis.agents.core.logic`)
+Parent : [`agents/core/README.md`](../README.md).
 
 Ce module fournit les composants nécessaires à la création et à l'utilisation d'agents capables d'effectuer des raisonnements basés sur différentes logiques formelles. Il s'appuie sur `TweetyProject` pour les capacités de raisonnement sous-jacentes.
 

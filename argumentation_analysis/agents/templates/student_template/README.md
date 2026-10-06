@@ -1,4 +1,5 @@
 # Template d'Agent pour Étudiants
+Parent : [`agents/templates/README.md`](../README.md).
 
 Ce template fournit une structure de base pour créer un nouvel agent dans le système d'analyse d'argumentation.
 

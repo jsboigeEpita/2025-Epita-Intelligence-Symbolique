@@ -1,4 +1,5 @@
 # `agents/core/political/` — extracteur d'enjeux, producteur unique du workflow spectacular
+Parent : [`agents/core/README.md`](../README.md).
 
 ## Rôle et frontière
 

@@ -1,4 +1,5 @@
 # `plugin_framework/` — l'ancien framework de plugins, retiré de la découverte
+Parent : [`argumentation_analysis/README.md`](../README.md).
 
 Ce paquet est une **racine d'assemblage** : plus aucun script, trois sous-arbres
 (`agents/`, `benchmarking/`, `core/`). Mesuré après les retraits #2099/#2102 :
@@ -147,3 +148,9 @@ Relevé mesuré, **rien corrigé ici** (hors retraits documentés ci-dessus).
    `services/benchmark_service.py`, APIs incompatibles) — arbitrés par consommateurs
    (chacun n'a que des tests), la disambiguïsation est documentée des deux côtés et le
    sort du jumeau `services/` relève du triage #2137.
+
+## Enfants documentés
+
+- [`agents/`](./agents/README.md)
+- [`benchmarking/`](./benchmarking/README.md)
+- [`core/`](./core/README.md)

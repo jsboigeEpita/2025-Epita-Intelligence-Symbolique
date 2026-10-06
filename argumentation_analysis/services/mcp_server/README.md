@@ -1,4 +1,5 @@
 # Serveur MCP pour l'analyse argumentative
+Parent : [`services/README.md`](../README.md).
 
 Ce MCP vous permet d'utiliser vos clients LLM préférés pour interagir avec les fonctionnalités d'analyse argumentative. Il utilise le [protocole](https://modelcontextprotocol.io/) MCP créé par Anthropic, qui met à disposition des outils que votre LLM peut appeler lorsque cela est pertinent.
 
@@ -52,3 +53,7 @@ Ce MCP vous permet d'utiliser vos clients LLM préférés pour interagir avec le
       }
     }
     ```
+
+## Enfants documentés
+
+- [`tools/`](./tools/README.md)

@@ -1,4 +1,5 @@
 # `plugins/semantic_kernel/` — surface SK du JTMS montée par l'API
+Parent : [`plugins/README.md`](../README.md).
 
 ## Rôle et frontière
 

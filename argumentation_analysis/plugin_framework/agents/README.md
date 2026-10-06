@@ -1,4 +1,5 @@
 # Agent Loading Mechanism — withdrawn
+Parent : [`plugin_framework/README.md`](../README.md).
 
 The manifest-based agent discovery that used to live here (`agent_loader.py` +
 `agent_manifest.json`) was withdrawn (#2099):

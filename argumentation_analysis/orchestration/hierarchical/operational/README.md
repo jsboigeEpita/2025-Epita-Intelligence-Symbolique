@@ -22,3 +22,7 @@ En résumé, la couche opérationnelle est le "bras armé" de l'orchestration, e
 -   **`adapters/`** : Répertoire crucial contenant les traducteurs spécifiques à chaque agent. Chaque adaptateur garantit que la couche opérationnelle peut communiquer avec un agent de manière standardisée.
 -   **`agent_registry.py`** : Maintient un catalogue des agents disponibles et de leurs capacités, permettant au `manager` de faire des choix éclairés.
 -   **`state.py`** : Contient le `OperationalState` qui stocke les informations relatives à l'exécution des tâches en cours.
+
+## Enfants documentés
+
+- [`adapters/`](./adapters/README.md)

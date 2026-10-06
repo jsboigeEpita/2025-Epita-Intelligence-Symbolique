@@ -1,4 +1,5 @@
 # `plugin_framework/core/services/` — guichet d'orchestration minimal
+Parent : [`plugin_framework/core/README.md`](../README.md).
 
 ## Rôle et frontière
 

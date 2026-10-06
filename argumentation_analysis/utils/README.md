@@ -1,4 +1,5 @@
 # Utilitaires d'Analyse d'Argumentation
+Parent : [`argumentation_analysis/README.md`](../README.md).
 
 Ce répertoire contient des modules utilitaires transverses utilisés par différents composants du projet d'analyse d'argumentation.
 
@@ -28,3 +29,9 @@ def ma_fonction_critique(param1, param2):
 ```
 
 L'argument `log_args=True` est optionnel et permet de capturer les arguments passés à la fonction dans les logs de performance.
+
+## Enfants documentés
+
+- [`core_utils/`](./core_utils/README.md)
+- [`dev_tools/`](./dev_tools/README.md)
+- [`extract_repair/`](./extract_repair/README.md)

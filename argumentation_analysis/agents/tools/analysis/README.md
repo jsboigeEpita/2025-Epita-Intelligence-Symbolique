@@ -1,4 +1,5 @@
 # Outils d'Analyse Rhétorique
+Parent : [`agents/tools/README.md`](../README.md).
 
 Ce répertoire contient des outils spécialisés pour l'analyse rhétorique, conçus pour améliorer les capacités des agents spécialistes dans l'identification et l'évaluation des sophismes et des arguments.
 

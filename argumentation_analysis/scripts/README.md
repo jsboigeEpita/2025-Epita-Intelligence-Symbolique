@@ -1,4 +1,5 @@
 # Package Scripts
+Parent : [`argumentation_analysis/README.md`](../README.md).
 
 Ce package contient les scripts utilitaires pour la gestion des extraits sources dans le projet d'analyse d'argumentation. Ces scripts sont conçus pour être exécutés directement ou via les points d'entrée à la racine du projet.
 

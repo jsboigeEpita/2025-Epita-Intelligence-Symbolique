@@ -1,4 +1,5 @@
 # `plugin_framework/core/plugins/standard/` — deux plugins déclaratifs, expérimentaux
+Parent : [`plugin_framework/core/plugins/README.md`](../README.md).
 
 Le répertoire que le chargeur du framework était censé énumérer — le mécanisme est
 retiré (#2099), les plugins y vivent par **import direct**. **5 fichiers `.py`,
@@ -71,3 +72,8 @@ consommés (`aiohttp`, `taxonomy_plugin`) de `taxonomy_explorer` ont été corri
 #2189 (#2100) ; les propres morts d'`external_verification` (import `aiohttp`,
 injection `taxonomy_plugin`, fixtures provider-shaped, enums dupliqués) par #2101 ;
 le `BasePlugin` local factice et le manifeste commun illisible ont été retirés par #2099.
+
+## Enfants documentés
+
+- [`external_verification/`](./external_verification/README.md)
+- [`taxonomy_explorer/`](./taxonomy_explorer/README.md)

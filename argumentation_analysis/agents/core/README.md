@@ -1,4 +1,5 @@
 # Agents Principaux
+Parent : [`agents/README.md`](../README.md).
 
 Ce répertoire contient les implémentations des agents principaux du système d'analyse d'argumentation.
 
@@ -28,3 +29,19 @@ Chaque sous-répertoire d'agent suit une structure standard :
 
 Les agents de ce répertoire sont conçus pour fonctionner ensemble dans le cadre du système d'analyse d'argumentation.
 Ils peuvent être utilisés individuellement pour des tâches spécifiques ou orchestrés ensemble pour une analyse complète.
+
+## Enfants documentés
+
+- [`abc/`](./abc/README.md)
+- [`counter_argument/`](./counter_argument/README.md)
+- [`debate/`](./debate/README.md)
+- [`extract/`](./extract/README.md)
+- [`governance/`](./governance/README.md)
+- [`informal/`](./informal/README.md)
+- [`logic/`](./logic/README.md)
+- [`oracle/`](./oracle/README.md)
+- [`pl/`](./pl/README.md)
+- [`pm/`](./pm/README.md)
+- [`political/`](./political/README.md)
+- [`quality/`](./quality/README.md)
+- [`synthesis/`](./synthesis/README.md)

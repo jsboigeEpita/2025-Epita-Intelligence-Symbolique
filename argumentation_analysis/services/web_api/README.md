@@ -1,4 +1,5 @@
 # Web API Service
+Parent : [`services/README.md`](../README.md).
 
 ## Description
 
@@ -64,3 +65,10 @@ python scripts/launch_webapp_background.py start
 Cet endpoint est essentiel pour le monitoring du service. Il ne se contente pas de confirmer que le serveur web est en ligne, mais il effectue également une vérification interne pour s'assurer que les services critiques sont initialisés, y compris une validation de la disponibilité de la **JVM (Java Virtual Machine)**, qui est une dépendance cruciale pour certaines fonctionnalités d'analyse.
 
 Une réponse `200 OK` de cet endpoint garantit que l'application est prête à traiter les requêtes.
+
+## Enfants documentés
+
+- [`models/`](./models/README.md)
+- [`routes/`](./routes/README.md)
+- [`services/`](./services/README.md)
+- [`tests/`](./tests/README.md)

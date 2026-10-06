@@ -1,4 +1,5 @@
 # Package Services
+Parent : [`argumentation_analysis/README.md`](../README.md).
 
 Ce package contient les services centralisés utilisés dans le projet d'analyse d'argumentation. Les services fournissent des fonctionnalités réutilisables pour manipuler les extraits, accéder aux sources, et gérer les données.
 
@@ -217,3 +218,10 @@ de l'homonyme `plugin_framework/benchmarking/benchmark_service.py` (suites de
 requêtes via `OrchestrationService`, décorateur `track_tokens`). Arbitrés par
 consommateurs (#2102 §3) : aucun des deux n'a d'appelant de production ; le triage
 du présent paquet appartient à #2137.
+
+## Enfants documentés
+
+- [`ai_shield/`](./ai_shield/README.md)
+- [`jtms/`](./jtms/README.md)
+- [`mcp_server/`](./mcp_server/README.md)
+- [`web_api/`](./web_api/README.md)

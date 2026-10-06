@@ -235,3 +235,11 @@ Le dossier `traces/` contient les traces d'exécution des agents, permettant :
 - N'hésitez pas à créer des issues GitHub pour poser des questions
 - Consultez la documentation existante avant de demander de l'aide
 - Partagez vos découvertes et solutions avec les autres étudiants
+
+## Enfants documentés
+
+- [`channels/`](./channels/README.md)
+- [`concrete_agents/`](./concrete_agents/README.md)
+- [`extract/`](./extract/README.md)
+- [`plugins/`](./plugins/README.md)
+- [`utils/`](./utils/README.md)
