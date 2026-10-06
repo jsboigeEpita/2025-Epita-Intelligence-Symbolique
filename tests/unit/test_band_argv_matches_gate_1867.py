@@ -28,10 +28,16 @@ REPLAY = "requires_api and not llm_light"
 # Gate directory -> issue that owns its admission to the replay-band job.
 # #2829 emptied it by admitting tests/agents/ with its cassettes. #1867
 # option (a) admitted the two directories below to the gate and the live
-# band; their 14 requires_api tests have no cassettes yet.
+# band; their 14 requires_api tests have no cassettes yet. #1783 (user
+# decision 2026-10-06, option (a)) named the integration root files one by
+# one; the two below are the root files whose ONLY tests are requires_api
+# and not llm_light (1 + 2), so the live band never selects them and the
+# replay job waits for their cassettes under the same owner as the others.
 REPLAY_PENDING = {
     "tests/integration/triage/": "#2932",
     "tests/integration/argumentation_analysis/": "#2932",
+    "tests/integration/test_api_connectivity.py": "#2932",
+    "tests/integration/test_growth_hook_corpus_a_597.py": "#2932",
 }
 
 
