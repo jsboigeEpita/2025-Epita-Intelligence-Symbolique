@@ -33,7 +33,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from .cited_units import (  # #2967: shared cited-unit budget + boundary cut
     CITED_UNIT_TEXT_CAP,
@@ -103,6 +103,23 @@ _DEBATE_MAX_EXCHANGES = 6
 # content — safe to surface). The reserved theme for arguments no fallacy
 # targets — the claims that hold.
 _SOUTIENS_THEME = "soutiens"
+
+# #2966 — « tient » est un VERDICT, il exige qu'un détecteur ait REGARDÉ.
+# L'absence d'entrée de sophisme pour une unité ne dit rien tant qu'on ignore si
+# l'unité était dans l'échantillon examiné. Deux thèmes réservés portent les deux
+# façons dont ce verdict manque, et aucun n'est le mouvement des soutiens :
+# l'unité hors de l'échantillon, et l'unité dont l'échantillon n'a pas été
+# enregistré (état écrit avant le champ (#2966), rétro-compat honnête).
+_NON_EXAMINE_THEME = "non examinés"
+_ECHANTILLON_NON_ENREGISTRE = "échantillon non enregistré"
+
+# Les thèmes qui ne sont pas des mouvements d'attaque : ils ferment le fil et
+# n'entrent pas dans le tri alphabétique des familles.
+_NON_ATTACK_THEMES = (
+    _SOUTIENS_THEME,
+    _NON_EXAMINE_THEME,
+    _ECHANTILLON_NON_ENREGISTRE,
+)
 
 # Honest label for a fallacy the LLM named but that resolves to no taxonomy node
 # (#1421-1). ``inconnu`` read as a bug; ``hors taxonomie`` says the truth — the
@@ -215,6 +232,13 @@ class ArgEvidence:
     fallacies: List[FallacyEvidence] = field(default_factory=list)
     counter_args: List[CounterEvidence] = field(default_factory=list)
     dung_rejected: Optional[str] = None  # semantics label, if rejected
+    # #2966 — l'unité était-elle dans l'échantillon soumis ? ``None`` = le run
+    # n'a pas enregistré l'ensemble examiné (état d'avant le champ) : l'absence
+    # de sophisme localisé n'est alors PAS un verdict, et rien ne peut être dit
+    # « qui tient ». Séparer ce ``None`` du ``False`` est le point de l'issue :
+    # « non examinée » et « ensemble inconnu » ne se racontent pas pareil.
+    fallacy_examined: Optional[bool] = None
+    quality_examined: Optional[bool] = None
 
 
 @dataclass
@@ -338,6 +362,13 @@ class Act2Evidence:
     debate_exchanges: List[DebateExchange] = field(default_factory=list)
     args_total: int = 0
     fallacies_total: int = 0
+    # #2966 — la couverture de la détection par argument, telle que le run l'a
+    # enregistrée. ``fallacy_sample_recorded`` vient de l'état : ``False`` = la
+    # couverture existe peut-être (k/N) mais pas l'ensemble des unités vues, et
+    # le prompt le dit alors au lieu de laisser lire « tient ».
+    fallacy_sample_recorded: bool = False
+    fallacy_sample_size: int = 0
+    quality_sample_size: int = 0
     # Note (a) (#1153): fallacies whose target_argument_id could not be
     # resolved to an identified argument. These cannot join a movement beat,
     # but they ARE counted (here) rather than silently dropped (#1019) — the
@@ -525,6 +556,33 @@ def _quality_axis_usable(quality: Any) -> bool:
     return False
 
 
+def _sampled_unit_ids(state: Any, phase: str) -> Optional[Set[str]]:
+    """Les ids des unités qu'une phase a RÉELLEMENT soumises, ou ``None``.
+
+    #2966 — ``record_analysis_coverage`` porte ``k``/``N`` depuis #2850/#2896 :
+    combien d'unités ont été échantillonnées, jamais LESQUELLES. Sans les ids,
+    aucun lecteur ne peut distinguer « examinée, propre » de « jamais
+    examinée » (famille #1019), et Acte II rendait cette confusion comme un
+    verdict — 84 unités « qui tiennent » alors que le détecteur en avait vu 10.
+
+    ``None`` = le champ est absent : état écrit avant #2966, ou phase sans
+    sélection. L'appelant doit alors dégrader vers « ensemble examiné non
+    enregistré », jamais vers une tenue. Un ``set()`` (couverture enregistrée,
+    zéro unité vue) est une information, pas une absence — les deux ne se
+    confondent pas.
+    """
+    coverage = getattr(state, "analysis_coverage", None)
+    if not isinstance(coverage, dict):
+        return None
+    entry = coverage.get(phase)
+    if not isinstance(entry, dict):
+        return None
+    ids = entry.get("unit_ids")
+    if not isinstance(ids, list):
+        return None
+    return {str(u) for u in ids}
+
+
 def build_act2_evidence(state: Any) -> Act2Evidence:
     """Build the deterministic Acte II evidence bundle from a shared state.
 
@@ -607,15 +665,25 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
     dung_rejected = decode_native_dung(state).rejected_by_arg
 
     # Assign each argument a movement key = primary fallacy family (sorted for
-    # determinism) or the soutiens theme if un-attacked.
+    # determinism) or, when no fallacy targets it, one of the two NON-VERDICT
+    # themes (#2966). An argument may only be called a soutien that holds when
+    # the fallacy detector actually EXAMINED it — the samples come from the
+    # coverage the phases recorded, and ``None`` means the run did not record
+    # which units it saw, so no unit can be called holding.
+    fallacy_sample = _sampled_unit_ids(state, "fallacy_per_argument")
+    quality_sample = _sampled_unit_ids(state, "quality")
     movement_key_by_arg: Dict[str, str] = {}
     for arg_id in args:
         flist = fallacy_by_arg.get(arg_id, [])
         if flist:
             families = sorted({f.family for f in flist if f.family})
             key = families[0] if families else _HORS_TAXONOMIE
-        else:
+        elif fallacy_sample is None:
+            key = _ECHANTILLON_NON_ENREGISTRE
+        elif str(arg_id) in fallacy_sample:
             key = _SOUTIENS_THEME
+        else:
+            key = _NON_EXAMINE_THEME
         movement_key_by_arg[arg_id] = key
 
     # Build movement evidence, ordering attack-movements first (alphabetical
@@ -675,13 +743,23 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
                 fallacies=fallacy_by_arg.get(arg_id, []),
                 counter_args=counter_by_arg.get(arg_id, []),
                 dung_rejected=dung_rejected.get(str(arg_id)),
+                fallacy_examined=(
+                    None if fallacy_sample is None else str(arg_id) in fallacy_sample
+                ),
+                quality_examined=(
+                    None if quality_sample is None else str(arg_id) in quality_sample
+                ),
             )
         )
 
-    attack_keys = sorted(k for k in movements_by_key if k != _SOUTIENS_THEME)
+    attack_keys = sorted(k for k in movements_by_key if k not in _NON_ATTACK_THEMES)
     ordered: List[MovementEvidence] = [movements_by_key[k] for k in attack_keys]
-    if _SOUTIENS_THEME in movements_by_key:
-        ordered.append(movements_by_key[_SOUTIENS_THEME])
+    # Non-attack themes close the thread, in this order: the soutiens (the
+    # claims that hold), then the units nothing was said about — never the
+    # reverse, or a verdict would precede the coverage that qualifies it.
+    for _trailing in _NON_ATTACK_THEMES:
+        if _trailing in movements_by_key:
+            ordered.append(movements_by_key[_trailing])
 
     formal_findings = _collect_formal_findings(state)
     virtuous_mode = detect_virtuous_mode(state)
@@ -696,6 +774,9 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         quality_axis_available=quality_axis_available,
         args_total=len(args),
         fallacies_total=fallacies_total,
+        fallacy_sample_recorded=fallacy_sample is not None,
+        fallacy_sample_size=len(fallacy_sample) if fallacy_sample is not None else 0,
+        quality_sample_size=len(quality_sample) if quality_sample is not None else 0,
         unattributed_fallacies=unattributed_fallacies,
         virtuous_mode=virtuous_mode,
         governance_verdict=governance_verdict,
@@ -1097,6 +1178,30 @@ _WEAVING_RULE = (
 )
 
 
+def _quality_scope_note(a: ArgEvidence, evidence: Act2Evidence) -> str:
+    """Le motif d'absence de score, DIT à sa portée (#2966, Expected 3).
+
+    « indisponible sur ce run » était imprimé pour toute unité sans score — y
+    compris les 86 unités simplement hors de l'échantillon des 8 évaluées : la
+    ligne imputait au run l'absence d'une unité. Quatre portées distinctes,
+    jamais confondues, et la formulation de run reste RÉSERVÉE au cas où le run
+    n'a réellement produit aucun score utilisable.
+    """
+    if not evidence.quality_axis_available:
+        return "non concluable ici (argument_quality_scores indisponible sur ce run)."
+    if a.quality_examined is False:
+        scored = accord(
+            evidence.quality_sample_size, "unité évaluée", "unités évaluées"
+        )
+        return f"non scorée ici (unité hors des {scored} sur ce run)."
+    if a.quality_examined is None:
+        return (
+            "non concluable ici (l'ensemble des unités évaluées n'a pas été "
+            "enregistré sur ce run)."
+        )
+    return "non scorée ici (unité soumise à l'évaluation, aucun score rendu)."
+
+
 def build_act2_prompt(evidence: Act2Evidence) -> str:
     """Build the §4-compliant LLM-conducted prompt for the Acte II narrative.
 
@@ -1124,13 +1229,36 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
 
     # --- movement data blocks (truncated, opaque) ---
     blocks: List[str] = []
+    unexamined_total = 0
     for mvt in evidence.movements:
         is_soutiens = mvt.theme == _SOUTIENS_THEME
-        header = f"MOUVEMENT « {mvt.theme} » — " + (
-            "les soutiens qui tiennent (aucun sophisme localisé)"
-            if is_soutiens
-            else f"les arguments attaqués par la famille « {mvt.theme} »"
-        )
+        if is_soutiens:
+            # #2966 — vrai seulement depuis que ce mouvement ne contient que
+            # des unités EXAMINÉES : la phrase était fausse pour les 84 unités
+            # que le détecteur n'avait jamais vues.
+            header = (
+                f"MOUVEMENT « {mvt.theme} » — les soutiens qui tiennent "
+                "(sophismes cherchés sur chacune, aucun localisé)"
+            )
+        elif mvt.theme == _NON_EXAMINE_THEME:
+            unexamined_total += len(mvt.arguments)
+            header = (
+                f"MOUVEMENT « {mvt.theme} » — unités JAMAIS soumises à la "
+                "détection de sophismes : aucun verdict n'a été rendu sur "
+                "elles, ni « tient » ni « dérape »"
+            )
+        elif mvt.theme == _ECHANTILLON_NON_ENREGISTRE:
+            unexamined_total += len(mvt.arguments)
+            header = (
+                f"MOUVEMENT « {mvt.theme} » — l'ensemble des unités examinées "
+                "n'a pas été enregistré sur ce run : aucune de ces unités ne "
+                "peut être dite « qui tient »"
+            )
+        else:
+            header = (
+                f"MOUVEMENT « {mvt.theme} » — "
+                f"les arguments attaqués par la famille « {mvt.theme} »"
+            )
         lines: List[str] = [header]
         for a in mvt.arguments:
             lines.append(f"  • {a.arg_id} : {a.description}")
@@ -1165,10 +1293,7 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                     )
                     lines.append(observation)
             else:
-                lines.append(
-                    "      Axe qualité : non concluable ici "
-                    "(argument_quality_scores indisponible sur ce run)."
-                )
+                lines.append(f"      Axe qualité : {_quality_scope_note(a, evidence)}")
             for fl in a.fallacies:
                 # #2031: the dotted taxonomy address never enters the evidence
                 # — the reader gets the NAME (type + family); an internal
@@ -1498,6 +1623,32 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
             "récit) :\n" + "\n".join(seq_lines) + "\n" + seq_verdict + "\n\n"
         )
 
+    # #2966 — le FAIT de couverture, dit comme un fait : combien d'unités n'ont
+    # pas été soumises. Sans lui, le lecteur du prompt voit un mouvement
+    # « non examinés » sans savoir s'il tient à un échantillon ou à un défaut
+    # d'enregistrement, et le writer doit savoir laquelle des deux raconter.
+    coverage_note = ""
+    if unexamined_total:
+        if evidence.fallacy_sample_recorded:
+            seen = accord(
+                evidence.fallacy_sample_size, "unité examinée", "unités examinées"
+            )
+            coverage_note = (
+                f"COUVERTURE — {accord(unexamined_total, 'unité', 'unités')} "
+                f"n'ont PAS été soumises à la détection de sophismes sur ce run "
+                f"({seen} sur {accord(evidence.args_total, 'extraite', 'extraites')}) : "
+                "leur absence de sophisme est une absence d'examen, jamais une "
+                "tenue démontrée. Nomme ce fait, ne le présente pas comme un "
+                "résultat d'analyse.\n\n"
+            )
+        else:
+            coverage_note = (
+                "COUVERTURE — l'ensemble des unités soumises à la détection de "
+                "sophismes n'a pas été enregistré sur ce run : aucune unité ne "
+                "peut être présentée comme tenant, faute de savoir lesquelles "
+                "ont été examinées.\n\n"
+            )
+
     return (
         "Tu es l'auteur de l'ACTE II d'un rapport de restitution argumentative.\n"
         "Le récit suit le FIL ARGUMENTATIF (thèse → soutiens → dérapages), découpé\n"
@@ -1507,6 +1658,7 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         f"{virtuous_section}"
         "DONNÉES VERIFIÉES DANS LE STATE (ne citer que celles-ci) :\n\n"
         f"{chr(10).join(blocks)}\n\n"
+        f"{coverage_note}"
         f"{unattributed_block}"
         f"TENUE FORMELLE (ancres vérifiées, à tisser comme PREUVE d'un battement) :\n"
         f"{formal_block}\n\n"

@@ -1300,6 +1300,7 @@ class DeepSynthesisAgent(BaseAgent):
                     _syn_args_selection.bands_covered,
                     _syn_args_selection.bands_total,
                     span=_syn_args_selection.span,
+                    unit_ids=[u.unit_id for u in _syn_args_selection.selected],
                 )
 
         fallacies = getattr(state, "identified_fallacies", {}) or {}
@@ -1359,6 +1360,7 @@ class DeepSynthesisAgent(BaseAgent):
                     _syn_fall_selection.bands_covered,
                     _syn_fall_selection.bands_total,
                     span=_syn_fall_selection.span,
+                    unit_ids=[u.unit_id for u in _syn_fall_selection.selected],
                 )
 
         for i, r in enumerate(

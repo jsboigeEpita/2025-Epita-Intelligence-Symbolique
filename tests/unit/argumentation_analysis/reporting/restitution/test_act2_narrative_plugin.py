@@ -165,11 +165,36 @@ _ENUMERATION = (
 
 class TestBuildEvidence:
     def test_groups_attacked_args_by_family_and_soutiens_last(self):
-        ev = build_act2_evidence(_rich_state())
+        state = _rich_state()
+        # #2966 — a soutien must have been EXAMINED. This test's own subject is
+        # the ORDER, so the sample is recorded here: both units were submitted,
+        # arg_1 came back with a fallacy, arg_2 clean.
+        state.analysis_coverage = {
+            "fallacy_per_argument": {
+                "k": 2,
+                "N": 2,
+                "bands_covered": 1,
+                "bands_total": 1,
+                "unit_ids": ["arg_1", "arg_2"],
+            }
+        }
+        ev = build_act2_evidence(state)
         themes = [m.theme for m in ev.movements]
         # attack movement first, soutiens last
         assert themes == ["ad hominem", "soutiens"]
         assert ev.movements[-1].arguments[0].arg_id == "arg_2"
+
+    def test_unrecorded_sample_is_never_called_holding(self):
+        """#2966 back-compat — the pre-#2966 state shape (no sampled ids) must
+        NOT present its un-attacked units as holding: the reader then cannot
+        tell "examined, clean" from "never examined". Degrading to the plain
+        pre-fix theme here is exactly the defect this issue repairs."""
+        ev = build_act2_evidence(_rich_state())
+        assert [m.theme for m in ev.movements] == [
+            "ad hominem",
+            "échantillon non enregistré",
+        ]
+        assert ev.movements[-1].arguments[0].fallacy_examined is None
 
     def test_attacked_arg_carries_fallacy_counter_and_dung(self):
         ev = build_act2_evidence(_rich_state())
@@ -776,6 +801,9 @@ def _virtuous_state() -> SimpleNamespace:
     """A virtuous text: two clean arguments, no fallacies, measured virtues.
 
     No attacks → both arguments form the 'soutiens' movement (what holds).
+    #2966 — the fallacy sample is recorded and covers BOTH units: on a virtuous
+    text the detector has read what it cleared, which is what makes the word
+    « tiennent » a verdict rather than the absence of an entry.
     """
     return _state(
         identified_arguments={
@@ -786,6 +814,22 @@ def _virtuous_state() -> SimpleNamespace:
         argument_quality_scores={
             "arg_1": {"overall": 8.0, "scores": {"clarte": 8.0, "coherence": 8.5}},
             "arg_2": {"overall": 7.5, "scores": {"coherence": 8.0, "pertinence": 7.0}},
+        },
+        analysis_coverage={
+            "fallacy_per_argument": {
+                "k": 2,
+                "N": 2,
+                "bands_covered": 1,
+                "bands_total": 1,
+                "unit_ids": ["arg_1", "arg_2"],
+            },
+            "quality": {
+                "k": 2,
+                "N": 2,
+                "bands_covered": 1,
+                "bands_total": 1,
+                "unit_ids": ["arg_1", "arg_2"],
+            },
         },
     )
 
