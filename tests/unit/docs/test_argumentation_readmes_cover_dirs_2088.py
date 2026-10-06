@@ -15,6 +15,7 @@ des README de ``argumentation_analysis/`` résout.
   prétend qu'une fiche existe : c'est exactement ce que cette garde interdit.
 """
 
+import posixpath
 import re
 import subprocess
 from collections import defaultdict
@@ -145,4 +146,37 @@ class TestReadmeLinksResolve:
         assert broken == [], (
             "#2088 : liens .md relatifs morts dans les README de "
             f"argumentation_analysis/ : {broken}"
+        )
+
+
+class TestRootReadmeCitesEveryChild:
+    """Le README racine cite chaque enfant de premier niveau qui a un README.
+
+    La garde voisine tient « substantiel ⇒ README » ; celle-ci tient la
+    réciproque côté racine — un enfant documenté mais absent de la fiche
+    racine est invisible depuis le point d'entrée du paquet. Propriété
+    d'ENSEMBLE, jamais un compte écrit à la main : un répertoire neuf avec
+    README rougit ici au lieu de périmer silencieusement un « 25 ».
+    """
+
+    def test_every_depth1_readme_is_cited_from_the_root(self):
+        files = _tracked_files()
+        root = f"{SUBTREE}/README.md"
+        children = {
+            f"{SUBTREE}/{f.split('/')[1]}/README.md"
+            for f in files
+            if f.count("/") == 2
+            and f.endswith("/README.md")
+            and f.split("/")[1] not in VENDORED_ROOTS
+        }
+        assert children, "population vide : le README racine n'a aucun enfant"
+
+        cited = {
+            posixpath.normpath(f"{SUBTREE}/{target}")
+            for target in _md_link_targets(root)
+        }
+        missing = sorted(children - cited)
+        assert missing == [], (
+            "#2088 : enfants de premier niveau portant un README et NON cités "
+            f"depuis {root} : {missing}"
         )
