@@ -1,5 +1,7 @@
 # Adaptateurs pour Agents Opérationnels
 
+Parent : [`hierarchical/README.md`](../../README.md) — l'architecture à trois niveaux (ce répertoire = les adaptateurs de la couche opérationnelle).
+
 Ce répertoire contient les adaptateurs qui permettent aux agents existants de fonctionner comme des agents opérationnels dans l'architecture hiérarchique.
 
 ## Vue d'ensemble

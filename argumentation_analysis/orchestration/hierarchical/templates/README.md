@@ -1,5 +1,7 @@
 # Templates d'architecture hiérarchique
 
+Parent : [`hierarchical/README.md`](../README.md) — l'architecture à trois niveaux (ce répertoire = les gabarits partagés).
+
 ## Utilisation des templates
 
 Chaque template fournit une structure de base pour intégrer de nouveaux composants au système d'orchestration. Les fichiers sont organisés par type de composant.

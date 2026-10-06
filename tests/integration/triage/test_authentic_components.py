@@ -61,8 +61,10 @@ def _names_a_correct_diagnosis(response: str) -> bool:
     )
     # The terms carry the docstring's own vocabulary: "non sequitur
     # (enthymème, missing premise)" — a correct answer naming only the
-    # enthymeme was rejected before. Bare "prémisse" stays out: it names
-    # no defect.
+    # enthymeme was rejected before. Both the nominal ("prémisse manquante")
+    # and the verbal ("il manque une prémisse") FR forms name the defect, as
+    # does the EN "missing premise" they paraphrase. Bare "prémisse" stays
+    # out: on its own it names no defect.
     return any(
         term in normalized
         for term in (
@@ -71,6 +73,7 @@ def _names_a_correct_diagnosis(response: str) -> bool:
             "generalization",
             "enthymeme",
             "premisse manquante",
+            "manque une premisse",
             "missing premise",
         )
     )
@@ -243,8 +246,13 @@ class TestNamesACorrectDiagnosis:
         assert _names_a_correct_diagnosis(
             "The argument is an enthymeme: a missing premise."
         )
-        # Bare "prémisse" is not a diagnosis — no widening past the defect.
-        assert not _names_a_correct_diagnosis("Il manque une prémisse.")
+        # #2951 review (R1069): the verbal FR form IS the paraphrase of the
+        # accepted EN "missing premise" — refusing it pinned a false red. It
+        # is now accepted, and the boundary moved to a sentence that names
+        # no defect at all (a premise stated as true, not one that is
+        # missing).
+        assert _names_a_correct_diagnosis("Il manque une prémisse.")
+        assert not _names_a_correct_diagnosis("La première prémisse est vraie.")
 
 
 @pytest.mark.jpype
