@@ -712,6 +712,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         bands_total: int,
         span: Optional[Tuple[float, float]] = None,
         largest_uncovered_stretch: Optional[float] = None,
+        unit_ids: Optional[List[str]] = None,
     ) -> None:
         """#2850 slice A — enregistre la couverture d'une phase sélectrice.
 
@@ -732,6 +733,16 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         chiffre qui peut ÉCHOUER : « 3/3 bandes » est resté vrai sur le run
         payé pendant qu'une lacune de 0,41 tenait 15 unités localisées.
         ``None`` = pas d'ancrés (ou pas de longueur de texte).
+
+        ``unit_ids`` (#2966) : les ids des unités que la phase a RÉELLEMENT
+        soumises. ``k``/``N`` disent combien, jamais lesquelles — sans les ids,
+        aucun lecteur ne peut distinguer « examinée, propre » de « jamais
+        examinée », et Acte II rendait la confusion comme un verdict (84/94
+        unités « qui tiennent » alors que le détecteur en avait vu 10). Ids
+        opaques (``arg_N``), déjà dans le state, aucune donnée de corpus.
+        ``None`` = non enregistré (appelant d'avant #2966, ou phase sans
+        sélection) : le lecteur dégrade en « ensemble examiné non enregistré »,
+        jamais en « tient ».
         """
         entry: Dict[str, Any] = {
             "k": int(k),
@@ -739,6 +750,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "bands_covered": int(bands_covered),
             "bands_total": int(bands_total),
         }
+        if unit_ids is not None:
+            entry["unit_ids"] = [str(u) for u in unit_ids]
         if span is not None:
             entry["span_start"] = float(span[0])
             entry["span_end"] = float(span[1])

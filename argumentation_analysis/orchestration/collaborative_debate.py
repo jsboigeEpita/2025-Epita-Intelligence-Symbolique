@@ -166,6 +166,7 @@ async def _invoke_collaborative_analysis(
                 _deb_selection.bands_total,
                 span=_deb_selection.span,
                 largest_uncovered_stretch=_deb_selection.largest_uncovered_stretch,
+                unit_ids=[u.unit_id for u in _deb_selection.selected],
             )
         for i, u in enumerate(_deb_selection.selected):
             arg_lines.append(f"A{i + 1}. {u.text}")

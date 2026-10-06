@@ -602,6 +602,7 @@ async def _invoke_quality_evaluator(
             _selection.bands_total,
             span=_selection.span,
             largest_uncovered_stretch=_selection.largest_uncovered_stretch,
+            unit_ids=[u.unit_id for u in _selection.selected],
         )
 
     # (#289) Read fallacy output to penalize arguments affected by fallacies
@@ -1593,6 +1594,7 @@ async def _invoke_counter_argument(
                     _ca_selection.bands_total,
                     span=_ca_selection.span,
                     largest_uncovered_stretch=_ca_selection.largest_uncovered_stretch,
+                    unit_ids=[u.unit_id for u in _ca_selection.selected],
                 )
 
             # (#289) Read quality scores to prioritize weakest arguments
@@ -2736,6 +2738,7 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
                 _jtms_selection.bands_total,
                 span=_jtms_selection.span,
                 largest_uncovered_stretch=_jtms_selection.largest_uncovered_stretch,
+                unit_ids=[u.unit_id for u in _jtms_selection.selected],
             )
     else:
         _fallback_args = raw_args[:10]
@@ -3093,6 +3096,7 @@ async def _invoke_atms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             _atms_selection.bands_total,
             span=_atms_selection.span,
             largest_uncovered_stretch=_atms_selection.largest_uncovered_stretch,
+            unit_ids=[u.unit_id for u in _atms_selection.selected],
         )
     arg_names: list[str] = []
     arg_ids: list[str] = []
@@ -7140,6 +7144,7 @@ def _extract_arguments_for_parallel(
                     selection.bands_total,
                     span=selection.span,
                     largest_uncovered_stretch=selection.largest_uncovered_stretch,
+                    unit_ids=[u.unit_id for u in selection.selected],
                 )
             result = [(u.unit_id, u.text.strip()) for u in selection.selected]
             if result:
@@ -7657,6 +7662,7 @@ async def _invoke_propositional_logic(
                                 largest_uncovered_stretch=(
                                     _pl_selection.largest_uncovered_stretch
                                 ),
+                                unit_ids=[u.unit_id for u in _pl_selection.selected],
                             )
 
                         async def _pl_batch_coro(_batch: list[str]) -> list[str]:
@@ -8176,6 +8182,9 @@ async def _invoke_fol_reasoning(
                                     largest_uncovered_stretch=(
                                         _fol_selection.largest_uncovered_stretch
                                     ),
+                                    unit_ids=[
+                                        u.unit_id for u in _fol_selection.selected
+                                    ],
                                 )
 
                             async def _fol_batch_coro(_batch: list[str]) -> list[str]:
@@ -8696,6 +8705,7 @@ async def _invoke_nl_to_logic(
             _ntl_selection.bands_total,
             span=_ntl_selection.span,
             largest_uncovered_stretch=_ntl_selection.largest_uncovered_stretch,
+            unit_ids=[u.unit_id for u in _ntl_selection.selected],
         )
     translator = NLToLogicTranslator(max_retries=3, logic_type=logic_type)
     batch_result = await translator.translate_batch(
@@ -11463,6 +11473,7 @@ async def _invoke_stakes_extractor(
                 _stakes_selection.bands_covered,
                 _stakes_selection.bands_total,
                 span=_stakes_selection.span,
+                unit_ids=[u.unit_id for u in _stakes_selection.selected],
             )
     elif isinstance(raw_args, dict):
         arguments = [
