@@ -2308,10 +2308,22 @@ class TestFormalismSidecarNonVacuityAndSubstitution:
     disappears, kill-set in numbers)."""
 
     def test_empty_sidecar_across_three_axes_fabricates_nothing(self) -> None:
-        """Non-vacuity: a sidecar present but empty (or with only the closed-
-        vocab/numeric leaves the projectors don't read) produces no finding."""
+        """Non-vacuity: a sidecar present but empty (or with only leaves that
+        stay inert — complements without their trigger, or leaves no projector
+        reads) produces no finding. #2952 note: this test's original exemplar
+        was ``criterion``+``program_size`` — chosen as "closed-vocab/numeric
+        leaves the projectors don't read", which was true while nobody read
+        them (the exact debt #2952 measured). Site 1a now reads exactly those
+        two, so the exemplar moved to leaves that remain inert on their own:
+        ``program_size`` without its criterion (1a's trigger), a
+        ``weight_statistics`` aggregate without any ``attack_weights`` entry,
+        and an unread ``note``."""
         state = _formalism_specific_state(
-            {"criterion": "generalized_specificity", "program_size": 7}
+            {
+                "program_size": 7,
+                "weight_statistics": {"min_weight": 0.1, "max_weight": 0.9},
+                "note": "context only",
+            }
         )
         assert build_act3_evidence(state).structured_findings == []
 

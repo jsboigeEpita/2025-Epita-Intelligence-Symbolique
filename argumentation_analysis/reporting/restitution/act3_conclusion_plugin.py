@@ -148,6 +148,14 @@ _FORMALISM_NODE_CAP = 120  # truncate corpus-derived atoms (privacy HARD, #1702)
 _ABA_CONTRARY_PAIR_CAP = 3  # max assumption↔contrary pairs named in prose
 _SETAF_JOINT_ATTACK_CAP = 3  # max collective-attack coalitions named
 _WEIGHTED_DIST_ATTACK_CAP = 8  # max attacks sampled for the weight distribution
+# #2952 sites 1a-3 (DeLP / EAF / ADF) — same prompt-budget discipline as above.
+_DELP_VERDICT_CAP = 3  # max named dialectical verdicts (warranted/defeated)
+_EAF_DIVERGENCE_CAP = 3  # max named agent-pair belief divergences
+_ADF_UNDECIDED_CAP = 3  # max named three-valued undecided statements
+# #2952 site 3 — assignments inside a Tweety ``str(interp)`` rendering
+# (``"{p=T,q=U}"``). Defensive by design: a format change fails the match and
+# the projector falls back to the non-unicity figure, never fabricates.
+_ADF_ASSIGNMENT_RE = re.compile(r"([A-Za-z0-9_.\-]+)\s*=\s*([TtFfUu])\b")
 
 # #1605 — reader-facing French names for the structured-argumentation axes. The
 # prose forbids raw snake_case identifiers (they are opaque to the non-technical
@@ -162,6 +170,13 @@ _ABSENT_DIMENSION_LABELS: Dict[str, str] = {
     "weighted_argumentation": "la force pondérée des attaques",
     "bipolar_argumentation": "les relations de soutien entre arguments",
     "belief_revision": "la révision des croyances (le point de rupture minimal)",
+    # #2952 — the three axes wired into Acte III by the sidecar/native
+    # projectors. Pure lookup here (both consumers call ``.get``): adding an
+    # entry does NOT declare an absence — the absence ledger iterates
+    # ``structured_arg_status``, not this map.
+    "delp_reasoning": "la décision dialectique sur requêtes défaisables",
+    "eaf_reasoning": "les croyances épistémiques par agent",
+    "adf_reasoning": "l'acceptation à trois valeurs des énoncés",
 }
 
 # Verdict bands (adapted from #1008 §2.1 to the restitution coverage model).
@@ -1171,6 +1186,32 @@ def _iter_formalism_specific(state: Any, leaf: str) -> List[Any]:
     return out
 
 
+def _iter_native_extension(state: Any, key: str) -> List[Any]:
+    """Collect every non-empty ``key`` value across all dung_frameworks extensions.
+
+    #2952 native counterpart of :func:`_iter_formalism_specific` — one channel
+    for the ``extensions`` leaves the #1648/#2063 writers attach (DeLP's
+    ``delp_query_results``, ADF's ``adf_models``), not one reader per axis.
+    ``native_dung.extension_lists`` deliberately yields ``None`` on these
+    entries (they are not acceptance-extension lists), so each of these keys
+    has exactly one reader: this one. Defensively typed like its sibling.
+    """
+    frameworks = getattr(state, "dung_frameworks", None)
+    if not isinstance(frameworks, dict):
+        return []
+    out: List[Any] = []
+    for entry in frameworks.values():
+        if not isinstance(entry, dict):
+            continue
+        exts = entry.get("extensions")
+        if not isinstance(exts, dict):
+            continue
+        val = exts.get(key)
+        if val:
+            out.append(val)
+    return out
+
+
 def _aba_finding(state: Any) -> Optional[StructuredArgFinding]:
     """Project the ASSUMPTION↔CONTRARY relation — what ABA alone says (#1667).
 
@@ -1333,6 +1374,277 @@ def _weighted_finding(state: Any) -> Optional[StructuredArgFinding]:
             f"{accord(len(weights), 'attaque', 'attaques')} selon leur "
             f"force (poids de {lo:.2f} à {hi:.2f}, moyenne {avg:.2f}) : "
             f"{flat}{tail}"
+        ),
+    )
+
+
+def _delp_program_finding(state: Any) -> Optional[StructuredArgFinding]:
+    """Project the defeasible PROGRAM and its comparison criterion (#2952 site 1a).
+
+    DeLP's sidecar (writer ``_write_delp_to_state``) preserves what the
+    dialectic reasoned OVER and HOW it compared arguments: the program
+    (``delp_arguments`` — the rule source), its size (``program_size``) and
+    the comparison ``criterion`` (e.g. ``generalized_specificity``). The
+    singular fact this projector names is the CRITERION — the rule that
+    governs every verdict the dialectic issues; a DeLP run without its
+    criterion is a tally, not a decision method. The program itself is
+    corpus-derived rule text (the exact surface #1702 opacifies at export)
+    and is NEVER echoed: only its size rides, as an amplitude qualifier.
+
+    Anti-#1667-pendule: a bare « DeLP a tourné sur N lignes » with no
+    criterion would be the « 1 résultat ABA » witness moved. The criterion
+    is mandatory; the size is a complement, not a substitute. Returns
+    ``None`` when no criterion leaf is populated (honest absence, #1019).
+    """
+    criteria = [
+        c
+        for c in _iter_formalism_specific(state, "criterion")
+        if isinstance(c, str) and c.strip()
+    ]
+    if not criteria:
+        return None
+    criterion = _truncate(criteria[0].strip(), _FORMALISM_NODE_CAP)
+    sizes = [
+        s
+        for s in _iter_formalism_specific(state, "program_size")
+        if isinstance(s, int) and s > 0
+    ]
+    amplitude = f" sur un programme de {sizes[0]} lignes" if sizes else ""
+    return StructuredArgFinding(
+        capability="delp_reasoning",
+        label=_axis_label("delp_reasoning"),
+        statement=(
+            "le raisonnement défaisable tranche ses requêtes selon le critère "
+            f"de comparaison « {criterion} »{amplitude} — la force d'un "
+            "argument se mesure relativement à ce qui le conteste, pas dans "
+            "l'absolu"
+        ),
+    )
+
+
+def _delp_verdicts_finding(state: Any) -> Optional[StructuredArgFinding]:
+    """Project the dialectical VERDICTS — what DeLP decided (#2952 site 1b).
+
+    DeLP's native leaf ``extensions["delp_query_results"]`` (writer
+    ``_write_delp_to_state``, handler ``delp_handler.analyze_delp``) carries
+    one verdict per query: YES (the argument is *warranted* — it survives
+    every dialectical attack), NO (*defeated*), UNDECIDED (both camps hold),
+    UNKNOWN (a functional error, never projected). The singular fact is the
+    DECISION itself — no other axis in the pipeline decides per-query: Dung
+    decides per-framework, PL per-formula. The statement names the first
+    warranted and defeated queries (truncated atoms — the sidecar is the
+    surface #1702 scrubs, privacy HARD) and counts the undecided remainder;
+    ``message`` payloads never reach the prose (they carry handler diagnostics).
+
+    Returns ``None`` when nothing was decided (no YES and no NO): an all-
+    UNDECIDED or empty run is an honest absence, never a fabricated verdict.
+    """
+    warranted: List[str] = []
+    defeated: List[str] = []
+    undecided_atoms: List[str] = []
+    for results in _iter_native_extension(state, "delp_query_results"):
+        if not isinstance(results, list):
+            continue
+        for r in results:
+            if not isinstance(r, dict):
+                continue
+            q = _truncate(str(r.get("query", "")).strip(), _FORMALISM_NODE_CAP)
+            answer = str(r.get("answer", "")).strip().upper()
+            if not q:
+                continue
+            if answer == "YES":
+                warranted.append(q)
+            elif answer == "NO":
+                defeated.append(q)
+            elif answer == "UNDECIDED":
+                undecided_atoms.append(q)
+
+    def _first(items: List[str]) -> List[str]:
+        return items[:_DELP_VERDICT_CAP]
+
+    if not warranted and not defeated:
+        return None
+    parts: List[str] = []
+    if warranted:
+        named = ", ".join(f"« {q} »" for q in _first(warranted))
+        parts.append(
+            f"{accord(len(warranted), 'requête ressort garantie', 'requêtes ressortent garanties')}"
+            f" ({named})"
+        )
+    if defeated:
+        named = ", ".join(f"« {q} »" for q in _first(defeated))
+        parts.append(
+            f"{accord(len(defeated), 'requête est renversée', 'requêtes sont renversées')}"
+            f" ({named})"
+        )
+    undecided = ""
+    if undecided_atoms:
+        first = undecided_atoms[0]
+        rest = len(undecided_atoms) - 1
+        if rest <= 0:
+            undecided = f" ; « {first} » resterait indécise — aucun camp ne l'emporte"
+        else:
+            undecided = (
+                f" ; « {first} » et {rest} "
+                + accord(rest, "autre resteraient", "autres resteraient")
+                + " indécises — aucun camp ne l'emporte"
+            )
+    over = ""
+    total = len(warranted) + len(defeated) + len(undecided_atoms)
+    if total > _DELP_VERDICT_CAP:
+        over = f" (sur {total} requêtes)"
+    return StructuredArgFinding(
+        capability="delp_reasoning",
+        label=_axis_label("delp_reasoning"),
+        statement=(
+            "la dialectique défaisable a tranché : "
+            + " et ".join(parts)
+            + undecided
+            + over
+        ),
+    )
+
+
+def _eaf_finding(state: Any) -> Optional[StructuredArgFinding]:
+    """Project the DIVERGENT epistemic beliefs — what EAF alone sees (#2952 site 2).
+
+    EAF's sidecar (writer ``_write_eaf_to_state``) preserves the per-agent
+    belief map ``epistemic_beliefs`` (``Dict[agent, List[arg]]``). The
+    singular fact is the DIVERGENCE: an argument one agent holds as believed
+    while another does not — the multi-agent disagreement no attack-only
+    framework can express (Dung says who defeats whom, never who believes
+    what). Like SETAF's unary attack (a Dung attack in disguise), agents in
+    full agreement carry nothing EAF-specific: the projector stays silent
+    (honest absence, #1019). Agent names and atoms are corpus-derived and are
+    truncated at the same bar as ABA/SETAF (privacy HARD, #1702).
+
+    Returns ``None`` when fewer than two agents populated beliefs, or when
+    every pair of agents agrees on every argument.
+    """
+    divergent: List[str] = []
+    for beliefs in _iter_formalism_specific(state, "epistemic_beliefs"):
+        if not isinstance(beliefs, dict):
+            continue
+        held: List[tuple[str, set[str]]] = []
+        for agent, args in beliefs.items():
+            if not isinstance(args, list):
+                continue
+            name = _truncate(str(agent).strip(), _FORMALISM_NODE_CAP)
+            atoms = {
+                _truncate(str(a).strip(), _FORMALISM_NODE_CAP)
+                for a in args
+                if str(a).strip()
+            }
+            if name:
+                held.append((name, atoms))
+        for i, (agent_a, atoms_a) in enumerate(held):
+            for agent_b, atoms_b in held[i + 1 :]:
+                # Two agents who each believe nothing agree (on the empty set);
+                # ONE who believes something the other does not is exactly the
+                # divergence this axis exists to name — an empty belief list on
+                # one side is a party to the disagreement, not an absence.
+                if not atoms_a and not atoms_b:
+                    continue
+                only_a = sorted(atoms_a - atoms_b)
+                only_b = sorted(atoms_b - atoms_a)
+                if only_a:
+                    divergent.append(
+                        f"« {agent_a} » tient « {only_a[0]} » pour acquis "
+                        f"quand « {agent_b} » ne l'admet pas"
+                    )
+                elif only_b:
+                    divergent.append(
+                        f"« {agent_b} » tient « {only_b[0]} » pour acquis "
+                        f"quand « {agent_a} » ne l'admet pas"
+                    )
+                if len(divergent) >= _EAF_DIVERGENCE_CAP:
+                    break
+            if len(divergent) >= _EAF_DIVERGENCE_CAP:
+                break
+        if len(divergent) >= _EAF_DIVERGENCE_CAP:
+            break
+    if not divergent:
+        return None
+    tail = "" if len(divergent) < _EAF_DIVERGENCE_CAP else " (extrait partiel)"
+    return StructuredArgFinding(
+        capability="eaf_reasoning",
+        label=_axis_label("eaf_reasoning"),
+        statement=(
+            "les croyances épistémiques divergent entre agents : "
+            + " ; ".join(divergent)
+            + tail
+        ),
+    )
+
+
+def _adf_finding(state: Any) -> Optional[StructuredArgFinding]:
+    """Project the THREE-VALUED undecided statements — what ADF alone says (#2952 site 3).
+
+    ADF's native leaf ``extensions["adf_models"]`` (writer
+    ``_write_adf_to_state``, #2063) carries the reasoner's interpretations as
+    strings (``"{p=T,q=U}"`` — T/F/U per statement). The singular fact is the
+    UNDECIDED value: a statement neither established nor overturned, which a
+    two-valued acceptance cannot name. When the format does not parse, the
+    projector falls back to the NON-UNICITY figure (several distinct
+    interpretations = the acceptance is not arbitrated to one world), never
+    fabricating assignments it could not read.
+
+    #2063 provenance combination: the writer also attaches a ``degraded`` flag
+    on the sidecar. Per the #2844 discipline (an axis filed degraded is named
+    by the absence channel and nowhere else), a degraded ADF run produces NO
+    finding here even when interpretations are populated — the two readers of
+    one state stay in agreement by construction. Statements are corpus-derived
+    and truncated (privacy HARD, #1702); the ``note``/``statistics`` provenance
+    leaves never reach the prose.
+
+    Returns ``None`` when nothing was decided (empty models), when the run is
+    degraded, or when every statement is two-valued in a single world (an
+    honest absence: plain acceptance, nothing ADF-specific to say).
+    """
+    for flag in _iter_formalism_specific(state, "degraded"):
+        if flag is True:
+            return None
+    models: List[str] = []
+    for batch in _iter_native_extension(state, "adf_models"):
+        if not isinstance(batch, list):
+            continue
+        for interp in batch:
+            text = str(interp).strip()
+            if text:
+                models.append(text)
+    if not models:
+        return None
+    undecided: List[str] = []
+    for interp in models:
+        for atom, value in _ADF_ASSIGNMENT_RE.findall(interp):
+            if value.upper() == "U":
+                atom = _truncate(atom.strip(), _FORMALISM_NODE_CAP)
+                if atom and atom not in undecided:
+                    undecided.append(atom)
+                if len(undecided) >= _ADF_UNDECIDED_CAP:
+                    break
+        if len(undecided) >= _ADF_UNDECIDED_CAP:
+            break
+    if undecided:
+        named = ", ".join(f"« {a} »" for a in undecided)
+        tail = "" if len(undecided) < _ADF_UNDECIDED_CAP else " (extrait partiel)"
+        return StructuredArgFinding(
+            capability="adf_reasoning",
+            label=_axis_label("adf_reasoning"),
+            statement=(
+                "le cadre d'acceptation conditionnelle laisse des énoncés "
+                "indécis — ni établis, ni renversés : " + named + tail
+            ),
+        )
+    distinct = set(models)
+    if len(distinct) < 2:
+        return None
+    return StructuredArgFinding(
+        capability="adf_reasoning",
+        label=_axis_label("adf_reasoning"),
+        statement=(
+            "le cadre d'acceptation conditionnelle n'arbitre pas à un monde "
+            f"unique : {len(distinct)} interprétations distinctes coexistent"
         ),
     )
 
@@ -1533,6 +1845,15 @@ def _collect_structured_arg_findings(state: Any) -> List[StructuredArgFinding]:
         _aba_finding,
         _setaf_finding,
         _weighted_finding,
+        # #2952 — DeLP (sidecar 1a + native 1b), EAF (sidecar), ADF (native +
+        # #2063 provenance): the three axes whose writers were planted without
+        # a consumer. Same contract: one projector per site, ``None`` when the
+        # site's singular fact is absent, degraded ADF yields to the absence
+        # channel (#2844).
+        _delp_program_finding,
+        _delp_verdicts_finding,
+        _eaf_finding,
+        _adf_finding,
     ):
         finding = projector(state)
         if finding is None or finding.capability in degraded:
