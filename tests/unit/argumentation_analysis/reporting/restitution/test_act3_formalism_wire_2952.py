@@ -10,7 +10,10 @@ the rendered sentence is present when the data is there, absent otherwise.
 Sites (issue #2952, coordinator arbitration c.6014772201 — wire, not retire):
 
 - 1a DeLP sidecar — ``delp_arguments``/``program_size``/``criterion`` via
-  ``_iter_formalism_specific``;
+  ``_iter_formalism_specific``; **folded into 1b as a prose qualifier (#2963)** —
+  the criterion is a constant on the production path, so on its own it would
+  print the same sentence on every run (positive control: criterion alone
+  without a verdict yields no finding at all);
 - 1b DeLP native — ``extensions["delp_query_results"]`` (warranted/defeated);
 - 2  EAF sidecar — ``epistemic_beliefs`` (per-agent divergence);
 - 3  ADF native — ``extensions["adf_models"]`` (three-valued undecided), with
@@ -35,7 +38,7 @@ from argumentation_analysis.orchestration.state_writers import (
 )
 from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
     _adf_finding,
-    _delp_program_finding,
+    _delp_criterion_qualifier,
     _delp_verdicts_finding,
     _eaf_finding,
     build_act3_evidence,
@@ -111,49 +114,72 @@ def _capabilities(state: SimpleNamespace) -> List[str]:
     return [f.capability for f in build_act3_evidence(state).structured_findings]
 
 
-class TestDelpProgramChannel:
-    """Site 1a — the comparison criterion (the method), not a run tally."""
+class TestDelpCriterionQualifier:
+    """#2963 — the criterion is a QUALIFIER of the verdicts, never a projector.
+
+    On the production path nothing poses the ``criterion`` leaf — the handler
+    default is what ``invoke_callables.py:5749`` reads — so a projector on it
+    would print the same sentence on every DeLP run: a constant dressed as a
+    finding. Folded into 1b, it appears only when a verdict does.
+    """
 
     def _state(self, **overrides: Any) -> SimpleNamespace:
         output = {**_DELP_OUTPUT, **overrides}
         return _writer_built_state(lambda real: _write_delp_to_state(output, real, {}))
 
-    def test_criterion_becomes_a_finding(self) -> None:
-        state = self._state()
-        finding = _delp_program_finding(state)
-        assert finding is not None
-        assert finding.capability == "delp_reasoning"
-        assert "generalized_specificity" in finding.statement
-        assert "2 lignes" in finding.statement  # program_size rides as amplitude
-
-    def test_finding_reaches_the_evidence(self) -> None:
-        """Criterion ALONE (no query_results): only site 1a can supply the
-        axis here, so the registration mutation — projector removed from the
-        loop — reddens THIS witness; a shared output would mask it (measured:
-        the first version of this test stayed green under the mutation)."""
+    def test_criterion_alone_yields_no_finding(self) -> None:
+        """POSITIVE CONTROL (coordinator, #2963): the criterion leaf on its
+        own — no YES, no NO — renders NO DeLP axis at all. Before the fold
+        this state rendered one; the fold is exactly what empties it."""
         state = self._state(query_results=[])
-        delp = [
-            f
-            for f in build_act3_evidence(state).structured_findings
-            if f.capability == "delp_reasoning"
-        ]
-        assert delp, "site 1a alone must render the DeLP axis"
-        assert any("generalized_specificity" in f.statement for f in delp)
+        assert _delp_verdicts_finding(state) is None
+        assert "delp_reasoning" not in _capabilities(state)
+
+    def test_criterion_qualifies_the_verdicts(self) -> None:
+        finding = _delp_verdicts_finding(self._state())
+        assert finding is not None
+        assert "selon un critère de spécificité" in finding.statement
+
+    def test_qualifier_carries_the_program_size_as_amplitude(self) -> None:
+        finding = _delp_verdicts_finding(self._state())
+        assert finding is not None
+        assert "sur un programme de 2 lignes" in finding.statement
+
+    def test_verdicts_without_criterion_keep_the_plain_head(self) -> None:
+        """1b is not gated on the criterion: absent, the sentence keeps its
+        bare form — the qualifier is additive, never a precondition."""
+        finding = _delp_verdicts_finding(self._state(criterion=""))
+        assert finding is not None
+        assert "selon" not in finding.statement
+        assert finding.statement.startswith("la dialectique défaisable a tranché : ")
+
+    def test_raw_token_never_reaches_the_statement(self) -> None:
+        """The leaf's snake_case label is a code token, not French prose."""
+        finding = _delp_verdicts_finding(self._state())
+        assert finding is not None
+        assert "generalized_specificity" not in finding.statement
+
+    def test_unknown_criterion_falls_back_to_a_generic_qualifier(self) -> None:
+        state = self._state(criterion="exotic_mode")
+        assert _delp_criterion_qualifier(state) == (
+            "selon son critère de comparaison déclaré, sur un programme de 2 lignes"
+        )
+
+    def test_malformed_criterion_yields_no_qualifier(self) -> None:
+        """A non-str criterion is not a criterion: the verdicts stand, the
+        qualifier stays out — no ``str(42)`` leak into the prose."""
+        state = self._state(criterion=42)
+        assert _delp_criterion_qualifier(state) == ""
+        finding = _delp_verdicts_finding(state)
+        assert finding is not None
+        assert "42" not in finding.statement
 
     def test_program_text_never_reaches_the_statement(self) -> None:
         """Privacy HARD: the sidecar is the #1702-scrubbed surface."""
-        finding = _delp_program_finding(self._state())
+        finding = _delp_verdicts_finding(self._state())
         assert finding is not None
         assert "claim_alpha <- claim_beta" not in finding.statement
         assert "<-" not in finding.statement
-
-    def test_no_criterion_yields_no_program_finding(self) -> None:
-        state = self._state(criterion="")
-        assert _delp_program_finding(state) is None
-
-    def test_malformed_criterion_yields_nothing(self) -> None:
-        state = self._state(criterion=42)
-        assert _delp_program_finding(state) is None
 
 
 class TestDelpVerdictsChannel:
@@ -316,7 +342,8 @@ class TestAllFourSitesTogether:
             lambda real: _write_adf_to_state(_ADF_OUTPUT, real, {}),
         )
         prompt = build_act3_prompt(build_act3_evidence(state))
-        assert "generalized_specificity" in prompt  # 1a — the criterion
+        assert "selon un critère de spécificité" in prompt  # 1a — folded in
+        assert "generalized_specificity" not in prompt  # ... never the raw token
         assert "garantie" in prompt  # 1b — the warranted verdict
         assert "pour acquis" in prompt  # 2 — the belief divergence
         assert "indécis" in prompt  # 3 — the three-valued undecided

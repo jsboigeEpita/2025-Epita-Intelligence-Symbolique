@@ -1378,23 +1378,27 @@ def _weighted_finding(state: Any) -> Optional[StructuredArgFinding]:
     )
 
 
-def _delp_program_finding(state: Any) -> Optional[StructuredArgFinding]:
-    """Project the defeasible PROGRAM and its comparison criterion (#2952 site 1a).
+# #2963 review (coordinator, c.6023555773) — the DeLP criterion is a
+# CONSTANT on the production path (nothing poses the leaf;
+# ``invoke_callables.py:5749`` reads the default), so a standalone projector
+# on it would print the same sentence on every run — a tally dressed as a
+# finding. It is folded below, as a qualifier that appears ONLY when the
+# verdicts do. The labels never echo the raw snake_case token.
+_DELP_CRITERION_QUALIFIERS = {
+    "generalized_specificity": "selon un critère de spécificité",
+    "specificity": "selon un critère de spécificité",
+    "weakness": "selon un critère de faiblesse",
+}
+_DELP_CRITERION_FALLBACK = "selon son critère de comparaison déclaré"
 
-    DeLP's sidecar (writer ``_write_delp_to_state``) preserves what the
-    dialectic reasoned OVER and HOW it compared arguments: the program
-    (``delp_arguments`` — the rule source), its size (``program_size``) and
-    the comparison ``criterion`` (e.g. ``generalized_specificity``). The
-    singular fact this projector names is the CRITERION — the rule that
-    governs every verdict the dialectic issues; a DeLP run without its
-    criterion is a tally, not a decision method. The program itself is
-    corpus-derived rule text (the exact surface #1702 opacifies at export)
-    and is NEVER echoed: only its size rides, as an amplitude qualifier.
 
-    Anti-#1667-pendule: a bare « DeLP a tourné sur N lignes » with no
-    criterion would be the « 1 résultat ABA » witness moved. The criterion
-    is mandatory; the size is a complement, not a substitute. Returns
-    ``None`` when no criterion leaf is populated (honest absence, #1019).
+def _delp_criterion_qualifier(state: Any) -> str:
+    """The comparison criterion as a prose qualifier (#2952 site 1a, folded).
+
+    Returns ``""`` when no criterion leaf is populated — the caller then
+    states the verdicts without qualifying the method. The raw criterion
+    token never reaches the prose: DeLP's sidecar is the surface #1702
+    opacifies, and a snake_case token is not a French qualifier.
     """
     criteria = [
         c
@@ -1402,24 +1406,16 @@ def _delp_program_finding(state: Any) -> Optional[StructuredArgFinding]:
         if isinstance(c, str) and c.strip()
     ]
     if not criteria:
-        return None
-    criterion = _truncate(criteria[0].strip(), _FORMALISM_NODE_CAP)
+        return ""
+    token = criteria[0].strip()
+    qualifier = _DELP_CRITERION_QUALIFIERS.get(token, _DELP_CRITERION_FALLBACK)
     sizes = [
         s
         for s in _iter_formalism_specific(state, "program_size")
         if isinstance(s, int) and s > 0
     ]
-    amplitude = f" sur un programme de {sizes[0]} lignes" if sizes else ""
-    return StructuredArgFinding(
-        capability="delp_reasoning",
-        label=_axis_label("delp_reasoning"),
-        statement=(
-            "le raisonnement défaisable tranche ses requêtes selon le critère "
-            f"de comparaison « {criterion} »{amplitude} — la force d'un "
-            "argument se mesure relativement à ce qui le conteste, pas dans "
-            "l'absolu"
-        ),
-    )
+    amplitude = f", sur un programme de {sizes[0]} lignes" if sizes else ""
+    return f"{qualifier}{amplitude}"
 
 
 def _delp_verdicts_finding(state: Any) -> Optional[StructuredArgFinding]:
@@ -1435,6 +1431,10 @@ def _delp_verdicts_finding(state: Any) -> Optional[StructuredArgFinding]:
     warranted and defeated queries (truncated atoms — the sidecar is the
     surface #1702 scrubs, privacy HARD) and counts the undecided remainder;
     ``message`` payloads never reach the prose (they carry handler diagnostics).
+
+    #2963 review: the comparison criterion (site 1a) rides here as a
+    QUALIFIER — it only appears when a verdict does, and it never prints the
+    raw token. Control: criterion alone (no YES, no NO) yields no finding.
 
     Returns ``None`` when nothing was decided (no YES and no NO): an all-
     UNDECIDED or empty run is an honest absence, never a fabricated verdict.
@@ -1493,15 +1493,17 @@ def _delp_verdicts_finding(state: Any) -> Optional[StructuredArgFinding]:
     total = len(warranted) + len(defeated) + len(undecided_atoms)
     if total > _DELP_VERDICT_CAP:
         over = f" (sur {total} requêtes)"
+    # #2963 — the comparison criterion (former site 1a) qualifies the verdicts
+    # instead of standing alone: alone it is a constant of the production path
+    # and would print the same sentence on every run.
+    qualifier = _delp_criterion_qualifier(state)
+    head = "la dialectique défaisable a tranché"
+    if qualifier:
+        head += f" {qualifier}"
     return StructuredArgFinding(
         capability="delp_reasoning",
         label=_axis_label("delp_reasoning"),
-        statement=(
-            "la dialectique défaisable a tranché : "
-            + " et ".join(parts)
-            + undecided
-            + over
-        ),
+        statement=(head + " : " + " et ".join(parts) + undecided + over),
     )
 
 
@@ -1845,12 +1847,11 @@ def _collect_structured_arg_findings(state: Any) -> List[StructuredArgFinding]:
         _aba_finding,
         _setaf_finding,
         _weighted_finding,
-        # #2952 — DeLP (sidecar 1a + native 1b), EAF (sidecar), ADF (native +
-        # #2063 provenance): the three axes whose writers were planted without
-        # a consumer. Same contract: one projector per site, ``None`` when the
-        # site's singular fact is absent, degraded ADF yields to the absence
-        # channel (#2844).
-        _delp_program_finding,
+        # #2952 — DeLP (native verdicts; the sidecar criterion rides as a
+        # qualifier, #2963), EAF (sidecar), ADF (native + #2063 provenance):
+        # the three axes whose writers were planted without a consumer. Same
+        # contract: one projector per site, ``None`` when the site's singular
+        # fact is absent, degraded ADF yields to the absence channel (#2844).
         _delp_verdicts_finding,
         _eaf_finding,
         _adf_finding,
