@@ -1425,6 +1425,36 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
             else:
                 who = "coup non référencé"
             seq_lines.append(f"  {_i}. {who} — {label} (offset {m.offset})")
+        # #2965 (Expected 3) — la lettre ne servait à rien : le fil disait
+        # « l'argument γ » sans qu'aucune ligne ne dise ce que γ DÉSIGNE, et le
+        # writer ne pouvait le joindre à aucune unité des blocs de mouvement
+        # qu'il reçoit pourtant. La légende porte le RÉFÉRENT, jamais l'id :
+        # #2896 (d) a banni l'id du fil narratif parce que le narrateur l'a
+        # recopié dans la prose (le run payé a imprimé « arg_40 tente de… »).
+        # Le texte tronqué donne au writer de quoi parler ; c'est la règle
+        # d'opacité — le référent voyage, l'identifiant ne s'imprime pas.
+        if _actor_letters:
+            _desc_by_id = {
+                a.arg_id: a.description
+                for mvt in evidence.movements
+                for a in mvt.arguments
+            }
+            seq_lines.append(
+                "  Légende des acteurs du fil (chaque lettre = un référent "
+                "distinct) :"
+            )
+            for _ref, _letter in _actor_letters.items():
+                _desc = _desc_by_id.get(_ref)
+                if _desc:
+                    # the SAME capped description the movement blocks carry, so
+                    # the writer re-links the thread to the beat it already read
+                    seq_lines.append(f"    • l'argument {_letter} : {_desc}")
+                else:
+                    seq_lines.append(
+                        f"    • le fil {_letter} : aucun argument identifié ne "
+                        "porte ce référent — décris le coup, ne lui prête pas "
+                        "de texte."
+                    )
         # #2848 — the truncation is SAID where it is read: k shown over N
         # anchored, covering a–b over the source's L characters.
         if len(_seq.moves) > len(_chosen_moves) and _chosen_moves:
