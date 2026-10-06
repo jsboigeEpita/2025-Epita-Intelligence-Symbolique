@@ -35,6 +35,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from .cited_units import (  # #2967: shared cited-unit budget + boundary cut
+    CITED_UNIT_TEXT_CAP,
+    cited_unit_ids,
+    truncate_at_boundary,
+)
 from .dung_reader import (  # #1908: one shared meaning for act2 and act3
     ACCEPTED_MEANS,
     EPISTEMIC_CAVEAT,
@@ -387,11 +392,12 @@ class Act2Result:
 
 
 def _truncate(text: Any, cap: int) -> str:
-    """Coerce to str and cap length (privacy + prompt budget)."""
-    if not text:
-        return ""
-    s = str(text).strip()
-    return s if len(s) <= cap else s[:cap].rstrip() + " […]"
+    """Coerce to str and cap length (privacy + prompt budget).
+
+    #2967 Expected 4: a cut lands on a boundary — sentence first, word as
+    fallback — never mid-word. The marker stays visible.
+    """
+    return truncate_at_boundary(text, cap)
 
 
 # Cap on how many attack relations we surface in the trace / prompt. The full
@@ -627,6 +633,11 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
             movements_by_key[key] = MovementEvidence(movement_id=mid, theme=key)
         return movements_by_key[key]
 
+    # #2967 — the budget is an ALLOCATION, not one global cap: a unit the
+    # writer is asked to discuss (attack target, counter target, governance
+    # winner) reaches it whole up to the cited budget; every other unit
+    # keeps the short cap, so the prompt does not grow with N.
+    cited = cited_unit_ids(state)
     for arg_id, desc in args.items():
         key = movement_key_by_arg[arg_id]
         mvt = _movement_for(key)
@@ -654,7 +665,10 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         mvt.arguments.append(
             ArgEvidence(
                 arg_id=str(arg_id),
-                description=_truncate(desc, _DESC_CAP),
+                description=_truncate(
+                    desc,
+                    CITED_UNIT_TEXT_CAP if arg_id in cited else _DESC_CAP,
+                ),
                 virtues=virtues,
                 quality_overall=q_overall,
                 quality_available=q_available,

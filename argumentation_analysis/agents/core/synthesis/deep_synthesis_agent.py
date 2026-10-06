@@ -23,6 +23,11 @@ from pydantic import PrivateAttr
 
 from ..abc.agent_bases import BaseAgent
 from ..semantic_setup import prompt_settings
+from argumentation_analysis.reporting.restitution.cited_units import (  # #2967
+    CITED_UNIT_TEXT_CAP,
+    cited_unit_ids,
+    truncate_at_boundary,
+)
 from .deep_synthesis_models import (
     ArgumentMapEntry,
     BeliefRetraction,
@@ -1236,14 +1241,26 @@ class DeepSynthesisAgent(BaseAgent):
         """Build the FB-18 'intelligence briefing' of verified artifacts.
 
         Every line is prefixed with its citation key ``[artifact:field.key]``
-        so the LLM can cite it verbatim. Raw discourse text is NEVER included
-        — only verified artifacts (privacy + grounding discipline).
+        so the LLM can cite it verbatim. ``identified_arguments`` lines carry
+        the units' discourse text, capped (#2967): a unit the writer is asked
+        to discuss gets its text whole up to the cited budget; every other
+        item keeps ``max_chars_per_item``, and every cut carries a visible
+        marker — no silent slices.
         """
         lines: List[str] = ["ARTIFACT BRIEFING (cite keys verbatim):"]
 
-        def _add(field_name: str, key: Any, summary: str) -> None:
-            summary = " ".join(str(summary).split())[:max_chars_per_item]
-            lines.append(f"[artifact:{field_name}.{key}] {summary}")
+        def _add(
+            field_name: str, key: Any, summary: str, cap: Optional[int] = None
+        ) -> None:
+            # #2967 Expected 3: the briefing's cut was a bare silent slice;
+            # it now cuts at a boundary with the same visible marker as the
+            # Act II plugin, and a cited item may carry a wider budget.
+            budget = max_chars_per_item if cap is None else cap
+            text = " ".join(str(summary).split())
+            lines.append(
+                f"[artifact:{field_name}.{key}] "
+                f"{truncate_at_boundary(text, budget)}"
+            )
 
         # #2850 §3.3: the per-field budget spends STRATIFIED over the text
         # (select_for_budget on the merged population), not on the first
@@ -1264,8 +1281,17 @@ class DeepSynthesisAgent(BaseAgent):
             _syn_args_selection = select_for_budget(
                 _syn_units, max_items_per_field, text_length=state_text_length(state)
             )
+            # #2967 — the budget is an allocation: a cited unit (attack
+            # target, counter target, governance winner) reaches the writer
+            # whole up to the cited budget; the others keep the short cap.
+            _cited = cited_unit_ids(state)
             for u in _syn_args_selection.selected:
-                _add("identified_arguments", u.unit_id, u.text)
+                _add(
+                    "identified_arguments",
+                    u.unit_id,
+                    u.text,
+                    cap=CITED_UNIT_TEXT_CAP if u.unit_id in _cited else None,
+                )
             if hasattr(state, "record_analysis_coverage"):
                 state.record_analysis_coverage(
                     "synthesis_args",
