@@ -49,6 +49,7 @@ from argumentation_analysis.core.llm_service import (
     REASONING_MODEL_PREFIXES as _REASONING_MODEL_PREFIXES,
 )
 from argumentation_analysis.services.llm_cache import LLMCacheMiss
+from argumentation_analysis.orchestration.kb_atom_renaming import rename_atoms_apart
 from argumentation_analysis.orchestration.selection import (
     SelectableUnit,
     merged_population_units,
@@ -7566,13 +7567,17 @@ async def _invoke_propositional_logic(
         if pl_translations:
             # #705: capture upstream NL-to-logic formulas; do NOT short-circuit
             # the 2-pass — they are unioned in after the robust generator runs.
-            upstream_formulas.extend(
-                t["formula"].strip() for t in pl_translations if t.get("formula")
-            )
+            # #2960: conjoin RENAMED formulas. Each translation's atom names
+            # only mean something inside its own ``variables`` map; the raw
+            # conjoin put two meanings under one ``p`` and produced a
+            # mechanical UNSAT the report pinned on the first formulas.
+            pl_renamed = rename_atoms_apart(pl_translations)
+            upstream_formulas.extend(f.strip() for f in pl_renamed if f)
             argument_mapping.update(
                 {
-                    t["formula"][:30]: t.get("original_text", "")[:60]
-                    for t in pl_translations
+                    f[:30]: t.get("original_text", "")[:60]
+                    for t, f in zip(pl_translations, pl_renamed)
+                    if f
                 }
             )
             pl_metrics["upstream_nl"] = len(upstream_formulas)
@@ -8075,9 +8080,12 @@ async def _invoke_fol_reasoning(
         if fol_translations:
             # #705: capture upstream NL-to-logic formulas; do NOT short-circuit
             # the 2-pass — they are unioned in after the robust generator runs.
-            for t in fol_translations:
+            # #2960: rename apart BEFORE splitting — every fragment of one
+            # translation shares its variables map, so the renaming applies
+            # per translation, not per fragment.
+            for f_renamed in rename_atoms_apart(fol_translations):
                 # FOL formulas may be semicolon-separated
-                for f in t["formula"].split(";"):
+                for f in f_renamed.split(";"):
                     f = f.strip()
                     if f and f not in upstream_formulas:
                         upstream_formulas.append(f)
@@ -8799,11 +8807,15 @@ async def _invoke_modal_logic(
     # atoms an existing KB already declared (MlParser rejects duplicates).
     nl_out = context.get("phase_nl_to_logic_output") or {}
     nl_translations = nl_out.get("translations", []) if isinstance(nl_out, dict) else []
-    nl_formulas = [
-        str(t["formula"])
+    # #2960: rename atoms apart BEFORE conjoining — the modal KB unions every
+    # valid translation regardless of logic_type, so a PL atom colliding with
+    # a modal atom matters here too. Same helper as the PL and FOL sites.
+    nl_valid = [
+        t
         for t in nl_translations
         if isinstance(t, dict) and t.get("is_valid") and t.get("formula")
     ]
+    nl_formulas = [f for f in rename_atoms_apart(nl_valid) if f]
 
     if nl_formulas:
         # Real-pipeline path (#1224): the modal KB comes from nl_to_logic.

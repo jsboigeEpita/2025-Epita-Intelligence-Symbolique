@@ -33,8 +33,11 @@ def _state() -> SimpleNamespace:
         dung_frameworks={},
         propositional_analysis_results=[],
         fol_analysis_results=[
-            {"consistent": False, "message": "incoherent",
-             "formulas": ["mortal(socrates)"]},
+            {
+                "consistent": False,
+                "message": "incoherent",
+                "formulas": ["mortal(socrates)", "!mortal(socrates)"],
+            },
         ],
         modal_analysis_results=[],
         workflow_results={},

@@ -141,11 +141,19 @@ class ConclusionSalience:
     surplus: SurplusAssessment
 
 
+_ELLIPSIS = " […]"
+
+
 def _truncate(text: Any, cap: int) -> str:
+    """Cap-respecting truncation: the marker is carved OUT of the budget,
+    never appended past it (#2960 — a conflict pair in the decisive
+    statement pushed an item past the cap the schema asserts)."""
     if not text:
         return ""
     s = str(text).strip()
-    return s if len(s) <= cap else s[:cap].rstrip() + " […]"
+    if len(s) <= cap:
+        return s
+    return s[: cap - len(_ELLIPSIS)].rstrip() + _ELLIPSIS
 
 
 def _fallacy_target_ids(state: Any) -> set:

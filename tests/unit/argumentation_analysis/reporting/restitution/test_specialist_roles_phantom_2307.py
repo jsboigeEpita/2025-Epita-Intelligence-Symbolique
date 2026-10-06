@@ -77,8 +77,16 @@ class TestContentlessRefutationIsNotDecisive:
 class TestRealRefutationStaysDecisive:
     def test_formulas_backed_refutation_is_decisive(self):
         # Non-vacuity: the classifier still knows a REAL refutation when it
-        # sees one — a false verdict over real formulas stays decisive.
-        state = _state([{"satisfiable": False, "formulas": ["mortal(socrates)"]}])
+        # sees one — #2960 sharpens "real" to a LOCALIZED conflict (the
+        # complementary ground-atom pair), and that stays decisive.
+        state = _state(
+            [
+                {
+                    "satisfiable": False,
+                    "formulas": ["mortal(socrates)", "!mortal(socrates)"],
+                }
+            ]
+        )
         roles = classify_specialist_roles(state)
         decisif = [r for r in roles if r.role == ROLE_DECISIF]
         assert decisif, "a content-backed refutation must stay decisive"
@@ -86,7 +94,14 @@ class TestRealRefutationStaysDecisive:
         assert "mortal" in decisif[0].statement.lower() or "«" in decisif[0].statement
 
     def test_real_refutation_still_reaches_the_surplus(self):
-        state = _state([{"satisfiable": False, "formulas": ["mortal(socrates)"]}])
+        state = _state(
+            [
+                {
+                    "satisfiable": False,
+                    "formulas": ["mortal(socrates)", "!mortal(socrates)"],
+                }
+            ]
+        )
         sal = cs.assess_conclusion_salience(state)
         decisif_formel = [
             s for s in sal.surplus.established if s.cites and "PL" in s.cites
