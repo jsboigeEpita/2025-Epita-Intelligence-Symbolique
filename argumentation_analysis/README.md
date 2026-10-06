@@ -26,7 +26,7 @@ Utilitaires racine : [`paths.py`](./paths.py) (chemins du projet),
 
 ## Structure des sous-répertoires documentés
 
-24 sous-répertoires portent un README (filiation vérifiée dans l'ordre enfant →
+25 sous-répertoires portent un README (filiation vérifiée dans l'ordre enfant →
 parent, Epic #2088). Les tableaux ci-dessous citent chaque enfant **depuis son
 README lu en entier** — jamais sur la foi de son nom.
 
@@ -103,4 +103,4 @@ mesurée :
 
 Le README précédent (65 lignes) racontait un modèle d'orchestration obsolète
 (pré-refonte #1962 et vagues ultérieures). Réécriture Epic #2088, après lecture
-des 24 READMEs enfants (ordre obligatoire feuilles → racine).
+des 25 READMEs enfants (ordre obligatoire feuilles → racine).
