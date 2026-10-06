@@ -164,8 +164,12 @@ class TestLlmEnrichQuality:
 
         assert result is None
 
-    async def test_llm_enrichment_caps_at_4_arguments(self):
-        """LLM enrichment only sends at most 4 arguments to the LLM."""
+    async def test_llm_enrichment_covers_the_whole_selection(self):
+        """#2959 — every evaluated unit goes to the LLM. The former [:4] cap
+        predates the budget-bounded stratified selection (#2850: raw_args IS
+        the selection, ≤8 by construction) and silently left half of it
+        without a narrative — an empty llm_assessment read as "the model had
+        nothing to say" about a unit it was never shown."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _llm_enrich_quality,
         )
@@ -187,7 +191,9 @@ class TestLlmEnrichQuality:
             }
             for i in range(1, 8)
         }
-        raw_args = [{"text": f"Argument {i}"} for i in range(1, 8)]
+        raw_args = [
+            {"unit_id": f"arg_{i}", "text": f"Argument {i}"} for i in range(1, 8)
+        ]
 
         with patch(
             "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
@@ -195,14 +201,13 @@ class TestLlmEnrichQuality:
         ):
             await _llm_enrich_quality(heuristic, raw_args)
 
-        # Verify the prompt only contains 4 arguments (cap)
         call_args = mock_client.chat.completions.create.call_args
         user_msg = call_args.kwargs["messages"][1]["content"]
-        # Count [arg_N] occurrences
+        # Count [arg_N] occurrences — all seven, none dropped silently
         import re
 
         arg_refs = re.findall(r"\[arg_\d+\]", user_msg)
-        assert len(arg_refs) <= 4
+        assert len(arg_refs) == 7
 
     async def test_llm_enrichment_uses_get_openai_client(self):
         """LLM enrichment uses the shared _get_openai_client helper."""
@@ -443,6 +448,104 @@ class TestLlmEnrichQualityWithFallacies:
 
         arg1 = result["per_argument_scores"]["arg_1"]
         assert "llm_assessment" not in arg1
+
+
+class TestLlmEnrichMatchesById2959:
+    """#2959 — the enrichment matches units BY ID, never by position.
+
+    #2850's stratified selection keys heuristic results by each unit's state
+    id, so ids and positions stopped coinciding: parsing ``arg_16`` as
+    position 16 sent another unit's text — or none at all — to the LLM
+    (measured on doc_A: every enriched unit read ``Text: ""``). These
+    witnesses assert on the PROMPT the fake client receives, not on the
+    returned narrative.
+    """
+
+    @staticmethod
+    def _client() -> AsyncMock:
+        mock_message = MagicMock()
+        mock_message.content = '{"enrichments": []}'
+        mock_choice = MagicMock()
+        mock_choice.message = mock_message
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+        return mock_client
+
+    @staticmethod
+    def _block(user_msg: str, uid: str) -> str:
+        """The unit's own prompt block: from its ``[uid]`` marker to the next."""
+        part = user_msg.split(f"[{uid}] score=", 1)[1]
+        return part.split("[arg_", 1)[0]
+
+    @staticmethod
+    def _scores() -> dict:
+        return {"note_finale": 5.0, "scores_par_vertu": {"clarity": 5.0}}
+
+    async def _prompt(self, heuristic: dict, raw_args: list) -> str:
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _llm_enrich_quality,
+        )
+
+        client = self._client()
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
+            return_value=(client, "gpt-5-mini"),
+        ):
+            await _llm_enrich_quality(heuristic, raw_args)
+        call_args = client.chat.completions.create.call_args
+        return call_args.kwargs["messages"][1]["content"]
+
+    async def test_out_of_range_ids_carry_their_own_text(self):
+        """Ids outside arg_1..n — the measured doc_A shape (arg_16, arg_23…)
+        where the positional read fell off the selection and sent ``Text: ""``:
+        each unit's OWN text must reach the prompt."""
+        ids_and_texts = [
+            ("arg_16", "TEXT_OF_UNIT_SIXTEEN"),
+            ("arg_23", "TEXT_OF_UNIT_TWENTY_THREE"),
+            ("arg_30", "TEXT_OF_UNIT_THIRTY"),
+            ("arg_45", "TEXT_OF_UNIT_FORTY_FIVE"),
+        ]
+        heuristic = {uid: self._scores() for uid, _ in ids_and_texts}
+        raw_args = [{"unit_id": uid, "text": text} for uid, text in ids_and_texts]
+        user_msg = await self._prompt(heuristic, raw_args)
+        for uid, text in ids_and_texts:
+            assert f"[{uid}] score=" in user_msg
+            assert text in self._block(user_msg, uid)
+
+    async def test_id_position_divergence_shows_no_foreign_text(self):
+        """arg_2 sitting at position 3: the positional read would show
+        position 2's text — the id's OWN text must be there instead, and the
+        foreign one absent from its block."""
+        heuristic = {"arg_2": self._scores()}
+        raw_args = [
+            {"unit_id": "arg_9", "text": "FOREIGN_TEXT_POSITION_ONE"},
+            {"unit_id": "arg_7", "text": "FOREIGN_TEXT_POSITION_TWO"},
+            {"unit_id": "arg_2", "text": "OWN_TEXT_OF_ARG_TWO"},
+        ]
+        user_msg = await self._prompt(heuristic, raw_args)
+        block = self._block(user_msg, "arg_2")
+        assert "OWN_TEXT_OF_ARG_TWO" in block
+        assert "FOREIGN_TEXT_POSITION_TWO" not in block
+
+    async def test_unknown_id_is_skipped_not_mismatched(self):
+        """An id with no unit in the selection yields NO block at all — the
+        old code fabricated one (``Text: ""``) from a positional read."""
+        heuristic = {"arg_40": self._scores(), "arg_16": self._scores()}
+        raw_args = [{"unit_id": "arg_16", "text": "TEXT_OF_UNIT_SIXTEEN"}]
+        user_msg = await self._prompt(heuristic, raw_args)
+        assert "[arg_40]" not in user_msg
+        assert "[arg_16] score=" in user_msg
+
+    async def test_stateless_units_still_mint_positional_ids(self):
+        """The stateless fallback (units carrying no unit_id) still answers
+        to arg_{i+1} — same minting as _eval_unit, so the id-based matching
+        follows it there instead of breaking the fallback lane."""
+        heuristic = {"arg_1": self._scores()}
+        raw_args = [{"text": "STATELESS_TEXT"}]
+        user_msg = await self._prompt(heuristic, raw_args)
+        assert "STATELESS_TEXT" in self._block(user_msg, "arg_1")
 
 
 class TestQualityStateWriterLlmAssessment:

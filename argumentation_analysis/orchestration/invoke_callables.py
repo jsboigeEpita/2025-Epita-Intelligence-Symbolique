@@ -997,19 +997,37 @@ async def _llm_enrich_quality(
         if not client:
             return None
 
-        # Build summary of heuristic scores for LLM context
+        # #2959 — match units BY ID, never by position: heuristic results are
+        # keyed by each unit's state id (the writer's key, #2850), and the
+        # stratified selection makes ids and positions diverge — parsing
+        # arg_16 as position 16 sent another unit's text, or none at all
+        # (measured on doc_A: every enriched unit read ``Text: ""``). The
+        # minting mirrors _eval_unit exactly, so a stateless unit (no
+        # unit_id) still answers to its arg_{i+1}.
+        units_by_id: Dict[str, Any] = {}
+        for i, unit in enumerate(raw_args):
+            if isinstance(unit, dict):
+                unit_id = str(unit.get("unit_id") or f"arg_{i+1}")
+            else:
+                unit_id = f"arg_{i+1}"
+                unit = {"text": str(unit)}
+            units_by_id[unit_id] = unit
+
+        # Build summary of heuristic scores for LLM context. The whole
+        # selection goes in (≤8 by construction, #2850): the former [:4]
+        # cap predates the budget-bounded selection and left half of it —
+        # unrecorded — without a narrative.
         score_summary = []
-        for arg_id, scores in list(heuristic_results.items())[:4]:
+        for arg_id, scores in heuristic_results.items():
             if not isinstance(scores, dict):
+                continue
+            unit = units_by_id.get(arg_id)
+            if unit is None:
+                # Unknown id: no text to show — never another unit's.
                 continue
             virtues = scores.get("scores_par_vertu", {})
             note = scores.get("note_finale", 0)
-            # Find the corresponding argument text
-            idx = int(arg_id.split("_")[-1]) - 1 if "_" in arg_id else 0
-            arg_text = ""
-            if idx < len(raw_args):
-                a = raw_args[idx]
-                arg_text = a.get("text", str(a)) if isinstance(a, dict) else str(a)
+            arg_text = unit.get("text", str(unit))
             weakest = min(virtues, key=virtues.get) if virtues else "unknown"
             penalty_info = ""
             fallacy_penalty = scores.get("fallacy_penalty", {})
