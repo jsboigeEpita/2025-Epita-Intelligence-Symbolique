@@ -65,6 +65,11 @@ from .native_dung import (  # #1912: single shared decoder — see native_dung.p
     decode_native_dung,
 )
 from .conclusion_salience import ConclusionSalience, assess_conclusion_salience
+from .cited_units import (  # #2965 (Acte III slice) — same budget as Act II
+    CITED_UNIT_TEXT_CAP,
+    cited_unit_ids,
+    truncate_at_boundary,
+)
 from .fr_accord import accord
 from .global_projection import GlobalFinding, project_global_findings
 from .llm_weaving import LlmCallable, WeaveOutcome, weave
@@ -93,8 +98,9 @@ _DEBATE_MAX_EXCHANGES = 4
 _META_CAP = 160
 # Epic #1258 / Track 4 #1262 — real claim excerpts for the reader-oriented
 # conclusion. A reader re-links the verdict to the discourse from a few claims,
-# not all; each is truncated (privacy HARD + prompt budget).
-_CLAIM_EXCERPT_CAP = 240
+# not all. The per-text cap is #2974's CITED_UNIT_TEXT_CAP (imported above):
+# the old 240-char cut kept 31 % of the governance winner (#2965); only the
+# count of excerpts stays a local constant.
 _MAX_CLAIM_EXCERPTS = 5
 # #1605 — the honest-absence ledger entering the prompt. The reason strings are
 # code-authored (no corpus content), but they are capped like everything else so
@@ -463,12 +469,22 @@ class Act3Evidence:
     # Epic #1258 / Track 1 #1259 — when True, build_act3_prompt DROPS the
     # opaque-ID directive so the readable conclusion names the real stakes.
     deanonymized: bool = True
-    # Epic #1258 / Track 4 #1262 — real (truncated) claim text from
-    # ``state.identified_arguments``. The prior evidence only carried ``arg_N``
-    # IDs + counts, so the conclusion could not cite what was actually said.
-    # Reader-oriented conclusion needs the real claim excerpts to let a reader
-    # re-link the verdict to the discourse. Privacy: truncated via _truncate.
-    claim_excerpts: List[str] = field(default_factory=list)
+    # Epic #1258 / Track 4 #1262, re-keyed by #2965 (Acte III slice) — real
+    # claim text from ``state.identified_arguments``, as ``(unit_id, capped
+    # text)`` pairs. The prior contract was the first N texts in insertion
+    # order: on the measured run, the 14 units Act III cites were none of
+    # them (issue #2965). The selection now follows the citations — see
+    # ``build_act3_evidence`` — and each text is capped by
+    # ``CITED_UNIT_TEXT_CAP`` (#2974's allocation), not the 240-char excerpt
+    # cut that kept 31 % of the governance winner.
+    claim_excerpts: List[Tuple[str, str]] = field(default_factory=list)
+    # #2965 (Acte III slice) — the governance winner's own text, capped.
+    # The writer does not join an id to its unit across a long prompt
+    # (measured on the saved state: wrong unit 4 of 5 samples, R1071), so
+    # the governance line carries the referent itself. Empty when the
+    # winner has no joinable text — the line then keeps its role-only
+    # wording (honest absence, not a fabricated description).
+    governance_winner_text: str = ""
     # #1605 — dimensions the run did NOT genuinely evaluate, read from
     # ``state.structured_arg_status``. Empty on a healthy run. Non-empty here is
     # not a defect of the pipeline: it is the one thing the conclusion was
@@ -2090,15 +2106,53 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
     verdict = _compute_verdict_band(axes_nontrivial)
     virtuous_mode = detect_virtuous_mode(state)
 
-    # Epic #1258 / Track 4 #1262 — real claim excerpts (truncated) so the
-    # reader-oriented conclusion can cite what was actually said. ``args``
-    # values are the claim text strings ({"arg_1": "thèse", ...}). Cap the
-    # count (a reader re-links from a few, not all) and each length (privacy).
-    claim_excerpts: List[str] = [
-        _truncate(v, _CLAIM_EXCERPT_CAP)
-        for v in list(args.values())[:_MAX_CLAIM_EXCERPTS]
-        if _truncate(v, _CLAIM_EXCERPT_CAP)
+    # #2965 (Acte III slice) — the excerpts follow the citations, not the
+    # dict head. On the measured run Act III cited 14 units (governance
+    # winner, ranked salience, weak-point and counter targets) and received
+    # the text of none of them: its only five excerpts were the first five
+    # units in insertion order, the opening of the document, which it cites
+    # nowhere. Order here is salience order — the winner first (it is what
+    # the conclusion presents as the discourse's answer), then the
+    # ranked-salience anchors, then the remaining citation populations from
+    # ``cited_unit_ids`` (#2974: fallacy targets, counter targets, winner).
+    # Each text is capped by ``CITED_UNIT_TEXT_CAP`` — the same budget Act
+    # II allocates to the units it asks its writer to discuss.
+    cited_args: List[str] = []
+
+    def _cite(unit_id: Any) -> None:
+        u = str(unit_id or "").strip()
+        if u and u in args and u not in cited_args:
+            cited_args.append(u)
+
+    if governance_verdict is not None:
+        _cite(governance_verdict.winner)
+    if salience is not None:
+        for item in salience.ranked:
+            for anchor in item.cites:
+                _cite(anchor)
+    for unit_id in sorted(cited_unit_ids(state)):
+        _cite(unit_id)
+    selected_args = cited_args[:_MAX_CLAIM_EXCERPTS]
+    # The dict head fills only budget the citations leave unused — a state
+    # that cites fewer than the cap still hands the reader a few claims.
+    for unit_id in list(args)[:_MAX_CLAIM_EXCERPTS]:
+        if len(selected_args) >= _MAX_CLAIM_EXCERPTS:
+            break
+        if unit_id not in selected_args:
+            selected_args.append(unit_id)
+    claim_excerpts: List[Tuple[str, str]] = [
+        (u, truncate_at_boundary(args[u], CITED_UNIT_TEXT_CAP))
+        for u in selected_args
+        if str(args[u] or "").strip()
     ]
+
+    # #2965 (Acte III slice) — the winner's referent travels on the
+    # governance line itself; see the field's comment.
+    governance_winner_text = ""
+    if governance_verdict is not None and governance_verdict.winner in args:
+        governance_winner_text = truncate_at_boundary(
+            args[governance_verdict.winner], CITED_UNIT_TEXT_CAP
+        )
 
     return Act3Evidence(
         args_total=args_total,
@@ -2115,6 +2169,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         debate_exchanges=debate_exchanges,
         deanonymized=bool(getattr(state, "deanonymized", True)),
         claim_excerpts=claim_excerpts,
+        governance_winner_text=governance_winner_text,
         absent_dimensions=_collect_absent_dimensions(state),
         structured_findings=structured,
         global_findings=global_findings,
@@ -2351,13 +2406,17 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         or "  (aucun point faible structurel localisé)"
     )
 
-    # Epic #1258 / Track 4 #1262 — real claim text so a reader can re-link the
-    # verdict to what was actually said. Truncated (privacy) + capped (a reader
-    # re-links from a few, not all). Empty when no arguments were extracted.
+    # Epic #1258 / Track 4 #1262, re-keyed by #2965 — real claim text so a
+    # reader can re-link the verdict to what was actually said. Each line is
+    # keyed by its opaque id: the weaknesses and counter blocks above cite
+    # those same ids, and the join is local (a few lines apart), which the
+    # measured run showed the writer does make. The texts arrive already
+    # capped at ``CITED_UNIT_TEXT_CAP`` — re-cutting them here would
+    # reintroduce the 240-char cut that kept 31 % of the winner.
     if evidence.claim_excerpts:
         claims_block = "\n".join(
-            f"  - {_truncate(c, _CLAIM_EXCERPT_CAP)}"
-            for c in evidence.claim_excerpts[:_MAX_CLAIM_EXCERPTS]
+            f"  - {unit_id} : {text}"
+            for unit_id, text in evidence.claim_excerpts[:_MAX_CLAIM_EXCERPTS]
         )
     else:
         claims_block = "  (aucune revendication extraite — G1 non passé)"
@@ -2376,13 +2435,27 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
     deliberation_lines: List[str] = []
     gv = evidence.governance_verdict
     if gv is not None:
-        deliberation_lines.append(
-            f"  - GOUVERNANCE : sous la méthode interne « {gv.method} », l'option "
-            f"d'identifiant interne « {gv.winner} » sort gagnante du vote "
-            "social-choice. DÉCRIS-la par son rôle dans la prose (p.ex. "
-            "« l'argument arrivé en tête »), ne recopie PAS l'identifiant "
-            "technique brut ni le nom de méthode snake_case. (options opaques, FB-34.)"
-        )
+        if evidence.governance_winner_text:
+            # #2965 (Acte III slice) — the line carries the winner's referent
+            # itself: the writer does not join an id to its unit across a
+            # long prompt (measured, R1071), so the text travels on the line
+            # and the id stays unprinted.
+            deliberation_lines.append(
+                f"  - GOUVERNANCE : sous la méthode interne « {gv.method} », "
+                "l'argument arrivé en tête du vote social-choice est celui "
+                f"qui dit : « {evidence.governance_winner_text} ». Présente-"
+                "le par ce qu'il dit (paraphrase fidèle), ne recopie NI un "
+                "identifiant technique brut NI le nom de méthode snake_case. "
+                "(options opaques, FB-34.)"
+            )
+        else:
+            deliberation_lines.append(
+                f"  - GOUVERNANCE : sous la méthode interne « {gv.method} », l'option "
+                f"d'identifiant interne « {gv.winner} » sort gagnante du vote "
+                "social-choice. DÉCRIS-la par son rôle dans la prose (p.ex. "
+                "« l'argument arrivé en tête »), ne recopie PAS l'identifiant "
+                "technique brut ni le nom de méthode snake_case. (options opaques, FB-34.)"
+            )
     if evidence.debate_exchanges:
         for i, ex in enumerate(evidence.debate_exchanges, start=1):
             scheme_anchor = ""

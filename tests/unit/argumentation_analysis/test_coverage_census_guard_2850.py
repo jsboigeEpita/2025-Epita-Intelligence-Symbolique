@@ -1324,7 +1324,20 @@ REGISTRY = {
         1,
     ): (
         "population_cap",
-        "first _MAX_CLAIM_EXCERPTS in insertion order; rest unanalysed",
+        "the dict head fills only excerpt budget the citations leave "
+        "unused (#2965); cited units always come first",
+        "silent on the unfilled remainder — debt #2850",
+    ),
+    (
+        "argumentation_analysis/reporting/restitution/act3_conclusion_plugin.py",
+        "cited_args",
+        "_MAX_CLAIM_EXCERPTS",
+        1,
+    ): (
+        "population_cap",
+        "the claims block is bounded at the _MAX_CLAIM_EXCERPTS most-cited "
+        "units (winner, salience, targets — #2965); citations beyond the "
+        "bound are unexcerpted",
         "silent — debt #2850",
     ),
     ("argumentation_analysis/reporting/summary_generator.py", "argument", "50", 1): (

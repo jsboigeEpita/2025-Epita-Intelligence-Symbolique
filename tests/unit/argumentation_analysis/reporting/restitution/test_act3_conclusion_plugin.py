@@ -205,12 +205,16 @@ class TestBuildEvidence:
     def test_claim_excerpts_carry_real_text(self):
         """#1262 — the reader-oriented conclusion must cite what was said:
         Act3Evidence carries the real (truncated) claim text, not just arg_N
-        counts. _rich_state has 2 identified_arguments → 2 excerpts."""
+        counts. _rich_state has 2 identified_arguments → 2 excerpts.
+        #2965: each excerpt is an (opaque id, capped text) pair, keyed for
+        the local join with the weaknesses/counter blocks."""
         ev = build_act3_evidence(_rich_state())
         assert len(ev.claim_excerpts) == 2
-        # Real claim text present (not opaque IDs).
-        assert "disqualifie" in ev.claim_excerpts[0]
-        assert "causal" in ev.claim_excerpts[1]
+        # Real claim text present (not opaque IDs), keyed by its id.
+        assert ev.claim_excerpts[0][0] == "arg_1"
+        assert "disqualifie" in ev.claim_excerpts[0][1]
+        assert ev.claim_excerpts[1][0] == "arg_2"
+        assert "causal" in ev.claim_excerpts[1][1]
 
     def test_claim_excerpts_empty_when_no_arguments(self):
         """#1262 — honest absence: no arguments extracted → empty excerpts
