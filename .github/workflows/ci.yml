@@ -255,7 +255,7 @@ jobs:
           # Glob the 6 substantive files explicitly so the 6 empty shells do
           # not bloat the argv and so a future empty stub cannot sneak into a
           # lane named after it.
-          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ tests/integration/triage/ tests/integration/argumentation_analysis/ tests/agents/ tests/test_fact_checking_integration.py tests/test_integration_success_validation.py tests/test_orchestration_integration.py tests/test_readme_quickstart.py tests/test_regression_golden.py -m "not slow and not requires_api" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
+          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ tests/integration/triage/ tests/integration/argumentation_analysis/ tests/agents/ tests/test_fact_checking_integration.py tests/test_integration_success_validation.py tests/test_orchestration_integration.py tests/test_readme_quickstart.py tests/test_regression_golden.py tests/integration/jpype_tweety/ tests/integration/logical_agents/ tests/soutenance/ tests/integration/test_1796_adf_eaf_decide.py tests/integration/test_api_connectivity.py tests/integration/test_authenticite_finale_gpt4o.py tests/integration/test_cluedo_extended_workflow_recovered1.py tests/integration/test_fol_pipeline_integration.py tests/integration/test_growth_hook_corpus_a_597.py tests/integration/test_invoke_modal_logic_reaches_solver.py tests/integration/test_logic_agents_integration.py tests/integration/test_mace4_real.py tests/integration/test_orchestration_finale_integration.py tests/integration/test_sherlock_watson_demo_integration.py tests/integration/test_test_runner_integration.py tests/integration/test_unified_investigation.py tests/integration/test_unified_system_integration.py -m "not slow and not requires_api" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
           #
           # #1867 (d), user decision 2026-09-28: tests/agents/ admitted. Measured on
           # ai-01 under the gate filter: 143 passed, 0 skipped, 3 deselected in 117 s
@@ -279,6 +279,26 @@ jobs:
           # the named predicate _names_a_correct_diagnosis, R1066
           # arbitration), so the gate count goes 331 -> 332 under the gate
           # filter (283 + 49), re-measured in collect-only on this head.
+          #
+          # #1783 (user decision 2026-10-06, option (a)): the four offline
+          # families po-2025 measured on 2026-09-29 (c.6009196083) are
+          # admitted — tests/integration/jpype_tweety/, logical_agents/,
+          # tests/soutenance/ as directories, and the integration root files
+          # one by one (a directory path would also sweep in webapp/, which
+          # stays out). 14 files measured at the root (the decision text said
+          # 13; the glob and the 2026-10-02 census both count 14). Measured
+          # on this head under the gate filter: +78 collected, +75 selected
+          # (39 passed + 5 skipped + 1 xfail across the 12 root files that
+          # collect, + 30 passed in the three directories), 3 deselected, 0
+          # failed, 0 network egress, ~67 s. The memory-threshold test that
+          # kept the root out on 2026-10-04
+          # (test_memory_usage_comparison, assert overhead < 450 %, red at
+          # 879 % on po-2025 on 2026-10-02) PASSES on this head — it is in
+          # the run above; the 2026-08 900 s timeout test
+          # (test_memory_efficiency_integration) also passes in the same run.
+          # Six root files collect 0 tests under any -m (module-level skips);
+          # they are named anyway so the root is enumerated whole — a future
+          # offline test added there enters the gate without an argv change.
 
       - name: Generate test summary
         if: always()
