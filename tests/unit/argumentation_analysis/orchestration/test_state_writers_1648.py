@@ -648,27 +648,31 @@ class TestSocialFlattening1648:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# EAF — epistemic beliefs dropped (Section 1.1 #6)
+# EAF — the Wave-2 sidecar was retired (#2952): no consumer ever read it
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 class TestEafFlattening1648:
-    """EAF writer carries per-agent epistemic beliefs via the sidecar (Wave-2 site 4).
+    """EAF writer projects the native graph and attaches NO sidecar (#2952).
 
-    The handler returns ``output["epistemic_beliefs"]`` as
-    ``Dict[agent_name, List[arg_name]]`` at ``eaf_handler.py:118``. The writer
-    at ``state_writers.py:1432-1480`` projects the binary attack graph
-    (preserved) and attaches the dropped belief map to the strictly additive
-    ``formalism_specific`` sidecar.
+    The #1648 Wave-2 site-4 sidecar (``epistemic_beliefs``) was retired: the
+    #2952 census found no consumer that regretted it — the invoke side
+    carries the beliefs as handler *input*, sanitize was pure transport,
+    and the promised downstream reader never came. The witness pins the
+    retirement: the handler output may still carry ``epistemic_beliefs``
+    (the producer is untouched), and the state entry must NOT grow a
+    ``formalism_specific`` sidecar from it.
     """
 
-    def test_eaf_writer_preserves_epistemic_beliefs(self) -> None:
+    def test_eaf_writer_projects_native_graph_without_sidecar(self) -> None:
         state = _new_state()
         output = {
             "semantics": "grounded",
             "arguments": ["a", "b"],
             "attacks": [["a", "b"]],
             "extensions": [["a"]],
+            # The handler still returns the beliefs (#2952 retired the
+            # *state write*, not the producer output).
             "epistemic_beliefs": {"agent1": ["a"], "agent2": ["b"]},
         }
 
@@ -677,74 +681,28 @@ class TestEafFlattening1648:
         entry = next(iter(state.dung_frameworks.values()))
         # Binary Dung projection untouched: attacks carry [src, tgt] pairs.
         assert entry["attacks"] == [["a", "b"]], entry["attacks"]
-        # Sidecar carries the per-agent beliefs.
-        sidecar = entry.get("formalism_specific", {})
-        assert sidecar.get("epistemic_beliefs") == {
-            "agent1": ["a"],
-            "agent2": ["b"],
-        }, sidecar
-
-    def test_eaf_writer_omits_sidecar_when_beliefs_empty(self) -> None:
-        """Empty beliefs ⇒ no ``formalism_specific`` key (no phantom sidecar)."""
-        state = _new_state()
-        output = {
-            "semantics": "grounded",
-            "arguments": ["a", "b"],
-            "attacks": [["a", "b"]],
-            "extensions": [["a"]],
-            "epistemic_beliefs": {},
-        }
-
-        _write_eaf_to_state(output, state, {})
-
-        entry = next(iter(state.dung_frameworks.values()))
+        assert entry["extensions"] == {"eaf_extensions": [["a"]]}, entry["extensions"]
+        # The retired sidecar must not come back.
         assert "formalism_specific" not in entry, entry
-
-    def test_eaf_writer_drops_malformed_belief_entries(self) -> None:
-        """Defensive: malformed entries are dropped, well-formed ones pass."""
-        state = _new_state()
-        output = {
-            "semantics": "grounded",
-            "arguments": ["a", "b", "c"],
-            "attacks": [["a", "b"]],
-            "extensions": [],
-            "epistemic_beliefs": {
-                "agent1": ["a", "b"],  # OK
-                "agent2": "not a list",  # malformed: value not a list
-                "agent3": ["c", 42, None],  # mixed: keep strings, drop non-strings
-            },
-        }
-
-        _write_eaf_to_state(output, state, {})
-
-        entry = next(iter(state.dung_frameworks.values()))
-        sidecar = entry.get("formalism_specific", {})
-        assert sidecar.get("epistemic_beliefs") == {
-            "agent1": ["a", "b"],
-            "agent3": ["c"],
-        }, sidecar
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DeLP — whole formalism flattened away (Section 2.4)
+# DeLP — the Wave-2 sidecar was retired (#2952); native entry remains
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 class TestDelpFlattening1648:
-    """DeLP writer carries the defeasible program + criterion via the sidecar (Wave-2 site 5).
+    """DeLP writer keeps the native query-verdict entry, NO sidecar (#2952).
 
-    The handler returns ``output["program"]`` (the rule source),
-    ``output["program_size"]`` and ``output["criterion"]`` (e.g.
-    ``generalized_specificity``) at ``delp_handler.py:149-157``. The writer
-    at ``state_writers.py:_write_delp_to_state`` keeps the query verdicts in
-    ``extensions`` (preserved) and attaches the dropped program + criterion
-    to the strictly additive ``formalism_specific`` sidecar. This was the
-    deepest flattening in the inventory (Section 2.4): the whole formalism
-    reduced to YES/NO/UNDECIDED verdicts. The xfail marker from #1672 R767
-    is removed (the strict-XPASS is the signal the Wave-2 fix landed).
+    The #1648 Wave-2 site-5 sidecar (``delp_arguments``/``program_size``/
+    ``criterion``) was retired with its sanitize transport rows: no
+    consumer ever read them (the restitution names ``delp_query_results``
+    as excluded; generic extension readers reject the shapes). The native
+    ``delp_analysis`` entry stays — retiring *it* would orphan the DeLP
+    phase, which is the coordinator's call, not this retirement's.
     """
 
-    def test_delp_writer_preserves_program_and_criterion(self) -> None:
+    def test_delp_writer_keeps_native_entry_without_sidecar(self) -> None:
         state = _new_state()
         output = {
             "program": "birds <- penguin\nflies <- birds",
@@ -765,52 +723,9 @@ class TestDelpFlattening1648:
         assert entry["extensions"] == {
             "delp_query_results": output["query_results"]
         }, entry["extensions"]
-        # Sidecar carries the program + criterion the writer used to drop.
-        sidecar = entry.get("formalism_specific", {})
-        assert sidecar.get("delp_arguments") == output["program"], sidecar
-        assert sidecar.get("program_size") == 2, sidecar
-        assert sidecar.get("criterion") == "generalized_specificity", sidecar
-
-    def test_delp_writer_omits_sidecar_when_program_and_criterion_absent(
-        self,
-    ) -> None:
-        """No program AND no criterion ⇒ no ``formalism_specific`` key."""
-        state = _new_state()
-        output = {
-            "program": "",
-            "query_results": [],
-        }
-
-        _write_delp_to_state(output, state, {})
-
-        entry = next(iter(state.dung_frameworks.values()))
+        # The retired sidecar must not come back, even with program and
+        # criterion present in the handler output.
         assert "formalism_specific" not in entry, entry
-
-    def test_delp_writer_carries_partial_output_without_phantom_keys(
-        self,
-    ) -> None:
-        """Program present but criterion absent ⇒ no phantom ``criterion`` key.
-
-        Anti-#1019: each sidecar field is carried independently so partial
-        handler output never synthesises a ``None``/empty placeholder that a
-        reader would mistake for a real (empty) value.
-        """
-        state = _new_state()
-        output = {
-            "program": "a <- b",
-            "program_size": 1,
-            # criterion intentionally absent
-            "query_results": [],
-        }
-
-        _write_delp_to_state(output, state, {})
-
-        entry = next(iter(state.dung_frameworks.values()))
-        sidecar = entry.get("formalism_specific", {})
-        assert sidecar.get("delp_arguments") == "a <- b", sidecar
-        assert sidecar.get("program_size") == 1, sidecar
-        # No phantom criterion key synthesised from absence.
-        assert "criterion" not in sidecar, sidecar
 
 
 # ─────────────────────────────────────────────────────────────────────────────

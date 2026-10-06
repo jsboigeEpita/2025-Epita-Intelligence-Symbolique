@@ -12,9 +12,12 @@ weight distribution, extension sizes) are unaffected.
 The leaf shapes mirror the real ``_write_*_to_state`` sites exactly (measured at
 each producer — the anti-pendule of #1702): ABA ``contraries`` (Dict[atom,atom]),
 SetAF ``set_attacks`` (List[{attackers,target}]), Weighted ``attack_weights``
-(List[{source,target,weight}]) + ``weight_statistics``, EAF ``epistemic_beliefs``
-(Dict[agent,List[atom]]), DeLP ``delp_arguments`` + ``program_size`` +
-``criterion``. Opaque synthetic atoms only (privacy HARD — no corpus text).
+(List[{source,target,weight}]) + ``weight_statistics``. The EAF
+(``epistemic_beliefs``) and DeLP (``delp_arguments``/``program_size``/
+``criterion``) sidecars were retired in #2952 — no consumer ever read them —
+and their spec rows went with the writers; this file keeps one pass-through
+witness asserting a stale pre-retirement state rides along untouched. Opaque
+synthetic atoms only (privacy HARD — no corpus text).
 """
 
 from __future__ import annotations
@@ -112,31 +115,27 @@ class TestFormalismSpecificNominativeLeavesOpacified:
         assert "claim_" not in aw[0]["source"]
         assert "claim_" not in aw[0]["target"]
 
-    def test_epistemic_beliefs_keys_and_values_opacified(self) -> None:
-        # EAF: Dict[agent, List[atom]] — agent names + belief atoms both nominative.
+    def test_retired_eaf_and_delp_sidecar_keys_pass_through_opacified(self) -> None:
+        """#2952: the EAF/DeLP sidecars are retired — no writer produces them
+        and their spec rows are gone. A stale state (written before the
+        retirement) carrying the retired keys must not crash the scrubber:
+        the unknown keys ride along untouched (pass-through by absence from
+        the spec table), which is safe because nothing downstream reads them.
+        """
         out = sanitize_state(
-            _entry({"epistemic_beliefs": {"agent_one": ["claim_alpha", "claim_beta"]}})
+            _entry(
+                {
+                    "epistemic_beliefs": {"agent_one": ["claim_alpha"]},
+                    "delp_arguments": ["claim_alpha <- claim_beta"],
+                }
+            )
         )
-        eb = out["dung_frameworks"]["dung_1"]["formalism_specific"]["epistemic_beliefs"]
-        assert len(eb) == 1  # agent count preserved
-        only_args = next(iter(eb.values()))
-        assert len(only_args) == 2  # belief arity preserved
-        assert all("claim_" not in a for a in only_args)
-        assert all("agent_" not in k for k in eb.keys())
-
-    def test_delp_arguments_opacified_as_atom_list(self) -> None:
-        # DeLP: the defeasible program — a source-derived string OR list of them.
-        out = sanitize_state(_entry({"delp_arguments": ["claim_alpha <- claim_beta"]}))
-        da = out["dung_frameworks"]["dung_1"]["formalism_specific"]["delp_arguments"]
-        assert isinstance(da, list) and len(da) == 1  # topology preserved
-        assert "claim_" not in da[0]
-
-    def test_delp_arguments_opacified_as_bare_string(self) -> None:
-        # The DeLP handler may emit the program as a single rule string.
-        out = sanitize_state(_entry({"delp_arguments": "claim_alpha <- claim_beta"}))
-        da = out["dung_frameworks"]["dung_1"]["formalism_specific"]["delp_arguments"]
-        assert isinstance(da, str)
-        assert "claim_" not in da
+        side = out["dung_frameworks"]["dung_1"]["formalism_specific"]
+        # Pass-through: present (not crashed, not dropped) and untouched —
+        # the retirement lives at the writer, the scrubber no longer names
+        # these leaves.
+        assert side.get("epistemic_beliefs") == {"agent_one": ["claim_alpha"]}
+        assert side.get("delp_arguments") == ["claim_alpha <- claim_beta"]
 
 
 class TestFormalismSpecificClosedVocabAndNumericSurvive:
@@ -161,7 +160,11 @@ class TestFormalismSpecificClosedVocabAndNumericSurvive:
         ]
         assert stats == {"min_weight": 0.1, "max_weight": 0.9, "avg_weight": 0.5}
 
-    def test_program_size_and_criterion_survive(self) -> None:
+    def test_retired_closed_vocab_and_numeric_leaves_ride_along(self) -> None:
+        """#2952: ``program_size``/``criterion`` belonged to the retired DeLP
+        sidecar. In a stale pre-retirement state they simply ride along with
+        the rest of the retired sidecar (pass-through), while the surviving
+        ``weight_statistics`` keeps its explicit survive contract below."""
         out = sanitize_state(
             _entry(
                 {
@@ -172,8 +175,8 @@ class TestFormalismSpecificClosedVocabAndNumericSurvive:
             )
         )
         side = out["dung_frameworks"]["dung_1"]["formalism_specific"]
-        assert side["program_size"] == 7  # int untouched
-        assert side["criterion"] == "generalized_specificity"  # closed vocab untouched
+        assert side["program_size"] == 7
+        assert side["criterion"] == "generalized_specificity"
 
 
 class TestFormalismSpecificAbsentOrNonDictIsSafe:

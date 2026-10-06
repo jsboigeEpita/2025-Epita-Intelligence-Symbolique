@@ -1845,92 +1845,48 @@ def _write_social_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None
 def _write_eaf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write EAF results to UnifiedAnalysisState (#88).
 
-    #1648 Wave-2 site 4: EAF's distinctive piece of data is the
-    *per-agent epistemic beliefs* dict (``Dict[agent_name, List[arg_name]]``)
-    that the handler computes at ``eaf_handler.py:118`` and the writer
-    used to drop on the floor. The native Dung projection carries the
-    binary attack graph but has no slot for the multi-agent belief map,
-    so we attach a strictly-additive ``formalism_specific`` sidecar to
-    the entry dict without touching the ``attacks`` / ``extensions`` /
-    ``arguments`` projections. The 12 readers of ``dung_frameworks``
-    (pattern_mining, deep_synthesis_agent, act2/3 restitution,
-    visualization, …) are not migrated: a downstream reader that wants
-    the per-agent beliefs reads
-    ``entry["formalism_specific"]["epistemic_beliefs"]``.
+    Native Dung projection only: the binary attack graph plus the EAF
+    extensions. The #1648 Wave-2 sidecar that preserved the handler's
+    per-agent ``epistemic_beliefs`` dict was retired in #2952: a
+    site-by-site census (production, tests, docs, generic
+    ``formalism_specific``/extension readers) found no consumer that
+    regretted it — the invoke side (``invoke_callables.py``) carries the
+    beliefs as handler *input*, the sanitize pass opacified them as pure
+    transport, and the promised downstream reader never came. The data
+    stays re-derivable from the upstream context / a handler re-run.
     """
     if not output or not isinstance(output, dict):
         return
-    df_id = state.add_dung_framework(
+    state.add_dung_framework(
         name=f"eaf_{output.get('semantics', 'grounded')}",
         arguments=output.get("arguments", []),
         attacks=[a for a in output.get("attacks", []) if isinstance(a, list)],
         extensions={"eaf_extensions": output.get("extensions", [])},
     )
-    # #1648 Wave-2 sidecar: preserve the per-agent epistemic beliefs the
-    # handler returns under ``output["epistemic_beliefs"]``. Empty dict
-    # ⇒ sidecar stays absent (no ``formalism_specific`` key — empty
-    # handler output is indistinguishable from a handler that never ran,
-    # so we don't synthesize a key).
-    beliefs = output.get("epistemic_beliefs")
-    if isinstance(beliefs, dict) and beliefs:
-        # Defensive: each value must be a list of strings; drop
-        # malformed entries rather than crash the writer boundary.
-        sanitised: dict[str, list[str]] = {
-            str(agent): [arg for arg in args if isinstance(arg, str)]
-            for agent, args in beliefs.items()
-            if isinstance(args, list)
-        }
-        if sanitised:
-            state.dung_frameworks[df_id]["formalism_specific"] = {
-                "epistemic_beliefs": sanitised,
-            }
 
 
 def _write_delp_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write DeLP results to UnifiedAnalysisState (#89).
 
-    #1648 Wave-2 site 5: DeLP's distinctive pieces of data are the
-    *defeasible program* (``output["program"]`` — the rule source the
-    handler parsed at ``delp_handler.py:134``), its size
-    (``output["program_size"]``), and the *comparison criterion* used for
-    dialectical reasoning (``output["criterion"]`` — e.g.
-    ``generalized_specificity``, ``delp_handler.py:121``). The writer used
-    to keep only ``query_results`` (the YES/NO/UNDECIDED verdicts) and drop
-    the program + criterion entirely — the deepest flattening in the
-    inventory (Section 2.4): the whole formalism reduced to query verdicts,
-    with no trace of what was reasoned over or how. The native Dung
-    projection has no slot for a defeasible program or a comparison
-    criterion, so we attach a strictly-additive ``formalism_specific``
-    sidecar to the entry dict without touching the ``attacks`` /
-    ``extensions`` / ``arguments`` projections.
+    Native entry only: the ``delp_analysis`` framework carrying the
+    YES/NO/UNDECIDED query verdicts in ``extensions["delp_query_results"]``.
+    The #1648 Wave-2 sidecar that preserved the handler's defeasible
+    ``program`` (as ``delp_arguments``), ``program_size`` and comparison
+    ``criterion`` was retired in #2952: the site-by-site census found no
+    consumer that regretted them (the restitution reader names
+    ``delp_query_results`` as excluded; every generic extension reader
+    rejects the shapes; the sanitize pass was pure transport). The data
+    stays re-derivable from the handler output (``delp_handler.py``).
     """
     if not output or not isinstance(output, dict):
         return
     query_results = output.get("query_results", [])
-    df_id = state.add_dung_framework(
+    state.add_dung_framework(
         name="delp_analysis",
         arguments=[],
         attacks=[],
         extensions={"delp_query_results": query_results},
     )
-    # #1648 Wave-2 sidecar: preserve the defeasible program + comparison
-    # criterion the handler returns. Absent program AND criterion ⇒ sidecar
-    # stays absent (no ``formalism_specific`` key — empty handler output is
-    # indistinguishable from a handler that never ran, so we don't
-    # synthesize a key). Each field is carried independently so partial
-    # output never produces phantom-None keys (anti-#1019).
-    program = output.get("program")
-    criterion = output.get("criterion")
-    sidecar: dict[str, Any] = {}
-    if program:
-        sidecar["delp_arguments"] = program
-        size = output.get("program_size")
-        if isinstance(size, int):
-            sidecar["program_size"] = size
-    if criterion:
-        sidecar["criterion"] = criterion
-    if sidecar:
-        state.dung_frameworks[df_id]["formalism_specific"] = sidecar
 
 
 def _write_qbf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:

@@ -226,13 +226,13 @@ def _canaried_state() -> UnifiedAnalysisState:
         extensions=dung_extensions,
     )
     # #1648 Wave-2 sidecar — attached by direct assignment exactly as the
-    # ``_write_setaf/weighted/eaf/delp`` writers do. NOT in any scrubber table.
+    # ``_write_setaf/weighted/aba`` writers do. The EAF (``epistemic_beliefs``)
+    # and DeLP (``delp_arguments``) sidecars were retired in #2952 and are no
+    # longer written, so the canary fixture carries only the surviving leaves.
     s.dung_frameworks[df_id]["formalism_specific"] = {
         "set_attacks": [{"attackers": [NL], "target": NL2}],
         "attack_weights": [{"source": NL, "target": NL2, "weight": 0.5}],
-        "epistemic_beliefs": {"agent_1": [NL]},
         "contraries": {NL: NL2},
-        "delp_arguments": [NL],
     }
 
     # --- formal_synthesis_reports: .summary covered (pass 5), .phase_results GAP

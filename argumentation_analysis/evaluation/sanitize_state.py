@@ -132,26 +132,24 @@ _OPAQUE_NESTED_LIST_SUBKEYS = {
 }
 
 # Wave-2 ``formalism_specific`` sidecars on ``dung_frameworks`` entries (#1702).
-# The six #1648 writers (ABA/SetAF/Weighted/EAF/DeLP, plus ADF which attaches no
-# sidecar) attach a strictly-additive ``entry["formalism_specific"] = {...}`` dict
-# to carry data the native Dung projection has no slot for. Each leaf was measured
-# at its producer (the anti-pendule of #1702: "mesurer le producteur"), and the
-# verdict split is nominative-source-atom vs closed-vocabulary/numeric-aggregate:
+# The #1648 writers attach a strictly-additive
+# ``entry["formalism_specific"] = {...}`` dict to carry data the native Dung
+# projection has no slot for. The EAF (``epistemic_beliefs``) and DeLP
+# (``delp_arguments``/``program_size``/``criterion``) sidecars were retired in
+# #2952 — no consumer ever read them; their table rows and transport witnesses
+# went with the writers. What remains is measured at its producer (the
+# anti-pendule of #1702: "mesurer le producteur"), and the verdict split is
+# nominative-source-atom vs closed-vocabulary/numeric-aggregate:
 #
 #   contraries        Dict[assumption_atom, contrary_atom]   — ABA l.968, BOTH
 #                                                               keys+values source
 #   set_attacks       List[{attackers:[atom], target:atom}]  — SetAF l.1482
 #   attack_weights    List[{source, target, weight:float}]   — Weighted l.1541,
 #                                                               weight KEPT (numeric)
-#   epistemic_beliefs Dict[agent, List[arg_atom]]            — EAF l.1611
-#   delp_arguments    str | List[str] (defeasible rule source over source
-#                     predicates)                            — DeLP l.1658
 #
 # Deliberately NOT listed (survive untouched — closed vocab / pure numeric, the
 # #1702 anti-pendule symmetrical to the scrubber's own l.156-163):
 #   weight_statistics {min/max/avg_weight: float}            — Weighted l.1551
-#   program_size      int                                     — DeLP l.1660
-#   criterion         str (e.g. "generalized_specificity")   — DeLP l.1662, closed
 #
 # Parent 2 (``propositional_analysis_results[*].formalism_specific.qbf_quantifiers``)
 # is ALSO not listed here and needs no scrub: the QBF writer docstring
@@ -171,10 +169,8 @@ _OPAQUE_NESTED_LIST_SUBKEYS = {
 #   "atom_list"               A source-atom string OR list of them -> opacify.
 _OPAQUE_FORMALISM_SPECIFIC = {
     "contraries": "mapping",
-    "epistemic_beliefs": "mapping",
     "set_attacks": ("dict_list", ("attackers", "target")),
     "attack_weights": ("dict_list", ("source", "target")),
-    "delp_arguments": "atom_list",
     # #1693: DL/CL provenance sidecars on fol_analysis_results (DL) and
     # propositional_analysis_results (CL). Each leaf is a list of source-derived
     # logical axioms/conditionals (NL→DL/CL translation of claim text) — same
@@ -358,7 +354,7 @@ def _scrub_formalism_specific(sidecar: Any) -> Any:
     of argument text) with closed vocabularies and numeric aggregates the export
     contract promises to preserve. ``_OPAQUE_FORMALISM_SPECIFIC`` names the
     nominative leaves and their opacification mode; every key NOT in that table
-    (``weight_statistics``, ``program_size``, ``criterion``) survives untouched.
+    (``weight_statistics``) survives untouched.
 
     Topology is preserved everywhere: a list stays a list of the same arity, a
     mapping keeps its key count, and the numeric ``weight`` on each
@@ -529,14 +525,14 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
             data[field] = nested_entries
 
     # 4d. Opacify the Wave-2 ``formalism_specific`` sidecar on ``dung_frameworks``
-    #     entries (#1702). The six #1648 writers attach this strictly-additive dict
-    #     to carry formalism-specific data the native Dung projection has no slot
-    #     for (ABA contraries, SetAF joint attacks, Weighted weights, EAF
-    #     epistemic beliefs, DeLP program/criterion). Its nominative leaves are
-    #     the same source-derived atoms passes 4b/4c opacify one level up, under a
-    #     sibling key the dict-of-dicts sub-key passes never inspect. The closed-
-    #     vocabulary / numeric-aggregate leaves (criterion, weight_statistics,
-    #     program_size) survive by being absent from the spec table.
+    #     entries (#1702). The remaining #1648 writers attach this
+    #     strictly-additive dict to carry formalism-specific data the native
+    #     Dung projection has no slot for (ABA contraries, SetAF joint attacks,
+    #     Weighted weights). Its nominative leaves are the same source-derived
+    #     atoms passes 4b/4c opacify one level up, under a sibling key the
+    #     dict-of-dicts sub-key passes never inspect. The closed-vocabulary /
+    #     numeric-aggregate leaves (weight_statistics) survive by being absent
+    #     from the spec table.
     if isinstance(data.get("dung_frameworks"), dict):
         for entry in data["dung_frameworks"].values():
             if isinstance(entry, dict) and "formalism_specific" in entry:
