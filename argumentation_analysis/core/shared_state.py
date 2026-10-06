@@ -1,5 +1,6 @@
 # core/shared_state.py
 import json
+import re
 from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Any, Optional, Tuple, cast
 import logging
@@ -25,15 +26,89 @@ def locate_unit_offset(unit_key: str, raw_text: str) -> Tuple[Optional[int], str
     ``0``, which is a real position, and never a guessed one (#1019). The
     basis string is the provenance's own vocabulary, reused verbatim by the
     trace writer so one rule serves both readers.
+
+    #2973 — la recherche exacte reste la première marche, mais elle n'est
+    plus la seule : le producteur heuristique joint des phrases strippées
+    par une seule espace, donc son texte diffère du texte source par les
+    espaces seules — sur le run du 06/10, 33 unités sur 94 étaient
+    ``offset: None`` pour cette seule raison. La cascade complète vit dans
+    ``locate_unit_span`` ; cette fonction en rend la position de départ.
+    """
+    span, _basis = locate_unit_span(unit_key, raw_text)
+    if span is None:
+        # les absences nommées de locate_unit_span portent déjà leur motif
+        reason = _basis
+        return None, reason
+    return span[0], f"offset {span[0]}{_basis}"
+
+
+#: #2973 — longueur minimale d'un préfixe de secours. Quand même la
+#: recherche à espaces flexibles échoue, un préfixe d'au moins cette
+#: longueur qui n'apparaît qu'une fois reste localisable (mesuré sur le run
+#: du 06/10 : un préfixe de 40 caractères retrouvait l'unité que la
+#: recherche exacte perdait). En dessous, un préfixe unique ne prouve pas
+#: l'unité — c'est une coincidence de texte, pas une localisation.
+_UNIT_PREFIX_MIN = 40
+
+
+def _flexible_pattern(key: str) -> "re.Pattern[str]":
+    """Le motif qui retrouve ``key`` malgré la normalisation du producteur.
+
+    Chaque espace de la clé accepte toute suite d'espaces du texte source
+    (le producteur heuristique joint des phrases par une seule espace ;
+    le texte source porte souvent des sauts de ligne). Le reste est
+    échappé tel quel — aucun autre écart n'est toléré.
+    """
+    parts = [re.escape(part) for part in key.split(" ") if part]
+    if not parts:
+        # une clé sans aucun caractère non-blanc n'est pas une clé
+        return re.compile(r"(?!)")
+    return re.compile(r"\s+".join(parts))
+
+
+def locate_unit_span(
+    unit_key: str, raw_text: str
+) -> Tuple[Optional[Tuple[int, int]], str]:
+    """#2973 — LA règle de localisation d'une unité, en trois marches.
+
+    1. Recherche exacte unique (la plus précise, inchangée) ;
+    2. recherche à espaces flexibles unique — l'écart exact que le
+       producteur heuristique introduit (phrases strippées jointes par une
+       seule espace) ;
+    3. préfixe unique d'au moins ``_UNIT_PREFIX_MIN`` caractères, à espaces
+       flexibles aussi.
+
+    Jamais une correspondance non unique : une clé qui apparaît deux fois
+    (à quelque marche que ce soit) est une position ambiguë, nommée comme
+    telle. Rend ``((start, end), tag)`` — le span est dans les coordonnées
+    du TEXTE SOURCE (la longueur flexible diffère de celle de la clé) — ou
+    ``(None, motif)`` où le motif nomme ce qui a été essayé (#1019).
     """
     if not unit_key or not raw_text:
         return None, "sans offset (clé ou texte source absent)"
     first = raw_text.find(unit_key)
-    if first == -1:
-        return None, "sans offset (introuvable dans le texte source)"
-    if raw_text.count(unit_key) != 1:
+    if first != -1:
+        if raw_text.count(unit_key) == 1:
+            return (first, first + len(unit_key)), ""
         return None, "sans offset (occurrences multiples, position ambiguë)"
-    return first, f"offset {first}"
+    pattern = _flexible_pattern(unit_key)
+    hits = [m for m in pattern.finditer(raw_text)]
+    if len(hits) == 1:
+        return (hits[0].start(), hits[0].end()), " (espaces flexibles)"
+    if len(unit_key) >= _UNIT_PREFIX_MIN:
+        prefix_hits = [
+            m for m in _flexible_pattern(unit_key[:_UNIT_PREFIX_MIN]).finditer(raw_text)
+        ]
+        if len(prefix_hits) == 1:
+            return (
+                (prefix_hits[0].start(), prefix_hits[0].end()),
+                f" (préfixe {_UNIT_PREFIX_MIN} caractères unique)",
+            )
+        if len(prefix_hits) > 1:
+            return None, "sans offset (préfixe non unique, position ambiguë)"
+    if hits:  # flexible non unique et préfixe trop court pour trancher
+        return None, "sans offset (occurrences multiples à espaces flexibles)"
+    return None, "sans offset (introuvable, même à espaces flexibles)"
 
 
 @dataclass
@@ -745,6 +820,43 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         if largest_uncovered_stretch is not None:
             entry["largest_uncovered_stretch"] = float(largest_uncovered_stretch)
         self.analysis_coverage[phase] = entry
+
+    def record_anchor_census(self) -> None:
+        """#2973 — le recensement des unités sans offset, DANS le run.
+
+        Sur le run payé du 06/10, 33 unités sur 94 étaient ``offset: None``
+        et personne ne l'a su avant l'analyse des traces : chaque entrée de
+        provenance portait son absence, mais aucune vue d'ensemble n'existait.
+        Le recensement agrège la table de provenance par producteur et
+        l'écrit dans l'enregistrement de couverture (clé ``anchor_census``)
+        — k = unités ancrées, N = unités totales, plus le détail par
+        producteur et les ids non ancrés. Une phase qui n'a pas de bandes
+        (celle-ci) écrit ``bands_total: 0`` : le rendu ne lui prête pas de
+        tiers de texte.
+        """
+        total = len(self.argument_provenance)
+        anchored = sum(
+            1 for p in self.argument_provenance.values() if p.get("offset") is not None
+        )
+        by_producer: Dict[str, int] = {}
+        unanchored_ids: List[str] = []
+        for arg_id, p in sorted(self.argument_provenance.items()):
+            if p.get("offset") is None:
+                producer = str(p.get("producer", "inconnu"))
+                by_producer[producer] = by_producer.get(producer, 0) + 1
+                unanchored_ids.append(arg_id)
+        self.analysis_coverage["anchor_census"] = {
+            "k": anchored,
+            "N": total,
+            "bands_covered": 0,
+            "bands_total": 0,
+            "unanchored_by_producer": by_producer,
+            "unanchored_ids": unanchored_ids,
+        }
+        state_logger.info(
+            f"[anchor_census] {anchored}/{total} unités ancrées ; "
+            f"sans offset : {dict(by_producer) if by_producer else 'aucune'}"
+        )
 
     def record_designation(
         self,

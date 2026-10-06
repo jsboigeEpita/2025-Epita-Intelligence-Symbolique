@@ -550,10 +550,13 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         # what a thin spread cannot saturate. No span key = no selected unit
         # carried an offset: the sentence lends no extent it cannot ground.
         def _coverage_fig(phase: str, fig: Any) -> str:
-            part = (
-                f"{phase} : {fig['k']}/{fig['N']} unités, "
-                f"{fig['bands_covered']}/{fig['bands_total']} tiers du texte"
-            )
+            part = f"{phase} : {fig['k']}/{fig['N']} unités"
+            # #2973 — une phase sans bandes (le recensement des ancres,
+            # anchor_census) n'emprunte pas de tiers de texte : bands_total
+            # à 0 dit « pas de concept de bandes ici », pas « 0 bandes
+            # couvertes sur 0 ».
+            if fig.get("bands_total"):
+                part += f", {fig['bands_covered']}/{fig['bands_total']} tiers du texte"
             if "span_start" in fig and "span_end" in fig:
                 # French prose reads a comma decimal (« 0,05 »), Python
                 # formats a dot — translate at the render, the state keeps
