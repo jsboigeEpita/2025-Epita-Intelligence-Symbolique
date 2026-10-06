@@ -136,9 +136,11 @@ _OPAQUE_NESTED_LIST_SUBKEYS = {
 # ``entry["formalism_specific"] = {...}`` dict to carry data the native Dung
 # projection has no slot for. The EAF (``epistemic_beliefs``) and DeLP
 # (``delp_arguments``/``program_size``/``criterion``) sidecars were retired in
-# #2952 — no consumer ever read them; their table rows and transport witnesses
-# went with the writers. What remains is measured at its producer (the
-# anti-pendule of #1702: "mesurer le producteur"), and the verdict split is
+# #2952 — no consumer ever read them; their table rows went with the writers,
+# and the retired leaves are now DROPPED at the export boundary
+# (``_RETIRED_FORMALISM_SPECIFIC`` below): a stale pre-retirement state cannot
+# cross the export with them in clear. What remains is measured at its producer
+# (the anti-pendule of #1702: "mesurer le producteur"), and the verdict split is
 # nominative-source-atom vs closed-vocabulary/numeric-aggregate:
 #
 #   contraries        Dict[assumption_atom, contrary_atom]   — ABA l.968, BOTH
@@ -180,6 +182,18 @@ _OPAQUE_FORMALISM_SPECIFIC = {
     "abox_roles": "atom_list",
     "conditionals": "atom_list",
 }
+
+# Leaves of the sidecars retired in #2952 (EAF ``epistemic_beliefs``, DeLP
+# ``delp_arguments``/``program_size``/``criterion``). No writer produces them
+# any more and nothing downstream reads them, but a state written before the
+# retirement may still carry them — and ``epistemic_beliefs``/``delp_arguments``
+# are nominative (agent names + argument atoms / defeasible rules over source
+# predicates). Cross-review #2956: pass-through would let such a stale state
+# export them in clear, so the export boundary drops them instead — total for
+# any seat, not just the seat that measured 0 carrier states.
+_RETIRED_FORMALISM_SPECIFIC = frozenset(
+    {"epistemic_beliefs", "delp_arguments", "program_size", "criterion"}
+)
 
 # List-of-dicts fields: top-level field -> sub-keys whose values are
 # nominative text to drop (the rest of each item is preserved).
@@ -354,7 +368,10 @@ def _scrub_formalism_specific(sidecar: Any) -> Any:
     of argument text) with closed vocabularies and numeric aggregates the export
     contract promises to preserve. ``_OPAQUE_FORMALISM_SPECIFIC`` names the
     nominative leaves and their opacification mode; every key NOT in that table
-    (``weight_statistics``) survives untouched.
+    (``weight_statistics``) survives untouched — except the #2952-retired
+    leaves (``_RETIRED_FORMALISM_SPECIFIC``), which are DROPPED at this
+    boundary rather than opacified or passed through (a stale pre-retirement
+    state cannot export them in clear).
 
     Topology is preserved everywhere: a list stays a list of the same arity, a
     mapping keeps its key count, and the numeric ``weight`` on each
@@ -364,7 +381,9 @@ def _scrub_formalism_specific(sidecar: Any) -> Any:
     """
     if not isinstance(sidecar, dict):
         return sidecar
-    out = dict(sidecar)  # shallow copy; untouched keys (criterion/stats) ride through
+    out = dict(sidecar)  # shallow copy; untouched keys (stats) ride through
+    for retired in _RETIRED_FORMALISM_SPECIFIC:
+        out.pop(retired, None)  # stale pre-#2952 leaves never cross the export
     for leaf, mode in _OPAQUE_FORMALISM_SPECIFIC.items():
         if leaf not in out:
             continue

@@ -15,8 +15,9 @@ SetAF ``set_attacks`` (List[{attackers,target}]), Weighted ``attack_weights``
 (List[{source,target,weight}]) + ``weight_statistics``. The EAF
 (``epistemic_beliefs``) and DeLP (``delp_arguments``/``program_size``/
 ``criterion``) sidecars were retired in #2952 — no consumer ever read them —
-and their spec rows went with the writers; this file keeps one pass-through
-witness asserting a stale pre-retirement state rides along untouched. Opaque
+and their spec rows went with the writers; cross-review (#2956) hardened the
+export boundary to DROP those leaves from a stale pre-retirement state rather
+than pass them through in clear, and this file pins that drop. Opaque
 synthetic atoms only (privacy HARD — no corpus text).
 """
 
@@ -115,12 +116,15 @@ class TestFormalismSpecificNominativeLeavesOpacified:
         assert "claim_" not in aw[0]["source"]
         assert "claim_" not in aw[0]["target"]
 
-    def test_retired_eaf_and_delp_sidecar_keys_pass_through_opacified(self) -> None:
-        """#2952: the EAF/DeLP sidecars are retired — no writer produces them
-        and their spec rows are gone. A stale state (written before the
-        retirement) carrying the retired keys must not crash the scrubber:
-        the unknown keys ride along untouched (pass-through by absence from
-        the spec table), which is safe because nothing downstream reads them.
+    def test_retired_eaf_and_delp_sidecar_keys_are_dropped(self) -> None:
+        """#2952 (hardened on cross-review of #2956): the EAF/DeLP sidecars
+        are retired — no writer produces them and their spec rows are gone.
+        A stale state (written before the retirement) carrying the retired
+        keys must not crash the scrubber, and must NOT export them in clear:
+        both leaves are nominative (agent names + argument atoms / defeasible
+        rules over source predicates), so the export boundary drops them.
+        Drop is total: pass-through would leak on any seat holding a
+        pre-retirement state, not just the seat that measured 0 carriers.
         """
         out = sanitize_state(
             _entry(
@@ -131,11 +135,10 @@ class TestFormalismSpecificNominativeLeavesOpacified:
             )
         )
         side = out["dung_frameworks"]["dung_1"]["formalism_specific"]
-        # Pass-through: present (not crashed, not dropped) and untouched —
-        # the retirement lives at the writer, the scrubber no longer names
-        # these leaves.
-        assert side.get("epistemic_beliefs") == {"agent_one": ["claim_alpha"]}
-        assert side.get("delp_arguments") == ["claim_alpha <- claim_beta"]
+        # Dropped: gone from the export (no crash, no clear text), while the
+        # entry itself survives (the surviving leaves ride as usual).
+        assert "epistemic_beliefs" not in side
+        assert "delp_arguments" not in side
 
 
 class TestFormalismSpecificClosedVocabAndNumericSurvive:
@@ -160,11 +163,13 @@ class TestFormalismSpecificClosedVocabAndNumericSurvive:
         ]
         assert stats == {"min_weight": 0.1, "max_weight": 0.9, "avg_weight": 0.5}
 
-    def test_retired_closed_vocab_and_numeric_leaves_ride_along(self) -> None:
-        """#2952: ``program_size``/``criterion`` belonged to the retired DeLP
-        sidecar. In a stale pre-retirement state they simply ride along with
-        the rest of the retired sidecar (pass-through), while the surviving
-        ``weight_statistics`` keeps its explicit survive contract below."""
+    def test_retired_closed_vocab_and_numeric_leaves_dropped_too(self) -> None:
+        """#2952 (hardened on cross-review of #2956): ``program_size``/
+        ``criterion`` belonged to the retired DeLP sidecar. Non-nominative, but
+        they ride WITH the retired sidecar and have no consumer: the export
+        boundary drops them with the nominative leaves, so a stale state
+        carries nothing retired across. ``weight_statistics`` (surviving
+        leaf) keeps its explicit survive contract above."""
         out = sanitize_state(
             _entry(
                 {
@@ -175,8 +180,7 @@ class TestFormalismSpecificClosedVocabAndNumericSurvive:
             )
         )
         side = out["dung_frameworks"]["dung_1"]["formalism_specific"]
-        assert side["program_size"] == 7
-        assert side["criterion"] == "generalized_specificity"
+        assert side == {}  # all three leaves retired: nothing crosses
 
 
 class TestFormalismSpecificAbsentOrNonDictIsSafe:
