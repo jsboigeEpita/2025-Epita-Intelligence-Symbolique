@@ -436,15 +436,17 @@ def _resolve_target_arg_id(state: Any, target_text: str) -> Optional[str]:
 
     Checks exact ID match first, then text-based matching.
 
-    #2968: the text branch requires a needle that is LONG (≥ 20 chars) and
-    UNIQUE across the identified arguments. The old unconstrained substring
-    let a one-character echo ("1" — the number the counter prompt used to
-    ask for) resolve to the first description containing a "1": 27 of 48
-    counters on the measured run pointed at a wrong unit. A short or
+    #2968: the SUBSTRING branch requires a needle that is LONG (≥ 20 chars)
+    and UNIQUE across the identified arguments. The old unconstrained
+    substring let a one-character echo ("1" — the number the counter prompt
+    used to ask for) resolve to the first description containing a "1": 27
+    of 48 counters on the measured run pointed at a wrong unit. A short or
     ambiguous needle resolves to None — the caller must not guess (#1019).
     The long-unique case stays: wide-net fallacy payloads carry no id and a
     ``problematic_quote`` quoted from one argument grounds the link (#1167
-    D1a).
+    D1a). An EXACT text equality is an identification, not a guess — it is
+    never length-gated (a producer naming the unit's full text links it
+    however short that text is; #2968 rework, explicit-target witness).
     """
     if not target_text:
         return None
@@ -452,15 +454,22 @@ def _resolve_target_arg_id(state: Any, target_text: str) -> Optional[str]:
     # Direct ID match
     if target_text in arguments:
         return str(target_text)
-    # Text-based matching — unique and long only (#2968)
+    # Exact text equality — unambiguous identification, no length gate
+    exact = [
+        str(arg_id)
+        for arg_id, desc in arguments.items()
+        if desc and target_text == desc
+    ]
+    if len(exact) == 1:
+        return exact[0]
+    # Substring/containment — unique and long only (#2968)
     needle = target_text.strip()
     if len(needle) < 20:
         return None
     matches = [
         str(arg_id)
         for arg_id, desc in arguments.items()
-        if desc
-        and (target_text == desc or desc[:60] in target_text or target_text in desc)
+        if desc and (desc[:60] in target_text or target_text in desc)
     ]
     return matches[0] if len(matches) == 1 else None
 

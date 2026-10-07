@@ -2976,18 +2976,35 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
         if target_arg_text and arg_beliefs:
             # #2968: ``target_argument`` carries the unit's own ``arg_N``
             # identifier here (#1633) and belief names are ``{unit_id}:{…}``
-            # (#2895) — the exact id prefix names the belief. The old
-            # substring scan first-hit whatever belief sat earlier in the
-            # quality-ordered list (``arg_1`` matches ``arg_10:…``), which
-            # is the same mislink family the counters measured.
-            target_idx = next(
-                (
+            # (#2895) — the exact id prefix names the belief. Producers that
+            # stamp no id send the unit's TEXT (#1167 wide-net): an exact
+            # text equality against the belief's text part identifies the
+            # same way, and a substring counts only when long (≥ 20) and
+            # unique. The old first-hit substring scan landed ``arg_1`` on
+            # ``arg_10:…`` — the same mislink family the counters measured
+            # (#2968 rework, #2895 witness).
+            target = str(target_arg_text)
+
+            def _belief_text(ab: str) -> str:
+                return ab.split(":", 1)[-1] if ":" in ab else ab
+
+            exact_id = [
+                idx for idx, ab in enumerate(arg_beliefs) if ab.startswith(f"{target}:")
+            ]
+            exact_text = [
+                idx for idx, ab in enumerate(arg_beliefs) if _belief_text(ab) == target
+            ]
+            candidates = exact_id or exact_text
+            if len(candidates) == 1:
+                target_idx = candidates[0]
+            elif len(target) >= 20:
+                sub = [
                     idx
                     for idx, ab in enumerate(arg_beliefs)
-                    if ab.startswith(f"{target_arg_text}:")
-                ),
-                -1,
-            )
+                    if target in ab or _belief_text(ab)[:60] in target
+                ]
+                if len(sub) == 1:
+                    target_idx = sub[0]
         # Fallback: try problematic_quote (exact text from source)
         if target_idx < 0 and arg_beliefs:
             quote_text = f.get("problematic_quote", "")
