@@ -295,7 +295,9 @@ class TestWriteKBToState:
 
         assert result["arguments_written"] == 1
         assert result["beliefs_written"] == 1
-        state.add_argument.assert_called_once_with("arg text")
+        # #2973 — the writer passes the payload's stated offset through (None
+        # here: this argument dict carries no text_offset).
+        state.add_argument.assert_called_once_with("arg text", offset=None)
         state.add_belief_set.assert_called_once_with("fol", "belief text")
 
     def test_no_state(self):

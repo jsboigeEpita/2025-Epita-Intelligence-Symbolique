@@ -346,12 +346,6 @@ ALLOWED = {
         "#2850 debt (the stakes site)"
     ),
     (
-        "argumentation_analysis/plugins/text_to_kb_plugin.py",
-        "fstring",
-        "current_chunk",
-        1,
-    ): ("line 88 — chunker accumulator, bounded by max_chars per chunk"),
-    (
         "argumentation_analysis/reporting/restitution/act3_conclusion_plugin.py",
         "fstring",
         "text",
