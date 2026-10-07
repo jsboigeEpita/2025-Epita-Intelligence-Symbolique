@@ -2197,17 +2197,24 @@ def _write_text_to_kb_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
     add_arg = getattr(state, "add_argument", None)
     if callable(add_arg):
         for arg_data in arguments:
-            text = (
-                arg_data.get("text", "")
-                if isinstance(arg_data, dict)
-                else str(arg_data)
-            )
+            if isinstance(arg_data, dict):
+                text = arg_data.get("text", "")
+                # #2973 (Expected 2) — the heuristic producer records the
+                # position it extracted each unit FROM at split time; the
+                # stated offset is used directly (``add_argument`` only
+                # searches when the producer could not state one).
+                stated = arg_data.get("text_offset")
+                if isinstance(stated, bool) or not isinstance(stated, int):
+                    stated = None
+            else:
+                text = str(arg_data)
+                stated = None
             if text:
                 # #2850 slice A — the second producer, named: kb_heuristic
                 # units are whole-text paragraph splits, so their own text is
                 # the find key. Both producers now land in identified_arguments
                 # WITH provenance instead of anonymously under one key.
-                arg_id = add_arg(text, producer="kb_heuristic")
+                arg_id = add_arg(text, producer="kb_heuristic", offset=stated)
                 # Review #2887 point (a): every unit with a named offset gets
                 # its anchored assert, BOTH producers — before this, the move
                 # population was the LLM head alone (the 3,000-char extract

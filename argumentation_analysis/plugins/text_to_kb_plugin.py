@@ -11,7 +11,7 @@ import asyncio
 import json
 import logging
 import re
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
 from semantic_kernel.functions import kernel_function
@@ -35,6 +35,14 @@ class ExtractedArgument(BaseModel):
     premises: List[ExtractedPremise] = Field(default_factory=list)
     conclusion: str = Field(..., description="Argument conclusion")
     confidence: float = Field(0.0, ge=0.0, le=1.0)
+    # #2973 (Expected 2): the offset the heuristic producer extracted this
+    # argument's first sentence FROM, in the source text — recorded at split
+    # time, where the position is known exactly, so no search is needed.
+    # None when the producer could not record it (the search in
+    # ``add_argument`` remains the fallback for those).
+    text_offset: Optional[int] = Field(
+        None, description="Source-text offset of the argument's first sentence"
+    )
 
 
 class FOLSignature(BaseModel):
@@ -87,6 +95,42 @@ _ABBREVIATION_TAIL = re.compile(
 _MIN_SENTENCE_CHARS = 20
 
 
+def _split_sentences_with_offsets(text: str) -> List[Tuple[str, int]]:
+    """#2973 — the same split as ``_split_sentences``, positionally.
+
+    Each surviving sentence carries the offset of its FIRST content
+    character in ``text``. A sentence assembled by the join rule (short
+    piece, or previous piece ending on an abbreviation) keeps the offset of
+    the piece that opened it — the group starts where its first sentence
+    starts. The sentence TEXTS are byte-identical to ``_split_sentences``
+    (same pieces, same joins): only positions are added.
+    """
+    # Pieces between separators, with their absolute positions. The pattern
+    # has no capture groups (lookbehind), so finditer spans partition the
+    # text exactly the way .split() pieces do.
+    pieces: List[Tuple[str, int]] = []
+    last = 0
+    for m in _SENTENCE_SPLIT.finditer(text):
+        pieces.append((text[last : m.start()], last))
+        last = m.end()
+    pieces.append((text[last:], last))
+
+    sentences: List[Tuple[str, int]] = []
+    for piece, piece_at in pieces:
+        stripped = piece.strip()
+        if not stripped:
+            continue
+        content_at = piece_at + (len(piece) - len(piece.lstrip()))
+        if sentences and (
+            len(stripped) <= _MIN_SENTENCE_CHARS
+            or _ABBREVIATION_TAIL.search(sentences[-1][0])
+        ):
+            sentences[-1] = (f"{sentences[-1][0]} {stripped}", sentences[-1][1])
+        else:
+            sentences.append((stripped, content_at))
+    return sentences
+
+
 def _split_sentences(text: str) -> List[str]:
     """Split into sentences WITHOUT losing text (#2982).
 
@@ -102,73 +146,83 @@ def _split_sentences(text: str) -> List[str]:
     joins its neighbour. Every character of ``text`` survives into some
     returned sentence, whitespace-normalised.
     """
-    sentences: List[str] = []
-    for piece in _SENTENCE_SPLIT.split(text):
-        stripped = piece.strip()
-        if not stripped:
-            continue
-        if sentences and (
-            len(stripped) <= _MIN_SENTENCE_CHARS
-            or _ABBREVIATION_TAIL.search(sentences[-1])
-        ):
-            sentences[-1] = f"{sentences[-1]} {stripped}"
-        else:
-            sentences.append(stripped)
-    return sentences
+    return [sentence for sentence, _ in _split_sentences_with_offsets(text)]
 
 
-def _split_into_chunks(text: str, max_chars: int = 2000) -> List[str]:
-    """Split text into paragraph-based chunks for parallel processing."""
-    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+def _split_into_chunks(text: str, max_chars: int = 2000) -> List[Tuple[str, int]]:
+    """Split text into paragraph-based chunks for parallel processing.
+
+    #2973 — each chunk is an EXACT SUBSTRING of ``text`` (from its first
+    paragraph's first content character to its last paragraph's last content
+    character) and carries the source offset of that first character. A
+    position measured inside the chunk translates to a source-text position
+    by simple addition — no search, no ambiguity between duplicate
+    occurrences. The extraction OUTPUT is unchanged: paragraphs are the same
+    stripped strings, the greedy max_chars grouping follows the same
+    arithmetic, and only the whitespace BETWEEN paragraphs of one chunk
+    (previously normalised to ``\\n\\n``) now travels through as written.
+    """
+    # Paragraph spans on the original text. re.finditer over "\n\n+" yields
+    # the same non-empty paragraph sequence text.split("\n\n") did (runs of
+    # separators produced empty pieces that the old filter dropped).
+    paragraphs: List[Tuple[str, int]] = []  # (stripped paragraph, content start)
+    last = 0
+    for m in re.finditer(r"\n\n+", text):
+        para = text[last : m.start()]
+        if para.strip():
+            paragraphs.append((para.strip(), last + (len(para) - len(para.lstrip()))))
+        last = m.end()
+    para = text[last:]
+    if para.strip():
+        paragraphs.append((para.strip(), last + (len(para) - len(para.lstrip()))))
     if not paragraphs:
-        paragraphs = [text]
+        return [(text, 0)]
 
-    chunks: List[str] = []
-    current_chunk = ""
-    for para in paragraphs:
-        if len(current_chunk) + len(para) + 2 > max_chars and current_chunk:
-            chunks.append(current_chunk.strip())
-            current_chunk = para
+    def _chunk_span(paras: List[Tuple[str, int]]) -> Tuple[str, int]:
+        """Exact substring covering ``paras``: first content char to last."""
+        start = paras[0][1]
+        last_para, last_start = paras[-1]
+        return text[start : last_start + len(last_para)], start
+
+    chunks: List[Tuple[str, int]] = []
+    current: List[Tuple[str, int]] = []
+    current_len = 0  # joined length of ``current`` (same arithmetic as before)
+    for para, pstart in paragraphs:
+        add = len(para) + (2 if current else 0)
+        if current_len + add > max_chars and current:
+            chunks.append(_chunk_span(current))
+            current = [(para, pstart)]
+            current_len = len(para)
         else:
-            current_chunk = f"{current_chunk}\n\n{para}" if current_chunk else para
-    if current_chunk.strip():
-        chunks.append(current_chunk.strip())
-    return chunks if chunks else [text]
+            current.append((para, pstart))
+            current_len += add
+    if current:
+        chunks.append(_chunk_span(current))
+    return chunks if chunks else [(text, 0)]
 
 
-def _heuristic_extract_arguments(text: str) -> List[ExtractedArgument]:
-    """Extract arguments heuristically from text when LLM is unavailable."""
+def _heuristic_extract_arguments(
+    text: str, base_offset: int = 0
+) -> List[ExtractedArgument]:
+    """Extract arguments heuristically from text when LLM is unavailable.
+
+    #2973 — ``base_offset`` is the source-text offset of ``text[0]`` (0 for a
+    whole document, the chunk origin otherwise). Each argument records
+    ``text_offset = base_offset + (offset of its first sentence)``: the TRUE
+    position it was extracted from, known exactly at split time — not a
+    ``find()`` first-occurrence guess that conflates duplicate sentences.
+    """
     arguments: List[ExtractedArgument] = []
-    sentences = _split_sentences(text)
+    sentences = _split_sentences_with_offsets(text)
 
     # Group consecutive sentences into argument-like units
     # triggered by argument markers
     current_group: List[str] = []
+    group_start = 0  # offset (within ``text``) of the group's first sentence
     arg_idx = 0
 
-    for sent in sentences:
-        is_marker = bool(_ARG_PATTERN.search(sent.split(",")[0]))
-        if is_marker and current_group:
-            arg_idx += 1
-            arg_text = " ".join(current_group)
-            premises = [
-                ExtractedPremise(text=s) for s in current_group[:-1] if len(s) > 15
-            ]
-            conclusion = current_group[-1] if current_group else arg_text
-            arguments.append(
-                ExtractedArgument(
-                    id=f"arg_{arg_idx}",
-                    text=arg_text,
-                    premises=premises,
-                    conclusion=conclusion,
-                    confidence=0.3,
-                )
-            )
-            current_group = [sent]
-        else:
-            current_group.append(sent)
-
-    if current_group:
+    def _flush() -> None:
+        nonlocal arg_idx
         arg_idx += 1
         arg_text = " ".join(current_group)
         premises = [ExtractedPremise(text=s) for s in current_group[:-1] if len(s) > 15]
@@ -180,8 +234,23 @@ def _heuristic_extract_arguments(text: str) -> List[ExtractedArgument]:
                 premises=premises,
                 conclusion=conclusion,
                 confidence=0.3,
+                text_offset=base_offset + group_start,
             )
         )
+
+    for sent, sent_at in sentences:
+        is_marker = bool(_ARG_PATTERN.search(sent.split(",")[0]))
+        if is_marker and current_group:
+            _flush()
+            current_group = [sent]
+            group_start = sent_at
+        else:
+            if not current_group:
+                group_start = sent_at
+            current_group.append(sent)
+
+    if current_group:
+        _flush()
 
     return arguments
 
@@ -212,10 +281,14 @@ def _extract_fol_signature(arguments: List[ExtractedArgument]) -> FOLSignature:
 
 
 async def _extract_chunk(
-    chunk: str, target_logic: str, chunk_idx: int
+    chunk: str, target_logic: str, chunk_idx: int, base_offset: int = 0
 ) -> KBExtractionResult:
-    """Extract KB from a single chunk (heuristic-only, LLM path available via SK)."""
-    arguments = _heuristic_extract_arguments(chunk)
+    """Extract KB from a single chunk (heuristic-only, LLM path available via SK).
+
+    #2973 — ``base_offset`` is the chunk's origin in the source text, so the
+    arguments carry true source-text offsets.
+    """
+    arguments = _heuristic_extract_arguments(chunk, base_offset)
 
     belief_candidates = [
         arg.conclusion for arg in arguments if len(arg.conclusion) > 10
@@ -272,11 +345,11 @@ class TextToKBPlugin:
         chunks = _split_into_chunks(text)
 
         if len(chunks) == 1:
-            result = await _extract_chunk(chunks[0], target_logic, 0)
+            result = await _extract_chunk(chunks[0][0], target_logic, 0, chunks[0][1])
         else:
             tasks = [
-                _extract_chunk(chunk, target_logic, idx)
-                for idx, chunk in enumerate(chunks)
+                _extract_chunk(chunk, target_logic, idx, origin)
+                for idx, (chunk, origin) in enumerate(chunks)
             ]
             chunk_results = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -327,7 +400,7 @@ class TextToKBPlugin:
         chunks = _split_into_chunks(text)
 
         if len(chunks) == 1:
-            arguments = _heuristic_extract_arguments(chunks[0])
+            arguments = _heuristic_extract_arguments(chunks[0][0], chunks[0][1])
             return json.dumps(
                 {
                     "arguments": [a.model_dump() for a in arguments],
@@ -337,11 +410,12 @@ class TextToKBPlugin:
             )
 
         # Parallel extraction for multi-chunk
-        async def _extract_args(chunk: str) -> List[ExtractedArgument]:
-            return _heuristic_extract_arguments(chunk)
+        async def _extract_args(chunk: str, origin: int) -> List[ExtractedArgument]:
+            return _heuristic_extract_arguments(chunk, origin)
 
         results = await asyncio.gather(
-            *[_extract_args(c) for c in chunks], return_exceptions=True
+            *[_extract_args(c, origin) for c, origin in chunks],
+            return_exceptions=True,
         )
 
         all_args: List[ExtractedArgument] = []
@@ -390,13 +464,19 @@ class TextToKBPlugin:
         add_arg = getattr(state, "add_argument", None)
         if callable(add_arg):
             for arg_data in arguments:
-                text = (
-                    arg_data.get("text", "")
-                    if isinstance(arg_data, dict)
-                    else str(arg_data)
-                )
+                if isinstance(arg_data, dict):
+                    text = arg_data.get("text", "")
+                    # #2973 — the producer-recorded source offset rides the
+                    # payload; ``add_argument`` uses it directly (search is
+                    # only the fallback).
+                    offset = arg_data.get("text_offset")
+                    if isinstance(offset, bool) or not isinstance(offset, int):
+                        offset = None
+                else:
+                    text = str(arg_data)
+                    offset = None
                 if text:
-                    arg_ids.append(add_arg(text))
+                    arg_ids.append(add_arg(text, offset=offset))
 
         # Write belief candidates as belief sets
         add_bs = getattr(state, "add_belief_set", None)

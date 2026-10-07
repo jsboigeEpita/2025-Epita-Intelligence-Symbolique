@@ -303,6 +303,7 @@ class RhetoricalAnalysisState:
         description: str,
         producer: Optional[str] = None,
         source_quote: Optional[str] = None,
+        offset: Optional[int] = None,
     ) -> str:
         """Ajoute un argument identifié et retourne son ID.
 
@@ -312,17 +313,35 @@ class RhetoricalAnalysisState:
         citation source quand elle existe, le texte sinon. Absence d'offset =
         nommée (jamais 0). Sans ``producer``, aucun enregistrement : les
         appelants hors couverture gardent le comportement d'avant.
+
+        #2973 (Expected 2) — quand le producteur a enregistré la position à
+        laquelle il a extrait (``offset`` : le splitter kb_heuristic la connaît
+        exactement au moment du découpage), elle est utilisée TELLE QUELLE
+        (base ``"producer-recorded"``) : la recherche par ``locate_unit_offset``
+        n'est plus que le fallback (producteur sans position, ou position hors
+        bornes du texte source).
         """
         arg_id = self._generate_id("arg", self.identified_arguments)
         self.identified_arguments[arg_id] = description
         if producer:
-            key = str(source_quote) if source_quote else description
-            offset, basis = locate_unit_offset(key, self.raw_text or "")
-            entry: Dict[str, Any] = {
-                "producer": producer,
-                "offset": offset,
-                "offset_basis": basis,
-            }
+            entry: Dict[str, Any] = {"producer": producer}
+            stated = (
+                offset
+                if isinstance(offset, int) and not isinstance(offset, bool)
+                else None
+            )
+            if (
+                stated is not None
+                and self.raw_text
+                and 0 <= stated < len(self.raw_text)
+            ):
+                entry["offset"] = stated
+                entry["offset_basis"] = "producer-recorded"
+            else:
+                key = str(source_quote) if source_quote else description
+                found, basis = locate_unit_offset(key, self.raw_text or "")
+                entry["offset"] = found
+                entry["offset_basis"] = basis
             if source_quote:
                 entry["source_quote"] = str(source_quote)
             self.argument_provenance[arg_id] = entry

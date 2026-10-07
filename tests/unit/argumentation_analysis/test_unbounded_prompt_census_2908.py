@@ -345,12 +345,6 @@ ALLOWED = {
         "line 137 — per-item 200-char excerpts over ≤30 args — registered "
         "#2850 debt (the stakes site)"
     ),
-    (
-        "argumentation_analysis/plugins/text_to_kb_plugin.py",
-        "fstring",
-        "current_chunk",
-        1,
-    ): ("line 88 — chunker accumulator, bounded by max_chars per chunk"),
     # --- not a prompt: logs, cache keys, renders, UI ---
     (
         "argumentation_analysis/agents/core/logic/tweety_bridge_sk.py",
