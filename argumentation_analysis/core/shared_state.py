@@ -1166,6 +1166,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         score: float,
         target_arg_id: Optional[str] = None,
         validation: Optional[Dict[str, Any]] = None,
+        target_unresolved_reason: Optional[str] = None,
     ) -> str:
         """Add a counter-argument result.
 
@@ -1174,6 +1175,11 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         logical_consistency / formal_representation) so the restitution report
         (Acte II/III) can cite counter-argument *validity*, not just existence.
         Stored only when non-empty (honest — never fabricated).
+
+        #2968: ``target_unresolved_reason`` records WHY a counter carries no
+        ``target_arg_id`` (the echoed target matched no offered id) — an
+        unlinked counter is a measured fact, not a silent one. Stored only
+        when non-empty, same honest-absence rule.
         """
         ca_id = self._generate_id("ca", self.counter_arguments)
         entry = {
@@ -1187,6 +1193,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             entry["target_arg_id"] = target_arg_id
         if validation:
             entry["validation"] = validation
+        if target_unresolved_reason:
+            entry["target_unresolved_reason"] = target_unresolved_reason
         self.counter_arguments.append(entry)
         state_logger.info(f"Counter-argument added: {ca_id} (strategy: {strategy})")
         return ca_id

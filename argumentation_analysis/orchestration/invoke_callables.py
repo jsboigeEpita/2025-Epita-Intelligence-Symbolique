@@ -1143,6 +1143,7 @@ async def _generate_counters_for_targets(
     targets: List[str],
     batch_size: int = 12,
     k_per_target: int = 1,
+    target_ids: Optional[List[Optional[str]]] = None,
 ) -> List[Dict[str, Any]]:
     """Generate ``k_per_target`` counter-arguments per target via the LLM.
 
@@ -1154,6 +1155,14 @@ async def _generate_counters_for_targets(
     use DIFFERENT rhetorical strategies per CA brings the CONV volume above the
     zero-shot baseline on every observed corpus without raising ``batch_size``
     (no mega-prompt drop-off) or relaxing the per-target coverage guarantee.
+
+    #2968 — the target's IDENTITY travels as an opaque key. Each offered item
+    carries ``target_ids[i]`` as its key; the prompt asks for the key back in
+    ``target_argument`` and the returned id is accepted ONLY if it is one the
+    batch offered. Every counter is stamped ``target_unit_id`` (the validated
+    key, or None with a ``target_unresolved_reason``) and ``target_text`` (the
+    offered text of the key it answers). Callers that pass no ``target_ids``
+    get no stamped id — the free-text echo never resolves an id.
     """
     counters: List[Dict[str, Any]] = []
     det_params = _get_determinism_params()
@@ -1180,24 +1189,39 @@ async def _generate_counters_for_targets(
     )
 
     strength_scale = "|".join(s.value for s in ArgumentStrength)
-    # #1633 — TRAP: the ``target_argument`` this prompt asks for is FREE TEXT
-    # (the LLM echoes the argument it rebuts). The identically-named field in
-    # ``phase_hierarchical_fallacy_output`` is an ``arg_N`` IDENTIFIER. Same
-    # name, two meanings — a consumer must know which payload it is reading.
-    # Text-matching is correct HERE and wrong there; identifier resolution is
-    # correct there and wrong here. Do not unify the two branches.
+    # #1633 — TRAP: the identically-named ``target_argument`` field in
+    # ``phase_hierarchical_fallacy_output`` is an ``arg_N`` IDENTIFIER, while
+    # here it carries the echoed KEY of the offered item. Same name, two
+    # meanings — a consumer must know which payload it is reading. Do not
+    # unify the two branches.
     system_prompt = (
         "You are an expert in argumentation and counter-argument generation. "
         + prompt_count_clause
-        + " Respond with ONLY a JSON array:\n"
+        + " Each listed item starts with its [key] — answer with that key "
+        "verbatim in target_argument. Respond with ONLY a JSON array:\n"
         '[{"counter_argument": "text", "strategy_used": "name", '
-        '"target_argument": "which argument", '
+        '"target_argument": "[key of the item you counter]", '
         f'"strength": "{strength_scale}", '
         '"reasoning": "why this works"}, ...]\n' + DECISIVE_CRITERION
     )
+    ids = (
+        list(target_ids)
+        if target_ids is not None
+        else [None] * len(targets)
+    )
     for start in range(0, len(targets), batch_size):
         batch = targets[start : start + batch_size]
-        targets_text = "\n".join(f"{i+1}. {t}" for i, t in enumerate(batch))
+        batch_ids = ids[start : start + batch_size]
+        # #2968: the key is the offered id when there is one, unique per batch
+        # (a positional key would rebuild the very defect this fixes).
+        keys: List[str] = []
+        for i, tid in enumerate(batch_ids):
+            key = str(tid) if tid else f"item_{start + i + 1}"
+            while key in keys:
+                key += "'"
+            keys.append(key)
+        text_by_key = dict(zip(keys, batch))
+        targets_text = "\n".join(f"[{key}] {t}" for key, t in zip(keys, batch))
         expected = k * len(batch)
         try:
             response = await _guarded_chat_completion(
@@ -1211,7 +1235,7 @@ async def _generate_counters_for_targets(
             )
             raw = response.choices[0].message.content or ""
             parsed = _parse_counter_array(raw)
-            counters.extend(parsed)
+            counters.extend(_stamp_counter_targets(parsed, keys, text_by_key, batch_ids))
             # GG-bis #709: retry once if the batch returned fewer CAs than the
             # k-per-target floor (k * batch_len). #730 raises the threshold to
             # the k floor instead of the one-per-target floor.
@@ -1232,7 +1256,11 @@ async def _generate_counters_for_targets(
                     )
                     retry_raw = retry.choices[0].message.content or ""
                     retry_parsed = _parse_counter_array(retry_raw)
-                    counters.extend(retry_parsed)
+                    counters.extend(
+                        _stamp_counter_targets(
+                            retry_parsed, keys, text_by_key, batch_ids
+                        )
+                    )
                 except LLMCacheMiss:
                     raise
                 except Exception as retry_err:
@@ -1244,6 +1272,45 @@ async def _generate_counters_for_targets(
                 f"Counter-argument batch [{start}:{start + batch_size}] failed: {e}"
             )
     return counters
+
+
+def _stamp_counter_targets(
+    counters: List[Dict[str, Any]],
+    keys: List[str],
+    text_by_key: Dict[str, str],
+    batch_ids: List[Optional[str]],
+) -> List[Dict[str, Any]]:
+    """#2968 — stamp each returned counter with the target it answers.
+
+    The echoed key is accepted ONLY if it is one the batch offered; the id it
+    resolves to is the offered id behind that key. An echo that matches no
+    offered key — a number, a paraphrase, free prose — leaves
+    ``target_unit_id`` None with the reason recorded: no substring, no
+    first-match, no positional guess (#1019).
+    """
+    id_by_key = {
+        key: batch_ids[i] for i, key in enumerate(keys) if i < len(batch_ids)
+    }
+    stamped: List[Dict[str, Any]] = []
+    for ca in counters:
+        if not isinstance(ca, dict):
+            stamped.append(ca)
+            continue
+        echo = str(ca.get("target_argument", "")).strip()
+        key = echo[1:-1].strip() if echo.startswith("[") and echo.endswith("]") else echo
+        if key in text_by_key:
+            ca["target_unit_id"] = id_by_key.get(key)
+            ca["target_text"] = text_by_key[key]
+            if ca["target_unit_id"] is None:
+                ca["target_unresolved_reason"] = "target carried no id"
+        else:
+            ca["target_unit_id"] = None
+            ca["target_text"] = None
+            ca["target_unresolved_reason"] = (
+                f"echoed target {echo[:60]!r} matches no offered key"
+            )
+        stamped.append(ca)
+    return stamped
 
 
 async def _generate_counter_arguments_from_state(state: Any) -> Dict[str, Any]:
@@ -1262,17 +1329,31 @@ async def _generate_counter_arguments_from_state(state: Any) -> Dict[str, Any]:
     calibrate k dynamically with a +1 safety margin.
     """
     args = getattr(state, "identified_arguments", []) or []
+    # #2968: each target carries its id (the state's own key) — dict form is
+    # {arg_id: description}, list form carries the id inside each entry.
+    if isinstance(args, dict):
+        pairs: List[Tuple[Optional[str], str]] = [
+            (str(k), v if isinstance(v, str) else str(v)) for k, v in args.items()
+        ]
+    else:
+        pairs = []
+        for a in args:
+            if isinstance(a, dict):
+                aid = a.get("id") or a.get("arg_id")
+                text = a.get("text") or a.get("description") or a.get("content") or ""
+                pairs.append((str(aid) if aid else None, str(text)))
+            else:
+                pairs.append((None, str(a)))
     targets: List[str] = []
-    for a in args:
-        if isinstance(a, dict):
-            text = a.get("text") or a.get("description") or a.get("content") or ""
-        else:
-            text = str(a)
-        text = str(text).strip()
+    target_ids: List[Optional[str]] = []
+    for aid, text in pairs:
+        text = text.strip()
         if text:
             targets.append(text)
+            target_ids.append(aid)
     if not targets:
         return {"added": 0, "targets": 0}
+    offered_ids = {aid for aid in target_ids if aid}
 
     client, model_id = _get_openai_client()
     if not client:
@@ -1293,8 +1374,15 @@ async def _generate_counter_arguments_from_state(state: Any) -> Dict[str, Any]:
             pass
 
     counters = await _generate_counters_for_targets(
-        client, model_id, targets, k_per_target=k_per_target
+        client, model_id, targets, k_per_target=k_per_target, target_ids=target_ids
     )
+
+    def _ca_target(ca: Dict[str, Any]) -> Tuple[str, Optional[str]]:
+        """(#2968) The offered text + the validated id of the answered target."""
+        tid = ca.get("target_unit_id")
+        tid = tid if isinstance(tid, str) and tid in offered_ids else None
+        text = ca.get("target_text") or ca.get("target_argument") or ""
+        return str(text)[:300], tid
 
     added = 0
     for ca in counters:
@@ -1304,12 +1392,14 @@ async def _generate_counter_arguments_from_state(state: Any) -> Dict[str, Any]:
         if not content:
             continue
         score = float(ca.get("evaluation_score", ca.get("score", 0.0)) or 0.0)
+        original_arg, tid = _ca_target(ca)
         try:
             state.add_counter_argument(
-                original_arg=str(ca.get("target_argument", ""))[:300],
+                original_arg=original_arg,
                 counter_content=str(content),
                 strategy=str(ca.get("strategy_used", "")),
                 score=score,
+                target_arg_id=tid,
             )
             added += 1
         except Exception as e:
@@ -1318,16 +1408,30 @@ async def _generate_counter_arguments_from_state(state: Any) -> Dict[str, Any]:
     # GG-bis #709: guarantee >=1 CA per argument — retry uncovered targets once.
     # YY #730: retry still requests k_per_target CAs per uncovered item so total
     # CA count stays ≥ k × args even when the first batch missed targets.
+    # #2968: coverage is measured by the VALIDATED id when the target carries
+    # one — a substring on the free-text echo covered nothing real.
     if added < len(targets) and client:
         covered_indices: set[int] = set()
-        for ca in counters:
-            if not isinstance(ca, dict):
-                continue
-            target_arg = str(ca.get("target_argument", ""))
-            for i, t in enumerate(targets):
-                if i not in covered_indices and t[:80] in target_arg:
+        covered_ids = {
+            ca.get("target_unit_id")
+            for ca in counters
+            if isinstance(ca, dict) and ca.get("target_unit_id")
+        }
+        for i, (t, aid) in enumerate(zip(targets, target_ids)):
+            if aid is not None:
+                if aid in covered_ids:
                     covered_indices.add(i)
+            else:
+                for ca in counters:
+                    if not isinstance(ca, dict):
+                        continue
+                    if t[:80] in str(ca.get("target_argument", "")):
+                        covered_indices.add(i)
+                        break
         uncovered = [t for i, t in enumerate(targets) if i not in covered_indices]
+        uncovered_ids = [
+            aid for i, aid in enumerate(target_ids) if i not in covered_indices
+        ]
         if uncovered:
             logger.info(
                 f"GG-bis: {len(uncovered)} targets uncovered "
@@ -1335,7 +1439,11 @@ async def _generate_counter_arguments_from_state(state: Any) -> Dict[str, Any]:
             )
             try:
                 retry_counters = await _generate_counters_for_targets(
-                    client, model_id, uncovered, k_per_target=k_per_target
+                    client,
+                    model_id,
+                    uncovered,
+                    k_per_target=k_per_target,
+                    target_ids=uncovered_ids,
                 )
                 for ca in retry_counters:
                     if not isinstance(ca, dict):
@@ -1346,12 +1454,14 @@ async def _generate_counter_arguments_from_state(state: Any) -> Dict[str, Any]:
                     score = float(
                         ca.get("evaluation_score", ca.get("score", 0.0)) or 0.0
                     )
+                    original_arg, tid = _ca_target(ca)
                     try:
                         state.add_counter_argument(
-                            original_arg=str(ca.get("target_argument", ""))[:300],
+                            original_arg=original_arg,
                             counter_content=str(content),
                             strategy=str(ca.get("strategy_used", "")),
                             score=score,
+                            target_arg_id=tid,
                         )
                         added += 1
                     except Exception as e:
@@ -1624,12 +1734,18 @@ async def _invoke_counter_argument(
             # the LLM calls so coverage stays reliable on dense corpora.
             # Fallacy-first priority kept (#2896): fallacious targets lead.
             targets = []
+            target_ids: List[Optional[str]] = []
             for f in fallacies:
                 if isinstance(f, dict):
                     targets.append(
                         f"[FALLACY: {f.get('type', f.get('fallacy_type', ''))}] "
                         f"{f.get('explanation', '')[:100]}"
                     )
+                    # #2968: the fallacy payload carries the arg_N it attacks
+                    # (#1633: an identifier HERE, free text in the counter
+                    # payload) — the counter answers that same unit.
+                    fallacy_target = str(f.get("target_argument", "") or "")
+                    target_ids.append(fallacy_target or None)
 
             # Sort the SELECTED units by quality score (weakest first)
             scored_args = []
@@ -1640,10 +1756,10 @@ async def _invoke_counter_argument(
                 # regardless of merit. Unmeasured arguments sort last and say
                 # so, instead of being handed a fabricated middling 5.0.
                 frac = _quality_fraction(per_arg_scores.get(u.unit_id, {}))
-                scored_args.append((frac, u.text))
+                scored_args.append((frac, u.text, u.unit_id))
             scored_args.sort(key=lambda x: (x[0] is None, x[0]))  # weakest first
 
-            for frac, text in scored_args:
+            for frac, text, unit_id in scored_args:
                 if text:
                     label = (
                         "quality=non mesurée"
@@ -1651,6 +1767,10 @@ async def _invoke_counter_argument(
                         else f"quality={frac:.0%} des dimensions applicables"
                     )
                     targets.append(f"[{label}] {text}")
+                    # #2968: the unit's own id travels as the opaque key —
+                    # the writer accepts the echoed key only if the batch
+                    # offered it.
+                    target_ids.append(str(unit_id) if unit_id else None)
 
             if not targets:
                 targets = [
@@ -1661,9 +1781,10 @@ async def _invoke_counter_argument(
                         state=reading_state_from_context(context),
                     )
                 ]
+                target_ids = [None]
 
             llm_counters = await _generate_counters_for_targets(
-                client, model_id, targets
+                client, model_id, targets, target_ids=target_ids
             )
     except LLMCacheMiss:
         raise
