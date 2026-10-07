@@ -109,17 +109,22 @@ def _gitignored_probe(rel_dir: str) -> bool:
     return out.returncode == 0 and bool(out.stdout.strip())
 
 
-def classify_one(readme: Path) -> dict[str, object]:
-    rel = readme.relative_to(REPO).as_posix()
-    parent_rel = readme.parent.relative_to(REPO).as_posix()
-    name = readme.name
-    broken = _broken_paths(readme)
-    prose = _prose_lines(readme)
-    specialized = bool(re.fullmatch(r"README_[^/]*\.md", name))
-    if specialized:
+def _decide(
+    rel: str, name: str, broken: list[str], prose: int, ignored: bool
+) -> tuple[str, str]:
+    """The class, from the MEASURED inputs — one place holds every literal.
+
+    Kept apart from :func:`classify_one` so the self-test can drive the real
+    decision on synthetic inputs: a control that re-implements the branches
+    (as the first version did for the judgment overlay) can never fail, and
+    a mutation of a threshold would go unnoticed (measured by the
+    coordinator on #2992, mutation-style). Every branch below is exercised
+    by ``--selftest``.
+    """
+    if re.fullmatch(r"README_[^/]*\.md", name):
         classe = "spécialisé seulement"
         motif = "README_*.md : document compagnon, pas le README du répertoire"
-    elif _gitignored_probe(parent_rel):
+    elif ignored:
         # Unreachable for tracked files (Lot 0 proved 0 tracked vendored) —
         # kept as a measured branch so the class is earned, not asserted.
         classe = "hors périmètre"
@@ -136,6 +141,16 @@ def classify_one(readme: Path) -> dict[str, object]:
     if rel in _JUDGMENT:
         classe, motif = _JUDGMENT[rel]
         motif = f"jugement daté : {motif}"
+    return classe, motif
+
+
+def classify_one(readme: Path) -> dict[str, object]:
+    rel = readme.relative_to(REPO).as_posix()
+    parent_rel = readme.parent.relative_to(REPO).as_posix()
+    name = readme.name
+    broken = _broken_paths(readme)
+    prose = _prose_lines(readme)
+    classe, motif = _decide(rel, name, broken, prose, _gitignored_probe(parent_rel))
     return {
         "path": rel,
         "lines": prose,
@@ -147,68 +162,87 @@ def classify_one(readme: Path) -> dict[str, object]:
 
 
 def _selftest() -> int:
-    """Born-red: every class the classifier must detect, on fixtures."""
+    """Born-red: the REAL decider is exercised on every branch it claims.
+
+    Two layers: the measurement primitives on disk fixtures (a broken link is
+    really a broken link; a stub really falls under the floor), then
+    :func:`_decide` itself on synthetic inputs — one assertion per branch, so
+    a mutated threshold or a dropped overlay reddens here.
+    """
     failures = []
+
+    def expect(desc: str, got: object, want: object) -> None:
+        if got != want:
+            failures.append(f"{desc}: got {got!r}, want {want!r}")
+
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         (root / "README.md").write_text(
             "# d\n\nsee [gone](missing.py) and [ok](./README.md)\n", encoding="utf-8"
         )
-        (root / "README_solver.md").write_text("# s\n\nnotes\n", encoding="utf-8")
         (root / "stub").mkdir()
         (root / "stub" / "README.md").write_text("# st\n\n", encoding="utf-8")
-
-        class _Fake:
-            pass
-
-        fake = _Fake()
-        broken = _broken_paths(root / "README.md")
-        if broken != ["missing.py"]:
-            failures.append(f"broken-link detector: got {broken}")
+        expect(
+            "broken-link detector",
+            _broken_paths(root / "README.md"),
+            ["missing.py"],
+        )
         if _prose_lines(root / "README.md") < 1:
             failures.append("prose counter returned 0 on real prose")
-        if not re.fullmatch(r"README_[^/]*\.md", "README_solver.md"):
-            failures.append("specialized pattern does not match README_solver.md")
         if _prose_lines(root / "stub" / "README.md") >= _MIN_PROSE_LINES:
             failures.append("stub passed the prose floor")
-    # Judgment overlay applies when set (the seam stays empty unless a dated
-    # reading adds an entry; this proves the seam wires through).
+
+    # The real decision function, one assertion per branch.
+    rel = "argumentation_analysis/fake/README.md"
+    expect(
+        "specialized branch",
+        _decide(rel, "README_solver.md", [], 50, False)[0],
+        "spécialisé seulement",
+    )
+    expect(
+        "out-of-scope branch",
+        _decide(rel, "README.md", [], 50, True)[0],
+        "hors périmètre",
+    )
+    expect(
+        "broken-link branch",
+        _decide(rel, "README.md", ["missing.py"], 50, False)[0],
+        "à réécrire",
+    )
+    expect(
+        "stub branch",
+        _decide(rel, "README.md", [], _MIN_PROSE_LINES - 1, False)[0],
+        "à réécrire",
+    )
+    expect("current branch", _decide(rel, "README.md", [], 50, False)[0], "courant")
+    # The judgment overlay wins over the measured class and marks its origin.
     global _JUDGMENT
     saved = dict(_JUDGMENT)
     try:
-        _JUDGMENT = {"fake/README.md": ("à réécrire", "selftest overlay")}
-        fake_row = {
-            "path": "fake/README.md",
-            "lines": 99,
-            "touched": "2026-10-07",
-            "broken": [],
-            "classe": "courant",
-            "motif": "",
-        }
-        rel = str(fake_row["path"])
-        if rel in _JUDGMENT:
-            fake_row["classe"], fake_row["motif"] = _JUDGMENT[rel]
-        if fake_row["classe"] != "à réécrire" or "selftest" not in str(
-            fake_row["motif"]
-        ):
-            failures.append("judgment overlay did not wire through")
+        _JUDGMENT = {rel: ("à réécrire", "selftest overlay")}
+        classe, motif = _decide(rel, "README.md", [], 50, False)
+        expect("overlay class", classe, "à réécrire")
+        if "selftest overlay" not in motif:
+            failures.append(f"overlay motif not carried: {motif!r}")
     finally:
         _JUDGMENT = saved
-    # Repo-side liveness: the enumeration must see a substantive population.
     readmes = _tracked_readmes()
     if len(readmes) < 90:
         failures.append(f"enumeration saw only {len(readmes)} READMEs (>= 90 expected)")
-    specialized = [p for p in readmes if re.fullmatch(r"README_[^/]*\.md", p.name)]
-    if not specialized:
+    specialized_readmes = [
+        p for p in readmes if re.fullmatch(r"README_[^/]*\.md", p.name)
+    ]
+    if not specialized_readmes:
         failures.append("no specialized README detected (Lot 0 measured 3)")
     if failures:
         for f in failures:
             print(f"SELFTEST FAIL: {f}", file=sys.stderr)
         return 1
     print(
-        f"SELFTEST PASS — broken-link detector fires, stub floor fires, "
-        f"specialized pattern matches, enumeration sees {len(readmes)} READMEs "
-        f"({len(specialized)} specialized)"
+        f"SELFTEST PASS — every branch of _decide fires (specialized / "
+        f"out-of-scope / broken link / stub / current / overlay), the "
+        f"measurement primitives bite, enumeration sees {len(readmes)} READMEs "
+        f"({len(specialized_readmes)} specialized)"
     )
     return 0
 

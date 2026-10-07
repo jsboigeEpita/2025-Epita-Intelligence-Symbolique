@@ -21,21 +21,18 @@ Cet outil est essentiel pour maintenir la qualité des extraits utilisés dans l
 ## Contenu 📁
 
 ### Scripts de réparation
-* **[`repair_extract_markers.py`](./repair_extract_markers.py)** : Script principal pour la réparation automatique des bornes.
+* **[`marker_repair_logic.py`](./marker_repair_logic.py)** : Logique de réparation des bornes (module Python, classe `ExtractRepairPlugin` + `generate_report`).
 * **[`repair_extract_markers.ipynb`](./repair_extract_markers.ipynb)** : Notebook interactif pour la réparation des bornes.
 * **[`fix_missing_first_letter.py`](./fix_missing_first_letter.py)** : Script spécifique pour corriger le problème de première lettre manquante dans les extraits.
 
 ### Scripts de vérification
-* **[`verify_extracts.py`](./verify_extracts.py)** : Script pour vérifier la validité des extraits de texte.
 * **[`verify_extracts_with_llm.py`](./verify_extracts_with_llm.py)** : Utilise un LLM pour vérifier la pertinence des extraits.
 
 ### Documentation et rapports
 * **[`__init__.py`](./__init__.py)** : Marque le dossier comme un package Python.
-* **[`docs/`](./docs/)** : Documentation et rapports générés (voir détails ci-dessous):
+* **[`docs/`](./docs/)** : Documentation (voir détails ci-dessous):
   * **[`repair_extract_markers_report.md`](./docs/repair_extract_markers_report.md)** : Documentation détaillée sur la réparation des bornes.
-  * **[`repair_report.html`](./docs/repair_report.html)** : Rapport HTML généré par le script de réparation.
-  * **[`verify_extracts_report.html`](./docs/verify_extracts_report.html)** : Rapport HTML généré par le script de vérification.
-  * **[`extract_sources_updated.json`](./docs/extract_sources_updated.json)** : Version mise à jour des sources d'extraits après réparation.
+  * Les rapports HTML (`repair_report.html`, `verify_extracts_report.html`) et `extract_sources_updated.json` cités plus bas sont des **artefacts générés à l'exécution, non suivis** — présents sur un poste qui a tourné la réparation, absents d'un checkout propre.
 #### Vue d'ensemble du contenu de `docs/`
 
 Le module de réparation des extraits (`extract_repair`) est conçu pour résoudre les problèmes liés aux marqueurs de début et de fin dans les définitions d'extraits. Cette documentation fournit des informations détaillées sur :
@@ -128,7 +125,15 @@ jupyter notebook repair_extract_markers.ipynb
 
 ### Intégration dans d'autres modules
 
-Le module peut être importé et utilisé dans d'autres parties du projet:
+> Exemple **historique** (chemins d'import d'avant la restructuration —
+> `repair_extract_markers.py` a été remplacé par
+> [`marker_repair_logic.py`](./marker_repair_logic.py) et son
+> `ExtractRepairPlugin`). Conservé tel quel comme trace du flux d'origine :
+> l'API vivante est le plugin.
+
+```python
+import asyncio
+from utils.extract_repair.repair_extract_markers import repair_extract_markers
 
 ```python
 import asyncio
@@ -265,7 +270,7 @@ Pour ajouter de nouvelles fonctionnalités à l'outil de réparation, suivez ces
 La documentation détaillée sur le fonctionnement de l'outil de réparation est disponible dans le dossier `docs/`:
 
 - [Documentation sur la réparation des bornes](./docs/repair_extract_markers_report.md)
-- [Exemple de rapport de réparation](./docs/repair_report.html)
+- Un exemple de rapport de réparation (`repair_report.html`) est généré à l'exécution par `generate_report` — artefact non suivi, donc sans lien ici
 
 ## Dépendances 📦
 
