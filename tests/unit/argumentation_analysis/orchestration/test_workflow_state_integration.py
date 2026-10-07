@@ -177,6 +177,10 @@ class TestStateWriters:
         assert state.debate_transcripts[0]["winner"] == "Team A"
 
     def test_write_governance_to_state(self):
+        """#2969 — an output carrying only ``available_methods`` writes NO
+        decision: the methods are a catalogue, not a vote, and the old
+        available_methods-as-0.0-scores fallback dressed that catalogue as a
+        decided record (method names as scores, winner N/A)."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _write_governance_to_state,
         )
@@ -185,8 +189,30 @@ class TestStateWriters:
         output = {"available_methods": ["majority", "borda", "condorcet"]}
         ctx = {}
         _write_governance_to_state(output, state, ctx)
+        assert len(state.governance_decisions) == 0
+
+    def test_write_governance_to_state_records_a_real_vote(self):
+        """#2969 positive control — removing the fallback must not drop
+        #294's auto-triggered records: a vote-only output (vote_result
+        .winner set, no stakeholders, no LLM) still writes its decision."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_governance_to_state,
+        )
+
+        state = UnifiedAnalysisState("test")
+        output = {
+            "available_methods": ["majority", "borda", "condorcet"],
+            "vote_result": {
+                "winner": "arg_2",
+                "copeland_scores": {"arg_2": 1.0},
+            },
+        }
+        ctx = {}
+        _write_governance_to_state(output, state, ctx)
         assert len(state.governance_decisions) == 1
-        assert "majority" in state.governance_decisions[0]["scores"]
+        decision = state.governance_decisions[0]
+        assert decision["winner"] == "arg_2"
+        assert decision["winner_provenance"] == "vote_aggregate"
 
     def test_write_camembert_to_state(self):
         from argumentation_analysis.orchestration.unified_pipeline import (

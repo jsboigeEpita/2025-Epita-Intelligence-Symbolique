@@ -377,9 +377,14 @@ class TestSpectacularWorkflowGolden:
         # #2890: the merged-population consumers (quality, per-argument
         # fallacy, nl_to_logic) gained depends_on text_to_kb — one level
         # later than the producer, instead of beside it. 8 → 9.
+        # #2969: every read now names a declared producer — quality waits
+        # for hierarchical_fallacy (the #289 penalty read an empty output,
+        # 0/8 units penalized), jtms for fol/pl, debate for jtms, dialogue
+        # for counter, and governance aggregates counter/debate/jtms and
+        # becomes the terminal L8 beside deep_synthesis. 9 → 10.
         wf = build_spectacular_workflow()
         levels = wf.get_execution_order()
-        assert len(levels) == 9
+        assert len(levels) == 10
 
     def test_extract_is_sole_entry_point(self):
         wf = build_spectacular_workflow()
@@ -408,13 +413,22 @@ class TestSpectacularWorkflowGolden:
         # hierarchical_fallacy, nl_to_logic — ordered after text_to_kb) plus
         # kb_to_tweety (already after its producer). Formal logic and counter
         # follow one level later, after their L2 inputs.
+        # #2969: quality moved one level later again — it READS
+        # hierarchical_fallacy (the #289 fallacy penalty), and an undeclared
+        # producer in the same level reads as an empty output. hf and
+        # nl_to_logic stay at L3; quality joins the formal-logic level L4;
+        # counter follows quality at L5; jtms waits for fol/pl at L6; debate
+        # waits for jtms at L7 and governance aggregates its axes at L8,
+        # terminal beside deep_synthesis.
         assert {
-            "quality",
             "hierarchical_fallacy",
             "nl_to_logic",
         }.issubset(set(levels[2]))
-        assert {"fol", "modal", "pl"}.issubset(set(levels[3]))
-        assert "counter" in levels[3]
+        assert {"fol", "modal", "pl", "quality"}.issubset(set(levels[3]))
+        assert "counter" in levels[4]
+        assert "jtms" in levels[5]
+        assert {"debate", "dialogue_reasoning"}.issubset(set(levels[6]))
+        assert {"deep_synthesis", "governance"}.issubset(set(levels[7]))
 
     def test_counter_depends_on_quality(self):
         wf = build_spectacular_workflow()
