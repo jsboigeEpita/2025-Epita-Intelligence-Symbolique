@@ -573,9 +573,9 @@ def _write_counter_argument_to_state(
             )
         else:
             unresolved = None
-        target = str(
-            llm_ca.get("target_text") or llm_ca.get("target_argument", "")
-        )[:200]
+        target = str(llm_ca.get("target_text") or llm_ca.get("target_argument", ""))[
+            :200
+        ]
         counter_text = str(llm_ca.get("counter_argument", ""))
         strategy_name = str(llm_ca.get("strategy_used", "unknown"))
         score = strength_map.get(str(llm_ca.get("strength", "")).lower(), 0.5)

@@ -16,9 +16,6 @@ recorded reason — no substring, no first-match, no positional guess (#1019).
 
 import asyncio
 import json
-from types import SimpleNamespace
-
-import pytest
 
 from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 from argumentation_analysis.orchestration import invoke_callables
@@ -230,3 +227,193 @@ class TestResolverRestriction:
     def test_exact_id_still_resolves(self):
         state = _units_state()
         assert _resolve_target_arg_id(state, "arg_3") == "arg_3"
+
+
+class TestJTMSLinkerFollowsIds:
+    async def test_rebuttal_targets_the_id_named_unit_not_a_substring_sibling(self):
+        """Linker witness (#2968): arg_1 and arg_10 both in the population,
+        arg_10 listed first (the quality-ordered selection is not the id
+        order). The counter stamped ``arg_1`` rebuts arg_1's belief — on
+        main the substring scan first-hit ``arg_10:…``, the first belief
+        containing "arg_1"."""
+        from argumentation_analysis.orchestration.unified_pipeline import _invoke_jtms
+
+        context = {
+            "phase_extract_output": {
+                # Shuffled: the selection order is NOT the id order, and
+                # arg_10 shadows arg_1 under any substring read.
+                "arguments": [
+                    {
+                        "text": "Unit 10 asserts the trend holds in every region",
+                        "unit_id": "arg_10",
+                    },
+                    {
+                        "text": "Unit 1 claims a 15 percent improvement",
+                        "unit_id": "arg_1",
+                    },
+                    {
+                        "text": "Unit 2 answers that the baseline is omitted",
+                        "unit_id": "arg_2",
+                    },
+                ],
+                "claims": [],
+            },
+            "phase_counter_output": {
+                "llm_counter_arguments": [
+                    {
+                        "counter_argument": "Counter A rebuts unit one head-on",
+                        "target_argument": "arg_1",
+                        "target_unit_id": "arg_1",
+                        "target_text": "Unit 1 claims a 15 percent improvement",
+                    }
+                ]
+            },
+        }
+        result = await _invoke_jtms("text", context)
+        rebuttals = [n for n in result["beliefs"] if n.startswith("rebuttal:")]
+        assert len(rebuttals) == 1, "the stamped id must link exactly one rebuttal"
+        assert "→arg_1:" in rebuttals[0], rebuttals[0]
+        assert "arg_10:" not in rebuttals[0], rebuttals[0]
+
+    async def test_unstamped_counter_creates_no_rebuttal(self):
+        """A counter whose echo matched no offered key (``target_unit_id``
+        absent) weakens nothing — the old substring read bound its batch
+        number to whatever belief contained the digit."""
+        from argumentation_analysis.orchestration.unified_pipeline import _invoke_jtms
+
+        context = {
+            "phase_extract_output": {
+                "arguments": [
+                    {
+                        "text": "Unit 1 claims a 15 percent improvement",
+                        "unit_id": "arg_1",
+                    },
+                    {"text": "Unit 2 notes 12 of 40 regions", "unit_id": "arg_2"},
+                ],
+                "claims": [],
+            },
+            "phase_counter_output": {
+                "llm_counter_arguments": [
+                    {
+                        "counter_argument": "Counter B echoes a batch number",
+                        # The measured echo shape: "1" — no offered key.
+                        "target_argument": "1",
+                        "target_unresolved_reason": (
+                            "echoed target '1' matches no offered key"
+                        ),
+                    }
+                ]
+            },
+        }
+        result = await _invoke_jtms("text", context)
+        rebuttals = [n for n in result["beliefs"] if n.startswith("rebuttal:")]
+        assert rebuttals == [], "a digit echo must link nothing (#2968)"
+
+
+class TestDialogueOpponentEdges:
+    def test_edges_follow_ids_through_shuffled_caller_order(self):
+        """The dialogue's opponent edges name BOTH endpoints exactly — the
+        counter text and the unit its validated id names — and a dangling id
+        (not in the run) yields no edge."""
+        from argumentation_analysis.orchestration.invoke_callables import _counter_edges
+
+        state = _units_state()
+        args = [state.identified_arguments[k] for k in ("arg_3", "arg_1", "arg_2")]
+        cas = [
+            {
+                "counter_argument": "Counter B answers unit two head-on",
+                "target_argument": "arg_2",
+                "target_unit_id": "arg_2",
+                "target_text": state.identified_arguments["arg_2"],
+            },
+            {
+                "counter_argument": "Counter C answers unit three head-on",
+                "target_argument": "arg_3",
+                "target_unit_id": "arg_3",
+                "target_text": state.identified_arguments["arg_3"],
+            },
+            {
+                "counter_argument": "Counter D carries a dangling reference",
+                "target_argument": "arg_99",
+                "target_unit_id": "arg_99",
+                "target_text": "Unit 99 is not in this run",
+            },
+        ]
+        edges = _counter_edges(cas, args, {"_state_object": state})
+        assert edges == [
+            ["Counter B answers unit two head-on", state.identified_arguments["arg_2"]],
+            [
+                "Counter C answers unit three head-on",
+                state.identified_arguments["arg_3"],
+            ],
+        ]
+
+
+class TestATMSRecordsItsContradictions:
+    async def test_targeted_units_invalidate_the_hypotheses_that_hold_them(self):
+        """Linker witness (#2968): two fallacies target arg_3 and arg_4 —
+        NOT the first two units. The hypotheses holding those units are
+        incoherent, the high-quality-only hypothesis stays coherent, and the
+        summary records the contradictions. On main the positional link put
+        the CONTRA on the first two units and the summary wrote
+        ``has_contradictions: False`` while recording two CONTRA beliefs
+        (the ⊥ label self-clears, #2094)."""
+        from argumentation_analysis.orchestration.unified_pipeline import _invoke_atms
+
+        state = UnifiedAnalysisState("Source text for the ATMS identity witness.")
+        state.identified_arguments = {
+            "arg_1": "Unit 1 claims a 15 percent improvement and cites 2023 data.",
+            "arg_2": "Unit 2 answers that the 15 percent figure omits the baseline.",
+            "arg_3": "Unit 3 notes the 2023 dataset covers only 12 of 40 regions.",
+            "arg_4": "Unit 4 concludes the policy cannot be judged yet overall.",
+        }
+        state.argument_provenance = {
+            "arg_1": {"producer": "test", "offset": 100},
+            "arg_2": {"producer": "test", "offset": 1_600},
+            "arg_3": {"producer": "test", "offset": 3_100},
+            "arg_4": {"producer": "test", "offset": 4_600},
+        }
+        context = {
+            "_state_object": state,
+            "phase_extract_output": {"arguments": [], "claims": []},
+            "phase_hierarchical_fallacy_output": {
+                "fallacies": [
+                    {
+                        "fallacy_type": "hasty_generalization",
+                        "target_argument": "arg_3",
+                    },
+                    {"fallacy_type": "false_dilemma", "target_argument": "arg_4"},
+                ]
+            },
+            "phase_quality_output": {
+                "per_argument_scores": {
+                    "arg_1": {"note_finale": 8.0},
+                    "arg_2": {"note_finale": 7.0},
+                    "arg_3": {"note_finale": 2.0},
+                    "arg_4": {"note_finale": 1.0},
+                }
+            },
+        }
+        result = await _invoke_atms("text", context)
+
+        # The summary no longer answers "no contradiction" with two CONTRA
+        # on record — the consumer keeps its own durable registry (#2094
+        # label contract, #2968).
+        assert result["has_contradictions"] is True
+        assert len(result["contradiction_environments"]) == 2
+        name_3 = state.identified_arguments["arg_3"][:80]
+        name_4 = state.identified_arguments["arg_4"][:80]
+        invalidated_envs = {
+            tuple(e["environment"]) for e in result["contradiction_environments"]
+        }
+        assert (name_3,) in invalidated_envs
+        assert (name_4,) in invalidated_envs
+
+        contexts = {c["hypothesis_id"]: c for c in result["atms_contexts"]}
+        # Full trust holds the targeted units → incoherent, and the
+        # contradicting beliefs are named.
+        assert contexts["h_full_trust"]["coherent"] is False
+        assert contexts["h_full_trust"]["contradiction_count"] == 2
+        # High-quality-only hypothesis drops arg_3/arg_4 → coherent.
+        assert contexts["h_high_quality"]["coherent"] is True
+        assert contexts["h_high_quality"]["contradiction_count"] == 0

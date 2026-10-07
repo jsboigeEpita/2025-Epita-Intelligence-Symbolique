@@ -20,6 +20,7 @@ from typing import (
     Awaitable,
     Callable,
     Final,
+    FrozenSet,
     Iterator,
     Optional,
     List,
@@ -1204,10 +1205,8 @@ async def _generate_counters_for_targets(
         f'"strength": "{strength_scale}", '
         '"reasoning": "why this works"}, ...]\n' + DECISIVE_CRITERION
     )
-    ids = (
-        list(target_ids)
-        if target_ids is not None
-        else [None] * len(targets)
+    ids: List[Optional[str]] = (
+        list(target_ids) if target_ids is not None else [None] * len(targets)
     )
     for start in range(0, len(targets), batch_size):
         batch = targets[start : start + batch_size]
@@ -1235,7 +1234,9 @@ async def _generate_counters_for_targets(
             )
             raw = response.choices[0].message.content or ""
             parsed = _parse_counter_array(raw)
-            counters.extend(_stamp_counter_targets(parsed, keys, text_by_key, batch_ids))
+            counters.extend(
+                _stamp_counter_targets(parsed, keys, text_by_key, batch_ids)
+            )
             # GG-bis #709: retry once if the batch returned fewer CAs than the
             # k-per-target floor (k * batch_len). #730 raises the threshold to
             # the k floor instead of the one-per-target floor.
@@ -1288,16 +1289,16 @@ def _stamp_counter_targets(
     ``target_unit_id`` None with the reason recorded: no substring, no
     first-match, no positional guess (#1019).
     """
-    id_by_key = {
-        key: batch_ids[i] for i, key in enumerate(keys) if i < len(batch_ids)
-    }
+    id_by_key = {key: batch_ids[i] for i, key in enumerate(keys) if i < len(batch_ids)}
     stamped: List[Dict[str, Any]] = []
     for ca in counters:
         if not isinstance(ca, dict):
             stamped.append(ca)
             continue
         echo = str(ca.get("target_argument", "")).strip()
-        key = echo[1:-1].strip() if echo.startswith("[") and echo.endswith("]") else echo
+        key = (
+            echo[1:-1].strip() if echo.startswith("[") and echo.endswith("]") else echo
+        )
         if key in text_by_key:
             ca["target_unit_id"] = id_by_key.get(key)
             ca["target_text"] = text_by_key[key]
@@ -2973,12 +2974,20 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
         target_idx = -1
         target_arg_text = f.get("target_argument", "")
         if target_arg_text and arg_beliefs:
-            # Try substring matching against belief names
-            target_lower = target_arg_text.lower()[:80]
-            for idx, ab in enumerate(arg_beliefs):
-                if target_lower in ab.lower() or ab.lower() in target_lower:
-                    target_idx = idx
-                    break
+            # #2968: ``target_argument`` carries the unit's own ``arg_N``
+            # identifier here (#1633) and belief names are ``{unit_id}:{…}``
+            # (#2895) — the exact id prefix names the belief. The old
+            # substring scan first-hit whatever belief sat earlier in the
+            # quality-ordered list (``arg_1`` matches ``arg_10:…``), which
+            # is the same mislink family the counters measured.
+            target_idx = next(
+                (
+                    idx
+                    for idx, ab in enumerate(arg_beliefs)
+                    if ab.startswith(f"{target_arg_text}:")
+                ),
+                -1,
+            )
         # Fallback: try problematic_quote (exact text from source)
         if target_idx < 0 and arg_beliefs:
             quote_text = f.get("problematic_quote", "")
@@ -2997,9 +3006,9 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
                     if expl_lower in ab.lower() or ab.lower() in expl_lower:
                         target_idx = idx
                         break
-        # Final fallback: index-based matching
-        if target_idx < 0 and arg_beliefs:
-            target_idx = min(i, len(arg_beliefs) - 1)
+        # #2968: no positional fallback. An index is not an identity —
+        # guessing ``arg_{i}`` undermined a wrong unit whenever the
+        # resolvers above missed (#1019: honest absence, no invented edge).
 
         if target_idx >= 0:
             target_arg = arg_beliefs[target_idx]
@@ -3026,36 +3035,49 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
         if not isinstance(ca, dict):
             continue
         ca_text = ca.get("counter_argument", f"counter_arg_{i+1}")[:80]
-        target = ca.get("target_argument", "")[:40]
+        # #2968: the counter weakens the unit its VALIDATED id names (belief
+        # names carry the unit id as prefix, #2895). The free-text echo never
+        # substring-resolves — measured, 4 of 4 refutations linked a wrong
+        # unit because the echo was a batch number. A text fallback stays
+        # only under the writer's rule: long (≥ 20) and unique.
+        target_id = ca.get("target_unit_id")
+        matched = None
+        if isinstance(target_id, str):
+            matched = next(
+                (ab for ab in arg_beliefs if ab.startswith(f"{target_id}:")), None
+            )
+        if matched is None:
+            needle = str(
+                ca.get("target_text") or ca.get("target_argument") or ""
+            ).strip()
+            if len(needle) >= 20:
+                hits = [ab for ab in arg_beliefs if needle[:60].lower() in ab.lower()]
+                matched = hits[0] if len(hits) == 1 else None
+        target = str(ca.get("target_text") or ca.get("target_argument", ""))[:40]
         confidence = float(ca.get("confidence", 0.6))
         session.add_belief(
             ca_text,
             agent_source="counter_argument_generator",
-            context={"target": target, "index": i},
+            context={"target": target, "index": i, "target_unit_id": target_id or ""},
             confidence=confidence,
         )
         session.set_fact(ca_text, is_true=True)
 
         # Counter-argument weakens its target via OUT-list
-        if target and any(target.lower() in ab.lower() for ab in arg_beliefs):
-            matched = next(
-                (ab for ab in arg_beliefs if target.lower() in ab.lower()),
-                None,
+        if matched:
+            rebuttal_name = f"rebuttal:{ca_text[:20]}→{matched[:20]}"[:80]
+            session.add_belief(
+                rebuttal_name,
+                agent_source="counter_argument_generator",
+                context={"counter_text": ca_text, "target": matched},
+                confidence=confidence,
             )
-            if matched:
-                rebuttal_name = f"rebuttal:{ca_text[:20]}→{matched[:20]}"[:80]
-                session.add_belief(
-                    rebuttal_name,
-                    agent_source="counter_argument_generator",
-                    context={"counter_text": ca_text, "target": matched},
-                    confidence=confidence,
-                )
-                session.add_justification(
-                    [ca_text],
-                    [matched],
-                    rebuttal_name,
-                    agent_source="counter_argument_generator",
-                )
+            session.add_justification(
+                [ca_text],
+                [matched],
+                rebuttal_name,
+                agent_source="counter_argument_generator",
+            )
 
     # ── Step 5b: Formal inconsistency → flag in belief network (#285) ─
     if not formal_consistency and arg_beliefs:
@@ -3259,18 +3281,41 @@ async def _invoke_atms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             atms.add_justification(supporting, [], name)
 
     # ── Step 3: Fallacies → contradictions ───────────────────────────
+    # Durable contradiction registry (#2968): ``(CONTRA name, environment)``
+    # pairs the ⊥-justifications are about to invalidate. See the comment
+    # at the justification call — the ATMS strips nogood environments from
+    # ⊥'s own label, so this list is the only place they survive.
+    nogoods: List[Tuple[str, FrozenSet[str]]] = []
     for i, f in enumerate(detected_fallacies[:4]):
         if not isinstance(f, dict):
             continue
         fallacy_type = f.get("type", f.get("fallacy_type", f"fallacy_{i+1}"))
         contra_name = f"CONTRA:{fallacy_type}"[:60]
         atms.add_node(contra_name)
-        target_arg = (
-            arg_names[i] if i < len(arg_names) else arg_names[0] if arg_names else None
-        )
+        # #2968: the contradiction sits on the unit the fallacy's OWN id
+        # names (``target_argument``, an arg_N identifier here — #1633) —
+        # never the i-th assumption by position (measured: 4 of 4
+        # hypotheses invalidated on the wrong unit).
+        fallacy_target = str(f.get("target_argument", "") or "")
+        try:
+            target_idx = arg_ids.index(fallacy_target) if fallacy_target else -1
+        except ValueError:
+            target_idx = -1
+        target_arg = arg_names[target_idx] if 0 <= target_idx < len(arg_names) else None
         if target_arg:
             atms.add_justification([target_arg], [], contra_name)
             # Mark as contradiction — the assumption leads to inconsistency
+            # #2968: the label contract (#2094) makes the contradiction node
+            # self-clearing \u2014 ``add_justification`` invalidates the nogood
+            # environment and strips it from every label INCLUDING ``\u22a5``'s,
+            # so a ``has_contradictions`` reading ``\u22a5`` always answered
+            # False (measured: 4 CONTRA recorded, 0 reported). The consumer
+            # keeps its own durable registry, as that contract says it must:
+            # the environments the CONTRA just derived are exactly the ones
+            # about to become nogood.
+            nogoods.extend(
+                (contra_name, env) for env in atms.get_environments(contra_name)
+            )
             atms.add_justification([contra_name], [], "\u22a5")  # ⊥
 
     # ── Step 4: Build result ─────────────────────────────────────────
@@ -3304,7 +3349,12 @@ async def _invoke_atms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
     atms_contexts = []
     for hyp in hypotheses:
         hyp_assumptions = frozenset(hyp["assumptions"])
-        is_consistent = atms.is_consistent(hyp_assumptions)
+        # #2968: an assumption set holding any recorded nogood is
+        # inconsistent — ``atms.is_consistent`` alone reads the
+        # self-cleared ⊥ label and answers True for everything.
+        is_consistent = atms.is_consistent(hyp_assumptions) and not any(
+            env.issubset(hyp_assumptions) for _, env in nogoods
+        )
 
         derivable_beliefs = []
         for name, node in atms.nodes.items():
@@ -3315,14 +3365,14 @@ async def _invoke_atms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
                     derivable_beliefs.append(name)
                     break
 
-        contradicting_beliefs = []
-        for name, node in atms.nodes.items():
-            if not name.startswith("CONTRA:"):
-                continue
-            for env in node.label:
-                if env.issubset(hyp_assumptions):
-                    contradicting_beliefs.append(name)
-                    break
+        # #2968: contradiction membership reads the durable registry — the
+        # ATMS strips a nogood from every label INCLUDING the CONTRA that
+        # derived it, so reading the CONTRA labels reported zero
+        # contradictions for inconsistent hypotheses (measured: 4 CONTRA
+        # recorded, every context ``coherent: true``).
+        contradicting_beliefs = sorted(
+            {name for name, env in nogoods if env.issubset(hyp_assumptions)}
+        )
 
         atms_contexts.append(
             {
@@ -3343,9 +3393,14 @@ async def _invoke_atms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
         "node_count": len(atms.nodes) - 1,  # exclude ⊥
         "environments": environments,
         "consistent_derivations": consistent_envs,
-        "has_contradictions": any(
-            len(n.label) > 0 for name, n in atms.nodes.items() if name == "⊥"
-        ),
+        # #2968: the durable registry decides — the contradiction node's own
+        # label is empty by contract (#2094) the moment a nogood lands, so
+        # reading it reported "no contradiction" while CONTRA beliefs had
+        # just been recorded.
+        "has_contradictions": len(nogoods) > 0,
+        "contradiction_environments": [
+            {"belief": name, "environment": sorted(env)} for name, env in nogoods
+        ],
         "atms_contexts": atms_contexts,
     }
 
@@ -4029,6 +4084,36 @@ def _resolve_target_argument_id(raw_target: Any, arguments: List[str]) -> Option
     return None if index is None else arguments[index]
 
 
+def _counter_edges(
+    cas: List[Any], arguments: List[str], context: Optional[Dict[str, Any]] = None
+) -> List[List[str]]:
+    """Edges ``[counter, unit]`` for counters whose validated id grounds a member.
+
+    Both endpoints are exact members of the caller's lists: a consumer that
+    filters edges by membership (the dialogue handler does) keeps them. A
+    counter without a validated ``target_unit_id`` produces no edge — the
+    wrong edge is worse than none (#2968, #1019).
+    """
+    edges: List[List[str]] = []
+    id_map: Dict[str, str] = {}
+    state = (context or {}).get("_state_object")
+    identified = getattr(state, "identified_arguments", None)
+    if isinstance(identified, dict):
+        id_map = {str(k): str(v) for k, v in identified.items()}
+    members = set(arguments)
+    for ca in cas:
+        if not isinstance(ca, dict):
+            continue
+        target_id = ca.get("target_unit_id")
+        unit = id_map.get(target_id) if isinstance(target_id, str) else None
+        if unit is None or unit not in members:
+            continue
+        counter = str(ca.get("counter_argument") or "")[:100]
+        if counter:
+            edges.append([counter, unit])
+    return edges
+
+
 def _generate_attacks_from_args(
     arguments: List[str], context: Optional[Dict[str, Any]] = None
 ) -> List[List[str]]:
@@ -4084,23 +4169,42 @@ def _generate_attacks_from_args(
             attacks.append([f"fallacy_{i}_{fallacy_label}", target_arg])
             resolved_targets += 1
 
-        # Use counter-arguments to generate attacks. Here ``target_argument`` is
-        # free text, so a text match is the right kind of resolution (#1629).
+        # Use counter-arguments to generate attacks. #2968: the counter
+        # attacks the unit its VALIDATED id names — resolved through the
+        # run's id→text map, then grounded as a member of the caller's own
+        # list. The free-text echo ("1", "2", …) never resolves (measured:
+        # 27 of 27 edges linked a fallacy to the wrong counter); the text
+        # fallback keeps the writer's rule — long (≥ 20) and unique.
         ca_output = context.get("phase_counter_output", {})
         if isinstance(ca_output, dict):
             cas = ca_output.get("llm_counter_arguments", [])
             if isinstance(cas, list):
+                id_map: Dict[str, str] = {}
+                _st = context.get("_state_object")
+                _ia = getattr(_st, "identified_arguments", None)
+                if isinstance(_ia, dict):
+                    id_map = {str(k): str(v) for k, v in _ia.items()}
                 for ca in cas:
                     if not isinstance(ca, dict):
                         continue
-                    target = ca.get("target_argument", "")
-                    # Find the target argument in our list
-                    for arg in arguments:
-                        if target and target.lower()[:30] in arg.lower():
-                            attacks.append(
-                                [f"CA: {ca.get('counter_argument', '')[:50]}", arg]
-                            )
-                            break
+                    target_arg = None
+                    target_id = ca.get("target_unit_id")
+                    if isinstance(target_id, str) and target_id in id_map:
+                        desc = id_map[target_id]
+                        target_arg = next((a for a in arguments if a == desc), None)
+                    if target_arg is None:
+                        needle = str(
+                            ca.get("target_text") or ca.get("target_argument") or ""
+                        ).strip()
+                        if len(needle) >= 20:
+                            hits = [
+                                a for a in arguments if needle[:60].lower() in a.lower()
+                            ]
+                            target_arg = hits[0] if len(hits) == 1 else None
+                    if target_arg is not None:
+                        attacks.append(
+                            [f"CA: {ca.get('counter_argument', '')[:50]}", target_arg]
+                        )
 
     # #1629: the ``(i + j) % 3 == 0`` fallback that stood here is REMOVED by
     # subtraction (anti-pendulum), not replaced. It built a modulo graph over
@@ -4525,8 +4629,16 @@ def _enrich_ranking_with_justification(
         for f in fallacy_output.get("fallacies", []):
             if isinstance(f, dict):
                 target = f.get("target_argument", "")
-                if target:
-                    fallacy_targets.add(target.lower()[:30])
+                if not target:
+                    continue
+                # #2968: ``target_argument`` is the unit's ``arg_N``
+                # identifier here (#1633); the ranked arguments are TEXTS.
+                # The old id-vs-text substring never matched anything, so
+                # no argument was ever annotated "targeted by fallacy".
+                # Resolve the id to its text member first.
+                resolved = _resolve_target_argument_id(target, args)
+                if resolved:
+                    fallacy_targets.add(resolved.lower()[:30])
 
     # Build per-argument strength justification
     strength_analysis = []
@@ -5197,7 +5309,15 @@ async def _invoke_belief_revision(
         if isinstance(ca_output, dict):
             llm_ca = ca_output.get("llm_counter_argument", {})
             if isinstance(llm_ca, dict) and llm_ca.get("counter_argument"):
-                new_belief = f"NOT({llm_ca.get('target_argument', 'unknown')[:60]})"
+                # #2968: negate the OFFERED target text (the unit the
+                # validated id names), never the free-text echo — measured,
+                # the revised belief was NOT(1).
+                negated = str(
+                    llm_ca.get("target_text")
+                    or llm_ca.get("target_argument")
+                    or "unknown"
+                )[:60]
+                new_belief = f"NOT({negated})"
 
         # Try fallacy output — a detected fallacy undermines a belief
         if not new_belief and fallacies and isinstance(fallacies[0], dict):
@@ -5369,29 +5489,41 @@ async def _invoke_dialogue(input_text: str, context: Dict[str, Any]) -> Dict[str
 
     # Use counter-arguments as opponent position if available
     ca_output = context.get("phase_counter_output", {})
-    ca_list = []
+    ca_list: List[str] = []
+    cas: List[Any] = []
     if isinstance(ca_output, dict):
-        cas = ca_output.get("llm_counter_arguments", [])
-        if isinstance(cas, list):
-            ca_list = [
-                ca.get("counter_argument", "")[:100]
-                for ca in cas
-                if isinstance(ca, dict) and ca.get("counter_argument")
-            ]
+        raw_cas = ca_output.get("llm_counter_arguments", [])
+        if isinstance(raw_cas, list):
+            for ca in raw_cas:
+                if isinstance(ca, dict) and ca.get("counter_argument"):
+                    cas.append(ca)
+                    ca_list.append(str(ca.get("counter_argument"))[:100])
 
     if ca_list:
         pro_args = context.get("proponent_args") or args
         opp_args = context.get("opponent_args") or ca_list
+        pro_attacks = context.get("proponent_attacks") or _generate_attacks_from_args(
+            args, context
+        )
+        # #2968: an opponent edge names BOTH endpoints exactly as the
+        # dialogue's lists carry them — the counter attacking the unit its
+        # validated id names. The old call resolved fallacy ``arg_N`` ids
+        # against the counter texts themselves (measured: 27 of 27 edges
+        # linked a fallacy to the wrong counter) and prefixed sources with
+        # "CA: ", which the handler's membership filter then dropped.
+        opp_attacks = context.get("opponent_attacks") or _counter_edges(
+            cas, pro_args, context
+        )
     else:
         mid = max(1, len(args) // 2)
         pro_args = context.get("proponent_args") or args[:mid]
         opp_args = context.get("opponent_args") or args[mid:]
-    pro_attacks = context.get("proponent_attacks") or _generate_attacks_from_args(
-        pro_args, context
-    )
-    opp_attacks = context.get("opponent_attacks") or _generate_attacks_from_args(
-        opp_args, context
-    )
+        pro_attacks = context.get("proponent_attacks") or _generate_attacks_from_args(
+            pro_args, context
+        )
+        opp_attacks = context.get("opponent_attacks") or _generate_attacks_from_args(
+            opp_args, context
+        )
     topic = context.get("topic", input_text[:200])
 
     try:
