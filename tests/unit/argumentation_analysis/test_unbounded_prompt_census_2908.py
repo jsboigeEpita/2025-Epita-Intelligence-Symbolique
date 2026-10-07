@@ -345,6 +345,17 @@ ALLOWED = {
         "line 137 — per-item 200-char excerpts over ≤30 args — registered "
         "#2850 debt (the stakes site)"
     ),
+    (
+        "argumentation_analysis/reporting/restitution/act3_conclusion_plugin.py",
+        "fstring",
+        "text",
+        1,
+    ): (
+        "line 2418 — claim excerpts in the Acte III claims block (#2965); "
+        "bounded upstream: each text was capped at CITED_UNIT_TEXT_CAP where "
+        "claim_excerpts is built (line 2144) and the loop stops at "
+        "_MAX_CLAIM_EXCERPTS (5) lines"
+    ),
     # --- not a prompt: logs, cache keys, renders, UI ---
     (
         "argumentation_analysis/agents/core/logic/tweety_bridge_sk.py",

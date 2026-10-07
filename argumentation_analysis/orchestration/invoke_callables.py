@@ -49,6 +49,7 @@ from argumentation_analysis.core.llm_service import (
     REASONING_MODEL_PREFIXES as _REASONING_MODEL_PREFIXES,
 )
 from argumentation_analysis.services.llm_cache import LLMCacheMiss
+from argumentation_analysis.orchestration.kb_atom_renaming import rename_atoms_apart
 from argumentation_analysis.orchestration.selection import (
     SelectableUnit,
     merged_population_units,
@@ -5295,10 +5296,34 @@ async def _invoke_dialogue(input_text: str, context: Dict[str, Any]) -> Dict[str
 
 
 async def _invoke_dl(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
-    """Invoke Description Logic handler (#86) with JVM fallback."""
+    """Invoke Description Logic handler (#86) with JVM fallback.
+
+    #2970: an empty KB (0 TBox axioms, 0 ABox assertions) is vacuously
+    consistent — that is a fact about the empty set, not a verdict on the
+    document, yet the 06/10 doc_A run counted it as ``fol_1.consistent=True``
+    in ``overall_validity``. No verdict without an understood input (#1774):
+    an empty ontology is not evaluated, never positively consistent.
+    """
     tbox = context.get("tbox", [])
     abox_concepts = context.get("abox_concepts", [])
     abox_roles = context.get("abox_roles", [])
+    if not tbox and not abox_concepts and not abox_roles:
+        return {
+            "consistent": None,
+            "message": (
+                "Not evaluated — empty knowledge base (a vacuous consistency "
+                "is not a verdict on the document, #2970)."
+            ),
+            "tbox_size": 0,
+            "abox_size": 0,
+            "input_ontology": {
+                "tbox": [],
+                "abox_concepts": [],
+                "abox_roles": [],
+            },
+            "status": "not_evaluated",
+            "statistics": {"handler": "DLHandler", "reasoner": "NaiveDlReasoner"},
+        }
 
     try:
         from argumentation_analysis.agents.core.logic.dl_handler import DLHandler
@@ -5339,7 +5364,14 @@ async def _invoke_dl(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]
 
 
 async def _invoke_cl(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
-    """Invoke Conditional Logic handler (#86) with JVM fallback."""
+    """Invoke Conditional Logic handler (#86) with JVM fallback.
+
+    #2970: the no-query branch used to return ``entailed=True`` ("No query
+    specified — KB constructed.") — a fabricated positive verdict the writer
+    projected as ``pl_2.satisfiable=True`` and formal synthesis counted on
+    the 06/10 doc_A run. A KB construction with nothing asked decides
+    nothing (#1774): not evaluated, never True.
+    """
     conditionals = context.get("conditionals", [])
     query_conclusion = context.get("query_conclusion")
     query_premise = context.get("query_premise")
@@ -5358,8 +5390,10 @@ async def _invoke_cl(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]
                 handler.query, kb, query_conclusion, query_premise
             )
         else:
-            entailed, msg = True, "No query specified — KB constructed."
-        return {
+            entailed, msg = None, (
+                "Not evaluated — no query specified (KB constructed, #2970)."
+            )
+        result = {
             "entailed": entailed,
             "message": msg,
             "num_conditionals": len(conditionals),
@@ -5370,6 +5404,9 @@ async def _invoke_cl(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]
             "input_conditionals": list(conditionals),
             "statistics": {"handler": "CLHandler", "reasoner": "SimpleCReasoner"},
         }
+        if not query_conclusion:
+            result["status"] = "not_evaluated"
+        return result
     except Exception as e:
         raise RuntimeError(
             f"Conditional Logic unavailable: JVM/Tweety required ({e}). "
@@ -5793,9 +5830,33 @@ async def _invoke_delp(input_text: str, context: Dict[str, Any]) -> Dict[str, An
 
 
 async def _invoke_qbf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
-    """Invoke QBF handler (#90) with JVM fallback."""
+    """Invoke QBF handler (#90) with JVM fallback.
+
+    #2970 (the #1215 FP-12 class, measured on the 06/10 doc_A run): the old
+    ``context.get("formula", input_text[:200])`` default fed the first 200
+    characters of the DOCUMENT — its header, no quantifier, not a QBF
+    formula — to the solver, which answered "QBF VALID" over prose and the
+    writer projected it as ``pl_3.satisfiable=True``. No positive formal
+    assertion without a formal computation on an understood input (#1774):
+    without an explicit ``formula`` there is nothing to decide. Honest
+    not-evaluated, never an ``input_text`` fallback.
+    """
     quantifiers = context.get("quantifiers", [])
-    formula = context.get("formula", input_text[:200])
+    formula = context.get("formula")
+    if not formula:
+        return {
+            "quantifiers": quantifiers,
+            "formula": None,
+            # Three states (#1650): not-evaluated is ``valid: None`` — folding
+            # onto False would make "no formula supplied" indistinguishable
+            # from "the formula is invalid".
+            "valid": None,
+            "status": "not_evaluated",
+            "message": (
+                "QBF analysis requires an explicit 'formula' in context; raw "
+                "document text is not a QBF formula (#2970)."
+            ),
+        }
 
     try:
         from argumentation_analysis.agents.core.logic.qbf_handler import QBFHandler
@@ -7566,13 +7627,17 @@ async def _invoke_propositional_logic(
         if pl_translations:
             # #705: capture upstream NL-to-logic formulas; do NOT short-circuit
             # the 2-pass — they are unioned in after the robust generator runs.
-            upstream_formulas.extend(
-                t["formula"].strip() for t in pl_translations if t.get("formula")
-            )
+            # #2960: conjoin RENAMED formulas. Each translation's atom names
+            # only mean something inside its own ``variables`` map; the raw
+            # conjoin put two meanings under one ``p`` and produced a
+            # mechanical UNSAT the report pinned on the first formulas.
+            pl_renamed = rename_atoms_apart(pl_translations)
+            upstream_formulas.extend(f.strip() for f in pl_renamed if f)
             argument_mapping.update(
                 {
-                    t["formula"][:30]: t.get("original_text", "")[:60]
-                    for t in pl_translations
+                    f[:30]: t.get("original_text", "")[:60]
+                    for t, f in zip(pl_translations, pl_renamed)
+                    if f
                 }
             )
             pl_metrics["upstream_nl"] = len(upstream_formulas)
@@ -8075,9 +8140,12 @@ async def _invoke_fol_reasoning(
         if fol_translations:
             # #705: capture upstream NL-to-logic formulas; do NOT short-circuit
             # the 2-pass — they are unioned in after the robust generator runs.
-            for t in fol_translations:
+            # #2960: rename apart BEFORE splitting — every fragment of one
+            # translation shares its variables map, so the renaming applies
+            # per translation, not per fragment.
+            for f_renamed in rename_atoms_apart(fol_translations):
                 # FOL formulas may be semicolon-separated
-                for f in t["formula"].split(";"):
+                for f in f_renamed.split(";"):
                     f = f.strip()
                     if f and f not in upstream_formulas:
                         upstream_formulas.append(f)
@@ -8293,8 +8361,8 @@ async def _invoke_fol_reasoning(
                     valid = [t for t in batch.translations if t.is_valid]
                     if valid:
                         formulas = []
-                        for t in valid:  # type: ignore[assignment]
-                            for f in t.formula.split(";"):  # type: ignore[attr-defined]
+                        for t in valid:
+                            for f in t.formula.split(";"):
                                 f = f.strip()
                                 if f:
                                     formulas.append(f)
@@ -8799,11 +8867,15 @@ async def _invoke_modal_logic(
     # atoms an existing KB already declared (MlParser rejects duplicates).
     nl_out = context.get("phase_nl_to_logic_output") or {}
     nl_translations = nl_out.get("translations", []) if isinstance(nl_out, dict) else []
-    nl_formulas = [
-        str(t["formula"])
+    # #2960: rename atoms apart BEFORE conjoining — the modal KB unions every
+    # valid translation regardless of logic_type, so a PL atom colliding with
+    # a modal atom matters here too. Same helper as the PL and FOL sites.
+    nl_valid = [
+        t
         for t in nl_translations
         if isinstance(t, dict) and t.get("is_valid") and t.get("formula")
     ]
+    nl_formulas = [f for f in rename_atoms_apart(nl_valid) if f]
 
     if nl_formulas:
         # Real-pipeline path (#1224): the modal KB comes from nl_to_logic.

@@ -168,6 +168,42 @@ def scan_tested_content(
     return real, placeholders
 
 
+# A unit literal is an optional negation followed by ONE atom term: a PL/modal
+# identifier (``p``) or a FOL ground atom (``mortal(socrates)`` — flat terms
+# only, no nested parens: a nested term does not localize and stays honest).
+_UNIT_LITERAL = re.compile(
+    r"^\s*(!?)([A-Za-z_][A-Za-z0-9_]*(?:\([A-Za-z0-9_,\s]*\))?)\s*$"
+)
+
+
+def _locate_conflict_pair(
+    formulas: List[str],
+) -> Optional[Tuple[str, str]]:
+    """The complementary unit-literal pair of a whole-KB refutation, if any.
+
+    #2960: a refuted record is a whole-KB consistency check — its verdict
+    belongs to the formulas IN CONFLICT, not to whichever formula happens to
+    come first in list order. The offline localization this pipeline can do
+    without a solver is the unit-clause pair (``a`` asserted by one formula,
+    ``!a`` by another). A conflict spread over compound formulas is NOT
+    localized: the caller renders the honest absence instead of pinning the
+    refutation on the record's first formulas.
+    """
+    seen: Dict[str, Tuple[str, int]] = {}
+    for index, formula in enumerate(formulas):
+        match = _UNIT_LITERAL.match(formula)
+        if not match:
+            continue
+        polarity, atom = match.groups()
+        if atom in seen:
+            other_polarity, other_index = seen[atom]
+            if other_polarity != polarity:
+                return formulas[other_index], formulas[index]
+        else:
+            seen[atom] = (polarity, index)
+    return None
+
+
 def extract_tested_content(
     records: Any,
     verdict_reader: Callable[[Dict[str, Any]], Optional[bool]],
@@ -180,10 +216,25 @@ def extract_tested_content(
     (placeholder-only or empty) — the caller renders the honest absence,
     never a fabricated derivation. ``refuted=True`` selects the REFUTED
     records (the decisive derivation: what failed); ``refuted=False`` the
-    verified ones (a sample of what passed)."""
+    verified ones (a sample of what passed).
+
+    #2960: for a refuted record the content is the CONFLICT — the
+    complementary unit-literal pair when the conflict localizes offline —
+    never the record's first formulas in list order: a KB-level refutation
+    pinned on whatever comes first names an inference the solver never
+    singled out. When the conflict does not localize (compound formulas,
+    spread conflict), there is no localizable tested content: ``None``,
+    and the decisive role must not fire against a specific inference.
+    """
     selected = _records_with_verdict(records, verdict_reader, verdict=not refuted)
     real, placeholders = scan_tested_content(selected, verdict_reader)
-    atoms = [_readable_atom(f) for f in real[:max_atoms]]
+    if refuted:
+        conflict = _locate_conflict_pair(real)
+        if conflict is None:
+            return None
+        atoms = [_readable_atom(f) for f in conflict]
+    else:
+        atoms = [_readable_atom(f) for f in real[:max_atoms]]
     if not atoms:
         return None
     quoted = ", ".join(f"« {a} »" for a in atoms)

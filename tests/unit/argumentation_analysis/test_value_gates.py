@@ -1782,7 +1782,11 @@ class TestQBFValueGate:
             side_effect=ImportError("No native QBF"),
             create=True,
         ):
-            result = await _invoke_qbf("forall x exists y: P(x,y)", {})
+            # #2970: the formula rides in context — input_text is never a
+            # formula source anymore (the header fallback is gone).
+            result = await _invoke_qbf(
+                "irrelevant", {"formula": "forall x exists y: P(x,y)"}
+            )
 
         assert (
             result.get("fallback") == "error"
