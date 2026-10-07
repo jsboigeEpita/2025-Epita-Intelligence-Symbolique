@@ -1701,8 +1701,19 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         summary: str,
         phase_results: Dict[str, Any],
         overall_validity: float,
+        decided_results: Optional[List[Dict[str, Any]]] = None,
+        not_evaluated: Optional[List[str]] = None,
     ) -> str:
-        """Add a formal synthesis report aggregating all logic analyses."""
+        """Add a formal synthesis report aggregating all logic analyses.
+
+        #2970 item 2: ``decided_results`` is the population
+        ``overall_validity`` was computed over (one entry per decided result —
+        producers that measured the same formulas under the same logic appear
+        once, in ``producers``) and ``not_evaluated`` names the producers that
+        carried a verdict field without deciding. Both are optional and
+        strictly additive: absent when the producer did not supply them, so an
+        entry written by a pre-#2970 code path keeps its exact former shape.
+        """
         fs_id = self._generate_id("fsyn", self.formal_synthesis_reports)
         entry = {
             "id": fs_id,
@@ -1710,6 +1721,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "phase_results": phase_results,
             "overall_validity": overall_validity,
         }
+        if decided_results is not None:
+            entry["decided_results"] = decided_results
+        if not_evaluated is not None:
+            entry["not_evaluated"] = not_evaluated
         self.formal_synthesis_reports.append(entry)
         state_logger.info(
             f"Formal synthesis added: {fs_id} (validity={overall_validity:.2f})"
