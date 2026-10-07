@@ -1097,6 +1097,12 @@ class WorkflowExecutor:
 
         * phase-level — optional slots that exhausted retry and stayed FAILED
           (``PhaseResult.degraded``, set in :meth:`_execute_phase`);
+        * self-declared — a phase that COMPLETED but whose output dict
+          carries ``degraded: True`` (#2971: ``modal_solver`` with
+          ``valid=None``, ``neural_detect``…) — the old rollup counted only
+          FAILED optional slots, so a run whose phases honestly reported
+          their own degeneracy still rendered a healthy network at run
+          level;
         * structured-arg — translators that raised mid-phase while the phase
           still COMPLETED (the handler ran on auto-shaped input), recorded in
           ``state.structured_arg_status`` with ``degraded=True``.
@@ -1110,7 +1116,16 @@ class WorkflowExecutor:
 
         Returns ``(degraded, degraded_phases, structured_degraded_caps)``.
         """
-        degraded_phases = sorted(name for name, r in results.items() if r.degraded)
+        degraded_phases = sorted(
+            name
+            for name, r in results.items()
+            if r.degraded
+            or (
+                r.status == PhaseStatus.COMPLETED
+                and isinstance(r.output, dict)
+                and r.output.get("degraded") is True
+            )
+        )
         degraded = len(degraded_phases) > 0
         structured_degraded_caps: List[str] = []
         if state is not None:
