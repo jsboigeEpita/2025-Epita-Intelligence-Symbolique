@@ -32,8 +32,11 @@ def test_act2_evidence_carries_role_assignments() -> None:
         jtms_beliefs={},
         dung_frameworks={},
         fol_analysis_results=[
-            {"consistent": False, "message": "incoherent",
-             "formulas": ["mortal(socrates)"]},
+            {
+                "consistent": False,
+                "message": "incoherent",
+                "formulas": ["mortal(socrates)", "!mortal(socrates)"],
+            },
         ],
         propositional_analysis_results=[],
         modal_analysis_results=[],

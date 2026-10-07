@@ -84,8 +84,11 @@ def _violation_state() -> SimpleNamespace:
         "arg_1": _q(3.0),
     }
     d["fol_analysis_results"] = [
-        {"consistent": False, "message": "incoherent",
-         "formulas": ["mortal(socrates)"]},
+        {
+            "consistent": False,
+            "message": "incoherent",
+            "formulas": ["mortal(socrates)", "!mortal(socrates)"],
+        },
     ]
     d["propositional_analysis_results"] = [{"satisfiable": True}]
     d["dung_frameworks"] = {

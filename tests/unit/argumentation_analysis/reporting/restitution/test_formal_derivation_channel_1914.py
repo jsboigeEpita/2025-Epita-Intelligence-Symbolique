@@ -52,24 +52,65 @@ def _modal_verdict(r):
 class TestExtraction:
     """The extraction helper itself — anti-fabrication contract."""
 
-    def test_refuted_record_yields_tested_atoms(self):
+    def test_refuted_record_yields_the_conflict_not_the_first_formulas(self):
+        """#2960: a whole-KB refutation names the formulas IN CONFLICT, not
+        the record's first formulas in list order."""
         records = [
             {
-                "formulas": ["device_is_broken", "economy_strong || borders_safe"],
+                "formulas": [
+                    "device_is_broken",
+                    "!device_is_broken",
+                    "economy_strong || borders_safe",
+                ],
                 "satisfiable": False,
             }
         ]
         out = extract_tested_content(records, _pl_verdict, refuted=True)
         assert out is not None
         assert "device is broken" in out
-        assert "economy strong" in out
+        # the third formula is not in conflict: pinning the refutation on it
+        # (the old ``real[:max_atoms]`` shape) is exactly the #2960 defect
+        assert "economy strong" not in out
+
+    def test_conflict_in_the_last_formulas_is_still_named(self):
+        """The issue's witness: a refuted record whose conflict lies in its
+        LAST two formulas must not render its first formula."""
+        records = [
+            {
+                "formulas": ["first_standing_claim", "p", "!p"],
+                "satisfiable": False,
+            }
+        ]
+        out = extract_tested_content(records, _pl_verdict, refuted=True)
+        assert out is not None
+        assert "first standing claim" not in out
+        assert "p" in out
+
+    def test_non_localizable_conflict_yields_none(self):
+        """A conflict spread over compound formulas is not localizable
+        offline: the honest absence — never a refutation pinned on the
+        record's first formulas. The caller then withholds the decisive
+        role instead of naming an inference the solver never singled out."""
+        records = [
+            {
+                "formulas": [
+                    "alliance_holds & trade_open",
+                    "!alliance_holds || !trade_open",
+                ],
+                "satisfiable": False,
+            }
+        ]
+        assert extract_tested_content(records, _pl_verdict, refuted=True) is None
 
     def test_refuted_selection_ignores_verified_records(self):
         """The derivation of a refutation is WHAT FAILED — the verified
         record's formulas must not be quoted as the tested content."""
         records = [
             {"formulas": ["verified_atom_a"], "satisfiable": True},
-            {"formulas": ["refuted_atom_b"], "satisfiable": False},
+            {
+                "formulas": ["refuted_atom_b", "!refuted_atom_b"],
+                "satisfiable": False,
+            },
         ]
         out = extract_tested_content(records, _pl_verdict, refuted=True)
         assert "refuted atom b" in out
@@ -91,6 +132,8 @@ class TestExtraction:
         assert extract_tested_content(records, _pl_verdict, refuted=True) is None
 
     def test_underscores_become_readable_and_counts_pluralize(self):
+        """#2960: readability and the pluralized surplus live on the VERIFIED
+        sample path — the refuted path renders the localized conflict only."""
         records = [
             {
                 "formulas": [
@@ -100,16 +143,16 @@ class TestExtraction:
                     "d_fourth_atom",
                     "e_fifth_atom",
                 ],
-                "satisfiable": False,
+                "satisfiable": True,
             }
         ]
-        out = extract_tested_content(records, _pl_verdict, refuted=True)
+        out = extract_tested_content(records, _pl_verdict, refuted=False)
         assert "a first atom" in out
         assert "(+2 autres formules)" in out
 
     def test_atom_cap_truncates_long_formulas(self):
-        records = [{"formulas": ["x" * 200], "satisfiable": False}]
-        out = extract_tested_content(records, _pl_verdict, refuted=True)
+        records = [{"formulas": ["x" * 200], "satisfiable": True}]
+        out = extract_tested_content(records, _pl_verdict, refuted=False)
         assert out is not None
         assert len(out) < 100  # bounded, never a wall of formula
 
@@ -120,7 +163,10 @@ class TestAct2AnchorChannel:
     def test_refuted_axis_finding_carries_tested(self):
         state = SimpleNamespace(
             propositional_analysis_results=[
-                {"formulas": ["device_is_broken"], "satisfiable": False}
+                {
+                    "formulas": ["device_is_broken", "!device_is_broken"],
+                    "satisfiable": False,
+                }
             ],
             fol_analysis_results=None,
             modal_analysis_results=None,
@@ -164,7 +210,7 @@ class TestPromptWeaving:
         return SimpleNamespace(
             propositional_analysis_results=[
                 {
-                    "formulas": ["device_is_broken", "economy_strong || borders_safe"],
+                    "formulas": ["device_is_broken", "!device_is_broken"],
                     "satisfiable": False,
                 }
             ],
@@ -207,7 +253,10 @@ class TestDecisifRoleCarriesDerivation:
     def test_decisif_statement_carries_tested_content(self):
         state = SimpleNamespace(
             propositional_analysis_results=[
-                {"formulas": ["device_is_broken"], "satisfiable": False}
+                {
+                    "formulas": ["device_is_broken", "!device_is_broken"],
+                    "satisfiable": False,
+                }
             ],
             fol_analysis_results=None,
             modal_analysis_results=None,
