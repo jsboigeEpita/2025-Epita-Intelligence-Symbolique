@@ -181,12 +181,21 @@ class TestActsConsumeTheProjection:
         does not; the clean prompt instead carries the explicit absence line.
         That is a difference in what the conclusion can CLAIM, not a
         decorative « a synthesis exists » sentence.
+
+        #2965 note: the claims block now keys every excerpt by its opaque id
+        (the local join), so ``arg_7`` legitimately appears in BOTH prompts
+        when the unit is excerpted — the absence this witness guards is the
+        absence of a FINDING, asserted here on the convergence block, not
+        the id's invisibility.
         """
         flagged = build_act3_prompt(build_act3_evidence(_flagged_state()))
         clean = build_act3_prompt(build_act3_evidence(_clean_state()))
         assert "arg_7" in flagged
         assert "méthodes indépendantes convergent" in flagged
-        assert "arg_7" not in clean
+        assert "méthodes indépendantes convergent" not in clean
+        # the clean prompt's convergence block names no anchor
+        conv_block = clean.split("CONVERGENCES GLOBALES")[1].split("[")[0]
+        assert "arg_7" not in conv_block
         assert "aucune convergence inter-axes" in clean
 
     def test_prompt_section_stays_bounded(self):
