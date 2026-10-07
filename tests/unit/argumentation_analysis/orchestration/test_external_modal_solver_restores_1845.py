@@ -20,23 +20,27 @@ the exception path, which is the path main leaks through.
 
 Born-red on main (measured): the screen's dict holds the forced SPASS after
 return; the assert fails.
+
+#2971: availability is now probed in the REGISTRY
+(``jvm_setup.EXTERNAL_TOOL_PATHS``) — the one surface the handlers read —
+so the stub registers there instead of on PATH.
 """
 
 import asyncio
-import os
 from unittest import mock
 
 from argumentation_analysis.core.config import ModalSolverChoice
 import argumentation_analysis.core.config as cfg
+import argumentation_analysis.core.jvm_setup as jvm_setup
 from argumentation_analysis.orchestration import invoke_callables
 
 
-def _put_stub_spass_on_path(monkeypatch, tmp_path):
-    """Make shutil.which("SPASS") genuinely answer, without mocking shutil."""
+def _register_stub_spass(monkeypatch, tmp_path):
+    """Make SPASS available the way production detects it (#2971): registered
+    in ``EXTERNAL_TOOL_PATHS`` — one availability probe per tool."""
     stub = tmp_path / "SPASS.exe"
     stub.write_bytes(b"")  # never executed — only detected
-    monkeypatch.setenv("PATH", str(tmp_path) + ";" + os.environ["PATH"])
-    assert invoke_callables.shutil.which("SPASS") is not None
+    monkeypatch.setitem(jvm_setup.EXTERNAL_TOOL_PATHS, "spass", str(stub))
 
 
 class _SettingsScreen:
@@ -60,7 +64,7 @@ class TestExternalModalSolverRestoresTheSetting:
     """#1845: the force is a loan; the singleton must get it back."""
 
     async def test_pinned_tweety_survives_the_spass_branch(self, monkeypatch, tmp_path):
-        _put_stub_spass_on_path(monkeypatch, tmp_path)
+        _register_stub_spass(monkeypatch, tmp_path)
 
         screen = _SettingsScreen(cfg.settings)
         object.__setattr__(screen, "modal_solver", ModalSolverChoice.TWEETY)
@@ -96,7 +100,7 @@ class TestExternalModalSolverRestoresTheSetting:
     async def test_no_loan_when_solver_already_spass(self, monkeypatch, tmp_path):
         """When the setting already says SPASS there is nothing to borrow: the
         call must leave the value untouched (no force, no spurious restore)."""
-        _put_stub_spass_on_path(monkeypatch, tmp_path)
+        _register_stub_spass(monkeypatch, tmp_path)
 
         screen = _SettingsScreen(cfg.settings)
         object.__setattr__(screen, "modal_solver", ModalSolverChoice.SPASS)

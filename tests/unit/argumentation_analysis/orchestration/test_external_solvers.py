@@ -425,7 +425,7 @@ class TestParseFailureIsNotAVerdict:
 
     def test_modal_parse_failure_is_undecided(self):
         """The modal external phase inherited the wrapper's flattening (#1634)."""
-        import argumentation_analysis.orchestration.invoke_callables as mod
+        import argumentation_analysis.core.jvm_setup as jvm_setup
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_external_modal_solver,
         )
@@ -438,7 +438,13 @@ class TestParseFailureIsNotAVerdict:
             with patch.dict(
                 "sys.modules",
                 {"argumentation_analysis.agents.core.logic.tweety_bridge": fake_mod},
-            ), patch.object(mod.shutil, "which", return_value=None):
+            ), patch.object(
+                # #2971: availability is the registry, not PATH — empty it so
+                # the phase takes the (stubbed) TweetyBridge fallback lane.
+                jvm_setup,
+                "EXTERNAL_TOOL_PATHS",
+                {},
+            ):
                 return self._run(
                     _invoke_external_modal_solver(
                         "probe",

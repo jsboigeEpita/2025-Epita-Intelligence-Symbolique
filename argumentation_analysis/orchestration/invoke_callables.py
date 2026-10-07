@@ -8,7 +8,6 @@ Split from unified_pipeline.py (#310).
 
 import asyncio
 import contextvars
-import shutil
 import json
 import logging
 import os
@@ -72,21 +71,33 @@ _SOLVER_PREFLIGHT_CHECKED = False
 
 
 def _preflight_solver_check() -> None:
-    """Log a one-time WARNING if external theorem provers are absent."""
+    """Log a one-time WARNING if external theorem provers are absent.
+
+    #2971: reads the registry the handlers read
+    (``jvm_setup.EXTERNAL_TOOL_PATHS`` — populated at JVM start from BOTH
+    the vendored trees and PATH). The previous bare ``shutil.which`` saw
+    only PATH installs, so the preflight warned about solvers the run then
+    actually used through their registered vendored binary — one
+    availability probe per tool, the modal sibling of the FOL probe #2482.
+    """
     global _SOLVER_PREFLIGHT_CHECKED
     if _SOLVER_PREFLIGHT_CHECKED:
         return
     _SOLVER_PREFLIGHT_CHECKED = True
+    try:
+        from argumentation_analysis.core.jvm_setup import EXTERNAL_TOOL_PATHS
+    except Exception:  # pragma: no cover - import guard
+        return
     missing = []
-    if shutil.which("eprover") is None:
+    if "eprover" not in EXTERNAL_TOOL_PATHS:
         missing.append("eprover (FOL)")
-    if shutil.which("SPASS") is None:
+    if "spass" not in EXTERNAL_TOOL_PATHS:
         missing.append("SPASS (modal)")
     if missing:
         logger.warning(
-            "External solvers not found on PATH: %s. "
+            "External solvers not registered (EXTERNAL_TOOL_PATHS): %s. "
             "Pipeline will use TweetyBridge (JVM) for FOL/modal reasoning. "
-            "Install solvers for optimal performance.",
+            "Install solvers under ext_tools/ for optimal performance.",
             ", ".join(missing),
         )
 
@@ -10968,8 +10979,28 @@ async def _invoke_tweety_interpretation(
 ) -> Dict[str, Any]:
     """Interpret formal results as NL via TweetyResultInterpretationPlugin (#476).
 
-    Uses interpret_full_analysis for a comprehensive multi-section synthesis.
-    Falls back to individual interpreters based on available data.
+    #2971: the plugin's methods are SYNCHRONOUS (plain ``def``) — the previous
+    ``await`` on each raised ``TypeError`` on a non-awaitable, swallowed by
+    ``except Exception: pass``, so the phase took 0.00 s, produced no
+    ``formal_interpretation`` extract, and returned a reason blaming the
+    upstream ("insufficient formal data") that was false: the state held Dung
+    and FOL results. Three repairs, all measured on the 06/10 run:
+
+    * the methods are called synchronously (they have no async surface);
+    * the state is read through ``_state_object`` — the key the executor
+      actually sets (``workflow_dsl``); the previous ``context.get("state")``
+      read a phantom key and was always ``None``;
+    * the plugin is fed the formal payloads its methods expect — one
+      ``{"extensions", "arguments"}`` per Dung framework, and a FOL entry
+      ONLY when it carries the query shape (``accepted``/``query``) that
+      ``interpret_fol_results`` speaks. The state's FOL leaf holds
+      KB-consistency entries; feeding those to a query interpreter would
+      fabricate an entailment verdict out of a consistency result, so they
+      stay out until a producer emits the query shape.
+
+    When nothing interpretable exists, the phase says so — and the reason is
+    then TRUE. When a call fails, the reason names the failure, never the
+    upstream.
     """
     if not input_text or not input_text.strip():
         return {"error": "empty input", "interpretation": ""}
@@ -10980,71 +11011,79 @@ async def _invoke_tweety_interpretation(
         )
 
         plugin = TweetyResultInterpretationPlugin()
+        state = context.get("_state_object")
 
-        # Try full analysis interpretation first
-        try:
-            full_json = await plugin.interpret_full_analysis(input_text)
-            full_result = (
-                json.loads(full_json) if isinstance(full_json, str) else full_json
-            )
-            interpretation = (
-                full_result
-                if isinstance(full_result, str)
-                else full_result.get("interpretation", str(full_result))
-            )
+        parts: List[str] = []
+        failures: List[str] = []
+        saw_interpretable = False
 
-            if interpretation:
-                return {"interpretation": interpretation}
-        except Exception:
-            pass
+        dung_data = (
+            getattr(state, "dung_frameworks", None) if state is not None else None
+        )
+        if isinstance(dung_data, dict) and dung_data:
+            for fw_name, fw in dung_data.items():
+                if not isinstance(fw, dict):
+                    continue
+                saw_interpretable = True
+                payload = {
+                    "extensions": fw.get("extensions") or {},
+                    "arguments": fw.get("arguments") or [],
+                }
+                try:
+                    interp = plugin.interpret_dung_results(payload)
+                    text = str(interp)
+                    # Sync-contract guard: an async regression would hand us
+                    # a coroutine repr, not an interpretation.
+                    if text and "coroutine" not in text.lower():
+                        parts.append(text)
+                except Exception as e:
+                    failures.append(f"dung[{fw_name}]: {e}")
 
-        # Fallback: try individual interpreters based on context data
-        parts = []
-        state = context.get("state")
+        fol_data = (
+            getattr(state, "fol_analysis_results", None) if state is not None else None
+        )
+        if isinstance(fol_data, list):
+            for i, entry in enumerate(fol_data):
+                # Only the query shape the plugin's FOL interpreter speaks —
+                # a consistency entry is NOT an entailment verdict (#2971).
+                if not (
+                    isinstance(entry, dict)
+                    and ("accepted" in entry or "query" in entry)
+                ):
+                    continue
+                saw_interpretable = True
+                try:
+                    interp = plugin.interpret_fol_results(entry)
+                    text = str(interp)
+                    if text and "coroutine" not in text.lower():
+                        parts.append(text)
+                except Exception as e:
+                    failures.append(f"fol[{i}]: {e}")
 
-        # Dung extensions
-        dung_data = getattr(state, "dung_frameworks", None) if state else None
-        if dung_data:
-            try:
-                dung_json = await plugin.interpret_dung_results(
-                    json.dumps(dung_data)
-                    if isinstance(dung_data, dict)
-                    else str(dung_data)
-                )
-                dung_interp = (
-                    json.loads(dung_json) if isinstance(dung_json, str) else dung_json
-                )
-                parts.append(str(dung_interp))
-            except Exception:
-                pass
+        combined = "\n\n".join(parts)
+        if combined:
+            out: Dict[str, Any] = {"interpretation": combined, "status": "ok"}
+            if failures:
+                out["status"] = "partial"
+                out["failures"] = failures
+            return out
 
-        # FOL results
-        fol_data = getattr(state, "fol_analysis_results", None) if state else None
-        if fol_data:
-            try:
-                fol_json = await plugin.interpret_fol_results(
-                    json.dumps(fol_data)
-                    if isinstance(fol_data, dict)
-                    else str(fol_data)
-                )
-                fol_interp = (
-                    json.loads(fol_json) if isinstance(fol_json, str) else fol_json
-                )
-                parts.append(str(fol_interp))
-            except Exception:
-                pass
-
-        combined = " ".join(parts) if parts else ""
-        if not combined:
-            # Fail-loud (#1019): the placeholder is NOT a real interpretation.
-            # Mark status so consumers do not present it as an authentic result.
+        # Fail-loud (#1019): the placeholder is NOT a real interpretation.
+        # Mark status so consumers do not present it as an authentic result.
+        if failures:
+            # something WAS interpretable but the calls failed — name the
+            # failure, never the upstream.
             return {
                 "interpretation": "",
-                "status": "unavailable",
-                "reason": "insufficient_upstream_formal_data",
+                "status": "error",
+                "reason": "; ".join(failures),
             }
-
-        return {"interpretation": combined, "status": "ok"}
+        reason = (
+            "insufficient_upstream_formal_data"
+            if not saw_interpretable
+            else "no_interpretation_produced"
+        )
+        return {"interpretation": "", "status": "unavailable", "reason": reason}
     except Exception as e:
         logger.warning(f"TweetyInterpretation failed: {e}")
         return {"error": str(e), "interpretation": ""}
@@ -11182,8 +11221,18 @@ async def _invoke_external_modal_solver(
 
     modalities = modal_output.get("modalities", ["none_detected"])
 
-    # #982: Probe for SPASS binary before claiming external solver
-    spass_available = shutil.which("SPASS") is not None
+    # #982/#2971: ONE availability probe per tool — the registry
+    # (``jvm_setup.EXTERNAL_TOOL_PATHS``, populated at JVM start from BOTH
+    # the vendored trees and PATH) is the surface the handlers read. A bare
+    # ``shutil.which("SPASS")`` saw only PATH installs: a vendored SPASS was
+    # invisible, the phase fell back to TweetyBridge while the registry held
+    # a working binary — the modal sibling of the FOL probe #2482.
+    try:
+        from argumentation_analysis.core.jvm_setup import EXTERNAL_TOOL_PATHS
+
+        spass_available = "spass" in EXTERNAL_TOOL_PATHS
+    except Exception:  # pragma: no cover - import guard
+        spass_available = False
 
     # Try SPASS via ModalHandler (only if binary present)
     if spass_available:
@@ -11242,7 +11291,8 @@ async def _invoke_external_modal_solver(
             logger.info(f"SPASS modal solver unavailable ({e}), falling back to Tweety")
     else:
         logger.info(
-            "SPASS binary not found on PATH (shutil.which), using TweetyBridge fallback"
+            "SPASS binary not registered (EXTERNAL_TOOL_PATHS['spass'] unset), "
+            "using TweetyBridge fallback"
         )
 
     # Fallback: TweetyBridge — genuine modal reasoning via JVM
