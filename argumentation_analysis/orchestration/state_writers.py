@@ -1132,6 +1132,26 @@ def _write_asp_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     }
 
 
+_ANCHOR_ABSENCE_REASONS = {
+    # #2973 — une seule règle (locate_unit_span) sert les deux lecteurs ;
+    # ses motifs d'absence sont traduits dans le vocabulaire de l'ancre,
+    # les cas préexistants gardant leur formulation.
+    "occurrences multiples, position ambiguë": "quote ambiguë, occurrences multiples",
+    "préfixe non unique, position ambiguë": "quote ambiguë, préfixe non unique",
+    "occurrences multiples à espaces flexibles": (
+        "quote ambiguë, occurrences multiples à espaces flexibles"
+    ),
+    "introuvable, même à espaces flexibles": (
+        "quote introuvable dans le texte, même à espaces flexibles ou par préfixe"
+    ),
+}
+
+
+def _anchor_absence_reason(span_reason: str) -> str:
+    inner = span_reason.removeprefix("sans offset (").removesuffix(")")
+    return _ANCHOR_ABSENCE_REASONS.get(inner, inner or "non localisée")
+
+
 def _record_assert_move(state: Any, arg_id: str, quote: str, raw_text: str) -> None:
     """#2295 — per-argument ``assert`` trace entry, anchored when measurable.
 
@@ -1142,17 +1162,29 @@ def _record_assert_move(state: Any, arg_id: str, quote: str, raw_text: str) -> N
     fabricated offset 0 masquerading as the start of the text. ``reacts_to``
     carries the freshly assigned argument id: the entry is ABOUT ``arg_N``,
     not about the phase that produced it.
+
+    #2973 — the predicate is ``locate_unit_span``'s cascade, the SAME rule
+    the provenance side-table uses: exact unique, then whitespace-flexible
+    unique (the heuristic producer joins stripped sentences with single
+    spaces — on the paid run 33 of 94 asserts left the narrated sequence
+    for that reason alone), then a unique 40-character prefix. Never a
+    non-unique match.
+
+    On a prefix match ``length`` is the PREFIX's span (≈ 40 characters),
+    not the unit's — a consumer reading ``offset + length`` as the unit's
+    end understates it (review R1072, measured on doc_A). The ``basis``
+    string names the prefix, so the figure stays honest.
     """
+    from argumentation_analysis.core.shared_state import locate_unit_span
+
     anchor = None
     if quote and raw_text:
-        first = raw_text.find(quote)
-        if first != -1 and raw_text.count(quote) == 1:
-            anchor = {"offset": first, "length": len(quote)}
-            basis = f"ancre offset {first}, longueur {len(quote)}"
-        elif first == -1:
-            basis = "sans ancre (quote introuvable dans le texte)"
+        span, tag = locate_unit_span(quote, raw_text)
+        if span is not None:
+            anchor = {"offset": span[0], "length": span[1] - span[0]}
+            basis = f"ancre offset {span[0]}, longueur {span[1] - span[0]}{tag}."
         else:
-            basis = "sans ancre (quote ambiguë, occurrences multiples)"
+            basis = f"sans ancre ({_anchor_absence_reason(tag)})"
     elif not quote:
         basis = "sans ancre (quote non fournie)"
     else:
@@ -1237,6 +1269,10 @@ def _write_fact_extraction_to_state(
     summary = output.get("summary", "")
     if summary and isinstance(summary, str):
         state.add_task(f"Fact extraction: {summary[:200]}")
+    # #2973 — le recensement des non-ancrées fait partie du run, pas de
+    # l'analyse de traces a posteriori.
+    if hasattr(state, "record_anchor_census"):
+        state.record_anchor_census()
 
 
 def _write_propositional_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
@@ -2179,6 +2215,11 @@ def _write_text_to_kb_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
                 # it was sampled. The unit's own text is the find key here,
                 # exactly the anchor rule the provenance side-table uses.
                 _record_assert_move(state, arg_id, text, state.raw_text or "")
+        # #2973 — ce writer est le deuxième producteur de population : le
+        # recensement des non-ancrées couvre désormais TOUTE la table de
+        # provenance (les deux producteurs), pas la sienne seule.
+        if hasattr(state, "record_anchor_census"):
+            state.record_anchor_census()
 
     add_bs = getattr(state, "add_belief_set", None)
     if callable(add_bs):
