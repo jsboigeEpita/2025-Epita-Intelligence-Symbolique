@@ -460,9 +460,15 @@ class TestConsumedByRenderer:
 
 
 def _virtuous_state() -> SimpleNamespace:
-    """A virtuous text with framing: political genre + measured virtues, no fallacies."""
+    """A virtuous text with framing: political genre + measured virtues, no fallacies.
+
+    #2975 — the fallacy pass's coverage record (#2966) covers both units:
+    without it the flag would read clean-by-absence, the defect this change
+    closes.
+    """
     s = _political_state()
     s.identified_fallacies = {}  # zero localized fallacies
+    s.analysis_coverage = {"fallacy_per_argument": {"unit_ids": ["arg_1", "arg_2"]}}
     s.argument_quality_scores = {
         "arg_1": {"overall": 8.0, "scores": {"clarte": 8.0, "coherence": 8.0}},
         "arg_2": {"overall": 7.5, "scores": {"pertinence": 7.5}},

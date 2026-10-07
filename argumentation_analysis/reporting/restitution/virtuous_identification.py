@@ -403,7 +403,10 @@ class VirtuousModeAssessment:
 
     A corpus input is virtuous iff its pipeline output shows (a) zero localized
     fallacies AND (b) a non-trivial **quality** axis — measured virtues the
-    evaluator scored > 0. The quality axis is the *title material*: Acte III
+    evaluator scored > 0 — AND (c, #2975) a fallacy pass that COVERED the
+    population (its #2966 coverage record lists every identified unit as
+    examined; without the record, or on a partial sample, the flag stays down
+    and the reasoning says why). The quality axis is the *title material*: Acte III
     titles on the virtues (spec §5 / DoD #1139), which requires measured virtues
     to title on. ``formal_holds`` (a PL/FOL theory the solver validated) is a
     strengthening signal surfaced for the "why it holds" narrative (Acte II),
@@ -476,6 +479,26 @@ def _localized_fallacy_count(state: Any) -> int:
     )
 
 
+def _fallacy_examined_ids(state: Any) -> Optional[set[str]]:
+    """#2975 — opaque ids the per-argument fallacy pass actually examined.
+
+    Reads the coverage record #2966 added (``analysis_coverage``
+    ``["fallacy_per_argument"]["unit_ids"]``: the ids the pass SUBMITTED, not
+    the ones it merely skipped over). ``None`` = no record (states older than
+    #2966, or a caller that does not record): absence of the record is not
+    coverage — callers degrade to honest silence, never to a cleanliness
+    claim. An empty set (record present, nothing examined) is a real answer.
+    """
+    cov = getattr(state, "analysis_coverage", None)
+    entry = cov.get("fallacy_per_argument") if isinstance(cov, dict) else None
+    if not isinstance(entry, dict):
+        return None
+    ids = entry.get("unit_ids")
+    if not isinstance(ids, list):
+        return None
+    return {str(u) for u in ids}
+
+
 def _formal_holds(state: Any) -> bool:
     """True iff at least one formal theory was checked AND found consistent.
 
@@ -517,23 +540,33 @@ def detect_virtuous_mode(state: Any) -> VirtuousModeAssessment:
     Anti-pendule: the flag is AND of two real signals (zero localized fallacies
     AND a non-trivial axis). It never inflates: an empty run is explicitly
     non-virtuous, and a single located fallacy disqualifies virtue-titling.
+    #2975 adds the third conjunct: « zéro sophisme localisé » is a signal only
+    on the population the fallacy pass EXAMINED — a run that examined 3 units
+    of 94 and found nothing has established nothing about the other 91, and
+    the flag drives Acte I framing, Acte II's centre and Acte III's titling.
+    The flag now requires the pass's coverage record (#2966) to cover the
+    population; the reasoning names the coverage it stands on.
     """
     fallacy_count = _localized_fallacy_count(state)
     virtues = _quality_virtue_names(state)
     quality_present = bool(virtues)
     formal_holds = _formal_holds(state)
+    examined = _fallacy_examined_ids(state)
+    population = set(getattr(state, "identified_arguments", None) or {})
+    covered = examined is not None and bool(population) and population <= examined
 
     low_fallacies = fallacy_count <= _VIRTUOUS_MAX_LOCALIZED_FALLACIES
     # Quality drives the titling flag (the title material). formal_holds is a
     # strengthening signal, not a standalone qualifier (see class docstring).
-    is_virtuous = low_fallacies and quality_present
+    is_virtuous = low_fallacies and quality_present and covered
 
     if is_virtuous:
         title_axes: List[str] = [f"vertus mesurées ({', '.join(sorted(virtues))})"]
         if formal_holds:
             title_axes.append("robustesse formelle (solveur valide les inférences)")
         reasoning = (
-            "0 sophisme localisé + vertus mesurées ("
+            f"0 sophisme localisé sur une détection couvrante ({len(population)} "
+            "unités examinées = toute la population) + vertus mesurées ("
             + "; ".join(title_axes)
             + ") → mode vertueux (titre sur les vertus, spec §5)."
         )
@@ -551,6 +584,16 @@ def detect_virtuous_mode(state: Any) -> VirtuousModeAssessment:
             )
         if not quality_present:
             reasons.append("aucune vertu mesurée (argument_quality_scores vide)")
+        if examined is None:
+            reasons.append(
+                "couverture de la détection non enregistrée → le silence n'est "
+                "pas une vertu (#2975)"
+            )
+        elif not covered:
+            reasons.append(
+                f"détection non couvrante ({len(examined)} unités examinées sur "
+                f"{len(population)}) → le silence n'est pas une vertu (#2975)"
+            )
         reasoning = "Mode non-vertueux : " + " ; ".join(reasons) + "."
 
     return VirtuousModeAssessment(

@@ -767,6 +767,9 @@ def _virtuous_state() -> SimpleNamespace:
             "arg_2": "Une conclusion qui suit logiquement ses prémisses.",
         },
         identified_fallacies={},  # zero localized fallacies — the honest result
+        # #2975 — the pass examined both units (record #2966): the titling
+        # stands on examination of the population, not on absence.
+        analysis_coverage={"fallacy_per_argument": {"unit_ids": ["arg_1", "arg_2"]}},
         argument_quality_scores={
             "arg_1": {
                 "overall": 8.0,

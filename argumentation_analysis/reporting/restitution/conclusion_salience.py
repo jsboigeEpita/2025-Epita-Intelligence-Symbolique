@@ -170,6 +170,12 @@ def _unchallenged_strengths(state: Any) -> List[SalienceItem]:
     finding); a strong-quality argument Dung rejects is already ``decisif``.
     Ranking either here again would present a contested move as settled
     ground.
+
+    #2975: « aucun axe ne la conteste » is established only for a unit the
+    fallacy pass EXAMINED — for a never-examined unit the absence of a
+    localized fallacy is an absence, not a signal (the #2966 class). The
+    strengths restrict to the examined set; no coverage record at all → no
+    strength claim (honest silence), per the record's own degradation rule.
     """
     args = getattr(state, "identified_arguments", None)
     quality = getattr(state, "argument_quality_scores", None)
@@ -182,11 +188,17 @@ def _unchallenged_strengths(state: Any) -> List[SalienceItem]:
         quality_fraction,
     )
     from .native_dung import decode_native_dung
+    from .virtuous_identification import _fallacy_examined_ids
 
+    examined = _fallacy_examined_ids(state)
+    if examined is None:
+        return []
     contested = _fallacy_target_ids(state)
     rejected = set(decode_native_dung(state).rejected_by_arg)
     out: List[SalienceItem] = []
     for arg_id in sorted(args):
+        if arg_id not in examined:
+            continue
         if arg_id in contested or arg_id in rejected:
             continue
         qs = quality.get(arg_id)

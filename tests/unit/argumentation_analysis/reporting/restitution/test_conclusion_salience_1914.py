@@ -55,6 +55,12 @@ def _base() -> dict:
             "arg_9": "these C",
         },
         identified_fallacies={},
+        # #2975 — the fallacy pass examined the whole population: « aucun axe
+        # ne la conteste » is provable for each of them. Without this record
+        # a strength claim degrades to honest silence by construction.
+        analysis_coverage={
+            "fallacy_per_argument": {"unit_ids": ["arg_1", "arg_7", "arg_9"]}
+        },
         argument_quality_scores={},
         counter_arguments=[],
         jtms_beliefs={},
@@ -90,8 +96,11 @@ def _violation_state() -> SimpleNamespace:
         "arg_1": _q(3.0),
     }
     d["fol_analysis_results"] = [
-        {"consistent": False, "message": "incoherent",
-         "formulas": ["mortal(socrates)"]},
+        {
+            "consistent": False,
+            "message": "incoherent",
+            "formulas": ["mortal(socrates)"],
+        },
     ]
     d["propositional_analysis_results"] = [{"satisfiable": True}]
     d["dung_frameworks"] = {
@@ -220,6 +229,39 @@ class TestStrengths:
     def test_neutral_quality_is_not_a_strength(self):
         sal = cs.assess_conclusion_salience(_settled_state())
         assert not [i for i in sal.ranked if i.kind == cs.KIND_STRENGTH]
+
+
+class TestStrengthsCoverage2975:
+    """#2975 — « aucun axe ne la conteste » is provable only for a unit the
+    fallacy pass EXAMINED (coverage record #2966). For a never-examined unit
+    the absence of a localized fallacy is an absence, not a signal — ranking
+    it a strength would sell unexamined ground as settled."""
+
+    @staticmethod
+    def _strong_settled_state() -> SimpleNamespace:
+        """arg_7 strong quality, no fallacies, Dung accepts everyone."""
+        state = _settled_state()
+        state.argument_quality_scores = {"arg_7": _q(9.0)}
+        return state
+
+    def test_never_examined_strong_unit_is_not_a_strength(self):
+        # the pass examined arg_1 and arg_9 only: arg_7's clean record is an
+        # absence, not an « unchallenged » verdict.
+        state = self._strong_settled_state()
+        state.analysis_coverage = {
+            "fallacy_per_argument": {"unit_ids": ["arg_1", "arg_9"]}
+        }
+        sal = cs.assess_conclusion_salience(state)
+        strengths = [i for i in sal.ranked if i.kind == cs.KIND_STRENGTH]
+        assert not any("arg_7" in i.cites for i in strengths)
+
+    def test_no_record_no_strength_claim(self):
+        # no coverage record at all → honest silence: no strength claim.
+        state = self._strong_settled_state()
+        del state.analysis_coverage
+        sal = cs.assess_conclusion_salience(state)
+        strengths = [i for i in sal.ranked if i.kind == cs.KIND_STRENGTH]
+        assert strengths == []
 
 
 class TestSurplus:
@@ -363,9 +405,9 @@ class TestSurplusProjection:
         assert proj["established_items"] == []
         assert proj["carries_non_procedural_surplus"] is False
         assert proj["procedural_items"] >= 1
-        assert "unavailable_reason" not in proj, (
-            "a measured-empty surplus is not an unavailable one (#1019)"
-        )
+        assert (
+            "unavailable_reason" not in proj
+        ), "a measured-empty surplus is not an unavailable one (#1019)"
 
     def test_projection_from_state_is_tri_valued(self):
         none_proj = cs.projection_from_state(None)

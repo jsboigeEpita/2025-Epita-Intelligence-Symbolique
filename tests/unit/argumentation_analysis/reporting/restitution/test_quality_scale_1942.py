@@ -57,6 +57,11 @@ def _base() -> dict:
             "arg_9": "these C",
         },
         identified_fallacies={},
+        # #2975 — the fallacy pass examined the whole population (record
+        # #2966): strength claims below stand on examination, not absence.
+        analysis_coverage={
+            "fallacy_per_argument": {"unit_ids": ["arg_1", "arg_7", "arg_9"]}
+        },
         argument_quality_scores={},
         counter_arguments=[],
         jtms_beliefs={},
