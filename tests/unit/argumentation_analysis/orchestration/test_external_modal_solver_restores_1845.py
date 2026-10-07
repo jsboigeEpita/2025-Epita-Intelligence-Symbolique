@@ -87,8 +87,13 @@ class TestExternalModalSolverRestoresTheSetting:
             "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
             fake_bridge_cls,
         ):
+            # #2993: the external modal lane now refuses raw input text as a
+            # KB (no-translation guard) — provide a translated KB explicitly
+            # so the test exercises the SPASS → Tweety fallback it was
+            # written for, not the no-translation exit.
             result = await invoke_callables._invoke_external_modal_solver(
-                "[](p => q)", {}
+                "[](p => q)",
+                {"phase_modal_output": {"formulas": ["p", "q"]}},
             )
 
         # The call completed via the Tweety fallback — the witness is not
@@ -116,8 +121,12 @@ class TestExternalModalSolverRestoresTheSetting:
             "argumentation_analysis.agents.core.logic.modal_handler.ModalHandler",
             return_value=fake_handler,
         ):
+            # #2993: provide the translated KB explicitly so the test
+            # exercises the SPASS branch — raw input text is no longer a
+            # valid formula (no-translation guard, anti-pendule).
             result = await invoke_callables._invoke_external_modal_solver(
-                "[](p => q)", {}
+                "[](p => q)",
+                {"phase_modal_output": {"formulas": ["p", "q"]}},
             )
 
         assert result["solver"] == "spass"

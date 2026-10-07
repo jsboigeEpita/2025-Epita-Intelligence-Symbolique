@@ -11287,9 +11287,31 @@ async def _invoke_external_modal_solver(
     modal_output = context.get("phase_modal_output", {})
     if not isinstance(modal_output, dict):
         modal_output = {}
-    formulas = modal_output.get("formulas", [input_text])
-    if not isinstance(formulas, list):
+    # #2993/#2970: when the modal translation produced no formulas there is
+    # nothing to decide — never feed the raw input text to a modal parser (the
+    # #2970 class: prose is not a KB). The lane sends nothing and says why.
+    formulas = modal_output.get("formulas")
+    if isinstance(formulas, list):
+        formulas = [str(f) for f in formulas if str(f).strip()]
+    elif formulas:
         formulas = [str(formulas)]
+    else:
+        formulas = []
+    if not formulas:
+        return {
+            "formulas": [],
+            "valid": None,
+            "modalities": modal_output.get("modalities", ["none_detected"]),
+            "logic_type": "modal",
+            "solver": "unavailable",
+            "degraded": True,
+            "message": (
+                "unavailable:no-translation — the modal phase produced no "
+                "formulas to decide; the external modal lane sends nothing "
+                "rather than raw input text (#2993/#2970)."
+            ),
+            "modal_status": "unavailable:no-translation",
+        }
 
     modalities = modal_output.get("modalities", ["none_detected"])
 
@@ -11338,7 +11360,20 @@ async def _invoke_external_modal_solver(
             try:
                 initializer = ready_initializer()
                 handler = ModalHandler(initializer_instance=initializer)
-                belief_set_str = "\n".join(str(f) for f in formulas)
+                # #2993: MlParser reads the OPENING lines of a belief base as
+                # its signature section — a raw ``"\n".join(formulas)`` has the
+                # first formula read as a sort declaration and the whole KB
+                # fails to parse ("Illegal characters in sort definition"), so
+                # this lane had never decided an NL-translated base. The one
+                # legaliser of the modal paths (#2471) builds it: declarations
+                # first, then the legalised formulas — same gesture as the nl
+                # path of ``_invoke_modal_logic``.
+                from argumentation_analysis.agents.core.logic.modal_kb_identifier_normalizer import (
+                    build_modal_kb,
+                )
+
+                _declarations, _kb_formulas = build_modal_kb(formulas)
+                belief_set_str = "\n".join(_declarations + _kb_formulas)
                 is_consistent, msg = await asyncio.to_thread(
                     handler.is_modal_kb_consistent, belief_set_str
                 )
@@ -11374,7 +11409,16 @@ async def _invoke_external_modal_solver(
         )
 
         bridge = TweetyBridge()
-        belief_set_str = "\n".join(str(f) for f in formulas)
+        # #2993: same legalisation gap as the SPASS path above — MlParser
+        # reads the first lines as a signature, raw formulas fail to parse
+        # and the lane reports degraded for the very base the nl path would
+        # have decided. build_modal_kb is the ONE legaliser (#2471).
+        from argumentation_analysis.agents.core.logic.modal_kb_identifier_normalizer import (
+            build_modal_kb,
+        )
+
+        _declarations, _kb_formulas = build_modal_kb(formulas)
+        belief_set_str = "\n".join(_declarations + _kb_formulas)
         logic_type = context.get("modal_logic_type", "K")
         accepted, msg = await asyncio.to_thread(
             bridge.execute_modal_query,

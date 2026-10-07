@@ -32,6 +32,7 @@ from argumentation_analysis.core.llm_errors import provider_failure
 from ..abc.agent_bases import BaseLogicAgent
 from ..semantic_setup import prompt_settings, register_prompt_function
 from .belief_set import BeliefSet, ModalBeliefSet
+from .modal_kb_identifier_normalizer import build_modal_kb
 from .tweety_bridge import TweetyBridge
 from .tweety_initializer import TweetyInitializer
 
@@ -318,6 +319,17 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
 
         Anti-pendule: the wrong ``constant X`` grammar is REPLACED by
         ``type(prop)`` — not kept alongside a parallel path.
+
+        #2993 verdict, measured: this producer declares but does NOT legalise.
+        ``type(heavy_rain)`` is illegal for MlParser, and the regex below
+        (anchored ``[a-z_]``) neither declares nor validates uppercase-initial
+        atoms. This KB still reaches the parser decidable because
+        ``ModalHandler`` normalises at the parse point (#1326, deliberately
+        upstream of ``parseBeliefBase`` so EVERY caller is protected) — that
+        normaliser is the legaliser of record for this path, which is why the
+        caller census lists ``text_to_belief_set`` with this reason instead of
+        double-legalising here. ``build_modal_kb`` remains the one producer-side
+        legaliser for paths with no parse-point guard (#2471).
         """
         kb_parts = []
 
@@ -886,20 +898,16 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
         # L'argument est valide si l'ensemble {prémisses} U {¬conclusion} est incohérent.
         negated_conclusion = f"!({conclusion})"  # Négation en logique modale Tweety
 
-        # Le belief set doit contenir les déclarations de propositions (type(prop),
-        # #1213 FP-11) et les formules. On construit un belief set temporaire.
+        # #2993 : la KB temporaire passe par le legalisateur unique (#2471).
+        # L'extraction inline précédente déclarait ``type(implies)``/``type(and)``
+        # pour les connecteurs mots-clés du graphe modal, ignorait les atomes à
+        # initiale majuscule (le regex était ancré ``[a-z_]``) et émettait
+        # ``type(heavy_rain)`` — illégal pour MlParser — si bien que la KB ne
+        # passait la parse que par la défense-en-profondeur de ModalHandler, et
+        # qu'une KB à atomes mixtes n'était jamais décidée (RuntimeError).
         all_formulas = premises + [negated_conclusion]
-
-        # Extraction des propositions pour les déclarer comme prédicats 0-aires.
-        all_props = set()
-        for formula in all_formulas:
-            props_in_formula = re.findall(r"\b[a-z_][a-z0-9_]*\b", formula)
-            all_props.update(props_in_formula)
-
-        kb_parts = [f"type({p})" for p in sorted(all_props)]
-        kb_parts.append("")
-        kb_parts.extend(all_formulas)
-        belief_set_content = "\n".join(kb_parts)
+        declarations, legal_formulas = build_modal_kb(all_formulas)
+        belief_set_content = "\n".join(declarations + legal_formulas)
 
         is_consistent, message = (
             self.tweety_bridge.modal_handler.is_modal_kb_consistent(belief_set_content)
