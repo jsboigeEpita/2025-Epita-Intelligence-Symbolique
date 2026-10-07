@@ -1644,6 +1644,24 @@ def _write_dl_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         return
     consistent = output.get("consistent")  # None = unverified (#1019)
     message = str(output.get("message", ""))
+    ontology = output.get("input_ontology")
+    # #2970: no positive DL verdict without an understood input. The 06/10
+    # doc_A run fed the reasoner an empty KB (0 TBox, 0 ABox), got the
+    # vacuous "Knowledge base is consistent", and this writer projected it
+    # as ``fol_1.consistent=True``. The provenance ontology the invoke
+    # carries (#1693) is the evidence: all three lists empty — or the
+    # producer itself says ``status: not_evaluated`` — means nothing was
+    # decided over. The guest entry carries None (not evaluated), never a
+    # fabricated True.
+    kb_has_axioms = isinstance(ontology, dict) and any(
+        isinstance(ontology.get(k), list) and ontology.get(k)
+        for k in ("tbox", "abox_concepts", "abox_roles")
+    )
+    if consistent is True and (
+        output.get("status") == "not_evaluated"
+        or (isinstance(ontology, dict) and not kb_has_axioms)
+    ):
+        consistent = None
     # Preserve None (unverified) vs True (consistent) vs False (inconsistent).
     if consistent is None:
         confidence = 0.0
@@ -1655,7 +1673,6 @@ def _write_dl_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         inferences=[],
         confidence=confidence,
     )
-    ontology = output.get("input_ontology")
     if isinstance(ontology, dict):
         sidecar = {
             k: list(v)
@@ -1682,6 +1699,18 @@ def _write_cl_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     entailed = output.get("entailed")
     message = str(output.get("message", ""))
     num = output.get("num_conditionals", 0)
+    conditionals = output.get("input_conditionals")
+    # #2970: no positive CL verdict without an understood input. The 06/10
+    # doc_A run had 0 conditionals and no query; the invoke's old no-query
+    # branch answered ``entailed=True`` ("No query specified") and this
+    # writer projected it as ``pl_2.satisfiable=True``. An empty conditional
+    # set (#1693 provenance) or a ``status: not_evaluated`` producer means
+    # nothing was asked of anything: the guest entry carries None.
+    if entailed is True and (
+        output.get("status") == "not_evaluated"
+        or (isinstance(conditionals, list) and not conditionals)
+    ):
+        entailed = None
     state.add_propositional_analysis_result(
         formulas=[f"CL({num} conditionals): {message}"],
         satisfiable=entailed,
@@ -1691,7 +1720,6 @@ def _write_cl_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     # strictly-additive ``formalism_specific`` sidecar (named provenance — see
     # _write_dl_to_state). Absent when the invoke produced no list (empty ⇒ no
     # key, same theatre-guard as QBF/DL). Scrubbed on export (pass 5f).
-    conditionals = output.get("input_conditionals")
     if (
         isinstance(conditionals, list)
         and conditionals
@@ -1997,8 +2025,18 @@ def _write_qbf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     # error), so an absent key must not fold onto False. The QBF entry is a
     # guest in the PL container (_is_guest_formal_entry) — the field still
     # carries the honest tri-state value.
+    # #2970: a ``status: not_evaluated`` producer (no formula in context —
+    # the old invoke fed the document header and wrote "QBF VALID" over it)
+    # is named in the entry itself; an empty formula line would read as a
+    # decision over nothing.
+    if output.get("status") == "not_evaluated":
+        formulas_line = (
+            f"QBF: not evaluated — {output.get('message', 'no formula supplied')}"
+        )
+    else:
+        formulas_line = f"QBF: {output.get('formula', '')}"
     state.add_propositional_analysis_result(
-        formulas=[f"QBF: {output.get('formula', '')}"],
+        formulas=[formulas_line],
         satisfiable=output.get("valid"),
         model={},
     )
@@ -2187,7 +2225,24 @@ def _write_act3_conclusion_to_state(
 
 
 def _write_text_to_kb_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
-    """Write TextToKB extraction results to UnifiedAnalysisState (#506)."""
+    """Write TextToKB extraction results to UnifiedAnalysisState (#506, #2970).
+
+    #2970: ``belief_candidates`` are natural-language sentences. Storing them
+    under ``logic_type="fol"`` made the deep synthesis count 87 prose lines
+    as formal belief sets — half of the 182 "formal findings" on the 06/10
+    doc_A run. They are kept (real extracted data, distinct from the
+    ``arguments`` population above) but labelled ``"nl"``: a non-formal
+    sentence is not a fol belief set, and ``_build_formal_findings``
+    excludes ``"nl"`` from the formal count.
+
+    History, for the record (#2970, Cleanup Gate): this writer used to also
+    persist ``{"arguments", "belief_candidates", "fol_signature"}`` under
+    ``state.knowledge_base`` — dead from birth (afa5b3236): the state class
+    never declared the field, ``hasattr`` was always False in production,
+    and only MagicMock states in tests ever received it. Removed together
+    with the ``tweety_formulas_from_kb`` twin in
+    ``_write_kb_to_tweety_to_state``.
+    """
     if not output or not isinstance(output, dict):
         return
 
@@ -2225,40 +2280,38 @@ def _write_text_to_kb_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
     if callable(add_bs):
         for belief_text in belief_candidates:
             if isinstance(belief_text, str) and belief_text.strip():
-                add_bs("fol", belief_text)
-
-    if hasattr(state, "knowledge_base"):
-        kb = {"arguments": arguments, "belief_candidates": belief_candidates}
-        fol_sig = output.get("fol_signature")
-        if fol_sig:
-            kb["fol_signature"] = fol_sig
-        state.knowledge_base = kb
+                # "nl", not "fol" — see the docstring (#2970).
+                add_bs("nl", belief_text)
 
 
 def _write_kb_to_tweety_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
-    """Write KBToTweety translation results to UnifiedAnalysisState (#506, #1643).
+    """Write KBToTweety translation results to UnifiedAnalysisState (#506, #2970).
 
-    The previous version (#506) silently stored whatever ``dung_framework`` and
-    ``aspic_system`` it found in the callable output — which, on every real run,
-    was the plugin's ``{"error": "Invalid JSON input"}`` dict (#1643 R761,
-    defect 3). Errors serialized in the domain vocabulary are
-    indistinguishable from real frameworks downstream; that is the same family
-    as #1634, and the writer participated in the failure by storing them.
+    The live production here is the belief-set population from the plugin's
+    ``formulas`` — the only consumer of the translation on the analysis path.
 
-    New contract (#1643): the callable emits a ``status`` field. We only write
-    ``dung_framework`` / ``aspic_system`` into state when the callable returned
-    a real framework (``status == "ok"`` and the field is not an error dict).
-    Errors are surfaced under ``_*_error`` keys, and the writer preserves
-    that distinction instead of folding it into the success path.
+    #2970: a formula the plugin marked ``is_valid=False`` (#1777 — parse
+    failure) is not a formal result and does not reach ``belief_sets``. On
+    the 06/10 doc_A run the writer stored all 87 formulas including the 7
+    invalid ones — and those 7 were, once re-read downstream, the 42
+    fol_handler ERROR lines of the run log.
+
+    History, for the record (#1643): this writer used to also persist an
+    audit payload under ``state.tweety_formulas_from_kb`` carrying the
+    plugin's ``dung_framework`` / ``aspic_system`` with error-dict refusal.
+    That branch was dead in production from its birth (afa5b3236): the
+    state class never declared the field, so ``hasattr`` was False on every
+    real run and only MagicMock states in tests ever received it — a
+    surface only tests call (#1842 doctrine). Removed by #2970 under the
+    Cleanup Gate; the refusal contract it encoded had no production reader
+    to protect. The ``knowledge_base`` twin in
+    ``_write_text_to_kb_to_state`` went the same way.
     """
     if not output or not isinstance(output, dict):
         return
 
-    status = output.get("status")
     formulas = output.get("formulas", [])
 
-    # Belief-set population is safe — formula dicts are validated by the plugin
-    # upstream, so we only need the shape check.
     add_bs = getattr(state, "add_belief_set", None)
     if callable(add_bs):
         for f in formulas:
@@ -2268,48 +2321,12 @@ def _write_kb_to_tweety_to_state(output: Any, state: Any, ctx: dict[str, Any]) -
                 if isinstance(f, dict)
                 else "propositional"
             )
-            if formula:
+            # #2970: is_valid=False (#1777 parse failure) never reaches
+            # belief_sets — see the docstring. None (not measured) and True
+            # pass; only the explicit parse failure is refused.
+            is_valid = f.get("is_valid") if isinstance(f, dict) else None
+            if formula and is_valid is not False:
                 add_bs(logic_type, formula)
-
-    if not hasattr(state, "tweety_formulas_from_kb"):
-        return
-
-    # Defect-3 fix: refuse to store error dicts in domain-vocabulary fields.
-    # Anything coming back as {"error": ...} or absent on a non-ok status is
-    # surfaced explicitly via *_error keys, NOT folded into dung_framework /
-    # aspic_system.
-    is_ok = status == "ok"
-    dung_raw = output.get("dung_framework") if is_ok else None
-    aspic_raw = output.get("aspic_system") if is_ok else None
-    dung_framework = (
-        dung_raw if isinstance(dung_raw, dict) and "error" not in dung_raw else None
-    )
-    aspic_system = (
-        aspic_raw if isinstance(aspic_raw, dict) and "error" not in aspic_raw else None
-    )
-
-    payload: Dict[str, Any] = {
-        "formulas": formulas,
-        "formula_count": output.get("formula_count", len(formulas)),
-        "status": status,
-    }
-    if dung_framework is not None:
-        payload["dung_framework"] = dung_framework
-    else:
-        dung_error = output.get("dung_error")
-        if dung_error:
-            payload["dung_error"] = dung_error
-    if aspic_system is not None:
-        payload["aspic_system"] = aspic_system
-    else:
-        aspic_error = output.get("aspic_error")
-        if aspic_error:
-            payload["aspic_error"] = aspic_error
-    batch_error = output.get("batch_error")
-    if batch_error:
-        payload["batch_error"] = batch_error
-
-    state.tweety_formulas_from_kb = payload
 
 
 def _write_tweety_interpretation_to_state(

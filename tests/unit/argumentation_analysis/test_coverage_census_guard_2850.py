@@ -820,8 +820,8 @@ REGISTRY = {
         "200",
         2,
     ): (
-        "window",
-        "the formula input defaults to the first 200 chars",
+        "population_cap",
+        "the argument population falls back to the document's first 200 chars",
         "silent — debt #2850",
     ),
     (
@@ -830,8 +830,8 @@ REGISTRY = {
         "200",
         3,
     ): (
-        "population_cap",
-        "the argument population falls back to the document's first 200 chars",
+        "window",
+        "the UnifiedAnalysisState carries only the first 200 chars",
         "silent — debt #2850",
     ),
     (
@@ -869,16 +869,6 @@ REGISTRY = {
         "input_text",
         "200",
         7,
-    ): (
-        "window",
-        "the UnifiedAnalysisState carries only the first 200 chars",
-        "silent — debt #2850",
-    ),
-    (
-        "argumentation_analysis/orchestration/invoke_callables.py",
-        "input_text",
-        "200",
-        8,
     ): (
         "window",
         "the counter-argument target defaults to the first 200 chars",

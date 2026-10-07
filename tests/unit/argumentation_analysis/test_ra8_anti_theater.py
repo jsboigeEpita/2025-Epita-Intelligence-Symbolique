@@ -316,12 +316,14 @@ class TestQBFNativeSurvives:
         )
 
         # QBF has its own native solver — test that the error fallback is
-        # 'fallback': 'error', not 'python'
+        # 'fallback': 'error', not 'python'. #2970: an explicit formula is
+        # required — without one the invoke answers not-evaluated and never
+        # reaches the fallback being measured here.
         with patch(
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
             side_effect=ImportError("No QBF module"),
         ):
-            result = _run(_invoke_qbf(_INPUT, _CTX))
+            result = _run(_invoke_qbf(_INPUT, {**_CTX, "formula": "exists x: P(x)"}))
             assert isinstance(result, dict)
             assert result.get("fallback") == "error"
             assert result.get("fallback") != "python"
