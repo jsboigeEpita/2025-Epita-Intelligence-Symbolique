@@ -240,6 +240,30 @@ _TAXONOMY_CODE_RE = re.compile(r"(?<![0-9.])\d+(?:\.\d+){2,}(?![0-9.])")
 _TAXCODE_WARN_THRESHOLD = 1  # any leak is worth a reason; 1–2 → WARN (residual)
 _TAXCODE_FAIL_THRESHOLD = 3  # ≥3 → FAIL (same band as a manifest enumeration)
 
+# #2980 — a raw internal id printed into a rendered act. The no-raw-id rule
+# (FB-34) was enforced on the INPUT only (prompt discipline + ids kept out of
+# the sequence block): a measured sample printed « l'argument arg_6 » and the
+# gate said PASS — nothing checked the OUTPUT. The classes below are the
+# opaque ids the state mints (``_generate_id`` prefixes: arg, fallacy, gov,
+# dung, jtms, ca, extract, task, error, qlog, the ``*_bs`` belief-set shapes)
+# plus the ``fl_N``/``fw_N`` fixture shapes. Two guards, each doing its own
+# job (measured): the digit tail is what keeps ``abs_arg_dung`` out — its tail
+# is a word, not a number, so the token is not an id; the ``\b`` pair is what
+# keeps a *partial* id shape inside a longer word (``subarg_1``, ``arg_1x``,
+# ``my_arg_2bis``) from being read as a printed standalone id. Greek thread
+# letters are the DESIGNED label and never match.
+_RAW_INTERNAL_ID_RE = re.compile(
+    r"\b(?:task|arg|fallacy|fl|fw|qlog|extract|error|ca|jtms|dung|gov"
+    r"|[a-z]+_bs)_\d+\b"
+)
+_RAW_ID_WARN_THRESHOLD = 1  # any printed id is worth a reason; 1–2 → WARN
+_RAW_ID_FAIL_THRESHOLD = 3  # ≥3 → FAIL (jargon has taken over the prose)
+
+
+def _find_internal_ids(body: str) -> List[str]:
+    """Raw internal-id tokens present in a rendered text, in order."""
+    return _RAW_INTERNAL_ID_RE.findall(body)
+
 
 def _find_taxonomy_codes(markdown: str) -> List[str]:
     """Raw dotted taxonomy codes present in a rendered text, in order."""
@@ -398,6 +422,7 @@ class ReadabilityGate:
 
         total_bare = 0
         total_taxcodes = 0
+        total_raw_ids = 0
 
         for n in (1, 2, 3):
             text = acts.as_dict()[n] or ""
@@ -445,6 +470,20 @@ class ReadabilityGate:
                     f"lecteur — #2031). Ex: « {act_codes[0]} »."
                 )
 
+            # (2c) raw internal ids — an opaque state id printed into the
+            # act is jargon the reader cannot resolve (#2980). The motif
+            # names the token CLASS, never the referent's content.
+            act_ids = _find_internal_ids(text)
+            total_raw_ids += len(act_ids)
+            if act_ids:
+                reasons.append(
+                    f"{title}: "
+                    f"{accord(len(act_ids), 'identifiant interne brut', 'identifiants internes bruts')} "
+                    f"de classe « {act_ids[0].rsplit('_', 1)[0]}_N » en prose "
+                    f"(id opaque du state, illisible pour le lecteur — "
+                    f"#2980). Ex: « {act_ids[0]} »."
+                )
+
             # (3) non-dump — repeated numbered dimension headings = enumeration
             dump_n = _count_dump_headings(text)
             if dump_n >= self.dump_fail_threshold:
@@ -464,6 +503,12 @@ class ReadabilityGate:
         if total_taxcodes >= _TAXCODE_FAIL_THRESHOLD:
             worst_band = _worsen(worst_band, "FAIL")
         elif total_taxcodes >= _TAXCODE_WARN_THRESHOLD:
+            worst_band = _worsen(worst_band, "WARN")
+
+        # aggregate raw internal ids across acts → WARN/FAIL (#2980)
+        if total_raw_ids >= _RAW_ID_FAIL_THRESHOLD:
+            worst_band = _worsen(worst_band, "FAIL")
+        elif total_raw_ids >= _RAW_ID_WARN_THRESHOLD:
             worst_band = _worsen(worst_band, "WARN")
 
         return GateVerdict(band=worst_band, reasons=reasons)
@@ -520,6 +565,26 @@ class ReadabilityGate:
             worst_band = _worsen(worst_band, "WARN")
             reasons.append(
                 "Corps: 1 signature résiduelle de machinerie formelle brute."
+            )
+
+        # #2980 — raw internal ids printed into the rendered prose. This is
+        # the check the acts' self-controls call (check_body), so a hit lands
+        # in the act's ``degraded`` map and in ``restitution_acts_degraded``
+        # via the existing plumbing — the run says it, nothing is rewritten.
+        body_ids = _find_internal_ids(body)
+        if len(body_ids) >= _RAW_ID_FAIL_THRESHOLD:
+            worst_band = _worsen(worst_band, "FAIL")
+            reasons.append(
+                f"Corps: {len(body_ids)} identifiants internes bruts en prose "
+                f"(ids opaques du state — #2980)."
+            )
+        elif len(body_ids) >= _RAW_ID_WARN_THRESHOLD:
+            worst_band = _worsen(worst_band, "WARN")
+            reasons.append(
+                f"Corps: identifiant interne brut de classe "
+                f"« {body_ids[0].rsplit('_', 1)[0]}_N » en prose "
+                f"(id opaque du state, illisible pour le lecteur — #2980). "
+                f"Ex: « {body_ids[0]} »."
             )
 
         extracted_values = _distinct_extracted_arg_values(body)
