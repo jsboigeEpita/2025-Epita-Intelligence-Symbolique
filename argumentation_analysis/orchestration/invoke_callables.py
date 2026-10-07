@@ -8301,8 +8301,8 @@ async def _invoke_fol_reasoning(
                     valid = [t for t in batch.translations if t.is_valid]
                     if valid:
                         formulas = []
-                        for t in valid:  # type: ignore[assignment]
-                            for f in t.formula.split(";"):  # type: ignore[attr-defined]
+                        for t in valid:
+                            for f in t.formula.split(";"):
                                 f = f.strip()
                                 if f:
                                     formulas.append(f)
