@@ -8,6 +8,7 @@ Split from unified_pipeline.py (#310).
 
 import asyncio
 import contextvars
+import hashlib
 import json
 import logging
 import os
@@ -10286,12 +10287,83 @@ async def _invoke_dung_arbitration(
     }
 
 
+_VERDICT_FIELDS: Final[Tuple[str, ...]] = ("consistent", "satisfiable", "valid")
+
+
+def _formal_verdict(res: Dict[str, Any]) -> Optional[Tuple[str, Optional[bool]]]:
+    """The verdict a single phase output carries (#2970 item 2).
+
+    Returns ``(field, value)`` for the first verdict field the output names.
+    One formal computation decides one thing, so a phase contributes at most
+    one result even if it named two fields. ``value is None`` is the honest
+    tri-state (#1634, #1650): the producer ran without deciding. A non-boolean
+    value is not a decision either — it is never coerced through ``bool()``.
+    """
+    for field in _VERDICT_FIELDS:
+        if field in res:
+            value = res[field]
+            return field, value if isinstance(value, bool) else None
+    return None
+
+
+def _formula_population(res: Dict[str, Any]) -> Optional[str]:
+    """Fingerprint of the formula population a producer decided over (#2970).
+
+    Two producers that named the same formulas under the same logic ran the
+    SAME measurement: on the 06/10 doc_A run ``fol`` and ``fol_solver`` each
+    reported the same 4 formulas and were counted twice. Whitespace-only
+    differences do not make a different population. The fingerprint is short
+    and one-way, so the population can be compared without republishing the
+    text (the formulas themselves already live under ``phase_results``, whose
+    non-scrubbing is a deliberate, documented decision — ``sanitize_state``).
+    """
+    formulas = res.get("formulas")
+    if not isinstance(formulas, list) or not formulas:
+        return None
+    normalized = sorted({" ".join(str(f).split()) for f in formulas if str(f).strip()})
+    if not normalized:
+        return None
+    return hashlib.sha1("\n".join(normalized).encode("utf-8")).hexdigest()[:12]
+
+
+def _count_extensions(value: Any) -> Optional[int]:
+    """Extensions across every shape the producers emit (#2970 item 2).
+
+    ``None`` = not computed (bipolar's honest-degraded path, #1645), never a
+    fabricated zero; a bare list = one extension per element (bipolar, ABA,
+    ASPIC); a dict = Dung's semantics map, or its enriched
+    ``{"extensions": [...], "count": n}`` entry whose own ``count`` is
+    authoritative. A computed-empty set is a real zero and stays ``0``.
+    """
+    if value is None:
+        return None
+    if isinstance(value, dict):
+        count = value.get("count")
+        if isinstance(count, int) and not isinstance(count, bool):
+            return count
+        counted = [
+            c for c in (_count_extensions(v) for v in value.values()) if c is not None
+        ]
+        return sum(counted) if counted else None
+    if isinstance(value, list):
+        return len(value)
+    return None
+
+
 async def _invoke_formal_synthesis(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Aggregate all formal analysis results from upstream phases into a unified report."""
+    """Aggregate all formal analysis results from upstream phases into a unified report.
+
+    #2970 item 2: a decided result is ONE tri-state verdict on ONE formula
+    population. Producers that decided over the same formulas under the same
+    logic (``fol`` / ``fol_solver`` on the 06/10 doc_A run) are one result, not
+    two; "not evaluated" is named instead of being averaged in; and the
+    population ``overall_validity`` was computed over is returned so the figure
+    can be re-derived — ``overall_validity`` is exactly the mean of
+    ``decided_scores``.
+    """
     phase_results = {}
-    overall_scores = []
 
     for key, val in context.items():
         if (
@@ -10299,50 +10371,79 @@ async def _invoke_formal_synthesis(
             and key.endswith("_output")
             and isinstance(val, dict)
         ):
-            phase_name = key[len("phase_") : -len("_output")]
-            phase_results[phase_name] = val
-            if "consistent" in val:
-                v = val["consistent"]
-                if v is True:
-                    overall_scores.append(1.0)
-                elif v is False:
-                    overall_scores.append(0.0)
-                # None (unverified) — excluded from scoring (#1019)
-            if "satisfiable" in val:
-                v = val["satisfiable"]
-                if v is True:
-                    overall_scores.append(1.0)
-                elif v is False:
-                    overall_scores.append(0.0)
-            if "valid" in val:
-                v = val["valid"]
-                if v is True:
-                    overall_scores.append(1.0)
-                elif v is False:
-                    overall_scores.append(0.0)
-                # None (unverified) — excluded from scoring (#1019)
+            phase_results[key[len("phase_") : -len("_output")]] = val
 
+    decided: Dict[Tuple[str, str, str, bool], Dict[str, Any]] = {}
+    not_evaluated: List[str] = []
+
+    for name, res in phase_results.items():
+        verdict = _formal_verdict(res)
+        if verdict is None:
+            # No verdict field at all: this is not a verdict axis (an extension
+            # axis, a synthesis phase, a phase that carried only an error). The
+            # summary reports its state; `not_evaluated` stays exactly "named a
+            # verdict field and decided nothing" (#2970).
+            continue
+        field, value = verdict
+        if value is None:
+            not_evaluated.append(name)
+            continue
+        logic_type = str(res.get("logic_type") or "")
+        fingerprint = _formula_population(res)
+        # Formula-carrying producers dedup by (logic, verdict field, formulas,
+        # verdict): the same measurement twice is one result, while two
+        # producers that DISAGREE over the same population stay two results —
+        # collapsing them would hide a real conflict. A producer that named no
+        # formulas is its own result: nothing proves it measured what another
+        # one did.
+        if fingerprint:
+            dedup_key = (logic_type, field, fingerprint, value)
+        else:
+            dedup_key = (f"producer:{name}", field, "", value)
+        entry = decided.get(dedup_key)
+        if entry is None:
+            decided[dedup_key] = {
+                "producers": [name],
+                "logic_type": logic_type or None,
+                "field": field,
+                "verdict": value,
+                "score": 1.0 if value else 0.0,
+                "formula_fingerprint": fingerprint,
+            }
+        else:
+            entry["producers"].append(name)
+
+    # Two producers that decided the same population differently stay two
+    # results, deliberately: collapsing them would hide a real disagreement,
+    # and the population already carries it — same ``formula_fingerprint`` and
+    # same ``field``, opposite ``verdict``. No dedicated key is added for it: a
+    # field nothing reads is the debt #1842/#1604 exists to catch.
+    decided_results = list(decided.values())
     overall_validity = (
-        sum(overall_scores) / len(overall_scores) if overall_scores else 0.5
+        sum(entry["score"] for entry in decided_results) / len(decided_results)
+        if decided_results
+        else 0.5
     )
+
     summary_parts = []
     for name, res in phase_results.items():
         if "error" in res:
-            summary_parts.append(f"{name}: error ({res['error'][:50]})")
-        elif "consistent" in res:
-            summary_parts.append(f"{name}: consistent={res['consistent']}")
-        elif "satisfiable" in res:
-            summary_parts.append(f"{name}: satisfiable={res['satisfiable']}")
-        elif "extensions" in res:
-            ext_count = (
-                sum(
-                    len(v) if isinstance(v, list) else 0
-                    for v in res["extensions"].values()
-                )
-                if isinstance(res.get("extensions"), dict)
-                else 0
+            summary_parts.append(f"{name}: error ({str(res['error'])[:50]})")
+            continue
+        verdict = _formal_verdict(res)
+        if verdict is not None:
+            field, value = verdict
+            summary_parts.append(
+                f"{name}: {field}={value if value is not None else 'not evaluated'}"
             )
-            summary_parts.append(f"{name}: {ext_count} extensions")
+            continue
+        if "extensions" in res:
+            ext_count = _count_extensions(res["extensions"])
+            summary_parts.append(
+                f"{name}: {ext_count} extensions"
+                if ext_count is not None
+                else f"{name}: extensions not computed"
+            )
 
     return {
         "summary": (
@@ -10351,6 +10452,13 @@ async def _invoke_formal_synthesis(
         "phase_results": phase_results,
         "overall_validity": overall_validity,
         "phase_count": len(phase_results),
+        # #2970 item 2: the population the figure was computed over. A reader
+        # re-derives it: ``overall_validity`` is the mean of
+        # ``decided_results[*]["score"]``, and ``not_evaluated`` names the
+        # producers that carried a verdict field without deciding, so an empty
+        # population is not mistaken for "everything agreed".
+        "decided_results": decided_results,
+        "not_evaluated": not_evaluated,
     }
 
 

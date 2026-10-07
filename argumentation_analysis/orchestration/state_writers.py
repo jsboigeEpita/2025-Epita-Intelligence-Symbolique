@@ -1622,7 +1622,24 @@ def _write_formal_synthesis_to_state(
         phase_results = {}
     if not isinstance(overall_validity, (int, float)):
         overall_validity = 0.0
-    state.add_formal_synthesis_report(summary, phase_results, float(overall_validity))
+    # #2970 item 2: the population the figure was computed over travels with
+    # it, so a reader of the state re-derives overall_validity instead of
+    # trusting it (mean of the per-result scores). A key the producer did not
+    # emit stays absent — the entry keeps its former shape — and a malformed
+    # value is dropped rather than propagated into the state.
+    decided_results = output.get("decided_results")
+    if not isinstance(decided_results, list):
+        decided_results = None
+    not_evaluated = output.get("not_evaluated")
+    if not isinstance(not_evaluated, list):
+        not_evaluated = None
+    state.add_formal_synthesis_report(
+        summary,
+        phase_results,
+        float(overall_validity),
+        decided_results=decided_results,
+        not_evaluated=not_evaluated,
+    )
 
 
 def _write_dl_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
