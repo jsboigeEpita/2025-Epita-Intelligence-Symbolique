@@ -19,6 +19,7 @@ literal that claimed reactions which did not happen.
 """
 
 import asyncio
+import re
 from typing import Any, Dict, List
 from unittest.mock import patch
 
@@ -343,6 +344,74 @@ class TestActsPresentDivergence:
             "reducing it to a single winner"
         )
         assert "arg_16" in prompt and "arg_23" in prompt
+
+    # --- #2989 rework — the divergence line names each winner by what it SAYS
+
+    @staticmethod
+    def _with_unit_texts(texts: Dict[str, str]) -> UnifiedAnalysisState:
+        state = _divergent_state()
+        for unit_id, text in texts.items():
+            state.identified_arguments[unit_id] = text
+        return state
+
+    @staticmethod
+    def _divergence_line(prompt: str) -> str:
+        return next(line for line in prompt.splitlines() if "DIVERGE" in line)
+
+    WINNER_TEXT_16 = "La réforme a réduit le chômage de deux points."
+    WINNER_TEXT_23 = "L'enquête exclut les demandeurs d'emploi en formation."
+
+    def test_act2_divergence_names_each_winner_by_its_text(self) -> None:
+        """Witness (Acte II) — both winners have text: the line carries what
+        each one says, and no raw ``arg_N`` id reaches the writer (#2965/#2980:
+        the writer does not join an id to its unit across a long prompt)."""
+        state = self._with_unit_texts(
+            {"arg_16": self.WINNER_TEXT_16, "arg_23": self.WINNER_TEXT_23}
+        )
+        line = self._divergence_line(build_act2_prompt(build_act2_evidence(state)))
+        assert self.WINNER_TEXT_16 in line, line
+        assert self.WINNER_TEXT_23 in line, line
+        assert not re.search(
+            r"arg_\d+", line
+        ), f"a localizable winner must travel by its text, not its id: {line}"
+
+    def test_act3_divergence_names_each_winner_by_its_text(self) -> None:
+        """Witness (Acte III) — same rule as Acte II."""
+        state = self._with_unit_texts(
+            {"arg_16": self.WINNER_TEXT_16, "arg_23": self.WINNER_TEXT_23}
+        )
+        line = self._divergence_line(build_act3_prompt(build_act3_evidence(state)))
+        assert self.WINNER_TEXT_16 in line, line
+        assert self.WINNER_TEXT_23 in line, line
+        assert not re.search(
+            r"arg_\d+", line
+        ), f"a localizable winner must travel by its text, not its id: {line}"
+
+    def test_act2_divergence_keeps_the_id_of_a_textless_winner(self) -> None:
+        """Control — one winner has no localizable text: its id stays on the
+        line while the other winner's text is still carried (the id is the
+        honest fallback, not the default)."""
+        state = self._with_unit_texts({"arg_16": self.WINNER_TEXT_16})
+        line = self._divergence_line(build_act2_prompt(build_act2_evidence(state)))
+        assert self.WINNER_TEXT_16 in line, line
+        assert (
+            "arg_23" in line
+        ), f"a winner with no text must keep its id on the line: {line}"
+        assert (
+            "arg_16" not in line
+        ), f"the localizable winner must not ALSO print its id: {line}"
+
+    def test_act3_divergence_keeps_the_id_of_a_textless_winner(self) -> None:
+        """Control (Acte III) — same rule as Acte II."""
+        state = self._with_unit_texts({"arg_16": self.WINNER_TEXT_16})
+        line = self._divergence_line(build_act3_prompt(build_act3_evidence(state)))
+        assert self.WINNER_TEXT_16 in line, line
+        assert (
+            "arg_23" in line
+        ), f"a winner with no text must keep its id on the line: {line}"
+        assert (
+            "arg_16" not in line
+        ), f"the localizable winner must not ALSO print its id: {line}"
 
     def test_undiverged_vote_adds_no_divergence_line(self) -> None:
         """Positive control the other way: one winner → no DIVERGE sentence

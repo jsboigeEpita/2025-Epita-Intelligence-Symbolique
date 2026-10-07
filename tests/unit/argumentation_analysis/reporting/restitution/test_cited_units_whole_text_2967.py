@@ -79,14 +79,25 @@ class TestCitedWinnerReachesTheWriters:
     def test_uncited_long_unit_keeps_the_short_cap(self) -> None:
         """Positive control (issue Expected 2): the allocation is not a
         global raise — an UNCITED unit of the same length stays short, on
-        both surfaces, so the prompt does not grow with N."""
+        both surfaces, so the prompt does not grow with N.
+
+        Refounded for the #2989 rework: the cited winner's text now travels
+        on TWO surfaces of the Act II prompt (its movement beat — #2967 —
+        and the governance line, which carries the winner's text the way
+        Acte III already does). The old ``count == 1`` proxy conflated the
+        two and no longer measures the intent. The invariant that does: the
+        prompt's text budget is UNCHANGED by adding an uncited long unit.
+        """
+        without_uncited = build_act2_prompt(build_act2_evidence(self._state()))
         state = self._state()
         # arg_3: same length, cited by nothing
         state.add_argument(_long_unit(), producer="kb_heuristic")
         prompt = build_act2_prompt(build_act2_evidence(state))
         briefing = DeepSynthesisAgent.build_artifact_briefing(state)
-        # exactly ONE occurrence on each surface (the cited winner's)
-        assert prompt.count(_TOKEN) == 1
+        assert prompt.count(_TOKEN) == without_uncited.count(_TOKEN), (
+            "adding an UNCITED long unit must not raise the prompt's text "
+            "budget — the allocation is targeted, not global"
+        )
         assert briefing.count(_TOKEN) == 1
         uncited = next(
             a
