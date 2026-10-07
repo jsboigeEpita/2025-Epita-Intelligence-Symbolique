@@ -277,6 +277,10 @@ class TestStateWriters:
         _write_text_to_kb_to_state(output, state, {})
         assert state.add_argument.call_count == 2
         assert state.add_belief_set.call_count == 1
+        # #2970: belief_candidates are natural-language sentences — stored
+        # "nl", never "fol" (a non-formal sentence is not a fol belief set;
+        # _build_formal_findings excludes "nl" from the formal count).
+        assert state.add_belief_set.call_args_list[0].args == ("nl", "belief A")
 
     def test_write_kb_to_tweety_to_state(self):
         from argumentation_analysis.orchestration.state_writers import (
@@ -288,29 +292,24 @@ class TestStateWriters:
             "formulas": [
                 {"formula": "P(a)", "logic_type": "fol"},
                 {"formula": "Q(b)", "logic_type": "propositional"},
+                # #2970: a parse failure (#1777, is_valid=False) is not a
+                # formal result — it must not reach belief_sets.
+                {"formula": "%%unparsable%%", "logic_type": "fol", "is_valid": False},
             ],
-            "formula_count": 2,
+            "formula_count": 3,
             "status": "ok",
         }
         _write_kb_to_tweety_to_state(output, state, {})
         assert state.add_belief_set.call_count == 2
-        assert state.tweety_formulas_from_kb["formula_count"] == 2
-        assert state.tweety_formulas_from_kb["status"] == "ok"
-        # Real dung_framework from a successful plugin call is preserved.
-        state.tweety_formulas_from_kb = {}
-        output_with_dung = {
-            "formulas": [],
-            "formula_count": 0,
-            "status": "ok",
-            "dung_framework": {"arguments": ["a1"], "attacks": [], "is_valid": True},
-        }
-        _write_kb_to_tweety_to_state(output_with_dung, state, {})
-        assert state.tweety_formulas_from_kb["dung_framework"]["is_valid"] is True
+        written = [c.args[0] for c in state.add_belief_set.call_args_list]
+        assert "%%unparsable%%" not in written
 
     def test_write_kb_to_tweety_to_state_refuses_error_dicts(self):
-        """#1643 R761 — defect 3: writer must NOT store {"error": ...} as a
-        domain-vocabulary field (dung_framework / aspic_system). Errors are
-        surfaced under *_error keys, never folded into success path."""
+        """#1643 R761 history / #2970: the error-dict payload surface
+        (``tweety_formulas_from_kb`` with dung/aspic + *_error keys) was
+        removed — dead from birth (state class never declared the field,
+        MagicMock-only surface). What stays measured: error dicts in the
+        output are inert for the live surface, the belief-set population."""
         from argumentation_analysis.orchestration.state_writers import (
             _write_kb_to_tweety_to_state,
         )
@@ -323,19 +322,14 @@ class TestStateWriters:
             "aspic_system": {"error": "Invalid JSON input"},
         }
         _write_kb_to_tweety_to_state(output, state, {})
-        # Bug-replication-failure: the writer refused to store the error dicts
-        # under dung_framework / aspic_system.
-        assert "dung_framework" not in state.tweety_formulas_from_kb
-        assert "aspic_system" not in state.tweety_formulas_from_kb
-        # status defaults to None when not provided — caller-visible signal
-        # that the run was not "ok".
-        assert "dung_error" not in state.tweety_formulas_from_kb
-        assert "aspic_error" not in state.tweety_formulas_from_kb
+        # No belief set is written from an error-shaped output, and the
+        # writer never reads the error dicts on the live path.
+        assert state.add_belief_set.call_count == 0
 
     def test_write_kb_to_tweety_to_state_input_error_status(self):
-        """#1643 R761 — on input_error status, only the explicit error keys
-        propagate; the domain fields stay absent rather than populated with
-        fallback defaults."""
+        """#1643 R761 history / #2970: on input_error status the writer
+        writes only what the formulas list earns — no fallback defaults on
+        the live belief-set surface."""
         from argumentation_analysis.orchestration.state_writers import (
             _write_kb_to_tweety_to_state,
         )
@@ -349,11 +343,7 @@ class TestStateWriters:
             "aspic_error": "missing_arguments",
         }
         _write_kb_to_tweety_to_state(output, state, {})
-        assert state.tweety_formulas_from_kb["status"] == "input_error"
-        assert state.tweety_formulas_from_kb["dung_error"] == "missing_arguments"
-        assert state.tweety_formulas_from_kb["aspic_error"] == "missing_arguments"
-        assert "dung_framework" not in state.tweety_formulas_from_kb
-        assert "aspic_system" not in state.tweety_formulas_from_kb
+        assert state.add_belief_set.call_count == 0
 
     def test_write_tweety_interpretation_to_state(self):
         from argumentation_analysis.orchestration.state_writers import (

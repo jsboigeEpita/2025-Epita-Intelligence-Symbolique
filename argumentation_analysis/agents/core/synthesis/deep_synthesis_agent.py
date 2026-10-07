@@ -23,6 +23,7 @@ from pydantic import PrivateAttr
 
 from ..abc.agent_bases import BaseAgent
 from ..semantic_setup import prompt_settings
+from argumentation_analysis.core.logic_types import canonical_logic_type  # #2970
 from argumentation_analysis.reporting.restitution.cited_units import (  # #2967
     CITED_UNIT_TEXT_CAP,
     cited_unit_ids,
@@ -575,23 +576,34 @@ class DeepSynthesisAgent(BaseAgent):
                     linked_args=[],
                 )
             )
-        # Belief sets + query log
+        # Belief sets + query log — #2970: only FORMAL belief sets count as
+        # formal findings. ``canonical_logic_type`` is the codebase's own
+        # boundary: it resolves every spelling a logic producer writes
+        # ("Propositional", "fol", "first_order", "modal", …) and answers
+        # None for anything that is not a formal logic — "nl" (the
+        # natural-language candidates text_to_kb stores since #2970,
+        # formerly mislabelled "fol") and "unknown" fall outside. An entry
+        # explicitly marked ``is_valid=False`` by its producer is not a
+        # formal result either. On the 06/10 doc_A run this loop counted
+        # 174 belief sets (87 prose lines + 87 first-token formulas
+        # including 7 unparsable) — 96 % of the formal channel was noise.
         belief_sets = getattr(state, "belief_sets", {})
         query_log = getattr(state, "query_log", [])
-        if belief_sets:
-            for bs_id, bs_data in belief_sets.items():
-                related_queries = [
-                    q for q in query_log if q.get("belief_set_id") == bs_id
-                ]
-                findings.append(
-                    FormalFinding(
-                        logic_type=bs_data.get("logic_type", "unknown"),
-                        axioms=[bs_data.get("content", "")],
-                        queries=[q.get("query", "") for q in related_queries],
-                        results=[q.get("raw_result", "") for q in related_queries],
-                        linked_args=[],
-                    )
+        for bs_id, bs_data in belief_sets.items():
+            if canonical_logic_type(bs_data.get("logic_type")) is None:
+                continue
+            if bs_data.get("is_valid") is False:
+                continue
+            related_queries = [q for q in query_log if q.get("belief_set_id") == bs_id]
+            findings.append(
+                FormalFinding(
+                    logic_type=bs_data.get("logic_type", "unknown"),
+                    axioms=[bs_data.get("content", "")],
+                    queries=[q.get("query", "") for q in related_queries],
+                    results=[q.get("raw_result", "") for q in related_queries],
+                    linked_args=[],
                 )
+            )
         return findings
 
     @staticmethod
