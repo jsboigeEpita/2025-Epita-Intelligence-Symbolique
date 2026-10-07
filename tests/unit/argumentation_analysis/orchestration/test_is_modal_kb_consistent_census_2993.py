@@ -192,8 +192,7 @@ def test_every_caller_of_is_modal_kb_consistent_is_registered():
     lines: list[str] = []
     if missing:
         shown = [
-            f"  {mod} :: {func} ({found[(mod, func)]})"
-            for mod, func in missing[:20]
+            f"  {mod} :: {func} ({found[(mod, func)]})" for mod, func in missing[:20]
         ]
         lines.append(
             "NEW is_modal_kb_consistent caller(s) not in ALLOWED — build the "
