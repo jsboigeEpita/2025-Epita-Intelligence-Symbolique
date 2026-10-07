@@ -325,6 +325,10 @@ class GovernanceVerdict:
     winner: str
     scores: Dict[str, float] = field(default_factory=dict)
     extraction_method: Optional[str] = None  # "llm" | "heuristic" | None
+    # #2969: a divergent vote records every distinct winner — presenting one
+    # "leading argument" when the methods disagreed (arg_16 vs arg_23 on
+    # doc_A) erases the divergence the vote actually expressed.
+    winners: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -833,6 +837,11 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
             winner=winner,
             scores=scores,
             extraction_method=extraction_method,
+            winners=[
+                str(w)
+                for w in (d.get("winners") or [])
+                if isinstance(w, str) and w.strip()
+            ],
         )
     return chosen
 
@@ -1447,6 +1456,16 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                 f"l'option d'identifiant « {gv.winner} » sort gagnante du vote "
                 f"social-choice. DÉCRIS-la par son rôle dans la prose, ne recopie "
                 f"pas l'identifiant technique brut. "
+            )
+        # #2969: a divergent vote is part of the verdict — name every distinct
+        # winner instead of presenting one "leading argument" the methods
+        # never agreed on.
+        if len(gv.winners) > 1:
+            all_winners = ", ".join(f"« {w} »" for w in gv.winners)
+            gov_lead += (
+                f"Le vote DIVERGE entre les méthodes : {all_winners} sortent "
+                f"gagnantes selon la méthode consultée. DÉCRIS la divergence, "
+                f"ne la réduis pas à un gagnant unique. "
             )
         if gov_origin:
             deliberation_lines.append(gov_origin)

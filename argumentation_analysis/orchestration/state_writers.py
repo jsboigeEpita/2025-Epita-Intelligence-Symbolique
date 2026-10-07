@@ -704,48 +704,69 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
     if not isinstance(llm_gov, dict):
         llm_gov = {}
 
-    # Build scores from stakeholder analysis or conflicts
-    scores = {}
+    # #2969: the record keeps its populations apart. ``scores`` carries the
+    # VOTE's option scores only; the LLM's stakeholder influences (labels
+    # the model invented, not units) are a separate field. Measured on
+    # doc_A, one dict mixed the two and the readers could not tell a party
+    # label from a ranked unit.
+    scores: dict[str, Any] = {}
+    stakeholder_scores: dict[str, float] = {}
     stakeholders = llm_gov.get("stakeholder_analysis", [])
     if isinstance(stakeholders, list):
         for s in stakeholders:
             if isinstance(s, dict):
                 agent = str(s.get("agent", "unknown"))
                 influence = float(s.get("influence", 0.0))
-                scores[agent] = influence
+                stakeholder_scores[agent] = influence
 
-    # Fallback: use available methods as score keys if no stakeholders
-    if not scores:
-        methods = output.get("available_methods", [])
-        if isinstance(methods, list) and methods:
-            scores = {str(m): 0.0 for m in methods}
-
-    # If no scores at all (no methods, no stakeholders, no LLM), skip
     has_conflicts = bool(output.get("conflicts"))
     has_llm = bool(llm_gov)
-    if not scores and not has_conflicts and not has_llm:
+    # #2969 — a genuine vote is a real population: on main, a vote-only
+    # output (no stakeholders, no LLM) survived only through the
+    # available_methods-as-scores fallback, so removing that fallback without
+    # counting the vote would drop #294's auto-triggered records entirely.
+    vote_result = output.get("vote_result", {})
+    has_vote = isinstance(vote_result, dict) and bool(vote_result.get("winner"))
+    if not stakeholder_scores and not has_conflicts and not has_llm and not has_vote:
         return
 
     recommended = output.get("recommended_method") or llm_gov.get(
         "recommended_method", "majority"
     )
+    method_provenance = (
+        "llm_recommendation"
+        if output.get("recommended_method") or llm_gov.get("recommended_method")
+        else "default"
+    )
 
-    # Determine winner from vote result, LLM assessment, or conflict resolution
+    # Determine winner from vote result, LLM assessment, or conflict
+    # resolution — #2969: the branch taken is the winner's provenance, and
+    # a divergent vote keeps ALL distinct winners instead of erasing the
+    # divergence behind one.
     winner = "N/A"
-    vote_result = output.get("vote_result", {})
+    winner_provenance = "unresolved"
+    winners: list[str] = []
     if isinstance(vote_result, dict) and vote_result.get("winner"):
         winner = str(vote_result["winner"])
-        # (#294) Merge Copeland scores into scores dict
+        winner_provenance = "vote_aggregate"
+        # (#294) The vote's own option scores — the only population here.
         copeland_scores = vote_result.get("copeland_scores", {})
         if isinstance(copeland_scores, dict):
             for agent, cscore in copeland_scores.items():
                 scores[str(agent)] = float(cscore)
+        verdict = vote_result.get("results", {})
+        if isinstance(verdict, dict):
+            distinct = verdict.get("distinct_winners", [])
+            if verdict.get("inter_method_disagreement") and isinstance(distinct, list):
+                winners = [str(w) for w in distinct if w]
     elif llm_gov.get("recommended_resolution"):
         winner = str(llm_gov["recommended_resolution"])
+        winner_provenance = "llm_resolution"
     elif output.get("resolutions"):
         resolutions = output["resolutions"]
         if isinstance(resolutions, list) and resolutions:
             winner = str(resolutions[0].get("resolution_type", "N/A"))
+            winner_provenance = "conflict_resolution"
 
     # Track E #1281 — propagate the honest origin signal: an LLM-assessed
     # verdict is not a genuine multi-agent deliberation, and the restitution
@@ -760,6 +781,10 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
         winner=winner,
         scores=scores,
         extraction_method=extraction_method,
+        winners=winners,
+        stakeholder_scores=stakeholder_scores,
+        winner_provenance=winner_provenance,
+        method_provenance=method_provenance,
     )
 
 

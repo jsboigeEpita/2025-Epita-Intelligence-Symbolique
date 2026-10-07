@@ -1278,6 +1278,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         winner: str,
         scores: Dict[str, float],
         extraction_method: Optional[str] = None,
+        winners: Optional[List[str]] = None,
+        stakeholder_scores: Optional[Dict[str, float]] = None,
+        winner_provenance: Optional[str] = None,
+        method_provenance: Optional[str] = None,
     ) -> str:
         """Add a governance voting decision.
 
@@ -1287,9 +1291,17 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         multi-agent deliberation, and must not be dressed as procedural
         legitimacy. ``None`` preserves backward compat for callers that don't
         supply it (the restitution then falls back to its prior framing).
+
+        #2969 — the record keeps its populations apart: ``scores`` is the
+        VOTE's option scores; ``stakeholder_scores`` the LLM assessment's
+        influences (labels, not units); ``winners`` carries every distinct
+        winner of a divergent vote (one ``winner`` erased the divergence on
+        doc_A: two methods named arg_16/arg_23, the record kept one). The
+        provenance fields say which branch produced ``winner``/``method``.
+        Optional fields are stored only when set (honest absence).
         """
         gd_id = self._generate_id("gov", self.governance_decisions)
-        entry = {
+        entry: Dict[str, Any] = {
             "id": gd_id,
             "method": method,
             "winner": winner,
@@ -1297,6 +1309,14 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         }
         if extraction_method:
             entry["extraction_method"] = extraction_method
+        if winners:
+            entry["winners"] = list(winners)
+        if stakeholder_scores:
+            entry["stakeholder_scores"] = dict(stakeholder_scores)
+        if winner_provenance:
+            entry["winner_provenance"] = winner_provenance
+        if method_provenance:
+            entry["method_provenance"] = method_provenance
         self.governance_decisions.append(entry)
         state_logger.info(f"Governance decision added: {gd_id} ({method}: {winner})")
         return gd_id

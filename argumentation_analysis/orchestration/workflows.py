@@ -757,7 +757,11 @@ def build_spectacular_workflow() -> WorkflowDefinition:
         .add_phase(
             "quality",
             capability="argument_quality",
-            depends_on=["extract", "text_to_kb"],
+            # #2969: the evaluator reads hierarchical_fallacy for the #289
+            # penalty — declared, or the executor gathers the level before
+            # the fallacy phase has written and the penalty never applies
+            # (measured on doc_A: 0 of 8 scored units carried it).
+            depends_on=["extract", "text_to_kb", "hierarchical_fallacy"],
         )
         .add_phase(
             "nl_to_logic",
@@ -913,7 +917,7 @@ def build_spectacular_workflow() -> WorkflowDefinition:
         .add_phase(
             "dialogue_reasoning",
             capability="dialogue_protocols",
-            depends_on=["aspic_analysis"],
+            depends_on=["aspic_analysis", "counter"],
             optional=True,
             timeout_seconds=180,
         )
@@ -972,17 +976,23 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             optional=True,
             timeout_seconds=120,
         )
-        # L6 — JTMS belief tracking + adversarial debate (parallel)
+        # L6 — JTMS belief tracking + adversarial debate
         .add_phase(
             "jtms",
             capability="belief_maintenance",
-            depends_on=["counter"],
+            # #2969: the invoker also reads pl/fol outputs for its
+            # formal-consistency axis (#285) — that read only worked by the
+            # accident of levels (fol/pl happened to run earlier). Declared.
+            depends_on=["counter", "fol", "pl"],
             optional=True,
         )
         .add_phase(
             "debate",
             capability="adversarial_debate",
-            depends_on=["counter"],
+            # #2969: the debate reads jtms beliefs (the "RETRACTED BELIEFS"
+            # block) — declared, or both run in the same level and the
+            # block reads an output that has not been written.
+            depends_on=["counter", "jtms"],
             optional=True,
         )
         # L7 — ATMS multi-context. #1650: the producer (_invoke_atms) reads
@@ -1002,7 +1012,12 @@ def build_spectacular_workflow() -> WorkflowDefinition:
         .add_phase(
             "governance",
             capability="governance_simulation",
-            depends_on=["quality"],
+            # #2969: the vote that designates "the leading argument"
+            # aggregates the axes — counter, debate, jtms (plus quality and
+            # hierarchical_fallacy it reads directly). Declared at ["quality"]
+            # alone, governance ran beside counter and before debate/jtms:
+            # the vote ran with none of the axes it aggregates.
+            depends_on=["quality", "hierarchical_fallacy", "counter", "debate", "jtms"],
             optional=True,
         )
         .add_phase(

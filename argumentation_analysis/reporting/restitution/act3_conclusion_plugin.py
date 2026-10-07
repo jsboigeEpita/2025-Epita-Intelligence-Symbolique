@@ -351,6 +351,9 @@ class GovernanceVerdict:
     method: str
     winner: str
     scores: Dict[str, float] = field(default_factory=dict)
+    # #2969: a divergent vote records every distinct winner — presenting one
+    # "leading argument" when the methods disagreed erases the divergence.
+    winners: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -819,7 +822,16 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
                     scores[str(k)] = float(v)
                 except (TypeError, ValueError):
                     continue
-        chosen = GovernanceVerdict(method=method, winner=winner, scores=scores)
+        chosen = GovernanceVerdict(
+            method=method,
+            winner=winner,
+            scores=scores,
+            winners=[
+                str(w)
+                for w in (d.get("winners") or [])
+                if isinstance(w, str) and w.strip()
+            ],
+        )
     return chosen
 
 
@@ -2455,6 +2467,17 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
                 "social-choice. DÉCRIS-la par son rôle dans la prose (p.ex. "
                 "« l'argument arrivé en tête »), ne recopie PAS l'identifiant "
                 "technique brut ni le nom de méthode snake_case. (options opaques, FB-34.)"
+            )
+        # #2969: a divergent vote is part of the verdict — name every
+        # distinct winner, do not reduce the conclusion to one "leading
+        # argument" the methods never agreed on. Appended to whichever
+        # form the line took (#2965 text-bearing or id fallback).
+        if len(gv.winners) > 1:
+            all_winners = ", ".join(f"« {w} »" for w in gv.winners)
+            deliberation_lines[-1] += (
+                f" Le vote DIVERGE entre les méthodes : {all_winners} sortent "
+                "gagnantes selon la méthode consultée — la conclusion doit le "
+                "dire, pas le réduire à un gagnant unique."
             )
     if evidence.debate_exchanges:
         for i, ex in enumerate(evidence.debate_exchanges, start=1):
