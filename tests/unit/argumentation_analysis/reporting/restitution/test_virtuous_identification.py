@@ -238,11 +238,23 @@ def _state(**fields: object) -> SimpleNamespace:
     return SimpleNamespace(**base)
 
 
+def _coverage(*unit_ids: str) -> dict:
+    """#2975 — a fallacy-pass coverage record: the ids the pass examined.
+
+    A state without this record proves nothing about examination: absence of
+    a localized fallacy is then an absence, not a signal (the #2966 class).
+    """
+    return {"fallacy_per_argument": {"unit_ids": list(unit_ids)}}
+
+
 def _virtuous_state() -> SimpleNamespace:
-    """0 localized fallacies + measured quality virtues → virtuous (quality)."""
+    """0 localized fallacies + measured quality virtues, on a pass that
+    COVERED the population → virtuous (quality). #2975: without the coverage
+    record this fixture is the defect itself — clean-by-absence."""
     return _state(
         identified_arguments={"arg_1": "Un raisonnement étayé et honnête."},
         identified_fallacies={},  # zero localized fallacies
+        analysis_coverage=_coverage("arg_1"),  # pass examined the population
         argument_quality_scores={
             "arg_1": {
                 "overall": 7.5,
@@ -301,6 +313,7 @@ class TestDetectVirtuousMode:
         # writer stores virtues under canonical 'scores' (Finding A, #1150)
         s = _state(
             identified_arguments={"arg_1": "x"},
+            analysis_coverage=_coverage("arg_1"),
             argument_quality_scores={
                 "arg_1": {"overall": 6.0, "scores": {"clarte": 5.0}}
             },
@@ -312,6 +325,7 @@ class TestDetectVirtuousMode:
     def test_quality_legacy_scores_par_vertu_fallback(self):
         s = _state(
             identified_arguments={"arg_1": "x"},
+            analysis_coverage=_coverage("arg_1"),
             argument_quality_scores={
                 "arg_1": {"overall": 6.0, "scores_par_vertu": {"clarte": 5.0}}
             },
@@ -373,3 +387,76 @@ class TestDetectVirtuousMode:
         a = detect_virtuous_mode(s)
         assert a.fallacy_count == 0
         assert a.is_virtuous is True
+
+
+class TestCoverageGate2975:
+    """#2975 — « zéro sophisme localisé » n'est un signal que sur la
+    population que la passe de détection a EXAMINÉE (registre #2966).
+
+    Inferring clean from absence on a partial sample is the #2966 defect
+    class: a pass that examined 1 unit of 3 and found nothing has established
+    nothing about the other 2. The flag requires the record to cover the
+    population; without a record it degrades to honest silence.
+    """
+
+    @staticmethod
+    def _clean_partial_sample() -> SimpleNamespace:
+        """0 fallacies + measured quality on arg_1, pass examined arg_1 only."""
+        return _state(
+            identified_arguments={
+                "arg_1": "Un raisonnement étayé.",
+                "arg_2": "Deuxième these, jamais examinée.",
+                "arg_3": "Troisième these, jamais examinée.",
+            },
+            identified_fallacies={},
+            analysis_coverage=_coverage("arg_1"),  # 1 of 3 examined
+            argument_quality_scores={
+                "arg_1": {"overall": 7.5, "scores": {"clarte": 8.0}}
+            },
+        )
+
+    def test_partial_examination_is_not_virtuous(self):
+        # the pass examined 1 unit of 3: clean-by-absence on the other 2
+        # proves nothing — the flag must stay down and say why.
+        a = detect_virtuous_mode(self._clean_partial_sample())
+        assert a.is_virtuous is False
+        assert a.fallacy_count == 0  # honest: nothing WAS localized
+        assert a.quality_virtues_present is True
+        assert "détection non couvrante" in a.reasoning
+        assert "#2975" in a.reasoning
+
+    def test_missing_record_is_not_virtuous(self):
+        # same clean signals, no coverage record at all: absence of the
+        # record is not coverage — degradation to honest silence.
+        s = self._clean_partial_sample()
+        s.analysis_coverage = {}
+        a = detect_virtuous_mode(s)
+        assert a.is_virtuous is False
+        assert "couverture de la détection non enregistrée" in a.reasoning
+        assert "#2975" in a.reasoning
+
+    def test_empty_examined_list_is_a_real_answer(self):
+        # a record present with an empty unit list means the pass examined
+        # nothing — an answer, never coverage.
+        s = self._clean_partial_sample()
+        s.analysis_coverage = _coverage()  # record, zero ids
+        a = detect_virtuous_mode(s)
+        assert a.is_virtuous is False
+        assert "détection non couvrante" in a.reasoning
+
+    def test_covering_sample_keeps_the_flag(self):
+        # DoD positive control: sample = whole population ⇒ flag unchanged —
+        # the gate adds no requirement beyond examination of everyone.
+        s = _state(
+            identified_arguments={"arg_1": "these A", "arg_2": "these B"},
+            identified_fallacies={},
+            analysis_coverage=_coverage("arg_1", "arg_2"),
+            argument_quality_scores={
+                "arg_1": {"overall": 7.5, "scores": {"clarte": 8.0}},
+                "arg_2": {"overall": 6.0, "scores": {"pertinence": 6.0}},
+            },
+        )
+        a = detect_virtuous_mode(s)
+        assert a.is_virtuous is True
+        assert "détection couvrante" in a.reasoning
+        assert "toute la population" in a.reasoning
