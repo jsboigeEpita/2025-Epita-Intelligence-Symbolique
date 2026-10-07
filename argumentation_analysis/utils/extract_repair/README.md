@@ -135,10 +135,6 @@ jupyter notebook repair_extract_markers.ipynb
 import asyncio
 from utils.extract_repair.repair_extract_markers import repair_extract_markers
 
-```python
-import asyncio
-from utils.extract_repair.repair_extract_markers import repair_extract_markers
-
 async def run_repair():
     # Charger les définitions d'extraits
     from ui.config import ENCRYPTION_KEY, CONFIG_FILE, CONFIG_FILE_JSON
