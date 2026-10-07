@@ -1,4 +1,5 @@
 # Outils et Utilitaires
+Parent : [`agents/README.md`](../README.md).
 
 Ce répertoire contient les outils et utilitaires utilisés par les agents du système d'analyse d'argumentation.
 
@@ -40,3 +41,8 @@ Exemples d'utilisation :
 ## Intégration
 
 Ces outils peuvent être utilisés de manière indépendante ou intégrés dans des workflows plus complexes. Ils sont conçus pour être modulaires et réutilisables.
+
+## Enfants documentés
+
+- [`analysis/`](./analysis/README.md)
+- [`support/`](./support/README.md)

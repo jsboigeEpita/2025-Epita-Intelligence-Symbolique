@@ -1,4 +1,5 @@
 # `argumentation_analysis/services/ai_shield/` — un bouclier adversarial de filtrage en profondeur, à trois voies d'activation toutes opt-in et sans lecteur aval
+Parent : [`services/README.md`](../README.md).
 
 Paquet de 7 modules `.py` (774 lignes) plus un unique README de sous-dossier (99 lignes), soit 873 lignes sur 8 fichiers. `shield.py` porte le contrat commun (`ShieldLayer`, `LayerResult`, l'agrégateur `Shield` en politique `fail_open`) ; `presets.py` compose trois couches en 4 profils nommés ; `layers/` ne contient que les trois couches. L'assemblage est branché sur **deux routes REST** et sur une phase de workflow — mais les **trois** voies sont inertes par défaut (`--shield-preset off` côté CLI, `shield_preset="off"` côté REST). Le champ d'état qu'il écrit avait valeur de verdict sans lecteur : depuis #2095 il a un **lecteur de production en lecture seule** (voir « Amont / aval »).
 
@@ -167,3 +168,7 @@ effet, `ai_shield_results` sans lecteur). Les items **6, 12, 13** restent locaux
 *Provenance : 2026-09-11, branche `docs/readme/2088-parents`. Écrit par mesure directe du dépôt (lecture de `argumentation_analysis/services/ai_shield/**`, `api/shield_endpoints.py`, `api/proposal_endpoints.py`, `api/proposal_models.py`, `api/main.py`, `argumentation_analysis/orchestration/{registry_setup,invoke_callables,unified_pipeline}.py`, `argumentation_analysis/run_orchestration.py`, `argumentation_analysis/core/{shared_state,reading_window}.py`, `argumentation_analysis/core/utils/llm_completion_guard.py`, `grep` ciblés, `git log`, et comptage `pytest --collect-only`) ; la fiche de départ a été traitée comme hypothèse et quatre de ses affirmations ont été corrigées. Aucun fichier du dépôt modifié hors ce README.*
 
 *Révisé le 2026-09-14 par le grain #2095 (reprise R995) : les entrées 4, 7, 10 et 11 sont fermées et le disent, les affirmations devenues fausses (« aucun lecteur de production », « repli score 0.0 », « ne stoppe rien », « sans README » côté `layers/`) sont corrigées. Attribution des ancres, mesurée sur le parent `4c733b93` : celles que #2095 a déplacées (`llm_validator.py`, `unified_pipeline.py`, `workflow_dsl.py`, corps d'`invoke_callables.py`) sont re-mesurées ; l'ancre du `def _invoke_ai_shield` et les ancres `shield.py` étaient périmées **avant** #2095 et sont rafraîchies à titre correctif — voir le détail dans le bloc #2095 ci-dessus.*
+
+## Enfants documentés
+
+- [`layers/`](./layers/README.md)

@@ -1,4 +1,5 @@
 # Templates pour Nouveaux Agents
+Parent : [`agents/README.md`](../README.md).
 
 Ce répertoire contient des templates pour la création de nouveaux agents dans le système d'analyse d'argumentation.
 
@@ -58,3 +59,7 @@ Les templates sont conçus pour être facilement personnalisables. Vous pouvez:
 - Testez régulièrement votre agent pendant le développement
 - Utilisez des noms explicites pour les fonctions et les variables
 - Respectez les conventions de codage du projet
+
+## Enfants documentés
+
+- [`student_template/`](./student_template/README.md)

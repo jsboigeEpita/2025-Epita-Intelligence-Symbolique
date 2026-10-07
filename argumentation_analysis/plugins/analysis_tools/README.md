@@ -1,4 +1,5 @@
 # `argumentation_analysis/plugins/analysis_tools/` — façade d'orchestration rhétorique **non-Semantic-Kernel** et ses six moteurs « Enhanced »
+Parent : [`plugins/README.md`](../README.md).
 
 Façade Python ordinaire (`plugin.py`) plus six moteurs métier : **13 `.py`, 5 498 lignes** en récursif, dont **zéro `@kernel_function`** (AST sur les 13 fichiers, pas `grep`). Le nom dit « plugin », mais le paquet n'est montable sur aucun kernel : il est appelé comme un objet Python. La façade est atteinte par **deux chaînes** seulement ; le descripteur `manifest.json` qui déclarait trois capacités a été **retiré** (#2145 — rejeté par le seul lecteur de son format, lui-même sans appelant de production, voir *Limites connues* §2), et **20 des 33 tests in-package échouent au *setup***.
 
@@ -175,3 +176,7 @@ Les items **2, 3, 4, 7, 9** restent locaux.
 ---
 
 *Révision — 2026-09-14, `#2145` (grain finition). `manifest.json` retiré avec son chargeur (`agents/core/plugin_loader.py`, 0 appelant de production) : lignes du descripteur supprimées des tables, limite §2 marquée corrigée par retrait, frères SK archivés vers `docs/archives/plugins_overflow/` (précédent #321). Compteurs `.py` inchangés (le descripteur n'était pas un `.py`). Les trois moteurs et la façade ne sont pas touchés.*
+
+## Enfants documentés
+
+- [`logic/`](./logic/README.md)

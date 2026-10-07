@@ -1,4 +1,5 @@
 # `plugin_framework/core/plugins/standard/external_verification/` — plugin de fact-checking (simulé)
+Parent : [`plugin_framework/core/plugins/standard/README.md`](../README.md).
 
 ## Rôle et frontière
 

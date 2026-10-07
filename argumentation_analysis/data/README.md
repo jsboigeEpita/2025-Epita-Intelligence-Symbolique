@@ -1,4 +1,5 @@
 # `argumentation_analysis/data/` — taxonomies, mocks et le corpus chiffré
+Parent : [`argumentation_analysis/README.md`](../README.md).
 
 ## Rôle et frontière
 

@@ -1,4 +1,5 @@
 # Paquet `orchestration`
+Parent : [`argumentation_analysis/README.md`](../README.md).
 
 Ce paquet fait collaborer les agents : il décide **qui** fait **quoi** et **quand**. La
 documentation complète des modes (arbitraires d'usage, comparaison, budget) vit dans

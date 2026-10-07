@@ -1,4 +1,5 @@
 # Package Models
+Parent : [`argumentation_analysis/README.md`](../README.md).
 
 Ce package contient les modèles de données utilisés dans le projet d'analyse d'argumentation. Les modèles définissent les structures de données et les classes qui représentent les concepts clés du projet.
 

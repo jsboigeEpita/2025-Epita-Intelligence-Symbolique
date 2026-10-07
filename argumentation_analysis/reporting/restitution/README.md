@@ -1,4 +1,5 @@
 # `reporting/restitution/` — moteur de restitution structurée (actes + annexes + gate)
+Parent : [`reporting/README.md`](../README.md).
 
 ## Rôle et frontière
 

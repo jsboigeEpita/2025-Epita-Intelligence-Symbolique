@@ -1,4 +1,5 @@
 # `kernel/` — ancien emplacement de `KernelBuilder` (retiré, #2711 B)
+Parent : [`argumentation_analysis/README.md`](../README.md).
 
 ## Rôle et frontière
 

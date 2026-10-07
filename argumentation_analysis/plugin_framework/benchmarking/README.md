@@ -1,4 +1,5 @@
 # `plugin_framework/benchmarking/` — mesure du framework de plugins
+Parent : [`plugin_framework/README.md`](../README.md).
 
 ## Rôle et frontière
 

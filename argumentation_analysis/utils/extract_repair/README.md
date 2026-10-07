@@ -286,3 +286,7 @@ La documentation détaillée sur le fonctionnement de l'outil de réparation est
 - Utilisez des noms explicites pour les fonctions et les variables
 - Gérez correctement les erreurs et les cas limites
 - Maintenez une séparation claire entre la logique de réparation et la génération de rapports
+
+## Enfants documentés
+
+- [`docs/`](./docs/README.md)

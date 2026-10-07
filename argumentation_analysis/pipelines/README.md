@@ -1,4 +1,5 @@
 # Paquet `pipelines`
+Parent : [`argumentation_analysis/README.md`](../README.md).
 
 ## 1. Rôle et Philosophie
 
@@ -27,3 +28,8 @@ graph TD
     B --> C{Processeur 2: Extraction d'entités};
     C --> D{Processeur 3: Analyse de sentiments};
     D --> E[Artefact de sortie];
+```
+
+## Enfants documentés
+
+- [`orchestration/`](./orchestration/README.md)

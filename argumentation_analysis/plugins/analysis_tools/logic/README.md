@@ -1,4 +1,5 @@
 # `plugins/analysis_tools/logic/` — moteurs d'analyse rhétorique et de sophismes
+Parent : [`plugins/analysis_tools/README.md`](../README.md).
 
 ## Rôle et frontière
 

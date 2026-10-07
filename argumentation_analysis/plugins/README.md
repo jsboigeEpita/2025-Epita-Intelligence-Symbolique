@@ -1,4 +1,5 @@
 # `argumentation_analysis/plugins/` — paquet agrégateur des surfaces Semantic Kernel, sans contrat d'export
+Parent : [`argumentation_analysis/README.md`](../README.md).
 
 Paquet « à plat » : **21** modules `.py` au premier niveau, **6 480** lignes (`wc -l`), portant **86** `def` réellement décorés `@kernel_function` (mesure AST) répartis sur **18** classes plugin. En récursif il compte **36** `.py` / **12 609** lignes, le surplus venant de deux sous-paquets traités par des fiches propres (`semantic_kernel/`, `analysis_tools/`). Son `__init__.py` fait **0 octet** : le paquet n'expose rien, et tout son câblage vit hors de lui, dans `agents/factory.py` et `orchestration/registry_setup.py`.
 
@@ -195,3 +196,8 @@ Relevées pour la plupart **non corrigées** (lot documentaire initial). Cinq d'
 *Révision — 2026-09-14, `#2145`. Trois affirmations de la passe du 2026-09-11 étaient **fausses** et sont corrigées ci-dessus avec leur mesure : (a) « aucun test ne porte sur `toulmin_plugin.py` » — `tests/unit/argumentation_analysis/plugins/test_tweety_plugins.py:289-296` **exécute** `analyze_argument` ; un recensement par `grep` compte des mentions, pas des exécutions. (b) « les 4 collisions ne sont couvertes par aucun test » et « 4 collisions » — la fabrique les détecte et les rapporte désormais, et la mesure en trouve **cinq** (la cinquième sur `watson`). (c) « configuration d'erreur silencieuse … un plugin qui échoue » (au singulier, ancres `:234-240`/`:304-307`) — l'arbre pristine portait **sept** silences : six `debug` d'amputation plus un `continue` nu sur un nom sans entrée de registre, sans aucun log. Les ancres de `agents/factory.py` de tout le document ont été re-dérivées sur l'arbre modifié (`_PLUGIN_REGISTRY` `:82-173`, `AGENT_SPECIALITY_MAP` `:56-79`, `get_plugin_instances` `:251-349`, `load_plugins_for_agent` `:352-433`, montages `:384`/`:420`). Enfin la couverture par spécialité passe de **83** à **82** des 86 `@kernel_function` : le montage de `toulmin` est retiré, le plugin reste enregistré.*
 
 *Révision — 2026-09-14 (grain finition), `#2145`. Trois dispositions supplémentaires : (a) le résidu de l'item 2 — l'analyseur qui montait le plugin sans corps et ordonnait son appel — est corrigé (prompt direct, garde `test_analyzer_does_not_promise_a_raising_tool_2145`, né-rouge exécuté) ; (b) l'item 4 est corrigé par **retrait** de l'île inerte (`agents/core/plugin_loader.py` + `abc/plugin.py` + `exceptions.py` + `plugins/analysis_tools/manifest.json` + leurs 3 fichiers de test, origines vérifiées `git log --all --`) ; (c) l'item 6 est corrigé par **archivage** des 3 répertoires de prompts vers `docs/archives/plugins_overflow/` (précédent #321). La mention « 17 entrées de `_PLUGIN_REGISTRY` » reste exacte : `toulmin` y est toujours enregistré.*
+
+## Enfants documentés
+
+- [`analysis_tools/`](./analysis_tools/README.md)
+- [`semantic_kernel/`](./semantic_kernel/README.md)

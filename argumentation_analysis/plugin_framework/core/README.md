@@ -1,4 +1,5 @@
 # `plugin_framework/core/` — le carrefour du contrat, sans mécanisme de découverte
+Parent : [`plugin_framework/README.md`](../README.md).
 
 Sous-paquet de `plugin_framework/`. **11 fichiers `.py`, 1 201 lignes** dans le sous-arbre
 (3 fichiers / 214 lignes au premier niveau : `__init__.py`, `contracts.py`,
@@ -90,3 +91,8 @@ même (#2099) : les deux homonymes du dépôt sont éteints.
 Historique résolu : le mode fantôme `workflow_execution` (déclaré au contrat, jamais
 implémenté) a été retiré du Literal (#2102 §5) — sa construction est rejetée par la
 validation, le guichet ne porte plus de branche morte.
+
+## Enfants documentés
+
+- [`plugins/`](./plugins/README.md)
+- [`services/`](./services/README.md)

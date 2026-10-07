@@ -1,4 +1,5 @@
 # Système de Communication
+Parent : [`core/README.md`](../README.md).
 
 Ce répertoire met en œuvre un système de communication multi-canaux flexible, conçu pour faciliter les interactions entre les différents agents et composants du projet d'analyse d'argumentation.
 
@@ -14,3 +15,7 @@ Ce répertoire met en œuvre un système de communication multi-canaux flexible,
 Le système utilise principalement un patron **Publish/Subscribe (Pub/Sub)**. Les composants peuvent s'abonner (`subscribe`) à un canal pour être notifiés lorsque des messages qui les intéressent sont publiés. Ils peuvent spécifier des `filter_criteria` pour ne recevoir que les messages pertinents.
 
 Ce découplage entre les éditeurs et les abonnés permet une grande flexibilité et une meilleure modularité du système.
+
+## Enfants documentés
+
+- [`tests/`](./tests/README.md)

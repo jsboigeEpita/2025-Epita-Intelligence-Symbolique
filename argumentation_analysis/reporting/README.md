@@ -1,4 +1,5 @@
 # `argumentation_analysis/reporting/` — paquet parent de restitution et d'export multi-format
+Parent : [`argumentation_analysis/README.md`](../README.md).
 
 Le paquet agrège **deux populations disjointes** : une chaîne d'assemblage de rapports
 `models → data_collector → document_assembler` **scaffold, sans consommateur production**
@@ -301,3 +302,7 @@ devient partagé, **hors du paquet parent**, dans
 `argumentation_analysis/evaluation/state_export_scrub.py` (452 lignes), consommé par les deux
 scripts d'export. Les chiffres de la fiche du 2026-09-11 sont conservés ci-dessus tels quels :
 ils mesurent l'état antérieur.*
+
+## Enfants documentés
+
+- [`restitution/`](./restitution/README.md)

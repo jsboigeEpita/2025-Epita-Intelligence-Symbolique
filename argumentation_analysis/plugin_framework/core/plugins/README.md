@@ -1,4 +1,5 @@
 # Plugin Architecture
+Parent : [`plugin_framework/core/README.md`](../README.md).
 
 This directory holds the canonical plugin contract of the `plugin_framework`
 subsystem (`interfaces.py`) and the two declarative plugins under `standard/`.
@@ -42,3 +43,7 @@ where used. See `standard/README.md`.
 - **YAML→JSON conversion** — rejected: no real consumer justifies rewriting the
   `plugin.yaml` declarations. They stay as the documented capability list of each
   plugin.
+
+## Enfants documentés
+
+- [`standard/`](./standard/README.md)

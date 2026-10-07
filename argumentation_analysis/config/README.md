@@ -1,4 +1,5 @@
 # Configuration du Projet d'Analyse Argumentative
+Parent : [`argumentation_analysis/README.md`](../README.md).
 
 Ce répertoire contient les fichiers de configuration nécessaires au fonctionnement du projet d'analyse argumentative.
 

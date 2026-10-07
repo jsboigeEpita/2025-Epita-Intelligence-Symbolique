@@ -1,4 +1,5 @@
 # Agent d'Analyse Informelle
+Parent : [`agents/core/README.md`](../README.md).
 
 Ce répertoire contient les définitions et les prompts pour l'agent d'analyse informelle, qui est responsable de l'identification des arguments et de l'analyse des sophismes dans un texte.
 

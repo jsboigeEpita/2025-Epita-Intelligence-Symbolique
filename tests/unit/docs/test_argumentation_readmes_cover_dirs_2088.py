@@ -13,16 +13,24 @@ des README de ``argumentation_analysis/`` résout.
 - **Liens** : ``[texte](chemin.md)`` relatifs uniquement (http/mailto hors
   périmètre, ancre ``#…`` ignorée) ; la cible doit exister. Un lien mort
   prétend qu'une fiche existe : c'est exactement ce que cette garde interdit.
+- **Liens RENDUS** (rework #2962, revue coord) : les liens sont comptés comme
+  markdown-it les REND, pas comme une regex lit le texte brut — un lien écrit
+  dans un bloc de code (exemple, extrait, fence non fermée) n'est pas un lien.
+  Mesuré sur la tête initiale de la PR : l'arête ``pipelines`` →
+  ``orchestration`` satisfaisait la garde par regex alors que la page rendue
+  ne liait rien (fence mermaid jamais fermée).
 """
 
 import posixpath
-import re
 import subprocess
 from collections import defaultdict
 from pathlib import Path
 
+from markdown_it import MarkdownIt
+
 REPO = Path(__file__).resolve().parents[3]
 SUBTREE = "argumentation_analysis"
+_MD = MarkdownIt()
 
 # Racines vendues sous argumentation_analysis/ (convention readme_waves_2088) :
 # runtimes externes, hors périmètre documentaire.
@@ -36,10 +44,9 @@ EXCLUDED_SUBSTANTIAL_DIRS: dict[str, str] = {}
 SUBSTANTIAL_MIN_FILES = 3
 _MIN_SUBSTANTIAL_DIRS = 90  # mesuré : 94 (avant data/README.md : 93 + data)
 _MIN_MD_LINKS = (
-    190  # mesuré : 196 (208 au recensement initial, dont 18 liens morts dé-liés)
+    355  # mesuré : 360 liens RENDUS markdown-it (rework #2962 ; 196 en regex
+    # texte brut, qui ne voyait ni les fences ni les liens par référence)
 )
-
-_LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 
 
 def _tracked_files() -> list[str]:
@@ -50,6 +57,29 @@ def _tracked_files() -> list[str]:
         check=True,
     )
     return [line for line in out.stdout.splitlines() if line]
+
+
+def _rendered_md_link_targets(text: str) -> list[str]:
+    """Les cibles de liens ``.md`` telles que markdown-it les REND.
+
+    Un bloc de code (fence) ne produit aucun token ``link_open`` : un lien
+    écrit dedans n'existe pas pour le lecteur, donc pas pour la garde. C'est
+    le rework #2962 — la regex sur texte brut comptait ces liens-là.
+    """
+    targets = []
+    for block in _MD.parse(text):
+        if block.type != "inline":
+            continue  # link_open vit dans les enfants du bloc inline
+        for token in block.children or []:
+            if token.type != "link_open":
+                continue
+            href = token.attrGet("href") or ""
+            if href.startswith(("http://", "https://", "mailto:")):
+                continue
+            target = href.split("#")[0].strip()
+            if target.endswith(".md"):
+                targets.append(target)
+    return targets
 
 
 def _substantial_dirs(files: list[str]) -> dict[str, set[str]]:
@@ -80,14 +110,7 @@ def _readme_files(files: list[str]) -> list[str]:
 
 def _md_link_targets(readme: str) -> list[str]:
     text = (REPO / readme).read_text(encoding="utf-8-sig")
-    targets = []
-    for raw in _LINK_RE.findall(text):
-        if raw.startswith(("http://", "https://", "mailto:")):
-            continue
-        target = raw.split("#")[0].strip()
-        if target.endswith(".md"):
-            targets.append(target)
-    return targets
+    return _rendered_md_link_targets(text)
 
 
 class TestSubstantialDirsCarryReadme:
@@ -149,6 +172,47 @@ class TestReadmeLinksResolve:
         )
 
 
+class TestLinksAreReadAsRendered:
+    """Rework #2962 (revue coord) : la garde compte les liens RENDUS.
+
+    Né-rouge mesuré sur la tête initiale de la PR : le lien de l'arête
+    ``pipelines`` → ``orchestration`` était écrit après une fence mermaid
+    jamais fermée — la regex le comptait, la page rendue ne liait rien.
+    """
+
+    def test_fenced_link_is_not_a_link(self):
+        text = (
+            "# Fiche\n\n"
+            "```mermaid\n"
+            "A --> B[`child/`](./child/README.md);\n"
+            "```\n"
+        )
+        assert _rendered_md_link_targets(text) == []
+
+    def test_unclosed_fence_swallows_the_whole_tail(self):
+        """La forme mesurée : fence jamais fermée, la section « Enfants
+        documentés » rend DANS le bloc — aucun lien n'en sort."""
+        text = (
+            "# Fiche\n\n"
+            "```mermaid\n"
+            "graph TD\n"
+            "    D --> E[Artefact];\n"
+            "\n"
+            "## Enfants documentés\n"
+            "\n"
+            "- [`child/`](./child/README.md)\n"
+        )
+        assert _rendered_md_link_targets(text) == []
+
+    def test_same_link_outside_the_fence_counts(self):
+        text = "# Fiche\n\n```\nexemple\n```\n\n- [`child/`](./child/README.md)\n"
+        assert _rendered_md_link_targets(text) == ["./child/README.md"]
+
+    def test_inline_code_link_is_not_a_link(self):
+        text = "# Fiche\n\n`[pas un lien](./child/README.md)`\n"
+        assert _rendered_md_link_targets(text) == []
+
+
 class TestRootReadmeCitesEveryChild:
     """Le README racine cite chaque enfant de premier niveau qui a un README.
 
@@ -180,3 +244,158 @@ class TestRootReadmeCitesEveryChild:
             "#2088 : enfants de premier niveau portant un README et NON cités "
             f"depuis {root} : {missing}"
         )
+
+
+# #2088 item 5 (dispatch R1070) : liens parent↔enfant dans les DEUX sens,
+# arbre entier. TestReadmeLinksResolve tient que les liens EXISTANTS
+# résolent ; retirer un lien ne rougissait nulle part (mutation mesurée :
+# supprimer le back-link « Parent : » de hierarchical/strategic laissait la
+# suite à 34 passed). Ces gardes tiennent que les liens EXISTENT :
+# chaque README qui a un parent/enfant documenté immédiat le lie —
+# parent→enfant ET enfant→parent.
+#
+# Exclusions nommées avec raison (même contrat que
+# EXCLUDED_SUBSTANTIAL_DIRS) : une entrée périmée (lien apparu, ou README
+# disparu d'un côté) ROUGIT — les cartes ne gonflent jamais.
+PARENT_OMITS_CHILD: dict[str, str] = {}
+CHILD_OMITS_PARENT: dict[str, str] = {}
+
+_MIN_PARENT_CHILD_PAIRS = (
+    80  # mesuré sur main 25299812e — re-mesurer après changement de convention
+)
+
+
+def _readme_tree(files: list[str]) -> set[str]:
+    """Dirs sous SUBTREE (relatifs, hors racine) portant un README suivi."""
+    return {
+        f[len(SUBTREE) + 1 : -len("/README.md")]
+        for f in _readme_files(files)
+        if f != f"{SUBTREE}/README.md"
+    }
+
+
+class TestParentChildReadmeLinksBothWays:
+    """Chaque arête documentée immédiate est liée des deux côtés.
+
+    Une arête = (parent dir, child dir) où les DEUX portent un README suivi
+    et l'enfant est IMMÉDIAT (pas petit-enfant). Le lien attendu : le parent
+    cite ``child/README.md``, l'enfant cite ``../README.md`` (résolu, la
+    garde de résolution s'en charge).
+    """
+
+    def _edges(self) -> list[tuple[str, str]]:
+        """Arêtes (parent, child) où les DEUX portent un README.
+
+        parent == "" désigne le README racine du sous-arbre
+        (``argumentation_analysis/README.md``), parent documenté par
+        construction (population non vide tenue par la garde racine).
+        """
+        files = _tracked_files()
+        tree = _readme_tree(files)
+        edges = []
+        for child in sorted(tree):
+            parent = child.rsplit("/", 1)[0] if "/" in child else ""
+            if parent == "" or parent in tree:
+                edges.append((parent, child))
+        return edges
+
+    def test_population_floor(self):
+        edges = self._edges()
+        assert len(edges) >= _MIN_PARENT_CHILD_PAIRS, (
+            f"population inattendue : {len(edges)} arêtes parent/enfant "
+            f"documentées (plancher {_MIN_PARENT_CHILD_PAIRS}) — re-mesurer "
+            "les planchers après un changement de convention"
+        )
+
+    def test_parent_links_every_documented_immediate_child(self):
+        broken = []
+        for parent, child in self._edges():
+            readme = (
+                f"{SUBTREE}/{parent}/README.md" if parent else f"{SUBTREE}/README.md"
+            )
+            expected = f"{child.rsplit('/', 1)[-1]}/README.md"
+            if (parent, child) in PARENT_OMITS_CHILD:
+                continue
+            targets = {
+                posixpath.normpath(
+                    (f"{SUBTREE}/{parent}/" if parent else f"{SUBTREE}/") + t
+                )
+                for t in _md_link_targets(readme)
+            }
+            if f"{SUBTREE}/{child}/README.md" not in targets:
+                broken.append(f"{readme} ne cite pas {expected}")
+        assert broken == [], (
+            "#2088 item 5 : parents ne citant pas leur enfant documenté "
+            f"immédiat (exclusion nommée requise dans PARENT_OMITS_CHILD) : "
+            f"{broken}"
+        )
+
+    def test_child_links_its_documented_parent(self):
+        broken = []
+        for parent, child in self._edges():
+            readme = f"{SUBTREE}/{child}/README.md"
+            if child in CHILD_OMITS_PARENT:
+                continue
+            targets = {
+                posixpath.normpath(f"{SUBTREE}/{child}/" + t)
+                for t in _md_link_targets(readme)
+            }
+            parent_readme = (
+                f"{SUBTREE}/{parent}/README.md" if parent else f"{SUBTREE}/README.md"
+            )
+            if parent_readme not in targets:
+                broken.append(f"{readme} ne back-linke pas {parent_readme}")
+        assert broken == [], (
+            "#2088 item 5 : enfants sans back-link vers leur parent documenté "
+            f"(exclusion nommée requise dans CHILD_OMITS_PARENT) : {broken}"
+        )
+
+    def test_named_exclusions_stay_stale_sensitive(self):
+        """Une exclusion périmée (lien apparu ou README disparu) rougit.
+
+        Les cartes ne gonflent jamais : chaque entrée nommée doit rester une
+        violation réelle de la propriété, sinon elle masque du silence.
+        """
+        files = _tracked_files()
+        tree = _readme_tree(files)
+        edges = {(p, c) for p, c in self._edges()}
+        for parent, child in PARENT_OMITS_CHILD:
+            assert (parent, child) in edges, (
+                f"exclusion PARENT_OMITS_CHILD périmée : l'arête "
+                f"({parent}, {child}) n'existe plus (README disparu)"
+            )
+            readme = (
+                f"{SUBTREE}/{parent}/README.md" if parent else f"{SUBTREE}/README.md"
+            )
+            targets = {
+                posixpath.normpath(
+                    (f"{SUBTREE}/{parent}/" if parent else f"{SUBTREE}/") + t
+                )
+                for t in _md_link_targets(readme)
+            }
+            assert f"{SUBTREE}/{child}/README.md" not in targets, (
+                f"exclusion PARENT_OMITS_CHILD périmée : {readme} cite "
+                f"maintenant {child}/README.md — retirer l'entrée"
+            )
+        for child in CHILD_OMITS_PARENT:
+            parent = child.rsplit("/", 1)[0] if "/" in child else ""
+            assert (parent, child) in edges, (
+                f"exclusion CHILD_OMITS_PARENT périmée : {child} n'a plus de "
+                "parent documenté"
+            )
+            targets = {
+                posixpath.normpath(f"{SUBTREE}/{child}/" + t)
+                for t in _md_link_targets(f"{SUBTREE}/{child}/README.md")
+            }
+            parent_readme = (
+                f"{SUBTREE}/{parent}/README.md" if parent else f"{SUBTREE}/README.md"
+            )
+            assert parent_readme not in targets, (
+                f"exclusion CHILD_OMITS_PARENT périmée : {child}/README.md "
+                "back-linke maintenant son parent — retirer l'entrée"
+            )
+        # Les exclusions ne couvrent que des arêtes réelles (déjà tenu par
+        # les asserts ci-dessus : une entrée hors arête rouge).
+        assert all(
+            c in tree for c in CHILD_OMITS_PARENT
+        ), "exclusion CHILD_OMITS_PARENT périmée : le README enfant a disparu"
