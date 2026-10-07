@@ -1169,6 +1169,11 @@ def _record_assert_move(state: Any, arg_id: str, quote: str, raw_text: str) -> N
     spaces — on the paid run 33 of 94 asserts left the narrated sequence
     for that reason alone), then a unique 40-character prefix. Never a
     non-unique match.
+
+    On a prefix match ``length`` is the PREFIX's span (≈ 40 characters),
+    not the unit's — a consumer reading ``offset + length`` as the unit's
+    end understates it (review R1072, measured on doc_A). The ``basis``
+    string names the prefix, so the figure stays honest.
     """
     from argumentation_analysis.core.shared_state import locate_unit_span
 

@@ -142,9 +142,11 @@ class TestTheCensusIsInTheRun:
         assert census["unanchored_ids"] == []
         assert census["unanchored_by_producer"] == {}
 
-    def test_the_census_renders_without_borrowing_bands(self) -> None:
-        """anchor_census has no bands: the Act I coverage phrase must not
-        lend it « 0/0 tiers du texte »."""
+    def test_the_census_renders_as_its_own_anchoring_clause(self) -> None:
+        """Review #2979 (ai-01, R1072): the census counts units LOCATED in the
+        text, not units EXAMINED — inside « Couverture de l'analyse » it reads
+        as one more analysis. It renders in its own clause, worded as
+        anchoring, and still borrows no bands (« 0/0 tiers »)."""
         from argumentation_analysis.reporting.restitution.act1_framing_plugin import (
             build_act1_prompt,
         )
@@ -156,6 +158,44 @@ class TestTheCensusIsInTheRun:
         _write_text_to_kb_to_state(
             {"arguments": [{"text": _EXACT}], "belief_candidates": []}, state, {}
         )
+        # a real examined phase, so the coverage parenthesis exists beside the
+        # census — the contrast the review asks for
+        state.analysis_coverage["atms"] = {
+            "k": 1,
+            "N": 1,
+            "bands_covered": 0,
+            "bands_total": 3,
+        }
         prompt = build_act1_prompt(build_act1_evidence(state))
-        assert "anchor_census : 1/1 unités" in prompt
+        assert "Ancrage dans le texte : 1/1 unités localisées" in prompt
+        # the census is OUT of the coverage parenthesis — a reader must not
+        # read « 1/1 » as analysis coverage
+        coverage = prompt.split("Couverture de l'analyse (", 1)[1].split(")", 1)[0]
+        assert "anchor_census" not in coverage
+        assert "atms : 1/1 unités" in coverage
         assert "0/0 tiers" not in prompt
+
+    def test_a_partial_census_says_what_is_missing(self) -> None:
+        """A unit the text does not carry is stated, not glossed over."""
+        from argumentation_analysis.reporting.restitution.act1_framing_plugin import (
+            build_act1_prompt,
+        )
+        from argumentation_analysis.reporting.restitution.act1_framing_plugin import (
+            build_act1_evidence,
+        )
+
+        state = UnifiedAnalysisState(_RAW)
+        _write_text_to_kb_to_state(
+            {
+                "arguments": [
+                    {"text": _UNIT},
+                    {"text": "une unité que le texte ne porte pas du tout ici"},
+                ],
+                "belief_candidates": [],
+            },
+            state,
+            {},
+        )
+        prompt = build_act1_prompt(build_act1_evidence(state))
+        assert "Ancrage dans le texte : 1/2 unités localisées" in prompt
+        assert "1 sans position, lecture heuristique" in prompt

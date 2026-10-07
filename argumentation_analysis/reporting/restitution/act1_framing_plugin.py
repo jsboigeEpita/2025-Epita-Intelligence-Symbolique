@@ -567,11 +567,26 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
                 ).replace(".", ",")
             return part
 
+        # #2979 review (ai-01, R1072): the anchor census counts units LOCATED
+        # in the text, not units EXAMINED by a phase. Left in the coverage
+        # parenthesis it reads as one more analysis — the « localisée ≠
+        # examinée » confusion #2966 removed from Act II (84 units « qui
+        # tiennent » against 10 examined). It leaves the list and gets its
+        # own clause, worded as anchoring.
         coverage_parts = [
             _coverage_fig(phase, fig)
             for phase, fig in sorted(coverage_map.items())
-            if isinstance(fig, dict) and "k" in fig
+            if phase != "anchor_census" and isinstance(fig, dict) and "k" in fig
         ]
+        anchor_fig = coverage_map.get("anchor_census")
+        if isinstance(anchor_fig, dict) and "k" in anchor_fig:
+            located = anchor_fig["k"]
+            total = anchor_fig["N"]
+            clause = f" Ancrage dans le texte : {located}/{total} unités localisées"
+            missing = total - located
+            if missing > 0:
+                clause += f" ({missing} sans position, lecture heuristique)"
+            gt_note += clause + "."
         if coverage_parts:
             gt_note += " Couverture de l'analyse (" + " ; ".join(coverage_parts) + ")."
 
