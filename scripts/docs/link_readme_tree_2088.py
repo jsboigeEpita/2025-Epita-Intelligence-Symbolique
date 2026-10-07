@@ -13,6 +13,13 @@ Conventions (matching ``orchestration/hierarchical/``, the pilot lot):
 - child README: a ``Parent :`` line right under the H1 title;
 - parent README: a trailing ``## Enfants documentés`` bullet list.
 
+#2962 rework (coord review): links are counted as RENDERED, not as raw
+text — a link written inside a fenced code block (an example, a snippet,
+or an unclosed fence) is not a link. And a parent README that ends inside
+an open fence is CLOSED before the section is appended: never append into
+a code block (measured: ``pipelines/README.md`` carried the only unclosed
+fence of the tree, and the appended section rendered inside it).
+
 Idempotent, BOM-tolerant (utf-8-sig read, utf-8 no-BOM write), line-ending
 preserving (CRLF files stay CRLF). Run from the repo root:
 
@@ -29,11 +36,18 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+from markdown_it import MarkdownIt
+
 REPO = Path(__file__).resolve().parents[2]
 SUBTREE = "argumentation_analysis"
 VENDORED_ROOTS = ("libs", "portable_jdk")
 
-_LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
+_MD = MarkdownIt()
+
+# CommonMark fence: 3+ backticks or tildes, up to 3 leading spaces; the
+# opening marker may carry an info string (```mermaid), the closing one
+# is the bare marker, same char, at least as long.
+_FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
 
 
 def _tracked_files() -> list[str]:
@@ -46,16 +60,53 @@ def _tracked_files() -> list[str]:
     return [line for line in out.stdout.splitlines() if line]
 
 
+def _rendered_md_link_targets(text: str) -> set[str]:
+    """The ``.md`` link targets of the text AS RENDERED (markdown-it).
+
+    Fenced/inline code carries no ``link_open`` token, so a link written
+    in a code block never counts — the raw-text regex used to count it
+    (#2962 review: the pipelines edge satisfied the guard while the
+    rendered page linked nothing).
+    """
+    targets = set()
+    for block in _MD.parse(text):
+        if block.type != "inline":
+            continue  # link_open vit dans les enfants du bloc inline
+        for token in block.children or []:
+            if token.type != "link_open":
+                continue
+            href = token.attrGet("href") or ""
+            if href.startswith(("http://", "https://", "mailto:")):
+                continue
+            target = href.split("#")[0].strip()
+            if target.endswith(".md"):
+                targets.add(target)
+    return targets
+
+
 def _md_link_targets(readme: str) -> set[str]:
     raw_text = (REPO / readme).read_text(encoding="utf-8-sig")
-    targets = set()
-    for raw in _LINK_RE.findall(raw_text):
-        if raw.startswith(("http://", "https://", "mailto:")):
+    return _rendered_md_link_targets(raw_text)
+
+
+def _ends_in_open_fence(text: str, nl: str) -> bool:
+    """True when the text ends inside an open fenced code block."""
+    open_marker = ""
+    for line in text.split(nl):
+        m = _FENCE_RE.match(line)
+        if not m:
             continue
-        target = raw.split("#")[0].strip()
-        if target.endswith(".md"):
-            targets.add(target)
-    return targets
+        marker = m.group(1)
+        if open_marker:
+            if (
+                marker[0] == open_marker[0]
+                and len(marker) >= len(open_marker)
+                and line.strip() == marker
+            ):
+                open_marker = ""  # a bare same-char fence closes
+        else:
+            open_marker = marker
+    return bool(open_marker)
 
 
 def _edges(files: list[str]) -> list[tuple[str, str]]:
@@ -109,6 +160,10 @@ def _add_child_list(text: str, nl: str, children: list[str]) -> str:
     )
     if not text.endswith(nl):
         text += nl
+    if _ends_in_open_fence(text, nl):
+        # #2962 rework: never append into an open code fence — close it
+        # first, else the section renders inside the block.
+        text += "```" + nl
     return text + section + nl
 
 

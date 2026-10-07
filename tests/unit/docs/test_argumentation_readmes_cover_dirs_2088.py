@@ -13,16 +13,24 @@ des README de ``argumentation_analysis/`` résout.
 - **Liens** : ``[texte](chemin.md)`` relatifs uniquement (http/mailto hors
   périmètre, ancre ``#…`` ignorée) ; la cible doit exister. Un lien mort
   prétend qu'une fiche existe : c'est exactement ce que cette garde interdit.
+- **Liens RENDUS** (rework #2962, revue coord) : les liens sont comptés comme
+  markdown-it les REND, pas comme une regex lit le texte brut — un lien écrit
+  dans un bloc de code (exemple, extrait, fence non fermée) n'est pas un lien.
+  Mesuré sur la tête initiale de la PR : l'arête ``pipelines`` →
+  ``orchestration`` satisfaisait la garde par regex alors que la page rendue
+  ne liait rien (fence mermaid jamais fermée).
 """
 
 import posixpath
-import re
 import subprocess
 from collections import defaultdict
 from pathlib import Path
 
+from markdown_it import MarkdownIt
+
 REPO = Path(__file__).resolve().parents[3]
 SUBTREE = "argumentation_analysis"
+_MD = MarkdownIt()
 
 # Racines vendues sous argumentation_analysis/ (convention readme_waves_2088) :
 # runtimes externes, hors périmètre documentaire.
@@ -36,10 +44,9 @@ EXCLUDED_SUBSTANTIAL_DIRS: dict[str, str] = {}
 SUBSTANTIAL_MIN_FILES = 3
 _MIN_SUBSTANTIAL_DIRS = 90  # mesuré : 94 (avant data/README.md : 93 + data)
 _MIN_MD_LINKS = (
-    190  # mesuré : 196 (208 au recensement initial, dont 18 liens morts dé-liés)
+    355  # mesuré : 360 liens RENDUS markdown-it (rework #2962 ; 196 en regex
+    # texte brut, qui ne voyait ni les fences ni les liens par référence)
 )
-
-_LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 
 
 def _tracked_files() -> list[str]:
@@ -50,6 +57,29 @@ def _tracked_files() -> list[str]:
         check=True,
     )
     return [line for line in out.stdout.splitlines() if line]
+
+
+def _rendered_md_link_targets(text: str) -> list[str]:
+    """Les cibles de liens ``.md`` telles que markdown-it les REND.
+
+    Un bloc de code (fence) ne produit aucun token ``link_open`` : un lien
+    écrit dedans n'existe pas pour le lecteur, donc pas pour la garde. C'est
+    le rework #2962 — la regex sur texte brut comptait ces liens-là.
+    """
+    targets = []
+    for block in _MD.parse(text):
+        if block.type != "inline":
+            continue  # link_open vit dans les enfants du bloc inline
+        for token in block.children or []:
+            if token.type != "link_open":
+                continue
+            href = token.attrGet("href") or ""
+            if href.startswith(("http://", "https://", "mailto:")):
+                continue
+            target = href.split("#")[0].strip()
+            if target.endswith(".md"):
+                targets.append(target)
+    return targets
 
 
 def _substantial_dirs(files: list[str]) -> dict[str, set[str]]:
@@ -80,14 +110,7 @@ def _readme_files(files: list[str]) -> list[str]:
 
 def _md_link_targets(readme: str) -> list[str]:
     text = (REPO / readme).read_text(encoding="utf-8-sig")
-    targets = []
-    for raw in _LINK_RE.findall(text):
-        if raw.startswith(("http://", "https://", "mailto:")):
-            continue
-        target = raw.split("#")[0].strip()
-        if target.endswith(".md"):
-            targets.append(target)
-    return targets
+    return _rendered_md_link_targets(text)
 
 
 class TestSubstantialDirsCarryReadme:
@@ -147,6 +170,47 @@ class TestReadmeLinksResolve:
             "#2088 : liens .md relatifs morts dans les README de "
             f"argumentation_analysis/ : {broken}"
         )
+
+
+class TestLinksAreReadAsRendered:
+    """Rework #2962 (revue coord) : la garde compte les liens RENDUS.
+
+    Né-rouge mesuré sur la tête initiale de la PR : le lien de l'arête
+    ``pipelines`` → ``orchestration`` était écrit après une fence mermaid
+    jamais fermée — la regex le comptait, la page rendue ne liait rien.
+    """
+
+    def test_fenced_link_is_not_a_link(self):
+        text = (
+            "# Fiche\n\n"
+            "```mermaid\n"
+            "A --> B[`child/`](./child/README.md);\n"
+            "```\n"
+        )
+        assert _rendered_md_link_targets(text) == []
+
+    def test_unclosed_fence_swallows_the_whole_tail(self):
+        """La forme mesurée : fence jamais fermée, la section « Enfants
+        documentés » rend DANS le bloc — aucun lien n'en sort."""
+        text = (
+            "# Fiche\n\n"
+            "```mermaid\n"
+            "graph TD\n"
+            "    D --> E[Artefact];\n"
+            "\n"
+            "## Enfants documentés\n"
+            "\n"
+            "- [`child/`](./child/README.md)\n"
+        )
+        assert _rendered_md_link_targets(text) == []
+
+    def test_same_link_outside_the_fence_counts(self):
+        text = "# Fiche\n\n```\nexemple\n```\n\n- [`child/`](./child/README.md)\n"
+        assert _rendered_md_link_targets(text) == ["./child/README.md"]
+
+    def test_inline_code_link_is_not_a_link(self):
+        text = "# Fiche\n\n`[pas un lien](./child/README.md)`\n"
+        assert _rendered_md_link_targets(text) == []
 
 
 class TestRootReadmeCitesEveryChild:

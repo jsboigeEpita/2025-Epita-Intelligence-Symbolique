@@ -28,6 +28,7 @@ graph TD
     B --> C{Processeur 2: Extraction d'entités};
     C --> D{Processeur 3: Analyse de sentiments};
     D --> E[Artefact de sortie];
+```
 
 ## Enfants documentés
 
