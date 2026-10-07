@@ -86,7 +86,14 @@ class TestQualityPenaltyConsumed:
             "phase_hierarchical_fallacy_output": {"fallacies": fallacies},
             "_state_object": state,
         }
+        # Same hermetic pair as test_quality_passage_2403._run: the agentic
+        # virtue detectors take their no-route branch and the enrichment
+        # pass is inert — the gate demands zero egress per run (#2444).
         with patch(
+            "argumentation_analysis.orchestration.invoke_callables"
+            "._make_agentic_llm_callable",
+            return_value=(None, "no_route", ""),
+        ), patch(
             "argumentation_analysis.orchestration.invoke_callables"
             "._llm_enrich_quality",
             side_effect=_no_enrichment,
