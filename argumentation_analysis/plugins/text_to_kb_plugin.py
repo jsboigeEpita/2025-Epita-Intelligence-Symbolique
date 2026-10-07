@@ -71,6 +71,51 @@ _ARG_PATTERN = re.compile(
 
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
 
+# The period of a common abbreviation is not a sentence end. This list is a
+# convenience, not the guarantee: a missed abbreviation merges two sentences,
+# it never drops text (the JOIN rule below is what guarantees no word is
+# lost — #2982).
+_ABBREVIATION_TAIL = re.compile(
+    r"(?:\b(?:Mr|Mrs|Ms|Dr|Prof|St|Jr|Sr|vs|etc|al|cf|no|art|p|pp|M|Mme|Mlle)\.|"
+    r"(?:e\.g|i\.e|etc)\.)$",
+    re.IGNORECASE,
+)
+
+# A fragment this short is not a sentence of its own: it joins its neighbour.
+# It is a JOIN threshold, never a drop threshold (#2982 — a piece of 20
+# characters or fewer used to be discarded, losing the attribution words).
+_MIN_SENTENCE_CHARS = 20
+
+
+def _split_sentences(text: str) -> List[str]:
+    """Split into sentences WITHOUT losing text (#2982).
+
+    Two traps, both measured on the 06/10 paid run:
+
+    * a period after an abbreviation (``Mr.``) is not a sentence end, yet the
+      splitter cut there;
+    * a fragment of 20 characters or fewer was DISCARDED, which dropped the
+      attribution words (``He knows that``) from the unit.
+
+    A piece no real sentence end separates — because the previous piece ends
+    on an abbreviation, or because the piece is too short to stand alone —
+    joins its neighbour. Every character of ``text`` survives into some
+    returned sentence, whitespace-normalised.
+    """
+    sentences: List[str] = []
+    for piece in _SENTENCE_SPLIT.split(text):
+        stripped = piece.strip()
+        if not stripped:
+            continue
+        if sentences and (
+            len(stripped) <= _MIN_SENTENCE_CHARS
+            or _ABBREVIATION_TAIL.search(sentences[-1])
+        ):
+            sentences[-1] = f"{sentences[-1]} {stripped}"
+        else:
+            sentences.append(stripped)
+    return sentences
+
 
 def _split_into_chunks(text: str, max_chars: int = 2000) -> List[str]:
     """Split text into paragraph-based chunks for parallel processing."""
@@ -94,8 +139,7 @@ def _split_into_chunks(text: str, max_chars: int = 2000) -> List[str]:
 def _heuristic_extract_arguments(text: str) -> List[ExtractedArgument]:
     """Extract arguments heuristically from text when LLM is unavailable."""
     arguments: List[ExtractedArgument] = []
-    sentences = _SENTENCE_SPLIT.split(text)
-    sentences = [s.strip() for s in sentences if len(s.strip()) > 20]
+    sentences = _split_sentences(text)
 
     # Group consecutive sentences into argument-like units
     # triggered by argument markers
@@ -108,9 +152,7 @@ def _heuristic_extract_arguments(text: str) -> List[ExtractedArgument]:
             arg_idx += 1
             arg_text = " ".join(current_group)
             premises = [
-                ExtractedPremise(text=s)
-                for s in current_group[:-1]
-                if len(s) > 15
+                ExtractedPremise(text=s) for s in current_group[:-1] if len(s) > 15
             ]
             conclusion = current_group[-1] if current_group else arg_text
             arguments.append(
@@ -129,9 +171,7 @@ def _heuristic_extract_arguments(text: str) -> List[ExtractedArgument]:
     if current_group:
         arg_idx += 1
         arg_text = " ".join(current_group)
-        premises = [
-            ExtractedPremise(text=s) for s in current_group[:-1] if len(s) > 15
-        ]
+        premises = [ExtractedPremise(text=s) for s in current_group[:-1] if len(s) > 15]
         conclusion = current_group[-1] if current_group else arg_text
         arguments.append(
             ExtractedArgument(
@@ -181,7 +221,9 @@ async def _extract_chunk(
         arg.conclusion for arg in arguments if len(arg.conclusion) > 10
     ]
 
-    fol_sig = _extract_fol_signature(arguments) if target_logic in ("fol", "all") else None
+    fol_sig = (
+        _extract_fol_signature(arguments) if target_logic in ("fol", "all") else None
+    )
 
     return KBExtractionResult(
         arguments=arguments,
@@ -348,7 +390,11 @@ class TextToKBPlugin:
         add_arg = getattr(state, "add_argument", None)
         if callable(add_arg):
             for arg_data in arguments:
-                text = arg_data.get("text", "") if isinstance(arg_data, dict) else str(arg_data)
+                text = (
+                    arg_data.get("text", "")
+                    if isinstance(arg_data, dict)
+                    else str(arg_data)
+                )
                 if text:
                     arg_ids.append(add_arg(text))
 
