@@ -22,6 +22,7 @@ des README de ``argumentation_analysis/`` résout.
 """
 
 import posixpath
+import re
 import subprocess
 from collections import defaultdict
 from pathlib import Path
@@ -47,6 +48,11 @@ _MIN_MD_LINKS = (
     355  # mesuré : 360 liens RENDUS markdown-it (rework #2962 ; 196 en regex
     # texte brut, qui ne voyait ni les fences ni les liens par référence)
 )
+_MIN_ALL_TARGET_LINKS = (
+    450  # mesuré 2026-10-08 : 458 liens relatifs rendus TOUT type de cible
+    # (466 avant la réécriture des 5 README #2992 — les artefacts non suivis
+    # y ont été dé-liés) ; extension DoD n°10 après le classement #2992
+)
 
 
 def _tracked_files() -> list[str]:
@@ -59,12 +65,14 @@ def _tracked_files() -> list[str]:
     return [line for line in out.stdout.splitlines() if line]
 
 
-def _rendered_md_link_targets(text: str) -> list[str]:
-    """Les cibles de liens ``.md`` telles que markdown-it les REND.
+def _rendered_relative_targets(text: str) -> list[str]:
+    """Toutes les cibles de liens RELATIVES telles que markdown-it les REND
+    — tout type de cible : ``.md``, ``.py``, notebooks, répertoires.
 
     Un bloc de code (fence) ne produit aucun token ``link_open`` : un lien
-    écrit dedans n'existe pas pour le lecteur, donc pas pour la garde. C'est
-    le rework #2962 — la regex sur texte brut comptait ces liens-là.
+    écrit dedans n'existe pas pour le lecteur, donc pas pour la garde
+    (rework #2962). Les ancres ``#…`` et ``:NN`` (ligne) sont retirées avant
+    résolution : ce ne sont pas des chemins.
     """
     targets = []
     for block in _MD.parse(text):
@@ -76,10 +84,15 @@ def _rendered_md_link_targets(text: str) -> list[str]:
             href = token.attrGet("href") or ""
             if href.startswith(("http://", "https://", "mailto:")):
                 continue
-            target = href.split("#")[0].strip()
-            if target.endswith(".md"):
+            target = re.split(r"[:#]", href)[0].strip()
+            if target:
                 targets.append(target)
     return targets
+
+
+def _rendered_md_link_targets(text: str) -> list[str]:
+    """Les cibles ``.md`` parmi les cibles relatives rendues (#2962)."""
+    return [t for t in _rendered_relative_targets(text) if t.endswith(".md")]
 
 
 def _substantial_dirs(files: list[str]) -> dict[str, set[str]]:
@@ -169,6 +182,36 @@ class TestReadmeLinksResolve:
         assert broken == [], (
             "#2088 : liens .md relatifs morts dans les README de "
             f"argumentation_analysis/ : {broken}"
+        )
+
+    def test_every_relative_rendered_link_resolves(self):
+        """#2088 DoD n°10, extension mesurée 2026-10-07 : la garde ne voyait
+        que les cibles ``.md`` — les 12 liens morts recensés par
+        l'instrument de classement (5 README pointant des ``.py``, des
+        notebooks convertis, des répertoires inexistants) lui étaient
+        invisibles. Cette instance garde TOUTES les cibles relatives rendues.
+
+        Né-rouge mesuré sur la tête de la PR, AVANT la correction des 5
+        README : les 12 cibles cassées la rendent rouge.
+        """
+        files = _tracked_files()
+        broken = []
+        n_links = 0
+        for readme in _readme_files(files):
+            text = (REPO / readme).read_text(encoding="utf-8-sig")
+            for target in _rendered_relative_targets(text):
+                n_links += 1
+                resolved = (REPO / readme).parent / target
+                if not resolved.exists():
+                    broken.append(f"{readme} -> {target}")
+        assert n_links >= _MIN_ALL_TARGET_LINKS, (
+            f"population inattendue : {n_links} liens relatifs rendus, tout "
+            f"type de cible (plancher {_MIN_ALL_TARGET_LINKS}) — re-mesurer "
+            "après un changement de convention"
+        )
+        assert broken == [], (
+            "#2088 : liens relatifs morts (TOUT type de cible) dans les "
+            f"README de argumentation_analysis/ : {broken}"
         )
 
 

@@ -30,8 +30,8 @@ Ce README sert de point d'entrée pour une instance VSCode dédiée au développ
 
 ### Données et Bibliothèques
 
-* **[`data/`](./data/)** 📁 : Données utilisées par les agents
-* **[`libs/`](./libs/)** 📦 : Bibliothèques partagées
+* **[`data/`](../data/)** 📁 : Données utilisées par les agents (à la racine du paquet)
+* **`libs/`** 📦 : Bibliothèques partagées vendorisées — arbre **non suivi** (`.gitignore` du paquet, cf. inventaire Lot 0 #2088) : présent sur un poste provisionné, absent d'un checkout propre, donc sans lien
 
 ### Documentation et Traces
 

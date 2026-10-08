@@ -1,5 +1,15 @@
 # Classement des README existants — `argumentation_analysis/` (#2088, DoD n°3)
 
+> **Révision 2 (2026-10-08)** — les 5 « à réécrire » du §2 ont été corrigés
+> (PR de réécriture : liens repris vers les fichiers existants, artefacts non
+> suivis dé-liés, commandes mortes remplacées par l'entrée de module vérifiée).
+> Re-mesure à l'instrument sur l'arbre corrigé : **101 README suivis — 98
+> courant / 0 à réécrire / 3 spécialisé seulement / 0 hors périmètre**. La
+> garde du DoD n°10 est étendue à TOUTES les cibles relatives (466 liens rendus
+> mesurés avant correction, dont 12 cassés = exactement les 5 lignes du §2 ;
+> 458 après dé-liage des artefacts non suivis). Les sections datées du 2026-10-07
+> ci-dessous restent telles quelles (#2057 : un audit daté ne se réécrit pas).
+
 **Date** : 2026-10-07 · **Base** : main `5f583e8b5` (mesuré ; le chiffre « 97 » du
 dashboard datait d'avant les merges des vagues — la population mesurée aujourd'hui
 est **101 README suivis**) · **Exécutant** : Claude Code @ myia-po-2025

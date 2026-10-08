@@ -11,7 +11,7 @@ Ce répertoire contient les outils et utilitaires utilisés par les agents du sy
 > L'outillage d'encryption historique (`encryption/`) a été retiré (#2120) : il
 > était inexécutable (import absent, chaîne de clé morte) et doublait la surface
 > vivante — [`core/io_manager.py`](../../core/io_manager.py) pour le chargement
-> du dataset chiffré et [`scripts/security/verify_encrypted_dataset_completeness.py`](../../../../scripts/security/verify_encrypted_dataset_completeness.py)
+> du dataset chiffré et [`scripts/security/verify_encrypted_dataset_completeness.py`](../../../scripts/security/verify_encrypted_dataset_completeness.py)
 > pour la vérification avant suppression.
 
 ## Utilisation

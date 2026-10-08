@@ -21,26 +21,17 @@ Cet outil est particulièrement utile pour préparer des extraits de texte spéc
 
 ## Contenu 📁
 
-* **[`extract_marker_editor.py`](./extract_marker_editor.py)** : Module principal contenant la logique de l'éditeur de marqueurs.
-* **[`extract_marker_editor.ipynb`](./extract_marker_editor.ipynb)** : Notebook interactif pour utiliser l'éditeur de marqueurs.
+* **[`extract_marker_editor.py`](./extract_marker_editor.py)** : Module principal contenant la logique de l'éditeur de marqueurs (l'ancien notebook a été converti en ce module).
 * **[`__init__.py`](./__init__.py)** : Marque le dossier comme un package Python.
 
 ## Utilisation 🚀
 
-### Via le script de lancement
+### Via le module
 
-Le moyen le plus simple d'utiliser l'éditeur est d'exécuter le script à la racine du projet:
-
-```bash
-python ../../run_extract_editor.py
-```
-
-### Via le notebook
-
-Vous pouvez également ouvrir directement le notebook interactif:
+Le moyen le plus simple d'utiliser l'éditeur est d'exécuter le module depuis la racine du dépôt :
 
 ```bash
-jupyter notebook extract_marker_editor.ipynb
+python -m argumentation_analysis.ui.extract_editor.extract_marker_editor
 ```
 
 ### Intégration dans d'autres modules
@@ -101,8 +92,7 @@ Pour ajouter de nouvelles fonctionnalités à l'éditeur de marqueurs, suivez ce
 1. Identifiez clairement la fonctionnalité à ajouter
 2. Modifiez le fichier `extract_marker_editor.py` pour implémenter la fonctionnalité
 3. Testez la fonctionnalité avec le script de test indépendant
-4. Mettez à jour le notebook `extract_marker_editor.ipynb` si nécessaire
-5. Documentez la nouvelle fonctionnalité dans ce README
+4. Documentez la nouvelle fonctionnalité dans ce README
 
 ### Exemple de nouvelle fonctionnalité
 
