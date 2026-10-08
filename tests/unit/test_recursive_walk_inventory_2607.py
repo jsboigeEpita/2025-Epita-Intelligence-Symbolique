@@ -40,6 +40,9 @@ ROOTS_BY_WALK = {
     "unit/argumentation_analysis/orchestration/test_dung_arbitration_wiring.py": [
         "orchestration_dir (production orchestration package)"
     ],
+    "unit/argumentation_analysis/orchestration/test_is_modal_kb_consistent_census_2993.py": [
+        "SEARCH_ROOTS (argumentation_analysis production)"
+    ],
     "unit/argumentation_analysis/orchestration/test_one_capability_surface_1842.py": [
         "root (PROD_ROOT or synthetic)"
     ]

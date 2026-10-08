@@ -234,7 +234,20 @@ class TweetyLogicPlugin:
         initializer = _ready_initializer()
         handler = ModalHandler(initializer)
         formula = params.get("formula", "")
-        is_consistent, message = handler.is_modal_kb_consistent(str(formula))
+        # #2993: single-formula KB has the same legalisation gap — the formula
+        # may carry undeclared atoms that MlParser reads as a sort definition
+        # and rejects. The legaliser (``build_modal_kb``) takes any iterable of
+        # strings and returns declarations + legalised formulas; for a single
+        # non-empty formula the declarations carry the atoms referenced and
+        # the legaliser renames any illegal identifier the same way as the
+        # multi-formula path (#2471).
+        from argumentation_analysis.agents.core.logic.modal_kb_identifier_normalizer import (
+            build_modal_kb,
+        )
+
+        _declarations, _kb_formulas = build_modal_kb([str(formula)])
+        belief_set_str = "\n".join(_declarations + _kb_formulas)
+        is_consistent, message = handler.is_modal_kb_consistent(belief_set_str)
         # #1339: name the RESOLVED solver in the verdict (SPASS when
         # auto-routed) — the genuine-solver invariant (#1019), surfacing which
         # reasoner actually decided rather than the configured default.

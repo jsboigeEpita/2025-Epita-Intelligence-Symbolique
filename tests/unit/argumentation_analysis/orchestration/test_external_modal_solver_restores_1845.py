@@ -76,7 +76,9 @@ class TestExternalModalSolverRestoresTheSetting:
         )
         fake_bridge_cls = mock.MagicMock()
         # to_thread calls it as a SYNC function in a worker thread.
-        fake_bridge_cls.return_value.execute_modal_query = mock.MagicMock(
+        # R1076: the fallback decides consistency via check_consistency —
+        # the pre-rework execute_modal_query(kb, kb) call is gone.
+        fake_bridge_cls.return_value.check_consistency = mock.MagicMock(
             return_value=(None, "stub fallback verdict")
         )
 
@@ -87,8 +89,13 @@ class TestExternalModalSolverRestoresTheSetting:
             "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
             fake_bridge_cls,
         ):
+            # #2993: the external modal lane now refuses raw input text as a
+            # KB (no-translation guard) — provide a translated KB explicitly
+            # so the test exercises the SPASS → Tweety fallback it was
+            # written for, not the no-translation exit.
             result = await invoke_callables._invoke_external_modal_solver(
-                "[](p => q)", {}
+                "[](p => q)",
+                {"phase_modal_output": {"formulas": ["p", "q"]}},
             )
 
         # The call completed via the Tweety fallback — the witness is not
@@ -116,8 +123,12 @@ class TestExternalModalSolverRestoresTheSetting:
             "argumentation_analysis.agents.core.logic.modal_handler.ModalHandler",
             return_value=fake_handler,
         ):
+            # #2993: provide the translated KB explicitly so the test
+            # exercises the SPASS branch — raw input text is no longer a
+            # valid formula (no-translation guard, anti-pendule).
             result = await invoke_callables._invoke_external_modal_solver(
-                "[](p => q)", {}
+                "[](p => q)",
+                {"phase_modal_output": {"formulas": ["p", "q"]}},
             )
 
         assert result["solver"] == "spass"
