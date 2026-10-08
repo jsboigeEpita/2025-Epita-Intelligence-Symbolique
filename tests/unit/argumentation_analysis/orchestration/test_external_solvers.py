@@ -432,7 +432,10 @@ class TestParseFailureIsNotAVerdict:
 
         def run(verdict):
             bridge = MagicMock()
-            bridge.execute_modal_query.return_value = (verdict, "msg")
+            # R1076: the fallback decides consistency via check_consistency
+            # (the pre-rework execute_modal_query(kb, kb) was vacuous — KB ⊨
+            # KB holds for every KB). Same tri-state contract, new surface.
+            bridge.check_consistency.return_value = (verdict, "msg")
             fake_mod = MagicMock()
             fake_mod.TweetyBridge.return_value = bridge
             with patch.dict(

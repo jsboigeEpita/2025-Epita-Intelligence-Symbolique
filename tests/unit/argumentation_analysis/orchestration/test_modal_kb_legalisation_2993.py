@@ -117,7 +117,7 @@ class TestExternalModalSolverTweetyFallbackLegalises:
 
         captured = {}
 
-        def _spy(queries, belief_set, logic_type="K"):
+        def _spy(belief_set, logic_type="propositional"):
             captured["belief_set"] = belief_set
             captured["logic_type"] = logic_type
             return (True, "ok")
@@ -125,7 +125,14 @@ class TestExternalModalSolverTweetyFallbackLegalises:
         with mock.patch(
             "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge"
         ) as fake_bridge_cls:
-            fake_bridge_cls.return_value.execute_modal_query = _spy
+            bridge = fake_bridge_cls.return_value
+            bridge.check_consistency = _spy
+            bridge.execute_modal_query = mock.MagicMock(
+                side_effect=AssertionError(
+                    "R1076: execute_modal_query(kb, kb) is the vacuous call "
+                    "this rework removed — KB ⊨ KB holds for every KB."
+                )
+            )
             result = _run(
                 invoke_callables._invoke_external_modal_solver(
                     "ignored input text",
@@ -138,6 +145,7 @@ class TestExternalModalSolverTweetyFallbackLegalises:
             )
 
         assert result["solver"] == "tweety"
+        assert result["valid"] is True
         kb = captured["belief_set"]
         first_line = kb.splitlines()[0]
         # #2993 — Tweety fallback also legalises its KB before sending to
@@ -147,6 +155,10 @@ class TestExternalModalSolverTweetyFallbackLegalises:
             "type("
         ), f"Tweety fallback received unlegalised KB: first line = {first_line!r}"
         assert "type(HeavyRain)" in kb
+        # R1076: the fallback decides CONSISTENCY through the bridge's modal
+        # routing — a modal logic type rides along (K/T/S4/S5), never the
+        # propositional default, and never the vacuous query call.
+        assert captured["logic_type"] in {"K", "T", "S4", "S5"}
 
 
 # ---------------------------------------------------------------------------

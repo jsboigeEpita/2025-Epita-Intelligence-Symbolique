@@ -76,7 +76,9 @@ class TestExternalModalSolverRestoresTheSetting:
         )
         fake_bridge_cls = mock.MagicMock()
         # to_thread calls it as a SYNC function in a worker thread.
-        fake_bridge_cls.return_value.execute_modal_query = mock.MagicMock(
+        # R1076: the fallback decides consistency via check_consistency —
+        # the pre-rework execute_modal_query(kb, kb) call is gone.
+        fake_bridge_cls.return_value.check_consistency = mock.MagicMock(
             return_value=(None, "stub fallback verdict")
         )
 

@@ -118,9 +118,14 @@ ALLOWED: Dict[Tuple[str, str], Tuple[bool, str]] = {
         "_invoke_external_modal_solver",
     ): (
         True,
-        "#2993: the external lane's SPASS branch AND TweetyBridge fallback "
-        "both build via build_modal_kb; when the modal translation produced "
-        "no formulas the lane sends nothing (unavailable:no-translation)",
+        "#2993/R1076: the external lane's SPASS branch AND TweetyBridge "
+        "fallback both build via build_modal_kb; the fallback decides "
+        "CONSISTENCY through the bridge's modal routing (check_consistency, "
+        "tri-state #1634) — the pre-rework execute_modal_query(kb, kb) "
+        "passed the KB as the QUERY and could never render a consistency "
+        "verdict (KB ⊨ KB holds for every KB); when the modal translation "
+        "produced no formulas the lane sends nothing "
+        "(unavailable:no-translation)",
     ),
     (
         "argumentation_analysis/plugins/tweety_logic_plugin.py",

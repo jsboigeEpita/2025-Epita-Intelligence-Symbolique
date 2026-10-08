@@ -96,3 +96,53 @@ class TestExternalModalSolverDecidesNlShapedKb:
         )
         assert result.get("valid") is None
         assert result.get("modal_status") == "unavailable:no-translation"
+
+
+class TestTweetyFallbackDecidesConsistency:
+    """R1076 rework: WITHOUT SPASS registered, the fallback branch decides
+    CONSISTENCY — the pre-rework call was ``execute_modal_query(kb, kb)``:
+    the KB (declarations included) passed as the QUERY formula failed to
+    parse ("Constant 'principles' has not been declared", measured on doc_A
+    by the coordinator), and deeper, KB ⊨ KB holds for EVERY KB — the call
+    could never render a consistency verdict even when it parsed. The
+    fallback now routes through the bridge's modal consistency check."""
+
+    async def test_fallback_decides_true_on_consistent_kb(self, jvm, monkeypatch):
+        import argumentation_analysis.core.jvm_setup as jvm_setup
+
+        monkeypatch.delitem(jvm_setup.EXTERNAL_TOOL_PATHS, "spass", raising=False)
+        # One boxed implication + its antecedent: the first formula carries
+        # ``=>`` (the issue's discriminant) and a modal operator. Two nested
+        # boxes OOM SimpleMlReasoner's heap — the #1279 limit that makes the
+        # lane PREFER SPASS; an OOM stays an honest None there (fail-loud),
+        # it is not this branch's defect.
+        result = await _invoke_external_modal_solver(
+            "ignored raw corpus",
+            {"phase_modal_output": {"formulas": ["[](rain => wet_ground)", "rain"]}},
+        )
+        assert result.get("solver") == "tweety", (
+            f"the fallback branch must have run (no SPASS registered); got "
+            f"solver={result.get('solver')!r}."
+        )
+        assert result.get("valid") is True, (
+            f"R1076 REGRESSION: the Tweety fallback must DECIDE a consistent "
+            f"NL-shaped KB (first formula carries =>); got "
+            f"valid={result.get('valid')!r}, message={result.get('message')!r}. "
+            f"A None means the fallback still sends a query instead of asking "
+            f"consistency."
+        )
+
+    async def test_fallback_decides_false_on_inconsistent_kb(self, jvm, monkeypatch):
+        import argumentation_analysis.core.jvm_setup as jvm_setup
+
+        monkeypatch.delitem(jvm_setup.EXTERNAL_TOOL_PATHS, "spass", raising=False)
+        result = await _invoke_external_modal_solver(
+            "ignored raw corpus",
+            {"phase_modal_output": {"formulas": ["p", "!p"]}},
+        )
+        assert result.get("solver") == "tweety"
+        assert result.get("valid") is False, (
+            f"R1076 REGRESSION: the Tweety fallback must DECIDE p/!p "
+            f"inconsistent (a real rejection); got "
+            f"valid={result.get('valid')!r}, message={result.get('message')!r}."
+        )

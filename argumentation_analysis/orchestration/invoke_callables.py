@@ -11420,11 +11420,18 @@ async def _invoke_external_modal_solver(
         _declarations, _kb_formulas = build_modal_kb(formulas)
         belief_set_str = "\n".join(_declarations + _kb_formulas)
         logic_type = context.get("modal_logic_type", "K")
+        # R1076 rework: this branch used ``execute_modal_query(kb, kb)`` —
+        # passing the KB, declarations included, as the QUERY formula, which
+        # fails to parse ("Constant 'principles' has not been declared",
+        # measured on doc_A by the coordinator) — and deeper: KB ⊨ KB holds
+        # for EVERY KB, so the call could never render a consistency verdict
+        # even when it parsed. The fallback decides CONSISTENCY through the
+        # bridge's modal routing (#1192/#1634: tri-state, a refusal is None,
+        # never a fabricated False).
         accepted, msg = await asyncio.to_thread(
-            bridge.execute_modal_query,
+            bridge.check_consistency,
             belief_set_str,
-            belief_set_str,
-            logic_type=logic_type,
+            logic_type,
         )
         return {
             "formulas": formulas,
