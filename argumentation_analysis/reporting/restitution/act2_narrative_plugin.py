@@ -33,11 +33,13 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from .cited_units import (  # #2967: shared cited-unit budget + boundary cut
     CITED_UNIT_TEXT_CAP,
     cited_unit_ids,
+    divergent_winner_texts,
+    render_divergence_clause,
     truncate_at_boundary,
 )
 from .dung_reader import (  # #1908: one shared meaning for act2 and act3
@@ -325,6 +327,10 @@ class GovernanceVerdict:
     winner: str
     scores: Dict[str, float] = field(default_factory=dict)
     extraction_method: Optional[str] = None  # "llm" | "heuristic" | None
+    # #2969: a divergent vote records every distinct winner — presenting one
+    # "leading argument" when the methods disagreed (arg_16 vs arg_23 on
+    # doc_A) erases the divergence the vote actually expressed.
+    winners: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -359,6 +365,15 @@ class Act2Evidence:
     # surfaced so the narrative can cite them. Empty/None when the phases did
     # not produce non-trivial output (honest absence, not fabricated).
     governance_verdict: Optional[GovernanceVerdict] = None
+    # #2989 rework — the winner's referent travels on the governance line
+    # (same rule as Acte III, #2965/#2980: the writer does not join an id to
+    # its unit across a long prompt). Empty when no text is localizable —
+    # the line keeps its id wording then (honest absence).
+    governance_winner_text: str = ""
+    # The DIVERGENT winners' texts, in ``winners`` order as
+    # ``(winner_id, text)`` pairs — an id stays only for a winner with no
+    # text.
+    governance_divergent_texts: List[Tuple[str, str]] = field(default_factory=list)
     debate_exchanges: List[DebateExchange] = field(default_factory=list)
     args_total: int = 0
     fallacies_total: int = 0
@@ -768,6 +783,20 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
     governance_verdict = _collect_governance(state)
     debate_exchanges = _collect_debate(state)
 
+    # #2989 rework — resolve the winner's (and every divergent winner's)
+    # text from the same unit map the movements read, so the governance
+    # line names what each winner says instead of a raw id.
+    governance_winner_text = ""
+    if governance_verdict is not None and governance_verdict.winner in args:
+        governance_winner_text = truncate_at_boundary(
+            args[governance_verdict.winner], CITED_UNIT_TEXT_CAP
+        )
+    governance_divergent_texts = (
+        divergent_winner_texts(governance_verdict.winners, args)
+        if governance_verdict is not None
+        else []
+    )
+
     return Act2Evidence(
         movements=ordered,
         formal_findings=formal_findings,
@@ -780,6 +809,8 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         unattributed_fallacies=unattributed_fallacies,
         virtuous_mode=virtuous_mode,
         governance_verdict=governance_verdict,
+        governance_winner_text=governance_winner_text,
+        governance_divergent_texts=governance_divergent_texts,
         debate_exchanges=debate_exchanges,
         deanonymized=bool(getattr(state, "deanonymized", True)),
         global_findings=project_global_findings(state),
@@ -833,6 +864,11 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
             winner=winner,
             scores=scores,
             extraction_method=extraction_method,
+            winners=[
+                str(w)
+                for w in (d.get("winners") or [])
+                if isinstance(w, str) and w.strip()
+            ],
         )
     return chosen
 
@@ -1448,6 +1484,24 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                 f"social-choice. DÉCRIS-la par son rôle dans la prose, ne recopie "
                 f"pas l'identifiant technique brut. "
             )
+        # #2989 rework — the winner's text travels on the line when it is
+        # localizable (same rule as Acte III), so a divergent vote does not
+        # hand the writer bare ids.
+        if evidence.governance_winner_text:
+            gov_lead = (
+                f"  - GOUVERNANCE : sous la méthode interne « {gv.method} », "
+                "l'argument arrivé en tête du vote social-choice est celui qui "
+                f"dit : « {evidence.governance_winner_text} ». Présente-le par ce "
+                "qu'il dit (paraphrase fidèle), ne recopie NI un identifiant "
+                "technique brut NI le nom de méthode snake_case. "
+            )
+        # #2969 / #2989 rework: a divergent vote is part of the verdict —
+        # name every distinct winner by WHAT IT SAYS (an id only when its
+        # text is not localizable), never reduce it to one "leading
+        # argument" the methods never agreed on.
+        divergence = render_divergence_clause(evidence.governance_divergent_texts)
+        if divergence:
+            gov_lead += divergence
         if gov_origin:
             deliberation_lines.append(gov_origin)
         deliberation_lines.append(

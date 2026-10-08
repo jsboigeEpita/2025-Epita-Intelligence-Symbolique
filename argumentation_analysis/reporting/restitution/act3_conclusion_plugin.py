@@ -68,6 +68,8 @@ from .conclusion_salience import ConclusionSalience, assess_conclusion_salience
 from .cited_units import (  # #2965 (Acte III slice) — same budget as Act II
     CITED_UNIT_TEXT_CAP,
     cited_unit_ids,
+    divergent_winner_texts,
+    render_divergence_clause,
     truncate_at_boundary,
 )
 from .fr_accord import accord
@@ -351,6 +353,9 @@ class GovernanceVerdict:
     method: str
     winner: str
     scores: Dict[str, float] = field(default_factory=dict)
+    # #2969: a divergent vote records every distinct winner — presenting one
+    # "leading argument" when the methods disagreed erases the divergence.
+    winners: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -485,6 +490,12 @@ class Act3Evidence:
     # winner has no joinable text — the line then keeps its role-only
     # wording (honest absence, not a fabricated description).
     governance_winner_text: str = ""
+    # #2989 rework — the DIVERGENT winners' texts, in ``winners`` order as
+    # ``(winner_id, text)`` pairs (text ``""`` when not localizable). The
+    # divergence clause names each winner by what it says; an id stays only
+    # for a winner with no text (#2965/#2980 — the writer does not join an
+    # id to its unit across a long prompt).
+    governance_divergent_texts: List[Tuple[str, str]] = field(default_factory=list)
     # #1605 — dimensions the run did NOT genuinely evaluate, read from
     # ``state.structured_arg_status``. Empty on a healthy run. Non-empty here is
     # not a defect of the pipeline: it is the one thing the conclusion was
@@ -819,7 +830,16 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
                     scores[str(k)] = float(v)
                 except (TypeError, ValueError):
                     continue
-        chosen = GovernanceVerdict(method=method, winner=winner, scores=scores)
+        chosen = GovernanceVerdict(
+            method=method,
+            winner=winner,
+            scores=scores,
+            winners=[
+                str(w)
+                for w in (d.get("winners") or [])
+                if isinstance(w, str) and w.strip()
+            ],
+        )
     return chosen
 
 
@@ -2154,6 +2174,15 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
             args[governance_verdict.winner], CITED_UNIT_TEXT_CAP
         )
 
+    # #2989 rework — the same resolution for EVERY distinct winner, so the
+    # divergence clause can name what each one argues instead of printing
+    # two raw ids.
+    governance_divergent_texts = (
+        divergent_winner_texts(governance_verdict.winners, args)
+        if governance_verdict is not None
+        else []
+    )
+
     return Act3Evidence(
         args_total=args_total,
         fallacies_total=fallacies_total,
@@ -2170,6 +2199,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         deanonymized=bool(getattr(state, "deanonymized", True)),
         claim_excerpts=claim_excerpts,
         governance_winner_text=governance_winner_text,
+        governance_divergent_texts=governance_divergent_texts,
         absent_dimensions=_collect_absent_dimensions(state),
         structured_findings=structured,
         global_findings=global_findings,
@@ -2456,6 +2486,14 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
                 "« l'argument arrivé en tête »), ne recopie PAS l'identifiant "
                 "technique brut ni le nom de méthode snake_case. (options opaques, FB-34.)"
             )
+        # #2969 / #2989 rework: a divergent vote is part of the verdict —
+        # name every distinct winner by WHAT IT SAYS, never reduce the
+        # conclusion to one "leading argument" the methods never agreed on,
+        # and never hand the writer two bare ids (#2965/#2980). An id stays
+        # only for a winner whose text could not be localized.
+        divergence = render_divergence_clause(evidence.governance_divergent_texts)
+        if divergence:
+            deliberation_lines[-1] += divergence
     if evidence.debate_exchanges:
         for i, ex in enumerate(evidence.debate_exchanges, start=1):
             scheme_anchor = ""

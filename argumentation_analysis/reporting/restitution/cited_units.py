@@ -24,7 +24,7 @@ imports it, and it must not pull the narrative plugins in.
 
 from __future__ import annotations
 
-from typing import Any, Optional, Set
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple
 
 # Budget for a CITED unit's text — see the module docstring for the
 # calibration and what remains pending.
@@ -88,6 +88,65 @@ def governance_winner_id(state: Any) -> Optional[str]:
             continue
         winner = w
     return winner
+
+
+def divergent_winner_texts(
+    winners: Sequence[str],
+    unit_texts: Mapping[str, Any],
+    cap: int = CITED_UNIT_TEXT_CAP,
+) -> List[Tuple[str, str]]:
+    """``(winner_id, text)`` for each divergent winner, text ``""`` untracked.
+
+    Why the pair travels instead of the bare id (#2965/#2980): the R1071
+    replays measured that a writer does not join an id to its unit across a
+    long prompt — a divergence line carrying only ``arg_16``, ``arg_23``
+    leaves it two bad choices (copy the raw id, and the readability gate
+    flags the render; or say "the methods disagree" without saying what
+    each winner argues, the role-only form that measured 1/5 attribution).
+    Resolution mirrors ``governance_winner_text``: the unit's text through
+    ``truncate_at_boundary``; a winner absent from the map keeps ``""`` so
+    its id can stay on the line.
+    """
+    pairs: List[Tuple[str, str]] = []
+    for w in winners:
+        wid = str(w).strip()
+        if not wid:
+            continue
+        text = unit_texts.get(wid) if isinstance(unit_texts, Mapping) else None
+        pairs.append((wid, truncate_at_boundary(text, cap) if text else ""))
+    return pairs
+
+
+def render_divergence_clause(
+    winner_texts: Sequence[Tuple[str, str]],
+    cap: int = CITED_UNIT_TEXT_CAP,
+) -> str:
+    """The divergent-vote clause: each winner by its TEXT, an id only when no
+    text was localized (#2965/#2980 — « ne recopie NI un identifiant
+    technique brut »). Empty string when fewer than two winners: the clause
+    is earned by the record, never unconditional.
+
+    The renderer bounds its OWN text (#2908 census, rework 3): the census
+    reads an interpolation of a doc-text name with no bound as a
+    whole-document read — it cannot see that ``divergent_winner_texts``
+    already capped the pair, and a future caller may hand this renderer raw
+    unit text. Each surface carries its own bound; ``truncate_at_boundary``
+    is idempotent, so a pair already cut upstream is returned untouched.
+    """
+    if len(winner_texts) < 2:
+        return ""
+    parts = []
+    for wid, text in winner_texts:
+        if text:
+            parts.append(f"celui qui dit : « {truncate_at_boundary(text, cap)} »")
+        else:
+            parts.append(f"l'option d'identifiant « {wid} » (texte non localisé)")
+    joined = " et ".join(parts)
+    return (
+        f" Le vote DIVERGE entre les méthodes : {joined} sortent gagnants selon "
+        "la méthode consultée — la conclusion doit le dire (nomme ce que "
+        "défend chacun), pas le réduire à un gagnant unique."
+    )
 
 
 def cited_unit_ids(state: Any) -> Set[str]:

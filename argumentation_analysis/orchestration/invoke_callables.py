@@ -898,11 +898,23 @@ async def _invoke_quality_evaluator(
             # Trace entry for quality evaluation specialist
             _state = context.get("_state_object")
             if _state is not None and output.get("per_argument_scores"):
+                # #2969: reacts_to names what this run actually consumed.
+                _consumed, _empty = _consumed_react_targets(
+                    [
+                        ("extract", raw_args),
+                        ("hierarchical_fallacy", detected_fallacies),
+                    ]
+                )
                 _state.add_trace_entry(
                     phase="quality",
                     agent="QualityScorer",
-                    reacts_to=["extract", "hierarchical_fallacy"],
-                    summary=_quality_trace_summary(len(results), output),
+                    reacts_to=_consumed,
+                    summary=_quality_trace_summary(len(results), output)
+                    + (
+                        f" Entrées vides à la lecture : {', '.join(_empty)}."
+                        if _empty
+                        else ""
+                    ),
                 )
             return output
         # Fallback if no results
@@ -1914,14 +1926,51 @@ async def _invoke_debate_analysis(
         base_scores["debate_quality_source"] = "unscored"
         _state = context.get("_state_object")
         if _state is not None:
+            # #2969: reacts_to names what this run actually consumed — the
+            # debate did not run, so the trace says which inputs were there.
+            _consumed, _empty = _consumed_react_targets(
+                [
+                    ("extract", raw_arguments),
+                    (
+                        "hierarchical_fallacy",
+                        _phase_field(
+                            context.get("phase_hierarchical_fallacy_output"),
+                            "fallacies",
+                        ),
+                    ),
+                    (
+                        "counter",
+                        _phase_field(
+                            context.get("phase_counter_output"),
+                            "llm_counter_arguments",
+                        ),
+                    ),
+                    (
+                        "quality",
+                        _phase_field(
+                            context.get("phase_quality_output"),
+                            "per_argument_scores",
+                        ),
+                    ),
+                    (
+                        "jtms",
+                        _phase_field(context.get("phase_jtms_output"), "beliefs"),
+                    ),
+                ]
+            )
             _state.add_trace_entry(
                 phase="debate",
                 agent="DebateAgent",
-                reacts_to=["counter", "quality", "jtms"],
+                reacts_to=_consumed,
                 summary=(
                     "Débat NON TENU — aucun argument extrait en amont "
                     "(degraded=True, raison=no_arguments_upstream). "
                     "Pas de verdict fabriqué."
+                    + (
+                        f" Entrées vides à la lecture : {', '.join(_empty)}."
+                        if _empty
+                        else ""
+                    )
                 ),
             )
         return base_scores  # type: ignore[no-any-return]
@@ -2137,7 +2186,39 @@ async def _invoke_debate_analysis(
         _state.add_trace_entry(
             phase="debate",
             agent="DebateAgent",
-            reacts_to=["counter", "quality", "jtms"],
+            # #2969: reacts_to names what this run actually consumed. The
+            # reads are recomputed from the context — the locals above are
+            # bound only when the LLM client existed.
+            reacts_to=_consumed_react_targets(
+                [
+                    ("extract", raw_arguments),
+                    (
+                        "hierarchical_fallacy",
+                        _phase_field(
+                            context.get("phase_hierarchical_fallacy_output"),
+                            "fallacies",
+                        ),
+                    ),
+                    (
+                        "counter",
+                        _phase_field(
+                            context.get("phase_counter_output"),
+                            "llm_counter_arguments",
+                        ),
+                    ),
+                    (
+                        "quality",
+                        _phase_field(
+                            context.get("phase_quality_output"),
+                            "per_argument_scores",
+                        ),
+                    ),
+                    (
+                        "jtms",
+                        _phase_field(context.get("phase_jtms_output"), "beliefs"),
+                    ),
+                ]
+            )[0],
             summary=(
                 f"Débat complété (source={_quality_source}) — "
                 f"vainqueur: {_winner}, qualité: {_quality_str}. "
@@ -2355,6 +2436,28 @@ def _resolve_phase_output(context: Dict[str, Any], *keys: str) -> Dict[str, Any]
     return {}
 
 
+def _consumed_react_targets(
+    reads: List[Tuple[str, Any]],
+) -> Tuple[List[str], List[str]]:
+    """(#2969) Split a consumer's declared reads into (consumed, empty).
+
+    ``reacts_to`` must say what was READ on this run, never a static
+    literal: measured on doc_A, the governance trace claimed a reaction to
+    ``jtms`` while jtms ran one level later and its output had not been
+    written. A producer whose payload the consumer found empty did not
+    happen — the trace entry names it among the empty inputs instead of
+    asserting a reaction that did not occur.
+    """
+    consumed = [name for name, payload in reads if payload]
+    empty = [name for name, payload in reads if not payload]
+    return consumed, empty
+
+
+def _phase_field(output: Any, key: str) -> Any:
+    """Read ``key`` from a phase-output dict, tolerating a non-dict payload."""
+    return output.get(key) if isinstance(output, dict) else None
+
+
 async def _invoke_governance(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -2397,13 +2500,20 @@ async def _invoke_governance(
     claims = extract_output.get("claims", [])
 
     # Detect conflicts using plugin if we have enough upstream data
+    # #2969: positions carry the unit's TEXT — ``str(dict)`` of an extract
+    # record is the repr of a mapping, and the conflict detector read that
+    # repr (all 15 conflicts degenerate at level 1.0 on doc_A).
     positions = {}
     if arguments:
         for i, arg in enumerate(arguments[:6]):
-            positions[f"agent_{i+1}"] = str(arg)
+            positions[f"agent_{i+1}"] = str(
+                arg.get("text", arg) if isinstance(arg, dict) else arg
+            )
     elif claims:
         for i, claim in enumerate(claims[:6]):
-            positions[f"agent_{i+1}"] = str(claim)
+            positions[f"agent_{i+1}"] = str(
+                claim.get("text", claim) if isinstance(claim, dict) else claim
+            )
 
     conflicts = []
     resolutions = []
@@ -2657,10 +2767,29 @@ async def _invoke_governance(
         _state.add_trace_entry(
             phase="governance",
             agent="GovernanceModule",
-            reacts_to=["quality", "hierarchical_fallacy", "jtms"],
+            # #2969: reacts_to names what this run actually consumed —
+            # measured on doc_A, the literal claimed a reaction to jtms
+            # while jtms ran one level later and had not written.
+            reacts_to=_consumed_react_targets(
+                [
+                    ("extract", arguments or claims),
+                    (
+                        "debate",
+                        _phase_field(debate_output, "llm_debate_assessment"),
+                    ),
+                    (
+                        "counter",
+                        _phase_field(counter_output, "llm_counter_arguments")
+                        or _phase_field(counter_output, "llm_counter_argument"),
+                    ),
+                    ("quality", _phase_field(quality_output, "per_argument_scores")),
+                    ("hierarchical_fallacy", _phase_field(fallacy_output, "fallacies")),
+                    ("jtms", _phase_field(jtms_output, "beliefs")),
+                ]
+            )[0],
             summary=(
                 f"{_n_conflicts} conflits détectés — {_verdict_kind}. "
-                f"Gagnants distincts: {_distinct}. (GE-4 #1462)"
+                f"Gagnants distincts: {_distinct}. (GE-4 #1462, #2969)"
             ),
         )
     return result

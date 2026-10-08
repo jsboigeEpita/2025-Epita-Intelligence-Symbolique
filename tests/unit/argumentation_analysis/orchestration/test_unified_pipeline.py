@@ -1780,7 +1780,10 @@ class TestStateWriters:
         assert len(state.debate_transcripts) == 0
 
     def test_write_governance_to_state(self):
-        """_write_governance_to_state writes decision."""
+        """#2969 — methods alone fabricate no record: available_methods with
+        no vote, no stakeholders, no LLM assessment and no conflicts is a
+        catalogue, not a decision. The old available_methods-as-0.0-scores
+        fallback dressed that catalogue as a decided vote."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _write_governance_to_state,
         )
@@ -1788,7 +1791,26 @@ class TestStateWriters:
         state = self._make_state()
         output = {"available_methods": ["majority", "borda"]}
         _write_governance_to_state(output, state, {})
+        assert len(state.governance_decisions) == 0
+
+    def test_write_governance_to_state_records_a_real_vote(self):
+        """#2969 — a genuine vote_result (no stakeholders, no LLM) still
+        writes its record: the vote is a real population, and dropping the
+        methods fallback must not drop #294's auto-triggered votes."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_governance_to_state,
+        )
+
+        state = self._make_state()
+        output = {
+            "available_methods": ["majority", "borda"],
+            "vote_result": {"winner": "agent_1", "copeland_scores": {"agent_1": 1}},
+        }
+        _write_governance_to_state(output, state, {})
         assert len(state.governance_decisions) == 1
+        decision = state.governance_decisions[0]
+        assert decision["winner"] == "agent_1"
+        assert decision["winner_provenance"] == "vote_aggregate"
 
     def test_write_governance_to_state_empty_methods(self):
         """_write_governance_to_state does nothing for empty methods."""
