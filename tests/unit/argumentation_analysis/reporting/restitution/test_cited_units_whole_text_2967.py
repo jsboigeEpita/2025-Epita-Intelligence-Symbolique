@@ -32,6 +32,8 @@ from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
 # unit then carries ~6 more sentences to ~730 chars.
 _FILLER = "Phrase synthetique numero {:02d} pour occuper la longueur. "
 _TOKEN = "TOKEN_DISTINCTIF_AU_MILIEU"
+# Sits past CITED_UNIT_TEXT_CAP (2000) in the divergence-clause probe below.
+_TOKEN_TAIL = "TOKEN_APRES_LA_BORNE_DIVERGENCE"
 
 
 def _long_unit(token_pos: int = 8) -> str:
@@ -190,6 +192,47 @@ class TestCutIsVisibleAndBounded:
 
         assert CITED_UNIT_TEXT_CAP >= 700
         assert CITED_UNIT_TEXT_CAP <= 2142
+
+
+class TestDivergenceClauseBoundsItsOwnText:
+    """#2989 rework 3 — the clause bounds its OWN text (#2908 census).
+
+    The census guard reads an interpolation of a doc-text name with no bound
+    as a whole-document read: it cannot see that ``divergent_winner_texts``
+    already capped the pair, and a future caller may hand the renderer RAW
+    unit text. This witness drives the renderer with text longer than the
+    cap — born red before the rework (the whole text landed in the clause).
+    """
+
+    def test_clause_caps_an_over_long_winner_text(self) -> None:
+        from argumentation_analysis.reporting.restitution.cited_units import (
+            CITED_UNIT_TEXT_CAP,
+            render_divergence_clause,
+        )
+
+        # The token sits past the cap (~40 fillers × 55 chars ≈ 2 200).
+        over_long = "".join(_FILLER.format(i) for i in range(40))
+        over_long += _TOKEN_TAIL + " conclut en declarant sa clause."
+        assert len(over_long) > CITED_UNIT_TEXT_CAP, "probe must exceed the cap"
+        clause = render_divergence_clause([("arg_1", over_long), ("arg_2", over_long)])
+        assert clause, "two winners earn the clause"
+        assert _TOKEN_TAIL not in clause, (
+            "the clause must not carry the whole over-long text — it bounds "
+            "its own interpolation (#2908)"
+        )
+        assert clause.count(" […]") == 2, "each winner's share carries the cut marker"
+
+    def test_clause_carries_a_short_text_whole(self) -> None:
+        """Positive control: the bound is a cap, not a blanking — text within
+        the cap reaches the clause untouched."""
+        from argumentation_analysis.reporting.restitution.cited_units import (
+            render_divergence_clause,
+        )
+
+        short = "Unite courte synthetique, sans coupe possible."
+        clause = render_divergence_clause([("arg_1", short), ("arg_2", short)])
+        assert short in clause
+        assert " […]" not in clause
 
 
 class TestGovernanceWinnerMirror:

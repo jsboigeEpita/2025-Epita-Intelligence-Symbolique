@@ -117,18 +117,28 @@ def divergent_winner_texts(
     return pairs
 
 
-def render_divergence_clause(winner_texts: Sequence[Tuple[str, str]]) -> str:
+def render_divergence_clause(
+    winner_texts: Sequence[Tuple[str, str]],
+    cap: int = CITED_UNIT_TEXT_CAP,
+) -> str:
     """The divergent-vote clause: each winner by its TEXT, an id only when no
     text was localized (#2965/#2980 — « ne recopie NI un identifiant
     technique brut »). Empty string when fewer than two winners: the clause
     is earned by the record, never unconditional.
+
+    The renderer bounds its OWN text (#2908 census, rework 3): the census
+    reads an interpolation of a doc-text name with no bound as a
+    whole-document read — it cannot see that ``divergent_winner_texts``
+    already capped the pair, and a future caller may hand this renderer raw
+    unit text. Each surface carries its own bound; ``truncate_at_boundary``
+    is idempotent, so a pair already cut upstream is returned untouched.
     """
     if len(winner_texts) < 2:
         return ""
     parts = []
     for wid, text in winner_texts:
         if text:
-            parts.append(f"celui qui dit : « {text} »")
+            parts.append(f"celui qui dit : « {truncate_at_boundary(text, cap)} »")
         else:
             parts.append(f"l'option d'identifiant « {wid} » (texte non localisé)")
     joined = " et ".join(parts)
