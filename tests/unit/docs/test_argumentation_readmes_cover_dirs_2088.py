@@ -21,9 +21,11 @@ des README de ``argumentation_analysis/`` résout.
   ne liait rien (fence mermaid jamais fermée).
 """
 
+import importlib.util
 import posixpath
 import re
 import subprocess
+import sys
 from collections import defaultdict
 from pathlib import Path
 
@@ -442,3 +444,147 @@ class TestParentChildReadmeLinksBothWays:
         assert all(
             c in tree for c in CHILD_OMITS_PARENT
         ), "exclusion CHILD_OMITS_PARENT périmée : le README enfant a disparu"
+
+
+# #3004 — la règle « substantiel » a TROIS copies : ce module
+# (_substantial_dirs), scripts/docs/readme_waves_2088.py (_derive_creations)
+# et scripts/docs/inventory_argumentation_readmes.py (règle en ligne dans
+# main(), sur main). La docstring de CE module AFFIRME l'équivalence avec la
+# copie « waves » sans la vérifier. Une dérive ferait VALIDER par cette garde
+# un classement que le recensement ne calcule pas — motif #1842, forme
+# documentaire (le dépôt porte déjà sa garde pour la variante « capacités »).
+#
+# Mesuré 2026-10-09 : les trois s'accordent (94 répertoires substantiels, 0
+# sans README, constantes identiques) — risque latent, pas défaut vivant.
+#
+# ⚠ L'égalité de l'arbre réel porte aujourd'hui sur DEUX ENSEMBLES VIDES
+# (0 substantiel sans README) : seule, elle ne prouverait rien. Ce qui rend
+# cette garde une mesure est l'instance de non-vacuité ci-dessous — mesurée,
+# porter le seuil de la copie « waves » à 2 rend son classement NON vide (les
+# répertoires légers sans README) et fait donc rougir la comparaison.
+# Une garde qui ne peut pas échouer ne mesure pas ; celle-ci le peut.
+#
+# La dimension « vendorisé » est aujourd'hui INERTE (aucun `libs/`/
+# `portable_jdk` suivi sous le sous-arbre) : la muter ne déplace rien, et
+# l'angle mort est exactement coextensif à l'absence d'effet. Elle est
+# DÉCLARÉE par un fil-piège plutôt que tue (contrat des cartes : on déclare,
+# on ne laisse pas de silence).
+# Mesuré par grep de CONCEPT (2026-10-09) : la CONSTANTE ``VENDORED_ROOTS`` a
+# un QUATRIÈME porteur, ``scripts/docs/link_readme_tree_2088.py``. Il ne porte
+# PAS la règle « substantiel » (aucun seuil) mais la même liste vendue, pour
+# ses arêtes parent/enfant : la muter chez lui déplacerait les arêtes sans que
+# la comparaison A/C le voie. Le test des constantes couvre donc les trois
+# copies de la RÈGLE (sous-arbre + seuil) et les quatre porteurs de la LISTE.
+_WAVES_SCRIPT = "readme_waves_2088.py"
+_INVENTORY_SCRIPT = "inventory_argumentation_readmes.py"
+_LINK_TREE_SCRIPT = "link_readme_tree_2088.py"
+
+
+def _load_script(name: str, filename: str):
+    """Importe un module de ``scripts/docs/`` par chemin (ce n'est pas un paquet)."""
+    spec = importlib.util.spec_from_file_location(
+        name, REPO / "scripts" / "docs" / filename
+    )
+    assert spec is not None and spec.loader is not None, filename
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _substantial_without_readme() -> set[str]:
+    """Les répertoires substantiels de CE module qui n'ont pas de README."""
+    substantial = _substantial_dirs(_tracked_files())
+    return {
+        d
+        for d, members in substantial.items()
+        if f"{SUBTREE}/{d}/README.md" not in members
+    }
+
+
+class TestTheSubstantialRuleHasOneDefinition:
+    """#3004 : trois copies, aucune ne vérifie les autres — cette garde le fait.
+
+    Elle ne remplace pas les copies par un import unique (trois consommateurs
+    distincts, chacune est courte) : elle tient qu'elles CLASSENT pareil.
+    """
+
+    def test_the_waves_script_classifies_as_this_module_does(self):
+        waves = _load_script("readme_waves_2088", _WAVES_SCRIPT)
+        assert waves._derive_creations() == _substantial_without_readme(), (
+            "#3004 : readme_waves_2088.py et ce module ne désignent plus les "
+            "mêmes répertoires substantiels sans README — la règle a dérivé, "
+            "et le recensement valide alors un classement que la garde ne "
+            "calcule pas"
+        )
+
+    def test_the_three_copies_share_their_constants(self):
+        waves = _load_script("readme_waves_2088", _WAVES_SCRIPT)
+        inventory = _load_script("inventory_argumentation_readmes", _INVENTORY_SCRIPT)
+        expected = (SUBTREE, VENDORED_ROOTS, SUBSTANTIAL_MIN_FILES)
+        for name, module in ((_WAVES_SCRIPT, waves), (_INVENTORY_SCRIPT, inventory)):
+            got = (module.SUBTREE, module.VENDORED_ROOTS, module.SUBSTANTIAL_MIN_FILES)
+            assert (
+                got == expected
+            ), f"#3004 : {name} porte des constantes différentes ({got} != {expected})"
+
+    def test_the_comparison_detects_a_drifted_threshold(self, monkeypatch):
+        """Non-vacuité : la comparaison ci-dessus doit pouvoir ÉCHOUER.
+
+        Mesuré : porter le seuil de la copie « waves » à 2 fait diverger les
+        deux classements. Sans cette instance, une garde verte ne dirait pas
+        si elle mesure ou si elle ne compare rien.
+        """
+        waves = _load_script("readme_waves_2088", _WAVES_SCRIPT)
+        monkeypatch.setattr(waves, "SUBSTANTIAL_MIN_FILES", 2)
+        assert (
+            waves._derive_creations() != _substantial_without_readme()
+        ), "#3004 : même à seuil divergent les deux classements s'accordent"
+
+    def test_the_vendored_list_agrees_across_all_its_holders(self):
+        """La liste vendue a QUATRE porteurs (mesuré par grep de concept).
+
+        Les trois copies de la règle, plus ``link_readme_tree_2088.py`` — qui
+        n'en porte pas le seuil mais la même liste, pour ses arêtes
+        parent/enfant. Une dérive là-bas ne serait vue par aucune autre garde.
+        """
+        other_holders = (
+            (_WAVES_SCRIPT, _load_script("readme_waves_2088", _WAVES_SCRIPT)),
+            (
+                _INVENTORY_SCRIPT,
+                _load_script("inventory_argumentation_readmes", _INVENTORY_SCRIPT),
+            ),
+            (
+                _LINK_TREE_SCRIPT,
+                _load_script("link_readme_tree_2088", _LINK_TREE_SCRIPT),
+            ),
+        )
+        for name, module in other_holders:
+            assert module.VENDORED_ROOTS == VENDORED_ROOTS, (
+                f"#3004 : {name} porte une liste vendue différente "
+                f"({module.VENDORED_ROOTS} != {VENDORED_ROOTS})"
+            )
+
+    def test_the_vendored_dimension_stays_declared_inert_while_it_is(self):
+        """L'angle mort est déclaré, pas silencieux (contrat des cartes).
+
+        Aucun répertoire vendoré suivi sous le sous-arbre aujourd'hui : muter
+        ``VENDORED_ROOTS`` ne déplace aucun classement, donc la comparaison
+        est aveugle à cette dimension. Ce fil-piège rougit le jour où un tel
+        répertoire apparaît — à ce moment l'angle mort devient vivant et la
+        comparaison devient sensible sans qu'on ait à y penser.
+        """
+        files = _tracked_files()
+        vendored = sorted(
+            {
+                f.split("/")[1]
+                for f in files
+                if f.count("/") >= 2 and f.split("/")[1] in VENDORED_ROOTS
+            }
+        )
+        assert vendored == [], (
+            f"#3004 : un répertoire vendoré est maintenant suivi sous "
+            f"{SUBTREE}/ ({vendored}) — la dimension vendorisée n'est plus "
+            "inerte : vérifier que la comparaison la couvre, puis retirer "
+            "ce fil-piège"
+        )
