@@ -7,7 +7,7 @@ disk and must not enter the inventory. The instrument therefore enumerates
 
 Emits a dated markdown report to stdout. Positive controls (exit 1 on any
 failure) pin the instrument itself — an inventory that cannot find the known
-documented dir, the known undocumented ones, the known vendored exclusion and
+documented dir, a planted undocumented one, the known vendored exclusion and
 the known deleted trees measures nothing.
 
 Usage:
@@ -97,6 +97,51 @@ def _ignore_status(rel_dir: str) -> str:
     return "untracked non-ignoré" if not tracked else "suivi (résiduel)"
 
 
+def _is_substantial(d: str, files: set[str]) -> bool:
+    vendored = d.replace(SUBTREE + "/", "").split("/")[0] in VENDORED_ROOTS
+    return (not vendored) and (
+        len(files) >= SUBSTANTIAL_MIN_FILES or any(f.endswith(".py") for f in files)
+    )
+
+
+def _needs_readme(d: str, files: set[str]) -> bool:
+    """True when ``d`` is substantial first-party and tracks no README.md."""
+    return _is_substantial(d, files) and f"{d}/README.md" not in files
+
+
+def _detection_control() -> tuple[bool, str]:
+    """Plant the shapes the inventory must tell apart, through its own rule.
+
+    The former control asked the real tree for at least 5 undocumented dirs.
+    That held when #2088 opened and failed once the Epic documented them all:
+    the instrument declared itself unreliable exactly when its goal was met.
+    A planted directory proves detection without depending on today's tree.
+    """
+    probe = f"{SUBTREE}/__probe_2088__"
+    plants = {
+        "un .py sans README": ({f"{probe}/a.py"}, probe, True),
+        "trois fichiers sans .py ni README": (
+            {f"{probe}/a.md", f"{probe}/b.json", f"{probe}/c.yaml"},
+            probe,
+            True,
+        ),
+        "un .py avec README": ({f"{probe}/a.py", f"{probe}/README.md"}, probe, False),
+        "léger (un seul fichier non .py)": ({f"{probe}/a.txt"}, probe, False),
+        "racine vendorisée": ({f"{SUBTREE}/libs/x/a.py"}, f"{SUBTREE}/libs/x", False),
+    }
+    wrong = [
+        name
+        for name, (files, d, expected) in plants.items()
+        if _needs_readme(d, files) != expected
+    ]
+    detail = (
+        f"mal classées : {', '.join(wrong)}"
+        if wrong
+        else f"{len(plants)}/{len(plants)} formes classées comme attendu"
+    )
+    return not wrong, f"détection plantée (répertoire fictif `{probe}`) — {detail}"
+
+
 def _broken_paths(readme: Path) -> list[str]:
     """Relative links/targets inside a README that resolve to nothing."""
     try:
@@ -132,12 +177,12 @@ def main() -> int:
             if re.fullmatch(r"README_[^/]*\.md", f.rsplit("/", 1)[1])
         )
         vendored = d.replace(SUBTREE + "/", "").split("/")[0] in VENDORED_ROOTS
-        substantial = (not vendored) and (n_files >= SUBSTANTIAL_MIN_FILES or bool(py))
+        substantial = _is_substantial(d, files)
         depth = len(d.split("/")) - 1
         rows.append(
             (d, depth, n_files, len(py), has_readme, specialized, vendored, substantial)
         )
-        if substantial and not has_readme:
+        if _needs_readme(d, files):
             substantial_without_readme.append(d)
         if has_readme:
             p = REPO / readme
@@ -232,11 +277,7 @@ def main() -> int:
         "répertoire documenté connu (`orchestration/` porte un README.md)"
     )
     checks.append((ok, msg))
-    ok2, msg2 = len(substantial_without_readme) >= 5, (
-        f"{len(substantial_without_readme)} substantiels sans README (attendu ≥26 selon "
-        "l'issue — l'instrument en voit au moins 5)"
-    )
-    checks.append((ok2, msg2))
+    checks.append(_detection_control())
     disk_roots = {d.replace(SUBTREE + "/", "").split("/")[0] for d in disk_only}
     tracked_vendored = {d.replace(SUBTREE + "/", "").split("/")[0] for d in vendored_dirs}
     vendored_rel = [f"{SUBTREE}/{r}" for r in VENDORED_ROOTS]
