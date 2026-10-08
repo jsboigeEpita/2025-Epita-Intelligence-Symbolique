@@ -1,103 +1,79 @@
 # Package Scripts
 Parent : [`argumentation_analysis/README.md`](../README.md).
 
-Ce package contient les scripts utilitaires pour la gestion des extraits sources dans le projet d'analyse d'argumentation. Ces scripts sont conçus pour être exécutés directement ou via les points d'entrée à la racine du projet.
+Points d'entrée **en ligne de commande** pour la maintenance des extraits
+sources : réparation des marqueurs de début corrompus, vérification LLM de la
+qualité des extraits, et un harnais de performance pour l'agent informel. Ce
+sont des enveloppes minces — arguments, puis délégation à la logique des
+packages voisins. Leur contrat est la ligne de commande, **pas une API** :
+aucun module de production ne les importe (mesuré le 2026-10-08 sur `f79a7c089`).
 
-## Structure
+## Contenu
 
-```
-scripts/
-├── __init__.py
-├── repair_extract_markers.py
-├── verify_extracts.py
-└── README.md
-```
+| Fichier | Rôle | Délègue à |
+|---|---|---|
+| [`run_fix_missing_first_letter.py`](./run_fix_missing_first_letter.py) | répare les marqueurs de début corrompus, écrit un rapport | [`utils/extract_repair/fix_missing_first_letter.py`](../utils/extract_repair/fix_missing_first_letter.py) |
+| [`run_verify_extracts_llm.py`](./run_verify_extracts_llm.py) | vérifie la qualité des extraits via un LLM | [`utils/extract_repair/verify_extracts_with_llm.py`](../utils/extract_repair/verify_extracts_with_llm.py) |
+| [`test_performance_extraits.py`](./test_performance_extraits.py) | harnais pytest de performance de l'agent informel (`StateManagerMock`) | agent informel (kernel réel) |
+| [`conftest.py`](./conftest.py) | fixtures pytest du répertoire — construit le kernel des tests ci-dessus | `UnifiedConfig` |
+| [`__init__.py`](./__init__.py) | marque le paquet | — |
 
-## Scripts disponibles
+## Points d'entrée
 
-### repair_extract_markers.py
-
-Script de réparation des bornes défectueuses dans les extraits définis dans le fichier de configuration. Il se concentre particulièrement sur le corpus mono-orateur qui est volumineux.
-
-#### Fonctionnalités principales
-- Analyse des extraits existants pour détecter les bornes défectueuses
-- Correction automatique des bornes avec des algorithmes de correspondance approximative
-- Traitement spécifique pour le corpus mono-orateur
-- Validation et sauvegarde des corrections
-- Génération d'un rapport détaillé des modifications
-
-#### Utilisation
-Le script peut être exécuté directement ou via le point d'entrée `run_extract_repair.py` à la racine du projet:
+### run_fix_missing_first_letter.py
 
 ```bash
-# Exécution directe
-python -m argumentation_analysis.scripts.repair_extract_markers --output repair_report_unencrypted.html --save
-
-# Via le point d'entrée
-python run_extract_repair.py --output repair_report_unencrypted.html --save
+python -m argumentation_analysis.scripts.run_fix_missing_first_letter \
+    --input <extract_sources.json> --output <sortie.json> --report
 ```
 
-#### Options
-- `--output`, `-o`: Fichier de sortie pour le rapport HTML (défaut: repair_report_unencrypted.html ; un chemin du dépôt que git n'ignore pas est refusé, #2773)
-- `--save`, `-s`: Sauvegarder les modifications
-- `--single-orator-only`: Traiter uniquement le corpus mono-orateur (l'ancienne orthographe reste parsée comme alias déprécié)
-- `--verbose`, `-v`: Activer le mode verbeux
-- `--input`, `-i`: Fichier d'entrée personnalisé
-- `--output-json`: Fichier de sortie JSON pour vérification (défaut: extract_sources_updated.json)
+Options : `--input/-i` (le défaut est un chemin absolu propre à un poste de
+développement — passez le vôtre), `--output/-o` (sans lui, écrase l'entrée),
+`--report/-r`, `--verbose/-v`.
 
-### verify_extracts.py
-
-Script de vérification des extraits définis dans le fichier de configuration. Il s'assure que les marqueurs de début et de fin sont présents dans les textes sources.
-
-#### Fonctionnalités principales
-- Vérification de la présence des marqueurs dans les textes sources
-- Génération d'un rapport détaillé des problèmes détectés
-- Prise en charge des templates pour les marqueurs de début
-- Vérification spécifique pour le corpus mono-orateur
-
-#### Utilisation
-Le script peut être exécuté directement ou via le point d'entrée `run_verify_extracts.py` à la racine du projet:
+### run_verify_extracts_llm.py
 
 ```bash
-# Exécution directe
-python -m argumentation_analysis.scripts.verify_extracts --output verify_report_unencrypted.html
-
-# Via le point d'entrée
-python run_verify_extracts.py --output verify_report_unencrypted.html
+python -m argumentation_analysis.scripts.run_verify_extracts_llm \
+    --output verify_extracts_llm_report.html --limit 5
 ```
 
-#### Options
-- `--output`, `-o`: Fichier de sortie pour le rapport HTML (défaut: verify_report_unencrypted.html ; un chemin du dépôt que git n'ignore pas est refusé, #2773)
-- `--verbose`, `-v`: Activer le mode verbeux
-- `--input`, `-i`: Fichier d'entrée personnalisé
-- `--single-orator-only`: Traiter uniquement le corpus mono-orateur (l'ancienne orthographe reste parsée comme alias déprécié)
+Options : `--output/-o` (défaut `verify_extracts_llm_report_unencrypted.html`),
+`--single-orator-only` (un alias déprécié reste parsé), `--only-source-index N`
+(répétable, 0-based), `--limit/-l`, `--input/-i`, `--verbose/-v`.
 
-## Intégration avec les services et modèles
+### test_performance_extraits.py
 
-Ces scripts utilisent les services et modèles définis dans les packages `services` et `models`:
+```bash
+pytest argumentation_analysis/scripts/test_performance_extraits.py
+```
 
-- `ExtractService` pour l'extraction de texte et la recherche de texte similaire
-- `FetchService` pour la récupération de texte à partir de sources
-- `DefinitionService` pour le chargement et la sauvegarde des définitions d'extraits
-- `CryptoService` pour le chiffrement et le déchiffrement des données
-- `CacheService` pour la mise en cache des textes sources
-- `ExtractDefinitions`, `SourceDefinition` et `Extract` pour représenter les définitions d'extraits
-- `ExtractResult` pour représenter les résultats d'extraction
+## État d'intégration
 
-## Points d'entrée à la racine du projet
+- **Actif, hors production.** Les scripts ne sont appelés par aucun module de
+  production ni par une phase de workflow : ce sont des outils de maintenance
+  lancés à la main. Preuve : aucune importation hors du paquet.
+- **Payant, donc hors du gate CI.** `run_verify_extracts_llm.py` et les tests du
+  répertoire construisent un kernel LLM réel
+  (`UnifiedConfig(use_authentic_llm=True)`) : leurs *exécutions* consomment des
+  jetons et ne tournent pas au gate (`requires_api`). C'est le résidu de
+  l'item 6 de l'Epic #2088, porté par ses issues gatées #2936 / #2932.
+- **Gratuit et vérifié.** Les exemples de commandes ci-dessus sont vérifiés
+  sans réseau (résolution de module, aucun import) par
+  `tests/unit/docs/test_readme_examples_execute_2088.py`.
 
-Pour faciliter l'utilisation des scripts, deux points d'entrée sont disponibles à la racine du projet:
+## Scripts retirés
 
-- `run_extract_repair.py`: Pour exécuter le script de réparation des bornes défectueuses
-- `run_verify_extracts.py`: Pour exécuter le script de vérification des extraits
+`repair_extract_markers.py` et `verify_extracts.py` ont vécu dans ce
+répertoire. Leur logique a été déplacée :
 
-Ces points d'entrée configurent automatiquement l'environnement d'exécution et transmettent les arguments aux scripts correspondants.
+- vers [`utils/dev_tools/repair_utils.py`](../utils/dev_tools/repair_utils.py)
+  (voir ses commentaires « Fonctions déplacées depuis
+  `argumentation_analysis/scripts/repair_extract_markers.py` ») ;
+- remplacé par [`run_verify_extracts_llm.py`](./run_verify_extracts_llm.py)
+  (voir le commentaire de renvoi dans
+  [`utils/extract_repair/verify_extracts_with_llm.py`](../utils/extract_repair/verify_extracts_with_llm.py)).
 
-## Évolution future
-
-Les scripts peuvent être étendus pour prendre en charge de nouvelles fonctionnalités:
-
-- Ajout de nouveaux types de réparations automatiques
-- Amélioration des rapports générés
-- Intégration avec des outils d'analyse d'argumentation
-- Support pour de nouveaux formats de sources
+Les noms de modules `argumentation_analysis.scripts.repair_extract_markers` et
+`argumentation_analysis.scripts.verify_extracts` ne résolvent plus rien ;
+aucune commande de ce README ne les cite.
