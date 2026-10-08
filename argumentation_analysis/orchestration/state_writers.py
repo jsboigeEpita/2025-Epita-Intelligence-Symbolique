@@ -768,10 +768,14 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
             winner = str(resolutions[0].get("resolution_type", "N/A"))
             winner_provenance = "conflict_resolution"
 
-    # Track E #1281 — propagate the honest origin signal: an LLM-assessed
-    # verdict is not a genuine multi-agent deliberation, and the restitution
-    # must not dress it as procedural legitimacy. extraction_method is computed
-    # by _invoke_governance (invoke_callables.py:1746) as "llm" | "heuristic".
+    # Track E #1281 introduced ``extraction_method``; GE-4 #1462 emptied its
+    # original meaning. It now records only whether an LLM assessment ran on the
+    # METHOD recommendation ("llm" | "heuristic") — it is not the verdict's
+    # origin: the genuine verdict is the formal vote aggregation, and the LLM is
+    # at most a prior on the method. The origin travels in
+    # ``winner_provenance``/``method_provenance`` below; framing a verdict on
+    # this field is the defect #2965/#3002 repaired.
+    # Producer: _invoke_governance, invoke_callables.py:2718.
     extraction_method = output.get("extraction_method")
     if not isinstance(extraction_method, str):
         extraction_method = None

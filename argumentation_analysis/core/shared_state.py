@@ -1285,19 +1285,27 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
     ) -> str:
         """Add a governance voting decision.
 
-        Track E #1281 — ``extraction_method`` carries the honest origin signal
-        (``"llm"`` | ``"heuristic"`` | ``None``) so the restitution can frame
-        the verdict correctly: an LLM-produced assessment is NOT a genuine
-        multi-agent deliberation, and must not be dressed as procedural
-        legitimacy. ``None`` preserves backward compat for callers that don't
-        supply it (the restitution then falls back to its prior framing).
+        Track E #1281 introduced ``extraction_method``; GE-4 #1462 emptied its
+        original meaning. It now records only whether an **LLM assessment ran
+        on the method recommendation** (``"llm"`` | ``"heuristic"`` | ``None``)
+        — it is NOT the verdict's origin: the genuine verdict is the formal
+        vote aggregation (or an honest-degraded marker), and the LLM's part is
+        at most a prior on the method, never the verdict. ``None`` preserves
+        backward compat for callers that don't supply it.
 
         #2969 — the record keeps its populations apart: ``scores`` is the
         VOTE's option scores; ``stakeholder_scores`` the LLM assessment's
         influences (labels, not units); ``winners`` carries every distinct
         winner of a divergent vote (one ``winner`` erased the divergence on
-        doc_A: two methods named arg_16/arg_23, the record kept one). The
-        provenance fields say which branch produced ``winner``/``method``.
+        doc_A: two methods named arg_16/arg_23, the record kept one).
+
+        The verdict's ORIGIN travels in ``winner_provenance`` (``vote_aggregate``
+        | ``llm_resolution`` | ``conflict_resolution`` | ``unresolved``), the
+        method's in ``method_provenance`` (``llm_recommendation`` | ``default``).
+        Restitution frames the verdict on those fields — the warning that an LLM
+        resolution is not a genuine multi-agent deliberation lives with that
+        framing, in ``reporting/restitution/cited_units.governance_origin`` —
+        never on ``extraction_method`` (#2965, #3002).
         Optional fields are stored only when set (honest absence).
         """
         gd_id = self._generate_id("gov", self.governance_decisions)
