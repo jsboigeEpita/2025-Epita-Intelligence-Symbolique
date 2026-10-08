@@ -69,6 +69,7 @@ from .cited_units import (  # #2965 (Acte III slice) — same budget as Act II
     CITED_UNIT_TEXT_CAP,
     cited_unit_ids,
     divergent_winner_texts,
+    governance_origin,
     render_divergence_clause,
     truncate_at_boundary,
 )
@@ -356,6 +357,12 @@ class GovernanceVerdict:
     # #2969: a divergent vote records every distinct winner — presenting one
     # "leading argument" when the methods disagreed erases the divergence.
     winners: List[str] = field(default_factory=list)
+    # #2965 / R1077: the winner's ORIGIN — "vote_aggregate" (a formal vote),
+    # "llm_resolution" (a single model's assessment), "conflict_resolution",
+    # or "unresolved"/None (unrecorded). Both Act III branches used to say
+    # "vote social-choice" unconditionally; this is what they frame on now.
+    winner_provenance: Optional[str] = None
+    method_provenance: Optional[str] = None
 
 
 @dataclass
@@ -839,6 +846,19 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
                 for w in (d.get("winners") or [])
                 if isinstance(w, str) and w.strip()
             ],
+            # #2965 / R1077 — the origin the conclusion must frame on (#2969).
+            winner_provenance=(
+                str(d["winner_provenance"]).strip()
+                if isinstance(d.get("winner_provenance"), str)
+                and str(d["winner_provenance"]).strip()
+                else None
+            ),
+            method_provenance=(
+                str(d["method_provenance"]).strip()
+                if isinstance(d.get("method_provenance"), str)
+                and str(d["method_provenance"]).strip()
+                else None
+            ),
         )
     return chosen
 
@@ -2465,24 +2485,38 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
     deliberation_lines: List[str] = []
     gv = evidence.governance_verdict
     if gv is not None:
+        # #2965 / R1077 — the origin is `winner_provenance` (#2969), never
+        # `extraction_method`: both branches said "vote social-choice"
+        # whatever produced the verdict, so an LLM resolution read as a vote.
+        gov_warning, origin, method_note = governance_origin(
+            gv.winner_provenance, gv.method_provenance
+        )
+        if origin is None:
+            # Absence is not a vote: state the origin is unrecorded, never guess.
+            desig_arg = "retenu par la gouvernance (origine non enregistrée)"
+            desig_option = "retenue par la gouvernance (origine non enregistrée)"
+        else:
+            note = f" ({method_note})" if method_note else ""
+            desig_arg = f"désigné par {origin}{note}"
+            desig_option = f"désignée par {origin}{note}"
         if evidence.governance_winner_text:
             # #2965 (Acte III slice) — the line carries the winner's referent
             # itself: the writer does not join an id to its unit across a
             # long prompt (measured, R1071), so the text travels on the line
             # and the id stays unprinted.
-            deliberation_lines.append(
+            gov_lead = (
                 f"  - GOUVERNANCE : sous la méthode interne « {gv.method} », "
-                "l'argument arrivé en tête du vote social-choice est celui "
-                f"qui dit : « {evidence.governance_winner_text} ». Présente-"
-                "le par ce qu'il dit (paraphrase fidèle), ne recopie NI un "
-                "identifiant technique brut NI le nom de méthode snake_case. "
+                f"l'argument {desig_arg} est celui qui dit : « "
+                f"{evidence.governance_winner_text} ». Présente-le par ce "
+                "qu'il dit (paraphrase fidèle), ne recopie NI un identifiant "
+                "technique brut NI le nom de méthode snake_case. "
                 "(options opaques, FB-34.)"
             )
         else:
-            deliberation_lines.append(
-                f"  - GOUVERNANCE : sous la méthode interne « {gv.method} », l'option "
-                f"d'identifiant interne « {gv.winner} » sort gagnante du vote "
-                "social-choice. DÉCRIS-la par son rôle dans la prose (p.ex. "
+            gov_lead = (
+                f"  - GOUVERNANCE : sous la méthode interne « {gv.method} », "
+                f"l'option d'identifiant interne « {gv.winner} » a été "
+                f"{desig_option}. DÉCRIS-la par son rôle dans la prose (p.ex. "
                 "« l'argument arrivé en tête »), ne recopie PAS l'identifiant "
                 "technique brut ni le nom de méthode snake_case. (options opaques, FB-34.)"
             )
@@ -2493,7 +2527,10 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         # only for a winner whose text could not be localized.
         divergence = render_divergence_clause(evidence.governance_divergent_texts)
         if divergence:
-            deliberation_lines[-1] += divergence
+            gov_lead += divergence
+        if gov_warning:
+            deliberation_lines.append(gov_warning)
+        deliberation_lines.append(gov_lead)
     if evidence.debate_exchanges:
         for i, ex in enumerate(evidence.debate_exchanges, start=1):
             scheme_anchor = ""

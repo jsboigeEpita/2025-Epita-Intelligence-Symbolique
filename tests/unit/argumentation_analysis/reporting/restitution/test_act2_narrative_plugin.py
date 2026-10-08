@@ -514,10 +514,14 @@ class TestReaderWriterContracts:
         assert ev.governance_verdict is not None
         assert ev.governance_verdict.extraction_method is None
 
-    def test_prompt_reframes_llm_governance_as_model_assessment(self):
-        """Track E #1281 — when extraction_method == 'llm', the prompt frames
-        the verdict as a MODEL assessment, NOT procedural legitimacy. The old
-        'social-choice' wording must NOT appear for LLM-origin verdicts."""
+    def test_prompt_frames_a_model_resolution_as_a_model_assessment(self):
+        """Track E #1281, corrected by R1077 — the model-assessment framing
+        belongs to ``winner_provenance == "llm_resolution"``, NOT to
+        ``extraction_method == "llm"``. Since GE-4 #1462 an LLM assessment
+        that ran is at most a recommended METHOD; the R1077 paid pass
+        measured ``llm`` + ``vote_aggregate``, where the old rule told the
+        reader a vote was a model ranking. The social-choice wording must
+        not survive for a model-resolved verdict."""
         state = _state(
             identified_arguments={"arg_1": "Claim."},
             governance_decisions=[
@@ -525,7 +529,7 @@ class TestReaderWriterContracts:
                     "method": "copeland",
                     "winner": "opt_X",
                     "scores": {"opt_X": 0.9},
-                    "extraction_method": "llm",
+                    "winner_provenance": "llm_resolution",
                 }
             ],
         )
@@ -534,14 +538,14 @@ class TestReaderWriterContracts:
         # Honest framing surfaced for the reader.
         assert "évaluation d'un modèle" in prompt.lower()
         assert "pas comme une caution de légitimité procédurale" in prompt.lower()
-        assert "évaluation modèle" in prompt.lower()
-        # The old theatrical wording must NOT survive for LLM-origin verdicts.
+        # The old theatrical wording must NOT survive for model-origin verdicts.
         assert "vote social-choice" not in prompt.lower()
 
-    def test_prompt_keeps_social_choice_wording_when_origin_unknown(self):
-        """Track E #1281 — when extraction_method is None (legacy / non-LLM),
-        the prompt keeps its prior framing (no regression on the social-choice
-        path). Anti-pendule: we re-label the LLM path, not blanket-rewrite."""
+    def test_prompt_does_not_dress_an_unrecorded_origin_as_a_vote(self):
+        """R1077 — with no ``winner_provenance`` (a pre-#2969 record) the
+        origin is unrecorded: the prompt states that, and claims neither a
+        vote nor a model ranking. Anti-pendulum: the vote wording is removed,
+        not swapped for its opposite."""
         state = _state(
             identified_arguments={"arg_1": "Claim."},
             governance_decisions=[
@@ -550,7 +554,8 @@ class TestReaderWriterContracts:
         )
         ev = build_act2_evidence(state)
         prompt = build_act2_prompt(ev)
-        assert "social-choice" in prompt.lower()
+        assert "origine non enregistrée" in prompt
+        assert "vote social-choice" not in prompt.lower()
         assert "évaluation d'un modèle" not in prompt.lower()
 
     def test_deliberation_block_in_prompt_sv(self):

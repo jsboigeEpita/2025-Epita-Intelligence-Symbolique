@@ -149,6 +149,58 @@ def render_divergence_clause(
     )
 
 
+GOVERNANCE_MODEL_WARNING = (
+    "ATTENTION : ce verdict governance est une ÉVALUATION D'UN MODÈLE "
+    "(issue d'un seul appel LLM, pas d'une délibération multi-agent "
+    "réelle). Présente-le comme un classement évalué par le modèle, "
+    "PAS comme une caution de légitimité procédurale indépendante."
+)
+
+
+def governance_origin(
+    winner_provenance: Any,
+    method_provenance: Any = None,
+) -> Tuple[str, Optional[str], str]:
+    """How a governance winner was designated, and the warning it earns.
+
+    The origin is ``winner_provenance`` — written by
+    ``state_writers._write_governance_to_state`` (#2969) — **never**
+    ``extraction_method``. Since GE-4 #1462 an LLM assessment can run *and* a
+    formal vote decide the winner: ``extraction_method == "llm"`` says only
+    that an assessment happened, so framing the verdict on it made Act II tell
+    the reader a vote was a model ranking (R1077 paid pass on ``doc_A``,
+    ``llm`` + ``vote_aggregate`` — the wording was false).
+
+    Returns ``(warning, origin, note)``:
+
+    * ``vote_aggregate`` → no warning, ``"le vote social-choice"`` (a
+      model-recommended *method* is carried in ``note``, not the verdict);
+    * ``llm_resolution`` → the model-assessment warning, ``"une évaluation
+      d'un modèle"``;
+    * ``conflict_resolution`` → no warning, ``"une résolution de conflit"``;
+    * unrecorded/unknown → ``origin`` is ``None``: the caller states the
+      origin is unrecorded and does NOT guess it (anti-#1019 — absence is not
+      a vote, and a vote is not an absence).
+    """
+    provenance = (
+        winner_provenance.strip()
+        if isinstance(winner_provenance, str) and winner_provenance.strip()
+        else ""
+    )
+    if provenance == "vote_aggregate":
+        note = (
+            "méthode de vote recommandée par le modèle"
+            if method_provenance == "llm_recommendation"
+            else ""
+        )
+        return "", "le vote social-choice", note
+    if provenance == "llm_resolution":
+        return GOVERNANCE_MODEL_WARNING, "une évaluation d'un modèle", ""
+    if provenance == "conflict_resolution":
+        return "", "une résolution de conflit", ""
+    return "", None, ""
+
+
 def cited_unit_ids(state: Any) -> Set[str]:
     """Ids of the units a writer is asked to DISCUSS (#2967 Expected 2).
 
