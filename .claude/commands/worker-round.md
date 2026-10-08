@@ -43,6 +43,50 @@ git status
 gh pr list --state open
 ```
 
+### 0. Précondition d'ENTRÉE — l'arbre est-il le mien ? (AVANT toute sélection)
+
+**C'est le tout premier contrôle du round** : avant de choisir une tâche, avant la moindre
+écriture. Le `git status` ci-dessus le donne déjà — le lire comme un **gate**, pas comme une
+information.
+
+```bash
+git status --porcelain
+```
+
+- **Vide (propre)** → le round continue normalement : sélection → implémentation → tests → commit.
+- **Non vide (sale)** → un round **planifié** (cron) **ne touche à rien et ne commite rien**.
+  Il poste `[CLAIMED]` sur le dashboard workspace (« arbre sale, stand-down »), dit ce qu'il a
+  trouvé, et **termine le round là**. Le travail présent dans l'arbre appartient à une autre
+  session : il reste où il est, intouché.
+
+**Les deux scénarios, en clair :**
+
+| À l'arrivée | Ce que ça veut dire | Ce que le round fait |
+|---|---|---|
+| **Arbre sale** | une autre session (interactive ou sœur) travaille dans ce checkout | **STOP.** `[CLAIMED]` au dashboard, round terminé. Aucun `git add`, aucun commit. |
+| **Arbre propre** | le checkout est à moi | Mes édits → tests → commit → PR, normalement. |
+
+La propreté n'est **pas** re-exigée après mes propres édits : à ce moment-là l'arbre porte
+**mon** travail, c'est précisément ce qu'on veut commiter.
+
+**Pourquoi le contrôle vit à l'entrée et non au commit.** Placé juste avant `git add` (là où
+il était d'abord écrit), il bloquait **tout round légitime** : à ce stade le round a
+nécessairement sali l'arbre avec sa propre implémentation, donc il se serait arrêté avant de
+commiter son travail. Le gate regarde l'état **d'entrée**, jamais l'état après coup.
+
+**Pourquoi c'est volontairement sans finesse.** Deviner à qui appartiennent les fichiers —
+« mon travail en vol » vs « celui d'une autre session » — est exactement l'arbitrage qui a
+échoué. Le contrôle refuse par construction au lieu de deviner. **Arbre sale à l'arrivée ⇒
+pas de commit**, sans exception, et le round le dit sur le dashboard.
+
+**Règle vs attribution — ne pas confondre les deux.** La règle est fondée par un **mandat
+user** (08/10) : un round planifié qui trouve un arbre sale s'arrête, sans exception. C'est le
+mandat qui la fonde. L'*incident* qui l'a motivée (R1128 : un cron de 00:37 tirant sur le
+checkout d'une session interactive) a d'abord été raconté comme un **vol de commit** dont le
+travail aurait été perdu — **attribution contestée** : `d09e67f5d` est un rework R1076 attendu,
+et son contenu est arrivé sur `main` (le fix #2993 est mergé via #2996). Le travail n'a donc
+**pas** été perdu. La règle tient sur le mandat user, pas sur cette narration.
+
 Puis en parallèle :
 
 ### 1. Dashboard + Inbox
@@ -183,33 +227,10 @@ conda run -n projet-is-roo-new --no-capture-output pytest tests/ -x --timeout=12
 
 ### 3d. Commit + Push
 
-**PRÉCONDITION — l'arbre est-il le mien ?** (mandat user 08/10, incident R1128)
-
-Avant `git add`, regarder l'arbre :
-
-```bash
-git status --porcelain
-```
-
-- **Vide (propre)** → continuer normalement.
-- **Non vide** → un round **planifié** (cron) **ne commite PAS**. Il poste `[CLAIMED]` sur le
-  dashboard workspace (« arbre sale — stand-down »), dit ce qu'il a trouvé, et **termine le
-  round là**. Le travail éventuel reste dans l'arbre : il n'est pas perdu, seulement pas
-  commité par cette session-ci.
-
-**Pourquoi, et pourquoi c'est volontairement sans finesse.** Mesuré R1128 : le cron
-`/worker-round` a tiré à 00:37 sur le **même checkout** qu'une session interactive ; une
-session sœur a commité l'arbre **en vol** de cette session (`d09e67f5d`, PR #2996) puis a
-publié un body de PR citant **ses propres** mesures (3086 voisinage / « 58 erreurs mypy ») à
-la place des vraies. Le contenu s'est trouvé juste ; le geste est un **vol de commit** — deux
-agents, un seul checkout. Le coût d'un tour de cron sauté est nul ; celui d'un commit volé
-(body faux, mesures d'autrui écrasées, review coord sur des chiffres qui ne sont pas les
-siens) est réel et s'est matérialisé.
-
-**Ne pas essayer de deviner à qui appartiennent les fichiers.** Distinguer « mon travail en
-cours » de « le travail d'une autre session » demande une détection fine que ce contrôle
-refuse par construction — c'est précisément l'arbitrage qui a échoué. **Arbre sale ⇒ pas de
-commit**, sans exception, et le round le dit sur le dashboard.
+> **La précondition d'arbre propre se vérifie à l'ENTRÉE du round (PHASE 1 §0), pas ici.** À ce
+> stade, l'arbre porte forcément les édits de ce round-ci — c'est **mon** travail, et c'est
+> exactement ce qu'on veut commiter. Un round parti propre (arbre vide à l'entrée) commit
+> normalement ; un round parti sale s'est déjà arrêté en §0 et n'est jamais arrivé ici.
 
 ```bash
 git checkout -b <type>/<scope>/<description>
@@ -297,9 +318,10 @@ Après 3 IDLE consécutifs (cf. protocole idle) : **ne pas ré-armer**.
 - **Anti-pendule** : Fix = suppression du problème, pas ajout d'un contrepoids
 - **Commit avant rapport** : Jamais annoncer un travail pas commité
 - **Rebase avant push** : Toujours `git rebase origin/main`
-- **Arbre sale ⇒ pas de commit** : un round planifié qui trouve `git status --porcelain` non
-  vide poste `CLAIMED` et s'arrête — jamais de commit sur l'arbre d'une autre session
-  (mandat user 08/10, incident R1128 ; cf. §3d)
+- **Arbre sale à l'ARRIVÉE ⇒ pas de commit** : un round planifié qui trouve
+  `git status --porcelain` non vide **à l'entrée du round** poste `CLAIMED` et s'arrête — jamais
+  de commit sur l'arbre d'une autre session (mandat user 08/10 ; cf. PHASE 1 §0). La propreté
+  n'est **pas** re-exigée après les édits propres du round.
 
 ### Technique
 - **Conda** : Toujours `conda run -n projet-is-roo-new --no-capture-output`
