@@ -182,6 +182,35 @@ conda run -n projet-is-roo-new --no-capture-output pytest tests/ -x --timeout=12
 ```
 
 ### 3d. Commit + Push
+
+**PRÉCONDITION — l'arbre est-il le mien ?** (mandat user 08/10, incident R1128)
+
+Avant `git add`, regarder l'arbre :
+
+```bash
+git status --porcelain
+```
+
+- **Vide (propre)** → continuer normalement.
+- **Non vide** → un round **planifié** (cron) **ne commite PAS**. Il poste `[CLAIMED]` sur le
+  dashboard workspace (« arbre sale — stand-down »), dit ce qu'il a trouvé, et **termine le
+  round là**. Le travail éventuel reste dans l'arbre : il n'est pas perdu, seulement pas
+  commité par cette session-ci.
+
+**Pourquoi, et pourquoi c'est volontairement sans finesse.** Mesuré R1128 : le cron
+`/worker-round` a tiré à 00:37 sur le **même checkout** qu'une session interactive ; une
+session sœur a commité l'arbre **en vol** de cette session (`d09e67f5d`, PR #2996) puis a
+publié un body de PR citant **ses propres** mesures (3086 voisinage / « 58 erreurs mypy ») à
+la place des vraies. Le contenu s'est trouvé juste ; le geste est un **vol de commit** — deux
+agents, un seul checkout. Le coût d'un tour de cron sauté est nul ; celui d'un commit volé
+(body faux, mesures d'autrui écrasées, review coord sur des chiffres qui ne sont pas les
+siens) est réel et s'est matérialisé.
+
+**Ne pas essayer de deviner à qui appartiennent les fichiers.** Distinguer « mon travail en
+cours » de « le travail d'une autre session » demande une détection fine que ce contrôle
+refuse par construction — c'est précisément l'arbitrage qui a échoué. **Arbre sale ⇒ pas de
+commit**, sans exception, et le round le dit sur le dashboard.
+
 ```bash
 git checkout -b <type>/<scope>/<description>
 git add <fichiers>
@@ -268,6 +297,9 @@ Après 3 IDLE consécutifs (cf. protocole idle) : **ne pas ré-armer**.
 - **Anti-pendule** : Fix = suppression du problème, pas ajout d'un contrepoids
 - **Commit avant rapport** : Jamais annoncer un travail pas commité
 - **Rebase avant push** : Toujours `git rebase origin/main`
+- **Arbre sale ⇒ pas de commit** : un round planifié qui trouve `git status --porcelain` non
+  vide poste `CLAIMED` et s'arrête — jamais de commit sur l'arbre d'une autre session
+  (mandat user 08/10, incident R1128 ; cf. §3d)
 
 ### Technique
 - **Conda** : Toujours `conda run -n projet-is-roo-new --no-capture-output`
