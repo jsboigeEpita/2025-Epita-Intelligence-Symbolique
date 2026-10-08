@@ -860,8 +860,9 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
         # Trivial / placeholder winners ("N/A", empty) carry no verdict.
         if not method or not winner or winner == "N/A":
             continue
-        # Track E #1281 — carry the honest origin signal so the prompt can frame
-        # an LLM-assessed verdict as model-assessed, not procedural legitimacy.
+        # `extraction_method` is carried for the record only: it says an LLM
+        # assessment ran on the METHOD, not that it produced the verdict. The
+        # prompt frames on the winner's origin, right below — never on this.
         em_raw = d.get("extraction_method")
         extraction_method = (
             str(em_raw).strip() if isinstance(em_raw, str) and em_raw.strip() else None

@@ -483,10 +483,13 @@ class TestReaderWriterContracts:
         assert ev.governance_verdict is None
         assert ev.debate_exchanges == []
 
-    # --- Track E #1281 — de-theatralise governance (LLM origin surfaced) ---
+    # --- Track E #1281 — de-theatralise governance (the record carries the
+    # field; the FRAMING keys on the origin, see test_governance_origin_2965) ---
 
     def test_governance_carries_llm_extraction_method(self):
-        """Track E #1281 — the verdict carries the honest origin signal."""
+        """The record's `extraction_method` reaches the verdict — as a record of
+        whether an LLM assessment ran on the method, not as the verdict's origin
+        (GE-4 #1462 emptied that meaning; #2965/#3002)."""
         state = _state(
             identified_arguments={"arg_1": "Claim."},
             governance_decisions=[
