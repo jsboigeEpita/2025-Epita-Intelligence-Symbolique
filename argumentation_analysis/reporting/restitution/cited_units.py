@@ -243,6 +243,13 @@ def qualitative_support_band(
     for: three bands, no digits (#1914 — a raw counter or a badge would hand
     the writer a number to copy instead of a fact to phrase).
 
+    The broad-majority test deliberately precedes the plurality branch
+    (cross-review #3006): this is a band of SUPPORT, and a fallback-tier
+    winner carried by at least 2/3 of the deciding methods reads as broad
+    support — ``winner_basis`` names the deciding tier only in the
+    "de justesse" band, where the missing clear majority is the fact being
+    rendered.
+
     ``None`` when the population is absent (no band without a measured
     support — honest absence, anti-#1019).
     """

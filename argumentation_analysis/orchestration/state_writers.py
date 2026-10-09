@@ -761,7 +761,13 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
         # ``output["vote_result"]`` has ONE production writer,
         # invoke_callables.py:2705-2710, which never sets that key; the
         # plugin path governance_plugin.py:153 answers the LLM agent, it
-        # does not feed the writer). ``scores`` keeps its honest shape:
+        # does not feed the writer). Scoped on purpose (cross-review
+        # #3006): ``social_choice_vote``'s copeland branch DOES return
+        # that key, as a JSON tool result in the agent loop — a different
+        # surface that never meets the aggregated ``vote_result``. The
+        # exact claim is "the producer that writes
+        # ``output["vote_result"]`` never sets this key", not "the repo
+        # never produces it". ``scores`` keeps its honest shape:
         # no option scores recorded on a GE-4 vote.
         verdict = vote_result.get("results", {})
         if isinstance(verdict, dict):
