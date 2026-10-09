@@ -69,6 +69,7 @@ from .cited_units import (  # #2965 (Acte III slice) — same budget as Act II
     CITED_UNIT_TEXT_CAP,
     cited_unit_ids,
     divergent_winner_texts,
+    render_governance_lead,
     render_divergence_clause,
     truncate_at_boundary,
 )
@@ -356,6 +357,13 @@ class GovernanceVerdict:
     # #2969: a divergent vote records every distinct winner — presenting one
     # "leading argument" when the methods disagreed erases the divergence.
     winners: List[str] = field(default_factory=list)
+    # #2965 / R1078: the winner's ORIGIN — "vote_aggregate" (a formal vote),
+    # "llm_resolution" (a model-recommended STRATEGY, not a ranked unit),
+    # "conflict_resolution" (a mediation TYPE), or "unresolved"/None
+    # (unrecorded). Both Act III branches used to say
+    # "vote social-choice" unconditionally; this is what they frame on now.
+    winner_provenance: Optional[str] = None
+    method_provenance: Optional[str] = None
 
 
 @dataclass
@@ -839,6 +847,19 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
                 for w in (d.get("winners") or [])
                 if isinstance(w, str) and w.strip()
             ],
+            # #2965 / R1077 — the origin the conclusion must frame on (#2969).
+            winner_provenance=(
+                str(d["winner_provenance"]).strip()
+                if isinstance(d.get("winner_provenance"), str)
+                and str(d["winner_provenance"]).strip()
+                else None
+            ),
+            method_provenance=(
+                str(d["method_provenance"]).strip()
+                if isinstance(d.get("method_provenance"), str)
+                and str(d["method_provenance"]).strip()
+                else None
+            ),
         )
     return chosen
 
@@ -2465,27 +2486,22 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
     deliberation_lines: List[str] = []
     gv = evidence.governance_verdict
     if gv is not None:
-        if evidence.governance_winner_text:
-            # #2965 (Acte III slice) — the line carries the winner's referent
-            # itself: the writer does not join an id to its unit across a
-            # long prompt (measured, R1071), so the text travels on the line
-            # and the id stays unprinted.
-            deliberation_lines.append(
-                f"  - GOUVERNANCE : sous la méthode interne « {gv.method} », "
-                "l'argument arrivé en tête du vote social-choice est celui "
-                f"qui dit : « {evidence.governance_winner_text} ». Présente-"
-                "le par ce qu'il dit (paraphrase fidèle), ne recopie NI un "
-                "identifiant technique brut NI le nom de méthode snake_case. "
-                "(options opaques, FB-34.)"
-            )
-        else:
-            deliberation_lines.append(
-                f"  - GOUVERNANCE : sous la méthode interne « {gv.method} », l'option "
-                f"d'identifiant interne « {gv.winner} » sort gagnante du vote "
-                "social-choice. DÉCRIS-la par son rôle dans la prose (p.ex. "
-                "« l'argument arrivé en tête »), ne recopie PAS l'identifiant "
-                "technique brut ni le nom de méthode snake_case. (options opaques, FB-34.)"
-            )
+        # #2965 / R1077 — the origin is `winner_provenance` (#2969), never
+        # `extraction_method`: both branches said "vote social-choice"
+        # whatever produced the verdict, so an LLM resolution read as a vote.
+        # R1078 — the GOUVERNANCE line is ONE shared renderer (cited_units,
+        # same as Acte II): the fallback producers write a STRATEGY
+        # (`compromise`) and a MEDIATION TYPE (`collaborative`) into
+        # `winner`, not a ranked unit — presenting those as « l'argument
+        # arrivé en tête » was the R1078 blocker on PR #3000.
+        gov_warning, gov_lead = render_governance_lead(
+            gv.method,
+            gv.winner,
+            evidence.governance_winner_text,
+            gv.winner_provenance,
+            gv.method_provenance,
+            tail="(options opaques, FB-34.)",
+        )
         # #2969 / #2989 rework: a divergent vote is part of the verdict —
         # name every distinct winner by WHAT IT SAYS, never reduce the
         # conclusion to one "leading argument" the methods never agreed on,
@@ -2493,7 +2509,10 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         # only for a winner whose text could not be localized.
         divergence = render_divergence_clause(evidence.governance_divergent_texts)
         if divergence:
-            deliberation_lines[-1] += divergence
+            gov_lead += divergence
+        if gov_warning:
+            deliberation_lines.append(gov_warning)
+        deliberation_lines.append(gov_lead)
     if evidence.debate_exchanges:
         for i, ex in enumerate(evidence.debate_exchanges, start=1):
             scheme_anchor = ""

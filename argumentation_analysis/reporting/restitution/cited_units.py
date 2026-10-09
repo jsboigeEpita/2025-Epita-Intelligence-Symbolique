@@ -149,6 +149,139 @@ def render_divergence_clause(
     )
 
 
+GOVERNANCE_MODEL_WARNING = (
+    "ATTENTION : ce verdict governance est une RECOMMANDATION DE STRATÉGIE "
+    "(issue d'un seul appel LLM, pas d'une délibération multi-agent réelle, "
+    "pas un classement d'arguments). Présente-la comme une stratégie de "
+    "résolution recommandée par le modèle, PAS comme une caution de "
+    "légitimité procédurale indépendante."
+)
+
+
+def governance_origin(
+    winner_provenance: Any,
+    method_provenance: Any = None,
+) -> Tuple[str, Optional[str], str, str]:
+    """How a governance winner was designated, and the warning it earns.
+
+    The origin is ``winner_provenance`` — written by
+    ``state_writers._write_governance_to_state`` (#2969) — **never**
+    ``extraction_method``. Since GE-4 #1462 an LLM assessment can run *and* a
+    formal vote decide the winner: ``extraction_method == "llm"`` says only
+    that an assessment happened, so framing the verdict on it made Act II tell
+    the reader a vote was a model ranking (R1077 paid pass on ``doc_A``,
+    ``llm`` + ``vote_aggregate`` — the wording was false).
+
+    Returns ``(warning, origin, note, kind)``. ``kind`` says WHAT THE ORIGIN'S
+    PRODUCER WRITES INTO ``winner`` — measured on the real producers (R1078
+    review of #3000): the two fallback paths do not write a ranked unit at
+    all, and framing their winners as ranked arguments was the R1078 blocker.
+
+    * ``vote_aggregate`` → no warning, ``"le vote social-choice"`` (a
+      model-recommended *method* is carried in ``note``, not the verdict);
+      ``kind="vote"`` — ``winner`` is a ranked unit id;
+    * ``llm_resolution`` → the model-recommendation warning; ``kind=
+      "llm_strategy"`` — the writer stores the LLM's
+      ``recommended_resolution`` (``"compromise"``/…), a STRATEGY, not an
+      argument;
+    * ``conflict_resolution`` → no warning, ``kind="mediation"`` — the writer
+      stores the mediation's ``resolution_type`` (``"collaborative"``/…),
+      an outcome TYPE, not a unit;
+    * unrecorded/unknown → ``origin`` is ``None``, ``kind="unrecorded"``: the
+      caller states the origin is unrecorded and does NOT guess it
+      (anti-#1019 — absence is not a vote, and a vote is not an absence).
+    """
+    provenance = (
+        winner_provenance.strip()
+        if isinstance(winner_provenance, str) and winner_provenance.strip()
+        else ""
+    )
+    if provenance == "vote_aggregate":
+        note = (
+            "méthode de vote recommandée par le modèle"
+            if method_provenance == "llm_recommendation"
+            else ""
+        )
+        return "", "le vote social-choice", note, "vote"
+    if provenance == "llm_resolution":
+        return (
+            GOVERNANCE_MODEL_WARNING,
+            "une recommandation de stratégie du modèle",
+            "",
+            "llm_strategy",
+        )
+    if provenance == "conflict_resolution":
+        return "", "une médiation de conflit", "", "mediation"
+    return "", None, "", "unrecorded"
+
+
+def render_governance_lead(
+    method: str,
+    winner: str,
+    winner_text: str,
+    winner_provenance: Any,
+    method_provenance: Any = None,
+    tail: str = "",
+) -> Tuple[str, str]:
+    """The GOUVERNANCE line of both Acts' prompts — one renderer, no drift.
+
+    Both Acts used to build this line independently (R1077: Act III said
+    "vote social-choice" whatever the origin; R1078: both dressed a strategy
+    as « l'argument arrivé en tête »). The framing keys on the origin AND on
+    the KIND of value the origin's producer writes into ``winner`` (see
+    :func:`governance_origin`): a strategy is named as a strategy, a mediation
+    type as a mediation — the ranked-argument framing is reserved for the
+    kinds whose ``winner`` IS a unit id (``vote``, ``unrecorded``).
+
+    Returns ``(warning, lead)`` — the caller appends the divergence clause
+    (#2989, votes only) to the lead, then the warning and the lead to its
+    deliberation lines.
+    """
+    warning, origin, note, kind = governance_origin(
+        winner_provenance, method_provenance
+    )
+    if kind == "llm_strategy":
+        lead = (
+            f"  - GOUVERNANCE : sous la méthode interne « {method} », "
+            f"l'évaluation d'un modèle RECOMMANDE la stratégie de résolution "
+            f"« {winner} » — une STRATÉGIE recommandée, PAS un argument "
+            "classé : ne la présente jamais comme « l'argument arrivé en "
+            "tête » ni comme un vote. "
+        )
+    elif kind == "mediation":
+        lead = (
+            f"  - GOUVERNANCE : les conflits ont été résolus par une "
+            f"MÉDIATION de type « {winner} » — une résolution de conflit, "
+            "PAS un vote et pas un argument classé. "
+        )
+    elif winner_text:
+        desig_arg = (
+            f"désigné par {origin}{' (' + note + ')' if note else ''}"
+            if origin is not None
+            else "retenu par la gouvernance (origine non enregistrée)"
+        )
+        lead = (
+            f"  - GOUVERNANCE : sous la méthode interne « {method} », "
+            f"l'argument {desig_arg} est celui qui dit : « {winner_text} ». "
+            "Présente-le par ce qu'il dit (paraphrase fidèle), ne recopie NI "
+            "un identifiant technique brut NI le nom de méthode snake_case. "
+        )
+    else:
+        desig_option = (
+            f"désignée par {origin}{' (' + note + ')' if note else ''}"
+            if origin is not None
+            else "retenue par la gouvernance (origine non enregistrée)"
+        )
+        lead = (
+            f"  - GOUVERNANCE : sous la méthode interne « {method} », "
+            f"l'option d'identifiant interne « {winner} » a été "
+            f"{desig_option}. DÉCRIS cette option par son RÔLE dans la "
+            "prose (p.ex. « l'argument arrivé en tête »), ne recopie PAS "
+            "l'identifiant technique brut ni le nom de méthode snake_case. "
+        )
+    return warning, lead + tail
+
+
 def cited_unit_ids(state: Any) -> Set[str]:
     """Ids of the units a writer is asked to DISCUSS (#2967 Expected 2).
 

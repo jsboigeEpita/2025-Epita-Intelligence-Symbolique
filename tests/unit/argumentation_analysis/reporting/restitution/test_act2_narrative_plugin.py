@@ -483,10 +483,13 @@ class TestReaderWriterContracts:
         assert ev.governance_verdict is None
         assert ev.debate_exchanges == []
 
-    # --- Track E #1281 — de-theatralise governance (LLM origin surfaced) ---
+    # --- Track E #1281 — de-theatralise governance (the record carries the
+    # field; the FRAMING keys on the origin, see test_governance_origin_2965) ---
 
     def test_governance_carries_llm_extraction_method(self):
-        """Track E #1281 — the verdict carries the honest origin signal."""
+        """The record's `extraction_method` reaches the verdict — as a record of
+        whether an LLM assessment ran on the method, not as the verdict's origin
+        (GE-4 #1462 emptied that meaning; #2965/#3002)."""
         state = _state(
             identified_arguments={"arg_1": "Claim."},
             governance_decisions=[
@@ -514,34 +517,40 @@ class TestReaderWriterContracts:
         assert ev.governance_verdict is not None
         assert ev.governance_verdict.extraction_method is None
 
-    def test_prompt_reframes_llm_governance_as_model_assessment(self):
-        """Track E #1281 — when extraction_method == 'llm', the prompt frames
-        the verdict as a MODEL assessment, NOT procedural legitimacy. The old
-        'social-choice' wording must NOT appear for LLM-origin verdicts."""
+    def test_prompt_frames_a_model_resolution_as_a_recommended_strategy(self):
+        """Track E #1281, corrected by R1077 then R1078 — the model framing
+        belongs to ``winner_provenance == "llm_resolution"``, NOT to
+        ``extraction_method == "llm"``. And the producer of that origin
+        writes a STRATEGY into ``winner`` (``compromise``), never a ranked
+        unit: the prompt must frame it as a recommended strategy — the
+        R1078 blocker was exactly « compromise » dressed as « l'argument
+        arrivé en tête ». The social-choice wording must not survive."""
         state = _state(
             identified_arguments={"arg_1": "Claim."},
             governance_decisions=[
                 {
                     "method": "copeland",
-                    "winner": "opt_X",
-                    "scores": {"opt_X": 0.9},
-                    "extraction_method": "llm",
+                    "winner": "compromise",
+                    "scores": {},
+                    "winner_provenance": "llm_resolution",
                 }
             ],
         )
         ev = build_act2_evidence(state)
         prompt = build_act2_prompt(ev)
-        # Honest framing surfaced for the reader.
-        assert "évaluation d'un modèle" in prompt.lower()
+        # Honest framing surfaced for the reader: a recommended STRATEGY.
+        assert "recommande la stratégie de résolution « compromise »" in prompt.lower()
+        assert "recommandation de stratégie" in prompt.lower()
         assert "pas comme une caution de légitimité procédurale" in prompt.lower()
-        assert "évaluation modèle" in prompt.lower()
-        # The old theatrical wording must NOT survive for LLM-origin verdicts.
+        # The ranked-argument framing must NOT survive for model-origin verdicts.
         assert "vote social-choice" not in prompt.lower()
+        assert "option d'identifiant interne" not in prompt
 
-    def test_prompt_keeps_social_choice_wording_when_origin_unknown(self):
-        """Track E #1281 — when extraction_method is None (legacy / non-LLM),
-        the prompt keeps its prior framing (no regression on the social-choice
-        path). Anti-pendule: we re-label the LLM path, not blanket-rewrite."""
+    def test_prompt_does_not_dress_an_unrecorded_origin_as_a_vote(self):
+        """R1077 — with no ``winner_provenance`` (a pre-#2969 record) the
+        origin is unrecorded: the prompt states that, and claims neither a
+        vote nor a model ranking. Anti-pendulum: the vote wording is removed,
+        not swapped for its opposite."""
         state = _state(
             identified_arguments={"arg_1": "Claim."},
             governance_decisions=[
@@ -550,7 +559,8 @@ class TestReaderWriterContracts:
         )
         ev = build_act2_evidence(state)
         prompt = build_act2_prompt(ev)
-        assert "social-choice" in prompt.lower()
+        assert "origine non enregistrée" in prompt
+        assert "vote social-choice" not in prompt.lower()
         assert "évaluation d'un modèle" not in prompt.lower()
 
     def test_deliberation_block_in_prompt_sv(self):

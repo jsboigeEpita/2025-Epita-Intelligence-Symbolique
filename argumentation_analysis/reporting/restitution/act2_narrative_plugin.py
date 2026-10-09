@@ -39,6 +39,7 @@ from .cited_units import (  # #2967: shared cited-unit budget + boundary cut
     CITED_UNIT_TEXT_CAP,
     cited_unit_ids,
     divergent_winner_texts,
+    render_governance_lead,
     render_divergence_clause,
     truncate_at_boundary,
 )
@@ -315,12 +316,13 @@ class GovernanceVerdict:
     debranching G6 fixed for counter-argument validity. ``scores`` maps opaque
     option IDs → Copeland/influence score (privacy: opaque keys, never party names).
 
-    Track E #1281 — ``extraction_method`` carries the honest origin signal so the
-    restitution can frame the verdict correctly. ``"llm"`` means the assessment was
-    produced by a SINGLE LLM call dressed as governance (NOT a genuine multi-agent
-    deliberation); the narrative must then present it as a model-assessed ranking,
-    not procedural legitimacy. ``None`` = origin not recorded (caller pre-#1281);
-    the prompt then falls back to its prior framing.
+    Track E #1281 — ``extraction_method`` records whether an LLM assessment
+    ran ("llm") or not ("heuristic"); ``None`` = not recorded. It does NOT say
+    the assessment produced the verdict: since GE-4 #1462 the winner comes from
+    the formal vote aggregation, and the LLM's ranking is at most a
+    recommended method. Framing the verdict on this field made the narrative
+    call a vote a model ranking (R1077 paid pass on ``doc_A``). The origin is
+    ``winner_provenance`` (#2969), see ``governance_origin``.
     """
 
     method: str
@@ -331,6 +333,12 @@ class GovernanceVerdict:
     # "leading argument" when the methods disagreed (arg_16 vs arg_23 on
     # doc_A) erases the divergence the vote actually expressed.
     winners: List[str] = field(default_factory=list)
+    # #2965 / R1078: the winner's ORIGIN — "vote_aggregate" (a formal vote),
+    # "llm_resolution" (a model-recommended STRATEGY, not a ranked unit),
+    # "conflict_resolution" (a mediation TYPE), or "unresolved"/None
+    # (unrecorded). This is what the narrative frames on.
+    winner_provenance: Optional[str] = None
+    method_provenance: Optional[str] = None
 
 
 @dataclass
@@ -853,11 +861,22 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
         # Trivial / placeholder winners ("N/A", empty) carry no verdict.
         if not method or not winner or winner == "N/A":
             continue
-        # Track E #1281 — carry the honest origin signal so the prompt can frame
-        # an LLM-assessed verdict as model-assessed, not procedural legitimacy.
+        # `extraction_method` is carried for the record only: it says an LLM
+        # assessment ran on the METHOD, not that it produced the verdict. The
+        # prompt frames on the winner's origin, right below — never on this.
         em_raw = d.get("extraction_method")
         extraction_method = (
             str(em_raw).strip() if isinstance(em_raw, str) and em_raw.strip() else None
+        )
+        # #2965 / R1077 — the winner's origin (#2969): what the narrative
+        # frames on, in place of the extraction_method proxy above.
+        wp_raw = d.get("winner_provenance")
+        winner_provenance = (
+            str(wp_raw).strip() if isinstance(wp_raw, str) and wp_raw.strip() else None
+        )
+        mp_raw = d.get("method_provenance")
+        method_provenance = (
+            str(mp_raw).strip() if isinstance(mp_raw, str) and mp_raw.strip() else None
         )
         chosen = GovernanceVerdict(
             method=method,
@@ -869,6 +888,8 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
                 for w in (d.get("winners") or [])
                 if isinstance(w, str) and w.strip()
             ],
+            winner_provenance=winner_provenance,
+            method_provenance=method_provenance,
         )
     return chosen
 
@@ -1454,47 +1475,25 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
     # report. We surface what exists — honestly sparse when the schemes-engine
     # gap (β G8) left debate thin. Each citation must bind to a narrative beat
     # (spec §4 anti-énumération); never a bare score/label line.
-    # Track E #1281 — frame governance honestly. When extraction_method == "llm",
-    # the verdict is a SINGLE-LLM assessment dressed as a voting layer (NOT a
-    # genuine multi-agent deliberation); present it as a model-assessed ranking,
-    # never as procedural legitimacy / an independent social-choice verdict.
+    # #2965 / R1077 — frame the verdict on its ORIGIN (`winner_provenance`,
+    # #2969), never on `extraction_method`. An LLM assessment that ran is not
+    # the verdict: on the R1077 paid pass (`doc_A`: llm + vote_aggregate) the
+    # old rule told the reader a vote was a model ranking — false.
+    # R1078 — the GOUVERNANCE line is ONE shared renderer (cited_units): the
+    # fallback producers write a STRATEGY (`compromise`) and a MEDIATION TYPE
+    # (`collaborative`) into `winner`, not a ranked unit — presenting those as
+    # « l'argument arrivé en tête » was the R1078 blocker on this PR.
     deliberation_lines: List[str] = []
     gv = evidence.governance_verdict
     if gv is not None:
-        if gv.extraction_method == "llm":
-            gov_origin = (
-                "ATTENTION : ce verdict governance est une ÉVALUATION D'UN MODÈLE "
-                "(issue d'un seul appel LLM, pas d'une délibération multi-agent "
-                "réelle). Présente-le comme un classement évalué par le modèle, "
-                "PAS comme une caution de légitimité procédurale indépendante."
-            )
-            gov_lead = (
-                f"  - GOUVERNANCE (évaluation modèle) : l'analyste-LLM classe en "
-                f"tête l'option d'identifiant interne « {gv.winner} » sous la "
-                f"méthode interne « {gv.method} ». DÉCRIS cette option par son "
-                f"RÔLE dans la prose (p.ex. « l'argument arrivé en tête »), ne "
-                f"recopie PAS l'identifiant technique brut ni le nom de méthode "
-                f"snake_case. "
-            )
-        else:
-            gov_origin = ""
-            gov_lead = (
-                f"  - GOUVERNANCE : sous la méthode interne « {gv.method} », "
-                f"l'option d'identifiant « {gv.winner} » sort gagnante du vote "
-                f"social-choice. DÉCRIS-la par son rôle dans la prose, ne recopie "
-                f"pas l'identifiant technique brut. "
-            )
-        # #2989 rework — the winner's text travels on the line when it is
-        # localizable (same rule as Acte III), so a divergent vote does not
-        # hand the writer bare ids.
-        if evidence.governance_winner_text:
-            gov_lead = (
-                f"  - GOUVERNANCE : sous la méthode interne « {gv.method} », "
-                "l'argument arrivé en tête du vote social-choice est celui qui "
-                f"dit : « {evidence.governance_winner_text} ». Présente-le par ce "
-                "qu'il dit (paraphrase fidèle), ne recopie NI un identifiant "
-                "technique brut NI le nom de méthode snake_case. "
-            )
+        gov_warning, gov_lead = render_governance_lead(
+            gv.method,
+            gv.winner,
+            evidence.governance_winner_text,
+            gv.winner_provenance,
+            gv.method_provenance,
+            tail="(noms d'options maintenus opaques — discipline FB-34.)",
+        )
         # #2969 / #2989 rework: a divergent vote is part of the verdict —
         # name every distinct winner by WHAT IT SAYS (an id only when its
         # text is not localizable), never reduce it to one "leading
@@ -1502,11 +1501,9 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         divergence = render_divergence_clause(evidence.governance_divergent_texts)
         if divergence:
             gov_lead += divergence
-        if gov_origin:
-            deliberation_lines.append(gov_origin)
-        deliberation_lines.append(
-            gov_lead + "(noms d'options maintenus opaques — discipline FB-34.)"
-        )
+        if gov_warning:
+            deliberation_lines.append(gov_warning)
+        deliberation_lines.append(gov_lead)
     if evidence.debate_exchanges:
         for i, ex in enumerate(evidence.debate_exchanges, start=1):
             scheme_anchor = ""
