@@ -141,6 +141,11 @@ class TestSchema:
                 cs.KIND_VULNERABILITY,
                 cs.KIND_TENSION,
                 cs.KIND_STRENGTH,
+                # R1080 on #1914 — the schema grew a fourth kind: the
+                # deliberation preference (this fixture has no governance,
+                # so none appears here; the route's own witnesses live in
+                # test_deliberation_preference_route_1914.py).
+                cs.KIND_PREFERENCE,
             )
             assert item.cites, f"a {item.kind} item without anchors is untraceable"
             assert item.statement

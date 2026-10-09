@@ -2117,21 +2117,27 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
     # lower-level state so every claim stays traceable.
     global_findings = project_global_findings(state)
 
+    # SV (#1182): surface governance verdict + debate exchanges (debranched
+    # capabilities — same fix shape as G6 for counter-arg validity). The
+    # verdict is collected BEFORE the salience call below: #1914 / R1080
+    # grafts the deliberation preference into the ranking from the SAME
+    # collected object — one reader of the ``governance_decisions`` leaf,
+    # never two (#1633).
+    governance_verdict = _collect_governance(state)
+
     # #1914 (Acte III slice) — the salience ranking + zero-shot surplus,
     # derived from the components above (one reader per state leaf, #1633):
     # the role classifier reads the state, the structured/global findings
-    # are passed in already-derived.
+    # are passed in already-derived, and so is the governance verdict.
     structured = _collect_structured_arg_findings(state)
     salience = assess_conclusion_salience(
         state,
         structured_findings=structured,
         global_findings=global_findings,
         counters_total=counters_total,
+        governance_verdict=governance_verdict,
     )
 
-    # SV (#1182): surface governance verdict + debate exchanges (debranched
-    # capabilities — same fix shape as G6 for counter-arg validity).
-    governance_verdict = _collect_governance(state)
     debate_exchanges = _collect_debate(state)
 
     # G1–G4 (#1008 §3.2). G3 passes once a band is computable (always, given the
@@ -2734,9 +2740,12 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         "  ne se dégage, n'invente aucune unanimité.\n"
         "- HIÉRARCHIE : fonde le deuxième battement sur la HIÉRARCHIE DU VERDICT\n"
         "  ci-dessus, dans cet ordre — les P1 d'abord, puis les tensions, puis\n"
-        "  l'accompagnement. Un label hors hiérarchie est du contexte : il peut\n"
-        "  illustrer, jamais porter le verdict. Ne rejoue pas chaque label au\n"
-        "  même niveau.\n"
+        "  l'accompagnement. Un item [preference] est la préférence de la\n"
+        "  délibération collective — le coup que son vote a placé en tête :\n"
+        "  rends-le comme tel (un choix de la délibération, jamais une force\n"
+        "  établie par un solveur) et jamais au-dessus d'un P1. Un label hors\n"
+        "  hiérarchie est du contexte : il peut illustrer, jamais porter le\n"
+        "  verdict. Ne rejoue pas chaque label au même niveau.\n"
         "- QUESTION : si le bloc LA QUESTION DE L'ACTE I porte une question,\n"
         "  le DEUXIÈME battement y répond EXPLICITEMENT : tranche-la au moyen\n"
         "  de la hiérarchie du verdict (P1 d'abord), puis dis franchement ce\n"
