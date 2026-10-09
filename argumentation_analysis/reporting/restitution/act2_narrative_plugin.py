@@ -39,7 +39,7 @@ from .cited_units import (  # #2967: shared cited-unit budget + boundary cut
     CITED_UNIT_TEXT_CAP,
     cited_unit_ids,
     divergent_winner_texts,
-    governance_origin,
+    render_governance_lead,
     render_divergence_clause,
     truncate_at_boundary,
 )
@@ -333,9 +333,10 @@ class GovernanceVerdict:
     # "leading argument" when the methods disagreed (arg_16 vs arg_23 on
     # doc_A) erases the divergence the vote actually expressed.
     winners: List[str] = field(default_factory=list)
-    # #2965 / R1077: the winner's ORIGIN — "vote_aggregate" (a formal vote),
-    # "llm_resolution" (a single model's assessment), "conflict_resolution",
-    # or "unresolved"/None (unrecorded). This is what the narrative frames on.
+    # #2965 / R1078: the winner's ORIGIN — "vote_aggregate" (a formal vote),
+    # "llm_resolution" (a model-recommended STRATEGY, not a ranked unit),
+    # "conflict_resolution" (a mediation TYPE), or "unresolved"/None
+    # (unrecorded). This is what the narrative frames on.
     winner_provenance: Optional[str] = None
     method_provenance: Optional[str] = None
 
@@ -1478,39 +1479,21 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
     # #2969), never on `extraction_method`. An LLM assessment that ran is not
     # the verdict: on the R1077 paid pass (`doc_A`: llm + vote_aggregate) the
     # old rule told the reader a vote was a model ranking — false.
+    # R1078 — the GOUVERNANCE line is ONE shared renderer (cited_units): the
+    # fallback producers write a STRATEGY (`compromise`) and a MEDIATION TYPE
+    # (`collaborative`) into `winner`, not a ranked unit — presenting those as
+    # « l'argument arrivé en tête » was the R1078 blocker on this PR.
     deliberation_lines: List[str] = []
     gv = evidence.governance_verdict
     if gv is not None:
-        gov_warning, origin, method_note = governance_origin(
-            gv.winner_provenance, gv.method_provenance
+        gov_warning, gov_lead = render_governance_lead(
+            gv.method,
+            gv.winner,
+            evidence.governance_winner_text,
+            gv.winner_provenance,
+            gv.method_provenance,
+            tail="(noms d'options maintenus opaques — discipline FB-34.)",
         )
-        if origin is None:
-            # Absence is not a vote: state the origin is unrecorded, never guess.
-            desig_arg = "retenu par la gouvernance (origine non enregistrée)"
-            desig_option = "retenue par la gouvernance (origine non enregistrée)"
-        else:
-            note = f" ({method_note})" if method_note else ""
-            desig_arg = f"désigné par {origin}{note}"
-            desig_option = f"désignée par {origin}{note}"
-        # #2989 rework — the winner's text travels on the line when it is
-        # localizable (same rule as Acte III), so a divergent vote does not
-        # hand the writer bare ids.
-        if evidence.governance_winner_text:
-            gov_lead = (
-                f"  - GOUVERNANCE : sous la méthode interne « {gv.method} », "
-                f"l'argument {desig_arg} est celui qui dit : « "
-                f"{evidence.governance_winner_text} ». Présente-le par ce "
-                "qu'il dit (paraphrase fidèle), ne recopie NI un identifiant "
-                "technique brut NI le nom de méthode snake_case. "
-            )
-        else:
-            gov_lead = (
-                f"  - GOUVERNANCE : sous la méthode interne « {gv.method} », "
-                f"l'option d'identifiant interne « {gv.winner} » a été "
-                f"{desig_option}. DÉCRIS cette option par son RÔLE dans la "
-                "prose (p.ex. « l'argument arrivé en tête »), ne recopie PAS "
-                "l'identifiant technique brut ni le nom de méthode snake_case. "
-            )
         # #2969 / #2989 rework: a divergent vote is part of the verdict —
         # name every distinct winner by WHAT IT SAYS (an id only when its
         # text is not localizable), never reduce it to one "leading
@@ -1520,9 +1503,7 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
             gov_lead += divergence
         if gov_warning:
             deliberation_lines.append(gov_warning)
-        deliberation_lines.append(
-            gov_lead + "(noms d'options maintenus opaques — discipline FB-34.)"
-        )
+        deliberation_lines.append(gov_lead)
     if evidence.debate_exchanges:
         for i, ex in enumerate(evidence.debate_exchanges, start=1):
             scheme_anchor = ""

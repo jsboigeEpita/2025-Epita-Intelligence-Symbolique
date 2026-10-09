@@ -517,32 +517,34 @@ class TestReaderWriterContracts:
         assert ev.governance_verdict is not None
         assert ev.governance_verdict.extraction_method is None
 
-    def test_prompt_frames_a_model_resolution_as_a_model_assessment(self):
-        """Track E #1281, corrected by R1077 — the model-assessment framing
+    def test_prompt_frames_a_model_resolution_as_a_recommended_strategy(self):
+        """Track E #1281, corrected by R1077 then R1078 — the model framing
         belongs to ``winner_provenance == "llm_resolution"``, NOT to
-        ``extraction_method == "llm"``. Since GE-4 #1462 an LLM assessment
-        that ran is at most a recommended METHOD; the R1077 paid pass
-        measured ``llm`` + ``vote_aggregate``, where the old rule told the
-        reader a vote was a model ranking. The social-choice wording must
-        not survive for a model-resolved verdict."""
+        ``extraction_method == "llm"``. And the producer of that origin
+        writes a STRATEGY into ``winner`` (``compromise``), never a ranked
+        unit: the prompt must frame it as a recommended strategy — the
+        R1078 blocker was exactly « compromise » dressed as « l'argument
+        arrivé en tête ». The social-choice wording must not survive."""
         state = _state(
             identified_arguments={"arg_1": "Claim."},
             governance_decisions=[
                 {
                     "method": "copeland",
-                    "winner": "opt_X",
-                    "scores": {"opt_X": 0.9},
+                    "winner": "compromise",
+                    "scores": {},
                     "winner_provenance": "llm_resolution",
                 }
             ],
         )
         ev = build_act2_evidence(state)
         prompt = build_act2_prompt(ev)
-        # Honest framing surfaced for the reader.
-        assert "évaluation d'un modèle" in prompt.lower()
+        # Honest framing surfaced for the reader: a recommended STRATEGY.
+        assert "recommande la stratégie de résolution « compromise »" in prompt.lower()
+        assert "recommandation de stratégie" in prompt.lower()
         assert "pas comme une caution de légitimité procédurale" in prompt.lower()
-        # The old theatrical wording must NOT survive for model-origin verdicts.
+        # The ranked-argument framing must NOT survive for model-origin verdicts.
         assert "vote social-choice" not in prompt.lower()
+        assert "option d'identifiant interne" not in prompt
 
     def test_prompt_does_not_dress_an_unrecorded_origin_as_a_vote(self):
         """R1077 — with no ``winner_provenance`` (a pre-#2969 record) the

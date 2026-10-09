@@ -69,7 +69,7 @@ from .cited_units import (  # #2965 (Acte III slice) — same budget as Act II
     CITED_UNIT_TEXT_CAP,
     cited_unit_ids,
     divergent_winner_texts,
-    governance_origin,
+    render_governance_lead,
     render_divergence_clause,
     truncate_at_boundary,
 )
@@ -357,9 +357,10 @@ class GovernanceVerdict:
     # #2969: a divergent vote records every distinct winner — presenting one
     # "leading argument" when the methods disagreed erases the divergence.
     winners: List[str] = field(default_factory=list)
-    # #2965 / R1077: the winner's ORIGIN — "vote_aggregate" (a formal vote),
-    # "llm_resolution" (a single model's assessment), "conflict_resolution",
-    # or "unresolved"/None (unrecorded). Both Act III branches used to say
+    # #2965 / R1078: the winner's ORIGIN — "vote_aggregate" (a formal vote),
+    # "llm_resolution" (a model-recommended STRATEGY, not a ranked unit),
+    # "conflict_resolution" (a mediation TYPE), or "unresolved"/None
+    # (unrecorded). Both Act III branches used to say
     # "vote social-choice" unconditionally; this is what they frame on now.
     winner_provenance: Optional[str] = None
     method_provenance: Optional[str] = None
@@ -2488,38 +2489,19 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         # #2965 / R1077 — the origin is `winner_provenance` (#2969), never
         # `extraction_method`: both branches said "vote social-choice"
         # whatever produced the verdict, so an LLM resolution read as a vote.
-        gov_warning, origin, method_note = governance_origin(
-            gv.winner_provenance, gv.method_provenance
+        # R1078 — the GOUVERNANCE line is ONE shared renderer (cited_units,
+        # same as Acte II): the fallback producers write a STRATEGY
+        # (`compromise`) and a MEDIATION TYPE (`collaborative`) into
+        # `winner`, not a ranked unit — presenting those as « l'argument
+        # arrivé en tête » was the R1078 blocker on PR #3000.
+        gov_warning, gov_lead = render_governance_lead(
+            gv.method,
+            gv.winner,
+            evidence.governance_winner_text,
+            gv.winner_provenance,
+            gv.method_provenance,
+            tail="(options opaques, FB-34.)",
         )
-        if origin is None:
-            # Absence is not a vote: state the origin is unrecorded, never guess.
-            desig_arg = "retenu par la gouvernance (origine non enregistrée)"
-            desig_option = "retenue par la gouvernance (origine non enregistrée)"
-        else:
-            note = f" ({method_note})" if method_note else ""
-            desig_arg = f"désigné par {origin}{note}"
-            desig_option = f"désignée par {origin}{note}"
-        if evidence.governance_winner_text:
-            # #2965 (Acte III slice) — the line carries the winner's referent
-            # itself: the writer does not join an id to its unit across a
-            # long prompt (measured, R1071), so the text travels on the line
-            # and the id stays unprinted.
-            gov_lead = (
-                f"  - GOUVERNANCE : sous la méthode interne « {gv.method} », "
-                f"l'argument {desig_arg} est celui qui dit : « "
-                f"{evidence.governance_winner_text} ». Présente-le par ce "
-                "qu'il dit (paraphrase fidèle), ne recopie NI un identifiant "
-                "technique brut NI le nom de méthode snake_case. "
-                "(options opaques, FB-34.)"
-            )
-        else:
-            gov_lead = (
-                f"  - GOUVERNANCE : sous la méthode interne « {gv.method} », "
-                f"l'option d'identifiant interne « {gv.winner} » a été "
-                f"{desig_option}. DÉCRIS-la par son rôle dans la prose (p.ex. "
-                "« l'argument arrivé en tête »), ne recopie PAS l'identifiant "
-                "technique brut ni le nom de méthode snake_case. (options opaques, FB-34.)"
-            )
         # #2969 / #2989 rework: a divergent vote is part of the verdict —
         # name every distinct winner by WHAT IT SAYS, never reduce the
         # conclusion to one "leading argument" the methods never agreed on,
