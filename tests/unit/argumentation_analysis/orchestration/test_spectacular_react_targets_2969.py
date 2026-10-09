@@ -159,14 +159,20 @@ class TestGovernancePopulationsApart:
                 "winner": "arg_16",
                 "votes": {"arg_16": 4, "arg_23": 3},
                 "method": "formal-aggregation",
-                "copeland_scores": {"arg_16": 1.0, "arg_23": 0.5, "arg_40": -1.0},
+                # #3001 — the former copeland_scores key fed a read that
+                # production never exercises; the GE-4 support population
+                # replaces it (winners_per_method tally + count + tier).
                 "results": {
                     "distinct_winners": ["arg_16", "arg_23"],
                     "inter_method_disagreement": True,
                     "winners_per_method": {
                         "majority": "arg_16",
-                        "borda": "arg_23",
+                        "borda": "arg_16",
+                        "plurality": "arg_23",
                     },
+                    "n_methods_decided": 3,
+                    "winner": "arg_16",
+                    "winner_basis": "majority",
                 },
             },
             "conflicts": [{"agents": ["agent_1", "agent_2"], "level": 0.8}],
@@ -201,10 +207,13 @@ class TestGovernancePopulationsApart:
             self._writer_output(), state, {"phase": "governance"}
         )
         record = state.decisions[0]
-        assert set(record["scores"]) == {"arg_16", "arg_23", "arg_40"}, (
-            "scores carries the VOTE's option scores only (Copeland), "
-            f"measured: {record['scores']}"
-        )
+        # #3001 — the vote's population is the SUPPORT tally (how many
+        # deciding methods chose each option); scores keeps its honest
+        # shape (no option scores on a GE-4 vote, the dead read is gone).
+        assert record["support_by_option"] == {"arg_16": 2, "arg_23": 1}
+        assert record["n_methods_decided"] == 3
+        assert record["winner_basis"] == "majority"
+        assert record["scores"] == {}
         assert record["stakeholder_scores"] == {"parti_A": 0.7, "parti_B": 0.4}, (
             "the LLM's stakeholder influences are labels, not units — they "
             "must not share the vote's field"

@@ -120,11 +120,18 @@ def divergent_winner_texts(
 def render_divergence_clause(
     winner_texts: Sequence[Tuple[str, str]],
     cap: int = CITED_UNIT_TEXT_CAP,
+    support_by_option: Optional[Mapping[str, int]] = None,
+    n_methods_decided: Optional[int] = None,
 ) -> str:
     """The divergent-vote clause: each winner by its TEXT, an id only when no
     text was localized (#2965/#2980 — « ne recopie NI un identifiant
     technique brut »). Empty string when fewer than two winners: the clause
     is earned by the record, never unconditional.
+
+    #3001 (a′) — each winner's QUALITATIVE support band travels next to its
+    text (#2989): in a divergence the aggregate number says nothing about
+    which winner is solid, and the band stays qualitative (#1914 — never a
+    counter). Absent population → no band (honest absence).
 
     The renderer bounds its OWN text (#2908 census, rework 3): the census
     reads an interpolation of a doc-text name with no bound as a
@@ -138,9 +145,16 @@ def render_divergence_clause(
     parts = []
     for wid, text in winner_texts:
         if text:
-            parts.append(f"celui qui dit : « {truncate_at_boundary(text, cap)} »")
+            fragment = f"celui qui dit : « {truncate_at_boundary(text, cap)} »"
         else:
-            parts.append(f"l'option d'identifiant « {wid} » (texte non localisé)")
+            fragment = f"l'option d'identifiant « {wid} » (texte non localisé)"
+        band = qualitative_support_band(
+            support_by_option.get(wid) if support_by_option else None,
+            n_methods_decided,
+        )
+        if band:
+            fragment += f" — soutenu {band}"
+        parts.append(fragment)
     joined = " et ".join(parts)
     return (
         f" Le vote DIVERGE entre les méthodes : {joined} sortent gagnants selon "
@@ -215,6 +229,37 @@ def governance_origin(
     return "", None, "", "unrecorded"
 
 
+def qualitative_support_band(
+    support: Optional[int],
+    n_methods_decided: Optional[int],
+    winner_basis: Optional[str] = None,
+) -> Optional[str]:
+    """The QUALITATIVE band of a vote's support (#3001 a′ — never a counter).
+
+    The R1077 census found the support population was dropped before the
+    record: "11 methods out of 12" and "the plurality fallback tier only"
+    are two different verdicts the Acts rendered with the same sentence.
+    This band is the bounded rendering the coordinator's arbitration asks
+    for: three bands, no digits (#1914 — a raw counter or a badge would hand
+    the writer a number to copy instead of a fact to phrase).
+
+    ``None`` when the population is absent (no band without a measured
+    support — honest absence, anti-#1019).
+    """
+    if not n_methods_decided or support is None or support <= 0:
+        return None
+    if support >= n_methods_decided:
+        return "à l'unanimité des méthodes qui ont décidé"
+    if support * 3 >= n_methods_decided * 2:
+        return "par une large majorité des méthodes"
+    if winner_basis == "plurality":
+        return (
+            "de justesse, au palier de repli — aucune majorité claire ne "
+            "s'était dégagée parmi les méthodes"
+        )
+    return "de justesse, par une majorité étroite des méthodes"
+
+
 def render_governance_lead(
     method: str,
     winner: str,
@@ -222,6 +267,9 @@ def render_governance_lead(
     winner_provenance: Any,
     method_provenance: Any = None,
     tail: str = "",
+    support_by_option: Optional[Mapping[str, int]] = None,
+    n_methods_decided: Optional[int] = None,
+    winner_basis: Optional[str] = None,
 ) -> Tuple[str, str]:
     """The GOUVERNANCE line of both Acts' prompts — one renderer, no drift.
 
@@ -232,6 +280,12 @@ def render_governance_lead(
     :func:`governance_origin`): a strategy is named as a strategy, a mediation
     type as a mediation — the ranked-argument framing is reserved for the
     kinds whose ``winner`` IS a unit id (``vote``, ``unrecorded``).
+
+    #3001 (a′) — for ``kind == "vote"`` ONLY, the lead carries a bounded
+    robustness clause: the winner's qualitative support band (see
+    :func:`qualitative_support_band`), with the instruction to keep it
+    qualitative. It grafts onto the ``kind`` framing of #3000 and never
+    fires for a fallback origin, whose winner is not a unit at all.
 
     Returns ``(warning, lead)`` — the caller appends the divergence clause
     (#2989, votes only) to the lead, then the warning and the lead to its
@@ -279,6 +333,18 @@ def render_governance_lead(
             "prose (p.ex. « l'argument arrivé en tête »), ne recopie PAS "
             "l'identifiant technique brut ni le nom de méthode snake_case. "
         )
+    if kind == "vote":
+        band = qualitative_support_band(
+            support_by_option.get(str(winner).strip()) if support_by_option else None,
+            n_methods_decided,
+            winner_basis,
+        )
+        if band:
+            lead += (
+                f"Le soutien de ce verdict : {band}. Rends ce soutien de "
+                "façon QUALITATIVE (comme cette phrase le fait) — jamais "
+                "sous forme de compteur ni de badge."
+            )
     return warning, lead + tail
 
 

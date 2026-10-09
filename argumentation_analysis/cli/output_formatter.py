@@ -26,6 +26,8 @@ render branch (a section that never fills blesses what it does not measure,
 import json
 from typing import Any, Dict, List, Optional
 
+from argumentation_analysis.reporting.restitution.cited_units import governance_origin
+
 try:
     from rich.console import Console
     from rich.panel import Panel
@@ -264,8 +266,22 @@ def _render_debate(console, state: Dict[str, Any]):
     if gov:
         for g in gov[:3]:
             method = g.get("method", "?")
-            result_text = g.get("result", "")
-            console.print(f"  Governance ({method}): {_truncate(str(result_text))}")
+            # #3001 — the former ``result`` read was dead (never written, the
+            # census of #3001): print what the record actually carries — the
+            # winner and the origin that decided it, same vocabulary as the
+            # Acts (cited_units.governance_origin).
+            winner = str(g.get("winner", "")).strip() or "?"
+            _warning, origin, _note, _kind = governance_origin(
+                g.get("winner_provenance"), g.get("method_provenance")
+            )
+            if origin:
+                console.print(
+                    f"  Governance ({method}): {winner} — désigné par {origin}"
+                )
+            else:
+                console.print(
+                    f"  Governance ({method}): {winner} — origine non enregistrée"
+                )
 
 
 def _render_quality(console, state: Dict[str, Any]):
