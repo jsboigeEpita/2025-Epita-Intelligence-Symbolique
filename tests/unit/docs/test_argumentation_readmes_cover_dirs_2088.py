@@ -448,20 +448,34 @@ class TestParentChildReadmeLinksBothWays:
 
 # #3004 — la règle « substantiel » a TROIS copies : ce module
 # (_substantial_dirs), scripts/docs/readme_waves_2088.py (_derive_creations)
-# et scripts/docs/inventory_argumentation_readmes.py (règle en ligne dans
-# main(), sur main). La docstring de CE module AFFIRME l'équivalence avec la
+# et scripts/docs/inventory_argumentation_readmes.py (_is_substantial /
+# _needs_readme). La docstring de CE module AFFIRME l'équivalence avec la
 # copie « waves » sans la vérifier. Une dérive ferait VALIDER par cette garde
 # un classement que le recensement ne calcule pas — motif #1842, forme
 # documentaire (le dépôt porte déjà sa garde pour la variante « capacités »).
 #
-# Mesuré 2026-10-09 : les trois s'accordent (94 répertoires substantiels, 0
-# sans README, constantes identiques) — risque latent, pas défaut vivant.
+# Les TROIS copies sont comparées, chacune par sa propre surface : « waves »
+# par _derive_creations(), « inventory » par _needs_readme() sur sa propre
+# énumération (_tracked_files). La comparaison « inventory » a été JOINTE en
+# rework (revue po-2023, R1135) : la déclaration d'angle mort de la première
+# version (« B joignable une fois #2998 mergée ») devenait périmée à l'instant
+# du merge — #2998 est mergée, _needs_readme est en ligne. Une déclaration
+# d'aveuglement n'est honnête que tant que l'aveugle est irréductible ; ici il
+# ne l'était plus, donc on joint au lieu de déclarer.
+#
+# Mesuré 2026-10-09 (main 786729fb3) : les trois s'accordent — « inventory »
+# énumère 104 répertoires, 94 substantiels, 0 substantiel sans README, et son
+# ensemble égale celui de ce module ; constantes identiques. Risque latent,
+# pas défaut vivant.
 #
 # ⚠ L'égalité de l'arbre réel porte aujourd'hui sur DEUX ENSEMBLES VIDES
 # (0 substantiel sans README) : seule, elle ne prouverait rien. Ce qui rend
-# cette garde une mesure est l'instance de non-vacuité ci-dessous — mesurée,
-# porter le seuil de la copie « waves » à 2 rend son classement NON vide (les
-# répertoires légers sans README) et fait donc rougir la comparaison.
+# cette garde une mesure sont les instances de non-vacuité ci-dessous —
+# mesurées, porter le seuil de la copie « waves » à 2 rend son classement NON
+# vide et fait rougir SA comparaison ; et sur des FORMES PLANTÉES (population
+# synthétique, indépendante de l'arbre), les deux règles sont comparées sur
+# le cas même où `ou` et `et` divergent — la dérive de forme, mesurée
+# invisible sur l'arbre du jour, y rougit.
 # Une garde qui ne peut pas échouer ne mesure pas ; celle-ci le peut.
 #
 # La dimension « vendorisé » est aujourd'hui INERTE (aucun `libs/`/
@@ -473,8 +487,9 @@ class TestParentChildReadmeLinksBothWays:
 # un QUATRIÈME porteur, ``scripts/docs/link_readme_tree_2088.py``. Il ne porte
 # PAS la règle « substantiel » (aucun seuil) mais la même liste vendue, pour
 # ses arêtes parent/enfant : la muter chez lui déplacerait les arêtes sans que
-# la comparaison A/C le voie. Le test des constantes couvre donc les trois
-# copies de la RÈGLE (sous-arbre + seuil) et les quatre porteurs de la LISTE.
+# les comparaisons de CLASSEMENT (waves, inventory) le voient. Le test des
+# constantes couvre donc les trois copies de la RÈGLE (sous-arbre + seuil) et
+# les quatre porteurs de la LISTE.
 _WAVES_SCRIPT = "readme_waves_2088.py"
 _INVENTORY_SCRIPT = "inventory_argumentation_readmes.py"
 _LINK_TREE_SCRIPT = "link_readme_tree_2088.py"
@@ -502,11 +517,85 @@ def _substantial_without_readme() -> set[str]:
     }
 
 
+def _inventory_substantial_without_readme() -> set[str]:
+    """Le classement de la copie « inventory », sur SA propre énumération.
+
+    On ne devine pas son univers depuis le nôtre : on lui demande son
+    ``_tracked_files()`` et on applique son ``_needs_readme``. Ses clés
+    portent le préfixe du sous-arbre (``argumentation_analysis/…``) — la
+    normalisation se fait ici pour rendre les deux ensembles comparables.
+    """
+    inventory = _load_script("inventory_argumentation_readmes", _INVENTORY_SCRIPT)
+    return {
+        d
+        for d, files in inventory._tracked_files().items()
+        if inventory._needs_readme(d, files)
+    }
+
+
+def _mine_with_subtree_prefix() -> set[str]:
+    """Le classement de ce module, remonté au même espace de noms que B."""
+    return {f"{SUBTREE}/{d}" for d in _substantial_without_readme()}
+
+
+def _classify_mine(files: list[str]) -> set[str]:
+    """Notre classement « substantiel sans README » sur une population DONNÉE."""
+    substantial = _substantial_dirs(files)
+    return {
+        f"{SUBTREE}/{d}"
+        for d, members in substantial.items()
+        if f"{SUBTREE}/{d}/README.md" not in members
+    }
+
+
+def _classify_inventory(population: dict[str, set[str]]) -> set[str]:
+    """Le classement de « inventory » sur une population DONNÉE (d → fichiers)."""
+    inventory = _load_script("inventory_argumentation_readmes", _INVENTORY_SCRIPT)
+    return {d for d, files in population.items() if inventory._needs_readme(d, files)}
+
+
+# Formes plantées : chaque clé est un répertoire candidat, la valeur ses
+# fichiers suivis. Elles exercent la FORME de la règle — le seuil, le `ou`
+# contre le `et`, le filtre vendu, la présence du README — indépendamment de
+# l'arbre du jour. C'est le contrat que l'inventaire applique déjà pour
+# lui-même (``_detection_control`` : « plant the shapes the inventory must
+# tell apart, through its own rule »).
+#
+# Pourquoi planter plutôt que muter un seuil : mesuré, une dérive de FORME
+# chez « inventory » (`ou` → `et`) ne déplace RIEN sur l'arbre réel
+# d'aujourd'hui — aucun répertoire ne bascule — donc l'égalité de l'arbre la
+# laisse passer. ``planted_thick_doc`` existe exactement pour ça : 3 fichiers
+# sans `.py`, que le `ou` classe substantiel et le `et` non.
+_PLANTED_SHAPES: dict[str, set[str]] = {
+    # 1 fichier `.py` : substantiel par le seul volet « .py » (et par le seuil ? non)
+    f"{SUBTREE}/planted_light_py": {f"{SUBTREE}/planted_light_py/a.py"},
+    # 2 fichiers sans `.py` : léger pour les deux volets (sous le seuil, pas de .py)
+    f"{SUBTREE}/planted_light_doc": {
+        f"{SUBTREE}/planted_light_doc/a.md",
+        f"{SUBTREE}/planted_light_doc/b.md",
+    },
+    # 3 fichiers sans `.py` : le SEUL point où `ou` et `et` divergent
+    f"{SUBTREE}/planted_thick_doc": {
+        f"{SUBTREE}/planted_thick_doc/a.md",
+        f"{SUBTREE}/planted_thick_doc/b.md",
+        f"{SUBTREE}/planted_thick_doc/c.md",
+    },
+    # substantiel ET documenté : ne compte pas comme « substantiel sans README »
+    f"{SUBTREE}/planted_documented": {
+        f"{SUBTREE}/planted_documented/a.py",
+        f"{SUBTREE}/planted_documented/README.md",
+    },
+    # vendoré : exclu par les deux règles
+    f"{SUBTREE}/libs/planted_vendored": {f"{SUBTREE}/libs/planted_vendored/a.py"},
+}
+
+
 class TestTheSubstantialRuleHasOneDefinition:
     """#3004 : trois copies, aucune ne vérifie les autres — cette garde le fait.
 
     Elle ne remplace pas les copies par un import unique (trois consommateurs
-    distincts, chacune est courte) : elle tient qu'elles CLASSENT pareil.
+    distincts, chacune est courte) : elle tient qu'elles CLASSENT pareil, et
+    elle nomme pour chacune la surface par laquelle elle la compare.
     """
 
     def test_the_waves_script_classifies_as_this_module_does(self):
@@ -516,6 +605,19 @@ class TestTheSubstantialRuleHasOneDefinition:
             "mêmes répertoires substantiels sans README — la règle a dérivé, "
             "et le recensement valide alors un classement que la garde ne "
             "calcule pas"
+        )
+
+    def test_the_inventory_script_classifies_as_this_module_does(self):
+        """La 2ᵉ copie est comparée par sa PROPRE surface, pas par ses constantes.
+
+        Comparer seulement les constantes laisserait passer une dérive de
+        forme (un `or` devenu `and`, un filtre vendorisé déplacé) : c'est le
+        CLASSEMENT qui doit concorder, pas seulement ses ingrédients.
+        """
+        assert _inventory_substantial_without_readme() == _mine_with_subtree_prefix(), (
+            "#3004 : inventory_argumentation_readmes._needs_readme et ce module "
+            "ne classent plus pareil — l'inventaire publié désigne des "
+            "répertoires que la garde ne voit pas (ou l'inverse)"
         )
 
     def test_the_three_copies_share_their_constants(self):
@@ -540,6 +642,47 @@ class TestTheSubstantialRuleHasOneDefinition:
         assert (
             waves._derive_creations() != _substantial_without_readme()
         ), "#3004 : même à seuil divergent les deux classements s'accordent"
+
+    def test_the_two_rules_classify_the_same_planted_shapes(self):
+        """La non-vacuité de la comparaison « inventory », sans dépendre de l'arbre.
+
+        Une mutation de seuil sur l'arbre réel prouve qu'un CHIFFRE voyage ;
+        elle ne prouve pas que la FORME est comparée. Mesuré : passer le `ou`
+        de « inventory » à `et` ne déplace rien sur l'arbre d'aujourd'hui —
+        l'égalité de l'arbre reste verte. Les formes plantées, elles, portent
+        le cas qui bascule (``planted_thick_doc``), donc la comparaison peut
+        ÉCHOUER, et l'assertion de discrimination ci-dessous interdit que la
+        population devienne silencieusement inoffensive.
+        """
+        population = {d: set(files) for d, files in _PLANTED_SHAPES.items()}
+        flat = sorted({f for files in population.values() for f in files})
+
+        mine = _classify_mine(flat)
+        inventory = _classify_inventory(population)
+
+        assert mine == inventory, (
+            "#3004 : sur les formes plantées, les deux règles ne classent plus "
+            f"pareil — ce module {sorted(mine)}, « inventory » {sorted(inventory)}"
+        )
+
+        # La population doit DISCRIMINER : si elle classait tout ou rien, son
+        # égalité serait vacante et le test ne mesurerait rien.
+        assert mine, (
+            "#3004 : aucune forme plantée n'est classée « substantiel sans "
+            "README » — la population ne prouve plus rien, réparer les formes"
+        )
+        assert len(mine) < len(population), (
+            "#3004 : toutes les formes plantées sont classées pareil — plus "
+            "aucun contraste, la comparaison ne discrimine plus"
+        )
+        assert f"{SUBTREE}/planted_thick_doc" in mine, (
+            "#3004 : le cas où `ou` et `et` divergent a disparu de la "
+            "population plantée — c'est lui qui rend la comparaison sensible "
+            "à la forme, pas seulement aux constantes"
+        )
+        assert (
+            f"{SUBTREE}/libs/planted_vendored" not in mine
+        ), "#3004 : la forme vendorée n'est plus exclue par ce module"
 
     def test_the_vendored_list_agrees_across_all_its_holders(self):
         """La liste vendue a QUATRE porteurs (mesuré par grep de concept).
