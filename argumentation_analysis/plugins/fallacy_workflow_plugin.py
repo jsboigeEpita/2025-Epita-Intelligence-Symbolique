@@ -915,9 +915,12 @@ class FallacyWorkflowPlugin:
                     "IMPORTANT: Only confirm if the reasoning in the text is genuinely fallacious.\n"
                     "Legitimate uses of authority, emotion, or tradition are NOT fallacies.\n\n"
                     "Choose ONE action:\n"
-                    f"- confirm_fallacy(node_pk='{current_pk}', justification='...', confidence=0.0-1.0) "
-                    "if this matches\n"
-                    "- conclude_no_fallacy(reason='...') if no match"
+                    f"- confirm_fallacy(node_pk='{current_pk}', matches=true, "
+                    "justification='...', confidence=0.0-1.0) if this leaf "
+                    "GENUINELY names the fallacy the text exhibits\n"
+                    "- conclude_no_fallacy(reason='...') if no match. If the "
+                    "text is not genuinely fallacious here, this is the honest "
+                    "exit — do not confirm to avoid an empty result."
                 )
 
                 leaf_history = ChatHistory(
@@ -967,10 +970,22 @@ class FallacyWorkflowPlugin:
                     leaf_calls, slave_kernel, leaf_history
                 )
 
+                # The first confirm/conclude decides the branch. #2972 — a
+                # NEGATIVE verdict is read here too: the model that says
+                # "matches=false" has refused this leaf, and the refusal is
+                # named rather than left to fall through the loop into a
+                # silent abandonment.
                 for lr in leaf_results:
-                    if lr.get("function_name") == "confirm_fallacy" and lr.get(
-                        "confirmed"
-                    ):
+                    func_name = lr.get("function_name")
+                    if func_name == "confirm_fallacy":
+                        if "confirmed" not in lr:
+                            continue  # tool failure, not a verdict
+                        if not lr.get("confirmed"):
+                            self.logger.info(
+                                "  Leaf refused by the model's verdict: "
+                                f"{lr.get('reason', lr.get('justification', ''))}"
+                            )
+                            return None
                         leaf_depth = int(current_node.get("depth", 0))
                         # Register leaf confirmation for supersession (RA-3 #1048)
                         if supersession_tracker is not None:
@@ -989,7 +1004,7 @@ class FallacyWorkflowPlugin:
                             family=current_node.get("Famille", ""),
                             depth=leaf_depth,
                         )
-                    elif lr.get("function_name") == "conclude_no_fallacy":
+                    if func_name == "conclude_no_fallacy":
                         self.logger.info(
                             f"  Leaf not confirmed: {lr.get('reason', '')}"
                         )
@@ -1026,8 +1041,10 @@ class FallacyWorkflowPlugin:
             if parent_example:
                 options_text += f"  Example: {parent_example[:200]}\n"
             options_text += (
-                "  → Select this node AGAIN (confirm_fallacy with pk='{current_pk}') "
-                "if this level matches and you want to STOP here.\n"
+                "  → Select this node AGAIN "
+                f"(confirm_fallacy with node_pk='{current_pk}', matches=true) "
+                "if this level GENUINELY names the fallacy the text exhibits "
+                "and you want to STOP here.\n"
             )
 
             # FB-30 (#1107): multi-level cluster, not just immediate children.
@@ -1052,7 +1069,9 @@ class FallacyWorkflowPlugin:
                 "Choose ONE action:\n"
                 "- Call explore_branch(node_pk='<any_listed_pk>') to explore a node — "
                 "you may jump several levels deep by picking a grandchild/great-grandchild PK directly\n"
-                f"- Call confirm_fallacy(node_pk='{current_pk}', ...) to confirm THIS level and stop\n"
+                f"- Call confirm_fallacy(node_pk='{current_pk}', matches=true, "
+                "justification='...') when this level GENUINELY names the "
+                "fallacy the text exhibits, and you want to stop here\n"
                 "- Call conclude_no_fallacy(reason='...') if no match in this branch\n"
                 "You MUST call exactly one function."
             )
@@ -1065,17 +1084,22 @@ class FallacyWorkflowPlugin:
                     "Do NOT respond with text — only function calls.\n\n"
                     "CRITICAL MULTI-BRANCH INSTRUCTION:\n"
                     "1. When selecting among children, PREFER exploring MULTIPLE children (call explore_branch "
-                    "   multiple times) rather than confirming immediately at the current level.\n"
+                    "   multiple times) rather than stopping immediately at the current level.\n"
                     "2. Confirm at the current level when EITHER: (a) you are at a LEAF node, OR "
-                    "   (b) NO child matches even partially, OR (c) every available child is a NARROWER "
-                    "   SPECIALIZATION than the fallacy the text actually exhibits. For (c): if the "
+                    "   (c) every available child is a NARROWER SPECIALIZATION than the fallacy the "
+                    "   text actually exhibits. For (c): if the "
                     "   current node correctly names the fallacy but its children each describe a "
                     "   more specific sub-case the argument does NOT instantiate (e.g. the current "
                     "   node is 'circular reasoning' but the only child is a specific named variant "
                     "   like a Cartesian circle that the text is not), confirm the current node rather "
                     "   than descending to a leaf that will not match. Descending to a non-matching "
                     "   leaf only to then conclude_no_fallacy loses a correct classification.\n"
-                    "3. Do NOT call conclude_no_fallacy prematurely. The text likely contains "
+                    "3. A node that merely does not match is NOT a confirmation. If you stop here "
+                    "   because no child fits better — the node names a fallacy the text does not "
+                    "   genuinely exhibit — pass matches=false on confirm_fallacy, or call "
+                    "   conclude_no_fallacy: the branch is then recorded as unconfirmed, which is "
+                    "   the honest outcome. Never pass matches=true to avoid returning nothing.\n"
+                    "4. Do NOT call conclude_no_fallacy prematurely. The text likely contains "
                     "   fallacies in multiple branches. Abandon a branch only if you are CERTAIN "
                     "   there is no match at ANY descendant.\n\n"
                     "IMPORTANT: Only confirm a fallacy if the reasoning in the text is "
@@ -1141,11 +1165,29 @@ class FallacyWorkflowPlugin:
             # sub-branches instead of being silently dropped.
             confirm_result = None
             conclude_result = None
+            refused_result = None
             explore_targets: List[Tuple[str, dict]] = []  # (next_pk, node_info)
             for result in tool_results:
                 func_name = result.get("function_name", "")
-                if func_name == "confirm_fallacy" and result.get("confirmed"):
-                    confirm_result = result
+                if func_name == "confirm_fallacy":
+                    # #2972 — le verdict est lu sur le CHAMP ``confirmed``,
+                    # jamais sur la prose. Un appel avec ``matches=False``
+                    # rend ``confirmed: False`` : le modèle a dit non, et
+                    # c'est cette réponse qui décide. Sans cette branche,
+                    # l'appel ne tombait dans AUCUN cas et était ignoré en
+                    # silence (la boucle poursuivait, puis ``break`` sur des
+                    # cibles vides) — le refus devenait un abandon muet.
+                    #
+                    # Un appel qui n'a PAS rendu de verdict (échec d'exécution
+                    # → ``{"error": ...}``) n'est ni une confirmation ni un
+                    # refus : il est ignoré, comme avant, pour ne pas faire
+                    # passer un incident d'outil pour un jugement du modèle.
+                    if "confirmed" not in result:
+                        continue
+                    if result.get("confirmed"):
+                        confirm_result = result
+                    else:
+                        refused_result = result
                     break
                 elif func_name == "conclude_no_fallacy":
                     conclude_result = result
@@ -1212,6 +1254,23 @@ class FallacyWorkflowPlugin:
                     family=current_node.get("Famille", ""),
                     depth=confirmed_depth,
                 )
+
+            if refused_result is not None:
+                # #2972 — le modèle a rendu un verdict NÉGATIF sur ce nœud :
+                # rien n'est stocké comme confirmé, et le motif n'est pas
+                # perdu (il part dans l'historique de raisonnement qui suit
+                # les branches voisines et dans le log). C'est la sortie
+                # honnête que le prompt demandait de ne plus éviter.
+                reason = refused_result.get("reason") or refused_result.get(
+                    "justification", "no reason"
+                )
+                reasoning_summary = (
+                    f"Refused {current_node.get(f'text_{self.language}', current_pk)}: "
+                    f"{reason}"
+                )
+                reasoning_history.append(reasoning_summary)
+                self.logger.info(f"  Branch refused by the model's verdict: {reason}")
+                return None
 
             if conclude_result is not None:
                 reason = conclude_result.get("reason", "no reason")
