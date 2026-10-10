@@ -1258,15 +1258,31 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         arguments: List[str],
         attacks: List[List[str]],
         extensions: Optional[Dict[str, List[str]]] = None,
+        argument_labels: Optional[Dict[str, str]] = None,
+        argument_ids_absent_reason: Optional[str] = None,
     ) -> str:
-        """Add a Dung argumentation framework."""
+        """Add a Dung argumentation framework.
+
+        #3008 — ``arguments`` are the frame's NODES: unit ids (``arg_N``) on
+        a pipeline run. The argument's TEXT travels in ``argument_labels``
+        (``{node: label}``), a display label — never the identity: every
+        reader keyed by "opaque arg_id" (``native_dung.rejected_by_arg``)
+        reads the node. ``argument_ids_absent_reason`` names the honest case
+        where no population minted ids and the nodes carry no unit identity.
+        Optional fields are stored only when set (honest absence).
+        """
         df_id = self._generate_id("dung", self.dung_frameworks)
-        self.dung_frameworks[df_id] = {
+        entry: Dict[str, Any] = {
             "name": name,
             "arguments": arguments,
             "attacks": attacks,
             "extensions": extensions or {},
         }
+        if argument_labels is not None:
+            entry["argument_labels"] = argument_labels
+        if argument_ids_absent_reason is not None:
+            entry["argument_ids_absent_reason"] = argument_ids_absent_reason
+        self.dung_frameworks[df_id] = entry
         state_logger.info(
             f"Dung framework added: {df_id} ({len(arguments)} args, {len(attacks)} attacks)"
         )

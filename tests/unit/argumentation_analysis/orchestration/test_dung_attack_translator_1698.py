@@ -434,7 +434,11 @@ class TestTheFabricatedGraphNoLongerReachesTheReasoner:
         await _run_axis(fn_name, ctx)
 
         submitted = [c for c in calls if c["axis"] == axis][0]
-        assert submitted["attacks"] == [["Beta", "Alpha"]]
+        # #3008: the Dung axis submits the frame's NODES — the units' arg_N
+        # ids minted positionally over the same extract output (the text
+        # travels as a label). The other axes still submit canonical texts.
+        expected = [["arg_2", "arg_1"]] if axis == "dung" else [["Beta", "Alpha"]]
+        assert submitted["attacks"] == expected
         both_in = _retained_attacks(submitted["arguments"], submitted["attacks"])
         assert len(both_in) == 1
 
@@ -513,7 +517,14 @@ class TestTheAttackerIsNeverPromotedToANode:
         await _run_axis(fn_name, ctx)
 
         submitted = [c for c in calls if c["axis"] == axis][0]
-        assert list(submitted["arguments"]) == _ARGUMENTS
+        # #3008: the Dung axis's inventory is the same extraction, as unit ids
+        # (positional arg_N over the extract output); the other axes submit
+        # the canonical texts. In both worlds the inventory is the extracted
+        # population — never a promoted fallacy_* source.
+        expected_inventory = (
+            ["arg_1", "arg_2", "arg_3"] if axis == "dung" else _ARGUMENTS
+        )
+        assert list(submitted["arguments"]) == expected_inventory
         assert not [a for a in submitted["arguments"] if str(a).startswith("fallacy_")]
 
 

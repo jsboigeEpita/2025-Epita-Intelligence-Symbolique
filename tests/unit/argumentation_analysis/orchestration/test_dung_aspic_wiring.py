@@ -79,11 +79,17 @@ class TestInvokeDungExtensions:
                 mock_init.return_value = MagicMock()
                 result = await _invoke_dung_extensions("test text", context)
 
-        # Should have called analyze_multi_semantics with extracted arguments
+        # Should have called analyze_multi_semantics with extracted arguments.
+        # #3008: the frame's nodes are the units' arg_N ids, minted
+        # positionally over the extract output (no state object here); the
+        # texts travel as labels in the result's argument_labels.
         call_args = mock_handler.analyze_multi_semantics.call_args
         args_passed = call_args[0][0]  # First positional arg = arguments
-        assert len(args_passed) == 2
-        assert "impots" in args_passed[0].lower() or "impots" in args_passed[0]
+        assert args_passed == ["arg_1", "arg_2"]
+        assert result["argument_labels"] == {
+            "arg_1": "Les impots doivent augmenter",
+            "arg_2": "L'etat est endette",
+        }
 
     @pytest.mark.asyncio
     async def test_attacks_are_id_validated_never_minted_from_fallacies(self):
@@ -153,10 +159,14 @@ class TestInvokeDungExtensions:
         call_args = mock_handler.analyze_multi_semantics.call_args
         args_passed = call_args[0][0]
         attacks_passed = call_args[0][1]  # Second positional arg = attacks
-        assert attacks_passed == [[arguments[1], arguments[0]]]
+        # #3008: the nodes (and therefore the edges) are unit ids minted
+        # positionally over the same extract output; the invariant is
+        # unchanged — both endpoints are nodes, no fabricated fallacy_*
+        # source, the attacker was not promoted.
+        assert attacks_passed == [["arg_2", "arg_1"]]
         assert not [a for a in attacks_passed if "fallacy" in str(a).lower()]
         # The attacker is a node of the frame — it was not promoted into one.
-        assert list(args_passed) == arguments
+        assert list(args_passed) == ["arg_1", "arg_2"]
 
     @pytest.mark.asyncio
     async def test_returns_multi_semantics(self):
