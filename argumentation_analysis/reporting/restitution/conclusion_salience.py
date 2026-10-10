@@ -35,6 +35,13 @@ only a render whose structure CARRIES them is verifiable):
   conclusion renders the honest refusal — the reader-chair acceptance
   criterion (a report whose only multi-agent surplus is counters/labels
   must not claim a changed interpretive conclusion).
+* **Deliberation preference** (R1080 on #1914) — every route above is a
+  TEST-STRENGTH property; « the move the deliberation put first » is a
+  DISCOURSE property, and it had no route into the ranking at all (measured
+  on every saved state whose ranking is non-empty: the governance winner is
+  cited by no item). The vote winner now enters as its OWN kind — never
+  above a ``decisif``, surviving the cap — and is never presented as
+  established by a solver (see ``_deliberation_preference``).
 
 Privacy HARD: opaque ids only. Every item cites its anchors (same
 traceability contract as #1911's ``GlobalFinding`` and #1914's
@@ -47,6 +54,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
 from .fr_accord import accord
+from .cited_units import governance_origin
 from .specialist_roles import (
     ROLE_CONTRADICTOIRE,
     ROLE_CORROBORANT,
@@ -74,14 +82,22 @@ _STATEMENT_CAP = 160
 # evidence it beat a reading.
 _NON_LLM_SIGNALS = ("rejet dung", "jtms retracte")
 
-# Evidential weights — P1 carries the verdict, P3 accompanies it.
+# Evidential weights — P1 carries the verdict, P3 accompanies it. The
+# deliberation preference shares the tension tier: directly under the
+# decisive block, above the accompanying matter.
 _WEIGHT_DECISIVE = 1
 _WEIGHT_TENSION = 2
 _WEIGHT_ACCOMPANYING = 3
+_WEIGHT_PREFERENCE = 2
 
 KIND_VULNERABILITY = "vulnerabilite"
 KIND_TENSION = "tension"
 KIND_STRENGTH = "force"
+# R1080 on #1914 — the deliberation preference: the move the governance vote
+# put first. Neither a strength nor a vulnerability — the only DISCOURSE
+# property in the list, kept apart from what the solvers established.
+KIND_PREFERENCE = "preference"
+_PREFERENCE_CITE = "deliberation"
 
 # #2298 — the established-surplus natures (the aggregation key of the
 # persisted projection): how each item was established, not what it says.
@@ -300,11 +316,106 @@ def _assess_surplus(
     return SurplusAssessment(established=established, procedural_only=procedural)
 
 
+def _deliberation_preference(
+    state: Any, governance_verdict: Any
+) -> "SalienceItem | None":
+    """#1914 (R1080) — the deliberation's own entry into the ranking.
+
+    Every other route into ``ranked`` is a TEST-STRENGTH property (a refuted
+    axis, a corroborated weakness, an unchallenged strength). « The move the
+    deliberation put first » is a DISCOURSE property, and the Act III
+    contract asks it to be separated from what the solvers established —
+    measured on every saved state whose ranking is non-empty, the vote
+    winner had NO route into it.
+
+    Enters ONLY when the origin kind is ``vote`` (``governance_origin``,
+    #3000: the fallback origins write a strategy or a mediation type into
+    ``winner``, not a ranked unit — excluded, each with a witness) AND the
+    id resolves to an identified argument (``agent_1``-style designation
+    ids never resolve). The verdict is PASSED IN by
+    ``build_act3_evidence`` — this module never re-reads the
+    ``governance_decisions`` leaf (#1633, one reader per state leaf).
+    """
+    if governance_verdict is None:
+        return None
+    winner = getattr(governance_verdict, "winner", None)
+    prov = getattr(governance_verdict, "winner_provenance", None)
+    mprov = getattr(governance_verdict, "method_provenance", None)
+    _warning, _origin, _note, kind = governance_origin(prov, mprov)
+    if kind != "vote":
+        return None
+    wid = str(winner or "").strip()
+    args = getattr(state, "identified_arguments", None)
+    if not wid or not isinstance(args, dict) or wid not in args:
+        return None
+    return SalienceItem(
+        weight=_WEIGHT_PREFERENCE,
+        kind=KIND_PREFERENCE,
+        statement=_truncate(
+            f"{wid} : le coup que la délibération a placé en tête par son "
+            "vote — une préférence de délibération, pas une force établie "
+            "par un solveur.",
+            _STATEMENT_CAP,
+        ),
+        cites=(wid, _PREFERENCE_CITE),
+    )
+
+
+def _apply_deliberation_preference(
+    ranked: List[SalienceItem], pref: SalienceItem
+) -> List[SalienceItem]:
+    """Graft the deliberation preference onto the capped ranking.
+
+    Never above a ``decisif`` — it inserts directly under the decisive
+    block. It SURVIVES the cap: when the test-strength items fill
+    ``_MAX_RANKED``, the preference displaces accompanying items from the
+    tail, never a decisive one and never itself (the one corner where both
+    cannot hold — a decisive block that alone saturates the cap — keeps the
+    preference one bounded row over, rather than silently dropping the only
+    discourse property). An item that already cites the winner is ANNOTATED
+    in place: the annotation is carved OUT of the statement budget so
+    truncation can never eat it (the #2960 discipline), and the
+    ``deliberation`` anchor travels on that row — no duplicate.
+    """
+    wid = pref.cites[0]
+    for idx, item in enumerate(ranked):
+        if wid in item.cites:
+            suffix = (
+                " — aussi le coup que la délibération a placé en tête par "
+                "son vote (préférence de délibération, pas une force établie "
+                "par un solveur)."
+            )
+            budget = max(0, _STATEMENT_CAP - len(suffix))
+            ranked[idx] = SalienceItem(
+                weight=item.weight,
+                kind=item.kind,
+                statement=_truncate(item.statement, budget).rstrip() + suffix,
+                cites=tuple(item.cites) + (_PREFERENCE_CITE,),
+            )
+            return ranked
+    pos = sum(1 for i in ranked if i.weight == _WEIGHT_DECISIVE)
+    ranked.insert(pos, pref)
+    while len(ranked) > _MAX_RANKED:
+        cut = next(
+            (
+                j
+                for j in range(len(ranked) - 1, -1, -1)
+                if ranked[j] is not pref and ranked[j].weight != _WEIGHT_DECISIVE
+            ),
+            None,
+        )
+        if cut is None:
+            break
+        del ranked[cut]
+    return ranked
+
+
 def assess_conclusion_salience(
     state: Any,
     structured_findings: Iterable[Any] = (),
     global_findings: Iterable[Any] = (),
     counters_total: int = 0,
+    governance_verdict: Any = None,
 ) -> ConclusionSalience:
     """Derive the Acte III salience bundle (ranking + zero-shot surplus).
 
@@ -313,7 +424,10 @@ def assess_conclusion_salience(
     derives (StructuredArgFinding / GlobalFinding) — passed in rather than
     recomputed so there is exactly one reader per state leaf (the #1633
     lesson). ``counters_total`` is the same honest count the evidence
-    bundle carries.
+    bundle carries. ``governance_verdict`` is the already-collected
+    governance verdict (``_collect_governance``'s output), passed in for
+    the deliberation-preference route (#1914 / R1080) — this module never
+    re-reads the ``governance_decisions`` leaf itself.
     """
     roles = classify_specialist_roles(state)
     by_role = {role: [a for a in roles if a.role == role] for role in ROLE_ORDER}
@@ -348,6 +462,12 @@ def assess_conclusion_salience(
         )
     ranked.extend(_unchallenged_strengths(state))
     ranked = ranked[:_MAX_RANKED]
+    # R1080 on #1914 — the deliberation preference, grafted AFTER the cap so
+    # it survives it (never above a decisif; annotate-not-duplicate when the
+    # winner is already cited — see ``_apply_deliberation_preference``).
+    pref = _deliberation_preference(state, governance_verdict)
+    if pref is not None:
+        ranked = _apply_deliberation_preference(ranked, pref)
 
     surplus = _assess_surplus(
         roles, structured_findings, global_findings, counters_total
