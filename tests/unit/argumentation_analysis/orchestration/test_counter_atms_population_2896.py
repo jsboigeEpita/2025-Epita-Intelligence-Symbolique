@@ -69,7 +69,7 @@ def test_counter_targets_reach_beyond_the_window(monkeypatch):
     state = _population_state()
     captured: dict = {}
 
-    async def _capture(client, model_id, targets):
+    async def _capture(client, model_id, targets, **kwargs):
         captured["targets"] = list(targets)
         return []
 

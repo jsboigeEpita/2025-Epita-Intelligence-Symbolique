@@ -121,7 +121,12 @@ class TestInvokeJtmsRetractionPath:
 
     @pytest.mark.asyncio
     async def test_fallback_index_retraction(self):
-        """When fallacy has no target_argument, fallback idx maps fallacy to arg."""
+        """#2968 — the positional fallback is RETIRED: a fallacy with no
+        resolvable target retracts NOTHING. The old contract mapped fallacy
+        i onto arg min(i, n-1) — an index is not an identity, and the
+        measured run showed that guess undermining wrong units (27/48
+        counters mislinked by the same family). The fallacy belief itself
+        still exists; no argument loses validity on a guess (#1019)."""
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_jtms,
         )
@@ -150,15 +155,17 @@ class TestInvokeJtmsRetractionPath:
         result = await _invoke_jtms("Test input text", context)
         beliefs = result["beliefs"]
 
-        # Fallacies without target_argument use fallback: min(i, len(arg_beliefs)-1)
-        # Fallacy 0 → arg_1, Fallacy 1 → arg_2
-        # After retraction: arg_1 and arg_2 should have valid=False
         retracted = [
             name
             for name, b in beliefs.items()
             if isinstance(b, dict) and b.get("valid") is False
         ]
-        assert len(retracted) >= 2  # At least 2 args retracted
+        assert retracted == [], (
+            "fallacies with no resolvable target must retract nothing — "
+            f"retracted: {retracted}"
+        )
+        # The fallacy beliefs themselves are recorded, honestly unlinked
+        assert any(name.startswith("FALLACY:") for name in beliefs)
 
     @pytest.mark.asyncio
     async def test_text_matching_retraction(self):
@@ -181,7 +188,7 @@ class TestInvokeJtmsRetractionPath:
                     {
                         "type": "ad hominem",
                         "confidence": 0.9,
-                        "target_argument": "policy causes harm",
+                        "target_argument": "The policy causes harm to many people",
                     },
                 ],
             },
@@ -193,7 +200,10 @@ class TestInvokeJtmsRetractionPath:
         result = await _invoke_jtms("Test input text", context)
         beliefs = result["beliefs"]
 
-        # arg_1 belief should be retracted (matches "policy causes harm")
+        # #2968: the target is the unit's FULL TEXT — an exact
+        # identification. (The old fixture's 18-char substring needle no
+        # longer links: substrings count only when ≥ 20 chars and unique,
+        # the discipline that stopped one-word echoes mislinking units.)
         arg1_name = [n for n in beliefs if n.startswith("arg_1:")][0]
         assert beliefs[arg1_name]["valid"] is False
 

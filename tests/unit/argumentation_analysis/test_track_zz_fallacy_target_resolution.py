@@ -251,6 +251,11 @@ class TestInvokeJtmsQuoteFallback:
 
     @pytest.mark.asyncio
     async def test_target_argument_still_works(self):
+        """#2968 — prose targeting still links, through an IDENTIFICATION:
+        the target is the unit's full text (exact equality on the belief's
+        text part). The old fixture's one-word needle ("economy", 7 chars)
+        linked by first-hit containment — the mislink family this PR
+        retires; a short echo now resolves nothing instead of a unit."""
         from argumentation_analysis.orchestration.invoke_callables import _invoke_jtms
 
         context = {
@@ -267,7 +272,7 @@ class TestInvokeJtmsQuoteFallback:
                     {
                         "type": "straw man",
                         "confidence": 0.85,
-                        "target_argument": "economy",
+                        "target_argument": "Second argument about economy",
                     },
                 ],
             },
@@ -281,6 +286,29 @@ class TestInvokeJtmsQuoteFallback:
 
         arg2_name = [n for n in beliefs if n.startswith("arg_2:")][0]
         assert beliefs[arg2_name]["valid"] is False
+
+        # The retired form, witnessed the other way: a 7-char echo that
+        # merely CONTAINS itself in one belief resolves nothing.
+        echo_context = {
+            **context,
+            "phase_hierarchical_fallacy_output": {
+                "fallacies": [
+                    {
+                        "type": "straw man",
+                        "confidence": 0.85,
+                        "target_argument": "economy",
+                    },
+                ],
+            },
+        }
+        result2 = await _invoke_jtms("Test input text", echo_context)
+        beliefs2 = result2["beliefs"]
+        retracted2 = [
+            n
+            for n, b in beliefs2.items()
+            if isinstance(b, dict) and b.get("valid") is False
+        ]
+        assert retracted2 == [], f"a short echo must not link: retracted {retracted2}"
 
 
 class TestEndToEndSignal4WithQuoteResolution:
