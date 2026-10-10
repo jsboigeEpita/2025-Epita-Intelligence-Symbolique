@@ -311,7 +311,10 @@ class TestStateWriterEvaluationScore:
         assert state.counter_arguments[0]["score"] == 0.9  # strong → 0.9
 
     def test_governance_state_writer_uses_vote_winner(self):
-        """Governance state writer uses vote_result winner and Copeland scores."""
+        """Governance state writer uses vote_result winner and the GE-4
+        support population (#3001 — the former ``copeland_scores`` fixture
+        fed a key production never sets: the one writer of
+        ``output["vote_result"]`` builds it without that key)."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _write_governance_to_state,
         )
@@ -325,7 +328,21 @@ class TestStateWriterEvaluationScore:
             "resolutions": [],
             "vote_result": {
                 "winner": "agent_1",
-                "copeland_scores": {"agent_1": 1, "agent_2": 0},
+                "votes": ["agent_1", "agent_1", "agent_2"],
+                "method": "formal-aggregation",
+                "results": {
+                    "winners_per_method": {
+                        "majority": "agent_1",
+                        "borda": "agent_1",
+                        "plurality": "agent_2",
+                    },
+                    "n_methods_decided": 3,
+                    "distinct_winners": ["agent_1", "agent_2"],
+                    "inter_method_disagreement": True,
+                    "condorcet_winner": None,
+                    "winner": "agent_1",
+                    "winner_basis": "majority",
+                },
             },
         }
         _write_governance_to_state(output, state, {})
@@ -333,4 +350,9 @@ class TestStateWriterEvaluationScore:
         assert len(state.governance_decisions) == 1
         decision = state.governance_decisions[0]
         assert decision["winner"] == "agent_1"
-        assert decision["scores"]["agent_1"] == 1.0
+        assert decision["winner_provenance"] == "vote_aggregate"
+        assert decision["support_by_option"] == {"agent_1": 2, "agent_2": 1}
+        assert decision["n_methods_decided"] == 3
+        assert decision["winner_basis"] == "majority"
+        # honest shape since #3001: a GE-4 vote records NO option scores
+        assert decision["scores"] == {}

@@ -339,6 +339,14 @@ class GovernanceVerdict:
     # (unrecorded). This is what the narrative frames on.
     winner_provenance: Optional[str] = None
     method_provenance: Optional[str] = None
+    # #3001 (a′) — HOW SOLID the vote was: per-option support across the
+    # deciding methods, the count of deciding methods, and the tier that
+    # decided (condorcet → majority → plurality, #2300). Rendered
+    # QUALITATIVELY by cited_units.qualitative_support_band (#1914 — never
+    # a counter); vote-origin records only, honest absence otherwise.
+    support_by_option: Dict[str, int] = field(default_factory=dict)
+    n_methods_decided: Optional[int] = None
+    winner_basis: Optional[str] = None
 
 
 @dataclass
@@ -878,6 +886,22 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
         method_provenance = (
             str(mp_raw).strip() if isinstance(mp_raw, str) and mp_raw.strip() else None
         )
+        # #3001 (a′) — the support population (vote records only; honest
+        # absence when the record carries none).
+        raw_support = d.get("support_by_option", {}) or {}
+        support_by_option: Dict[str, int] = {}
+        if isinstance(raw_support, dict):
+            for k, v in raw_support.items():
+                if isinstance(v, int) and v > 0:
+                    support_by_option[str(k)] = v
+        n_raw = d.get("n_methods_decided")
+        n_methods_decided = n_raw if isinstance(n_raw, int) and n_raw > 0 else None
+        wb_raw = d.get("winner_basis")
+        winner_basis = (
+            str(wb_raw).strip()
+            if isinstance(wb_raw, str) and str(wb_raw).strip()
+            else None
+        )
         chosen = GovernanceVerdict(
             method=method,
             winner=winner,
@@ -890,6 +914,10 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
             ],
             winner_provenance=winner_provenance,
             method_provenance=method_provenance,
+            # #3001 — the qualitative robustness band's inputs.
+            support_by_option=support_by_option,
+            n_methods_decided=n_methods_decided,
+            winner_basis=winner_basis,
         )
     return chosen
 
@@ -1493,12 +1521,21 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
             gv.winner_provenance,
             gv.method_provenance,
             tail="(noms d'options maintenus opaques — discipline FB-34.)",
+            # #3001 (a′) — the robustness band's inputs (vote only).
+            support_by_option=gv.support_by_option,
+            n_methods_decided=gv.n_methods_decided,
+            winner_basis=gv.winner_basis,
         )
         # #2969 / #2989 rework: a divergent vote is part of the verdict —
         # name every distinct winner by WHAT IT SAYS (an id only when its
         # text is not localizable), never reduce it to one "leading
-        # argument" the methods never agreed on.
-        divergence = render_divergence_clause(evidence.governance_divergent_texts)
+        # argument" the methods never agreed on. #3001: each winner's
+        # qualitative support travels beside its text.
+        divergence = render_divergence_clause(
+            evidence.governance_divergent_texts,
+            support_by_option=gv.support_by_option,
+            n_methods_decided=gv.n_methods_decided,
+        )
         if divergence:
             gov_lead += divergence
         if gov_warning:

@@ -1282,6 +1282,9 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         stakeholder_scores: Optional[Dict[str, float]] = None,
         winner_provenance: Optional[str] = None,
         method_provenance: Optional[str] = None,
+        support_by_option: Optional[Dict[str, int]] = None,
+        n_methods_decided: Optional[int] = None,
+        winner_basis: Optional[str] = None,
     ) -> str:
         """Add a governance voting decision.
 
@@ -1306,6 +1309,15 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         resolution is not a genuine multi-agent deliberation lives with that
         framing, in ``reporting/restitution/cited_units.governance_origin`` —
         never on ``extraction_method`` (#2965, #3002).
+
+        #3001 (a′) — HOW SOLID the vote was travels in the support population:
+        ``support_by_option`` (how many deciding methods chose each option,
+        tallied from the aggregate's ``winners_per_method``),
+        ``n_methods_decided`` and ``winner_basis`` (the tier that decided —
+        condorcet → majority → plurality, #2300). Restitution renders this
+        QUALITATIVELY (``cited_units.qualitative_support_band``), never as a
+        counter (#1914).
+
         Optional fields are stored only when set (honest absence).
         """
         gd_id = self._generate_id("gov", self.governance_decisions)
@@ -1325,6 +1337,12 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             entry["winner_provenance"] = winner_provenance
         if method_provenance:
             entry["method_provenance"] = method_provenance
+        if support_by_option:
+            entry["support_by_option"] = dict(support_by_option)
+        if n_methods_decided is not None:
+            entry["n_methods_decided"] = n_methods_decided
+        if winner_basis:
+            entry["winner_basis"] = winner_basis
         self.governance_decisions.append(entry)
         state_logger.info(f"Governance decision added: {gd_id} ({method}: {winner})")
         return gd_id

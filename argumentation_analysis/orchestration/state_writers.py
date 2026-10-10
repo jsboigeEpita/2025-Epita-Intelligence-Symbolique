@@ -746,19 +746,46 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
     winner = "N/A"
     winner_provenance = "unresolved"
     winners: list[str] = []
+    # #3001 (a′, R1079) — the GE-4 support population: how many deciding
+    # methods chose each option (tallied from ``winners_per_method``), how
+    # many methods decided, and the tier that decided (#2300). The R1077
+    # census measured this population was dropped before the record, so
+    # "11/12" and "the plurality fallback tier only" read identically.
+    support_by_option: dict[str, int] = {}
+    n_methods_decided: int | None = None
+    winner_basis: str | None = None
     if isinstance(vote_result, dict) and vote_result.get("winner"):
         winner = str(vote_result["winner"])
         winner_provenance = "vote_aggregate"
-        # (#294) The vote's own option scores — the only population here.
-        copeland_scores = vote_result.get("copeland_scores", {})
-        if isinstance(copeland_scores, dict):
-            for agent, cscore in copeland_scores.items():
-                scores[str(agent)] = float(cscore)
+        # #3001 — the former ``copeland_scores`` read is GONE (measured:
+        # ``output["vote_result"]`` has ONE production writer,
+        # invoke_callables.py:2705-2710, which never sets that key; the
+        # plugin path governance_plugin.py:153 answers the LLM agent, it
+        # does not feed the writer). Scoped on purpose (cross-review
+        # #3006): ``social_choice_vote``'s copeland branch DOES return
+        # that key, as a JSON tool result in the agent loop — a different
+        # surface that never meets the aggregated ``vote_result``. The
+        # exact claim is "the producer that writes
+        # ``output["vote_result"]`` never sets this key", not "the repo
+        # never produces it". ``scores`` keeps its honest shape:
+        # no option scores recorded on a GE-4 vote.
         verdict = vote_result.get("results", {})
         if isinstance(verdict, dict):
             distinct = verdict.get("distinct_winners", [])
             if verdict.get("inter_method_disagreement") and isinstance(distinct, list):
                 winners = [str(w) for w in distinct if w]
+            wpm = verdict.get("winners_per_method")
+            if isinstance(wpm, dict):
+                for chosen in wpm.values():
+                    if chosen:
+                        key = str(chosen)
+                        support_by_option[key] = support_by_option.get(key, 0) + 1
+            n_decided = verdict.get("n_methods_decided")
+            if isinstance(n_decided, int) and n_decided > 0:
+                n_methods_decided = n_decided
+            basis = verdict.get("winner_basis")
+            if isinstance(basis, str) and basis.strip():
+                winner_basis = basis.strip()
     elif llm_gov.get("recommended_resolution"):
         winner = str(llm_gov["recommended_resolution"])
         winner_provenance = "llm_resolution"
@@ -789,6 +816,11 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
         stakeholder_scores=stakeholder_scores,
         winner_provenance=winner_provenance,
         method_provenance=method_provenance,
+        # #3001 — the vote's support population, stored only when the
+        # verdict carried it (honest absence for a bare vote_result).
+        support_by_option=support_by_option or None,
+        n_methods_decided=n_methods_decided,
+        winner_basis=winner_basis,
     )
 
 

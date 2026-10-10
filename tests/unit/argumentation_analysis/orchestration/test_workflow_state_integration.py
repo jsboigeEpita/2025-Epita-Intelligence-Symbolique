@@ -202,10 +202,9 @@ class TestStateWriters:
         state = UnifiedAnalysisState("test")
         output = {
             "available_methods": ["majority", "borda", "condorcet"],
-            "vote_result": {
-                "winner": "arg_2",
-                "copeland_scores": {"arg_2": 1.0},
-            },
+            # #3001 — a bare vote_result (no copeland_scores: production
+            # never sets that key) is enough: the VOTE is the population.
+            "vote_result": {"winner": "arg_2", "method": "formal-aggregation"},
         }
         ctx = {}
         _write_governance_to_state(output, state, ctx)

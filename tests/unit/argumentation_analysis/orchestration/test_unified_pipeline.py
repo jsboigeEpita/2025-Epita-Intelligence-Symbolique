@@ -1804,7 +1804,9 @@ class TestStateWriters:
         state = self._make_state()
         output = {
             "available_methods": ["majority", "borda"],
-            "vote_result": {"winner": "agent_1", "copeland_scores": {"agent_1": 1}},
+            # #3001 — a bare vote_result (no copeland_scores: production
+            # never sets that key) is enough: the VOTE is the population.
+            "vote_result": {"winner": "agent_1", "method": "formal-aggregation"},
         }
         _write_governance_to_state(output, state, {})
         assert len(state.governance_decisions) == 1
