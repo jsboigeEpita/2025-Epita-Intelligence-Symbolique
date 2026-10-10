@@ -435,7 +435,18 @@ def _resolve_target_arg_id(state: Any, target_text: str) -> Optional[str]:
     """Resolve target text to an arg_id from identified_arguments.
 
     Checks exact ID match first, then text-based matching.
-    Returns None if no match found.
+
+    #2968: the SUBSTRING branch requires a needle that is LONG (≥ 20 chars)
+    and UNIQUE across the identified arguments. The old unconstrained
+    substring let a one-character echo ("1" — the number the counter prompt
+    used to ask for) resolve to the first description containing a "1": 27
+    of 48 counters on the measured run pointed at a wrong unit. A short or
+    ambiguous needle resolves to None — the caller must not guess (#1019).
+    The long-unique case stays: wide-net fallacy payloads carry no id and a
+    ``problematic_quote`` quoted from one argument grounds the link (#1167
+    D1a). An EXACT text equality is an identification, not a guess — it is
+    never length-gated (a producer naming the unit's full text links it
+    however short that text is; #2968 rework, explicit-target witness).
     """
     if not target_text:
         return None
@@ -443,19 +454,24 @@ def _resolve_target_arg_id(state: Any, target_text: str) -> Optional[str]:
     # Direct ID match
     if target_text in arguments:
         return str(target_text)
-    # Text-based matching (same heuristic as get_enrichment_summary)
-    for arg_id, desc in arguments.items():
-        if not desc:
-            continue
-        match_prefix = desc[:60]
-        if (
-            target_text == desc
-            or target_text[:60] == match_prefix
-            or match_prefix in target_text
-            or target_text in desc
-        ):
-            return str(arg_id)
-    return None
+    # Exact text equality — unambiguous identification, no length gate
+    exact = [
+        str(arg_id)
+        for arg_id, desc in arguments.items()
+        if desc and target_text == desc
+    ]
+    if len(exact) == 1:
+        return exact[0]
+    # Substring/containment — unique and long only (#2968)
+    needle = target_text.strip()
+    if len(needle) < 20:
+        return None
+    matches = [
+        str(arg_id)
+        for arg_id, desc in arguments.items()
+        if desc and (desc[:60] in target_text or target_text in desc)
+    ]
+    return matches[0] if len(matches) == 1 else None
 
 
 def resolve_fallacy_target_arg_id(state: Any, fallacy: Dict[str, Any]) -> Optional[str]:
@@ -515,7 +531,20 @@ def _write_counter_argument_to_state(
         for llm_ca in llm_cas:
             if not isinstance(llm_ca, dict) or not llm_ca.get("counter_argument"):
                 continue
-            target = str(llm_ca.get("target_argument", ""))[:200]
+            # #2968: the identity is the VALIDATED id the producer stamped
+            # (offered by the batch, echoed back). The free-text echo resolves
+            # nothing — no substring, no first-match.
+            arg_id = llm_ca.get("target_unit_id")
+            if not (isinstance(arg_id, str) and arg_id in _identified_arguments(state)):
+                arg_id = None
+                unresolved = llm_ca.get("target_unresolved_reason") or (
+                    "target id absent from the run's identified arguments"
+                )
+            else:
+                unresolved = None
+            target = str(
+                llm_ca.get("target_text") or llm_ca.get("target_argument", "")
+            )[:200]
             counter_text = str(llm_ca.get("counter_argument", ""))
             strategy_name = str(llm_ca.get("strategy_used", "unknown"))
             # (#294) Use evaluation score if available, else fallback to strength map
@@ -530,7 +559,6 @@ def _write_counter_argument_to_state(
             validation = llm_ca.get("validation")
             if not isinstance(validation, dict):
                 validation = None
-            arg_id = _resolve_target_arg_id(state, target)
             state.add_counter_argument(
                 target,
                 counter_text,
@@ -538,20 +566,31 @@ def _write_counter_argument_to_state(
                 score,
                 target_arg_id=arg_id,
                 validation=validation,
+                target_unresolved_reason=unresolved,
             )
         return
 
     # Backward compat: single LLM counter-argument
     llm_ca = output.get("llm_counter_argument")
     if isinstance(llm_ca, dict) and llm_ca.get("counter_argument"):
-        target = str(llm_ca.get("target_argument", ""))[:200]
+        # #2968: same validated-id rule as the list branch
+        arg_id = llm_ca.get("target_unit_id")
+        if not (isinstance(arg_id, str) and arg_id in _identified_arguments(state)):
+            arg_id = None
+            unresolved = llm_ca.get("target_unresolved_reason") or (
+                "target id absent from the run's identified arguments"
+            )
+        else:
+            unresolved = None
+        target = str(llm_ca.get("target_text") or llm_ca.get("target_argument", ""))[
+            :200
+        ]
         counter_text = str(llm_ca.get("counter_argument", ""))
         strategy_name = str(llm_ca.get("strategy_used", "unknown"))
         score = strength_map.get(str(llm_ca.get("strength", "")).lower(), 0.5)
         validation = llm_ca.get("validation")
         if not isinstance(validation, dict):
             validation = None
-        arg_id = _resolve_target_arg_id(state, target)
         state.add_counter_argument(
             target,
             counter_text,
@@ -559,6 +598,7 @@ def _write_counter_argument_to_state(
             score,
             target_arg_id=arg_id,
             validation=validation,
+            target_unresolved_reason=unresolved,
         )
         return
 

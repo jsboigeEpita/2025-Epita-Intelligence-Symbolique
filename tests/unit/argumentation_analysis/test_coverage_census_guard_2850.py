@@ -1099,11 +1099,6 @@ REGISTRY = {
         "first 50 chars of an already-produced string",
         "display only",
     ),
-    ("argumentation_analysis/orchestration/state_writers.py", "target_text", "60", 1): (
-        "window",
-        "argument resolution matches on a 60-char prefix only",
-        "silent — debt #2850",
-    ),
     (
         "argumentation_analysis/orchestration/structured_arg_translator.py",
         "selected_text",
