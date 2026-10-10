@@ -135,31 +135,80 @@ class ExplorationPlugin:
     @kernel_function(
         name="confirm_fallacy",
         description=(
-            "Confirm that a specific taxonomy node is the identified fallacy. "
-            "Call this when you are confident that the current node matches "
-            "the fallacy in the analyzed text. Provide justification."
+            "Record your verdict on a specific taxonomy node. Pass "
+            "matches=true when the analyzed text genuinely exhibits THIS "
+            "node's fallacy. Pass matches=false when you are stopping here "
+            "only because no child of this node fits better: the branch is "
+            "then recorded as UNconfirmed with your justification as its "
+            "reason, exactly as conclude_no_fallacy would. The verdict is a "
+            "field, so it is never inferred from the wording of your "
+            "justification."
         ),
     )
     def confirm_fallacy(
         self,
-        node_pk: Annotated[str, "The PK of the confirmed fallacy node"],
+        node_pk: Annotated[str, "The PK of the fallacy node you are judging"],
         confidence: Annotated[
             str,
             "Confidence: a number between 0.0 and 1.0 (as the leaf prompt "
             "specifies), or a level 'high'/'medium'/'low'",
         ] = "medium",
-        justification: Annotated[str, "Why this fallacy matches the text"] = "",
-    ) -> Annotated[str, "Confirmation result"]:
-        """Confirm a fallacy identification with justification."""
+        matches: Annotated[
+            bool,
+            "true ONLY if the text genuinely exhibits this node's fallacy. "
+            "false if you stop here for lack of a better-fitting child — the "
+            "branch is then abandoned, not confirmed",
+        ] = True,
+        justification: Annotated[str, "Why this verdict holds for the text"] = "",
+    ) -> Annotated[str, "Verdict result"]:
+        """Record the verdict on a node, with the justification that supports it.
+
+        #2972 — le verdict est un CHAMP (``matches``), pas la prose. La
+        descente payante du 06/10 a stocké 5 sophismes « confirmés » à
+        ``confidence 0.90`` dont la justification disait le contraire (« ne
+        correspond pas », « pas réellement instancié ») : le modèle écrivait
+        « non » en prose tout en appelant ``confirm``, parce que le prompt
+        feuille lui demandait de confirmer faute de mieux. Aucun garde ne
+        comparait les deux, et une regex sur la prose n'est pas un détecteur
+        acceptable (mesuré : 4 des 5, plus 1 faux positif).
+
+        ``matches=False`` rend ``confirmed: False`` — la descente lit alors
+        ce champ et abandonne la branche comme si ``conclude_no_fallacy``
+        avait été appelé. Le verdict est TOUJOURS renvoyé dans le résultat,
+        pour qu'aucun lecteur n'ait à interpréter la prose.
+
+        Défaut ``True`` : mesuré sur les cassettes commitées, les appels
+        ``confirm_fallacy`` enregistrés portent exactement ``node_pk``,
+        ``confidence``, ``justification``. Un champ requis ferait échouer
+        chaque rejeu de ces appels (argument manquant) — la bande rougirait
+        pour une raison étrangère au fix. L'absence de verdict vaut donc la
+        sémantique d'avant #2972, et c'est le prompt qui rend la réponse
+        obligatoire.
+        """
         node = self.taxonomy_navigator.get_node(node_pk)
         if not node:
             return json.dumps({"error": f"Node {node_pk} not found"})
 
         confidence_score, confidence_note = _confidence_score(confidence)
 
+        if not matches:
+            refusal = {
+                "confirmed": False,
+                "matches": False,
+                "reason": justification,
+                "pk": node.get("PK", ""),
+                "path": node.get("path", ""),
+                "confidence": confidence_score,
+                "justification": justification,
+            }
+            if confidence_note:
+                refusal["confidence_note"] = confidence_note
+            return json.dumps(refusal, ensure_ascii=False)
+
         lang = self.language
         result = {
             "confirmed": True,
+            "matches": True,
             "pk": node.get("PK", ""),
             "path": node.get("path", ""),
             "name": (

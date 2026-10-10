@@ -2904,8 +2904,13 @@ class TestHierarchicalFallacyWorkflow:
         # Check that taxonomy info is in the justification
         fallacy_values = list(state.identified_fallacies.values())
         assert "[taxonomy:99]" in fallacy_values[0]["justification"]
-        assert "[confidence:0.80]" in fallacy_values[0]["justification"]
         assert "[trace:1>5>99]" in fallacy_values[0]["justification"]
+        # #2972 — la confiance est un CHAMP. Elle était repliée dans la
+        # justification (« [confidence:0.80] ») : aucun lecteur ne pouvait
+        # filtrer dessus, et ce test fixait cette forme comme attendue.
+        assert fallacy_values[0]["confidence"] == 0.8
+        assert fallacy_values[1]["confidence"] == 0.6
+        assert "[confidence:" not in fallacy_values[0]["justification"]
 
     def test_state_writer_hierarchical_fallacy_empty(self):
         """_write_hierarchical_fallacy_to_state handles empty output."""

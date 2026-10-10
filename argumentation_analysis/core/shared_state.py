@@ -358,14 +358,31 @@ class RhetoricalAnalysisState:
         target_arg_id: Optional[str] = None,
         family: str = "",
         taxonomy_path: str = "",
+        confidence: Optional[float] = None,
+        problematic_quote: Optional[str] = None,
     ) -> str:
-        """Ajoute un sophisme identifié et retourne son ID."""
+        """Ajoute un sophisme identifié et retourne son ID.
+
+        ``confidence`` et ``problematic_quote`` sont des CHAMPS, pas de la
+        prose (#2972). Le writer de la descente hiérarchique repliait la
+        confiance dans la justification (``[confidence:0.90]``) : aucun
+        lecteur ne pouvait filtrer dessus, et un lecteur qui voulait trier
+        les confirmations devait parser du texte. Mesuré avant le
+        déplacement : zéro lecteur de ce marqueur dans le dépôt.
+
+        ``None`` et ``0.0`` restent distincts : une lane qui n'a pas mesuré
+        de confiance n'en déclare pas une nulle (famille #1019).
+        """
         fallacy_id = self._generate_id("fallacy", self.identified_fallacies)
-        entry = {"type": fallacy_type, "justification": justification}
+        entry: Dict[str, Any] = {"type": fallacy_type, "justification": justification}
         if family:
             entry["family"] = family
         if taxonomy_path:
             entry["taxonomy_path"] = taxonomy_path
+        if confidence is not None:
+            entry["confidence"] = float(confidence)
+        if problematic_quote:
+            entry["problematic_quote"] = str(problematic_quote)
         log_target_info = ""
         if target_arg_id:
             if target_arg_id not in self.identified_arguments:

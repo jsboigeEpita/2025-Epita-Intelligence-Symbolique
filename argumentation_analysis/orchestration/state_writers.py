@@ -871,15 +871,22 @@ def _write_hierarchical_fallacy_to_state(
             except ImportError:
                 pass  # adapter unavailable — keep LLM explanation as-is
         taxonomy_pk = f.get("taxonomy_pk", "")
-        confidence = f.get("confidence", 0.0)
+        # #2972 — la confiance et la citation problématique sont des CHAMPS.
+        # Elles étaient repliées dans la justification (``[confidence:0.90]``,
+        # mesuré : zéro lecteur de ce marqueur) et la citation était perdue.
+        # ``None`` reste None : une descente qui n'a pas rendu de confiance
+        # n'en déclare pas une nulle, et 0.0 mesuré reste 0.0 (#1019).
+        raw_confidence = f.get("confidence")
+        confidence = (
+            float(raw_confidence) if isinstance(raw_confidence, (int, float)) else None
+        )
+        problematic_quote = f.get("problematic_quote", "")
         trace = f.get("navigation_trace", [])
         family = f.get("family", "")
         taxonomy_path = f.get("taxonomy_path", "")
         full_justification = justification
         if taxonomy_pk:
             full_justification += f" [taxonomy:{taxonomy_pk}]"
-        if confidence:
-            full_justification += f" [confidence:{confidence:.2f}]"
         if trace:
             full_justification += f" [trace:{'>'.join(trace)}]"
         # Resolve target argument through the resolution shared with the
@@ -892,6 +899,8 @@ def _write_hierarchical_fallacy_to_state(
             target_arg_id=target_arg_id,
             family=family,
             taxonomy_path=taxonomy_path,
+            confidence=confidence,
+            problematic_quote=problematic_quote,
         )
 
     # FB-35 (#1121): state-level fail-loud marker when the agentic descent was
