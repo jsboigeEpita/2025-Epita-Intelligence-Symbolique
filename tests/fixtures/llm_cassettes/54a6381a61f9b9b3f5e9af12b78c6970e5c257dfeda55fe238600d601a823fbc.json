@@ -1,0 +1,48 @@
+{
+  "key": "54a6381a61f9b9b3f5e9af12b78c6970e5c257dfeda55fe238600d601a823fbc",
+  "value": {
+    "id": "chatcmpl-EXZMm39zRB167PNHPELq9zU4GWpv0",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Les modèles prédictifs sont unanimes quant à l’impact des activités humaines sur le climat.\\n2. Les personnes qui minimisent la crise climatique utilisent souvent des données sélectives pour soutenir leur position.\\n3. La transition énergétique est nécessaire et économiquement avantageuse à long terme.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791669480,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 134,
+      "prompt_tokens": 227,
+      "total_tokens": 361,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 59,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

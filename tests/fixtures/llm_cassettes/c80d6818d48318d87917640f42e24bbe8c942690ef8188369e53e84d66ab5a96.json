@@ -1,0 +1,40 @@
+{
+  "key": "c80d6818d48318d87917640f42e24bbe8c942690ef8188369e53e84d66ab5a96",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_bZG9VdRMNhN4cewwgF38uZ4I",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"34\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"L'énoncé rapporte seulement l'affirmation du président qu'une politique est un succès; il ne fournit aucun événement isolé servant de preuve ni généralisation fondée sur une anecdote.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EXZCEoBnlYgP7maP7JE5DsieEYQ9C",
+        "created": 1791668826,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1695,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1692,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 74,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

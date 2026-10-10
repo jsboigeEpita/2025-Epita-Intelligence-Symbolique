@@ -1,0 +1,40 @@
+{
+  "key": "9b7275485189233fc1f0b9ae9a650ab1da6cbb1ffe38ff89c6274f1d0992f2c4",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_CwMGmCDaOHElgMchYPM1jEQC",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"356\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"La phrase affirme simplement un succès politique et ne fournit pas de procédé de manipulation mentale identifiable; aucune influence subtile, émotionnelle ou comportementale n'est explicitement mise en œuvre.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EXZCA2wEwVsmq40gh9YKcweYRVlPm",
+        "created": 1791668822,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2057,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 2054,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 71,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "key": "12f79bffff9ad1b31838ba1b0bc514768b07f34959bfd7a036d093b49f0c03e7",
+  "value": {
+    "id": "chatcmpl-EXZFAEquKaTemXgGOmrLjq2i1V7nU",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "[\n  {\n    \"counter_argument\": \"Un tournoi avec buffet et prix ne garantit pas une visibilité durable ni une hausse des adhésions ; consacrer tout le budget à un événement ponctuel peut donc produire un impact limité par rapport à un investissement durable.\",\n    \"strategy_used\": \"remise en cause du lien causal\",\n    \"target_argument\": \"[arg_1]\",\n    \"strength\": \"moderate\",\n    \"reasoning\": \"L'argument suppose que la dépense entraînera automatiquement une visibilité accrue, sans fournir d'éléments établissant cette relation ni mesurant les retombées attendues.\"\n  },\n  {\n    \"counter_argument\": \"Du matériel neuf ne produira pas nécessairement de bénéfices importants s'il n'est pas accompagné d'activités, d'encadrement ou d'une stratégie pour attirer et fidéliser les joueurs.\",\n    \"strategy_used\": \"identification d'une condition manquante\",\n    \"target_argument\": \"[arg_2]\",\n    \"strength\": \"moderate\",\n    \"reasoning\": \"L'investissement matériel peut améliorer les ressources disponibles, mais son efficacité dépend de son utilisation concrète et ne garantit pas à lui seul le développement du club.\"\n  },\n  {\n    \"counter_argument\": \"Le partage égal du budget est un compromis arbitraire : il peut laisser le tournoi comme le matériel insuffisamment financés, alors qu'une répartition fondée sur les besoins et les résultats attendus serait potentiellement plus efficace.\",\n    \"strategy_used\": \"critique de l'arbitrage\",\n    \"target_argument\": \"[arg_3]\",\n    \"strength\": \"moderate\",\n    \"reasoning\": \"L'option hybride présente un équilibre apparent, mais elle ne justifie pas pourquoi une division à parts égales serait la meilleure allocation des ressources.\"\n  }\n]",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791669008,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 490,
+      "prompt_tokens": 359,
+      "total_tokens": 849,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 110,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

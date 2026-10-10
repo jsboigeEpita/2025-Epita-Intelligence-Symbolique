@@ -1,0 +1,48 @@
+{
+  "key": "d24fdbdf1b825b37a1e24bfc36a1660dcb7c425f80a2a178789110fd5be35c92",
+  "value": {
+    "id": "chatcmpl-EXZKNWcXesKHx8X5Y731Vdybxlcey",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne reconstruite invoque les succès historiques des vaccins (éradication de la variole et réduction de la polio), puis conclut que l’affirmation selon laquelle les vaccins sont dangereux ne tient pas. Verdict : saut logique, car ces prémisses ne suffisent pas à établir l’absence de dangerosité.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791669331,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 123,
+      "prompt_tokens": 290,
+      "total_tokens": 413,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 35,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "key": "52bef1d9e25cb78c42439f6904e243c50713c65ec300a1e3b6000b2a72aa9938",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_EjsPDsB4R42mML6gbQZ5GlPZ",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"301\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"L'énoncé présente le succès de la politique économique comme incontestable uniquement parce que le président l'affirme avec assurance, sans fournir de preuves indépendantes.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EXZCCcm4zq7UH0pLLmo2mPKxbeGfd",
+        "created": 1791668824,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1406,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1403,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 67,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

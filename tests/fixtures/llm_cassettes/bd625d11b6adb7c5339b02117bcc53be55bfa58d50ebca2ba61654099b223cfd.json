@@ -1,0 +1,40 @@
+{
+  "key": "bd625d11b6adb7c5339b02117bcc53be55bfa58d50ebca2ba61654099b223cfd",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_b9gZDqnqQEGwh92faSE49YPt",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"846\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"La phrase est affirmative mais ne présente pas d’ambiguïté sémantique ou syntaxique identifiable; elle rapporte simplement une affirmation du président.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EXZC877D5cbDP1d2dL1tjx68WCfZs",
+        "created": 1791668820,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1864,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1861,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 65,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

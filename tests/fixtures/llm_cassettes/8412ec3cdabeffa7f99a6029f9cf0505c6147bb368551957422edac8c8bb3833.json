@@ -1,14 +1,14 @@
 {
   "key": "8412ec3cdabeffa7f99a6029f9cf0505c6147bb368551957422edac8c8bb3833",
   "value": {
-    "id": "chatcmpl-EVOEOty1hbA8y2MCXNHzJ90HDz2aM",
+    "id": "chatcmpl-EXZKNA2JkC0OgWq3DsRWyEc6W6W7y",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":1.0,\"exhibit\":\"Deux points distincts : le premier affirme le rôle indispensable de la vaccination pour la santé publique ; le second fournit des exemples historiques et scientifiques de son efficacité (éradication de la variole et réduction de la polio). Aucune redondance substantielle.\"}",
+          "content": "{\"score\":0.5,\"exhibit\":\"Les deux points sont distincts : le premier énonce l’importance de la vaccination pour la santé publique, tandis que le second fournit des exemples historiques et scientifiques à l’appui. Ils se recoupent partiellement, car le second justifie le premier, mais il apporte une précision concrète plutôt qu’une simple répétition.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1791150020,
+    "created": 1791669331,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 134,
+      "completion_tokens": 179,
       "prompt_tokens": 277,
-      "total_tokens": 411,
+      "total_tokens": 456,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 61,
+        "reasoning_tokens": 93,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

@@ -1,0 +1,48 @@
+{
+  "key": "a50d7e07f4ecb61d305d32c217f27ef1e4f244e5661a0f50e68e87660341891c",
+  "value": {
+    "id": "chatcmpl-EXZKWg3QRsl2UqYXJfbYwjsbTCeyR",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points lisibles apportent des idées distinctes : le premier souligne l’ignorance de décennies de recherche clinique, tandis que le second invoque des résultats historiques précis sur la variole et la polio. Aucune redondance substantielle n’est démontrée parmi eux ; le troisième point étant tronqué, il ne peut pas être évalué.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791669340,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 175,
+      "prompt_tokens": 295,
+      "total_tokens": 470,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 81,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

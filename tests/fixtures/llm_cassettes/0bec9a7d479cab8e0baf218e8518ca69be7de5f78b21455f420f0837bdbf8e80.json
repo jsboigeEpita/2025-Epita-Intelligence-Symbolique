@@ -1,0 +1,48 @@
+{
+  "key": "0bec9a7d479cab8e0baf218e8518ca69be7de5f78b21455f420f0837bdbf8e80",
+  "value": {
+    "id": "chatcmpl-EXZLbT2JO4GeoiCT2YmCJigedK6EV",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Prémisses : la peine de mort est irréversible et une erreur judiciaire ne pourrait pas être réparée. Conclusion : la peine de mort ne devrait pas être utilisée. Verdict : saut logique, car les prémisses ne suffisent pas à établir directement cette conclusion.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791669407,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 130,
+      "prompt_tokens": 277,
+      "total_tokens": 407,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 57,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

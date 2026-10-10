@@ -1,0 +1,40 @@
+{
+  "key": "2df2ed404d71168189f8607888d094d8f6d40d780f7f0a474e694e4fac97f625",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_Ii3greJ9W8jgnt8DQue1d8gl",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1281\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"L’énoncé affirme simplement un succès économique, sans esquiver un débat ni empêcher explicitement l’échange rationnel.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EXZC9UIjMHbcvMaoIS3FRvldmmBJh",
+        "created": 1791668821,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2029,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 2026,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 61,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "key": "86b22513aa0d27a883d31012b7a8e35907d36de70cebe056625191bfff7cf108",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_qJfzP4bAetUL2FBQ8ey8mUVP",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"55\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"La phrase affirme simplement le succès de la politique économique, sans objection préalable ni justification improvisée destinée à esquiver une critique; elle n'exhibe donc pas un sauvetage ad hoc.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EXZCBBxnXBClUGoxhet83FXIi21Vj",
+        "created": 1791668823,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1811,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1808,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 73,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

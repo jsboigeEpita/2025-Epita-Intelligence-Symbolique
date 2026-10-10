@@ -1,0 +1,48 @@
+{
+  "key": "08b9059a5acbe0421650a7e3251fbb3ff66b76af721b2b23a5610d9cc714c737",
+  "value": {
+    "id": "chatcmpl-EXZ9S7Caphy2XcshL6zHTbYFhUyrF",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Position adverse identifiée : la justification budgétaire fondée sur un déficit de 2,3 % du PIB en 2030, une croissance annuelle de 1,8 % et l’idée de travailler plus longtemps. Verdict : engagement réel avec cette thèse adverse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791668654,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 199,
+      "prompt_tokens": 292,
+      "total_tokens": 491,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 124,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

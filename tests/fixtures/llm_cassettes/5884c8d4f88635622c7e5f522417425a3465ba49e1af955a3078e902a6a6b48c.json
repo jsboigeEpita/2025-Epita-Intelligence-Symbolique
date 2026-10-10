@@ -1,0 +1,48 @@
+{
+  "key": "5884c8d4f88635622c7e5f522417425a3465ba49e1af955a3078e902a6a6b48c",
+  "value": {
+    "id": "chatcmpl-EXZLSaaMIrBGTeFnjjB6t4ZDbw3jc",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La thèse soutient que la peine de mort est justifiée par son rôle dissuasif et protecteur, en s’appuyant aussi sur les progrès de l’analyse ADN ; aucune digression n’est identifiée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791669398,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 96,
+      "prompt_tokens": 278,
+      "total_tokens": 374,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 31,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

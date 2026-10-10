@@ -1,0 +1,48 @@
+{
+  "key": "f49eb12c81a7ef7b7a7863ebe548a11a207ace6c1e6153f80ad6166258c26148",
+  "value": {
+    "id": "chatcmpl-EXZLKXY3H2cH1wxLKHbWp0ReTAJ96",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"La peine de mort devrait être rejetée parce que son irréversibilité rend impossible la réparation d’une erreur judiciaire.\",\"digressions\":\"La proposition selon laquelle certains criminels sont irrécupérables et constituent un danger permanent pour la société, ainsi que celle affirmant que le coût des appels et des procédures dépasse souvent celui de l’emprisonnement à vie, sont des arguments distincts qui s’écartent de la thèse principale.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791669390,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 261,
+      "prompt_tokens": 270,
+      "total_tokens": 531,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 151,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

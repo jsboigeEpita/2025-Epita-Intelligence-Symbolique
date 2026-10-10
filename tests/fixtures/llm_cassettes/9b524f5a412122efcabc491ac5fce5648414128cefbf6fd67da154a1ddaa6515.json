@@ -1,0 +1,48 @@
+{
+  "key": "9b524f5a412122efcabc491ac5fce5648414128cefbf6fd67da154a1ddaa6515",
+  "value": {
+    "id": "chatcmpl-EXZMj3w38xc0KDM8BGlNi8j3TlIqA",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Les mesures de température globale montrent une augmentation de 1,1 degré depuis l’ère préindustrielle ; le changement climatique actuel est d’une vitesse sans précédent ; les modèles prédictifs sont unanimes sur l’impact des activités humaines.\",\"conclusion\":\"La situation climatique actuelle se distingue des variations climatiques passées, et les activités humaines en sont une cause déterminante.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791669477,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 230,
+      "prompt_tokens": 275,
+      "total_tokens": 505,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 135,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

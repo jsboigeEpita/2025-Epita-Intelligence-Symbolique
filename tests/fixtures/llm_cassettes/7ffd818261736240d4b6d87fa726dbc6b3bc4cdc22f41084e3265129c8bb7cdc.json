@@ -1,0 +1,48 @@
+{
+  "key": "7ffd818261736240d4b6d87fa726dbc6b3bc4cdc22f41084e3265129c8bb7cdc",
+  "value": {
+    "id": "chatcmpl-EXZMcgovqEQg8IUE98ZQOOHorrYRp",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Ceux qui minimisent la crise climatique utilisent souvent des données sélectives pour soutenir leur position.\",\"conclusion\":\"La minimisation de la crise climatique s'appuie souvent sur une sélection partiale des données.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791669470,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 385,
+      "prompt_tokens": 267,
+      "total_tokens": 652,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 324,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
