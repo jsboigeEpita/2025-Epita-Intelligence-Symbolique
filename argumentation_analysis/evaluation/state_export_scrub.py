@@ -339,6 +339,15 @@ def _scrub_state_for_export(
                     ("<scrubbed>" if isinstance(a, str) and len(a) > 10 else a)
                     for a in args_list
                 ]
+            # #3008 — the argument TEXT moved from the node identity into
+            # ``argument_labels`` ({node: label}); moving it must not take it
+            # out of the scrub's reach. Same rule as the list above.
+            labels_map = item_val.get("argument_labels")
+            if isinstance(labels_map, dict):
+                item_val["argument_labels"] = {
+                    k: ("<scrubbed>" if isinstance(v, str) and len(v) > 10 else v)
+                    for k, v in labels_map.items()
+                }
             # Also scrub "name" field (often contains NL descriptions)
             name = item_val.get("name")
             if isinstance(name, str) and len(name) > 20:

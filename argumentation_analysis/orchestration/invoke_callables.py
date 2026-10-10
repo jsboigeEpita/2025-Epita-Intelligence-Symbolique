@@ -9237,6 +9237,60 @@ async def _invoke_modal_logic(
             object.__setattr__(_modal_settings, "modal_solver", _prev_modal_solver)
 
 
+def _dung_node_units(
+    input_text: str, context: Dict[str, Any]
+) -> Tuple[List[Tuple[str, str]], Optional[str]]:
+    """#3008 — the Dung frame's nodes as ``(unit_id, label)`` pairs.
+
+    The id is minted by the SAME builder that mints the population every
+    other axis joins on (``merged_population_units``): the state's
+    ``identified_arguments`` ids first, the extract output's positional
+    ``arg_N`` enumeration second (the #1629 arithmetic — never a text join).
+    The label — the argument's text — travels beside the id, never AS the
+    identity: the frame's members, its extensions and every
+    ``rejected_by_arg`` key are ``arg_N``, which is the reader contract
+    ``native_dung`` documents. Before #3008 the ids were discarded at the
+    source (``_extract_arguments_from_context`` returns texts) and the graph
+    was built over free text: 0/7 exact joins to the units on the measured
+    real state, rejections that quote prose where the id should be.
+
+    Returns ``(pairs, no_id_reason)``. ``no_id_reason`` is set only when no
+    population minted any id and the sentence fallback built the nodes: the
+    nodes then carry real content but NO unit identity, and the record says
+    so explicitly (never a guessed id).
+    """
+    state = context.get("_state_object")
+    units = merged_population_units(state)
+    if not units:
+        extract_out = context.get("phase_extract_output")
+        fallback = (
+            extract_out.get("arguments") if isinstance(extract_out, dict) else None
+        )
+        units = merged_population_units(None, fallback_args=fallback)
+    if units:
+        # Budget parity with the previous extraction (its lists were capped
+        # at 40 too).
+        return [(str(u.unit_id), str(u.text)) for u in units[:40]], None
+    # Last resort (parity with _extract_arguments_from_context's final
+    # branch): real sentences as nodes — explicitly WITHOUT unit ids.
+    sentences = [
+        s.strip()
+        for s in input_text.replace("\n", ". ").split(".")
+        if len(s.strip()) > 10
+    ]
+    if len(sentences) >= 2:
+        nodes = [s[:120] for s in sentences[: min(len(sentences), 6)]]
+        return [(node, node) for node in nodes], (
+            "no identified_arguments population — sentence-fallback nodes "
+            "carry no unit id (#3008)"
+        )
+    single = input_text[:200] if len(input_text) > 10 else "argument_placeholder"
+    return [(single, single)], (
+        "no identified_arguments population — the whole input is the only "
+        "node and carries no unit id (#3008)"
+    )
+
+
 async def _invoke_dung_extensions(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -9248,6 +9302,12 @@ async def _invoke_dung_extensions(
     naive. (cf2 is NOT shipped in the vendored Tweety build — #1215.)
     Falls back to pure-Python computation when JVM is unavailable.
 
+    #3008 — the frame's nodes are the units' ``arg_N`` ids (see
+    :func:`_dung_node_units`), with the argument texts travelling as
+    ``argument_labels``; every extension and rejection the payload carries is
+    keyed by the unit id, which is the reader contract ``native_dung``
+    documents.
+
     #908: If ``context["dung_provider_hint"]`` is set to
     ``"abs_arg_dung_student"``, delegates to the student Dung provider
     instead of the native AFHandler.
@@ -9258,17 +9318,53 @@ async def _invoke_dung_extensions(
     cannot run are reported ``unavailable`` (fail-loud), never omitted. See
     :func:`_compare_dung_backends`.
     """
-    # 1. Extract arguments from upstream phases
-    arguments = _extract_arguments_from_context(input_text, context)
+    # 1. Extract arguments from upstream phases — as (unit_id, label) pairs
+    #    (#3008): the frame's nodes are the unit IDS minted by the same
+    #    builder as ``identified_arguments``; the texts travel as labels. The
+    #    old extraction returned bare texts and the whole chain keyed on
+    #    prose the readers could never join back to a unit.
+    pairs, no_id_reason = _dung_node_units(input_text, context)
+    arguments = [unit_id for unit_id, _ in pairs]
+    argument_labels = (
+        {unit_id: label for unit_id, label in pairs} if (no_id_reason is None) else {}
+    )
+
+    def _identity_payload() -> Dict[str, Any]:
+        """#3008 — the node identity fields every return site carries."""
+        out: Dict[str, Any] = {"argument_labels": dict(argument_labels)}
+        if no_id_reason is not None:
+            out["argument_ids_absent_reason"] = no_id_reason
+        return out
 
     # 2. Build attack relations from the text, cited by id (#1698). Every edge
     #    has both endpoints in ``arguments``; the previous producer minted
     #    sources that were never nodes, so the frame was inert on 3/3 corpora.
     #    ``context["attacks"]`` is deliberately NOT consulted here — this site
     #    has never read it, and making it do so is a separate decision.
-    attacks = await _derive_dung_attacks(
-        input_text, arguments, context, capability="dung_extensions"
+    #    #3008: the translator reads TEXTS (its inventory is LLM-facing and
+    #    its validator returns canonical text pairs), then the edges map back
+    #    to node ids EXACTLY — both sides come from the same in-memory list,
+    #    by construction, never a prefix/substring heuristic. A duplicate
+    #    label joins the first node that carries it (deterministic; before
+    #    #3008 duplicates collapsed into ONE node named by the text).
+    text_edges = await _derive_dung_attacks(
+        input_text,
+        [label for _, label in pairs],
+        context,
+        capability="dung_extensions",
     )
+    node_by_label: Dict[str, str] = {}
+    for unit_id, label in pairs:
+        node_by_label.setdefault(label, unit_id)
+    attacks = [
+        [node_by_label[str(src)], node_by_label[str(tgt)]]
+        for src, tgt in (
+            (edge[0], edge[1])
+            for edge in text_edges
+            if isinstance(edge, (list, tuple)) and len(edge) >= 2
+        )
+        if str(src) in node_by_label and str(tgt) in node_by_label
+    ]
 
     # I5 #1430: compare mode — run every available backend on the same AF and
     # surface agreement / disagreement (never auto-reconciled). Short-circuits
@@ -9295,6 +9391,7 @@ async def _invoke_dung_extensions(
                 "per-semantics and NEVER auto-reconciled (anti-pendule #1019); "
                 "unavailable backends are reported, never omitted."
             ),
+            **_identity_payload(),
         }
 
     # #908: Provider selection — delegate to student provider if hinted
@@ -9337,6 +9434,9 @@ async def _invoke_dung_extensions(
                 logger.info(
                     "Dung extensions computed via abs_arg_dung_student provider"
                 )
+                # #3008: the provider's payload carries the node identity it
+                # was handed (ids) — the labels travel with it.
+                result.update(_identity_payload())
                 return result
         except Exception as e:
             logger.warning(f"DungStudentProvider failed ({e}), falling back to native")
@@ -9393,6 +9493,7 @@ async def _invoke_dung_extensions(
                     "arguments_count": len(arguments),
                     "attacks_count": len(attacks),
                 },
+                **_identity_payload(),
             }
 
         raw_extensions = result.get("extensions", {})
@@ -9429,6 +9530,7 @@ async def _invoke_dung_extensions(
                     [v for v in enriched_extensions.values() if "count" in v]
                 ),
             },
+            **_identity_payload(),
         }
         # Trace entry for Dung extensions specialist
         _state = context.get("_state_object")
@@ -9488,6 +9590,7 @@ async def _invoke_dung_extensions(
                 "arguments_count": len(arguments),
                 "attacks_count": len(attacks),
             },
+            **_identity_payload(),
         }
 
 

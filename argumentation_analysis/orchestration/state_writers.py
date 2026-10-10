@@ -10,6 +10,8 @@ Split from unified_pipeline.py (#310).
 import logging
 from typing import Dict, Any, List, Optional, Tuple
 
+from argumentation_analysis.services.argument_ids import ARG_ID_RE
+
 logger = logging.getLogger("UnifiedPipeline")
 
 
@@ -1572,7 +1574,19 @@ def _guard_attack_contradiction(
 def _write_dung_extensions_to_state(
     output: Any, state: Any, ctx: dict[str, Any]
 ) -> None:
-    """Write Dung extension computation results to UnifiedAnalysisState."""
+    """Write Dung extension computation results to UnifiedAnalysisState.
+
+    #3008 — the frame's arguments are the units' ``arg_N`` ids, minted by the
+    same builder as ``identified_arguments``; the texts travel in
+    ``argument_labels``. A payload whose arguments are NOT ids while the state
+    holds units is a producer REGRESSION (the pre-fix graph was keyed by free
+    text: 0/7 exact joins to the units on the measured real state) — refuse
+    it, the reader contract (``native_dung``: opaque arg_id) is not
+    negotiable. A payload that NAMES its id-absence
+    (``argument_ids_absent_reason``) is the honest degradation, not a
+    regression: it writes, marked — a named absence is not a hidden one
+    (#1019).
+    """
     if not output or not isinstance(output, dict):
         return
     semantics = str(output.get("semantics", "preferred"))
@@ -1580,6 +1594,30 @@ def _write_dung_extensions_to_state(
     all_extensions = output.get("all_extensions", {})
     arguments = output.get("arguments", [])
     attacks = output.get("attacks", [])
+    labels = output.get("argument_labels")
+    labels = labels if isinstance(labels, dict) and labels else None
+    absent_reason = output.get("argument_ids_absent_reason")
+    absent_reason = str(absent_reason) if absent_reason else None
+
+    identified = getattr(state, "identified_arguments", None)
+    if (
+        isinstance(identified, dict)
+        and identified
+        and absent_reason is None
+        and isinstance(arguments, list)
+    ):
+        non_id = [
+            a for a in arguments if not (isinstance(a, str) and ARG_ID_RE.match(a))
+        ]
+        if non_id:
+            raise ValueError(
+                f"#3008: refusing to curate a Dung framework whose arguments "
+                f"are not unit ids while identified_arguments holds "
+                f"{len(identified)} unit(s) — the reader contract "
+                f"(native_dung: opaque arg_id) requires arg_N nodes; first "
+                f"offender: {str(non_id[0])[:60]!r}"
+            )
+
     # Store primary framework with actual arguments and attacks
     df_ids = [
         state.add_dung_framework(
@@ -1587,6 +1625,8 @@ def _write_dung_extensions_to_state(
             arguments=arguments if isinstance(arguments, list) else [],
             attacks=attacks if isinstance(attacks, list) else [],
             extensions=extensions if isinstance(extensions, dict) else {},
+            argument_labels=labels,
+            argument_ids_absent_reason=absent_reason,
         )
     ]
     # Store additional semantics if computed
@@ -1599,6 +1639,8 @@ def _write_dung_extensions_to_state(
                         arguments=arguments if isinstance(arguments, list) else [],
                         attacks=attacks if isinstance(attacks, list) else [],
                         extensions=ext,
+                        argument_labels=labels,
+                        argument_ids_absent_reason=absent_reason,
                     )
                 )
     # #1698 (R791 item 1): the honest submitted/retained/dropped accounting
