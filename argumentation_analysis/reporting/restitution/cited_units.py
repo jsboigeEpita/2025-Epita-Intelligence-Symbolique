@@ -243,28 +243,48 @@ def qualitative_support_band(
     for: three bands, no digits (#1914 — a raw counter or a badge would hand
     the writer a number to copy instead of a fact to phrase).
 
+    The bands derive from the DEFINITION (R1080 rework): "majorité" is
+    spoken only when 2s > n — strictly more than half of the deciding
+    methods — so a tie (2s == n) and any support below half render the
+    honest no-majority band (« par une partie seulement des méthodes »).
+    The pre-rework else branch said « une majorité étroite » for every
+    support below 2/3, which the coordinator's enumeration measured as 108
+    affirmative false majorities on the grid n 1..12 — including every
+    divergent vote's weakest winner.
+
     The broad-majority test deliberately precedes the plurality branch
     (cross-review #3006): this is a band of SUPPORT, and a fallback-tier
     winner carried by at least 2/3 of the deciding methods reads as broad
-    support — ``winner_basis`` names the deciding tier only in the
-    "de justesse" band, where the missing clear majority is the fact being
-    rendered.
+    support. ``winner_basis`` names the deciding tier only in the
+    "de justesse" bands, where the narrowness of the decision is the fact
+    being rendered — and the plurality branch never borrows the word
+    "majorité": the fallback tier can decide while the winner holds no
+    majority at all.
 
     ``None`` when the population is absent (no band without a measured
     support — honest absence, anti-#1019).
     """
     if not n_methods_decided or support is None or support <= 0:
         return None
-    if support >= n_methods_decided:
+    n = n_methods_decided
+    s = support
+    if s >= n:
         return "à l'unanimité des méthodes qui ont décidé"
-    if support * 3 >= n_methods_decided * 2:
+    if 3 * s >= 2 * n:
         return "par une large majorité des méthodes"
     if winner_basis == "plurality":
+        if 2 * s > n:
+            return (
+                "de justesse, par une majorité étroite des méthodes, au "
+                "palier de repli"
+            )
         return (
-            "de justesse, au palier de repli — aucune majorité claire ne "
-            "s'était dégagée parmi les méthodes"
+            "de justesse, au palier de repli — aucune option ne s'était "
+            "clairement imposée parmi les méthodes"
         )
-    return "de justesse, par une majorité étroite des méthodes"
+    if 2 * s > n:
+        return "de justesse, par une majorité étroite des méthodes"
+    return "par une partie seulement des méthodes"
 
 
 def render_governance_lead(

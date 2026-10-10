@@ -34,6 +34,9 @@ from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 from argumentation_analysis.orchestration.state_writers import (
     _write_governance_to_state,
 )
+from argumentation_analysis.reporting.restitution.cited_units import (
+    qualitative_support_band,
+)
 from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
     build_act2_evidence,
     build_act2_prompt,
@@ -211,6 +214,9 @@ class TestTheSupportBandReachesTheActs:
         assert "palier de repli" in line
         assert "unanimité" not in line
         assert "large majorité" not in line
+        # R1080: the winner holds exactly half the methods (6/12) — a tie is
+        # not a majority, and the GOUVERNANCE line must not say one
+        assert "majorit" not in line
 
     def test_the_band_is_never_a_raw_counter(self, act: str) -> None:
         """#1914: qualitative only — no "6/12", no "11 méthodes sur 12"."""
@@ -230,7 +236,74 @@ class TestTheSupportBandReachesTheActs:
         assert "Le vote DIVERGE" in line
         # the winner text and its band share the divergence clause
         assert "Première position synthétique" in line
-        assert "majorité étroite" in line
+        # R1080: 6/12, 4/12 and 2/12 hold no majority — each winner's band is
+        # the honest no-majority one, and the pinned "majorité étroite" the
+        # pre-rework head rendered for all three is gone
+        assert "partie seulement des méthodes" in line
+        assert "majorit" not in line
+
+    def test_a_lead_winner_below_half_reads_as_no_majority(self, act: str) -> None:
+        """R1080: a condorcet-tier winner chosen by fewer than half the
+        deciding methods — the tier decided, but the line must not say a
+        majority of the methods did. Realistic shape: the pairwise champion
+        that only 5 of 12 methods name as their winner."""
+        wpm: dict[str, str] = {m: "arg_7" for m in _METHODS[:5]}
+        wpm.update({m: "arg_9" for m in _METHODS[5:9]})
+        wpm.update({m: "arg_11" for m in _METHODS[9:]})
+        output = {
+            "recommended_method": "condorcet",
+            "vote_result": {
+                "winner": "arg_7",
+                "votes": [w for w in wpm.values()],
+                "method": "formal-aggregation",
+                "results": {
+                    "winners_per_method": wpm,
+                    "n_methods_decided": 12,
+                    "distinct_winners": ["arg_7", "arg_9", "arg_11"],
+                    "inter_method_disagreement": True,
+                    "condorcet_winner": "arg_7",
+                    "winner": "arg_7",
+                    "winner_basis": "condorcet",
+                },
+            },
+        }
+        state = _written_state(output)
+        line = _gov_line(_PROMPTS[act](state))
+        assert "partie seulement des méthodes" in line
+        # no divergent winner holds a majority either (5/4/3) — the whole
+        # line is majority-free, by measurement not by scoping
+        assert "majorit" not in line
+
+
+class TestTheBandMatchesTheDefinition:
+    """R1080: the band's words are checked against the DEFINITION on the full
+    grid — n 1..12 × s 1..n × basis — not against the function's own
+    thresholds.
+
+    A majority means strictly more than half: the word "majorité" appears
+    iff 2s > n (a tie, 2s == n, is not one); unanimity iff s == n; "large"
+    iff 3s >= 2n. On the pre-rework head ``3ae69904b`` this reddens on 144
+    cells: 108 that affirmatively claim « une majorité étroite » with
+    2s <= n (36 per non-plurality basis — the coordinator's count,
+    reproduced on this seat), plus the 36 plurality cells whose « aucune
+    majorité claire » carries the word into a support that holds none."""
+
+    def test_every_cell_of_the_grid_matches_the_definition(self) -> None:
+        for n in range(1, 13):
+            for s in range(1, n + 1):
+                for basis in (None, "condorcet", "majority", "plurality"):
+                    band = qualitative_support_band(s, n, basis)
+                    assert band is not None, (s, n, basis)
+                    if s == n:
+                        assert "unanimité" in band, (s, n, basis, band)
+                        continue
+                    assert ("majorit" in band) == (2 * s > n), (s, n, basis, band)
+                    assert ("large" in band) == (3 * s >= 2 * n), (
+                        s,
+                        n,
+                        basis,
+                        band,
+                    )
 
 
 @pytest.mark.parametrize("act", ["act2", "act3"])
