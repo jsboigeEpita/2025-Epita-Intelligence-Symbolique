@@ -9255,9 +9255,9 @@ def _dung_node_units(
     real state, rejections that quote prose where the id should be.
 
     Returns ``(pairs, no_id_reason)``. ``no_id_reason`` is set only when no
-    population minted any id and the sentence fallback built the nodes: the
-    nodes then carry real content but NO unit identity, and the record says
-    so explicitly (never a guessed id).
+    population minted any id and the historical text extractor's fallback
+    built the nodes: the nodes then carry real content but NO unit identity,
+    and the record says so explicitly (never a guessed id).
     """
     state = context.get("_state_object")
     units = merged_population_units(state)
@@ -9271,23 +9271,16 @@ def _dung_node_units(
         # Budget parity with the previous extraction (its lists were capped
         # at 40 too).
         return [(str(u.unit_id), str(u.text)) for u in units[:40]], None
-    # Last resort (parity with _extract_arguments_from_context's final
-    # branch): real sentences as nodes — explicitly WITHOUT unit ids.
-    sentences = [
-        s.strip()
-        for s in input_text.replace("\n", ". ").split(".")
-        if len(s.strip()) > 10
-    ]
-    if len(sentences) >= 2:
-        nodes = [s[:120] for s in sentences[: min(len(sentences), 6)]]
-        return [(node, node) for node in nodes], (
-            "no identified_arguments population — sentence-fallback nodes "
-            "carry no unit id (#3008)"
-        )
-    single = input_text[:200] if len(input_text) > 10 else "argument_placeholder"
-    return [(single, single)], (
-        "no identified_arguments population — the whole input is the only "
-        "node and carries no unit id (#3008)"
+    # Last resort: delegate to the HISTORICAL text extractor's own tail
+    # (claims, then real sentences, then the whole input) — one fallback
+    # implementation, and its #2850 census windows stay where they are
+    # registered. #3008 mints ids; it does not fork the tail fallback. The
+    # nodes then carry real content but NO unit identity, and the record
+    # says so explicitly (never a guessed id).
+    texts = _extract_arguments_from_context(input_text, context)
+    return [(text, text) for text in texts], (
+        "no identified_arguments population — fallback nodes carry no unit "
+        "id (#3008)"
     )
 
 
