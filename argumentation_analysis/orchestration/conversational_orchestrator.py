@@ -3041,6 +3041,7 @@ async def _run_parent_harness_fallback(
         # Register fallacies into state — skip unusable type names (#655 Track KK).
         added = 0
         skipped_unusable = 0
+        failed = 0
         for f in fallacies:
             if not isinstance(f, dict):
                 continue
@@ -3051,8 +3052,22 @@ async def _run_parent_harness_fallback(
             justification = (
                 f.get("justification")
                 or f.get("explanation")
-                or f"Detected by parent harness (confidence: {f.get('confidence', 'N/A')})"
+                or "Detected by parent harness"
             )
+            # #3011 — confidence and problematic_quote are fields of the
+            # detection, not prose (#2972 made them state fields for the
+            # pipeline lane; this loop was still folding confidence into the
+            # fallback justification). The extraction mirrors
+            # _write_hierarchical_fallacy_to_state so the two lanes cannot
+            # disagree: an unmeasured confidence stores None, never 0.0
+            # (#1019).
+            raw_confidence = f.get("confidence")
+            confidence = (
+                float(raw_confidence)
+                if isinstance(raw_confidence, (int, float))
+                else None
+            )
+            problematic_quote = f.get("problematic_quote") or None
             # #1633 site 3: resolve through the same ladder the pipeline lane
             # uses. This used to read ``source_arg_id or target_argument_id``,
             # which inverted the precedence AND skipped the membership guard —
@@ -3066,6 +3081,8 @@ async def _run_parent_harness_fallback(
                         fallacy_type=fallacy_type,
                         justification=justification,
                         target_arg_id=target_arg_id,
+                        confidence=confidence,
+                        problematic_quote=problematic_quote,
                     )
                     added += 1
                 elif hasattr(state, "add_identified_fallacy"):
@@ -3074,16 +3091,26 @@ async def _run_parent_harness_fallback(
                         justification=justification,
                     )
                     added += 1
-            except Exception:
-                pass
+            except Exception as e:
+                # #3011 — a registration failure degrades (the values come
+                # from model output), but it is counted and named, never
+                # swallowed: a state rejecting the entry is a loss an
+                # operator must see (#2978's failure class).
+                failed += 1
+                logger.warning(
+                    "Parent harness: fallacy registration failed for %r: %s",
+                    fallacy_type,
+                    e,
+                )
 
         logger.info(
             "Parent harness: %d fallacies found (%d whole-text extra), "
-            "%d registered, %d skipped (unusable type)",
+            "%d registered, %d skipped (unusable type), %d failed",
             len(fallacies),
             extra_count,
             added,
             skipped_unusable,
+            failed,
         )
 
         return {
@@ -3092,6 +3119,7 @@ async def _run_parent_harness_fallback(
             "fallacies_found": len(fallacies),
             "fallacies_registered": added,
             "fallacies_skipped_unusable": skipped_unusable,
+            "fallacies_failed": failed,
             "wide_net_extras": extra_count,
             "exploration_method": per_arg_result.get(
                 "exploration_method", "per_argument_parallel"
