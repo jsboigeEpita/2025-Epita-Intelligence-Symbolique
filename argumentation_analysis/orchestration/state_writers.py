@@ -883,6 +883,32 @@ def _write_camembert_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> N
         )
 
 
+def fallacy_measured_fields(
+    fallacy: Dict[str, Any],
+) -> Tuple[Optional[float], Optional[str]]:
+    """Extract the measured (confidence, problematic_quote) pair from a detection.
+
+    One rule for both lanes (#3011 rework, R1083): the pipeline writer
+    (``_write_hierarchical_fallacy_to_state``) and the conversational lane's
+    parent-harness loop both call this helper — no second copy of the
+    extraction, so the lanes cannot disagree on which detections are
+    filterable downstream.
+
+    - a numeric confidence stores ``float(raw)``; anything else (absent,
+      string, bool) stores ``None`` — an unmeasured confidence is not 0.0
+      (#1019), and a boolean flag is not a measurement (#3015: ``True`` is
+      not 1.0);
+    - the quote returns ``None`` when absent or empty (``add_fallacy`` drops
+      an empty one, shared_state.py:384), so one rule covers both lanes.
+    """
+    raw_confidence = fallacy.get("confidence")
+    if isinstance(raw_confidence, bool) or not isinstance(raw_confidence, (int, float)):
+        confidence = None
+    else:
+        confidence = float(raw_confidence)
+    return confidence, fallacy.get("problematic_quote") or None
+
+
 def _write_hierarchical_fallacy_to_state(
     output: Any, state: Any, ctx: dict[str, Any]
 ) -> None:
@@ -916,13 +942,11 @@ def _write_hierarchical_fallacy_to_state(
         # #2972 — la confiance et la citation problématique sont des CHAMPS.
         # Elles étaient repliées dans la justification (``[confidence:0.90]``,
         # mesuré : zéro lecteur de ce marqueur) et la citation était perdue.
-        # ``None`` reste None : une descente qui n'a pas rendu de confiance
-        # n'en déclare pas une nulle, et 0.0 mesuré reste 0.0 (#1019).
-        raw_confidence = f.get("confidence")
-        confidence = (
-            float(raw_confidence) if isinstance(raw_confidence, (int, float)) else None
-        )
-        problematic_quote = f.get("problematic_quote", "")
+        # Rework R1083 (#3011) : l'extraction vit dans
+        # ``fallacy_measured_fields``, partagée avec la voie conversationnelle
+        # — une seule règle, les deux lanes ne peuvent plus diverger (un
+        # booléen n'est pas une mesure, repris de #3015).
+        confidence, problematic_quote = fallacy_measured_fields(f)
         trace = f.get("navigation_trace", [])
         family = f.get("family", "")
         taxonomy_path = f.get("taxonomy_path", "")
