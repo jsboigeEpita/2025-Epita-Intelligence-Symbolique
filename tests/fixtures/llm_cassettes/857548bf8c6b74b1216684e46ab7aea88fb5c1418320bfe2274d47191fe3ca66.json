@@ -1,14 +1,14 @@
 {
   "key": "857548bf8c6b74b1216684e46ab7aea88fb5c1418320bfe2274d47191fe3ca66",
   "value": {
-    "id": "chatcmpl-EVO8OiQ1YnWXUwEViZDrPsMVNxmZl",
+    "id": "chatcmpl-EXZDq0TOZ2Jgdm61AqfHyrVSe5k9c",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\n  \"sorts\": {\n    \"Person\": [],\n    \"Opinion\": [],\n    \"Proposition\": []\n  },\n  \"predicates\": {\n    \"Expert\": [\"Person\"],\n    \"Unanimous\": [\"Person\"],\n    \"True\": [\"Proposition\"],\n    \"HasOpinion\": [\"Person\", \"Opinion\"],\n    \"Counts\": [\"Opinion\"]\n  },\n  \"constants\": {}\n}",
+          "content": "{\n  \"sorts\": {\n    \"Person\": [\"vous\"],\n    \"Thing\": []\n  },\n  \"predicates\": {\n    \"Expert\": [\"Person\"],\n    \"Unanimous\": [\"Person\"],\n    \"OpinionCounts\": [\"Person\"],\n    \"True\": [\"Thing\"]\n  },\n  \"constants\": {\n    \"vous\": \"the person being addressed\"\n  }\n}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1791149648,
+    "created": 1791668926,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,9 +26,9 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 602,
+      "completion_tokens": 599,
       "prompt_tokens": 195,
-      "total_tokens": 797,
+      "total_tokens": 794,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,

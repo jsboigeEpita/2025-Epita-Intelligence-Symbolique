@@ -1,0 +1,48 @@
+{
+  "key": "54d3d304b77d28541d4692891baffcbc600cd83aa81106d87cbaff1d0f26fca0",
+  "value": {
+    "id": "chatcmpl-EXZ9XF69eT3DzpdDe7Gtw22rZiK5H",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La position adverse est clairement identifiée — l'inaction entraînerait l'effondrement du système dans cinq ans, justifiant l'urgence — et le verdict indique un engagement réel avec cette thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791668659,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 88,
+      "prompt_tokens": 273,
+      "total_tokens": 361,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 27,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

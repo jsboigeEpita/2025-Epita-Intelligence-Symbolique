@@ -1,0 +1,48 @@
+{
+  "key": "f136ae0cedaf0dfe347d8118c0a43b4dfe88de84f755035846f8150595d24f12",
+  "value": {
+    "id": "chatcmpl-EXZFuWSbuleNGyr3vRSPnERM8A8On",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La thèse consiste à utiliser la subvention pour élargir le fonds de livres jeunesse (Option A) ; aucune digression n’est identifiée, toutes les propositions restent donc pertinentes.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791669054,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 87,
+      "prompt_tokens": 263,
+      "total_tokens": 350,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 29,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,14 +1,14 @@
 {
   "key": "35e0928554a14ea21d6cfc793c25681f37d59ac6081e3fdf8960374c688ade60",
   "value": {
-    "id": "chatcmpl-EVOEGwqIMDkD8PyZtsGNxCeCSNTqB",
+    "id": "chatcmpl-EXZKCNmXnWSuo9hJXNKNtYjWh3FEL",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"chain_holds\":false,\"structure_verdict\":\"saut_logique\",\"reasoning\":\"Les résultats attribués à la vaccination soutiennent son importance pour la santé publique, mais ne suffisent pas à démontrer qu’elle est indispensable.\"}",
+          "content": "{\"chain_holds\":true,\"structure_verdict\":\"progression_logique\",\"reasoning\":\"Les résultats majeurs attribués à la vaccination fournissent un soutien empirique direct à l’idée qu’elle est indispensable à la protection de la santé publique.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1791150012,
+    "created": 1791669320,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 137,
+      "completion_tokens": 217,
       "prompt_tokens": 345,
-      "total_tokens": 482,
+      "total_tokens": 562,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 78,
+        "reasoning_tokens": 156,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

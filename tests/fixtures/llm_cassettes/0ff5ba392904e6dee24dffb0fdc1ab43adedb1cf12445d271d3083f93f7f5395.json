@@ -1,0 +1,48 @@
+{
+  "key": "0ff5ba392904e6dee24dffb0fdc1ab43adedb1cf12445d271d3083f93f7f5395",
+  "value": {
+    "id": "chatcmpl-EXZ9TBrH7OYLLXkbtKUZlkaICph9a",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Le gouvernement présente le fait de travailler plus longtemps comme étant « dans l'ordre des choses », ce qui constitue un sophisme naturaliste ; il affirme aussi que, sans action immédiate, le système s'effondrera dans cinq ans, ce qui relève d'un appel à la peur ; enfin, sa projection d'un déficit de 2,3 % du PIB en 2030 repose sur une hypothèse de croissance optimiste de 1,8 % par an.\",\"conclusion\":\"La justification gouvernementale du fait de travailler plus longtemps est fallacieuse et peu fiable.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791668655,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 294,
+      "prompt_tokens": 338,
+      "total_tokens": 632,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 159,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

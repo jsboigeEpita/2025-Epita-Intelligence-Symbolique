@@ -1,0 +1,48 @@
+{
+  "key": "be2c8871413e43c7caba6fa6035c5285b60c7b771547a8e1eebeebfee67bab58",
+  "value": {
+    "id": "chatcmpl-EXZ9Nr8ZNLb75Q7bHFD48hrDExPDY",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"La justification budgétaire du gouvernement, selon laquelle le déficit atteindra 2,3 % du PIB d’ici 2030 sur la base d’une croissance annuelle de 1,8 %, ainsi que l’idée que travailler plus longtemps serait « dans l’ordre des choses ».\",\"main_thesis\":\"La justification budgétaire est contestable, car la projection du déficit repose sur des hypothèses de croissance trop optimistes.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791668649,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 237,
+      "prompt_tokens": 346,
+      "total_tokens": 583,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 130,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "key": "a9fa360259033d100d226ddaa76b3bdbd5a8bc9346fe1af94df98489beebe724",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_IIn5P6AHfKP8cqOh2h5dauIP",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"801\",\"matches\":false,\"confidence\":0.99,\"justification\":\"L’énoncé affirme simplement que le président considère la politique économique comme un succès incontestable. Il ne fournit pas de définition complexe ou obscurcissante ; le défaut d’élucidation n’est donc pas établi.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EXZCEEPmb6iQKvsHOXxMweDGx4GUq",
+        "created": 1791668826,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 781,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 81,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

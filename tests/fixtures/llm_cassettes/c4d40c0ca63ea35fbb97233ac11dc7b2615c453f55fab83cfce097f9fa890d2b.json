@@ -1,0 +1,48 @@
+{
+  "key": "c4d40c0ca63ea35fbb97233ac11dc7b2615c453f55fab83cfce097f9fa890d2b",
+  "value": {
+    "id": "chatcmpl-EXZMl1hc2rgPJ9oXcZXVERfg2fOAk",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Les activités humaines ont un impact sur le changement climatique.\\n2. Le changement climatique actuel se distingue par une vitesse sans précédent, que les sceptiques négligent en rappelant seulement que le climat a toujours changé.\\n3. Les personnes qui minimisent la crise climatique utilisent souvent des données sélectives pour soutenir leur position.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791669479,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 139,
+      "prompt_tokens": 234,
+      "total_tokens": 373,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 56,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

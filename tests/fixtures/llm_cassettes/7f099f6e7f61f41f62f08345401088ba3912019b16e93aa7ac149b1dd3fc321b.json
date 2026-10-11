@@ -1,0 +1,48 @@
+{
+  "key": "7f099f6e7f61f41f62f08345401088ba3912019b16e93aa7ac149b1dd3fc321b",
+  "value": {
+    "id": "chatcmpl-EXZLksDl8AEeUDn4ml9c0LjSLViQW",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Trois points distincts sont avancés : réduction des erreurs judiciaires grâce aux progrès de l’analyse ADN, effet dissuasif contre les crimes graves, et impossibilité de réinsérer certains criminels. Aucune redondance sémantique notable n’est localisée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791669416,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 129,
+      "prompt_tokens": 302,
+      "total_tokens": 431,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 51,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

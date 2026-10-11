@@ -36,7 +36,42 @@ class TestInvokeJTMS:
         assert len(in_list) == 2
 
     async def test_fallacies_retract_undermined_beliefs(self):
-        """Detected fallacies → beliefs are retracted."""
+        """A fallacy carrying its target's arg_N id retracts that belief."""
+        from argumentation_analysis.orchestration.unified_pipeline import _invoke_jtms
+
+        context = {
+            "phase_extract_output": {
+                "arguments": [{"text": "He is wrong because he is biased"}],
+                "claims": [],
+            },
+            "phase_hierarchical_fallacy_output": {
+                "fallacies": [
+                    {
+                        "fallacy_type": "ad_hominem",
+                        "explanation": "Attacks the person",
+                        # The hierarchical producer writes the unit's own
+                        # identifier here (#1633) — position is not a
+                        # resolver (#2968), so without this id the fallacy
+                        # undermines nothing.
+                        "target_argument": "arg_1",
+                    }
+                ]
+            },
+        }
+        result = await _invoke_jtms("text", context)
+
+        assert result["undermined_count"] > 0
+        assert result["fallacy_count"] == 1
+        # Belief names carry an "arg_N:" prefix so compute_argument_convergence
+        # can index JTMS signals by arg_id (startswith check).
+        arg_belief = result["beliefs"].get("arg_1:He is wrong because he is biased")
+        assert arg_belief is not None
+        assert arg_belief["valid"] is False
+
+    async def test_fallacy_without_identity_retracts_nothing(self):
+        """#2968/#1019: a fallacy naming no target (no id, no quote that
+        grounds) undermines nothing — the old positional fallback retracted
+        arg_{i+1} and linked a wrong unit."""
         from argumentation_analysis.orchestration.unified_pipeline import _invoke_jtms
 
         context = {
@@ -52,13 +87,10 @@ class TestInvokeJTMS:
         }
         result = await _invoke_jtms("text", context)
 
-        assert result["undermined_count"] > 0
-        assert result["fallacy_count"] == 1
-        # Belief names carry an "arg_N:" prefix so compute_argument_convergence
-        # can index JTMS signals by arg_id (startswith check).
+        assert result["undermined_count"] == 0
         arg_belief = result["beliefs"].get("arg_1:He is wrong because he is biased")
         assert arg_belief is not None
-        assert arg_belief["valid"] is False
+        assert arg_belief["valid"] is True
 
     async def test_counter_arguments_create_rebuttals(self):
         """Counter-arguments → rebuttal entries via OUT-list."""
@@ -168,7 +200,8 @@ class TestInvokeJTMS:
         assert isinstance(j["out_list"], list)
 
     async def test_multiple_fallacies_target_different_args(self):
-        """Multiple fallacies target different arguments by index."""
+        """Fallacies carrying their targets' ids retract those units — the
+        untouched third belief stays valid (#2968)."""
         from argumentation_analysis.orchestration.unified_pipeline import _invoke_jtms
 
         context = {
@@ -182,8 +215,16 @@ class TestInvokeJTMS:
             },
             "phase_hierarchical_fallacy_output": {
                 "fallacies": [
-                    {"fallacy_type": "ad_hominem", "explanation": "attacks person"},
-                    {"fallacy_type": "strawman", "explanation": "misrepresents"},
+                    {
+                        "fallacy_type": "ad_hominem",
+                        "explanation": "attacks person",
+                        "target_argument": "arg_1",
+                    },
+                    {
+                        "fallacy_type": "strawman",
+                        "explanation": "misrepresents",
+                        "target_argument": "arg_2",
+                    },
                 ]
             },
         }
@@ -191,3 +232,6 @@ class TestInvokeJTMS:
 
         assert result["fallacy_count"] == 2
         assert result["undermined_count"] >= 2
+        assert result["beliefs"]["arg_1:First argument"]["valid"] is False
+        assert result["beliefs"]["arg_2:Second argument"]["valid"] is False
+        assert result["beliefs"]["arg_3:Third argument"]["valid"] is True

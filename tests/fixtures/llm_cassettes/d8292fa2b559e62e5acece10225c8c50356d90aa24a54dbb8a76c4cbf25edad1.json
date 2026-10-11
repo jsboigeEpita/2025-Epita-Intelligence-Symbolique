@@ -1,0 +1,48 @@
+{
+  "key": "d8292fa2b559e62e5acece10225c8c50356d90aa24a54dbb8a76c4cbf25edad1",
+  "value": {
+    "id": "chatcmpl-EXZAHFBvT2xqQTGxukApfohs6grFO",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne affirme que personne n’a proposé de supprimer les retraites, seulement de les réformer, et que l’appel à « penser à vos enfants » vise à susciter une réaction émotionnelle. Elle conclut toutefois que cet appel constitue un homme de paille et détourne le débat des questions techniques de financement. Le verdict est un saut logique, car les prémisses ne suffisent pas à établir ces deux conclusions.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791668705,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 137,
+      "prompt_tokens": 306,
+      "total_tokens": 443,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 32,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\"fallacy_name\":\"Lapalissade\",\"taxonomy_pk\":\"31\",\"explanation\":\"Le texte énonce des affirmations banales et évidentes, sans fournir de raisonnement ou d’information substantielle.\",\"confidence\":0.86}",
+      "content": "{\"fallacy_name\":\"Lapalissade\",\"taxonomy_pk\":\"31\",\"explanation\":\"Ces énoncés présentent comme une information une évidence triviale, sans véritable raisonnement ni justification.\",\"confidence\":0.98}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EVO6NOPh06zm1n5F3wNGpmI5BTZg7",
-        "created": 1791149523,
+        "id": "chatcmpl-EXZBQP8tcigagITp5csPsbqxsiD2J",
+        "created": 1791668776,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 22905,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 315,
+          "completion_tokens": 150,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 258,
+            "reasoning_tokens": 96,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

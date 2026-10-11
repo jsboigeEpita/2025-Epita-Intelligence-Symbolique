@@ -1,0 +1,40 @@
+{
+  "key": "41c6a521117dccf2215b9634455bab0e2ac4dc5b3112e9eb7ad288f2d24b8785",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_0ICzanKmRD4DDoZV9LYDhEzw",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"759\",\"confidence\":\"medium\",\"matches\":true,\"justification\":\"L'affirmation présente le succès de la politique économique comme incontestable sans fournir de données, critères ni preuves suffisantes; elle tire donc une conclusion trop vite.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EXZCEfxB5FiEFC4AKpjeZCPV6vH8Y",
+        "created": 1791668826,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1859,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1856,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 68,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

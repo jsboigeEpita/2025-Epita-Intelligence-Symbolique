@@ -1,0 +1,48 @@
+{
+  "key": "d49e02266faa350bc767ce6cfa843fd218b92456ba611d0a467426d2fa4177dc",
+  "value": {
+    "id": "chatcmpl-EXZLUsa1d3Kz1PQq0WwBu9Tmt9mCW",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Le système judiciaire peut se tromper, ce qui crée un risque d’erreur judiciaire.\",\"main_thesis\":\"Les progrès de l’analyse ADN réduisent considérablement le risque d’erreur judiciaire et contribuent à dissuader les crimes graves, ce qui justifie leur utilisation pour protéger la société.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791669400,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 149,
+      "prompt_tokens": 292,
+      "total_tokens": 441,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 67,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

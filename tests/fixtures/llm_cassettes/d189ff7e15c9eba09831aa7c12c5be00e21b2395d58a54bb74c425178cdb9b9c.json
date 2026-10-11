@@ -1,0 +1,40 @@
+{
+  "key": "d189ff7e15c9eba09831aa7c12c5be00e21b2395d58a54bb74c425178cdb9b9c",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_N9SPmrrVEFhYm1GOgsi2pBGS",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"761\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"Le texte invoque l'unanimité des experts et exclut l'avis des non-experts, ce qui relève d'un appel à l'autorité et d'un argument ad hominem circonstanciel, non du sophisme génétique : il ne rejette pas une idée en raison de son origine.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EXZDTHAHWSoJEUBdI1bICsyPDKsev",
+        "created": 1791668903,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 782,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 96,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

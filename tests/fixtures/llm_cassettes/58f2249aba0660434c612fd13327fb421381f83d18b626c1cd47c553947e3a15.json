@@ -1,0 +1,48 @@
+{
+  "key": "58f2249aba0660434c612fd13327fb421381f83d18b626c1cd47c553947e3a15",
+  "value": {
+    "id": "chatcmpl-EXZ989JtefGvuV9j9mLuVlTV0xbhL",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Jargon technique non défini : « argument d’autorité », « appel à la peur » et « sophisme naturaliste ». Aucun autre obstacle notable : les références sont résolvables et les phrases ne sont pas excessivement emboîtées.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791668634,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 166,
+      "prompt_tokens": 321,
+      "total_tokens": 487,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 94,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

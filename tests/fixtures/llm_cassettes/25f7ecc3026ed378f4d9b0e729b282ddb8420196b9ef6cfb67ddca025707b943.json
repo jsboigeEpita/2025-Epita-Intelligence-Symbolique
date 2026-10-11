@@ -1,0 +1,40 @@
+{
+  "key": "25f7ecc3026ed378f4d9b0e729b282ddb8420196b9ef6cfb67ddca025707b943",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_wXtX3fq97pnMsovD9M9bOyTp",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"51\",\"matches\":true,\"confidence\":\"medium\",\"justification\":\"Le président présente son propre jugement selon lequel la politique économique est un succès comme une affirmation objective et incontestable, sans fournir d'éléments indépendants.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EXZCCshEtBkwbfKUtbNgSGwsxhSaw",
+        "created": 1791668824,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1457,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1454,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 66,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

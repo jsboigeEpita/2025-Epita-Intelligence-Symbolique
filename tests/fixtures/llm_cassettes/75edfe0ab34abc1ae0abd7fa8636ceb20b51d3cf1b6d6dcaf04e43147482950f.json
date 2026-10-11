@@ -1,0 +1,40 @@
+{
+  "key": "75edfe0ab34abc1ae0abd7fa8636ceb20b51d3cf1b6d6dcaf04e43147482950f",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_YVBgXgEYYSy060QNXYFCKsFN",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"826\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"L’énoncé affirme seulement que la politique économique est un succès incontestable, sans employer de termes définis de manière contradictoire ou incohérente.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EXZCBUzcuddvYmrORhHG2U5c91BUe",
+        "created": 1791668823,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1594,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1591,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 68,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

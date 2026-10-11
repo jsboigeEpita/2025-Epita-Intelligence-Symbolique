@@ -1,0 +1,48 @@
+{
+  "key": "d43896b53809402851f97c19fe2128ea757ab43b9e1b9df573e3631c70432d83",
+  "value": {
+    "id": "chatcmpl-EXZMz5SHDpmDV3fKfXowReZwa0YEe",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points abordent trois dimensions distinctes : la vitesse du changement climatique, l’ampleur mesurée du réchauffement et le consensus des modèles prédictifs. Aucune redondance sémantique manifeste n’est démontrée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791669493,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 127,
+      "prompt_tokens": 302,
+      "total_tokens": 429,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 57,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

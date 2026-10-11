@@ -1,0 +1,48 @@
+{
+  "key": "a7f4fec6aba8d5c5cdbf563941d7d950321b9f7262502b70689eef1cf05af8d7",
+  "value": {
+    "id": "chatcmpl-EXZG1YsdxfszIq98SPAufM3anlWGd",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Utiliser la subvention pour créer un espace numérique avec des ordinateurs en libre accès.\\n2. Élargir le fonds de livres jeunesse.\\n3. Répartir la subvention à parts égales entre le fonds de livres et l’espace numérique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791669061,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 142,
+      "prompt_tokens": 219,
+      "total_tokens": 361,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 73,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

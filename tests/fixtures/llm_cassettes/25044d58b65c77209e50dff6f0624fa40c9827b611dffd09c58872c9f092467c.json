@@ -1,0 +1,48 @@
+{
+  "key": "25044d58b65c77209e50dff6f0624fa40c9827b611dffd09c58872c9f092467c",
+  "value": {
+    "id": "chatcmpl-EXZKUmQPIEIQPpN8JUABQN0FKe7XF",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Le point 1 affirme que certains opposants jugent les vaccins dangereux, et le point 3, tronqué après « da », semble reprendre cette même idée. Le point 2 apporte en revanche un élément distinct sur l’efficacité historique de la vaccination.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791669338,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 195,
+      "prompt_tokens": 299,
+      "total_tokens": 494,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 123,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

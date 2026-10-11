@@ -1,0 +1,40 @@
+{
+  "key": "ef26056c61892d47c2c51fa54d17245994b088bf1d8c177238e97d61f25b3cea",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_1fXx1RpEtaGnd74NfvySzFKd",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"301\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"Les deux arguments présentent l'unanimité et le statut d'expert comme suffisants pour établir la vérité ou invalider un avis, sans fournir de justification indépendante. Cela relève de l'appel à la conviction dans cette branche, plutôt que d'un effet de halo.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EXZD1pRyiCpqwDf5w9aXhUfEkKf09",
+        "created": 1791668875,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1425,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1422,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 88,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

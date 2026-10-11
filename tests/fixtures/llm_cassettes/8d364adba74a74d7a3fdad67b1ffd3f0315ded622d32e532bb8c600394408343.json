@@ -1,0 +1,48 @@
+{
+  "key": "8d364adba74a74d7a3fdad67b1ffd3f0315ded622d32e532bb8c600394408343",
+  "value": {
+    "id": "chatcmpl-EXZ9QhqokDAxys494yIEWYbNlBT2J",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"La réforme est nécessaire ou justifiée parce que le déficit atteindra 2,3 % du PIB en 2030 et qu’il serait naturel de travailler plus longtemps.\",\"main_thesis\":\"La justification gouvernementale de la réforme est contestable, car elle repose sur une projection fondée sur des hypothèses de croissance optimistes et sur un sophisme naturaliste.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791668652,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 299,
+      "prompt_tokens": 346,
+      "total_tokens": 645,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 204,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "key": "70a53c4f5ecedaaf9053913b619f7e291197c5d4d89025747b776d34ec07b963",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_oNrosgoSDhhhL2uGHxo3KvGw",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"183\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"Le texte rapporte simplement une affirmation du président selon laquelle la politique économique est un succès incontestable. Il n’explicite aucun raisonnement dont la conclusion serait présupposée par une prémisse; il s’agit au plus d’une affirmation d’autorité, pas d’une pétition de principe.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EXZCGy9jZOMcziKuzLf9lZ1sikA2d",
+        "created": 1791668828,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 762,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 95,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

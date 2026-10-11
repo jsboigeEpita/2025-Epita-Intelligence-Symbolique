@@ -1,0 +1,48 @@
+{
+  "key": "a192100b271fc632d26398407df2728b46b3c9b8b818907b27f0251cfe8b51c9",
+  "value": {
+    "id": "chatcmpl-EXZHszuBiCNio5Pru5763poySblKx",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\":false,\"structure_verdict\":\"saut_logique\",\"reasoning\":\"Le fait que le matériel soit usé justifie un investissement, mais ne suffit pas à conclure qu’il faut consacrer l’intégralité du budget au matériel pédagogique plutôt qu’aux autres options.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791669176,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 113,
+      "prompt_tokens": 483,
+      "total_tokens": 596,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 44,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

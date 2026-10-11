@@ -1,0 +1,40 @@
+{
+  "key": "55ecd22737a39dc3c1d35750ff23bf4f2533fa7d88f424f45ab45b9ed368095b",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_iEQcquxSjDxT4ZTOVbZbzpVa",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"322\",\"confidence\":\"high\",\"matches\":false,\"justification\":\"Le texte invoque plutôt l'autorité et exclut les avis des non-experts; il ne caricature ni ne rend une idée repoussante. Cette branche Repoussoir ne correspond pas.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EXZCs6lCAJweJ0a0sV4zrMjUapCMZ",
+        "created": 1791668866,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2004,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 2001,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 75,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

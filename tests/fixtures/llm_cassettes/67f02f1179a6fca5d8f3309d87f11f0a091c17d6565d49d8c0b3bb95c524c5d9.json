@@ -1,0 +1,40 @@
+{
+  "key": "67f02f1179a6fca5d8f3309d87f11f0a091c17d6565d49d8c0b3bb95c524c5d9",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_QdnhhfaBo66c3dfmZ1dyCjpr",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"190\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"Les deux arguments disqualifient l'avis des non-experts et présentent l'unanimité des experts comme une preuve suffisante, en faisant pression sur l'auditoire pour accepter la conclusion sans examen des raisons ou des preuves.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EXZDICbdsLM9yvwxunOkjVF719PTB",
+        "created": 1791668892,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1798,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1795,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 83,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

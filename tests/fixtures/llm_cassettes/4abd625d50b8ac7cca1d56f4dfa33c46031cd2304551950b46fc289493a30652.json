@@ -1,0 +1,40 @@
+{
+  "key": "4abd625d50b8ac7cca1d56f4dfa33c46031cd2304551950b46fc289493a30652",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_OzOOWRlZBE6nRz69UERbLSlO",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"Les deux phrases sont de simples affirmations descriptives, sans argument ni conclusion à démontrer; elles n’exhibent pas une insuffisance argumentative fallacieuse.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EXZBPK00pRPzog6zzcm2dOYcdJ1zi",
+        "created": 1791668775,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1751,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1748,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 69,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

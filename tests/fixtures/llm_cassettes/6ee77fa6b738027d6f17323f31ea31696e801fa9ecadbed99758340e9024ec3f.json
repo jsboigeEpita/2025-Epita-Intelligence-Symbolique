@@ -1,0 +1,48 @@
+{
+  "key": "6ee77fa6b738027d6f17323f31ea31696e801fa9ecadbed99758340e9024ec3f",
+  "value": {
+    "id": "chatcmpl-EXZ98Aad697EwKWTefa3etrCbZz82",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Jargon technique non défini : « sophisme naturaliste » et « homme de paille » sont des termes spécialisés utilisés sans explication. « PIB » est également une abréviation non explicitée. Aucun problème majeur d’anaphore ni de phrase excessivement emboîtée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791668634,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 162,
+      "prompt_tokens": 344,
+      "total_tokens": 506,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 82,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

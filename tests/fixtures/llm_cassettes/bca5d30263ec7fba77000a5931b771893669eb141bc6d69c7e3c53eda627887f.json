@@ -1,0 +1,48 @@
+{
+  "key": "bca5d30263ec7fba77000a5931b771893669eb141bc6d69c7e3c53eda627887f",
+  "value": {
+    "id": "chatcmpl-EXZMoOzbxdlyJfjkPdd7r5doHl1z7",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Les sceptiques du climat soutiennent que le climat a toujours connu des variations. 2. Les mesures de température globale montrent une augmentation de 1,1 °C depuis l’ère préindustrielle. 3. Les sceptiques omettent que la vitesse du changement climatique actuel est sans précédent. 4. Les modèles prédictifs sont unanimes quant à l’impact des activités humaines sur le climat.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1791669482,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 165,
+      "prompt_tokens": 233,
+      "total_tokens": 398,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 64,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

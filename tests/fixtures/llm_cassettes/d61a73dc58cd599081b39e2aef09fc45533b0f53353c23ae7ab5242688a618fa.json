@@ -1,0 +1,40 @@
+{
+  "key": "d61a73dc58cd599081b39e2aef09fc45533b0f53353c23ae7ab5242688a618fa",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_8RfLeq3lGBZMPk9zgYA3bAr7",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"74\",\"matches\":true,\"confidence\":0.98,\"justification\":\"Le texte affirme que l'unanimité des experts suffit à établir la vérité, puis disqualifie tout avis non expert sans examiner les raisons ni les preuves. Il s'agit bien d'un recours à l'autorité comme justification suffisante, et l'argument 2 renforce cette prétention d'autorité.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EXZDh5nYvE4a72PFB3HFrlpuPTLiM",
+        "created": 1791668917,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 799,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 100,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}
