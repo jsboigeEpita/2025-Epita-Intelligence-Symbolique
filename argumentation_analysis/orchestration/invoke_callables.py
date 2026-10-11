@@ -5922,21 +5922,32 @@ async def _invoke_sat(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
 
 
 async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
-    """Invoke Set Argumentation Framework handler (#87) with JVM fallback."""
-    args = context.get("arguments") or _extract_arguments_from_context(
+    """Invoke Set Argumentation Framework handler (#87) with JVM fallback.
+
+    #3014 — the frame's nodes are the merged population's unit ids (see
+    :func:`_af_family_frame`): the ``set_attacks`` sidecar the Act III
+    projector reads is keyed by ``arg_N``, joinable to the units, with the
+    texts travelling as ``argument_labels``. Before #3014 the nodes came
+    from the extraction window alone, named by text.
+    """
+    node_ids, labels, node_by_label, identity_payload = _af_family_frame(
         input_text, context
     )
+    args = node_ids
     # Genuine SetAF joint-attacks: if the caller did not supply them, try to
     # derive them from the text (validated by id). Never overrides a caller's
     # explicit set; empty/failed derivation leaves the key unset so the handler
     # honestly falls back to auto-shaped pairwise attacks.
+    # #3014: the translator reads TEXTS (its inventory is LLM-facing) — the
+    # returned relations reference labels and translate back to node ids
+    # below, exactly (same in-memory pairs, never a prefix join).
     if not context.get("set_attacks"):
         try:
             from argumentation_analysis.orchestration.structured_arg_translator import (
                 translate_to_setaf_attacks,
             )
 
-            outcome = await translate_to_setaf_attacks(input_text, args)
+            outcome = await translate_to_setaf_attacks(input_text, labels)
             derived_attacks = outcome.relations
             if derived_attacks:
                 context["set_attacks"] = derived_attacks
@@ -5950,13 +5961,28 @@ async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict[str, A
             )
     # SetAF attacks come as {attackers, target} dicts. Upstream may provide
     # them directly, else shape from the canonical pairwise attack graph.
+    # #3014: whichever way they arrived, their members reference argument
+    # names — translate to node ids; an entry whose target resolves to no
+    # node or whose attackers all resolve to nothing joins nothing and is
+    # dropped (deterministic first-label match).
     raw_attacks = context.get("set_attacks")
     if (
         isinstance(raw_attacks, list)
         and raw_attacks
         and isinstance(raw_attacks[0], dict)
     ):
-        attacks = raw_attacks
+        attacks = []
+        for entry in raw_attacks:
+            if not isinstance(entry, dict):
+                continue
+            target = node_by_label.get(str(entry.get("target")))
+            attackers = [
+                node_by_label[str(a)]
+                for a in (entry.get("attackers") or [])
+                if str(a) in node_by_label
+            ]
+            if target is not None and attackers:
+                attacks.append({"attackers": attackers, "target": target})
     elif _structured_arg_cause(context, "setaf_reasoning") == "no_genuine_relations":
         # #1629 soustraction: the translator arbitrated and found NO genuine
         # joint attacks in the source — an analytical result, not a failure
@@ -5969,8 +5995,8 @@ async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict[str, A
         # stay out of this scope.)
         attacks = []
     else:
-        pairs = context.get("attacks") or _generate_attacks_from_args(args, context)
-        attacks = _setaf_attacks_from_pairs(pairs)
+        pairs = context.get("attacks") or _generate_attacks_from_args(labels, context)
+        attacks = _setaf_attacks_from_pairs(_edges_labels_to_ids(node_by_label, pairs))
     semantics = context.get("semantics", "grounded")
 
     try:
@@ -5985,13 +6011,15 @@ async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict[str, A
             handler.analyze_setaf, args, attacks, semantics
         )
         # #1698: the handler echoes the INPUT attacks; make the echo honest.
-        return _annotate_attack_retention(
+        output = _annotate_attack_retention(
             output,
             args,
             attacks,
             framework_name=f"setaf_{semantics}",
             state=context.get("_state_object"),
         )
+        output.update(identity_payload)
+        return output
     except Exception as e:
         raise RuntimeError(
             f"SetAF analysis unavailable: JVM/Tweety required ({e}). "
@@ -6000,21 +6028,32 @@ async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict[str, A
 
 
 async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
-    """Invoke Weighted AF handler (#87) with JVM fallback."""
-    args = context.get("arguments") or _extract_arguments_from_context(
+    """Invoke Weighted AF handler (#87) with JVM fallback.
+
+    #3014 — the frame's nodes are the merged population's unit ids (see
+    :func:`_af_family_frame`): the ``attack_weights`` sidecar the Act III
+    projector reads is keyed by ``arg_N``, joinable to the units, with the
+    texts travelling as ``argument_labels``. Before #3014 the nodes came
+    from the extraction window alone, named by text.
+    """
+    node_ids, labels, node_by_label, identity_payload = _af_family_frame(
         input_text, context
     )
+    args = node_ids
     # Genuine weighted attacks: if the caller did not supply them, try to
     # derive them from the text (validated by id). Never overrides a caller's
     # explicit set; empty/failed derivation leaves the key unset so the handler
     # honestly falls back to auto-shaped pairwise attacks with neutral weight.
+    # #3014: the translator reads TEXTS (its inventory is LLM-facing) — the
+    # returned triples reference labels and translate back to node ids below,
+    # exactly (same in-memory pairs, never a prefix join).
     if not context.get("weighted_attacks"):
         try:
             from argumentation_analysis.orchestration.structured_arg_translator import (
                 translate_to_weighted_attacks,
             )
 
-            outcome = await translate_to_weighted_attacks(input_text, args)
+            outcome = await translate_to_weighted_attacks(input_text, labels)
             derived_attacks = outcome.relations
             if derived_attacks:
                 context["weighted_attacks"] = derived_attacks
@@ -6031,6 +6070,9 @@ async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str
     # Weighted attacks come as (source, target, weight) triples. Upstream may
     # provide them directly, else shape from the canonical pairwise graph with
     # neutral weight 0.5 (#1019: no fabricated confidence).
+    # #3014: whichever way they arrived, the endpoints reference argument
+    # names — translate to node ids; a triple whose endpoint resolves to no
+    # node is dropped (the weight rides along unchanged).
     raw_attacks = context.get("weighted_attacks")
     if (
         isinstance(raw_attacks, list)
@@ -6039,9 +6081,12 @@ async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str
         and len(raw_attacks[0]) >= 3
     ):
         attacks = [
-            (str(t[0]), str(t[1]), float(t[2]))
+            (node_by_label[str(t[0])], node_by_label[str(t[1])], float(t[2]))
             for t in raw_attacks
-            if isinstance(t, (list, tuple)) and len(t) >= 3
+            if isinstance(t, (list, tuple))
+            and len(t) >= 3
+            and str(t[0]) in node_by_label
+            and str(t[1]) in node_by_label
         ]
     elif (
         _structured_arg_cause(context, "weighted_argumentation")
@@ -6054,8 +6099,10 @@ async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str
         # inventory sources) and echoed as a result (#1698). See setaf twin.
         attacks = []
     else:
-        pairs = context.get("attacks") or _generate_attacks_from_args(args, context)
-        attacks = _weighted_attacks_from_pairs(pairs)
+        pairs = context.get("attacks") or _generate_attacks_from_args(labels, context)
+        attacks = _weighted_attacks_from_pairs(
+            _edges_labels_to_ids(node_by_label, pairs)
+        )
     semantics = context.get("semantics", "grounded")
 
     try:
@@ -6072,13 +6119,15 @@ async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str
             handler.analyze_weighted_framework, args, attacks, semantics
         )
         # #1698: the handler echoes the INPUT attacks; make the echo honest.
-        return _annotate_attack_retention(
+        output = _annotate_attack_retention(
             output,
             args,
             attacks,
             framework_name=f"weighted_{semantics}",
             state=context.get("_state_object"),
         )
+        output.update(identity_payload)
+        return output
     except Exception as e:
         raise RuntimeError(
             f"Weighted AF analysis unavailable: JVM/Tweety required ({e}). "
@@ -6087,17 +6136,34 @@ async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str
 
 
 async def _invoke_social(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
-    """Invoke Social AF handler (#87) with JVM fallback."""
-    args = context.get("arguments") or _extract_arguments_from_context(
+    """Invoke Social AF handler (#87) with JVM fallback.
+
+    #3014 — the frame's nodes are the merged population's unit ids (see
+    :func:`_af_family_frame`): the ranking/scores the handler computes are
+    keyed by ``arg_N``, joinable to the units, with the texts travelling as
+    ``argument_labels``. Before #3014 the nodes came from the extraction
+    window alone, named by text.
+    """
+    node_ids, labels, node_by_label, identity_payload = _af_family_frame(
         input_text, context
     )
-    # #1698: id-validated attacks derived from the text, no synthetic fallback.
-    attacks = context.get("attacks") or await _derive_dung_attacks(
-        input_text, args, context, capability="social_argumentation"
+    args = node_ids
+    # #1698: id-validated attacks derived from the text, no synthetic
+    # fallback. #3014: the derivation reads TEXTS (its inventory is
+    # LLM-facing); the returned edges translate back to node ids exactly —
+    # both sides from the same in-memory pairs, never a prefix join.
+    text_edges = context.get("attacks") or await _derive_dung_attacks(
+        input_text, labels, context, capability="social_argumentation"
     )
-    votes = context.get("votes", {})
-    if votes:
-        votes = {k: tuple(v) if isinstance(v, list) else v for k, v in votes.items()}
+    attacks = _edges_labels_to_ids(node_by_label, text_edges)
+    # Votes are keyed by argument name: translate label keys to node ids; a
+    # key that resolves to no node joins nothing and is dropped.
+    votes_in = context.get("votes", {})
+    votes = {}
+    for k, v in votes_in.items():
+        node = node_by_label.get(str(k))
+        if node is not None:
+            votes[node] = tuple(v) if isinstance(v, list) else v
 
     try:
         from argumentation_analysis.agents.core.logic.social_handler import (
@@ -6113,15 +6179,19 @@ async def _invoke_social(input_text: str, context: Dict[str, Any]) -> Dict[str, 
             handler.analyze_social_framework, args, attacks, votes
         )
         # #1698: the handler echoes the INPUT attacks; make the echo honest.
-        return _annotate_attack_retention(
+        output = _annotate_attack_retention(
             output,
             args,
             attacks,
             framework_name="social_af",
             state=context.get("_state_object"),
         )
+        output.update(identity_payload)
+        return output
     except Exception as e:
         logger.info(f"Social handler failed ({e}); failing loud with the cause (#1826)")
+        # The fail-loud stub always raises (#1826) — there is no degraded
+        # payload to carry the identity fields on this path.
         return _python_social_fallback(args, attacks, votes, context, cause=e)
 
 
@@ -6175,18 +6245,40 @@ def _python_eaf_fallback(
 
 
 async def _invoke_eaf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
-    """Invoke Epistemic AF handler (#88) with JVM fallback."""
-    args = context.get("arguments") or _extract_arguments_from_context(
+    """Invoke Epistemic AF handler (#88) with JVM fallback.
+
+    #3014 — the frame's nodes are the merged population's unit ids (see
+    :func:`_af_family_frame`): the ``epistemic_beliefs`` sidecar the Act III
+    projector reads is keyed by ``arg_N``, joinable to the units, with the
+    texts travelling as ``argument_labels``. Before #3014 the nodes came
+    from the extraction window alone, named by text.
+    """
+    node_ids, labels, node_by_label, identity_payload = _af_family_frame(
         input_text, context
     )
-    # #1698: id-validated attacks derived from the text, no synthetic fallback.
-    attacks = context.get("attacks") or await _derive_dung_attacks(
-        input_text, args, context, capability="epistemic_argumentation"
+    args = node_ids
+    # #1698: id-validated attacks derived from the text, no synthetic
+    # fallback. #3014: the derivation reads TEXTS; the returned edges
+    # translate back to node ids exactly (same in-memory pairs, never a
+    # prefix join).
+    text_edges = context.get("attacks") or await _derive_dung_attacks(
+        input_text, labels, context, capability="epistemic_argumentation"
     )
+    attacks = _edges_labels_to_ids(node_by_label, text_edges)
     # EAF expects Dict[agent, List[arg]] beliefs, NOT float probabilities.
     # Shape/validate; None lets the handler default to "all believed" (valid
-    # non-fabricated baseline, #1019).
-    beliefs = _eaf_beliefs_from_context(args, context)
+    # non-fabricated baseline, #1019). #3014: the belief lists reference
+    # argument names — translate the resolvable ones to node ids; an agent
+    # whose list resolves to nothing joins nothing and is dropped.
+    beliefs = _eaf_beliefs_from_context(labels, context)
+    if beliefs:
+        beliefs = {
+            str(agent): [
+                node_by_label[str(x)] for x in arg_names if str(x) in node_by_label
+            ]
+            for agent, arg_names in beliefs.items()
+        }
+        beliefs = {a: lst for a, lst in beliefs.items() if lst} or None
     semantics = context.get("semantics", "grounded")
 
     try:
@@ -6197,11 +6289,15 @@ async def _invoke_eaf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
 
         initializer = ready_initializer()
         handler = EAFHandler(initializer)
-        return await asyncio.to_thread(
+        output = await asyncio.to_thread(
             handler.analyze_epistemic_framework, args, attacks, beliefs, semantics
         )
+        output.update(identity_payload)
+        return output
     except Exception as e:
         logger.info(f"EAF handler failed ({e}); failing loud with the cause (#1826)")
+        # The fail-loud stub always raises (#1826) — there is no degraded
+        # payload to carry the identity fields on this path.
         return _python_eaf_fallback(args, attacks, semantics, context, cause=e)
 
 
@@ -9525,10 +9621,14 @@ async def _invoke_modal_logic(
             object.__setattr__(_modal_settings, "modal_solver", _prev_modal_solver)
 
 
-def _dung_node_units(
+def _population_node_units(
     input_text: str, context: Dict[str, Any]
 ) -> Tuple[List[Tuple[str, str]], Optional[str]]:
-    """#3008 — the Dung frame's nodes as ``(unit_id, label)`` pairs.
+    """#3008 — the AF frame's nodes as ``(unit_id, label)`` pairs.
+
+    #3014: renamed from ``_dung_node_units`` — five AF-family members
+    (Dung, SETAF, weighted, social, EAF) now build their nodes here; it is
+    the family builder, not Dung's private helper.
 
     The id is minted by the SAME builder that mints the population every
     other axis joins on (``merged_population_units``): the state's
@@ -9572,6 +9672,75 @@ def _dung_node_units(
     )
 
 
+def _af_family_frame(
+    input_text: str, context: Dict[str, Any]
+) -> Tuple[List[str], List[str], Dict[str, str], Dict[str, Any]]:
+    """#3014 — the AF family's frame: unit ids as nodes, texts as labels.
+
+    Shaping over :func:`_population_node_units`, shared by every family
+    member that reasons over the corpus (one builder, never a copy — the
+    copy was what reddened #3009's first CI). Returns, in order:
+
+    - ``node_ids`` — the frame's nodes (``arg_N`` unit ids);
+    - ``labels`` — the argument texts, for every text-consuming seam
+      (translators, derivation) that must keep reading prose;
+    - ``node_by_label`` — the exact label→id map for translating whatever
+      those seams return back into node ids;
+    - ``identity_payload`` — the ``argument_labels`` (+ absence reason)
+      dict every return site carries, so the writer curates labels the way
+      #3009's Dung entry does.
+    """
+    pairs, no_id_reason = _population_node_units(input_text, context)
+    if no_id_reason is not None:
+        # The family's historical caller seam: before #3014 every member read
+        # ``context["arguments"]`` FIRST (naked texts). When neither the state
+        # population nor the extract output minted ids, honor that seam before
+        # the sentence tail — the caller's list feeds the same builder, which
+        # mints positional ``arg_N`` ids over it (labels = the texts).
+        caller_args = context.get("arguments")
+        if isinstance(caller_args, list) and caller_args:
+            units = merged_population_units(None, fallback_args=caller_args)
+            if units:
+                pairs = [(str(u.unit_id), str(u.text)) for u in units[:40]]
+                no_id_reason = None
+    node_by_label: Dict[str, str] = {}
+    for unit_id, label in pairs:
+        node_by_label.setdefault(label, unit_id)
+    payload: Dict[str, Any] = {
+        "argument_labels": (
+            {unit_id: label for unit_id, label in pairs} if no_id_reason is None else {}
+        )
+    }
+    if no_id_reason is not None:
+        payload["argument_ids_absent_reason"] = no_id_reason
+    return (
+        [unit_id for unit_id, _ in pairs],
+        [label for _, label in pairs],
+        node_by_label,
+        payload,
+    )
+
+
+def _edges_labels_to_ids(node_by_label: Dict[str, str], edges: Any) -> List[List[str]]:
+    """Exact label→id edge translation (#3009/#3014).
+
+    Both sides come from the same in-memory pairs list, by construction —
+    an edge whose endpoint is not a member NEVER joins by prefix or
+    substring, it is dropped. (The #1698 retention accounting downstream
+    counts what is submitted to the handler; the translation happens before
+    it, as in #3009's Dung site.)
+    """
+    out: List[List[str]] = []
+    if not isinstance(edges, list):
+        return out
+    for edge in edges:
+        if isinstance(edge, (list, tuple)) and len(edge) >= 2:
+            src, tgt = str(edge[0]), str(edge[1])
+            if src in node_by_label and tgt in node_by_label:
+                out.append([node_by_label[src], node_by_label[tgt]])
+    return out
+
+
 async def _invoke_dung_extensions(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -9584,7 +9753,7 @@ async def _invoke_dung_extensions(
     Falls back to pure-Python computation when JVM is unavailable.
 
     #3008 — the frame's nodes are the units' ``arg_N`` ids (see
-    :func:`_dung_node_units`), with the argument texts travelling as
+    :func:`_population_node_units`), with the argument texts travelling as
     ``argument_labels``; every extension and rejection the payload carries is
     keyed by the unit id, which is the reader contract ``native_dung``
     documents.
@@ -9604,7 +9773,9 @@ async def _invoke_dung_extensions(
     #    builder as ``identified_arguments``; the texts travel as labels. The
     #    old extraction returned bare texts and the whole chain keyed on
     #    prose the readers could never join back to a unit.
-    pairs, no_id_reason = _dung_node_units(input_text, context)
+    #    #3014: the builder is renamed ``_population_node_units`` — it is the
+    #    AF family's builder now, not Dung's private helper.
+    pairs, no_id_reason = _population_node_units(input_text, context)
     arguments = [unit_id for unit_id, _ in pairs]
     argument_labels = (
         {unit_id: label for unit_id, label in pairs} if (no_id_reason is None) else {}

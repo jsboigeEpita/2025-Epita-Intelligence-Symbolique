@@ -396,7 +396,14 @@ class TestSoustractionNoGenuineRelations1629:
         ):
             output = await _invoke_setaf("text", {"arguments": ["a", "b", "c"]})
 
-        assert sink["setaf"] == genuine  # genuine relations used as-is
+        # #3014: the frame's nodes are unit ids (positional arg_N over the
+        # caller-supplied ``arguments`` seam) — the genuine relations are
+        # translated label→id, still used as-is (nothing fabricated).
+        assert sink["setaf"] == [
+            {"attackers": ["arg_2"], "target": "arg_1"},
+            {"attackers": ["arg_3"], "target": "arg_1"},
+            {"attackers": ["arg_3"], "target": "arg_2"},
+        ]
         assert output["attacks_retained"] == 3  # all members ⇒ all retained
 
     async def test_setaf_falls_back_when_translator_failed(self) -> None:

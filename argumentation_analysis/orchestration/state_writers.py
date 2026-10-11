@@ -1985,6 +1985,8 @@ def _write_setaf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         arguments=output.get("arguments", []),
         attacks=[],  # set attacks don't map to binary attacks
         extensions={"setaf_extensions": output.get("extensions", [])},
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
     )
     # #1648 Wave-2 sidecar: preserve the joint attacks the handler
     # returns under ``output["attacks"]``. Empty list ⇒ sidecar stays
@@ -2041,6 +2043,8 @@ def _write_weighted_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> No
             if isinstance(a, dict)
         ],
         extensions={"weighted_extensions": output.get("extensions", [])},
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
     )
     # #1648 Wave-2 sidecar: preserve the per-attack weight the handler
     # returns under ``output["attacks"]`` (and the aggregate statistics
@@ -2092,6 +2096,8 @@ def _write_social_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None
         arguments=output.get("arguments", []),
         attacks=output.get("attacks", []),
         extensions={"social_ranking": ranking, "social_scores": scores},
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
     )
     # #1698 (R791 item 1): carry the honest accounting onto the curated entry
     # (no contradiction guard: social has ranking/scores, not acceptance
@@ -2122,6 +2128,8 @@ def _write_eaf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         arguments=output.get("arguments", []),
         attacks=[a for a in output.get("attacks", []) if isinstance(a, list)],
         extensions={"eaf_extensions": output.get("extensions", [])},
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
     )
     # #1648 Wave-2 sidecar: preserve the per-agent epistemic beliefs the
     # handler returns under ``output["epistemic_beliefs"]``. Empty dict

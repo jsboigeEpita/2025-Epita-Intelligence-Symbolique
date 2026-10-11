@@ -436,8 +436,11 @@ class TestTheFabricatedGraphNoLongerReachesTheReasoner:
         submitted = [c for c in calls if c["axis"] == axis][0]
         # #3008: the Dung axis submits the frame's NODES — the units' arg_N
         # ids minted positionally over the same extract output (the text
-        # travels as a label). The other axes still submit canonical texts.
-        expected = [["arg_2", "arg_1"]] if axis == "dung" else [["Beta", "Alpha"]]
+        # travels as a label). #3014: social and eaf joined it (batch 1 of
+        # the family move); probabilistic still submits canonical texts
+        # until its own move.
+        _id_keyed = axis in ("dung", "social", "eaf")
+        expected = [["arg_2", "arg_1"]] if _id_keyed else [["Beta", "Alpha"]]
         assert submitted["attacks"] == expected
         both_in = _retained_attacks(submitted["arguments"], submitted["attacks"])
         assert len(both_in) == 1
@@ -519,11 +522,11 @@ class TestTheAttackerIsNeverPromotedToANode:
         submitted = [c for c in calls if c["axis"] == axis][0]
         # #3008: the Dung axis's inventory is the same extraction, as unit ids
         # (positional arg_N over the extract output); the other axes submit
-        # the canonical texts. In both worlds the inventory is the extracted
-        # population — never a promoted fallacy_* source.
-        expected_inventory = (
-            ["arg_1", "arg_2", "arg_3"] if axis == "dung" else _ARGUMENTS
-        )
+        # the canonical texts. #3014: social and eaf joined the id-keyed
+        # world (batch 1 of the family move). In both worlds the inventory
+        # is the extracted population — never a promoted fallacy_* source.
+        _id_keyed = axis in ("dung", "social", "eaf")
+        expected_inventory = ["arg_1", "arg_2", "arg_3"] if _id_keyed else _ARGUMENTS
         assert list(submitted["arguments"]) == expected_inventory
         assert not [a for a in submitted["arguments"] if str(a).startswith("fallacy_")]
 
@@ -550,4 +553,10 @@ class TestACallerSuppliedGraphIsNeverOverridden:
         await _run_axis(fn_name, ctx)
 
         submitted = [c for c in calls if c["axis"] == axis][0]
-        assert submitted["attacks"] == [["Gamma", "Beta"]]
+        # #3014: on the batch-1 axes the caller's graph still wins, translated
+        # label→id over the positional inventory (Alpha=arg_1, Beta=arg_2,
+        # Gamma=arg_3); probabilistic keeps its text nodes until its own move.
+        if axis in ("social", "eaf"):
+            assert submitted["attacks"] == [["arg_3", "arg_2"]]
+        else:
+            assert submitted["attacks"] == [["Gamma", "Beta"]]
