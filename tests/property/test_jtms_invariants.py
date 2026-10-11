@@ -111,6 +111,50 @@ class TestJTMSJustificationConsistency:
             ), f"Belief {name} is valid via propagation but no justification is satisfied"
 
 
+class TestJTMSUnconditionalOnOddLoop:
+    """#3013 — the issue's 4-belief counterexample, as an explicit witness.
+
+    Hypothesis found and shrank this table on a fresh database; the CI gate
+    draws 50 fresh examples per run and never sees it. Pinned here so the
+    gate stops depending on the draw. Born red on main ``2f9cdb9d5``.
+    """
+
+    def test_unconditional_belief_is_true_on_odd_loop_and_dependents_follow(self):
+        jtms = JTMS()
+        for name in ["b0", "b1", "b2", "b3"]:
+            jtms.add_belief(name)
+        # (in, out -> conclusion), insertion order — the issue's table.
+        jtms.add_justification(["b3"], [], "b0")  # J1
+        jtms.add_justification([], [], "b1")  # J2
+        jtms.add_justification([], [], "b1")  # J3
+        jtms.add_justification(["b3"], [], "b2")  # J4
+        jtms.add_justification([], ["b0"], "b3")  # J5 — odd loop with J1
+        jtms.add_justification([], [], "b3")  # J6 — unconditional
+
+        # b3's unconditional justification (J6) holds whatever b0 is: the odd
+        # loop through J5/J1 does not erase it. On main b3 stayed None.
+        assert jtms.beliefs["b3"].valid is True
+        # The loop is still detected and marked — the flag is a marker, not a
+        # label override.
+        assert jtms.beliefs["b3"].non_monotonic is True
+        assert jtms.beliefs["b0"].non_monotonic is True
+
+        # The property's invariant, made explicit on this network: every
+        # belief that is valid has a satisfied justification. On main, b2 kept
+        # a stale True from before b3's drop, with J4 unsatisfied.
+        for name in ["b0", "b1", "b2", "b3"]:
+            belief = jtms.beliefs[name]
+            assert belief.valid is True, f"Belief {name} should be True (#3013)"
+            has_satisfied = any(
+                all(b.valid is True for b in just.in_list)
+                and all(b.valid is not True for b in just.out_list)
+                for just in belief.justifications
+            )
+            assert (
+                has_satisfied
+            ), f"Belief {name} is valid but no justification is satisfied (#3013)"
+
+
 class TestJTMSRetractionCascade:
     """Retracting a belief invalidates all beliefs whose only justification
     depended on it."""

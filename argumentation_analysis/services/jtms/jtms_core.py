@@ -94,9 +94,12 @@ class Belief:
         self.propagate()
 
     def compute_truth_statement(self):
-        if self.non_monotonic:
-            self.valid = None
-            return
+        # #3013: ``non_monotonic`` is an SCC marker, not a label override. The
+        # old branch forced ``None`` without looking at the justifications —
+        # so a belief with an unconditional justification stayed unknown on an
+        # odd loop — and returned before the change-propagation below, leaving
+        # dependents on a stale label. A belief is True iff some justification
+        # is satisfied, loop or no loop; the flag only marks the topology.
         if self._propagating:
             return  # Break re-entrant cycle
 
