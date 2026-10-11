@@ -202,3 +202,49 @@ class TestNeighborhood:
         assert result["fallacies_failed"] == 0
         entry = _single_entry(state)
         assert entry["confidence"] == 0.8
+
+
+class TestBoolConfidenceIsNotAMeasurement:
+    """Rework R1083, taken from #3015: a boolean flag is not a measurement —
+    ``confidence: True`` stores no confidence on EITHER lane. One witness per
+    lane; both born red before the shared helper (each lane stored 1.0 via
+    float(True))."""
+
+    async def test_conversational_bool_confidence_stores_nothing(self):
+        state = UnifiedAnalysisState(initial_text="x")
+        detection = {
+            "fallacy_type": "appel_a_autorite",
+            "justification": "Aucune source vérifiée n'étaye l'affirmation.",
+            "confidence": True,
+        }
+        with _harness(detection), _no_target():
+            result = await _run_parent_harness_fallback(_SHORT_TEXT, state)
+        assert result is not None
+        entry = _single_entry(state)
+        assert "confidence" not in entry
+
+    async def test_pipeline_bool_confidence_stores_nothing(self):
+        """The pipeline writer on the real state — born red on main, where
+        ``True`` landed as ``1.0`` (float(True))."""
+        from argumentation_analysis.orchestration.state_writers import (
+            _write_hierarchical_fallacy_to_state,
+        )
+
+        state = UnifiedAnalysisState(initial_text="x")
+        output = {
+            "fallacies": [
+                {
+                    "type": "appel_a_autorite",
+                    "explanation": "Aucune source vérifiée n'étaye l'affirmation.",
+                    "confidence": True,
+                    "problematic_quote": "Tous les experts s'accordent sur ce point.",
+                }
+            ]
+        }
+        _write_hierarchical_fallacy_to_state(output, state, {})
+        entry = _single_entry(state)
+        assert "confidence" not in entry
+        # the quote is unaffected — it remains a measured field
+        assert (
+            entry["problematic_quote"] == "Tous les experts s'accordent sur ce point."
+        )

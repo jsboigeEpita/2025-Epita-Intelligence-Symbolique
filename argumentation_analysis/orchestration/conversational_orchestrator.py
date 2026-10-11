@@ -2971,6 +2971,7 @@ async def _run_parent_harness_fallback(
             _invoke_hierarchical_fallacy,
         )
         from argumentation_analysis.orchestration.state_writers import (
+            fallacy_measured_fields,
             resolve_fallacy_target_arg_id,
         )
 
@@ -3057,17 +3058,11 @@ async def _run_parent_harness_fallback(
             # #3011 — confidence and problematic_quote are fields of the
             # detection, not prose (#2972 made them state fields for the
             # pipeline lane; this loop was still folding confidence into the
-            # fallback justification). The extraction mirrors
-            # _write_hierarchical_fallacy_to_state so the two lanes cannot
-            # disagree: an unmeasured confidence stores None, never 0.0
-            # (#1019).
-            raw_confidence = f.get("confidence")
-            confidence = (
-                float(raw_confidence)
-                if isinstance(raw_confidence, (int, float))
-                else None
-            )
-            problematic_quote = f.get("problematic_quote") or None
+            # fallback justification). Rework R1083: the extraction lives in
+            # ``fallacy_measured_fields`` next to the pipeline writer — one
+            # rule for both lanes (a boolean flag is not a measurement,
+            # taken from #3015).
+            confidence, problematic_quote = fallacy_measured_fields(f)
             # #1633 site 3: resolve through the same ladder the pipeline lane
             # uses. This used to read ``source_arg_id or target_argument_id``,
             # which inverted the precedence AND skipped the membership guard —
