@@ -4869,10 +4869,16 @@ async def _invoke_ranking(input_text: str, context: Dict[str, Any]) -> Dict[str,
 
     Enriches ranking with Dung extension data and strength justification.
     """
-    args = context.get("arguments") or _extract_arguments_from_context(
+    node_ids, labels, node_by_label, identity_payload = _af_family_frame(
         input_text, context
     )
-    attacks = context.get("attacks") or _generate_attacks_from_args(args, context)
+    args = node_ids
+    # #3014: the fallback producer reads TEXTS; the returned pairs translate
+    # back to node ids exactly (same in-memory pairs, never a prefix join).
+    attacks = _edges_labels_to_ids(
+        node_by_label,
+        context.get("attacks") or _generate_attacks_from_args(labels, context),
+    )
     method = context.get("ranking_method", "categorizer")
 
     try:
@@ -4885,11 +4891,14 @@ async def _invoke_ranking(input_text: str, context: Dict[str, Any]) -> Dict[str,
         # Enrich Tweety result with strength justification
         if isinstance(result, dict) and "ranking" in result:
             result = _enrich_ranking_with_justification(result, args, attacks, context)
+        if isinstance(result, dict):
+            result.update(identity_payload)
         return result
     except Exception as e:
         logger.info(
             f"Ranking handler failed ({e}); failing loud with the cause (#1826)"
         )
+        # The fail-loud stub raises (#1826) — no degraded payload on this path.
         return _python_ranking_fallback(args, attacks, method, cause=e)
 
 
@@ -5018,12 +5027,28 @@ async def _derive_dung_attacks(
 
 
 async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
-    """Invoke bipolar argumentation handler with JVM fallback."""
-    args = context.get("arguments") or _extract_arguments_from_context(
+    """Invoke bipolar argumentation handler with JVM fallback.
+
+    #3014 — the frame's nodes are the merged population's unit ids (see
+    :func:`_af_family_frame`): the ``supports`` edges the export and the
+    sanitizer handle are keyed by ``arg_N``, joinable to the units, with the
+    texts travelling as ``argument_labels``. Before #3014 the nodes came from
+    the extraction window alone, named by text.
+    """
+    node_ids, labels, node_by_label, identity_payload = _af_family_frame(
         input_text, context
     )
-    attacks = context.get("attacks") or _generate_attacks_from_args(args, context)
-    supports = context.get("supports", [])
+    args = node_ids
+    # #3014: the fallback producer reads TEXTS; the returned pairs translate
+    # back to node ids exactly (same in-memory pairs, never a prefix join).
+    attacks = _edges_labels_to_ids(
+        node_by_label,
+        context.get("attacks") or _generate_attacks_from_args(labels, context),
+    )
+    # Supports are name-referencing pairs whichever way they arrive: translate
+    # resolvable endpoints to node ids; an endpoint that joins no node is
+    # dropped — an edge that connects nothing enters no frame.
+    supports = _edges_labels_to_ids(node_by_label, context.get("supports", []))
     fw_type = context.get("framework_type", "necessity")
     # TR-1 #1419 / FP-17 #1236: when no genuine supports were supplied, derive
     # them from the real text + extracted arguments (the translation gap). The
@@ -5031,14 +5056,16 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
     # fabricated pairs are dropped, so an empty result keeps the honest
     # absent_no_translator status (anti-théâtre #1019). Persisting into
     # ``context`` lets _record_structured_arg_status label the axis "evaluated".
+    # #3014: the translator reads TEXTS (LLM-facing inventory); the returned
+    # pairs translate back to node ids below, exactly.
     if not supports:
         try:
             from argumentation_analysis.orchestration.structured_arg_translator import (
                 translate_to_bipolar_supports,
             )
 
-            outcome = await translate_to_bipolar_supports(input_text, args)
-            supports = outcome.relations
+            outcome = await translate_to_bipolar_supports(input_text, labels)
+            supports = _edges_labels_to_ids(node_by_label, outcome.relations)
             if supports:
                 context["supports"] = supports
             _propagate_structured_arg_cause(
@@ -5113,6 +5140,7 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
         )
         result["support_cycles"] = support_cycles
         result["articulation_points"] = articulation_points
+        result.update(identity_payload)
         return result
     except Exception as e:
         # #1645: three states, never two (coordinator review). Pre-fix this block
@@ -5138,7 +5166,7 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
                 "the phase continues degraded). Underlying signal: %s",
                 e,
             )
-            return {
+            output = {
                 "framework_type": fw_type,
                 "arguments": list(args),
                 # Echo the supports the translator established BEFORE this try
@@ -5171,6 +5199,10 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
                 ),
                 "error": f"{type(e).__name__}: {e}",
             }
+            # #3014: the degraded payload carries the node identity fields too
+            # — every return site, degraded or not, is joinable (#3009 parity).
+            output.update(identity_payload)
+            return output
         # JVM is up — the failure is in OUR handler or analysis, not the
         # environment. Fail loud with the real cause; do not relabel it
         # "JVM/Tweety required" (that fabrication was the #1634 defect).
@@ -5618,15 +5650,35 @@ async def _invoke_belief_revision(
 async def _invoke_probabilistic(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Invoke probabilistic argumentation handler with JVM fallback."""
-    args = context.get("arguments") or _extract_arguments_from_context(
+    """Invoke probabilistic argumentation handler with JVM fallback.
+
+    #3014 — the frame's nodes are the merged population's unit ids (see
+    :func:`_af_family_frame`): the ``acceptance_probabilities`` the export
+    reports are keyed by ``arg_N``, joinable to the units, with the texts
+    travelling as ``argument_labels``.
+    """
+    node_ids, labels, node_by_label, identity_payload = _af_family_frame(
         input_text, context
     )
-    # #1698: id-validated attacks derived from the text, no synthetic fallback.
-    attacks = context.get("attacks") or await _derive_dung_attacks(
-        input_text, args, context, capability="probabilistic_argumentation"
+    args = node_ids
+    # #1698: id-validated attacks derived from the text, no synthetic
+    # fallback. #3014: the derivation reads TEXTS; the returned edges
+    # translate back to node ids exactly (never a prefix join).
+    text_edges = context.get("attacks") or await _derive_dung_attacks(
+        input_text, labels, context, capability="probabilistic_argumentation"
     )
-    probs = context.get("probabilities") or {a: 0.5 for a in args}
+    attacks = _edges_labels_to_ids(node_by_label, text_edges)
+    # Probabilities are keyed by argument NAME — translate resolvable keys to
+    # node ids; a key that joins no node is dropped, never guessed onto one.
+    probs_in = context.get("probabilities")
+    if isinstance(probs_in, dict) and probs_in:
+        probs = {
+            node_by_label[str(k)]: v
+            for k, v in probs_in.items()
+            if str(k) in node_by_label
+        }
+    else:
+        probs = {node_id: 0.5 for node_id in args}
 
     try:
         from argumentation_analysis.agents.core.logic.probabilistic_handler import (
@@ -5634,9 +5686,11 @@ async def _invoke_probabilistic(
         )
 
         handler = ProbabilisticHandler()  # type: ignore[no-untyped-call]
-        return await asyncio.to_thread(
+        output = await asyncio.to_thread(
             handler.analyze_probabilistic_framework, args, attacks, probs
         )
+        output.update(identity_payload)
+        return output
     except Exception as e:
         raise RuntimeError(
             f"Probabilistic argumentation unavailable: JVM/Tweety required ({e}). "

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """#3014 — an AF-family node carries its unit id, never the argument text.
 
-Batch 1 (this file): the four ``add_dung_framework`` callables — SETAF,
-weighted, social, EAF. Each built its frame over the TEXTS
+Batch 1: the four ``add_dung_framework`` callables — SETAF, weighted,
+social, EAF. Each built its frame over the TEXTS
 ``_extract_arguments_from_context`` returns (the extraction window: on the
 measured doc_A state 7 of 94 units), so every downstream surface keyed by
 ``arg_N`` held free text instead: the ``set_attacks`` / ``attack_weights`` /
@@ -10,6 +10,15 @@ measured doc_A state 7 of 94 units), so every downstream surface keyed by
 reads, and ``native_dung.extension_lists``, could never join a node back to
 the unit it came from — the same dead join #3008 measured on Dung (0/7 exact
 joins, 7/7 positional prefix).
+
+Batch 2a (this file's last three classes): the three ``add_*_result``
+callables — ranking, probabilistic, bipolar. Same defect, one more surface
+each: ``ranking_results`` entries (``arguments`` / ``comparisons``),
+``probabilistic_results`` (``arguments`` and the keys of
+``acceptance_probabilities``) and ``bipolar_results`` (``arguments`` and the
+``supports`` endpoints) carried extraction-window texts as nodes — the
+six-way ``multi_format_exporter`` reads and the sanitizer scrubs could not
+join them back to the units.
 
 The fix mirrors #3009 at each site: the nodes are minted by the family
 builder ``_population_node_units`` (state ``identified_arguments`` ids first,
@@ -19,7 +28,7 @@ EXACTLY — both sides from the same in-memory pairs, never a prefix join),
 and each return site carries ``argument_labels`` (+ the named id-absence)
 for its writer to curate.
 
-Born red on ``main`` (the source edits stashed, the file alone): the four
+Born red on ``main`` (the source edits stashed, the file alone): the
 producers return text nodes and text-keyed edges, votes and beliefs, and the
 writers curate entries without labels. Green after: the frames are built
 over ``arg_1..arg_N`` with labels alongside.
@@ -31,6 +40,7 @@ from __future__ import annotations
 
 import importlib
 import re
+import sys
 from types import SimpleNamespace
 from typing import Any, Dict, List, Optional
 
@@ -38,7 +48,10 @@ import pytest
 
 from argumentation_analysis.orchestration import invoke_callables as ic
 from argumentation_analysis.orchestration.state_writers import (
+    _write_bipolar_to_state,
     _write_eaf_to_state,
+    _write_probabilistic_to_state,
+    _write_ranking_to_state,
     _write_setaf_to_state,
     _write_social_to_state,
     _write_weighted_to_state,
@@ -81,6 +94,9 @@ class _RecordingState(SimpleNamespace):
     def __init__(self, **fields: Any) -> None:
         super().__init__(**fields)
         self.dung_frameworks: Dict[str, Dict[str, Any]] = {}
+        self.ranking_results: List[Dict[str, Any]] = []
+        self.probabilistic_results: List[Dict[str, Any]] = []
+        self.bipolar_results: List[Dict[str, Any]] = []
         self.traces: List[str] = []
 
     def add_dung_framework(
@@ -106,6 +122,73 @@ class _RecordingState(SimpleNamespace):
         self.dung_frameworks[df_id] = entry
         return df_id
 
+    # The batch-2a sinks mirror the same contract: accept the pre-#3014
+    # positional call AND the labelled one, so the witness runs red on the
+    # old tree by ASSERTION, not by TypeError.
+    def _curated(
+        self, base: Dict[str, Any], argument_labels: Any, reason: Any
+    ) -> Dict[str, Any]:
+        if argument_labels is not None:
+            base["argument_labels"] = argument_labels
+        if reason is not None:
+            base["argument_ids_absent_reason"] = reason
+        return base
+
+    def add_ranking_result(
+        self,
+        method: str,
+        arguments: List[str],
+        comparisons: List[Dict[str, Any]],
+        argument_labels: Optional[Dict[str, str]] = None,
+        argument_ids_absent_reason: Optional[str] = None,
+    ) -> str:
+        entry = self._curated(
+            {"method": method, "arguments": arguments, "comparisons": comparisons},
+            argument_labels,
+            argument_ids_absent_reason,
+        )
+        self.ranking_results.append(entry)
+        return f"rank_{len(self.ranking_results)}"
+
+    def add_probabilistic_result(
+        self,
+        arguments: List[str],
+        acceptance_probs: Dict[str, float],
+        argument_labels: Optional[Dict[str, str]] = None,
+        argument_ids_absent_reason: Optional[str] = None,
+    ) -> str:
+        entry = self._curated(
+            {"arguments": arguments, "acceptance_probabilities": acceptance_probs},
+            argument_labels,
+            argument_ids_absent_reason,
+        )
+        self.probabilistic_results.append(entry)
+        return f"prob_{len(self.probabilistic_results)}"
+
+    def add_bipolar_result(
+        self,
+        framework_type: str,
+        arguments: List[str],
+        supports: List[List[str]],
+        support_cycles: Optional[List[List[str]]] = None,
+        articulation_points: Optional[List[Dict[str, Any]]] = None,
+        argument_labels: Optional[Dict[str, str]] = None,
+        argument_ids_absent_reason: Optional[str] = None,
+    ) -> str:
+        entry = self._curated(
+            {
+                "framework_type": framework_type,
+                "arguments": arguments,
+                "supports": supports,
+                "support_cycles": support_cycles or [],
+                "articulation_points": articulation_points or [],
+            },
+            argument_labels,
+            argument_ids_absent_reason,
+        )
+        self.bipolar_results.append(entry)
+        return f"bipolar_{len(self.bipolar_results)}"
+
     def add_trace_entry(self, **kw: Any) -> None:
         self.traces.append(str(kw.get("summary", "")))
 
@@ -117,10 +200,13 @@ def _install_fake_handler(
     method_name: str,
     received: List[Dict[str, Any]],
     returns: Any,
+    takes_initializer: bool = True,
 ) -> None:
     """Patch the JVM seam on its home module (the callable imports at call
     time): the handler records what it received and answers ``returns`` —
-    a static dict, or a callable building the echo from the call args."""
+    a static dict, or a callable building the echo from the call args.
+    ``takes_initializer=False`` for the batch-2a handlers constructed with
+    no initializer argument (ranking / probabilistic / bipolar)."""
     import argumentation_analysis.agents.core.logic.tweety_initializer as twi
 
     mod = importlib.import_module(
@@ -137,11 +223,10 @@ def _install_fake_handler(
         out.setdefault("arguments", list(call_args[0]))
         return out
 
-    fake_cls = type(
-        class_name,
-        (),
-        {"__init__": lambda self, initializer: None, method_name: _analyze},
+    fake_init = (
+        (lambda self, initializer: None) if takes_initializer else (lambda self: None)
     )
+    fake_cls = type(class_name, (), {"__init__": fake_init, method_name: _analyze})
     monkeypatch.setattr(mod, class_name, fake_cls)
     monkeypatch.setattr(twi, "ready_initializer", lambda: object())
 
@@ -569,3 +654,313 @@ class TestTheNamedAbsence:
         assert result.get("argument_labels") in (None, {})
         reason = str(result.get("argument_ids_absent_reason") or "")
         assert reason, "the absence of ids must be named, not silent"
+
+
+# --------------------------------------------------------------------------
+# Batch 2a — ranking, probabilistic, bipolar: the *_results callables
+# --------------------------------------------------------------------------
+
+
+class TestRankingNodesAreUnits:
+    async def test_the_frame_and_edges_are_id_keyed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        # Caller-seam edges: label-referencing pairs (the upstream contract),
+        # translated back to node ids — never a prefix join.
+        context["attacks"] = [[_UNIT_1, _UNIT_2]]
+        context["ranking_method"] = "burden"
+        handler_seen: List[Dict[str, Any]] = []
+        _install_fake_handler(
+            monkeypatch,
+            "ranking_handler",
+            "RankingHandler",
+            "rank_arguments",
+            handler_seen,
+            {
+                "ranking": ["arg_2", "arg_1"],
+                "scores": {"arg_2": 2, "arg_1": 1},
+                "method": "burden",
+            },
+            takes_initializer=False,
+        )
+
+        result = await ic._invoke_ranking(_UNIT_1, context)
+
+        assert result["arguments"] == ["arg_1", "arg_2"]
+        assert result.get("argument_labels") == _LABELS
+        assert "argument_ids_absent_reason" not in result
+        # The handler received ids — nodes AND edges AND the method rode along.
+        args, attacks, method = handler_seen[0]["args"]
+        assert list(args) == ["arg_1", "arg_2"]
+        assert [list(a) for a in attacks] == [["arg_1", "arg_2"]]
+        assert method == "burden"
+        # The ranking itself is id-keyed — joinable to the units.
+        assert result["ranking"] == ["arg_2", "arg_1"]
+
+    async def test_the_writer_curates_labels(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        context["attacks"] = [[_UNIT_1, _UNIT_2]]
+        _install_fake_handler(
+            monkeypatch,
+            "ranking_handler",
+            "RankingHandler",
+            "rank_arguments",
+            [],
+            {
+                "ranking": ["arg_2", "arg_1"],
+                "comparisons": [{"a": "arg_2", "b": "arg_1", "relation": ">"}],
+                "method": "burden",
+            },
+            takes_initializer=False,
+        )
+
+        result = await ic._invoke_ranking(_UNIT_1, context)
+        _write_ranking_to_state(result, state, {})
+
+        entry = state.ranking_results[-1]
+        assert entry["arguments"] == ["arg_1", "arg_2"]
+        assert entry.get("argument_labels") == _LABELS
+        assert entry["method"] == "burden"
+        assert entry["comparisons"] == [{"a": "arg_2", "b": "arg_1", "relation": ">"}]
+
+
+class TestProbabilisticNodesAreUnits:
+    async def test_the_frame_probs_and_edges_are_id_keyed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        # Probabilities keyed by argument NAME (the upstream contract); one
+        # key joins no node and must be dropped, never guessed onto one.
+        context["probabilities"] = {_UNIT_1: 0.9, "Texte non membre": 0.1}
+        handler_seen: List[Dict[str, Any]] = []
+        _install_fake_derivation(monkeypatch, [[_UNIT_1, _UNIT_2]])
+
+        def _echo(args: Any, attacks: Any, probs: Any) -> Dict[str, Any]:
+            return {
+                "acceptance_probabilities": dict(probs),
+                "statistics": {},
+            }
+
+        _install_fake_handler(
+            monkeypatch,
+            "probabilistic_handler",
+            "ProbabilisticHandler",
+            "analyze_probabilistic_framework",
+            handler_seen,
+            _echo,
+            takes_initializer=False,
+        )
+
+        result = await ic._invoke_probabilistic(_UNIT_1, context)
+
+        assert result["arguments"] == ["arg_1", "arg_2"]
+        assert result.get("argument_labels") == _LABELS
+        assert "argument_ids_absent_reason" not in result
+        args, attacks, probs = handler_seen[0]["args"]
+        assert list(args) == ["arg_1", "arg_2"]
+        assert [list(a) for a in attacks] == [["arg_1", "arg_2"]]
+        # The probability keys translated label→id; the non-member joined nothing.
+        assert probs == {"arg_1": 0.9}
+        # The echoed acceptance table the export reads is id-keyed too.
+        assert result["acceptance_probabilities"] == {"arg_1": 0.9}
+
+    async def test_absent_probs_default_over_the_ids(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """No ``probabilities`` in context: the honest 0.5 baseline is keyed by
+        the node ids — not by texts the reader could never join."""
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        _install_fake_derivation(monkeypatch, [])
+        _install_fake_handler(
+            monkeypatch,
+            "probabilistic_handler",
+            "ProbabilisticHandler",
+            "analyze_probabilistic_framework",
+            [],
+            lambda args, attacks, probs: {
+                "acceptance_probabilities": dict(probs),
+                "statistics": {},
+            },
+            takes_initializer=False,
+        )
+
+        result = await ic._invoke_probabilistic(_UNIT_1, context)
+
+        assert result["acceptance_probabilities"] == {"arg_1": 0.5, "arg_2": 0.5}
+
+    async def test_the_writer_curates_labels(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        context["probabilities"] = {_UNIT_1: 0.9}
+        _install_fake_derivation(monkeypatch, [[_UNIT_1, _UNIT_2]])
+        _install_fake_handler(
+            monkeypatch,
+            "probabilistic_handler",
+            "ProbabilisticHandler",
+            "analyze_probabilistic_framework",
+            [],
+            lambda args, attacks, probs: {
+                "acceptance_probabilities": dict(probs),
+                "statistics": {},
+            },
+            takes_initializer=False,
+        )
+
+        result = await ic._invoke_probabilistic(_UNIT_1, context)
+        _write_probabilistic_to_state(result, state, {})
+
+        entry = state.probabilistic_results[-1]
+        assert entry["arguments"] == ["arg_1", "arg_2"]
+        assert entry.get("argument_labels") == _LABELS
+        assert entry["acceptance_probabilities"] == {"arg_1": 0.9}
+
+
+class TestBipolarNodesAreUnits:
+    async def test_the_frame_supports_and_cycles_are_id_keyed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        context["attacks"] = [[_UNIT_2, _UNIT_1]]
+        handler_seen: List[Dict[str, Any]] = []
+        translator_seen: List[List[str]] = []
+        # A planted mutual-support cycle, answered over the FULL texts — the
+        # inventory the seam must keep reading.
+        _install_fake_translator(
+            monkeypatch,
+            "translate_to_bipolar_supports",
+            [[_UNIT_1, _UNIT_2], [_UNIT_2, _UNIT_1]],
+            translator_seen,
+        )
+
+        def _echo(
+            args: Any, attacks: Any, supports: Any, fw_type: Any
+        ) -> Dict[str, Any]:
+            return {
+                "extensions": [["arg_2"]],
+                "statistics": {},
+                "supports": [list(s) for s in supports],
+            }
+
+        _install_fake_handler(
+            monkeypatch,
+            "bipolar_handler",
+            "BipolarHandler",
+            "analyze_bipolar_framework",
+            handler_seen,
+            _echo,
+            takes_initializer=False,
+        )
+
+        result = await ic._invoke_bipolar(_UNIT_1, context)
+
+        # The translator seam kept reading TEXTS (full units).
+        assert translator_seen == [[_UNIT_1, _UNIT_2]]
+        assert result["arguments"] == ["arg_1", "arg_2"]
+        assert result.get("argument_labels") == _LABELS
+        assert "argument_ids_absent_reason" not in result
+        args, attacks, supports, _fw_type = handler_seen[0]["args"]
+        assert list(args) == ["arg_1", "arg_2"]
+        assert [list(a) for a in attacks] == [["arg_2", "arg_1"]]
+        assert [list(s) for s in supports] == [["arg_1", "arg_2"], ["arg_2", "arg_1"]]
+        # The echoed supports the export reads are id-keyed, and the #1645
+        # insight (circular authority) is computed over the id-keyed edges.
+        assert result["supports"] == [["arg_1", "arg_2"], ["arg_2", "arg_1"]]
+        assert result["support_cycles"] == [["arg_1", "arg_2"]]
+
+    async def test_the_honest_absent_payload_still_joins(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The JVM-down degraded return carries the node identity fields too —
+        every return site, degraded or not, is joinable (#3009 parity)."""
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        _install_fake_translator(
+            monkeypatch,
+            "translate_to_bipolar_supports",
+            [[_UNIT_1, _UNIT_2]],
+            [],
+        )
+        # The code resolves the JVM state at call time from the home module
+        # (import inside the function): pin "not started" there so the
+        # honest-absent branch fires regardless of the conftest session JVM,
+        # then make the handler's own import raise via None in sys.modules.
+        import argumentation_analysis.core.jvm_setup as jvm_setup
+
+        monkeypatch.setattr(jvm_setup, "is_jvm_started", lambda: False)
+        monkeypatch.setitem(
+            sys.modules,
+            "argumentation_analysis.agents.core.logic.bipolar_handler",
+            None,
+        )
+
+        result = await ic._invoke_bipolar(_UNIT_1, context)
+
+        assert result.get("degraded") is True
+        assert result["arguments"] == ["arg_1", "arg_2"]
+        assert result.get("argument_labels") == _LABELS
+        # The supports the translator established before the failure survive,
+        # translated to node ids.
+        assert result["supports"] == [["arg_1", "arg_2"]]
+
+    async def test_the_writer_curates_labels(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        _install_fake_translator(
+            monkeypatch,
+            "translate_to_bipolar_supports",
+            [[_UNIT_1, _UNIT_2]],
+            [],
+        )
+        _install_fake_handler(
+            monkeypatch,
+            "bipolar_handler",
+            "BipolarHandler",
+            "analyze_bipolar_framework",
+            [],
+            lambda args, attacks, supports, fw_type: {
+                "extensions": [["arg_2"]],
+                "statistics": {},
+                "supports": [list(s) for s in supports],
+            },
+            takes_initializer=False,
+        )
+
+        result = await ic._invoke_bipolar(_UNIT_1, context)
+        _write_bipolar_to_state(result, state, {})
+
+        entry = state.bipolar_results[-1]
+        assert entry["arguments"] == ["arg_1", "arg_2"]
+        assert entry.get("argument_labels") == _LABELS
+        assert entry["supports"] == [["arg_1", "arg_2"]]
+        # The #1645 insight was computed over the id-keyed edges and stored:
+        # a single support edge holds no cycle — an honest "none detected",
+        # not a silently missing field.
+        assert entry["support_cycles"] == []

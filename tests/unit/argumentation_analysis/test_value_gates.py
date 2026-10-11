@@ -797,7 +797,9 @@ class TestBipolarValueGate:
         assert result.get("absent_reason") == "jvm_not_started"
         assert result.get("extensions") is None  # tri-state, not a verdict
         # The caller's supports survive the degraded branch (not zeroed to []).
-        assert result.get("supports") == [["a", "b"], ["b", "c"]]
+        # #3014: the echo is keyed by the frame's nodes — the positional unit
+        # ids the caller's texts minted (a=arg_1, b=arg_2, c=arg_3).
+        assert result.get("supports") == [["arg_1", "arg_2"], ["arg_2", "arg_3"]]
 
     async def test_jvm_present_handler_failure_raises_real_cause(self):
         """State 2 — JVM up + handler raises ⇒ fail loud with the REAL cause.

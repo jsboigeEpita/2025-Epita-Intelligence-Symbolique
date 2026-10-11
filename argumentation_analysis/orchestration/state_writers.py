@@ -1037,7 +1037,15 @@ def _write_ranking_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> Non
         arguments = []
     if not isinstance(comparisons, list):
         comparisons = []
-    state.add_ranking_result(method, arguments, comparisons)
+    # #3014: pass through the node identity fields (#3009 parity) — the
+    # entry's arguments are unit ids, the text lives in argument_labels.
+    state.add_ranking_result(
+        method,
+        arguments,
+        comparisons,
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+    )
 
 
 def _write_aspic_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
@@ -1121,7 +1129,15 @@ def _write_probabilistic_to_state(output: Any, state: Any, ctx: dict[str, Any]) 
         arguments = []
     if not isinstance(acceptance, dict):
         acceptance = {}
-    state.add_probabilistic_result(arguments, acceptance)
+    # #3014: pass through the node identity fields (#3009 parity) — the
+    # entry's arguments and acceptance keys are unit ids, the text lives in
+    # argument_labels.
+    state.add_probabilistic_result(
+        arguments,
+        acceptance,
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+    )
 
 
 def _write_bipolar_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
@@ -1149,7 +1165,16 @@ def _write_bipolar_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> Non
     if not isinstance(articulation_points, list):
         articulation_points = []
     state.add_bipolar_result(
-        fw_type, arguments, supports, support_cycles, articulation_points
+        fw_type,
+        arguments,
+        supports,
+        support_cycles,
+        articulation_points,
+        # #3014: pass through the node identity fields (#3009 parity) — the
+        # entry's arguments and supports endpoints are unit ids, the text
+        # lives in argument_labels.
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
     )
 
 

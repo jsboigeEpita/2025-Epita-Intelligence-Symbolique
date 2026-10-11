@@ -111,6 +111,8 @@ def test_honest_absent_reachable_without_jpype() -> None:
     assert payload["absent_reason"] == "jvm_not_started"
     # tri-state: None = not computed (JVM absent), never a fabricated empty set
     assert payload["extensions"] is None
-    # the translator-established support is echoed, not zeroed
-    assert payload["supports"] == [["prop_1", "prop_2"]]
+    # the translator-established support is echoed, not zeroed. #3014: the
+    # echo is keyed by the frame's nodes — the positional unit ids the caller's
+    # texts minted (prop_1=arg_1, prop_2=arg_2).
+    assert payload["supports"] == [["arg_1", "arg_2"]]
     assert payload["backend"] == "jvm-unavailable"

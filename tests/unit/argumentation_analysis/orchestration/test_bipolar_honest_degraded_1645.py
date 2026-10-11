@@ -213,16 +213,21 @@ class TestTranslatorWorkSurvivesDegradedState:
         )
 
         # The translator runs BEFORE the try (no JVM needed) and produces 2
-        # genuine support pairs.
+        # genuine support pairs. #3014: the REAL translator validates its
+        # relations against the inventory it was fed, so both endpoints are
+        # inventory members — the mocked payload mirrors that shape (the old
+        # mock paired members with non-members, which validation never emits).
         translator_outcome = MagicMock()
         translator_outcome.relations = [
-            ("corpus_A", "prop_1"),
-            ("corpus_B", "prop_2"),
+            ("corpus_A", "corpus_B"),
+            ("corpus_B", "corpus_A"),
         ]
         translator_outcome.cause = "ok"
         translator_outcome.error = ""
 
         # ctx WITHOUT supports ⇒ _invoke_bipolar calls the translator itself.
+        # The caller's naked texts mint the positional frame ids (#3014):
+        # corpus_A=arg_1, corpus_B=arg_2 — the echo below is keyed by them.
         ctx = {"arguments": ["corpus_A", "corpus_B"]}
 
         with patch(
@@ -237,12 +242,12 @@ class TestTranslatorWorkSurvivesDegradedState:
         ):
             output = _run(_invoke_bipolar("opaque text", ctx))
 
-        # Degraded dict, supports echoed as 2 pairs — NOT zeroed to [].
+        # Degraded dict, supports echoed as 2 id-keyed pairs — NOT zeroed to [].
         assert output["degraded"] is True
         assert output["extensions"] is None  # tri-state, Dung reasoning skipped
         assert output["supports"] == [
-            ["corpus_A", "prop_1"],
-            ["corpus_B", "prop_2"],
+            ["arg_1", "arg_2"],
+            ["arg_2", "arg_1"],
         ]
 
         # The writer reads supports FROM the dict → it must persist the 2 pairs.
@@ -254,9 +259,9 @@ class TestTranslatorWorkSurvivesDegradedState:
 
         state.add_bipolar_result.assert_called_once()
         call_args = state.add_bipolar_result.call_args.args
-        # signature: add_bipolar_result(fw_type, arguments, supports)
+        # signature: add_bipolar_result(fw_type, arguments, supports, …)
         persisted_supports = call_args[2]
         assert persisted_supports == [
-            ["corpus_A", "prop_1"],
-            ["corpus_B", "prop_2"],
+            ["arg_1", "arg_2"],
+            ["arg_2", "arg_1"],
         ], "writer must persist the translator's supports, not []"

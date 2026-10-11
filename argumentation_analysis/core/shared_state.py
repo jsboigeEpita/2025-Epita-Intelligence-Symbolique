@@ -1470,16 +1470,31 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         return si_id
 
     def add_ranking_result(
-        self, method: str, arguments: List[str], comparisons: List[Dict[str, Any]]
+        self,
+        method: str,
+        arguments: List[str],
+        comparisons: List[Dict[str, Any]],
+        argument_labels: Optional[Dict[str, str]] = None,
+        argument_ids_absent_reason: Optional[str] = None,
     ) -> str:
-        """Add a ranking semantics result."""
+        """Add a ranking semantics result.
+
+        #3014 — ``arguments`` are the frame's NODES: unit ids (``arg_N``) on
+        a pipeline run. The argument's TEXT travels in ``argument_labels``
+        (``{node: label}``) — same contract as ``add_dung_framework`` (#3009).
+        Optional fields are stored only when set (honest absence).
+        """
         rk_id = self._generate_id("rank", self.ranking_results)
-        entry = {
+        entry: Dict[str, Any] = {
             "id": rk_id,
             "method": method,
             "arguments": arguments,
             "comparisons": comparisons,
         }
+        if argument_labels is not None:
+            entry["argument_labels"] = argument_labels
+        if argument_ids_absent_reason is not None:
+            entry["argument_ids_absent_reason"] = argument_ids_absent_reason
         self.ranking_results.append(entry)
         state_logger.info(f"Ranking result added: {rk_id} (method: {method})")
         return rk_id
@@ -1568,15 +1583,30 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         return dl_id
 
     def add_probabilistic_result(
-        self, arguments: List[str], acceptance_probs: Dict[str, float]
+        self,
+        arguments: List[str],
+        acceptance_probs: Dict[str, float],
+        argument_labels: Optional[Dict[str, str]] = None,
+        argument_ids_absent_reason: Optional[str] = None,
     ) -> str:
-        """Add a probabilistic argumentation result."""
+        """Add a probabilistic argumentation result.
+
+        #3014 — ``arguments`` and the keys of ``acceptance_probs`` are the
+        frame's NODES: unit ids (``arg_N``) on a pipeline run. The argument's
+        TEXT travels in ``argument_labels`` (``{node: label}``) — same
+        contract as ``add_dung_framework`` (#3009). Optional fields are
+        stored only when set (honest absence).
+        """
         pr_id = self._generate_id("prob", self.probabilistic_results)
-        entry = {
+        entry: Dict[str, Any] = {
             "id": pr_id,
             "arguments": arguments,
             "acceptance_probabilities": acceptance_probs,
         }
+        if argument_labels is not None:
+            entry["argument_labels"] = argument_labels
+        if argument_ids_absent_reason is not None:
+            entry["argument_ids_absent_reason"] = argument_ids_absent_reason
         self.probabilistic_results.append(entry)
         state_logger.info(
             f"Probabilistic result added: {pr_id} ({len(arguments)} args)"
@@ -1590,6 +1620,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         supports: List[List[str]],
         support_cycles: Optional[List[List[str]]] = None,
         articulation_points: Optional[List[Dict[str, Any]]] = None,
+        argument_labels: Optional[Dict[str, str]] = None,
+        argument_ids_absent_reason: Optional[str] = None,
     ) -> str:
         """Add a bipolar argumentation framework result.
 
@@ -1600,9 +1632,15 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         Both are computed JVM-free over the ``supports`` edges, so they are
         populated even on the honest-degraded path. Default to empty lists so
         callers that pre-date the insight store an honest "none detected".
+
+        #3014 — ``arguments`` and the ``supports`` endpoints are the frame's
+        NODES: unit ids (``arg_N``) on a pipeline run. The argument's TEXT
+        travels in ``argument_labels`` (``{node: label}``) — same contract as
+        ``add_dung_framework`` (#3009). Optional fields are stored only when
+        set (honest absence).
         """
         bp_id = self._generate_id("bipolar", self.bipolar_results)
-        entry = {
+        entry: Dict[str, Any] = {
             "id": bp_id,
             "framework_type": framework_type,
             "arguments": arguments,
@@ -1610,6 +1648,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "support_cycles": support_cycles or [],
             "articulation_points": articulation_points or [],
         }
+        if argument_labels is not None:
+            entry["argument_labels"] = argument_labels
+        if argument_ids_absent_reason is not None:
+            entry["argument_ids_absent_reason"] = argument_ids_absent_reason
         self.bipolar_results.append(entry)
         state_logger.info(f"Bipolar result added: {bp_id} (type: {framework_type})")
         return bp_id
