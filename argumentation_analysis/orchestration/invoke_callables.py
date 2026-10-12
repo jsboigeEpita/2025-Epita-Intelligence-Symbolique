@@ -4875,11 +4875,14 @@ async def _invoke_ranking(input_text: str, context: Dict[str, Any]) -> Dict[str,
     args = node_ids
     # #3014: the fallback producer reads TEXTS; the returned pairs translate
     # back to node ids exactly (same in-memory pairs, never a prefix join).
-    attacks = _edges_labels_to_ids(
+    attacks, dropped = _edges_labels_to_ids(
         node_by_label,
         context.get("attacks") or _generate_attacks_from_args(labels, context),
     )
     method = context.get("ranking_method", "categorizer")
+    # #3014 follow-up: endpoints that resolved to nothing are counted, never
+    # dropped silently before the #1698 retention accounting.
+    identity_payload["dropped_unresolved"] = dropped
 
     try:
         from argumentation_analysis.agents.core.logic.ranking_handler import (
@@ -5041,14 +5044,17 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
     args = node_ids
     # #3014: the fallback producer reads TEXTS; the returned pairs translate
     # back to node ids exactly (same in-memory pairs, never a prefix join).
-    attacks = _edges_labels_to_ids(
+    attacks, dropped = _edges_labels_to_ids(
         node_by_label,
         context.get("attacks") or _generate_attacks_from_args(labels, context),
     )
     # Supports are name-referencing pairs whichever way they arrive: translate
     # resolvable endpoints to node ids; an endpoint that joins no node is
     # dropped — an edge that connects nothing enters no frame.
-    supports = _edges_labels_to_ids(node_by_label, context.get("supports", []))
+    supports, supports_dropped = _edges_labels_to_ids(
+        node_by_label, context.get("supports", [])
+    )
+    dropped += supports_dropped
     fw_type = context.get("framework_type", "necessity")
     # TR-1 #1419 / FP-17 #1236: when no genuine supports were supplied, derive
     # them from the real text + extracted arguments (the translation gap). The
@@ -5065,7 +5071,10 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
             )
 
             outcome = await translate_to_bipolar_supports(input_text, labels)
-            supports = _edges_labels_to_ids(node_by_label, outcome.relations)
+            supports, translator_dropped = _edges_labels_to_ids(
+                node_by_label, outcome.relations
+            )
+            dropped += translator_dropped
             if supports:
                 context["supports"] = supports
             _propagate_structured_arg_cause(
@@ -5076,6 +5085,9 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
             _propagate_structured_arg_cause(
                 context, "bipolar_argumentation", "translator_failed", type(e).__name__
             )
+    # #3014 follow-up: endpoints that resolved to nothing are counted, never
+    # dropped silently before the #1698 retention accounting.
+    identity_payload["dropped_unresolved"] = dropped
 
     # #1645 section A: the bipolar axis's singular contribution is the SUPPORT
     # relation. Its most distinctive structural property — a support cycle
@@ -5238,19 +5250,23 @@ async def _invoke_aba(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
     # caller overrides resolve through ``_node_id_for`` — an endpoint that
     # already IS an id passes through (idempotent, R1084 review item 1).
     assumptions, rules = _aba_rules_from_context(node_ids, context)
+    dropped = len(assumptions)
     assumptions = [
         node_id
         for a in assumptions
         if (node_id := _node_id_for(node_by_label, a)) is not None
     ]
+    dropped -= len(assumptions)
     translated_rules: List[Dict[str, Any]] = []
     for rule in rules:
         head = _node_id_for(node_by_label, rule.get("head"))
+        dropped += head is None
         body = [
             node_id
             for b in (rule.get("body") or [])
             if (node_id := _node_id_for(node_by_label, b)) is not None
         ]
+        dropped += len(rule.get("body") or []) - len(body)
         if head is not None and body:
             translated_rules.append({"head": head, "body": body})
     rules = translated_rules
@@ -5287,10 +5303,15 @@ async def _invoke_aba(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
         for asm, sentence in (contraries_raw or {}).items()
         if (asm_id := _node_id_for(node_by_label, asm)) is not None
     }
+    dropped += len(contraries_raw or {}) - len(contraries_sentences)
     contraries = {
         asm_id: _pl_atom(sentence, prefix="contrary")
         for asm_id, sentence in contraries_sentences.items()
     }
+    # #3014 follow-up: every name that resolved to nothing — assumptions,
+    # rule heads and bodies, contrary keys — is counted, never dropped
+    # silently before the #1698 retention accounting.
+    identity_payload["dropped_unresolved"] = dropped
 
     try:
         from argumentation_analysis.agents.core.logic.aba_handler import ABAHandler
@@ -5335,18 +5356,21 @@ async def _invoke_adf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
     # statements it was handed) — a shallow copy, the caller's context is
     # never mutated.
     shaped_ctx = dict(context)
-    shaped_ctx["attacks"] = _edges_labels_to_ids(
+    shaped_attacks, dropped = _edges_labels_to_ids(
         node_by_label, context.get("attacks") or []
     )
+    shaped_ctx["attacks"] = shaped_attacks
     statements, conditions = _adf_conditions_from_context(node_ids, shaped_ctx)
     semantics = context.get("semantics", "grounded")
     # Caller overrides (statements / acceptance_conditions keys) resolve
     # through the single join; an endpoint already an id passes through.
+    dropped += len(statements)
     statements = [
         node_id
         for s in statements
         if (node_id := _node_id_for(node_by_label, s)) is not None
     ]
+    dropped -= len(statements)
 
     def _translate_condition(condition: str) -> str:
         if condition.startswith("negation:"):
@@ -5355,11 +5379,16 @@ async def _invoke_adf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
                 return f"negation:{other}"
         return condition
 
+    conditions_in = dict(conditions)
     conditions = {
         node_id: _translate_condition(str(cond))
         for s, cond in conditions.items()
         if (node_id := _node_id_for(node_by_label, s)) is not None
     }
+    dropped += len(conditions_in) - len(conditions)
+    # #3014 follow-up: statements, condition keys and attack endpoints that
+    # resolved to nothing are counted, never dropped silently.
+    identity_payload["dropped_unresolved"] = dropped
 
     try:
         from argumentation_analysis.agents.core.logic.adf_handler import ADFHandler
@@ -5815,11 +5844,13 @@ async def _invoke_probabilistic(
     text_edges = context.get("attacks") or await _derive_dung_attacks(
         input_text, labels, context, capability="probabilistic_argumentation"
     )
-    attacks = _edges_labels_to_ids(node_by_label, text_edges)
+    attacks, dropped = _edges_labels_to_ids(node_by_label, text_edges)
     # Probabilities are keyed by argument NAME — translate resolvable keys to
     # node ids; a key that joins no node is dropped, never guessed onto one.
     # R1084 review item 1: the join goes through ``_node_id_for``, the family's
-    # single label→id resolver (stripped on both sides).
+    # single label→id resolver (stripped on both sides). #3014 follow-up: the
+    # dropped keys are counted — an empty table after resolution (count > 0)
+    # stays distinguishable from "no keys given" (count 0, 0.5 defaults).
     probs_in = context.get("probabilities")
     if isinstance(probs_in, dict) and probs_in:
         probs = {
@@ -5827,8 +5858,10 @@ async def _invoke_probabilistic(
             for k, v in probs_in.items()
             if (node_id := _node_id_for(node_by_label, k)) is not None
         }
+        dropped += len(probs_in) - len(probs)
     else:
         probs = {node_id: 0.5 for node_id in args}
+    identity_payload["dropped_unresolved"] = dropped
 
     try:
         from argumentation_analysis.agents.core.logic.probabilistic_handler import (
@@ -6197,6 +6230,7 @@ async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict[str, A
     # node or whose attackers all resolve to nothing joins nothing and is
     # dropped (deterministic first-label match).
     raw_attacks = context.get("set_attacks")
+    dropped = 0
     if (
         isinstance(raw_attacks, list)
         and raw_attacks
@@ -6207,11 +6241,14 @@ async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict[str, A
             if not isinstance(entry, dict):
                 continue
             target = _node_id_for(node_by_label, entry.get("target"))
-            attackers = [
-                node_id
-                for a in (entry.get("attackers") or [])
-                if (node_id := _node_id_for(node_by_label, a)) is not None
-            ]
+            dropped += target is None
+            attackers = []
+            for a in entry.get("attackers") or []:
+                node_id = _node_id_for(node_by_label, a)
+                if node_id is not None:
+                    attackers.append(node_id)
+                else:
+                    dropped += 1
             if target is not None and attackers:
                 attacks.append({"attackers": attackers, "target": target})
     elif _structured_arg_cause(context, "setaf_reasoning") == "no_genuine_relations":
@@ -6227,7 +6264,11 @@ async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict[str, A
         attacks = []
     else:
         pairs = context.get("attacks") or _generate_attacks_from_args(labels, context)
-        attacks = _setaf_attacks_from_pairs(_edges_labels_to_ids(node_by_label, pairs))
+        edges, dropped = _edges_labels_to_ids(node_by_label, pairs)
+        attacks = _setaf_attacks_from_pairs(edges)
+    # #3014 follow-up: targets, attacker names and edge endpoints that
+    # resolved to nothing are counted, never dropped silently.
+    identity_payload["dropped_unresolved"] = dropped
     semantics = context.get("semantics", "grounded")
 
     try:
@@ -6305,6 +6346,7 @@ async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str
     # names — translate to node ids; a triple whose endpoint resolves to no
     # node is dropped (the weight rides along unchanged).
     raw_attacks = context.get("weighted_attacks")
+    dropped = 0
     if (
         isinstance(raw_attacks, list)
         and raw_attacks
@@ -6313,6 +6355,8 @@ async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str
     ):
         # R1084 review item 1: both endpoints resolve through the family's
         # single join (``_node_id_for``) — the weight rides the resolved pair.
+        # #3014 follow-up: a triple endpoint that resolves to nothing is
+        # counted, never dropped silently.
         attacks = []
         for t in raw_attacks:
             if not (isinstance(t, (list, tuple)) and len(t) >= 3):
@@ -6321,6 +6365,8 @@ async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str
             tgt = _node_id_for(node_by_label, t[1])
             if src is not None and tgt is not None:
                 attacks.append((src, tgt, float(t[2])))
+            else:
+                dropped += (src is None) + (tgt is None)
     elif (
         _structured_arg_cause(context, "weighted_argumentation")
         == "no_genuine_relations"
@@ -6333,9 +6379,11 @@ async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str
         attacks = []
     else:
         pairs = context.get("attacks") or _generate_attacks_from_args(labels, context)
-        attacks = _weighted_attacks_from_pairs(
-            _edges_labels_to_ids(node_by_label, pairs)
-        )
+        edges, dropped = _edges_labels_to_ids(node_by_label, pairs)
+        attacks = _weighted_attacks_from_pairs(edges)
+    # #3014 follow-up: endpoints that resolved to nothing are counted, never
+    # dropped silently before the #1698 retention accounting.
+    identity_payload["dropped_unresolved"] = dropped
     semantics = context.get("semantics", "grounded")
 
     try:
@@ -6388,15 +6436,19 @@ async def _invoke_social(input_text: str, context: Dict[str, Any]) -> Dict[str, 
     text_edges = context.get("attacks") or await _derive_dung_attacks(
         input_text, labels, context, capability="social_argumentation"
     )
-    attacks = _edges_labels_to_ids(node_by_label, text_edges)
+    attacks, dropped = _edges_labels_to_ids(node_by_label, text_edges)
     # Votes are keyed by argument name: translate label keys to node ids; a
-    # key that resolves to no node joins nothing and is dropped.
+    # key that resolves to no node joins nothing and is dropped — counted
+    # (#3014 follow-up), never silent.
     votes_in = context.get("votes", {})
     votes = {}
     for k, v in votes_in.items():
         node = _node_id_for(node_by_label, k)
         if node is not None:
             votes[node] = tuple(v) if isinstance(v, list) else v
+        else:
+            dropped += 1
+    identity_payload["dropped_unresolved"] = dropped
 
     try:
         from argumentation_analysis.agents.core.logic.social_handler import (
@@ -6497,14 +6549,16 @@ async def _invoke_eaf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
     text_edges = context.get("attacks") or await _derive_dung_attacks(
         input_text, labels, context, capability="epistemic_argumentation"
     )
-    attacks = _edges_labels_to_ids(node_by_label, text_edges)
+    attacks, dropped = _edges_labels_to_ids(node_by_label, text_edges)
     # EAF expects Dict[agent, List[arg]] beliefs, NOT float probabilities.
     # Shape/validate; None lets the handler default to "all believed" (valid
     # non-fabricated baseline, #1019). #3014: the belief lists reference
     # argument names — translate the resolvable ones to node ids; an agent
-    # whose list resolves to nothing joins nothing and is dropped.
+    # whose list resolves to nothing joins nothing and is dropped. #3014
+    # follow-up: every name that resolved to nothing is counted.
     beliefs = _eaf_beliefs_from_context(labels, context)
     if beliefs:
+        dropped += sum(len(names) for names in beliefs.values())
         beliefs = {
             str(agent): [
                 node_id
@@ -6513,7 +6567,9 @@ async def _invoke_eaf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
             ]
             for agent, arg_names in beliefs.items()
         }
+        dropped -= sum(len(lst) for lst in beliefs.values())
         beliefs = {a: lst for a, lst in beliefs.items() if lst} or None
+    identity_payload["dropped_unresolved"] = dropped
     semantics = context.get("semantics", "grounded")
 
     try:
@@ -9979,26 +10035,34 @@ def _node_id_for(node_by_label: Dict[str, str], name: Any) -> Optional[str]:
     return key if key in set(node_by_label.values()) else None
 
 
-def _edges_labels_to_ids(node_by_label: Dict[str, str], edges: Any) -> List[List[str]]:
+def _edges_labels_to_ids(
+    node_by_label: Dict[str, str], edges: Any
+) -> Tuple[List[List[str]], int]:
     """Exact label→id edge translation (#3009/#3014).
 
     Both sides come from the same in-memory pairs list, by construction —
     an edge whose endpoint is not a member NEVER joins by prefix or
     substring, it is dropped, through :func:`_node_id_for` (the single
-    join, stripped on both sides since the R1084 review). (The #1698
+    join, stripped on both sides since the R1084 review). The #1698
     retention accounting downstream counts what is submitted to the
-    handler; the translation happens before it, as in #3009's Dung site.)
+    handler; the translation happens before it, as in #3009's Dung site —
+    and the caller-supplied endpoints that resolved to nothing are
+    COUNTED, never silent (#3014 follow-up, review item 3): the return is
+    ``(resolved_pairs, dropped_endpoint_count)``.
     """
     out: List[List[str]] = []
+    dropped = 0
     if not isinstance(edges, list):
-        return out
+        return out, dropped
     for edge in edges:
         if isinstance(edge, (list, tuple)) and len(edge) >= 2:
             src = _node_id_for(node_by_label, edge[0])
             tgt = _node_id_for(node_by_label, edge[1])
             if src is not None and tgt is not None:
                 out.append([src, tgt])
-    return out
+            else:
+                dropped += (src is None) + (tgt is None)
+    return out, dropped
 
 
 def _dialogue_endpoint(node_by_label: Dict[str, str], name: Any) -> str:
@@ -10105,7 +10169,11 @@ async def _invoke_dung_extensions(
         context,
         capability="dung_extensions",
     )
-    attacks = _edges_labels_to_ids(node_by_label, text_edges)
+    attacks, dropped = _edges_labels_to_ids(node_by_label, text_edges)
+    # #3014 follow-up: a translator edge endpoint that resolves to nothing is
+    # counted, never dropped silently (this site reads no caller attacks, so
+    # the count can only come from the translator's own output).
+    identity_payload["dropped_unresolved"] = dropped
 
     # I5 #1430: compare mode — run every available backend on the same AF and
     # surface agreement / disagreement (never auto-reconciled). Short-circuits
