@@ -27,7 +27,11 @@ What the census reads (all static, no run):
     mutates — the two classes of ``shared_state.py`` are both walked, since
     ``UnifiedAnalysisState`` extends ``RhetoricalAnalysisState``).
   - readers: fields read inside a capability's invoker body and inside the
-    functions that invoker calls by name (bounded to two levels). Attribution
+    functions that invoker calls by name (bounded to two levels). The
+    capability -> invoker mapping is the one ``setup_registry()`` really
+    builds — runtime truth, so every registration shape counts (direct
+    calls, the row tables, the counter_argument patch); a literal-only read
+    resolved 16 of 43 voie capabilities (#3021 review). Attribution
     is per CAPABILITY, never per module: every invoker lives in the single
     file ``invoke_callables.py``, so a module-granular census would attribute
     ``narrative_synthesis``'s read to every voie that touches that file.
@@ -204,26 +208,33 @@ def _writer_fields(writer):
     return fields, unresolvable
 
 
+_INVOKER_CACHE = {}
+
+
 def _capability_invokers():
-    """capability -> the `invoke=<name>` declared for it in registry_setup.py."""
-    mapping = {}
-    for node in ast.walk(_tree(REGISTRY_SETUP)):
-        if not isinstance(node, ast.Call):
+    """capability -> invoker name, from the registry setup_registry() builds.
+
+    Runtime truth, not a re-parse of the registration syntax: every
+    registration shape lands in the same place — the direct
+    ``register_*(capabilities=[...], invoke=...)`` calls, the row tables
+    ``for name, caps, desc, invoke_fn in ...`` loops over
+    (registry_setup.py:465/499/589/840), and the counter_argument module
+    function whose invoke is patched onto the registration afterwards. A
+    literal-only census resolved 16 of the 43 capabilities the voies request
+    (#3021 review); the registry resolves what production resolves.
+    """
+    if _INVOKER_CACHE:
+        return _INVOKER_CACHE
+    from argumentation_analysis.orchestration.registry_setup import setup_registry
+
+    for registration in setup_registry()._registrations.values():
+        invoke = getattr(registration, "invoke", None)
+        name = getattr(invoke, "__name__", None)
+        if name is None:
             continue
-        caps, invoke = None, None
-        for kw in node.keywords:
-            if kw.arg == "capabilities" and isinstance(kw.value, ast.List):
-                caps = [
-                    e.value
-                    for e in kw.value.elts
-                    if isinstance(e, ast.Constant) and isinstance(e.value, str)
-                ]
-            if kw.arg == "invoke" and isinstance(kw.value, ast.Name):
-                invoke = kw.value.id
-        if caps and invoke:
-            for cap in caps:
-                mapping.setdefault(cap, invoke)
-    return mapping
+        for cap in registration.capabilities:
+            _INVOKER_CACHE.setdefault(cap, name)
+    return _INVOKER_CACHE
 
 
 def _file_imports():
@@ -417,6 +428,7 @@ def census(voies):
         read_by_voie[voie] = read
 
     report = {}
+    unresolvable = set()
     for voie, wf in voies.items():
         own = read_by_voie[voie]
         elsewhere = set()
@@ -428,12 +440,18 @@ def census(voies):
             writer = CAPABILITY_STATE_WRITERS.get(phase.capability)
             if writer is None:
                 continue
-            fields, _unres = _writer_fields(writer)
+            fields, writer_unres = _writer_fields(writer)
+            unresolvable |= writer_unres
             if not fields or fields & own:
                 continue
             if fields & elsewhere:
                 found.append((phase.name, frozenset(fields)))
         report[voie] = found
+    assert not unresolvable, (
+        "writers whose add_* the census cannot resolve to state fields: "
+        f"{sorted(unresolvable)} — everything such a writer writes is "
+        "invisible to this census; extend _state_methods or name the exception"
+    )
     return report
 
 
@@ -525,6 +543,57 @@ def test_allowlist_entries_are_qualified_by_measurement():
         assert (
             len(why) > 40
         ), f"{key}: qualification too thin to check — name the reader's site"
+
+
+INVOKER_UNRESOLVED = frozenset()
+"""Voie capabilities allowed to have no resolved invoker. Measured empty on
+main `bc55357ef`: the registry setup_registry() builds resolves every one,
+whatever its registration shape. A capability that lands here reads as no
+read at all — name it only with a measured reason."""
+
+
+def test_every_voie_capability_has_a_resolved_invoker():
+    """A capability the census cannot resolve to an invoker contributes no
+    reads — #3021's blind spot, measured at 27 of 43 voie capabilities by
+    the review. The registry resolves every one today; this pins it, so a
+    registration shape the census stops seeing reddens here instead of
+    silently blinding half the voies."""
+    invokers = _capability_invokers()
+    missing = sorted(
+        f"{voie}/{phase.name} ({phase.capability})"
+        for voie, wf in _real_voies().items()
+        for phase in wf.phases
+        if phase.capability not in invokers
+        and phase.capability not in INVOKER_UNRESOLVED
+    )
+    assert not missing, f"voie capabilities with no resolved invoker: {missing}"
+
+
+def test_a_row_registered_invoker_counts_as_a_reader():
+    """Born-red for the registry resolution: a reader registered through a
+    row table must count. `fol_reasoning`'s invoker is registered in the
+    logic row table, and it reads `identified_arguments`, which
+    `fact_extraction` writes. On a voie carrying just those two phases, the
+    literal-only census called the producer an orphan; the registry-resolved
+    census sees the read (#3021 review's loud direction, made impossible)."""
+    from argumentation_analysis.orchestration.workflow_dsl import WorkflowBuilder
+
+    probe = (
+        WorkflowBuilder("probe_1626_rows")
+        .add_phase("extract", capability="fact_extraction")
+        .add_phase("fol", capability="fol_reasoning")
+        .build()
+    )
+    voies = dict(_real_voies())
+    voies["probe_1626_rows"] = probe
+
+    report = census(voies)
+    orphans = dict(report["probe_1626_rows"])
+    assert "extract" not in orphans, (
+        "a producer whose own voie carries a reader — registered through a "
+        "row table — was still called an orphan: the census is blind to that "
+        "registration shape again"
+    )
 
 
 def _voie_without(wf, dropped_phase):
