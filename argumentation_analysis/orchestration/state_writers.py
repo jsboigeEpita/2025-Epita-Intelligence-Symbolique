@@ -1081,7 +1081,16 @@ def _write_aspic_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         statistics = {}
     if not isinstance(attacks, list):
         attacks = None
-    state.add_aspic_result(reasoner_type, extensions, statistics, attacks=attacks)
+    state.add_aspic_result(
+        reasoner_type,
+        extensions,
+        statistics,
+        attacks=attacks,
+        # #3014: the rule atoms are the units' ``arg_N`` ids — the labels
+        # make the extensions/attacks joinable to the population.
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+    )
 
 
 def _write_belief_revision_to_state(
@@ -1203,11 +1212,14 @@ def _write_aba_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         arguments=assumptions,
         attacks=[],
         extensions={"aba_extensions": extensions},
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
     )
     # #1648 Wave-2 sidecar: preserve the contraries the handler echoes
     # under ``output["contraries"]``. Empty mapping ⇒ sidecar still present
     # but with empty dict (so readers can detect "handler ran, contraries
-    # not supplied" vs. "writer dropped the field").
+    # not supplied" vs. "writer dropped the field"). #3014: the echo is
+    # keyed by unit id and carries the contrary SENTENCES (labels).
     contraries = output.get("contraries")
     if isinstance(contraries, dict) and contraries:
         state.dung_frameworks[df_id]["formalism_specific"] = {
@@ -1239,6 +1251,8 @@ def _write_adf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         arguments=statements,
         attacks=[],
         extensions={"adf_models": interpretations},
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
     )
     # #2063 sidecar: carry the provenance the handler supplied — presence of
     # the key, not its truthiness, gates each field (``degraded: False`` is

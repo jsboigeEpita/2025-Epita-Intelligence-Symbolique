@@ -48,6 +48,9 @@ import pytest
 
 from argumentation_analysis.orchestration import invoke_callables as ic
 from argumentation_analysis.orchestration.state_writers import (
+    _write_aba_to_state,
+    _write_adf_to_state,
+    _write_aspic_to_state,
     _write_bipolar_to_state,
     _write_eaf_to_state,
     _write_probabilistic_to_state,
@@ -97,6 +100,7 @@ class _RecordingState(SimpleNamespace):
         self.ranking_results: List[Dict[str, Any]] = []
         self.probabilistic_results: List[Dict[str, Any]] = []
         self.bipolar_results: List[Dict[str, Any]] = []
+        self.aspic_results: List[Dict[str, Any]] = []
         self.traces: List[str] = []
 
     def add_dung_framework(
@@ -189,6 +193,28 @@ class _RecordingState(SimpleNamespace):
         self.bipolar_results.append(entry)
         return f"bipolar_{len(self.bipolar_results)}"
 
+    def add_aspic_result(
+        self,
+        reasoner_type: str,
+        extensions: List[Any],
+        statistics: Dict[str, Any],
+        attacks: Optional[List[Dict[str, Any]]] = None,
+        argument_labels: Optional[Dict[str, str]] = None,
+        argument_ids_absent_reason: Optional[str] = None,
+    ) -> str:
+        entry = self._curated(
+            {
+                "reasoner_type": reasoner_type,
+                "extensions": extensions,
+                "statistics": statistics,
+                "attacks": list(attacks) if attacks is not None else [],
+            },
+            argument_labels,
+            argument_ids_absent_reason,
+        )
+        self.aspic_results.append(entry)
+        return f"aspic_{len(self.aspic_results)}"
+
     def add_trace_entry(self, **kw: Any) -> None:
         self.traces.append(str(kw.get("summary", "")))
 
@@ -238,10 +264,11 @@ def _install_fake_translator(
     seen: List[List[str]],
 ) -> None:
     """Stand in for the #1698 translator: answer label-referencing relations
-    and record the inventory it was fed (the seam keeps reading TEXTS)."""
+    and record the inventory it was fed (the seam keeps reading TEXTS). The
+    ``**kwargs`` absorbs the #3014 ``atomizer`` the ASPIC seam passes."""
     import argumentation_analysis.orchestration.structured_arg_translator as sat
 
-    async def _fake(text: str, arguments: List[str]) -> Any:
+    async def _fake(text: str, arguments: List[str], **kwargs: Any) -> Any:
         seen.append(list(arguments))
         return SimpleNamespace(relations=relations, cause="evaluated", error="")
 
@@ -1048,3 +1075,284 @@ class TestStrippedLabelsKeepTheirEdges:
             "arg_1": _UNIT_1,
             "arg_2": _UNIT_2 + "  ",
         }
+
+
+# --------------------------------------------------------------------------
+# Batch 2b — ABA, ADF, ASPIC: the rule-based theory callables
+# --------------------------------------------------------------------------
+
+
+class TestAbaNodesAreUnits:
+    async def test_the_theory_and_contraries_are_id_keyed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        handler_seen: List[Dict[str, Any]] = []
+        translator_seen: List[List[str]] = []
+        # The translator answers over the FULL texts (its inventory); the
+        # contrary VALUE is the LLM's defeating sentence — free prose, never
+        # an inventory member.
+        _install_fake_translator(
+            monkeypatch,
+            "translate_to_aba_contraries",
+            {_UNIT_1: "Sentence contraire synthétique de la première thèse."},
+            translator_seen,
+        )
+        _install_fake_handler(
+            monkeypatch,
+            "aba_handler",
+            "ABAHandler",
+            "analyze_aba_framework",
+            handler_seen,
+            {"extensions": [["arg_1"]], "statistics": {}},
+            takes_initializer=False,
+        )
+
+        result = await ic._invoke_aba(_UNIT_1, context)
+
+        # The translator seam kept reading TEXTS (full units).
+        assert translator_seen == [[_UNIT_1, _UNIT_2]]
+        assert result.get("argument_labels") == _LABELS
+        assert "argument_ids_absent_reason" not in result
+        # The handler received id assumptions, id rules, and an ATOM for the
+        # contrary sentence (a Tweety Proposition name, never prose). With 2
+        # units both are assumptions, so the derived rule is the theory's
+        # non-empty self-loop (head=body=first assumption).
+        assumptions, rules, contraries, _semantics = handler_seen[0]["args"]
+        assert list(assumptions) == ["arg_1", "arg_2"]
+        assert rules == [{"head": "arg_1", "body": ["arg_1"]}]
+        assert list(contraries) == ["arg_1"]
+        contrary_atom = contraries["arg_1"]
+        assert contrary_atom.startswith("contrary_")
+        assert " " not in contrary_atom
+        # The ECHOED contraries keep the SENTENCE (a label), keyed by id.
+        assert result["contraries"] == {
+            "arg_1": "Sentence contraire synthétique de la première thèse."
+        }
+
+    async def test_the_writer_curates_labels_and_the_sidecar(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        _install_fake_translator(
+            monkeypatch,
+            "translate_to_aba_contraries",
+            {_UNIT_1: "Sentence contraire synthétique."},
+            [],
+        )
+        _install_fake_handler(
+            monkeypatch,
+            "aba_handler",
+            "ABAHandler",
+            "analyze_aba_framework",
+            [],
+            # The real handler echoes the assumptions it was handed.
+            lambda assumptions, rules, contraries, semantics: {
+                "extensions": [["arg_1"]],
+                "assumptions": list(assumptions),
+                "statistics": {},
+            },
+            takes_initializer=False,
+        )
+
+        result = await ic._invoke_aba(_UNIT_1, context)
+        _write_aba_to_state(result, state, {})
+
+        entry = next(iter(state.dung_frameworks.values()))
+        assert entry["arguments"] == ["arg_1", "arg_2"]
+        assert entry.get("argument_labels") == _LABELS
+        sidecar = entry.get("formalism_specific", {}).get("contraries")
+        assert sidecar == {"arg_1": "Sentence contraire synthétique."}
+
+
+class TestAdfNodesAreUnits:
+    async def test_the_statements_and_attacked_conditions_are_id_keyed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        # Label-keyed caller attacks: the derivation must mark the TARGET
+        # statement's condition "F" — through the single join.
+        context["attacks"] = [[_UNIT_1, _UNIT_2]]
+        handler_seen: List[Dict[str, Any]] = []
+        _install_fake_handler(
+            monkeypatch,
+            "adf_handler",
+            "ADFHandler",
+            "analyze_adf",
+            handler_seen,
+            {"interpretations": [["arg_2"]], "statistics": {}},
+            takes_initializer=False,
+        )
+
+        result = await ic._invoke_adf(_UNIT_1, context)
+
+        assert result.get("argument_labels") == _LABELS
+        assert "argument_ids_absent_reason" not in result
+        statements, conditions, _semantics = handler_seen[0]["args"]
+        assert list(statements) == ["arg_1", "arg_2"]
+        assert conditions == {"arg_1": "T", "arg_2": "F"}
+
+    async def test_a_negation_override_resolves_the_peer_by_id(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An override condition referencing a peer by TEXT resolves the peer's
+        id — the override path stays internally consistent with the id-keyed
+        statements (before, the reference missed and silently degraded to a
+        tautology)."""
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        context["acceptance_conditions"] = {_UNIT_2: f"negation:{_UNIT_1}"}
+        handler_seen: List[Dict[str, Any]] = []
+        _install_fake_handler(
+            monkeypatch,
+            "adf_handler",
+            "ADFHandler",
+            "analyze_adf",
+            handler_seen,
+            {"interpretations": [], "statistics": {}},
+            takes_initializer=False,
+        )
+
+        await ic._invoke_adf(_UNIT_1, context)
+
+        _statements, conditions, _semantics = handler_seen[0]["args"]
+        assert conditions == {"arg_2": "negation:arg_1"}
+
+    async def test_the_writer_curates_labels(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        _install_fake_handler(
+            monkeypatch,
+            "adf_handler",
+            "ADFHandler",
+            "analyze_adf",
+            [],
+            # The real handler echoes the statements it was handed.
+            lambda statements, conditions, semantics: {
+                "interpretations": [],
+                "statements": list(statements),
+                "statistics": {},
+            },
+            takes_initializer=False,
+        )
+
+        result = await ic._invoke_adf(_UNIT_1, context)
+        _write_adf_to_state(result, state, {})
+
+        entry = next(iter(state.dung_frameworks.values()))
+        assert entry["arguments"] == ["arg_1", "arg_2"]
+        assert entry.get("argument_labels") == _LABELS
+
+
+class TestAspicNodesAreUnits:
+    async def test_the_theory_atoms_are_unit_ids(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        handler_seen: List[Dict[str, Any]] = []
+
+        # The fake translator mirrors the real one: it builds each rule
+        # member's atom THROUGH the injected atomizer (#3014) and answers
+        # over the LABELS it was fed.
+        import argumentation_analysis.orchestration.structured_arg_translator as sat
+
+        translator_seen: List[Any] = []
+
+        async def _fake_aspic(text: str, arguments: List[str], atomizer: Any = None):
+            translator_seen.append((list(arguments), atomizer))
+            from argumentation_analysis.orchestration.invoke_callables import _pl_atom
+
+            atoms = (
+                atomizer
+                if atomizer is not None
+                else (lambda t: _pl_atom(t, prefix="arg"))
+            )
+            return SimpleNamespace(
+                relations=[
+                    {"head": atoms(_UNIT_2), "body": [atoms(_UNIT_1)], "name": "def_1"}
+                ],
+                cause="evaluated",
+                error="",
+            )
+
+        monkeypatch.setattr(sat, "translate_to_aspic_rules", _fake_aspic)
+        _install_fake_handler(
+            monkeypatch,
+            "aspic_handler",
+            "ASPICHandler",
+            "analyze_aspic_framework",
+            handler_seen,
+            {"extensions": [["arg_2"]], "statistics": {}},
+            takes_initializer=False,
+        )
+
+        result = await ic._invoke_aspic(_UNIT_1, context)
+
+        # The seam kept reading TEXTS and received the atomizer.
+        assert translator_seen[0][0] == [_UNIT_1, _UNIT_2]
+        assert callable(translator_seen[0][1])
+        assert result.get("argument_labels") == _LABELS
+        assert "argument_ids_absent_reason" not in result
+        strict, defeasible, _axioms = handler_seen[0]["args"]
+        # The translator-derived rule cites the unit IDS — joinable atoms,
+        # not slug+hash atoms derived from prose.
+        assert defeasible[0] == {"head": "arg_2", "body": ["arg_1"], "name": "def_1"}
+        # The translator's relations persisted into the context cite ids too.
+        assert context["defeasible_rules"] == [
+            {"head": "arg_2", "body": ["arg_1"], "name": "def_1"}
+        ]
+
+    async def test_the_writer_curates_labels(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        # #1591 hermeticity: without rules the invoke calls the REAL
+        # translator — answer an honest empty outcome (no LLM request).
+        _install_fake_translator(
+            monkeypatch,
+            "translate_to_aspic_rules",
+            [],
+            [],
+        )
+        _install_fake_handler(
+            monkeypatch,
+            "aspic_handler",
+            "ASPICHandler",
+            "analyze_aspic_framework",
+            [],
+            {"extensions": [["arg_2"]], "statistics": {}},
+            takes_initializer=False,
+        )
+
+        result = await ic._invoke_aspic(_UNIT_1, context)
+        from unittest.mock import patch as _patch
+
+        with _patch(
+            "argumentation_analysis.orchestration.state_writers._record_structured_arg_status"
+        ):
+            _write_aspic_to_state(result, state, {})
+
+        entry = state.aspic_results[-1]
+        assert entry.get("argument_labels") == _LABELS
+        assert entry["reasoner_type"]

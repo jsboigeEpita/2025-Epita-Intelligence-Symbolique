@@ -5220,28 +5220,56 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
 
 
 async def _invoke_aba(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
-    """Invoke ABA handler with JVM fallback."""
-    args = _extract_arguments_from_context(input_text, context)
+    """Invoke ABA handler with JVM fallback.
+
+    #3014: the theory's nodes are the units' ``arg_N`` ids (family frame) —
+    ids are exactly what a Tweety ``Proposition`` name wants, where free
+    prose is not (the ``_pl_atom`` contract). The texts travel as labels:
+    the translator seam keeps reading them, its contrary dict translates
+    back through the single join, and the contrary SENTENCE stays prose in
+    the echoed payload — a label, never a node.
+    """
+    node_ids, labels, node_by_label, identity_payload = _af_family_frame(
+        input_text, context
+    )
     # ABA rules come as {head, body} dicts. Shape from the argument graph
     # when upstream provides none (bug family E1b #1168: handler rejected the
-    # old string rules ``"a => valid"``).
-    assumptions, rules = _aba_rules_from_context(args, context)
-    contraries = context.get("contraries")
+    # old string rules ``"a => valid"``). #3014: shaped over the node ids;
+    # caller overrides resolve through ``_node_id_for`` — an endpoint that
+    # already IS an id passes through (idempotent, R1084 review item 1).
+    assumptions, rules = _aba_rules_from_context(node_ids, context)
+    assumptions = [
+        node_id
+        for a in assumptions
+        if (node_id := _node_id_for(node_by_label, a)) is not None
+    ]
+    translated_rules: List[Dict[str, Any]] = []
+    for rule in rules:
+        head = _node_id_for(node_by_label, rule.get("head"))
+        body = [
+            node_id
+            for b in (rule.get("body") or [])
+            if (node_id := _node_id_for(node_by_label, b)) is not None
+        ]
+        if head is not None and body:
+            translated_rules.append({"head": head, "body": body})
+    rules = translated_rules
+    contraries_raw = context.get("contraries")
     semantics = context.get("semantics", "preferred")
     # TR-1 #1419 / FP-17 #1236: when no genuine contraries were supplied, derive
     # them from the real text + extracted arguments (the translation gap). Same
     # honest-absent contract as bipolar: validated against the real inventory,
     # empty result keeps absent_no_translator (anti-théâtre #1019).
-    if not contraries:
+    if not contraries_raw:
         try:
             from argumentation_analysis.orchestration.structured_arg_translator import (
                 translate_to_aba_contraries,
             )
 
-            outcome = await translate_to_aba_contraries(input_text, args)
-            contraries = outcome.relations
-            if contraries:
-                context["contraries"] = contraries
+            outcome = await translate_to_aba_contraries(input_text, labels)
+            contraries_raw = outcome.relations
+            if contraries_raw:
+                context["contraries"] = contraries_raw
             _propagate_structured_arg_cause(
                 context, "aba_reasoning", outcome.cause, outcome.error
             )
@@ -5250,14 +5278,37 @@ async def _invoke_aba(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
             _propagate_structured_arg_cause(
                 context, "aba_reasoning", "translator_failed", type(e).__name__
             )
+    # Key = assumption LABEL → unit id through the single join; value = the
+    # defeating SENTENCE — not an inventory member, so it never joins a unit.
+    # It rides as prose in the echo (a label) and reaches the theory as a
+    # sanitized atom.
+    contraries_sentences = {
+        asm_id: str(sentence)
+        for asm, sentence in (contraries_raw or {}).items()
+        if (asm_id := _node_id_for(node_by_label, asm)) is not None
+    }
+    contraries = {
+        asm_id: _pl_atom(sentence, prefix="contrary")
+        for asm_id, sentence in contraries_sentences.items()
+    }
 
     try:
         from argumentation_analysis.agents.core.logic.aba_handler import ABAHandler
 
         handler = ABAHandler()  # type: ignore[no-untyped-call]
-        return await asyncio.to_thread(
-            handler.analyze_aba_framework, assumptions, rules, contraries, semantics
+        result = await asyncio.to_thread(
+            handler.analyze_aba_framework,
+            assumptions,
+            rules,
+            contraries if contraries else None,
+            semantics,
         )
+        result.update(identity_payload)
+        # The echoed contraries carry the SENTENCES, keyed by unit id — the
+        # sidecar reader keeps the prose while the theory kept atoms.
+        if contraries_sentences:
+            result["contraries"] = dict(contraries_sentences)
+        return result
     except Exception as e:
         raise RuntimeError(
             f"ABA reasoning unavailable: JVM/Tweety required ({e}). "
@@ -5266,20 +5317,59 @@ async def _invoke_aba(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
 
 
 async def _invoke_adf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
-    """Invoke ADF handler with JVM fallback."""
-    args = _extract_arguments_from_context(input_text, context)
+    """Invoke ADF handler with JVM fallback.
+
+    #3014: the statements are the units' ``arg_N`` ids (family frame) — the
+    ``ADFArgument`` names — with the texts travelling as labels. The
+    attacked-statement derivation reads attack endpoints through the single
+    join, and an override condition that references a peer (``negation:…``)
+    resolves the same way, so the override path stays internally consistent.
+    """
+    node_ids, labels, node_by_label, identity_payload = _af_family_frame(
+        input_text, context
+    )
     # ADF acceptance conditions map statement → propositional formula string.
-    # Shape from the attack graph when upstream provides none.
-    statements, conditions = _adf_conditions_from_context(args, context)
+    # Shape from the attack graph when upstream provides none. #3014: shaped
+    # over the node ids, with the attack endpoints translated BEFORE the
+    # shaper reads them (its attacked-set is a membership test against the
+    # statements it was handed) — a shallow copy, the caller's context is
+    # never mutated.
+    shaped_ctx = dict(context)
+    shaped_ctx["attacks"] = _edges_labels_to_ids(
+        node_by_label, context.get("attacks") or []
+    )
+    statements, conditions = _adf_conditions_from_context(node_ids, shaped_ctx)
     semantics = context.get("semantics", "grounded")
+    # Caller overrides (statements / acceptance_conditions keys) resolve
+    # through the single join; an endpoint already an id passes through.
+    statements = [
+        node_id
+        for s in statements
+        if (node_id := _node_id_for(node_by_label, s)) is not None
+    ]
+
+    def _translate_condition(condition: str) -> str:
+        if condition.startswith("negation:"):
+            other = _node_id_for(node_by_label, condition.split(":", 1)[1])
+            if other is not None:
+                return f"negation:{other}"
+        return condition
+
+    conditions = {
+        node_id: _translate_condition(str(cond))
+        for s, cond in conditions.items()
+        if (node_id := _node_id_for(node_by_label, s)) is not None
+    }
 
     try:
         from argumentation_analysis.agents.core.logic.adf_handler import ADFHandler
 
         handler = ADFHandler()  # type: ignore[no-untyped-call]
-        return await asyncio.to_thread(
+        result = await asyncio.to_thread(
             handler.analyze_adf, statements, conditions, semantics
         )
+        result.update(identity_payload)
+        return result
     except Exception as e:
         raise RuntimeError(
             f"ADF reasoning unavailable: JVM/Tweety required ({e}). "
@@ -5344,7 +5434,23 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
     - Strict rules: factual claims support conclusions
     - Defeasible rules: arguments that may be undermined by fallacies
     """
-    args = _extract_arguments_from_context(input_text, context)
+    node_ids, labels, node_by_label, identity_payload = _af_family_frame(
+        input_text, context
+    )
+    # #3014: the theory's atoms are the units' ``arg_N`` ids when the
+    # population minted them — an id IS a valid PL atom (``[A-Za-z0-9_]``),
+    # so a rule body citing ``arg_1`` is joinable to the unit by every
+    # reader of ``aspic_results``. On the sentence fallback (no ids) every
+    # member still goes through ``_pl_atom`` — prose never reaches a
+    # ``Proposition`` either way.
+    have_ids = identity_payload.get("argument_ids_absent_reason") is None
+
+    def _atom(text: str) -> str:
+        if have_ids:
+            unit = _node_id_for(node_by_label, text)
+            if unit is not None:
+                return unit
+        return _pl_atom(text, prefix="arg")
 
     # TR-2 #1425: when the caller supplied no genuine defeasible rules, derive
     # them from the real text + extracted arguments (mirror TR-1 bipolar/ABA).
@@ -5354,14 +5460,15 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
     # Persisting into ``context["defeasible_rules"]`` lets
     # _record_structured_arg_status label the axis "evaluated" via the existing
     # has_genuine_input path. Caller-supplied rules are never overridden, and the
-    # honest-absent gate is not modified.
+    # honest-absent gate is not modified. #3014: the inventory stays the LABELS
+    # (the seam is LLM-facing) and the atomizer maps members to unit ids.
     if not context.get("defeasible_rules"):
         try:
             from argumentation_analysis.orchestration.structured_arg_translator import (
                 translate_to_aspic_rules,
             )
 
-            outcome = await translate_to_aspic_rules(input_text, args)
+            outcome = await translate_to_aspic_rules(input_text, labels, atomizer=_atom)
             derived_rules = outcome.relations
             if derived_rules:
                 context["defeasible_rules"] = derived_rules
@@ -5400,7 +5507,7 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
                 {"head": f"supported_{i+1}", "body": [_pl_atom(text, prefix="claim")]}
             )
         # If claims feed into arguments, chain them.
-        if len(args) >= 2:
+        if len(node_ids) >= 2:
             strict.append(
                 {"head": "argument_chain", "body": ["supported_1", "supported_2"]}
             )
@@ -5408,12 +5515,13 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
     defeasible = context.get("defeasible_rules")
     if not defeasible:
         defeasible = []
-        # Defeasible rules: arguments that could be undermined.
-        for i, arg in enumerate(args[:4]):
+        # Defeasible rules: arguments that could be undermined. #3014: the
+        # premise atom is the unit's id when the population minted one.
+        for i, arg in enumerate(node_ids[:4]):
             defeasible.append(
                 {
                     "head": f"plausible_conclusion_{i+1}",
-                    "body": [_pl_atom(arg, prefix="arg")],
+                    "body": [_atom(arg)],
                     "name": f"def_arg_{i+1}",
                 }
             )
@@ -5459,13 +5567,15 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
         from argumentation_analysis.agents.core.logic.aspic_handler import ASPICHandler
 
         handler = ASPICHandler()
-        return await asyncio.to_thread(
+        result = await asyncio.to_thread(
             handler.analyze_aspic_framework, strict, defeasible, axioms
         )
+        result.update(identity_payload)
+        return result
     except Exception as e:
         logger.info(f"ASPIC+ handler failed ({e}); failing loud with the cause (#1826)")
         return _python_aspic_fallback(
-            args, strict, defeasible, fallacies, context, cause=e
+            node_ids, strict, defeasible, fallacies, context, cause=e
         )
 
 

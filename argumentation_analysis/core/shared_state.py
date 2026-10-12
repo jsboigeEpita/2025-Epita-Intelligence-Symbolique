@@ -1505,6 +1505,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         extensions: List[Any],
         statistics: Dict[str, Any],
         attacks: Optional[List[Dict[str, Any]]] = None,
+        argument_labels: Optional[Dict[str, str]] = None,
+        argument_ids_absent_reason: Optional[str] = None,
     ) -> str:
         """Add an ASPIC+ analysis result.
 
@@ -1530,6 +1532,14 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "statistics": statistics,
             "attacks": list(attacks) if attacks is not None else [],
         }
+        # #3014: the rule atoms are the units' ``arg_N`` ids — the labels
+        # (id → text) make extensions and attacks joinable to the population;
+        # the reason names the sentence fallback. Stored only when set
+        # (#3009 contract).
+        if argument_labels is not None:
+            entry["argument_labels"] = argument_labels
+        if argument_ids_absent_reason is not None:
+            entry["argument_ids_absent_reason"] = argument_ids_absent_reason
         self.aspic_results.append(entry)
         state_logger.info(f"ASPIC+ result added: {as_id} (reasoner: {reasoner_type})")
         return as_id

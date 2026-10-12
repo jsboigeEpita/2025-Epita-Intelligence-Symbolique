@@ -611,7 +611,9 @@ class TestAspicHandlerWiring:
         _inject_fake_aspic_module(monkeypatch, {"extensions": []})
         genuine = [{"head": "arg:h", "body": ["arg:b"], "name": "def_rule_1"}]
 
-        async def _fake_rules(text, args):
+        # #3014: the invoke passes the label→id ``atomizer`` — the fake
+        # absorbs it (it answers pre-shaped rules).
+        async def _fake_rules(text, args, **kwargs):
             return TranslationResult(relations=genuine, cause=CAUSE_EVALUATED)
 
         monkeypatch.setattr(
@@ -628,7 +630,7 @@ class TestAspicHandlerWiring:
     async def test_does_not_override_caller_supplied_rules(self, monkeypatch):
         called = {"n": 0}
 
-        async def _fake_rules(text, args):
+        async def _fake_rules(text, args, **kwargs):
             called["n"] += 1
             return TranslationResult(
                 relations=[
