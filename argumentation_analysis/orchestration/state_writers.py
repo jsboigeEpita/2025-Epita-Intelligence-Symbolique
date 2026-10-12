@@ -1113,7 +1113,17 @@ def _write_belief_revision_to_state(
     minimal_retraction = output.get("minimal_retraction")
     if not isinstance(minimal_retraction, dict):
         minimal_retraction = None
-    state.add_belief_revision_result(method, original, revised, minimal_retraction)
+    # #3014: pass through the node identity fields (#3009 parity) — the
+    # entry's original/revised and the retraction options are unit ids, the
+    # texts live in argument_labels.
+    state.add_belief_revision_result(
+        method,
+        original,
+        revised,
+        minimal_retraction,
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+    )
 
 
 def _write_dialogue_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
@@ -1125,7 +1135,15 @@ def _write_dialogue_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> No
     trace = output.get("dialogue_trace", [])
     if not isinstance(trace, list):
         trace = []
-    state.add_dialogue_result(topic, outcome, trace)
+    # #3014: the trace's unit-naming entries carry unit ids; the labels ride
+    # along for the reader (#3009 parity).
+    state.add_dialogue_result(
+        topic,
+        outcome,
+        trace,
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+    )
 
 
 def _write_probabilistic_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:

@@ -5600,9 +5600,29 @@ async def _invoke_belief_revision(
     and the honest-degraded paths — a structural insight that lives only inside
     the JVM-bound handler dies on the degraded path where the handler never runs
     (#1670/#1677).
+
+    #3014 — the belief base is the merged population's units (see
+    :func:`_af_family_frame`): the insight's retraction options name ``arg_N``
+    ids (joinable to the units, the texts travelling as
+    ``argument_labels`` — the Act III reader resolves them for the prose), and
+    a caller ``belief_set`` (free text, caller data) still feeds the handler
+    verbatim. The fallacy targets index the population positions, so a target
+    naming a unit beyond the extraction window resolves now (it was out of
+    range against the window's length and silently dropped).
     """
-    args = _extract_arguments_from_context(input_text, context)
-    beliefs = context.get("belief_set") or args
+    node_ids, labels, node_by_label, identity_payload = _af_family_frame(
+        input_text, context
+    )
+    args = node_ids
+    # #3014: the belief base is the population — the fallback list IS the
+    # unit ids; a caller ``belief_set`` entry that names a unit by its text
+    # resolves to the unit's id (the family's single join), so the handler's
+    # atoms and the echoed ``original`` join back to the units.
+    raw_beliefs = context.get("belief_set") or args
+    beliefs = [
+        (_node_id_for(node_by_label, b) or b) if isinstance(b, str) else b
+        for b in raw_beliefs
+    ]
     method = context.get("revision_method", "dalal")
 
     # Upstream fallacies — read once: they drive both the Levi ``new_belief`` and
@@ -5702,10 +5722,19 @@ async def _invoke_belief_revision(
         )
 
         # Sanitize free-form beliefs/new_belief into valid PL atoms.
-        # Upstream data (extracted args, fallacy types, LLM counter-arguments)
-        # is free text — Tweety's PlParser rejects non-alphanumeric atoms
-        # (ParserException: Unknown object ...). Reduce to stable atoms.
-        safe_beliefs = [_pl_atom(b) for b in beliefs if b and isinstance(b, str)]
+        # Upstream data (caller belief sets, fallacy types, LLM
+        # counter-arguments) is free text — Tweety's PlParser rejects
+        # non-alphanumeric atoms (ParserException: Unknown object ...).
+        # #3014: a belief that IS a node id passes through untouched (a unit
+        # id is a valid PL atom and the echo stays joinable — ``_pl_atom``
+        # would rewrite it to a prefixed, hashed atom); free text still
+        # reduces to a stable atom.
+        node_id_set = set(args)
+        safe_beliefs = [
+            b if b in node_id_set else _pl_atom(b)
+            for b in beliefs
+            if b and isinstance(b, str)
+        ]
         safe_new_belief = _pl_atom(new_belief, prefix="n")
         if not safe_beliefs:
             safe_beliefs = [_pl_atom("initial_belief", prefix="b")]
@@ -5716,6 +5745,8 @@ async def _invoke_belief_revision(
         )
         if isinstance(result, dict):
             result["minimal_retraction"] = minimal_retraction
+            # #3014: every return site carries the node identity fields.
+            result.update(identity_payload)
         return result
     except Exception as e:
         # Three states, never two (mirrors _invoke_bipolar l.3646-3702). JVM
@@ -5737,7 +5768,7 @@ async def _invoke_belief_revision(
                 "computed). Underlying signal: %s",
                 e,
             )
-            return {
+            degraded = {
                 "method": method,
                 "original": list(beliefs) if isinstance(beliefs, list) else [],
                 "new_belief": new_belief,
@@ -5754,6 +5785,10 @@ async def _invoke_belief_revision(
                 ),
                 "error": f"{type(e).__name__}: {e}",
             }
+            # #3014: the degraded return is joinable too — every return site
+            # carries the node identity fields (bipolar parity, #3009).
+            degraded.update(identity_payload)
+            return degraded
         raise RuntimeError(
             f"Belief revision ({method}) failed with JVM up: "
             f"{type(e).__name__}: {e}"
@@ -5819,8 +5854,19 @@ async def _invoke_dialogue(input_text: str, context: Dict[str, Any]) -> Dict[str
     Organizes arguments into proponent/opponent positions using upstream data:
     - Counter-arguments become opponent moves
     - Original arguments become proponent moves
+
+    #3014 — the proponent's position is the merged population's unit ids (see
+    :func:`_af_family_frame`); the opponent's counters stay texts (they are
+    not population units). Every edge endpoint resolves through the family's
+    join when it names a unit and is kept verbatim otherwise
+    (:func:`_dialogue_edges`); the topic follows the same rule so the
+    membership check that decides ``accepted`` keeps its meaning across the
+    keying change. The texts travel as ``argument_labels``.
     """
-    args = _extract_arguments_from_context(input_text, context)
+    node_ids, labels, node_by_label, identity_payload = _af_family_frame(
+        input_text, context
+    )
+    args = node_ids
 
     # Use counter-arguments as opponent position if available
     ca_output = context.get("phase_counter_output", {})
@@ -5837,8 +5883,12 @@ async def _invoke_dialogue(input_text: str, context: Dict[str, Any]) -> Dict[str
     if ca_list:
         pro_args = context.get("proponent_args") or args
         opp_args = context.get("opponent_args") or ca_list
+        # #3014: the generators are text-consuming seams — they read the
+        # LABELS (the counter branch of _generate_attacks_from_args matches
+        # texts, _counter_edges grounds the unit as a text member); the edges
+        # they return translate back to node ids below.
         pro_attacks = context.get("proponent_attacks") or _generate_attacks_from_args(
-            args, context
+            labels, context
         )
         # #2968: an opponent edge names BOTH endpoints exactly as the
         # dialogue's lists carry them — the counter attacking the unit its
@@ -5847,19 +5897,26 @@ async def _invoke_dialogue(input_text: str, context: Dict[str, Any]) -> Dict[str
         # linked a fallacy to the wrong counter) and prefixed sources with
         # "CA: ", which the handler's membership filter then dropped.
         opp_attacks = context.get("opponent_attacks") or _counter_edges(
-            cas, pro_args, context
+            cas, labels, context
         )
     else:
         mid = max(1, len(args) // 2)
         pro_args = context.get("proponent_args") or args[:mid]
         opp_args = context.get("opponent_args") or args[mid:]
+        # The halves are positionally aligned between ids and labels (the
+        # frame guarantees it), so each seam reads ITS half of the labels.
         pro_attacks = context.get("proponent_attacks") or _generate_attacks_from_args(
-            pro_args, context
+            labels[:mid], context
         )
         opp_attacks = context.get("opponent_attacks") or _generate_attacks_from_args(
-            opp_args, context
+            labels[mid:], context
         )
-    topic = context.get("topic", input_text[:200])
+    # #3014: caller-provided or generated, every edge resolves-or-keeps its
+    # endpoints; the topic follows the same rule (an accepted topic names a
+    # member, and the members are ids now).
+    pro_attacks = _dialogue_edges(node_by_label, pro_attacks)
+    opp_attacks = _dialogue_edges(node_by_label, opp_attacks)
+    topic = _dialogue_endpoint(node_by_label, context.get("topic", input_text[:200]))
 
     try:
         from argumentation_analysis.agents.core.logic.dialogue_handler import (
@@ -5867,7 +5924,7 @@ async def _invoke_dialogue(input_text: str, context: Dict[str, Any]) -> Dict[str
         )
 
         handler = DialogueHandler()  # type: ignore[no-untyped-call]
-        return await asyncio.to_thread(
+        output = await asyncio.to_thread(
             handler.execute_dialogue,
             pro_args,
             pro_attacks,
@@ -5875,6 +5932,11 @@ async def _invoke_dialogue(input_text: str, context: Dict[str, Any]) -> Dict[str
             opp_attacks,
             topic,
         )
+        # #3014: the result's members (grounded_extension, trace, merged
+        # framework) are unit ids where they name units — the labels ride
+        # along for the reader.
+        output.update(identity_payload)
+        return output
     except Exception as e:
         raise RuntimeError(
             f"Dialogue protocol unavailable: JVM/Tweety required ({e}). "
@@ -9936,6 +9998,46 @@ def _edges_labels_to_ids(node_by_label: Dict[str, str], edges: Any) -> List[List
             tgt = _node_id_for(node_by_label, edge[1])
             if src is not None and tgt is not None:
                 out.append([src, tgt])
+    return out
+
+
+def _dialogue_endpoint(node_by_label: Dict[str, str], name: Any) -> str:
+    """Resolve-or-keep join for ONE dialogue endpoint (#3014).
+
+    A dialogue runs over TWO populations: the proponent's units (id-joinable
+    through :func:`_node_id_for`, the family's single resolver) and the
+    opponent's counters (free text — no unit exists to join). An endpoint that
+    names a unit becomes its id (label→id, or an id already carried); every
+    other endpoint is kept verbatim — a counter IS a dialogue member, so the
+    family's drop-unresolvable rule would delete every counter→unit edge, and
+    with it the dialogue itself.
+    """
+    node_id = _node_id_for(node_by_label, name)
+    return node_id if node_id is not None else str(name)
+
+
+def _dialogue_edges(node_by_label: Dict[str, str], edges: Any) -> List[List[str]]:
+    """Translate a dialogue edge list's endpoints, member by member (#3014).
+
+    Same resolve-or-keep contract as :func:`_dialogue_endpoint` on both
+    endpoints (the family's ``_edges_labels_to_ids`` drops an edge whose
+    endpoint joins no unit; a dialogue edge may legitimately name a counter,
+    so it resolves-or-keeps instead). A malformed edge (not a pair) is
+    skipped, never guessed into one. The handler's own membership filter (it
+    keeps an edge only when both endpoints name dialogue members) then decides
+    what enters the theory, exactly as it did before the keying change.
+    """
+    out: List[List[str]] = []
+    if not isinstance(edges, list):
+        return out
+    for edge in edges:
+        if isinstance(edge, (list, tuple)) and len(edge) >= 2:
+            out.append(
+                [
+                    _dialogue_endpoint(node_by_label, edge[0]),
+                    _dialogue_endpoint(node_by_label, edge[1]),
+                ]
+            )
     return out
 
 

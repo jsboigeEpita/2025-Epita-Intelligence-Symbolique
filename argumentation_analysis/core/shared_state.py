@@ -1550,6 +1550,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         original: List[str],
         revised: List[str],
         minimal_retraction: Optional[Dict[str, Any]] = None,
+        argument_labels: Optional[Dict[str, str]] = None,
+        argument_ids_absent_reason: Optional[str] = None,
     ) -> str:
         """Add a belief revision result.
 
@@ -1561,6 +1563,12 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         path. ``None`` means "not computed" (callers that pre-date the insight,
         or an honest degrade of the insight itself); the reader names it only when
         the cardinality is >= 1.
+
+        #3014 — ``original``/``revised`` and the retraction options name unit
+        ids (``arg_N``) on a pipeline run; the beliefs' TEXT travels in
+        ``argument_labels`` (``{node: label}``) — same contract as
+        ``add_dung_framework`` (#3009). Optional fields are stored only when
+        set (honest absence).
         """
         br_id = self._generate_id("brevision", self.belief_revision_results)
         entry: Dict[str, Any] = {
@@ -1571,21 +1579,42 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         }
         if minimal_retraction is not None:
             entry["minimal_retraction"] = minimal_retraction
+        if argument_labels is not None:
+            entry["argument_labels"] = argument_labels
+        if argument_ids_absent_reason is not None:
+            entry["argument_ids_absent_reason"] = argument_ids_absent_reason
         self.belief_revision_results.append(entry)
         state_logger.info(f"Belief revision result added: {br_id} (method: {method})")
         return br_id
 
     def add_dialogue_result(
-        self, topic: str, outcome: str, trace: List[Dict[str, Any]]
+        self,
+        topic: str,
+        outcome: str,
+        trace: List[Dict[str, Any]],
+        argument_labels: Optional[Dict[str, str]] = None,
+        argument_ids_absent_reason: Optional[str] = None,
     ) -> str:
-        """Add a dialogue protocol result."""
+        """Add a dialogue protocol result.
+
+        #3014 — the trace's unit-naming entries (``argument``/``target``) and
+        the grounded extension carry unit ids (``arg_N``) where they name
+        population units; the opponent's counters stay texts. The units' TEXT
+        travels in ``argument_labels`` (``{node: label}``) — same contract as
+        ``add_dung_framework`` (#3009). Optional fields are stored only when
+        set (honest absence).
+        """
         dl_id = self._generate_id("dialogue", self.dialogue_results)
-        entry = {
+        entry: Dict[str, Any] = {
             "id": dl_id,
             "topic": topic,
             "outcome": outcome,
             "trace": trace,
         }
+        if argument_labels is not None:
+            entry["argument_labels"] = argument_labels
+        if argument_ids_absent_reason is not None:
+            entry["argument_ids_absent_reason"] = argument_ids_absent_reason
         self.dialogue_results.append(entry)
         state_logger.info(
             f"Dialogue result added: {dl_id} (topic: {topic[:50]}, outcome: {outcome})"

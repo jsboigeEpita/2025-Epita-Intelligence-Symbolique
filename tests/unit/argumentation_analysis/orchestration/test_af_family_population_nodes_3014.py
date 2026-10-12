@@ -51,7 +51,9 @@ from argumentation_analysis.orchestration.state_writers import (
     _write_aba_to_state,
     _write_adf_to_state,
     _write_aspic_to_state,
+    _write_belief_revision_to_state,
     _write_bipolar_to_state,
+    _write_dialogue_to_state,
     _write_eaf_to_state,
     _write_probabilistic_to_state,
     _write_ranking_to_state,
@@ -101,6 +103,8 @@ class _RecordingState(SimpleNamespace):
         self.probabilistic_results: List[Dict[str, Any]] = []
         self.bipolar_results: List[Dict[str, Any]] = []
         self.aspic_results: List[Dict[str, Any]] = []
+        self.belief_revision_results: List[Dict[str, Any]] = []
+        self.dialogue_results: List[Dict[str, Any]] = []
         self.traces: List[str] = []
 
     def add_dung_framework(
@@ -214,6 +218,41 @@ class _RecordingState(SimpleNamespace):
         )
         self.aspic_results.append(entry)
         return f"aspic_{len(self.aspic_results)}"
+
+    def add_belief_revision_result(
+        self,
+        method: str,
+        original: List[str],
+        revised: List[str],
+        minimal_retraction: Optional[Dict[str, Any]] = None,
+        argument_labels: Optional[Dict[str, str]] = None,
+        argument_ids_absent_reason: Optional[str] = None,
+    ) -> str:
+        entry = self._curated(
+            {"method": method, "original": original, "revised": revised},
+            argument_labels,
+            argument_ids_absent_reason,
+        )
+        if minimal_retraction is not None:
+            entry["minimal_retraction"] = minimal_retraction
+        self.belief_revision_results.append(entry)
+        return f"brevision_{len(self.belief_revision_results)}"
+
+    def add_dialogue_result(
+        self,
+        topic: str,
+        outcome: str,
+        trace: List[Dict[str, Any]],
+        argument_labels: Optional[Dict[str, str]] = None,
+        argument_ids_absent_reason: Optional[str] = None,
+    ) -> str:
+        entry = self._curated(
+            {"topic": topic, "outcome": outcome, "trace": trace},
+            argument_labels,
+            argument_ids_absent_reason,
+        )
+        self.dialogue_results.append(entry)
+        return f"dialogue_{len(self.dialogue_results)}"
 
     def add_trace_entry(self, **kw: Any) -> None:
         self.traces.append(str(kw.get("summary", "")))
@@ -1356,3 +1395,301 @@ class TestAspicNodesAreUnits:
         entry = state.aspic_results[-1]
         assert entry.get("argument_labels") == _LABELS
         assert entry["reasoner_type"]
+
+
+# --------------------------------------------------------------------------
+# Batch 2c — belief revision and dialogue join the population nodes
+# --------------------------------------------------------------------------
+
+
+class TestBeliefRevisionNodesAreUnits:
+    async def test_the_base_and_options_are_id_keyed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The belief base is the population: the handler's atoms and the
+        retraction options name ``arg_N`` (joinable), never a truncated
+        extraction text; the texts travel as ``argument_labels``."""
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        # One fallacy on arg_1: the base gains the real clash whose minimal
+        # retraction the reader names (#1646) — now over the unit ids.
+        context["phase_hierarchical_fallacy_output"] = {
+            "fallacies": [{"type": "ad_hominem", "target_argument": "arg_1"}]
+        }
+        received: List[Dict[str, Any]] = []
+        _install_fake_handler(
+            monkeypatch,
+            "belief_revision_handler",
+            "BeliefRevisionHandler",
+            "revise",
+            received,
+            lambda belief_set, new_belief, method: {
+                "method": method,
+                "original": list(belief_set),
+                "revised": sorted(belief_set),
+                "statistics": {},
+            },
+            takes_initializer=False,
+        )
+
+        result = await ic._invoke_belief_revision(_UNIT_1, context)
+
+        # The handler's belief atoms ARE the unit ids (valid PL atoms).
+        assert received[0]["args"][0] == ["arg_1", "arg_2"]
+        assert result["original"] == ["arg_1", "arg_2"]
+        # The retraction options name the clashing unit and its negation.
+        flat = {
+            label for opt in result["minimal_retraction"]["options"] for label in opt
+        }
+        assert any(label == "arg_1" for label in flat)
+        assert any(label == "¬arg_1" for label in flat)
+        assert result.get("argument_labels") == _LABELS
+
+    async def test_a_caller_belief_set_joins_the_units(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A caller ``belief_set`` entry that names a unit by its text
+        resolves to the unit's id (the historical caller seam, joined); a
+        free-text belief stays a sanitized atom, never a unit."""
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        context["belief_set"] = [_UNIT_1, "croyance libre hors population"]
+        received: List[Dict[str, Any]] = []
+        _install_fake_handler(
+            monkeypatch,
+            "belief_revision_handler",
+            "BeliefRevisionHandler",
+            "revise",
+            received,
+            lambda belief_set, new_belief, method: {
+                "method": method,
+                "original": list(belief_set),
+                "revised": [],
+                "statistics": {},
+            },
+            takes_initializer=False,
+        )
+
+        await ic._invoke_belief_revision(_UNIT_1, context)
+
+        atoms = received[0]["args"][0]
+        # The unit-named belief resolves to its id and passes through
+        # verbatim (never a prefixed, hashed atom).
+        assert atoms[0] == "arg_1"
+        # The free-text belief stays a belief: a sanitized PL atom, no unit.
+        assert atoms[1] != "croyance libre hors population"
+        assert " " not in atoms[1]
+        assert atoms[1] != "arg_1" and atoms[1] != "arg_2"
+
+    async def test_the_honest_absent_echo_still_joins(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The JVM-down degraded return carries the node identity fields too —
+        every return site, degraded or not, is joinable (#3009 parity)."""
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        context["phase_hierarchical_fallacy_output"] = {
+            "fallacies": [{"type": "ad_hominem", "target_argument": "arg_1"}]
+        }
+        # Pin "not started" on the home module so the honest-absent branch
+        # fires regardless of the conftest session JVM, then make the
+        # handler's own import raise via None in sys.modules.
+        import argumentation_analysis.core.jvm_setup as jvm_setup
+
+        monkeypatch.setattr(jvm_setup, "is_jvm_started", lambda: False)
+        monkeypatch.setitem(
+            sys.modules,
+            "argumentation_analysis.agents.core.logic.belief_revision_handler",
+            None,
+        )
+
+        result = await ic._invoke_belief_revision(_UNIT_1, context)
+
+        assert result.get("degraded") is True
+        assert result["original"] == ["arg_1", "arg_2"]
+        assert result.get("argument_labels") == _LABELS
+        # The JVM-free insight still names the units on the degraded path.
+        flat = {
+            label for opt in result["minimal_retraction"]["options"] for label in opt
+        }
+        assert any(label == "arg_1" for label in flat)
+
+    def test_the_writer_curates_labels(self) -> None:
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        output = {
+            "method": "dalal",
+            "original": ["arg_1", "arg_2"],
+            "revised": ["arg_1"],
+            "minimal_retraction": {"cardinality": 1, "options": [["arg_1"]]},
+            "argument_labels": dict(_LABELS),
+        }
+
+        _write_belief_revision_to_state(output, state, {})
+
+        entry = state.belief_revision_results[-1]
+        assert entry["original"] == ["arg_1", "arg_2"]
+        assert entry.get("argument_labels") == _LABELS
+        assert entry["minimal_retraction"]["options"] == [["arg_1"]]
+
+    def test_the_reader_renders_the_units_text(self) -> None:
+        """The Act III reader resolves an id-keyed option through the entry's
+        labels — the prose names the belief's TEXT (and the negation's text),
+        never a bare id."""
+        from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
+            _belief_revision_finding,
+        )
+
+        state = SimpleNamespace(
+            belief_revision_results=[
+                {
+                    "minimal_retraction": {
+                        "cardinality": 1,
+                        "options": [["arg_1"], ["¬arg_1"]],
+                        "base_size": 3,
+                        "touched_count": 2,
+                        "degraded": False,
+                    },
+                    "argument_labels": dict(_LABELS),
+                }
+            ]
+        )
+
+        finding = _belief_revision_finding(state)
+
+        assert finding is not None
+        assert "Première thèse" in finding.statement
+        # The negation clause renders the negated unit's text too.
+        assert "¬Première thèse" in finding.statement
+        assert "arg_1" not in finding.statement
+
+
+class TestDialogueNodesAreUnits:
+    async def test_the_positions_and_edges_are_id_keyed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The proponent's position is the population's unit ids; the
+        opponent's counter stays a text (it is not a unit); every edge
+        endpoint resolves to its id when it names a unit, and a topic naming
+        a unit resolves too — the membership check that decides ``accepted``
+        keeps its meaning across the keying change."""
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        ca_text = "Contre-argument synthétique visant la première thèse du corpus."
+        context["phase_counter_output"] = {
+            "llm_counter_arguments": [
+                {"counter_argument": ca_text, "target_unit_id": "arg_1"}
+            ]
+        }
+        context["phase_hierarchical_fallacy_output"] = {
+            "fallacies": [{"type": "ad_hominem", "target_argument": "arg_1"}]
+        }
+        context["topic"] = _UNIT_1
+        received: List[Dict[str, Any]] = []
+        _install_fake_handler(
+            monkeypatch,
+            "dialogue_handler",
+            "DialogueHandler",
+            "execute_dialogue",
+            received,
+            lambda pro, pro_atk, opp, opp_atk, topic: {
+                "topic": topic,
+                "outcome": "accepted",
+                "dialogue_trace": [],
+                "merged_framework": {
+                    "arguments": sorted(set(pro) | set(opp)),
+                    "attacks": [list(a) for a in pro_atk + opp_atk],
+                },
+            },
+            takes_initializer=False,
+        )
+
+        result = await ic._invoke_dialogue(_UNIT_1, context)
+
+        pro, pro_atk, opp, opp_atk, topic = received[0]["args"]
+        # The proponent's position = the population units; the opponent's
+        # counter stays a text (a dialogue member no unit exists for).
+        assert pro == ["arg_1", "arg_2"]
+        assert opp == [ca_text]
+        # The fallacy edge targets the unit's id; the counter-derived edge
+        # keeps its "CA:" pseudo-source and targets the id — both exactly as
+        # the dialogue's lists carry them (the handler's membership filter).
+        assert pro_atk == [
+            ["fallacy_0_ad_hominem", "arg_1"],
+            [f"CA: {ca_text[:50]}", "arg_1"],
+        ]
+        # An opponent edge names BOTH endpoints exactly as the lists carry
+        # them (#2968): the counter text attacking the unit's id.
+        assert opp_atk == [[ca_text, "arg_1"]]
+        assert topic == "arg_1"
+        assert result.get("argument_labels") == _LABELS
+        assert result["merged_framework"]["attacks"] == [
+            ["fallacy_0_ad_hominem", "arg_1"],
+            [f"CA: {ca_text[:50]}", "arg_1"],
+            [ca_text, "arg_1"],
+        ]
+
+    async def test_the_split_halves_are_ids(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Without counters the population splits in halves — both positions
+        are unit ids."""
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        received: List[Dict[str, Any]] = []
+        _install_fake_handler(
+            monkeypatch,
+            "dialogue_handler",
+            "DialogueHandler",
+            "execute_dialogue",
+            received,
+            lambda pro, pro_atk, opp, opp_atk, topic: {
+                "topic": topic,
+                "outcome": "rejected",
+                "dialogue_trace": [],
+            },
+            takes_initializer=False,
+        )
+
+        result = await ic._invoke_dialogue(_UNIT_1, context)
+
+        pro, _, opp, _, _ = received[0]["args"]
+        assert pro == ["arg_1"]
+        assert opp == ["arg_2"]
+        assert result.get("argument_labels") == _LABELS
+
+    def test_the_writer_curates_labels(self) -> None:
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        output = {
+            "topic": "arg_1",
+            "outcome": "accepted",
+            "dialogue_trace": [
+                {
+                    "round": 1,
+                    "speaker": "proponent",
+                    "action": "assert",
+                    "argument": "arg_1",
+                }
+            ],
+            "argument_labels": dict(_LABELS),
+        }
+
+        _write_dialogue_to_state(output, state, {})
+
+        entry = state.dialogue_results[-1]
+        assert entry["topic"] == "arg_1"
+        assert entry.get("argument_labels") == _LABELS
+        assert entry["trace"][0]["argument"] == "arg_1"
