@@ -2,7 +2,8 @@
 """
 Manages environment variables for the project.
 Loads root .env deterministically: it wins over sub-.env files (#1295) and loses
-to the values the caller started the process with, even "" (#2472).
+to the values the caller started the process with, even "" (#2472) — in this
+process and in every child it spawns (#3019).
 Warns when secondary .env files carry a different OPENAI_API_KEY.
 """
 
@@ -15,8 +16,53 @@ from dotenv import dotenv_values
 
 logger = logging.getLogger(__name__)
 
+# The non-empty carrier of the caller's neutralisations (#3019). On Windows,
+# restoring os.environ (clear() + update(saved), or patch.dict(clear=True))
+# erases every ""-valued name from the process block: Python's dict keeps "",
+# but a child spawned with the default env=None inherits no name at all, and its
+# loader fills the key from the root .env — routing a replay test to another
+# provider (the cache key drifts, the cassette misses) and, outside replay,
+# spending through .env from a neutralised run (the R1073 class). The carrier is
+# non-empty on purpose: a restore never erases it, so the names survive the
+# boundary and every import of this module re-asserts them as "" before the
+# snapshot below reads the environment.
+_CALLER_EMPTY_NAMES_VAR = "CALLER_EMPTY_NAMES"
+
+
+def _carry_caller_empty_names() -> None:
+    """Export the caller-empty names for children, or re-assert the carried ones.
+
+    Root process (no carrier): the variables the caller left empty are the
+    caller's neutralisations — a value the caller set wins over the root .env
+    even "" (#2472) — so their names are exported in a non-empty carrier a
+    restore cannot erase. Child process (carrier present): a carried name the
+    boundary erased is re-asserted as "", before ``_CALLER_ENVIRONMENT``
+    captures the environment; a carried name that holds a value is left alone —
+    an explicit ``env=`` outranks the carrier.
+    """
+    carried = os.environ.get(_CALLER_EMPTY_NAMES_VAR)
+    if carried:
+        for name in carried.split(","):
+            if name and name != _CALLER_EMPTY_NAMES_VAR and name not in os.environ:
+                try:
+                    os.environ[name] = ""
+                except ValueError:  # a tampered carrier must not break the import
+                    continue
+        return
+    empty = sorted(
+        name
+        for name, value in os.environ.items()
+        if value == "" and name != _CALLER_EMPTY_NAMES_VAR
+    )
+    if empty:
+        os.environ[_CALLER_EMPTY_NAMES_VAR] = ",".join(empty)
+
+
+_carry_caller_empty_names()
+
 # The environment the caller started the process with, captured when this module
-# is first imported: before EnvironmentManager has loaded any .env (#2472).
+# is first imported: before EnvironmentManager has loaded any .env (#2472), and
+# after the caller's neutralisations were re-asserted (#3019).
 # tests/conftest.py imports this module first thing, so a pytest session captures
 # the command line's environment.
 _CALLER_ENVIRONMENT: Dict[str, str] = dict(os.environ)
@@ -86,7 +132,8 @@ class EnvironmentManager:
     Loading order (deterministic):
     1. Root .env (located via pyproject.toml sentinel). It replaces a value set
        in-process before it, e.g. by a sub-.env imported first (#1295), but not a
-       value the caller started the process with, even "" (#2472). A caller-set
+       value the caller started the process with, even "" (#2472) — in this
+       process and in every child it spawns (#3019). A caller-set
        key that differs from the root .env's is reported with a WARNING.
     2. Secondary .env files (argumentation_analysis/.env, config/.env) are NOT loaded;
        they are only parsed to detect divergence and emit a WARNING.
