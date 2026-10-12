@@ -5434,7 +5434,10 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
     - Strict rules: factual claims support conclusions
     - Defeasible rules: arguments that may be undermined by fallacies
     """
-    node_ids, labels, node_by_label, identity_payload = _af_family_frame(
+    # Dung's naming: the frame's first return is the theory's ARGUMENTS list
+    # (unit ids) — the #2850 census reads the ``[:4]`` head slice over it
+    # below, so the cap stays in the ledger (base renamed with #3014).
+    arguments, labels, node_by_label, identity_payload = _af_family_frame(
         input_text, context
     )
     # #3014: the theory's atoms are the units' ``arg_N`` ids when the
@@ -5507,7 +5510,7 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
                 {"head": f"supported_{i+1}", "body": [_pl_atom(text, prefix="claim")]}
             )
         # If claims feed into arguments, chain them.
-        if len(node_ids) >= 2:
+        if len(arguments) >= 2:
             strict.append(
                 {"head": "argument_chain", "body": ["supported_1", "supported_2"]}
             )
@@ -5517,7 +5520,7 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
         defeasible = []
         # Defeasible rules: arguments that could be undermined. #3014: the
         # premise atom is the unit's id when the population minted one.
-        for i, arg in enumerate(node_ids[:4]):
+        for i, arg in enumerate(arguments[:4]):
             defeasible.append(
                 {
                     "head": f"plausible_conclusion_{i+1}",
@@ -5575,7 +5578,7 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
     except Exception as e:
         logger.info(f"ASPIC+ handler failed ({e}); failing loud with the cause (#1826)")
         return _python_aspic_fallback(
-            node_ids, strict, defeasible, fallacies, context, cause=e
+            arguments, strict, defeasible, fallacies, context, cause=e
         )
 
 
