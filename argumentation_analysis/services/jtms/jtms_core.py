@@ -11,7 +11,7 @@ Integrated into argumentation_analysis framework.
 
 import importlib.util
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 logger = logging.getLogger("JTMS")
 
@@ -90,6 +90,11 @@ class Belief:
         self.implications.remove(justification)
 
     def set_truth_value(self, value: Optional[bool]):
+        # Belief-level assignment, kept for API compatibility. The
+        # network-level entry point is ``JTMS.set_belief_validity``, which
+        # records the assignment as a fact and re-runs the well-founded
+        # labeling (#3018); a direct call here bypasses that bookkeeping and
+        # the next structural change realigns the labels.
         self.valid = value
         self.propagate()
 
@@ -100,6 +105,9 @@ class Belief:
         # odd loop — and returned before the change-propagation below, leaving
         # dependents on a stale label. A belief is True iff some justification
         # is satisfied, loop or no loop; the flag only marks the topology.
+        # #3018: this stays the LOCAL satisfaction operator — idempotent at
+        # the well-founded fixpoint the network computes after every
+        # structural change; it no longer decides the final labels.
         if self._propagating:
             return  # Break re-entrant cycle
 
@@ -116,24 +124,14 @@ class Belief:
             self.propagate()
 
     def propagate(self):
+        # #3018: the retraction-cascade trace moved to
+        # ``JTMS.set_belief_validity`` — labels are produced by the global
+        # well-founded computation, so the cascade is traced by diffing the
+        # labels around it, not by intercepting this local walk.
         self._propagating = True
         try:
             for justification in self.implications:
-                conclusion = justification.conclusion
-                old_valid = conclusion.valid
-                conclusion.compute_truth_statement()
-                # Track cascade: conclusion was valid, now retracted
-                if (
-                    hasattr(self, "_jtms_ref")
-                    and self._jtms_ref is not None
-                    and self._jtms_ref._tracing_enabled
-                    and old_valid is True
-                    and conclusion.valid is not True
-                    and self._jtms_ref._retraction_trace
-                ):
-                    self._jtms_ref._retraction_trace[-1]["cascaded"].append(
-                        conclusion.name
-                    )
+                justification.conclusion.compute_truth_statement()
         finally:
             self._propagating = False
 
@@ -173,6 +171,9 @@ class JTMS:
         self.strict = strict
         self._retraction_trace: List[Dict] = []
         self._tracing_enabled: bool = False
+        # Direct assignments (set_belief_validity) — the facts the
+        # well-founded labeling iterates from (#3018).
+        self._facts: Dict[str, bool] = {}
 
     def add_belief(self, name: str):
         """Add a new belief to the system."""
@@ -214,23 +215,38 @@ class JTMS:
                     premise.remove_implication(justification)
 
         self.beliefs.pop(belief_name)
+        self._facts.pop(belief_name, None)
+        self.update_non_monotonic_beliefs()
+        self._recompute_well_founded()
 
     def set_belief_validity(self, belief_name: str, validity: Optional[bool]):
-        """Set the truth value of a belief and propagate."""
+        """Set the truth value of a belief as a fact and relabel globally.
+
+        The assignment is recorded in ``_facts`` and the whole network is
+        relabeled by the well-founded computation (#3018): every label comes
+        from the same fixpoint, whatever the order the justifications were
+        added in.
+        """
         if belief_name not in self.beliefs:
             raise KeyError(f"Unknown belief: {belief_name}")
         belief = self.beliefs[belief_name]
-        old_valid = belief.valid
-        if self._tracing_enabled and old_valid is True and validity is not True:
-            self._retraction_trace.append(
-                {
-                    "trigger": belief_name,
-                    "retracted": [belief_name],
-                    "cascaded": [],
-                    "reason": f"directly set to {validity}",
-                }
-            )
-        belief.set_truth_value(validity)
+        old_labels = {name: b.valid for name, b in self.beliefs.items()}
+        tracing_entry = None
+        if self._tracing_enabled and belief.valid is True and validity is not True:
+            tracing_entry = {
+                "trigger": belief_name,
+                "retracted": [belief_name],
+                "cascaded": [],
+                "reason": f"directly set to {validity}",
+            }
+            self._retraction_trace.append(tracing_entry)
+        if validity is None:
+            self._facts.pop(belief_name, None)
+        else:
+            self._facts[belief_name] = validity
+        self._recompute_well_founded()
+        if tracing_entry is not None:
+            self._trace_cascaded_drops(belief, old_labels)
 
     def add_justification(
         self,
@@ -258,9 +274,19 @@ class JTMS:
             self.beliefs[out_belief.name].add_implication(justification)
 
         self.update_non_monotonic_beliefs()
+        self._recompute_well_founded()
 
-    def update_non_monotonic_beliefs(self):
-        """Detect strongly-connected components and mark beliefs as non-monotonic."""
+    def update_non_monotonic_beliefs(self) -> None:
+        """Mark beliefs on a cycle passing through at least one out-list edge.
+
+        #3018: the flag is exact — recomputed from scratch on every call
+        (marks left over from an earlier topology are cleared), a positive
+        cycle (in-list edges only) is monotone and stays unflagged, and a
+        self-loop counts when its edge is an out-list edge (``a ← ¬a``).
+        Every member of such a cycle lies on it, so the whole SCC is marked.
+        """
+        for belief in self.beliefs.values():
+            belief.non_monotonic = False
         if not _HAS_NETWORKX:
             return
 
@@ -274,10 +300,128 @@ class JTMS:
         graph = nx.DiGraph(vertices)
         sccs = nx.strongly_connected_components(graph)
         for scc in sccs:
-            if len(scc) > 1:
-                for belief_name in scc:
+            members = set(scc)
+            has_out_edge = any(
+                premise.name in members
+                for name in members
+                if name in self.beliefs
+                for j in self.beliefs[name].justifications
+                for premise in j.out_list
+            )
+            if has_out_edge:
+                for belief_name in members:
                     if belief_name in self.beliefs:
                         self.beliefs[belief_name].non_monotonic = True
+
+    def _recompute_well_founded(self) -> None:
+        """Relabel every belief by the well-founded computation (#3018).
+
+        Van Gelder's alternating fixpoint, on the rule reading the JTMS
+        already gives its out-lists (``not p`` holds unless ``p`` is True):
+        ``T`` is the least set of beliefs rule derivation supports, ``S``
+        the greatest unfounded set — beliefs no rule can still support,
+        where a belief's own loop does not count as support. Facts — direct
+        assignments — seed the iteration and are exempt from ``S``. At the
+        fixpoint:
+        ``True`` for members of ``T``, ``False`` only for False facts, and
+        ``None`` for the rest — one labeling, whatever the order the
+        justifications were added in.
+        """
+        facts = {name for name in self._facts if name in self.beliefs}
+        facts_true = {name for name in facts if self._facts[name] is True}
+        facts_false = facts - facts_true
+        s = set(facts_false)
+        while True:
+            t = self._least_supported_model(facts_true, s)
+            s_next = facts_false | self._unsupported(t, facts_true, facts)
+            if s_next == s:
+                break
+            s = s_next
+        for name, belief in self.beliefs.items():
+            if name in facts_true:
+                belief.valid = True
+            elif name in facts_false:
+                belief.valid = False
+            elif name in t:
+                belief.valid = True
+            else:
+                belief.valid = None
+
+    def _least_supported_model(self, seed: Set[str], s: Set[str]) -> Set[str]:
+        """Least set containing ``seed`` closed under rule firing: a rule
+        fires when every in-premise is in the set and every out-premise is
+        in ``s`` (assumed not-true)."""
+        t = set(seed)
+        changed = True
+        while changed:
+            changed = False
+            for name, belief in self.beliefs.items():
+                if name in t:
+                    continue
+                for justification in belief.justifications:
+                    if all(p.name in t for p in justification.in_list) and all(
+                        p.name in s for p in justification.out_list
+                    ):
+                        t.add(name)
+                        changed = True
+                        break
+        return t
+
+    def _unsupported(
+        self, t: Set[str], facts_true: Set[str], facts: Set[str]
+    ) -> Set[str]:
+        """Beliefs (facts excluded) outside the least possibly-supported
+        set: the least set containing the True facts and closed under rules
+        that could still fire — every in-premise possibly supported, no
+        out-premise already derived True in ``t``. A belief whose only
+        support runs through itself never enters it, so self-support counts
+        as no support (Van Gelder's greatest unfounded set). The one-step
+        reading this replaces missed exactly that clause: it required every
+        justification to be already dead, so a self-supporting loop kept
+        its members out of ``S`` and a rule reading ``not loop`` never
+        fired (#3020 review)."""
+        possible = set(facts_true)
+        changed = True
+        while changed:
+            changed = False
+            for name, belief in self.beliefs.items():
+                if name in possible or name in facts:
+                    continue
+                for justification in belief.justifications:
+                    if all(
+                        p.name in possible for p in justification.in_list
+                    ) and not any(p.name in t for p in justification.out_list):
+                        possible.add(name)
+                        changed = True
+                        break
+        return {
+            name for name in self.beliefs if name not in facts and name not in possible
+        }
+
+    def _trace_cascaded_drops(
+        self, trigger: Belief, old_labels: Dict[str, Optional[bool]]
+    ) -> None:
+        """Depth-first post-order walk from the retracted belief: every
+        conclusion whose label dropped from True is recorded as cascaded —
+        the same order the propagation cascade used to produce (deepest
+        first)."""
+        cascaded = self._retraction_trace[-1]["cascaded"]
+        visited = set()
+
+        def visit(belief: Belief) -> None:
+            visited.add(belief.name)
+            for justification in belief.implications:
+                conclusion = justification.conclusion
+                if conclusion.name in visited:
+                    continue
+                visit(conclusion)
+                if (
+                    old_labels.get(conclusion.name) is True
+                    and conclusion.valid is not True
+                ):
+                    cascaded.append(conclusion.name)
+
+        visit(trigger)
 
     def show(self):
         """Print all beliefs and their truth values."""
