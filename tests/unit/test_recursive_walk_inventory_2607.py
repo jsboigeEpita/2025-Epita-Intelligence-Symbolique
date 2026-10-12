@@ -47,6 +47,9 @@ ROOTS_BY_WALK = {
         "root (PROD_ROOT or synthetic)"
     ]
     * 4,
+    "unit/argumentation_analysis/orchestration/test_phase_producer_reader_1626.py": [
+        "ROOT/argumentation_analysis/reporting/restitution (production renderer)"
+    ],
     "unit/argumentation_analysis/test_cross_text_parallels_status_2344.py": [
         "REPO_ROOT/root (argumentation_analysis, scripts)"
     ],
