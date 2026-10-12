@@ -964,3 +964,87 @@ class TestBipolarNodesAreUnits:
         # a single support edge holds no cycle — an honest "none detected",
         # not a silently missing field.
         assert entry["support_cycles"] == []
+
+
+# --------------------------------------------------------------------------
+# R1084 review item 1 — the join strips on BOTH sides
+# --------------------------------------------------------------------------
+
+
+class TestStrippedLabelsKeepTheirEdges:
+    """A unit whose text carries boundary whitespace keeps its translated edge.
+
+    Every ``translate_to_*`` builds its inventory on the STRIPPED text
+    (``_build_inventory``), so the canonical pairs the seam returns reference
+    the stripped label while the unit's own text may end in whitespace. The
+    join keyed the unstripped text, so such an edge dropped silently — no
+    count, no log (on main since #3009, measured by the R1084 review). One
+    normalization in one place now: the frame keys ``node_by_label`` by the
+    stripped label and ``_node_id_for`` strips the incoming name — labels
+    themselves still travel UNSTRIPPED (display).
+    """
+
+    async def test_dung_keeps_the_edge_of_a_unit_ending_in_a_space(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1 + "  ", "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        # The derivation mirrors the real seam: its inventory strips, so the
+        # canonical pair comes back STRIPPED — while the unit's own text (the
+        # frame's label, and the label the seam was FED) ends in two spaces.
+        _install_fake_derivation(monkeypatch, [[_UNIT_1, _UNIT_2]])
+        _install_fake_handler(
+            monkeypatch,
+            "af_handler",
+            "AFHandler",
+            "analyze_multi_semantics",
+            [],
+            {"extensions": {"grounded": [["arg_2"]]}, "statistics": {}},
+        )
+
+        result = await ic._invoke_dung_extensions(_UNIT_1, context)
+
+        # The labels travel UNSTRIPPED — only the join key strips.
+        assert result.get("argument_labels") == {
+            "arg_1": _UNIT_1 + "  ",
+            "arg_2": _UNIT_2,
+        }
+        # Born red: the pre-R1084 join keyed the unstripped text and dropped
+        # this very edge to [].
+        assert result["attacks"] == [["arg_1", "arg_2"]]
+
+    async def test_setaf_keeps_the_joint_attack_of_a_unit_ending_in_a_space(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2 + "  "}
+        )
+        context = _measured_context(state)
+        # The translator answers the stripped canonical pair (its inventory
+        # strips); the target unit's own text ends in two spaces.
+        _install_fake_translator(
+            monkeypatch,
+            "translate_to_setaf_attacks",
+            [{"attackers": [_UNIT_1], "target": _UNIT_2}],
+            [],
+        )
+        _install_fake_handler(
+            monkeypatch,
+            "setaf_handler",
+            "SetAFHandler",
+            "analyze_setaf",
+            [],
+            {"extensions": [["arg_2"]], "statistics": {}},
+        )
+
+        result = await ic._invoke_setaf(_UNIT_1, context)
+
+        # Both endpoints resolved through the stripped join — born red: the
+        # target joined nothing and the whole joint attack was dropped.
+        assert result["attacks"] == [{"attackers": ["arg_1"], "target": "arg_2"}]
+        assert result.get("argument_labels") == {
+            "arg_1": _UNIT_1,
+            "arg_2": _UNIT_2 + "  ",
+        }

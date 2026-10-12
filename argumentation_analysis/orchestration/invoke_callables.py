@@ -5670,12 +5670,14 @@ async def _invoke_probabilistic(
     attacks = _edges_labels_to_ids(node_by_label, text_edges)
     # Probabilities are keyed by argument NAME — translate resolvable keys to
     # node ids; a key that joins no node is dropped, never guessed onto one.
+    # R1084 review item 1: the join goes through ``_node_id_for``, the family's
+    # single label→id resolver (stripped on both sides).
     probs_in = context.get("probabilities")
     if isinstance(probs_in, dict) and probs_in:
         probs = {
-            node_by_label[str(k)]: v
+            node_id: v
             for k, v in probs_in.items()
-            if str(k) in node_by_label
+            if (node_id := _node_id_for(node_by_label, k)) is not None
         }
     else:
         probs = {node_id: 0.5 for node_id in args}
@@ -6029,11 +6031,11 @@ async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict[str, A
         for entry in raw_attacks:
             if not isinstance(entry, dict):
                 continue
-            target = node_by_label.get(str(entry.get("target")))
+            target = _node_id_for(node_by_label, entry.get("target"))
             attackers = [
-                node_by_label[str(a)]
+                node_id
                 for a in (entry.get("attackers") or [])
-                if str(a) in node_by_label
+                if (node_id := _node_id_for(node_by_label, a)) is not None
             ]
             if target is not None and attackers:
                 attacks.append({"attackers": attackers, "target": target})
@@ -6134,14 +6136,16 @@ async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str
         and isinstance(raw_attacks[0], (list, tuple))
         and len(raw_attacks[0]) >= 3
     ):
-        attacks = [
-            (node_by_label[str(t[0])], node_by_label[str(t[1])], float(t[2]))
-            for t in raw_attacks
-            if isinstance(t, (list, tuple))
-            and len(t) >= 3
-            and str(t[0]) in node_by_label
-            and str(t[1]) in node_by_label
-        ]
+        # R1084 review item 1: both endpoints resolve through the family's
+        # single join (``_node_id_for``) — the weight rides the resolved pair.
+        attacks = []
+        for t in raw_attacks:
+            if not (isinstance(t, (list, tuple)) and len(t) >= 3):
+                continue
+            src = _node_id_for(node_by_label, t[0])
+            tgt = _node_id_for(node_by_label, t[1])
+            if src is not None and tgt is not None:
+                attacks.append((src, tgt, float(t[2])))
     elif (
         _structured_arg_cause(context, "weighted_argumentation")
         == "no_genuine_relations"
@@ -6215,7 +6219,7 @@ async def _invoke_social(input_text: str, context: Dict[str, Any]) -> Dict[str, 
     votes_in = context.get("votes", {})
     votes = {}
     for k, v in votes_in.items():
-        node = node_by_label.get(str(k))
+        node = _node_id_for(node_by_label, k)
         if node is not None:
             votes[node] = tuple(v) if isinstance(v, list) else v
 
@@ -6328,7 +6332,9 @@ async def _invoke_eaf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
     if beliefs:
         beliefs = {
             str(agent): [
-                node_by_label[str(x)] for x in arg_names if str(x) in node_by_label
+                node_id
+                for x in arg_names
+                if (node_id := _node_id_for(node_by_label, x)) is not None
             ]
             for agent, arg_names in beliefs.items()
         }
@@ -9759,7 +9765,11 @@ def _af_family_frame(
                 no_id_reason = None
     node_by_label: Dict[str, str] = {}
     for unit_id, label in pairs:
-        node_by_label.setdefault(label, unit_id)
+        # R1084 review item 1: the join key is the STRIPPED label. Every
+        # ``translate_to_*`` inventory strips its texts
+        # (``_build_inventory``), so an unstripped key here silently dropped
+        # every edge touching a unit whose text carries boundary whitespace.
+        node_by_label.setdefault(label.strip(), unit_id)
     payload: Dict[str, Any] = {
         "argument_labels": (
             {unit_id: label for unit_id, label in pairs} if no_id_reason is None else {}
@@ -9775,23 +9785,44 @@ def _af_family_frame(
     )
 
 
+def _node_id_for(node_by_label: Dict[str, str], name: Any) -> Optional[str]:
+    """THE single label→id join of the AF family (#3014, R1084 review item 1).
+
+    Normalization lives here and nowhere else: the frame keys
+    ``node_by_label`` by the stripped label, and this lookup strips the
+    incoming name — both sides go through the same rule, so a unit whose
+    text carries boundary whitespace keeps its edges. An endpoint that
+    already IS a node id (``arg_N``) passes through unchanged: a context
+    key an earlier run persisted as ids must survive a second translation
+    (idempotent round trip, review item 2). A name that is neither a label
+    nor a node id resolves to nothing — never a prefix/substring guess.
+    """
+    key = str(name).strip()
+    node = node_by_label.get(key)
+    if node is not None:
+        return node
+    return key if key in set(node_by_label.values()) else None
+
+
 def _edges_labels_to_ids(node_by_label: Dict[str, str], edges: Any) -> List[List[str]]:
     """Exact label→id edge translation (#3009/#3014).
 
     Both sides come from the same in-memory pairs list, by construction —
     an edge whose endpoint is not a member NEVER joins by prefix or
-    substring, it is dropped. (The #1698 retention accounting downstream
-    counts what is submitted to the handler; the translation happens before
-    it, as in #3009's Dung site.)
+    substring, it is dropped, through :func:`_node_id_for` (the single
+    join, stripped on both sides since the R1084 review). (The #1698
+    retention accounting downstream counts what is submitted to the
+    handler; the translation happens before it, as in #3009's Dung site.)
     """
     out: List[List[str]] = []
     if not isinstance(edges, list):
         return out
     for edge in edges:
         if isinstance(edge, (list, tuple)) and len(edge) >= 2:
-            src, tgt = str(edge[0]), str(edge[1])
-            if src in node_by_label and tgt in node_by_label:
-                out.append([node_by_label[src], node_by_label[tgt]])
+            src = _node_id_for(node_by_label, edge[0])
+            tgt = _node_id_for(node_by_label, edge[1])
+            if src is not None and tgt is not None:
+                out.append([src, tgt])
     return out
 
 
@@ -9822,25 +9853,25 @@ async def _invoke_dung_extensions(
     cannot run are reported ``unavailable`` (fail-loud), never omitted. See
     :func:`_compare_dung_backends`.
     """
-    # 1. Extract arguments from upstream phases — as (unit_id, label) pairs
+    # 1. Extract arguments from upstream phases — the family frame's nodes
     #    (#3008): the frame's nodes are the unit IDS minted by the same
     #    builder as ``identified_arguments``; the texts travel as labels. The
     #    old extraction returned bare texts and the whole chain keyed on
     #    prose the readers could never join back to a unit.
-    #    #3014: the builder is renamed ``_population_node_units`` — it is the
-    #    AF family's builder now, not Dung's private helper.
-    pairs, no_id_reason = _population_node_units(input_text, context)
-    arguments = [unit_id for unit_id, _ in pairs]
-    argument_labels = (
-        {unit_id: label for unit_id, label in pairs} if (no_id_reason is None) else {}
+    #    #3014 (R1084 review item 1): Dung goes through ``_af_family_frame``
+    #    — ONE label→id join for the whole AF family. This site's private
+    #    ``node_by_label`` builder was the second of the two, and it keyed
+    #    the unstripped text like the helper's, so an edge touching a unit
+    #    with boundary whitespace dropped silently (#3009 exposure). The
+    #    frame also honors the family's caller seam (``context["arguments"]``
+    #    → positional ids) exactly like every other member.
+    arguments, labels, node_by_label, identity_payload = _af_family_frame(
+        input_text, context
     )
 
     def _identity_payload() -> Dict[str, Any]:
         """#3008 — the node identity fields every return site carries."""
-        out: Dict[str, Any] = {"argument_labels": dict(argument_labels)}
-        if no_id_reason is not None:
-            out["argument_ids_absent_reason"] = no_id_reason
-        return out
+        return dict(identity_payload)
 
     # 2. Build attack relations from the text, cited by id (#1698). Every edge
     #    has both endpoints in ``arguments``; the previous producer minted
@@ -9855,22 +9886,11 @@ async def _invoke_dung_extensions(
     #    #3008 duplicates collapsed into ONE node named by the text).
     text_edges = await _derive_dung_attacks(
         input_text,
-        [label for _, label in pairs],
+        labels,
         context,
         capability="dung_extensions",
     )
-    node_by_label: Dict[str, str] = {}
-    for unit_id, label in pairs:
-        node_by_label.setdefault(label, unit_id)
-    attacks = [
-        [node_by_label[str(src)], node_by_label[str(tgt)]]
-        for src, tgt in (
-            (edge[0], edge[1])
-            for edge in text_edges
-            if isinstance(edge, (list, tuple)) and len(edge) >= 2
-        )
-        if str(src) in node_by_label and str(tgt) in node_by_label
-    ]
+    attacks = _edges_labels_to_ids(node_by_label, text_edges)
 
     # I5 #1430: compare mode — run every available backend on the same AF and
     # surface agreement / disagreement (never auto-reconciled). Short-circuits
