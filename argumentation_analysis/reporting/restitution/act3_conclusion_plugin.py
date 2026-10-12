@@ -1736,6 +1736,22 @@ def _adf_finding(state: Any) -> Optional[StructuredArgFinding]:
     )
 
 
+def _resolve_unit_label(labels: Dict[str, str], key: str) -> str:
+    """Render a retraction option name as text when it names a unit (#3014).
+
+    The pipeline's retraction options carry unit ids (``arg_N``) with the
+    unit texts in the entry's ``argument_labels``; a fallacy-negation clause
+    names ``¬arg_N``. The conversational lane and pre-#3014 entries name texts
+    already — an unknown key passes through verbatim, so the prose keeps
+    naming the belief either way.
+    """
+    if key in labels:
+        return labels[key]
+    if key.startswith("¬") and key[1:] in labels:
+        return f"¬{labels[key[1:]]}"
+    return key
+
+
 def _belief_revision_finding(state: Any) -> Optional[StructuredArgFinding]:
     """Project what belief revision alone establishes: the minimal retraction.
 
@@ -1764,6 +1780,7 @@ def _belief_revision_finding(state: Any) -> Optional[StructuredArgFinding]:
     # cardinal-1 is the canonical figure "one belief restores consistency"; if
     # any entry reaches it, stop — no deeper search needed.
     best_mr: Optional[Dict[str, Any]] = None
+    best_labels: Dict[str, str] = {}
     for entry in entries:
         if not isinstance(entry, dict):
             continue
@@ -1775,6 +1792,8 @@ def _belief_revision_finding(state: Any) -> Optional[StructuredArgFinding]:
             continue
         if best_mr is None or card < best_mr.get("cardinality", card + 1):
             best_mr = mr
+            entry_labels = entry.get("argument_labels")
+            best_labels = entry_labels if isinstance(entry_labels, dict) else {}
             if card == 1:
                 break
     if best_mr is None:
@@ -1801,9 +1820,14 @@ def _belief_revision_finding(state: Any) -> Optional[StructuredArgFinding]:
             continue
         for label in opt:
             key = str(label).strip()
-            if key and key not in seen:
-                seen.add(key)
-                named.append(_truncate(key, _SUPPORT_NODE_CAP))
+            if not key:
+                continue
+            # #3014: an id-keyed option renders the unit's TEXT when the
+            # entry carries the label map — the prose names beliefs, not ids.
+            rendered = _resolve_unit_label(best_labels, key)
+            if rendered not in seen:
+                seen.add(rendered)
+                named.append(_truncate(rendered, _SUPPORT_NODE_CAP))
                 if len(named) >= _RETRACTION_CAP:
                     break
         if len(named) >= _RETRACTION_CAP:

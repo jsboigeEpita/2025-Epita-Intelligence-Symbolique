@@ -436,9 +436,10 @@ class TestTheFabricatedGraphNoLongerReachesTheReasoner:
         submitted = [c for c in calls if c["axis"] == axis][0]
         # #3008: the Dung axis submits the frame's NODES — the units' arg_N
         # ids minted positionally over the same extract output (the text
-        # travels as a label). The other axes still submit canonical texts.
-        expected = [["arg_2", "arg_1"]] if axis == "dung" else [["Beta", "Alpha"]]
-        assert submitted["attacks"] == expected
+        # travels as a label). #3014: social and eaf (batch 1), then
+        # probabilistic (batch 2a), joined the id-keyed world — every axis
+        # here now submits the same translated edge.
+        assert submitted["attacks"] == [["arg_2", "arg_1"]]
         both_in = _retained_attacks(submitted["arguments"], submitted["attacks"])
         assert len(both_in) == 1
 
@@ -518,13 +519,11 @@ class TestTheAttackerIsNeverPromotedToANode:
 
         submitted = [c for c in calls if c["axis"] == axis][0]
         # #3008: the Dung axis's inventory is the same extraction, as unit ids
-        # (positional arg_N over the extract output); the other axes submit
-        # the canonical texts. In both worlds the inventory is the extracted
-        # population — never a promoted fallacy_* source.
-        expected_inventory = (
-            ["arg_1", "arg_2", "arg_3"] if axis == "dung" else _ARGUMENTS
-        )
-        assert list(submitted["arguments"]) == expected_inventory
+        # (positional arg_N over the extract output). #3014: social and eaf
+        # (batch 1), then probabilistic (batch 2a), joined the id-keyed
+        # world. In every world the inventory is the extracted population —
+        # never a promoted fallacy_* source.
+        assert list(submitted["arguments"]) == ["arg_1", "arg_2", "arg_3"]
         assert not [a for a in submitted["arguments"] if str(a).startswith("fallacy_")]
 
 
@@ -550,4 +549,7 @@ class TestACallerSuppliedGraphIsNeverOverridden:
         await _run_axis(fn_name, ctx)
 
         submitted = [c for c in calls if c["axis"] == axis][0]
-        assert submitted["attacks"] == [["Gamma", "Beta"]]
+        # #3014: the caller's graph still wins, translated label→id over the
+        # positional inventory (Alpha=arg_1, Beta=arg_2, Gamma=arg_3) on every
+        # axis here — probabilistic joined the id-keyed world in batch 2a.
+        assert submitted["attacks"] == [["arg_3", "arg_2"]]

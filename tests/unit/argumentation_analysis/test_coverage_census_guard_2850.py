@@ -694,7 +694,7 @@ REGISTRY = {
         "first 4 in insertion order; rest unanalysed",
         "silent — debt #2850",
     ),
-    ("argumentation_analysis/orchestration/invoke_callables.py", "args", "4", 3): (
+    ("argumentation_analysis/orchestration/invoke_callables.py", "arguments", "4", 1): (
         "population_cap",
         "first 4 in insertion order; rest unanalysed",
         "silent — debt #2850",

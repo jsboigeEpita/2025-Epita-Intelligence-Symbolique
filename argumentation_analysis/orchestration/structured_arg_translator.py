@@ -42,7 +42,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from argumentation_analysis.core.reading_window import (
     LLM_EXTRACTION_WINDOW,
@@ -809,7 +809,9 @@ async def translate_to_aba_contraries(
 
 
 async def translate_to_aspic_rules(
-    input_text: str, arguments: List[str]
+    input_text: str,
+    arguments: List[str],
+    atomizer: Optional[Callable[[str], str]] = None,
 ) -> TranslationResult:
     """Derive genuine ASPIC+ defeasible inference rules from the text + arguments.
 
@@ -817,6 +819,10 @@ async def translate_to_aspic_rules(
     handler-shaped ``{head, body, name}`` rule dicts with PL-atom
     heads/bodies, validated against the real inventory. See
     :func:`translate_to_bipolar_supports` for the ``cause`` contract (#1608).
+
+    ``atomizer`` maps an inventory member to its PL atom — injectable so the
+    caller can mint unit ids as atoms (#3014: a member's atom is its ``arg_N``
+    when the population minted one). Defaults to ``_pl_atom`` (slug + hash).
 
     Only **defeasible** rules are derived: natural-language argumentation is
     defeasible, and strict rules / preference orderings are not reliably
@@ -844,18 +850,17 @@ async def translate_to_aspic_rules(
     # _pl_atom lives in invoke_callables (lazy import — no module-load cycle).
     from argumentation_analysis.orchestration.invoke_callables import _pl_atom
 
-    rules = _validate_aspic_rules(data, arg_by_id, _pl_atom)
+    _atoms = atomizer if atomizer is not None else _pl_atom
+    rules = _validate_aspic_rules(data, arg_by_id, _atoms)
     # #1678: the contradictions + undercuts channels. Contradictions render as
     # negated-head rules (rebut/undermine, qualified structurally by the
     # handler); undercuts render as negated-rule-name rules. Undercuts may only
     # target rules that survived validation (ids/names validated identically),
     # so they run AFTER rules. All three share the used-names namespace.
     used_names = {r["name"] for r in rules}
-    contradictions = _validate_aspic_contradictions(
-        data, arg_by_id, _pl_atom, used_names
-    )
+    contradictions = _validate_aspic_contradictions(data, arg_by_id, _atoms, used_names)
     undercuts = _validate_aspic_undercuts(
-        data, arg_by_id, _pl_atom, set(used_names), used_names
+        data, arg_by_id, _atoms, set(used_names), used_names
     )
 
     # #1649 diagnostics (coord R783): on real corpus the handler emits 0 attack

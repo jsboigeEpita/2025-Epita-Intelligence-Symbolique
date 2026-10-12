@@ -327,7 +327,11 @@ class TestHandlerWiringPersistsToContext:
 
         ctx: Dict[str, Any] = {"arguments": ["Alpha", "Beta"]}
         await _invoke_bipolar("source text", ctx)
-        assert ctx.get("supports") == [["Alpha", "Beta"]]
+        # #3014: the persisted supports are keyed by the frame's nodes — the
+        # positional unit ids (Alpha=arg_1, Beta=arg_2) — so downstream
+        # readers join them; the invariant is that they PERSIST (axis
+        # "evaluated"), not their keying.
+        assert ctx.get("supports") == [["arg_1", "arg_2"]]
 
     async def test_bipolar_does_not_override_caller_supplied_supports(
         self, monkeypatch
@@ -356,7 +360,11 @@ class TestHandlerWiringPersistsToContext:
             _invoke_bipolar,
         )
 
-        genuine = [["Alpha", "Gamma"]]
+        # #3014: "genuine" now means both endpoints are members of the
+        # population (Alpha=arg_1, Beta=arg_2) — an edge naming a non-member
+        # connects nothing and is dropped, which would correctly fall back
+        # to the translator.
+        genuine = [["Alpha", "Beta"]]
         ctx: Dict[str, Any] = {"arguments": ["Alpha", "Beta"], "supports": genuine}
         await _invoke_bipolar("text", ctx)
         assert ctx["supports"] is genuine  # unchanged
@@ -603,7 +611,9 @@ class TestAspicHandlerWiring:
         _inject_fake_aspic_module(monkeypatch, {"extensions": []})
         genuine = [{"head": "arg:h", "body": ["arg:b"], "name": "def_rule_1"}]
 
-        async def _fake_rules(text, args):
+        # #3014: the invoke passes the label→id ``atomizer`` — the fake
+        # absorbs it (it answers pre-shaped rules).
+        async def _fake_rules(text, args, **kwargs):
             return TranslationResult(relations=genuine, cause=CAUSE_EVALUATED)
 
         monkeypatch.setattr(
@@ -620,7 +630,7 @@ class TestAspicHandlerWiring:
     async def test_does_not_override_caller_supplied_rules(self, monkeypatch):
         called = {"n": 0}
 
-        async def _fake_rules(text, args):
+        async def _fake_rules(text, args, **kwargs):
             called["n"] += 1
             return TranslationResult(
                 relations=[

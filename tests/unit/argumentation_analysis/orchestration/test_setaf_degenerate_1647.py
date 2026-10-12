@@ -149,13 +149,28 @@ class _WriteState:
         self.dung_frameworks: dict = {}
         self.structured_arg_status: dict = {}
 
-    def add_dung_framework(self, name, arguments, attacks, extensions):
-        self.dung_frameworks[name] = {
+    def add_dung_framework(
+        self,
+        name,
+        arguments,
+        attacks,
+        extensions,
+        argument_labels=None,
+        argument_ids_absent_reason=None,
+    ):
+        # #3014: the four AF-family writers now curate the node identity
+        # fields (#3009 shape) — the sink records them like the real state.
+        entry = {
             "name": name,
             "arguments": arguments,
             "attacks": attacks,
             "extensions": extensions,
         }
+        if argument_labels is not None:
+            entry["argument_labels"] = argument_labels
+        if argument_ids_absent_reason is not None:
+            entry["argument_ids_absent_reason"] = argument_ids_absent_reason
+        self.dung_frameworks[name] = entry
         return name
 
     def add_structured_arg_status(

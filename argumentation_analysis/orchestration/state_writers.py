@@ -1037,7 +1037,15 @@ def _write_ranking_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> Non
         arguments = []
     if not isinstance(comparisons, list):
         comparisons = []
-    state.add_ranking_result(method, arguments, comparisons)
+    # #3014: pass through the node identity fields (#3009 parity) — the
+    # entry's arguments are unit ids, the text lives in argument_labels.
+    state.add_ranking_result(
+        method,
+        arguments,
+        comparisons,
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+    )
 
 
 def _write_aspic_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
@@ -1073,7 +1081,16 @@ def _write_aspic_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         statistics = {}
     if not isinstance(attacks, list):
         attacks = None
-    state.add_aspic_result(reasoner_type, extensions, statistics, attacks=attacks)
+    state.add_aspic_result(
+        reasoner_type,
+        extensions,
+        statistics,
+        attacks=attacks,
+        # #3014: the rule atoms are the units' ``arg_N`` ids — the labels
+        # make the extensions/attacks joinable to the population.
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+    )
 
 
 def _write_belief_revision_to_state(
@@ -1096,7 +1113,17 @@ def _write_belief_revision_to_state(
     minimal_retraction = output.get("minimal_retraction")
     if not isinstance(minimal_retraction, dict):
         minimal_retraction = None
-    state.add_belief_revision_result(method, original, revised, minimal_retraction)
+    # #3014: pass through the node identity fields (#3009 parity) — the
+    # entry's original/revised and the retraction options are unit ids, the
+    # texts live in argument_labels.
+    state.add_belief_revision_result(
+        method,
+        original,
+        revised,
+        minimal_retraction,
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+    )
 
 
 def _write_dialogue_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
@@ -1108,7 +1135,15 @@ def _write_dialogue_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> No
     trace = output.get("dialogue_trace", [])
     if not isinstance(trace, list):
         trace = []
-    state.add_dialogue_result(topic, outcome, trace)
+    # #3014: the trace's unit-naming entries carry unit ids; the labels ride
+    # along for the reader (#3009 parity).
+    state.add_dialogue_result(
+        topic,
+        outcome,
+        trace,
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+    )
 
 
 def _write_probabilistic_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
@@ -1121,7 +1156,15 @@ def _write_probabilistic_to_state(output: Any, state: Any, ctx: dict[str, Any]) 
         arguments = []
     if not isinstance(acceptance, dict):
         acceptance = {}
-    state.add_probabilistic_result(arguments, acceptance)
+    # #3014: pass through the node identity fields (#3009 parity) — the
+    # entry's arguments and acceptance keys are unit ids, the text lives in
+    # argument_labels.
+    state.add_probabilistic_result(
+        arguments,
+        acceptance,
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+    )
 
 
 def _write_bipolar_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
@@ -1149,7 +1192,16 @@ def _write_bipolar_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> Non
     if not isinstance(articulation_points, list):
         articulation_points = []
     state.add_bipolar_result(
-        fw_type, arguments, supports, support_cycles, articulation_points
+        fw_type,
+        arguments,
+        supports,
+        support_cycles,
+        articulation_points,
+        # #3014: pass through the node identity fields (#3009 parity) — the
+        # entry's arguments and supports endpoints are unit ids, the text
+        # lives in argument_labels.
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
     )
 
 
@@ -1178,11 +1230,14 @@ def _write_aba_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         arguments=assumptions,
         attacks=[],
         extensions={"aba_extensions": extensions},
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
     )
     # #1648 Wave-2 sidecar: preserve the contraries the handler echoes
     # under ``output["contraries"]``. Empty mapping ⇒ sidecar still present
     # but with empty dict (so readers can detect "handler ran, contraries
-    # not supplied" vs. "writer dropped the field").
+    # not supplied" vs. "writer dropped the field"). #3014: the echo is
+    # keyed by unit id and carries the contrary SENTENCES (labels).
     contraries = output.get("contraries")
     if isinstance(contraries, dict) and contraries:
         state.dung_frameworks[df_id]["formalism_specific"] = {
@@ -1214,6 +1269,8 @@ def _write_adf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         arguments=statements,
         attacks=[],
         extensions={"adf_models": interpretations},
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
     )
     # #2063 sidecar: carry the provenance the handler supplied — presence of
     # the key, not its truthiness, gates each field (``degraded: False`` is
@@ -1985,6 +2042,8 @@ def _write_setaf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         arguments=output.get("arguments", []),
         attacks=[],  # set attacks don't map to binary attacks
         extensions={"setaf_extensions": output.get("extensions", [])},
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
     )
     # #1648 Wave-2 sidecar: preserve the joint attacks the handler
     # returns under ``output["attacks"]``. Empty list ⇒ sidecar stays
@@ -2041,6 +2100,8 @@ def _write_weighted_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> No
             if isinstance(a, dict)
         ],
         extensions={"weighted_extensions": output.get("extensions", [])},
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
     )
     # #1648 Wave-2 sidecar: preserve the per-attack weight the handler
     # returns under ``output["attacks"]`` (and the aggregate statistics
@@ -2092,6 +2153,8 @@ def _write_social_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None
         arguments=output.get("arguments", []),
         attacks=output.get("attacks", []),
         extensions={"social_ranking": ranking, "social_scores": scores},
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
     )
     # #1698 (R791 item 1): carry the honest accounting onto the curated entry
     # (no contradiction guard: social has ranking/scores, not acceptance
@@ -2122,6 +2185,8 @@ def _write_eaf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         arguments=output.get("arguments", []),
         attacks=[a for a in output.get("attacks", []) if isinstance(a, list)],
         extensions={"eaf_extensions": output.get("extensions", [])},
+        argument_labels=output.get("argument_labels") or None,
+        argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
     )
     # #1648 Wave-2 sidecar: preserve the per-agent epistemic beliefs the
     # handler returns under ``output["epistemic_beliefs"]``. Empty dict

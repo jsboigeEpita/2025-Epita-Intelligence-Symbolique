@@ -120,9 +120,13 @@ class TestJvmAbsentIsHonestAbsentWithInsight:
         # belief OR drop its negation) — the non-unicity the reader names. The
         # multiplicity reaches the state, not just the cardinality.
         assert len(mr["options"]) >= 2
-        # The retraction options name the clashing belief (alpha) or its negation.
+        # #3014: the retraction options name the clashing unit's ID (the
+        # fallacy's target) or its negation — this caller-seam context mints
+        # positional ids over the naked texts, and the texts travel as
+        # argument_labels (the Act III reader resolves them for the prose).
         flat = {label for opt in mr["options"] for label in opt}
-        assert any("alpha" in label for label in flat)
+        assert any("arg_1" in label for label in flat)
+        assert result.get("argument_labels", {}).get("arg_1") == "claim_alpha"
 
     def test_absent_dict_preserves_real_signal_not_relabeled(self):
         from argumentation_analysis.orchestration.invoke_callables import (
