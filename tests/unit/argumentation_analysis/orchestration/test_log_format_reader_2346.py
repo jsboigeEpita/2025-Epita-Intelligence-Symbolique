@@ -63,6 +63,8 @@ PhaseLogger(
 def _executor_line(entry, log_format):
     """The executor's ``Starting phase`` line, as a real run of the entry point prints it."""
     runner, target, argv = ENTRY_POINTS[entry]
+    # #3019 carrier: indifferent — only LOG_FORMAT is dropped and the
+    # assertion reads the log line's shape, never a provider value.
     env = {k: v for k, v in os.environ.items() if k != "LOG_FORMAT"}
     if log_format is not None:
         env["LOG_FORMAT"] = log_format
