@@ -86,8 +86,7 @@ Le projet est organisé en plusieurs modules principaux, chacun ayant une respon
 │   └── utils/                # Utilitaires généraux pour le projet
 ├── config/                   # Configuration globale du projet
 │   ├── .env.template         # Template pour les variables d'environnement globales
-│   ├── pytest.ini            # Configuration pour Pytest (peut être à la racine aussi)
-│   └── requirements-test.txt # Dépendances spécifiques pour les tests globaux
+│   └── pytest.ini            # Configuration pour Pytest (peut être à la racine aussi)
 ├── docs/                     # Documentation du projet (guides, architecture, rapports)
 ├── tests/                    # Ensemble des tests du projet (unitaires, intégration, fonctionnels)
 │   ├── fixtures/             # Fixtures Pytest partagées

@@ -230,7 +230,6 @@ web_api/tests/
 ├── test_basic.py           # Tests de validation de base
 ├── test_endpoints.py       # Tests des endpoints HTTP
 ├── test_services.py        # Tests des services métier
-├── requirements-test.txt   # Dépendances de test
 └── conftest_complex.py     # Configuration avancée (avec mocks)
 ```
 
@@ -240,8 +239,9 @@ web_api/tests/
 # Naviguer vers l'API
 cd services/web_api
 
-# Installer les dépendances de test
-pip install -r tests/requirements-test.txt
+# Installer les dépendances de test : l'environnement de référence est
+# environment.yml / le requirements.txt racine (épinglé au lock, #1803 étape 6)
+pip install -r ../../requirements.txt
 
 # Exécuter tous les tests
 python -m pytest tests/ -v
@@ -294,7 +294,7 @@ Les tests sont conçus pour s'intégrer facilement dans des pipelines CI/CD :
 - name: Run Tests
   run: |
     cd services/web_api
-    pip install -r tests/requirements-test.txt
+    pip install -r ../../requirements.txt
     python -m pytest tests/ --cov=. --cov-report=xml
 ```
 

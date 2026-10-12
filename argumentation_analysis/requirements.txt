@@ -1,5 +1,8 @@
-# File generated from environment.yml to fix the setup script
-# This file should ideally be kept in sync with environment.yml
+# Not what CI installs. CI installs conda-lock.yml, solved from environment.yml —
+# environment.yml is the source of truth (#1803 step 6, user decision 2026-10-12).
+# Kept because docs/guides/WSL_QUALITY_RADAR.md installs it for the WSL quality
+# environment. It is deliberately partial: the full environment comes from
+# environment.yml (see that guide's NOTE for what it omits).
 
 # --- Pip-specific packages ---
 semantic-kernel>=1.33.0

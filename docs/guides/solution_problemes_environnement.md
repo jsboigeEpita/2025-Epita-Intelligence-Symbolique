@@ -110,7 +110,7 @@ Pour résoudre complètement les problèmes d'environnement, nous recommandons:
 
 1. **Utiliser un environnement virtuel propre**: Toujours utiliser un environnement virtuel dédié pour ce projet afin d'éviter les conflits de dépendances.
 
-2. **Installer les dépendances à partir du fichier `requirements-test.txt`**: Ce fichier contient toutes les dépendances nécessaires pour les tests.
+2. **Installer les dépendances à partir de l'environnement de référence**: `environment.yml` (résolu en `conda-lock.yml` pour la CI) est la source de vérité ; le `requirements.txt` racine en est la déclinaison pip, épinglée au lock.
 
 3. **Installer le package en mode développement**: Cela permet de s'assurer que toutes les dépendances locales sont correctement configurées.
 
@@ -126,4 +126,4 @@ Pour résoudre complètement les problèmes d'environnement, nous recommandons:
 
 La solution mise en place a permis de résoudre une grande partie des problèmes d'environnement, mais certains problèmes persistent. Une analyse plus approfondie et des ajustements supplémentaires pourraient être nécessaires pour résoudre complètement tous les problèmes.
 
-Les scripts et fichiers de configuration créés (`requirements-test.txt`, `setup_test_env.py`, `setup_test_env.ps1`) ont été retirés depuis (#2532 pour le `.py`, #1803 étape 3 pour le `.ps1`) : l'environnement de test se configure aujourd'hui avec `setup_project_env.ps1` / `environment.yml`.
+Les scripts et fichiers de configuration créés (`requirements-test.txt`, `setup_test_env.py`, `setup_test_env.ps1`) ont été retirés depuis (#2532 pour le `.py`, #1803 étape 3 pour le `.ps1`, #1803 étape 6 pour `requirements-test.txt` — ses paquets vivent dans `environment.yml` et le `requirements.txt` racine) : l'environnement de test se configure aujourd'hui avec `setup_project_env.ps1` / `environment.yml`.

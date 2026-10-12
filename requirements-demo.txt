@@ -1,3 +1,9 @@
-# Additional dependencies for the Gradio live demo app
+# Not what CI installs. CI installs conda-lock.yml, solved from environment.yml —
+# environment.yml is the source of truth (#1803 step 6, user decision 2026-10-12).
+# gradio deliberately stays out of environment.yml: the CI environment does not
+# grow a demo's dependency. This file is the only declaration of
+# speech-to-text/whisper.py's gradio dependency — install it only for the live
+# demo app.
+#
 # Install: pip install -r requirements-demo.txt
 gradio>=4.0.0
