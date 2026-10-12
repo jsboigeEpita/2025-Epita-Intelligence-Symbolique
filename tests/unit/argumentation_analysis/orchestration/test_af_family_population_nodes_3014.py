@@ -1693,3 +1693,283 @@ class TestDialogueNodesAreUnits:
         assert entry["topic"] == "arg_1"
         assert entry.get("argument_labels") == _LABELS
         assert entry["trace"][0]["argument"] == "arg_1"
+
+
+# --------------------------------------------------------------------------
+# #3014 follow-up (R1085 review item 3) — a dropped endpoint is counted
+# --------------------------------------------------------------------------
+
+
+class TestDroppedUnresolvedIsCounted:
+    """A name the family join cannot resolve is COUNTED, never silent.
+
+    Before the follow-up, every translation site dropped unresolved names
+    BEFORE the #1698 retention accounting, with no count anywhere: edges,
+    joint-attack targets and attackers, weighted triple endpoints, vote
+    keys, EAF belief members, probability keys — and the same-class key
+    drops of ABA (assumptions, rule heads and bodies, contrary keys) and
+    ADF (statements, condition keys). A caller ``probabilities`` dict whose
+    keys all failed to resolve became ``{}`` with no way to tell it apart
+    from "no keys given". Every family member now reports
+    ``dropped_unresolved`` in its payload — 0 when nothing was dropped.
+    """
+
+    async def test_an_edge_endpoint_that_joins_nothing_is_counted(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        # One caller edge names a non-member: a half-resolved edge enters no
+        # frame, and the failed endpoint is counted — never dropped silently.
+        context["attacks"] = [[_UNIT_1, "Texte non membre"]]
+        context["probabilities"] = {_UNIT_1: 0.9}
+        handler_seen: List[Dict[str, Any]] = []
+        _install_fake_handler(
+            monkeypatch,
+            "probabilistic_handler",
+            "ProbabilisticHandler",
+            "analyze_probabilistic_framework",
+            handler_seen,
+            lambda args, attacks, probs: {
+                "acceptance_probabilities": dict(probs),
+                "statistics": {},
+            },
+            takes_initializer=False,
+        )
+
+        result = await ic._invoke_probabilistic(_UNIT_1, context)
+
+        _args, attacks, _probs = handler_seen[0]["args"]
+        assert [list(a) for a in attacks] == []
+        assert result["dropped_unresolved"] == 1
+
+    async def test_nothing_dropped_reports_zero(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        context["attacks"] = [[_UNIT_1, _UNIT_2]]
+        context["probabilities"] = {_UNIT_1: 0.9}
+        _install_fake_derivation(monkeypatch, [])
+        _install_fake_handler(
+            monkeypatch,
+            "probabilistic_handler",
+            "ProbabilisticHandler",
+            "analyze_probabilistic_framework",
+            [],
+            lambda args, attacks, probs: {
+                "acceptance_probabilities": dict(probs),
+                "statistics": {},
+            },
+            takes_initializer=False,
+        )
+
+        result = await ic._invoke_probabilistic(_UNIT_1, context)
+
+        assert result["dropped_unresolved"] == 0
+
+    async def test_probability_keys_that_all_join_nothing_stay_distinguishable(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """All keys unresolved → the handler gets ``{}`` (NOT the 0.5 default)
+        and the payload says how many — versus "no keys given", which defaults
+        and counts 0. The two outcomes never merge again."""
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        context["probabilities"] = {"Premier non-membre": 0.9, "Second non-membre": 0.8}
+        handler_seen: List[Dict[str, Any]] = []
+        _install_fake_derivation(monkeypatch, [])
+        _install_fake_handler(
+            monkeypatch,
+            "probabilistic_handler",
+            "ProbabilisticHandler",
+            "analyze_probabilistic_framework",
+            handler_seen,
+            lambda args, attacks, probs: {
+                "acceptance_probabilities": dict(probs),
+                "statistics": {},
+            },
+            takes_initializer=False,
+        )
+
+        all_dropped = await ic._invoke_probabilistic(_UNIT_1, context)
+        _args, _attacks, probs = handler_seen[0]["args"]
+        # The empty table after resolution is NOT the default baseline.
+        assert probs == {}
+        assert all_dropped["acceptance_probabilities"] == {}
+        assert all_dropped["dropped_unresolved"] == 2
+
+        # The same callable with NO keys given: the honest 0.5 default over
+        # the ids, and a zero count — a reader can tell the two apart.
+        context.pop("probabilities")
+        defaulted = await ic._invoke_probabilistic(_UNIT_1, context)
+        assert defaulted["acceptance_probabilities"] == {"arg_1": 0.5, "arg_2": 0.5}
+        assert defaulted["dropped_unresolved"] == 0
+
+    @pytest.mark.parametrize(
+        "member",
+        [
+            "ranking",
+            "bipolar",
+            "aba",
+            "adf",
+            "probabilistic",
+            "setaf",
+            "weighted",
+            "social",
+            "eaf",
+            "dung",
+        ],
+    )
+    async def test_every_family_member_reports_the_count(
+        self, monkeypatch: pytest.MonkeyPatch, member: str
+    ) -> None:
+        """All-resolvable inputs: each member's payload carries the count, 0.
+
+        The census of the follow-up: a member missing the key reddens here
+        (a site added later with a silent drop cannot reappear unnoticed)."""
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        if member == "ranking":
+            context["attacks"] = [[_UNIT_1, _UNIT_2]]
+            _install_fake_handler(
+                monkeypatch,
+                "ranking_handler",
+                "RankingHandler",
+                "rank_arguments",
+                [],
+                {"ranking": ["arg_1", "arg_2"], "scores": {"arg_1": 1, "arg_2": 2}},
+                takes_initializer=False,
+            )
+            result = await ic._invoke_ranking(_UNIT_1, context)
+        elif member == "bipolar":
+            context["attacks"] = [[_UNIT_2, _UNIT_1]]
+            context["supports"] = [[_UNIT_1, _UNIT_2]]
+            _install_fake_handler(
+                monkeypatch,
+                "bipolar_handler",
+                "BipolarHandler",
+                "analyze_bipolar_framework",
+                [],
+                lambda args, attacks, supports, fw_type: {
+                    "extensions": [["arg_1"]],
+                    "statistics": {},
+                },
+                takes_initializer=False,
+            )
+            result = await ic._invoke_bipolar(_UNIT_1, context)
+        elif member == "aba":
+            _install_fake_translator(
+                monkeypatch,
+                "translate_to_aba_contraries",
+                {_UNIT_1: "Sentence contraire synthétique."},
+                [],
+            )
+            _install_fake_handler(
+                monkeypatch,
+                "aba_handler",
+                "ABAHandler",
+                "analyze_aba_framework",
+                [],
+                {"extensions": [["arg_1"]], "statistics": {}},
+                takes_initializer=False,
+            )
+            result = await ic._invoke_aba(_UNIT_1, context)
+        elif member == "adf":
+            _install_fake_handler(
+                monkeypatch,
+                "adf_handler",
+                "ADFHandler",
+                "analyze_adf",
+                [],
+                {"interpretations": [], "statistics": {}},
+                takes_initializer=False,
+            )
+            result = await ic._invoke_adf(_UNIT_1, context)
+        elif member == "probabilistic":
+            context["probabilities"] = {_UNIT_1: 0.9}
+            _install_fake_derivation(monkeypatch, [[_UNIT_1, _UNIT_2]])
+            _install_fake_handler(
+                monkeypatch,
+                "probabilistic_handler",
+                "ProbabilisticHandler",
+                "analyze_probabilistic_framework",
+                [],
+                lambda args, attacks, probs: {
+                    "acceptance_probabilities": dict(probs),
+                    "statistics": {},
+                },
+                takes_initializer=False,
+            )
+            result = await ic._invoke_probabilistic(_UNIT_1, context)
+        elif member == "setaf":
+            context["set_attacks"] = [{"attackers": [_UNIT_1], "target": _UNIT_2}]
+            _install_fake_handler(
+                monkeypatch,
+                "setaf_handler",
+                "SetAFHandler",
+                "analyze_setaf",
+                [],
+                {"extensions": [["arg_2"]], "statistics": {}},
+            )
+            result = await ic._invoke_setaf(_UNIT_1, context)
+        elif member == "weighted":
+            context["weighted_attacks"] = [[_UNIT_1, _UNIT_2, 0.7]]
+            _install_fake_handler(
+                monkeypatch,
+                "weighted_handler",
+                "WeightedHandler",
+                "analyze_weighted_framework",
+                [],
+                {"extensions": [["arg_2"]], "statistics": {}},
+            )
+            result = await ic._invoke_weighted(_UNIT_1, context)
+        elif member == "social":
+            context["votes"] = {_UNIT_1: [1, 2]}
+            _install_fake_derivation(monkeypatch, [[_UNIT_1, _UNIT_2]])
+            _install_fake_handler(
+                monkeypatch,
+                "social_handler",
+                "SocialHandler",
+                "analyze_social_framework",
+                [],
+                {"ranking": ["arg_2", "arg_1"], "scores": {"arg_2": 2, "arg_1": 1}},
+            )
+            result = await ic._invoke_social(_UNIT_1, context)
+        elif member == "eaf":
+            context["epistemic_beliefs"] = {"agent_a": [_UNIT_1], "agent_b": [_UNIT_2]}
+            _install_fake_derivation(monkeypatch, [[_UNIT_1, _UNIT_2]])
+            _install_fake_handler(
+                monkeypatch,
+                "eaf_handler",
+                "EAFHandler",
+                "analyze_epistemic_framework",
+                [],
+                lambda args, attacks, beliefs, semantics: {
+                    "extensions": [["arg_2"]],
+                    "epistemic_beliefs": {a: list(v) for a, v in beliefs.items()},
+                },
+            )
+            result = await ic._invoke_eaf(_UNIT_1, context)
+        else:
+            assert member == "dung"
+            _install_fake_derivation(monkeypatch, [[_UNIT_1, _UNIT_2]])
+            _install_fake_handler(
+                monkeypatch,
+                "af_handler",
+                "AFHandler",
+                "analyze_multi_semantics",
+                [],
+                {"extensions": {"grounded": [["arg_2"]]}, "statistics": {}},
+            )
+            result = await ic._invoke_dung_extensions(_UNIT_1, context)
+
+        assert result.get("dropped_unresolved") == 0, member
