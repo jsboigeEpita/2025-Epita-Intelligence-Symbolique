@@ -3,7 +3,7 @@
   "issue": 1961,
   "phase": 4,
   "inventory": {
-    "argumentation_analysis/services/jtms/jtms_core.py": 374,
+    "argumentation_analysis/services/jtms/jtms_core.py": 505,
     "argumentation_analysis/services/jtms/atms_core.py": 242,
     "argumentation_analysis/services/jtms/conflict_resolution.py": 305,
     "argumentation_analysis/agents/core/logic/dung_native.py": 308,
@@ -37,7 +37,7 @@
         "B"
       ],
       "a_valid_after_direct_set": true,
-      "note": "compute_truth_statement returns None early when non_monotonic — direct set via set_truth_value bypasses compute, so valid keeps the set value until next compute"
+      "note": "#3018: the cycle is routed through an out-list edge (A ← ¬B, B ← A) — a positive cycle is monotone and unflagged. Without a fact the loop has no grounded support (both unknown); a direct set is a fact the well-founded computation keeps."
     },
     {
       "name": "explain_belief_tri_state_verdicts",

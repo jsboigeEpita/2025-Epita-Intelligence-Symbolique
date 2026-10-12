@@ -117,10 +117,20 @@ def test_jtms_scc_marks_non_monotonic(examples):
         examples["jtms_cases"], "scc_cycle_marks_non_monotonic_and_locks_unknown"
     )
     j = JTMS()
+    # #3018: the cycle must pass through an out-list edge to be
+    # non-monotonic — A ← ¬B, B ← A.
+    j.add_justification([], ["B"], "A")
     j.add_justification(["A"], [], "B")
-    j.add_justification(["B"], [], "A")
     nonmono = sorted(n for n, b in j.beliefs.items() if b.non_monotonic)
     assert nonmono == stored["cycle_members"] == ["A", "B"]
+    # Without a fact, the loop has no grounded support: both stay unknown
+    assert j.beliefs["A"].valid is None
+    assert j.beliefs["B"].valid is None
+    # A direct set still holds — the flag marks the topology, it does not
+    # lock the label away from facts (#3013) nor from the well-founded
+    # computation (#3018).
+    j.set_belief_validity("A", True)
+    assert j.beliefs["A"].valid is stored["a_valid_after_direct_set"]
 
 
 def test_jtms_explain_tri_state(examples):

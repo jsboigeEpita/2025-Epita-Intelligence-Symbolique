@@ -6,6 +6,8 @@ Uses hypothesis to randomly generate belief networks and verify universal proper
 3. Cycle detection: mutual dependencies (A→B→A) are marked non-monotonic
 """
 
+import itertools
+
 import pytest
 from hypothesis import given, settings, assume
 from hypothesis import strategies as st
@@ -23,16 +25,13 @@ belief_names = st.lists(
 
 
 @st.composite
-def jtms_with_justifications(draw):
-    """Build a JTMS: add beliefs, then justifications, THEN set validity.
-    This ensures truth values are determined by the justification network."""
-    jtms = JTMS()
+def jtms_network_spec(draw):
+    """Draw a raw network spec: belief names, justifications, then a prefix
+    of directly-set-valid names. The conclusion may be one of its own
+    premises — self-loops (``a ← ¬a``) are part of the surface since #3018,
+    they are no longer excluded from the draw."""
     names = draw(belief_names)
-
-    for name in names:
-        jtms.add_belief(name)
-
-    # Add 1-6 justifications FIRST
+    justifications = []
     n_just = draw(st.integers(min_value=1, max_value=6))
     for _ in range(n_just):
         candidates = list(names)
@@ -47,31 +46,42 @@ def jtms_with_justifications(draw):
             )
         )
         remaining = [n for n in candidates if n not in in_list]
-        if remaining:
-            out_list = draw(
+        out_list = (
+            draw(
                 st.lists(
                     st.sampled_from(remaining),
                     min_size=0,
-                    max_size=2,
+                    max_size=min(2, len(remaining)),
                     unique=True,
                 )
             )
-        else:
-            out_list = []
-        conclusion_candidates = [
-            n for n in candidates if n not in in_list and n not in out_list
-        ]
-        if not conclusion_candidates:
-            continue
-        conclusion = draw(st.sampled_from(conclusion_candidates))
-        jtms.add_justification(in_list, out_list, conclusion)
+            if remaining
+            else []
+        )
+        conclusion = draw(st.sampled_from(candidates))
+        justifications.append((in_list, out_list, conclusion))
 
-    # THEN set some beliefs as valid (propagation follows justifications)
     valid_count = draw(st.integers(min_value=0, max_value=len(names)))
-    valid_names = names[:valid_count]
+    return names, justifications, names[:valid_count]
+
+
+def build_jtms(names, justifications, valid_names=()):
+    """Build a JTMS from a spec: beliefs, then justifications, THEN direct
+    validity sets — truth values are determined by the network."""
+    jtms = JTMS()
+    for name in names:
+        jtms.add_belief(name)
+    for in_list, out_list, conclusion in justifications:
+        jtms.add_justification(in_list, out_list, conclusion)
     for name in valid_names:
         jtms.set_belief_validity(name, True)
+    return jtms
 
+
+@st.composite
+def jtms_with_justifications(draw):
+    names, justifications, valid_names = draw(jtms_network_spec())
+    jtms = build_jtms(names, justifications, valid_names)
     return jtms, names, valid_names
 
 
@@ -91,7 +101,7 @@ class TestJTMSJustificationConsistency:
 
         for name in names:
             belief = jtms.beliefs[name]
-            if belief.valid is not True or belief.non_monotonic:
+            if belief.valid is not True:
                 continue
             if not belief.justifications:
                 continue
@@ -153,6 +163,120 @@ class TestJTMSUnconditionalOnOddLoop:
             assert (
                 has_satisfied
             ), f"Belief {name} is valid but no justification is satisfied (#3013)"
+
+
+class TestJTMSWellFoundedLoopLabeling:
+    """#3018 — a loop's labels come from a global well-founded computation,
+    not from the insertion order: the two issue networks, checked over ALL
+    their insertion orders, admit exactly one labeling with zero broken
+    beliefs (no True without a satisfied justification). The non-monotonic
+    flag is exact: a cycle counts only through an out-list edge, self-loops
+    included, positive cycles stay unflagged."""
+
+    def _labels(self, jtms):
+        return {name: belief.valid for name, belief in jtms.beliefs.items()}
+
+    def _assert_no_broken_support(self, jtms, order):
+        """Label ⇔ support: no belief is True without a satisfied
+        justification under the final labels."""
+        for name, belief in jtms.beliefs.items():
+            if belief.valid is True:
+                has_satisfied = any(
+                    all(b.valid is True for b in just.in_list)
+                    and all(b.valid is not True for b in just.out_list)
+                    for just in belief.justifications
+                )
+                assert has_satisfied, (
+                    f"{name} is True without satisfied justification "
+                    f"(insertion order {order})"
+                )
+
+    def test_odd_loop_pair_one_labeling_over_all_orders(self):
+        """`a ← ¬b, b ← a, b ← x` — coordinator-measured 3 labelings / 6
+        broken beliefs over the 6 insertion orders on #3016."""
+        justifications = [([], ["b"], "a"), (["a"], [], "b"), (["x"], [], "b")]
+        labelings = set()
+        for order in itertools.permutations(justifications):
+            jtms = build_jtms(["a", "b", "x"], order)
+            # The well-founded reading: the a↔b loop has no grounded
+            # support (x is not a fact), so nobody on it is True.
+            for name in ("a", "b", "x"):
+                assert (
+                    jtms.beliefs[name].valid is None
+                ), f"{name}={jtms.beliefs[name].valid} (insertion order {order})"
+            self._assert_no_broken_support(jtms, order)
+            labelings.add(tuple(sorted(self._labels(jtms).items())))
+        assert len(labelings) == 1, "insertion order must not change the labeling"
+        # Marking exact: the cycle passes through J1's out-list edge; x
+        # is not on it.
+        assert jtms.beliefs["a"].non_monotonic is True
+        assert jtms.beliefs["b"].non_monotonic is True
+        assert jtms.beliefs["x"].non_monotonic is False
+
+    def test_odd_three_cycle_one_labeling_over_all_orders(self):
+        """`a ← ¬b, b ← ¬c, c ← ¬a, c ← x` — 4 labelings / 24 broken over
+        the 24 insertion orders on #3016."""
+        justifications = [
+            ([], ["b"], "a"),
+            ([], ["c"], "b"),
+            ([], ["a"], "c"),
+            (["x"], [], "c"),
+        ]
+        labelings = set()
+        for order in itertools.permutations(justifications):
+            jtms = build_jtms(["a", "b", "c", "x"], order)
+            for name in ("a", "b", "c", "x"):
+                assert (
+                    jtms.beliefs[name].valid is None
+                ), f"{name}={jtms.beliefs[name].valid} (insertion order {order})"
+            self._assert_no_broken_support(jtms, order)
+            labelings.add(tuple(sorted(self._labels(jtms).items())))
+        assert len(labelings) == 1, "insertion order must not change the labeling"
+        for name in ("a", "b", "c"):
+            assert jtms.beliefs[name].non_monotonic is True
+        assert jtms.beliefs["x"].non_monotonic is False
+
+    def test_self_loop_through_out_list_flagged_and_not_true(self):
+        """`a ← ¬a` must be flagged (the cycle is its own out-list edge)
+        and must not self-support to True."""
+        jtms = JTMS()
+        jtms.add_justification([], ["a"], "a")
+        assert jtms.beliefs["a"].non_monotonic is True
+        assert jtms.beliefs["a"].valid is not True
+
+    def test_positive_cycle_not_flagged_and_unknown(self):
+        """`a ← b, b ← a` — a positive cycle is monotone: unflagged, and
+        without a fact nothing on it is True."""
+        jtms = JTMS()
+        jtms.add_justification(["b"], [], "a")
+        jtms.add_justification(["a"], [], "b")
+        assert jtms.beliefs["a"].non_monotonic is False
+        assert jtms.beliefs["b"].non_monotonic is False
+        assert jtms.beliefs["a"].valid is None
+        assert jtms.beliefs["b"].valid is None
+
+
+class TestJTMSInsertionOrderIndependence:
+    """#3018 — the final labeling (and the flags) of a network do not depend
+    on the order its justifications were added in."""
+
+    @given(data=st.data())
+    @settings(max_examples=50, deadline=5000)
+    @pytest.mark.property
+    def test_insertion_order_does_not_change_labels_or_flags(self, data):
+        names, justifications, valid_names = data.draw(jtms_network_spec())
+        permuted = data.draw(st.permutations(justifications))
+
+        base = build_jtms(names, justifications, valid_names)
+        other = build_jtms(names, permuted, valid_names)
+
+        labels = lambda j: {n: b.valid for n, b in j.beliefs.items()}
+        flags = lambda j: {n: b.non_monotonic for n, b in j.beliefs.items()}
+        assert labels(base) == labels(other), (
+            f"labels differ between insertion orders:\n"
+            f"{labels(base)} vs {labels(other)}"
+        )
+        assert flags(base) == flags(other)
 
 
 class TestJTMSRetractionCascade:
@@ -229,8 +353,9 @@ class TestJTMSRetractionCascadeTracing:
 
 
 class TestJTMSNoCircularSupport:
-    """Mutual dependencies (cycles of length >= 2) are detected and marked non-monotonic.
-    Self-loops (A → A) are NOT detected — this is a known limitation."""
+    """Cycles through an out-list edge (length >= 2 or a self-loop) are
+    detected and marked non-monotonic (#3018: the flag is exact — a
+    positive cycle, in-list edges only, is monotone and stays unflagged)."""
 
     @given(n=st.integers(min_value=2, max_value=4))
     @settings(max_examples=15, deadline=2000)
@@ -241,9 +366,11 @@ class TestJTMSNoCircularSupport:
         for name in names:
             jtms.add_belief(name)
 
-        for i in range(n):
-            next_i = (i + 1) % n
-            jtms.add_justification([names[i]], [], names[next_i])
+        for i in range(n - 1):
+            jtms.add_justification([names[i]], [], names[i + 1])
+        # The closing edge of the cycle goes through an out-list — that is
+        # what makes the cycle non-monotonic (#3018).
+        jtms.add_justification([], [names[n - 1]], names[0])
 
         for name in names:
             assert (

@@ -229,7 +229,9 @@ class TestNonMonotonic:
     """Test SCC-based non-monotonic detection."""
 
     def test_circular_dependency_marks_non_monotonic(self):
-        """Circular justification A→B→A marks beliefs as non-monotonic."""
+        """A cycle passing through an out-list edge (A→B, B←¬A i.e. A ← ¬B)
+        marks both beliefs as non-monotonic (#3018: a positive cycle would
+        not — the flag needs a non-monotonic edge on the loop)."""
         from argumentation_analysis.services.jtms import JTMS
 
         jtms = JTMS()
@@ -237,8 +239,8 @@ class TestNonMonotonic:
         jtms.add_belief("B")
         jtms.set_belief_validity("A", True)
         jtms.add_justification(["A"], [], "B")
-        jtms.add_justification(["B"], [], "A")
-        # Both should be non-monotonic due to SCC
+        jtms.add_justification([], ["B"], "A")
+        # Both are on a cycle through an out-list edge: non-monotonic
         assert jtms.beliefs["A"].non_monotonic is True
         assert jtms.beliefs["B"].non_monotonic is True
 

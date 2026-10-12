@@ -199,8 +199,10 @@ class TestJTMSAgentBase:
         test_agent.add_belief("premise1", context, 0.8)
         test_agent.add_belief("conclusion1", context, 0.8)
 
-        # Forcer la validité de la prémisse dans le JTMS
-        test_agent.jtms_session.jtms.beliefs["premise1"].valid = True
+        # Forcer la validité de la prémisse dans le JTMS — via l'API publique:
+        # #3018 makes labels the product of facts + justifications, a raw
+        # `.valid` poke is not an assignment the labeling keeps.
+        test_agent.jtms_session.jtms.set_belief_validity("premise1", True)
 
         test_agent.add_justification(["premise1"], [], "conclusion1")
 
