@@ -10,6 +10,8 @@ restored_reason: "audit rogue cleanup commits — issue #581 phase 2 / #580 sub-
 
 > **Note**: This document was deleted by commit `c7ba0e3a` (chore(#130): TIER 2 — consolidate docs/ structure). It is the final architecture plan for the refactoring initiative — load-bearing reference for ongoing architectural decisions. Restored from git history.
 
+> **Note (2026-10-12, #1803 étape 6)** : la façade décrite ci-dessous a atterri autrement que prévu. Elle existe — `scripts/setup_manager.py`, verbes réels `setup` / `status` / `install` / `fix-deps` / `validate` (voir `docs/guides/cli/setup_manager.md`) — mais les blocs « Appel via Façade » de ce plan invoquent des verbes et drapeaux qui n'ont jamais existé (`compat`, `set-path`, `setup-deps`, `--from-requirements`), à la racine du dépôt qui plus est, et `requirements-test.txt` a été retiré (#1803 étape 6) : ces commandes sont un historique de plan, pas des instructions exécutables.
+
 ---
 
 # Plan de Refactoring v4 : Architecture Noyau Unifié

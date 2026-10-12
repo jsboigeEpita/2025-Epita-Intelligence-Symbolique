@@ -13,6 +13,14 @@ They read both files as data: no solver, no network, no conda-lock import. They
 check that every spec of ``environment.yml`` is met by a locked package, not
 that the lock is byte-for-byte the output of a fresh solve (a fresh solve moves
 with the channels every day, which is what the lock exists to stop).
+
+#1803 step 6 (user decision 2026-10-12) extends the same predicate to the root
+``requirements.txt``: that file is NOT what CI installs — it exists for the
+pip-only path README.md hands to Linux/macOS users — so the trap is the reverse
+one, a pin the lock does not provide (``pydantic==2.9.0`` while the lock ships
+2.13.5, the same shadowing user-site ``mcp`` 1.26 pulled in #2282 A0). The
+requirements file was regenerated from the CI environment; this guard keeps it
+there.
 """
 
 from __future__ import annotations
@@ -152,6 +160,44 @@ def test_every_pip_spec_is_met_by_the_lock(env, lock):
         "environment.yml asks for what conda-lock.yml does not provide; regenerate "
         "the lock (command in .github/actions/setup-projet-is/action.yml):\n  "
         + "\n  ".join(problems)
+    )
+
+
+ROOT_REQUIREMENTS = ROOT / "requirements.txt"
+
+
+def test_root_requirements_pins_are_satisfied_by_the_lock(lock):
+    """#1803 step 6: the root requirements.txt is not what CI installs, but a
+    Linux/macOS user pip-installing it must land on the CI versions, not on a
+    pin the lock has never provided."""
+    pip_locked = _locked(lock, "pip")
+    conda_locked = _locked(lock, "conda")
+    specs = []
+    for line in ROOT_REQUIREMENTS.read_text(encoding="utf-8").splitlines():
+        # pip allows a trailing comment after whitespace; Requirement() does
+        # not parse one, so read the file the way pip reads it.
+        stripped = line.split(" #", 1)[0].strip()
+        if stripped and not stripped.startswith("#"):
+            specs.append(stripped)
+    assert specs, "no requirement read from the root requirements.txt"
+    problems = []
+    for spec in specs:
+        req = Requirement(spec)
+        name = canonicalize_name(req.name)
+        # Same lookup as the environment.yml guard: a pip name may be provided
+        # by the conda section of the lock (flask, for one).
+        version = pip_locked.get(name) or conda_locked.get(name)
+        if version is None:
+            problems.append(f"{spec!r}: not in conda-lock.yml")
+            continue
+        if req.specifier and not req.specifier.contains(
+            Version(version), prereleases=True
+        ):
+            problems.append(f"{spec!r}: locked {version}")
+    assert not problems, (
+        "the root requirements.txt carries pins conda-lock.yml does not provide; "
+        "regenerate it from the CI environment (the lock is what CI installs, "
+        "#1803 step 6):\n  " + "\n  ".join(problems)
     )
 
 

@@ -44,8 +44,10 @@ Si vous préférez installer les dépendances manuellement :
 # Installer les versions spécifiques des dépendances problématiques
 pip install numpy==1.24.3 pandas==2.0.3 jpype1==1.4.1
 
-# Installer les autres dépendances de test
-pip install -r requirements-test.txt
+# Installer les autres dépendances de test : l'environnement de référence est
+# environment.yml (résolu en conda-lock.yml pour la CI) ; pour un env pip,
+# le requirements.txt racine porte les dépendances de test, épinglées au lock.
+pip install -r requirements.txt
 ```
 
 ## Exécution des Tests

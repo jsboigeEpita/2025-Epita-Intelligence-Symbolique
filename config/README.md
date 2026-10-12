@@ -5,7 +5,6 @@ Ce répertoire contient les fichiers de configuration utilisés par le projet d'
 ## Fichiers de Configuration
 
 - **`pytest.ini`** : Configuration pour l'exécution des tests avec pytest, définissant les options par défaut et les marqueurs personnalisés.
-- **`requirements-test.txt`** : Liste des dépendances Python nécessaires pour exécuter les tests du projet.
 
 ## Utilisation
 
@@ -21,15 +20,6 @@ pytest
 
 # Exécuter les tests avec des options supplémentaires
 pytest -v --cov=argumentation_analysis
-```
-
-### Dépendances de Test
-
-Le fichier `requirements-test.txt` liste les dépendances nécessaires pour exécuter les tests. Pour installer ces dépendances :
-
-```bash
-# Installer les dépendances de test
-pip install -r config/requirements-test.txt
 ```
 
 ## Bonnes Pratiques

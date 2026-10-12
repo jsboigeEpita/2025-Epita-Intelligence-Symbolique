@@ -1,38 +1,43 @@
-# Core Dependencies
-Flask[async]~=3.1.1
-Flask-CORS
+# Not what CI installs. CI installs conda-lock.yml, solved from environment.yml —
+# environment.yml is the source of truth (#1803 step 6, user decision 2026-10-12).
+# This file is regenerated from that CI environment: every pin below is the
+# version conda-lock.yml locks for the CI env, and
+# tests/unit/test_conda_lock_matches_environment_1803.py fails the gate if a
+# pin ever drifts from the lock again (the pydantic==2.9.0 pin it replaces
+# shadowed the locked 2.13.5 for every pip-only install, README.md's path).
+
+# Core dependencies
+Flask[async]==3.1.3
+Flask-CORS==6.0.5
 jpype1==1.7.1  # #2538: the version environment.yml pins (see the measurement there)
-matplotlib
-networkx
-nltk
-openai
-pandas
-pydantic==2.9.0
-python-dotenv
-scikit-learn
-# scipy>=1.15.1
-sentence-transformers
-semantic-kernel>=1.5.0,<2.0.0
-numpy
-spacy
-textstat  # FB-23 #1088: readability (Flesch) for the quality-radar clarte detector
-clingo
-unidecode
-markdown
+matplotlib==3.10.9
+networkx==3.4.2
+nltk==3.10.3
+openai==3.3.0
+pandas==2.0.3
+pydantic==2.13.5
+python-dotenv==1.2.3
+scikit-learn==1.7.2
+scipy==1.15.2
+semantic-kernel==1.44.0
+numpy==1.25.0
+spacy==3.8.14
+textstat==0.7.13  # FB-23 #1088: readability (Flesch) for the quality-radar clarte detector
+clingo==5.8.2
+unidecode==1.4.0
+markdown==3.10.3
+psutil==7.2.2
+tiktoken==0.14.0
+diskcache==5.6.3
 
-psutil
-# Testing Dependencies
-pytest
-pytest-asyncio
-pytest-mock
-pytest-playwright
-pyfakefs>=5.0.0
-playwright
-coverage
-
-pytest-benchmark
-
-tiktoken
-diskcache
-black
-flake8
+# Testing dependencies
+pytest==9.1.1
+pytest-asyncio==1.4.0
+pytest-mock==3.15.1
+pytest-playwright==0.9.0
+pyfakefs==6.2.0
+playwright==1.63.0
+coverage==7.16.0
+pytest-benchmark==5.3.0
+black==26.5.1
+flake8==7.3.0
