@@ -60,6 +60,9 @@ class TestCreateLlmServiceMocking:
         create = self._import_create()
         # Hermetic: sans le couple OpenRouter non plus, sinon la factory
         # bascule sur ce provider (chargé depuis .env sur les machines dev).
+        # #3019 carrier: indifferent — this test expects the keys MISSING (an
+        # empty re-assertion still counts as no key for the factory), and no
+        # env_loader import runs inside the patch to act on the carrier.
         removed = {"OPENAI_API_KEY", "OPENROUTER_API_KEY", "OPENROUTER_BASE_URL"}
         env = {k: v for k, v in os.environ.items() if k not in removed}
         env.pop("PYTEST_CURRENT_TEST", None)

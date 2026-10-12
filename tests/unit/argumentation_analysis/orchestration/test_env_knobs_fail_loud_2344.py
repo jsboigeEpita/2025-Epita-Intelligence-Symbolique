@@ -105,6 +105,9 @@ def test_import_refuses_each_malformed_knob():
         print("VALUES", m._LLM_CALL_TIMEOUT_S, m._DUNG_TIMEOUT_S,
               m._EXTRACTION_MAX_ATTEMPTS, m._EXTRACTION_MAX_TOKENS)
         """)
+    # #3019 carrier: indifferent — the scrubbed knobs are re-set explicitly by
+    # the child script itself, and carried provider names never touch the knob
+    # reads under assertion.
     env = {k: v for k, v in os.environ.items() if k not in KNOBS}
     # The worktree first: an editable install would otherwise resolve the
     # package to another checkout.

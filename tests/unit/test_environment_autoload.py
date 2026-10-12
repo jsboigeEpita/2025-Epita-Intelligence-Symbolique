@@ -23,6 +23,8 @@ from pathlib import Path
 
 import pytest
 
+from argumentation_analysis.config import env_loader as _env_loader
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ENV_FILE = REPO_ROOT / ".env"
 
@@ -49,13 +51,22 @@ def _declared_env_names() -> list[str]:
 
 
 def test_import_loads_the_declared_env_2130():
+    """The import fills every declared .env name a bare caller did not set.
+
+    The scrub drops #3019's carrier (``CALLER_EMPTY_NAMES``) along with the
+    declared names: this caller neutralised nothing, and a surviving carrier
+    would re-assert the scrubbed names as "" in the child — caller-set, so
+    .env correctly leaves them empty and the probe would misread that as a
+    dead auto-load.
+    """
     if not ENV_FILE.is_file():
         pytest.skip("no repo .env on this seat (CI) — nothing to autoload")
 
     names = [n for n in _declared_env_names() if n != "E2E_TESTING_MODE"]
     assert names, "the .env declares no variable — the probe would measure nothing"
 
-    env = {k: v for k, v in os.environ.items() if k not in set(names)}
+    drop = set(names) | {_env_loader._CALLER_EMPTY_NAMES_VAR}
+    env = {k: v for k, v in os.environ.items() if k not in drop}
     env["PYTHONIOENCODING"] = "utf-8"
     proc = subprocess.run(
         [sys.executable, "-c", _PROBE, str(REPO_ROOT), ",".join(names)],
@@ -93,6 +104,10 @@ def test_import_does_not_raise_without_conda_gate():
     ensure_env() raises RuntimeError when CONDA_DEFAULT_ENV is unset — the
     import-time path must never carry that gate (that is why the original
     auto-execution was defused into ``pass``).
+
+    #3019 carrier: indifferent — only CONDA_DEFAULT_ENV is dropped and the
+    assertion is that the import survives, so carried ""-re-assertions in the
+    child change nothing here.
     """
     if not ENV_FILE.is_file():
         pytest.skip("no repo .env on this seat (CI)")

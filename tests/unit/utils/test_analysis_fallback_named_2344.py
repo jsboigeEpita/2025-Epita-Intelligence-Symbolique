@@ -48,6 +48,9 @@ _LLM_KEYS = ("OPENAI_API_KEY", "OPENROUTER_API_KEY", "OPENROUTER_BASE_URL")
 
 def _no_key():
     # #2711: ``create_llm_service`` reads the keys from the environment.
+    # #3019 carrier: indifferent — expects the keys missing (an empty
+    # re-assertion still means "no key" for the factory), and env_loader is
+    # long imported, so nothing inside the patch reads the carrier.
     env = {k: v for k, v in os.environ.items() if k not in _LLM_KEYS}
     return patch.dict(os.environ, env, clear=True)
 
