@@ -319,8 +319,10 @@ class JTMS:
         Van Gelder's alternating fixpoint, on the rule reading the JTMS
         already gives its out-lists (``not p`` holds unless ``p`` is True):
         ``T`` is the least set of beliefs rule derivation supports, ``S``
-        the beliefs no rule can still support. Facts — direct assignments —
-        seed the iteration and are exempt from ``S``. At the fixpoint:
+        the greatest unfounded set — beliefs no rule can still support,
+        where a belief's own loop does not count as support. Facts — direct
+        assignments — seed the iteration and are exempt from ``S``. At the
+        fixpoint:
         ``True`` for members of ``T``, ``False`` only for False facts, and
         ``None`` for the rest — one labeling, whatever the order the
         justifications were added in.
@@ -331,7 +333,7 @@ class JTMS:
         s = set(facts_false)
         while True:
             t = self._least_supported_model(facts_true, s)
-            s_next = facts_false | self._unfounded(t, s, facts)
+            s_next = facts_false | self._unsupported(t, facts_true, facts)
             if s_next == s:
                 break
             s = s_next
@@ -365,25 +367,36 @@ class JTMS:
                         break
         return t
 
-    def _unfounded(self, t: Set[str], s: Set[str], facts: Set[str]) -> Set[str]:
-        """Beliefs (facts excluded) no rule can still support: they have no
-        justification at all, or every one of their justifications has an
-        in-premise already unfounded (in ``s``) or an out-premise derived
-        (in ``t``)."""
-        dead = set()
-        for name, belief in self.beliefs.items():
-            if name in facts:
-                continue
-            if not belief.justifications:
-                dead.add(name)
-                continue
-            if all(
-                any(p.name in s for p in justification.in_list)
-                or any(p.name in t for p in justification.out_list)
-                for justification in belief.justifications
-            ):
-                dead.add(name)
-        return dead
+    def _unsupported(
+        self, t: Set[str], facts_true: Set[str], facts: Set[str]
+    ) -> Set[str]:
+        """Beliefs (facts excluded) outside the least possibly-supported
+        set: the least set containing the True facts and closed under rules
+        that could still fire — every in-premise possibly supported, no
+        out-premise already derived True in ``t``. A belief whose only
+        support runs through itself never enters it, so self-support counts
+        as no support (Van Gelder's greatest unfounded set). The one-step
+        reading this replaces missed exactly that clause: it required every
+        justification to be already dead, so a self-supporting loop kept
+        its members out of ``S`` and a rule reading ``not loop`` never
+        fired (#3020 review)."""
+        possible = set(facts_true)
+        changed = True
+        while changed:
+            changed = False
+            for name, belief in self.beliefs.items():
+                if name in possible or name in facts:
+                    continue
+                for justification in belief.justifications:
+                    if all(
+                        p.name in possible for p in justification.in_list
+                    ) and not any(p.name in t for p in justification.out_list):
+                        possible.add(name)
+                        changed = True
+                        break
+        return {
+            name for name in self.beliefs if name not in facts and name not in possible
+        }
 
     def _trace_cascaded_drops(
         self, trigger: Belief, old_labels: Dict[str, Optional[bool]]

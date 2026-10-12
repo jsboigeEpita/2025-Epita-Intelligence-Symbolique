@@ -9,7 +9,7 @@ Uses hypothesis to randomly generate belief networks and verify universal proper
 import itertools
 
 import pytest
-from hypothesis import given, settings, assume
+from hypothesis import given, settings, assume, seed
 from hypothesis import strategies as st
 
 from argumentation_analysis.services.jtms.jtms_core import JTMS
@@ -255,6 +255,31 @@ class TestJTMSWellFoundedLoopLabeling:
         assert jtms.beliefs["a"].valid is None
         assert jtms.beliefs["b"].valid is None
 
+    def test_self_supporting_loop_is_unfounded_so_its_negation_decides(self):
+        """A belief whose only support runs through itself never counts as
+        supported: the loop lands in the unfounded set, so a rule reading
+        its negation fires. Three programs, coordinator-measured against
+        the WFS definition — the negation stayed None before the
+        `_unsupported` fix while `main` labelled it True (#3020 review)."""
+        # `a ← b, b ← a, c ← ¬a` — the a↔b loop is its own only support.
+        jtms = build_jtms(
+            ["a", "b", "c"], [(["b"], [], "a"), (["a"], [], "b"), ([], ["a"], "c")]
+        )
+        assert jtms.beliefs["c"].valid is True
+        assert jtms.beliefs["a"].non_monotonic is False
+        assert jtms.beliefs["b"].non_monotonic is False
+
+        # `a ← a, c ← ¬a` — the loop is a self-loop on the in-list side.
+        jtms = build_jtms(["a", "c"], [(["a"], [], "a"), ([], ["a"], "c")])
+        assert jtms.beliefs["c"].valid is True
+
+        # `x0 ← ¬x1 ; x1 ← x1, ¬x0, ¬x1` — the smallest random
+        # counterexample of the coordinator's 20 000-program run.
+        jtms = build_jtms(
+            ["x0", "x1"], [([], ["x1"], "x0"), (["x1"], ["x0", "x1"], "x1")]
+        )
+        assert jtms.beliefs["x0"].valid is True
+
 
 class TestJTMSInsertionOrderIndependence:
     """#3018 — the final labeling (and the flags) of a network do not depend
@@ -396,3 +421,68 @@ class TestJTMSNoCircularSupport:
             assert (
                 jtms.beliefs[name].non_monotonic is False
             ), f"Non-cyclic belief {name} should not be non-monotonic"
+
+
+def _wfs_true_reference(names, justifications, facts_true):
+    """Independent well-founded-semantics oracle, written from the
+    definition rather than from the implementation's operators: ``gamma(F)``
+    is the least model of the reduct assuming exactly ``F`` false (a rule
+    fires when every in-premise is derived and every out-premise is in
+    ``F``), and the iteration alternates ``T = gamma(F)`` with ``F = atoms
+    - gamma(atoms - T)`` — the skeptical reading, where nothing is false
+    that survives even when every not-yet-true atom is assumed false.
+    Same fixpoint as the implementation, different road (#3020 review)."""
+    program = {}
+    for in_list, out_list, conclusion in justifications:
+        program.setdefault(conclusion, []).append((in_list, out_list))
+    atoms = set(names)
+
+    def gamma(assumed_false):
+        derived = set(facts_true)
+        changed = True
+        while changed:
+            changed = False
+            for head, rules in program.items():
+                if head in derived:
+                    continue
+                for in_list, out_list in rules:
+                    if all(p in derived for p in in_list) and all(
+                        p in assumed_false for p in out_list
+                    ):
+                        derived.add(head)
+                        changed = True
+                        break
+        return derived
+
+    false_set = set()
+    while True:
+        true_set = gamma(false_set)
+        next_false = atoms - gamma(atoms - true_set)
+        if next_false == false_set:
+            break
+        false_set = next_false
+    return gamma(false_set)
+
+
+class TestJTMSMatchesWellFoundedSemantics:
+    """The labels must agree with the well-founded semantics itself, not
+    only with the network's own invariants: an independent oracle — two
+    composed gamma operators, no possibly-supported set — recomputes the
+    WFS-true set from the raw spec, and every True label must land inside
+    it, and nothing outside it may be True. The `_unfounded` one-step gap
+    survived every invariant property and died to this one (#3020 review).
+    """
+
+    @seed(3018)
+    @given(spec=jtms_network_spec())
+    @settings(max_examples=200, deadline=5000)
+    def test_true_labels_are_exactly_the_wfs_true_set(self, spec):
+        names, justifications, valid_names = spec
+        jtms = build_jtms(names, justifications, valid_names)
+        wfs_true = _wfs_true_reference(names, justifications, set(valid_names))
+        mismatches = [
+            (name, jtms.beliefs[name].valid, name in wfs_true)
+            for name in names
+            if (jtms.beliefs[name].valid is True) != (name in wfs_true)
+        ]
+        assert not mismatches, f"labels disagree with the WFS reference: {mismatches}"
