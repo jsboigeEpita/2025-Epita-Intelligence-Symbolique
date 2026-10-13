@@ -272,6 +272,47 @@ class TestSectionBuilders:
             assert d.taxonomy_path.startswith("fallacy/")
             assert len(d.impacted_args) > 0
 
+    def test_s3_neural_detections_join_the_diagnoses(self, state):
+        """#1626 item 1 — neural_detect's whole-text detections reach the
+        conclusion's diagnoses. Same state ± ``neural_fallacy_scores`` ⇒ the
+        diagnosis set differs by exactly the neural entry: no span, no
+        argument anchor (the Track NN adjudication files that shape as
+        "claimed / wide-net"), provenance visible in the commentary."""
+        before = DeepSynthesisAgent._build_fallacy_diagnoses(state)
+        state.add_neural_fallacy_score(
+            text_segment="",
+            label="Appel à la pitié",
+            confidence=0.87,
+            detector="self_hosted_llm",
+        )
+        after = DeepSynthesisAgent._build_fallacy_diagnoses(state)
+        assert len(after) == len(before) + 1
+        neural_entries = [d for d in after if d not in before]
+        assert len(neural_entries) == 1
+        ne = neural_entries[0]
+        assert ne.fallacy_id == "nf_1"
+        assert ne.taxonomy_path.startswith("fallacy/")
+        assert "Appel à la pitié" in ne.taxonomy_path
+        assert ne.impacted_args == []
+        assert "self_hosted_llm" in ne.commentary
+
+    def test_s3_neural_scores_change_the_rendered_conclusion(self, state):
+        """#1626 item 1 — the OUTPUT differs, not just the write: two full
+        reports from the same state ± one neural detection render two
+        different conclusions (the Section 4 fallacy count moves)."""
+        report_without = _build_report_from_state(state)
+        state.add_neural_fallacy_score(
+            text_segment="",
+            label="Appel à la pitié",
+            confidence=0.87,
+            detector="self_hosted_llm",
+        )
+        report_with = _build_report_from_state(state)
+        assert report_with.fallacy_diagnoses != report_without.fallacy_diagnoses
+        md_without = DeepSynthesisAgent.render_markdown(report_without)
+        md_with = DeepSynthesisAgent.render_markdown(report_with)
+        assert md_with != md_without
+
     def test_s4_formal_findings(self, state):
         findings = DeepSynthesisAgent._build_formal_findings(state)
         assert len(findings) >= 1
