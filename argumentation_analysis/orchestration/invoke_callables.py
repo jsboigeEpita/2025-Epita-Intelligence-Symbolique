@@ -37,6 +37,7 @@ from argumentation_analysis.core.reading_window import (
     reading_state_from_context,
     selected_text,
 )
+from argumentation_analysis.plugins.identification_models import confidence_outranks
 
 # File-local window meanings (#2915): fallback excerpts used only by
 # this module's phase runners — no other module shares them.
@@ -3796,7 +3797,10 @@ async def _invoke_camembert_fallacy(
                 ftype = f.get("fallacy_type", f.get("fallacy_name", "unknown"))
                 detected[ftype] = {
                     "source": "self_hosted_llm",
-                    "confidence": f.get("confidence", 0.5),
+                    # #3029 — raw passthrough: the plugin already emits None
+                    # for an unmeasured confidence; a 0.5 here would fabricate
+                    # the number back before the writer's rule could fire.
+                    "confidence": f.get("confidence"),
                     "description": f.get("explanation", ""),
                     "taxonomy_pk": f.get("taxonomy_pk", ""),
                 }
@@ -7439,7 +7443,8 @@ def _merge_fallacy_results(
 
     Keeps the highest-confidence entry for each unique taxonomy_pk.
     Wide-net results are kept as the floor; per-argument extras are added
-    only if their taxonomy_pk is not already present.
+    only if their taxonomy_pk is not already present. #3029: an unmeasured
+    confidence (None) loses to a measured one but never crashes the merge.
     """
     seen: Dict[str, Dict[str, Any]] = {}
     for f in wide_fallacies:
@@ -7448,7 +7453,9 @@ def _merge_fallacy_results(
         pk = str(f.get("taxonomy_pk") or f.get("fallacy_type") or "")
         if pk and pk not in seen:
             seen[pk] = f
-        elif pk and f.get("confidence", 0) > seen.get(pk, {}).get("confidence", 0):
+        elif pk and confidence_outranks(
+            f.get("confidence"), seen.get(pk, {}).get("confidence")
+        ):
             seen[pk] = f
 
     for f in per_arg_fallacies:
@@ -7459,7 +7466,9 @@ def _merge_fallacy_results(
             continue
         if pk not in seen:
             seen[pk] = f
-        elif f.get("confidence", 0) > seen.get(pk, {}).get("confidence", 0):
+        elif confidence_outranks(
+            f.get("confidence"), seen.get(pk, {}).get("confidence")
+        ):
             seen[pk] = f
 
     return list(seen.values())
@@ -7917,6 +7926,8 @@ async def _invoke_hierarchical_fallacy_per_argument(
                     methods_used.add(method)
 
         # Dedup by (taxonomy_pk, source_arg_id) — keep highest confidence
+        # (#3029: None-safe ordering — an unmeasured entry never crashes the
+        # dedup nor evicts a measured one; confidence_outranks).
         seen: Dict[tuple[str, str], Dict[str, Any]] = {}
         deduped: List[Dict[str, Any]] = []
         for f in all_fallacies:
@@ -7926,7 +7937,9 @@ async def _invoke_hierarchical_fallacy_per_argument(
                 str(f.get("taxonomy_pk") or f.get("fallacy_type") or ""),
                 str(f.get("source_arg_id") or ""),
             )
-            if key in seen and seen[key].get("confidence", 0) >= f.get("confidence", 0):
+            if key in seen and not confidence_outranks(
+                f.get("confidence"), seen[key].get("confidence")
+            ):
                 continue
             seen[key] = f
             deduped = [

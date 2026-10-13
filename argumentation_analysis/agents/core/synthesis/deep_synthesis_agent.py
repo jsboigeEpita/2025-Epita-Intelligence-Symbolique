@@ -493,6 +493,15 @@ class DeepSynthesisAgent(BaseAgent):
         for i, entry in enumerate(neural):
             label = str(entry.get("label", "unknown"))
             family = DeepSynthesisAgent._fallacy_family(label)
+            # #3029 — the confidence is a field, not a given: None (never
+            # measured) renders « non mesurée » instead of the fabricated
+            # 0.00 the old float(...) default printed. A measured number
+            # still renders as itself.
+            conf = entry.get("confidence")
+            if isinstance(conf, bool) or not isinstance(conf, (int, float)):
+                conf_repr = "non mesurée"
+            else:
+                conf_repr = f"{float(conf):.2f}"
             entries.append(
                 FallacyDiagnosis(
                     fallacy_id=str(entry.get("id", f"neural_{i}")),
@@ -501,8 +510,7 @@ class DeepSynthesisAgent(BaseAgent):
                     textual_span="",
                     commentary=(
                         f"{entry.get('detector', 'self_hosted_llm')} whole-text "
-                        f"detection (confidence "
-                        f"{float(entry.get('confidence', 0.0)):.2f})"
+                        f"detection (confidence {conf_repr})"
                     ),
                     impacted_args=[],
                 )

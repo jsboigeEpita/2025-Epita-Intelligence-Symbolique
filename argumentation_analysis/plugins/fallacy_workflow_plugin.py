@@ -51,6 +51,8 @@ from argumentation_analysis.utils.taxonomy_local_overrides import purge_rows
 from argumentation_analysis.plugins.identification_models import (
     IdentifiedFallacy,
     FallacyAnalysisResult,
+    confidence_outranks,
+    fallacy_measured_fields,
 )
 
 logger = logging.getLogger(__name__)
@@ -146,8 +148,11 @@ class FallacyWorkflowPlugin:
             descent_call_budget: int = 0,
         ):
             self._navigator = navigator
-            # (pk, taxonomy_path, depth, confidence)
-            self._confirmed: List[Tuple[str, str, int, float]] = []
+            # (pk, taxonomy_path, depth, confidence) — the confidence may be
+            # None: the descent registers whatever confirm_fallacy measured,
+            # and an unmeasured confirmation is still a confirmation (#3029).
+            # check_superseded reads only depth/path, never this number.
+            self._confirmed: List[Tuple[str, str, int, Optional[float]]] = []
             self.superseded_count = 0
             # RA-3 #1048 item 2: shared budget bounding recursive sub-branch
             # fan-out across ALL branches of one analysis. Mirrors the agentic
@@ -172,7 +177,7 @@ class FallacyWorkflowPlugin:
             self.descent_calls_made = 0
             self.descent_budget_exceeded = False
 
-        def register(self, pk: str, depth: int, confidence: float) -> None:
+        def register(self, pk: str, depth: int, confidence: Optional[float]) -> None:
             """Register a confirmed fallacy."""
             node = self._navigator.get_node(pk)
             path = node.get("path", "") if node else ""
@@ -987,19 +992,23 @@ class FallacyWorkflowPlugin:
                             )
                             return None
                         leaf_depth = int(current_node.get("depth", 0))
-                        # Register leaf confirmation for supersession (RA-3 #1048)
+                        # Register leaf confirmation for supersession (RA-3 #1048).
+                        # #3029 — no fabricated 0.7: confirm_fallacy's result
+                        # always carries the measured (or #2746-named-default)
+                        # confidence, and if that contract ever breaks the
+                        # honest value is None, not an invented number.
                         if supersession_tracker is not None:
                             supersession_tracker.register(
                                 current_pk,
                                 leaf_depth,
-                                lr.get("confidence", 0.7),
+                                lr.get("confidence"),
                             )
                         return IdentifiedFallacy(
                             fallacy_type=lr.get("name", lr.get("name_fr", leaf_name)),
                             taxonomy_pk=current_pk,
                             taxonomy_path=current_node.get("path", ""),
                             explanation=lr.get("justification", ""),
-                            confidence=lr.get("confidence", 0.7),
+                            confidence=lr.get("confidence"),
                             navigation_trace=navigation_trace,
                             family=current_node.get("Famille", ""),
                             depth=leaf_depth,
@@ -1233,12 +1242,13 @@ class FallacyWorkflowPlugin:
                         f" | Reasoning path: {'; '.join(reasoning_history)}"
                     )
 
-                # Register confirmation for branch supersession (RA-3 #1048)
+                # Register confirmation for branch supersession (RA-3 #1048).
+                # #3029 — no fabricated 0.7 (same rule as the leaf site above).
                 if supersession_tracker is not None:
                     supersession_tracker.register(
                         confirmed_pk,
                         confirmed_depth,
-                        confirm_result.get("confidence", 0.7),
+                        confirm_result.get("confidence"),
                     )
 
                 return IdentifiedFallacy(
@@ -1249,7 +1259,7 @@ class FallacyWorkflowPlugin:
                     taxonomy_pk=confirmed_pk,
                     taxonomy_path=confirm_result.get("path", ""),
                     explanation=full_explanation,
-                    confidence=confirm_result.get("confidence", 0.7),
+                    confidence=confirm_result.get("confidence"),
                     navigation_trace=navigation_trace,
                     family=current_node.get("Famille", ""),
                     depth=confirmed_depth,
@@ -1496,9 +1506,13 @@ class FallacyWorkflowPlugin:
                 if isinstance(result, IdentifiedFallacy):
                     total_iterations += len(result.navigation_trace)
                     leaf_pk = result.fallacy_type
-                    if (
-                        leaf_pk in seen_pks
-                        and seen_pks[leaf_pk].confidence >= result.confidence
+                    # #3029 — the leaf dedup compared confidences with >=,
+                    # which crashes now that a confidence can be None (a
+                    # reply that measured nothing). Same rule as the
+                    # pipeline merges: measured outranks unmeasured, ties
+                    # keep the incumbent (confidence_outranks).
+                    if leaf_pk in seen_pks and not confidence_outranks(
+                        result.confidence, seen_pks[leaf_pk].confidence
                     ):
                         continue
                     seen_pks[leaf_pk] = result
@@ -1510,9 +1524,8 @@ class FallacyWorkflowPlugin:
             for result in fanout_sink:
                 total_iterations += len(result.navigation_trace)
                 leaf_pk = result.fallacy_type
-                if (
-                    leaf_pk in seen_pks
-                    and seen_pks[leaf_pk].confidence >= result.confidence
+                if leaf_pk in seen_pks and not confidence_outranks(
+                    result.confidence, seen_pks[leaf_pk].confidence
                 ):
                     continue
                 seen_pks[leaf_pk] = result
@@ -1799,11 +1812,21 @@ class FallacyWorkflowPlugin:
                     parsed = json.loads(text_to_parse[start:end])
                     fallacy_name = parsed.get("fallacy_name", "")
                     if fallacy_name:
+                        # #3029 — the reply's confidence is a FIELD, not a
+                        # given: absent or non-numeric (a word, a bool) means
+                        # "not measured", stored as None. The old
+                        # ``float(parsed.get("confidence", 0.5))`` fabricated
+                        # 0.5 on absence and DROPPED the whole detection on
+                        # garbage (ValueError swallowed below) — both halves
+                        # were wrong: the detection is kept, the number is
+                        # honest. Same rule as every other lane
+                        # (``fallacy_measured_fields``).
+                        confidence, _quote = fallacy_measured_fields(parsed)
                         fallacy = IdentifiedFallacy(
                             fallacy_type=fallacy_name,
                             taxonomy_pk=parsed.get("taxonomy_pk", ""),
                             explanation=parsed.get("explanation", ""),
-                            confidence=float(parsed.get("confidence", 0.5)),
+                            confidence=confidence,
                             navigation_trace=[],
                         )
                         result = FallacyAnalysisResult(

@@ -10,6 +10,7 @@ Split from unified_pipeline.py (#310).
 import logging
 from typing import Dict, Any, List, Optional, Tuple
 
+from argumentation_analysis.plugins.identification_models import fallacy_measured_fields
 from argumentation_analysis.services.argument_ids import ARG_ID_RE
 
 logger = logging.getLogger("UnifiedPipeline")
@@ -902,48 +903,28 @@ def _write_camembert_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> N
     for fallacy_type, info in detected.items():
         if not isinstance(info, dict):
             continue
-        raw_confidence = info.get("confidence", 0.5)
-        if isinstance(raw_confidence, bool) or not isinstance(
-            raw_confidence, (int, float)
-        ):
-            # The producer's own emission default — garbage from the LLM is
-            # not a measurement, and a bool is not a confidence (#3015).
-            raw_confidence = 0.5
+        # #3029 — same rule as every other lane: ``fallacy_measured_fields``.
+        # Garbage from the LLM is not a measurement, and a bool is not a
+        # confidence (#3015); the writer no longer fabricates 0.5, it stores
+        # None so the render says « non mesurée ».
+        confidence, _quote = fallacy_measured_fields(info)
         state.add_neural_fallacy_score(
             # One-shot detection runs on the whole text: the producer names
             # no segment, and an invented one would be corpus-shaped matter
             # the sanitizer then has to drop anyway (#1019).
             text_segment="",
             label=str(fallacy_type),
-            confidence=float(raw_confidence),
+            confidence=confidence,
             detector=str(info.get("source", "self_hosted_llm")),
         )
 
 
-def fallacy_measured_fields(
-    fallacy: Dict[str, Any],
-) -> Tuple[Optional[float], Optional[str]]:
-    """Extract the measured (confidence, problematic_quote) pair from a detection.
-
-    One rule for both lanes (#3011 rework, R1083): the pipeline writer
-    (``_write_hierarchical_fallacy_to_state``) and the conversational lane's
-    parent-harness loop both call this helper — no second copy of the
-    extraction, so the lanes cannot disagree on which detections are
-    filterable downstream.
-
-    - a numeric confidence stores ``float(raw)``; anything else (absent,
-      string, bool) stores ``None`` — an unmeasured confidence is not 0.0
-      (#1019), and a boolean flag is not a measurement (#3015: ``True`` is
-      not 1.0);
-    - the quote returns ``None`` when absent or empty (``add_fallacy`` drops
-      an empty one, shared_state.py:384), so one rule covers both lanes.
-    """
-    raw_confidence = fallacy.get("confidence")
-    if isinstance(raw_confidence, bool) or not isinstance(raw_confidence, (int, float)):
-        confidence = None
-    else:
-        confidence = float(raw_confidence)
-    return confidence, fallacy.get("problematic_quote") or None
+# ``fallacy_measured_fields`` is imported at the top from its canonical home
+# (``plugins.identification_models``, #3029 — the plugin layer cannot import
+# orchestration, so the rule lives one layer down where both can reach it).
+# The name stays re-exported here: the conversational lane imports it from
+# this module (conversational_orchestrator.py), and one import site moving
+# must not break the other.
 
 
 def _write_hierarchical_fallacy_to_state(

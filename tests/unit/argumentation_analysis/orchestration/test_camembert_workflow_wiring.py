@@ -176,6 +176,46 @@ class TestCamemBERTStateWriter:
         _write_camembert_to_state({"detected_fallacies": {}}, state, {})
         assert len(state.neural_fallacy_scores) == 0
 
+    def test_write_camembert_unmeasured_confidence_is_none(self):
+        """#3029 — the writer goes through ``fallacy_measured_fields``: a
+        detection whose confidence was never measured (absent, or garbage the
+        model emitted instead of a number) stores ``None``, not a fabricated
+        0.5. None and 0.0 stay distinct (#1019 family)."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_camembert_to_state,
+        )
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
+        state = UnifiedAnalysisState("test text")
+        _write_camembert_to_state(
+            {
+                "detected_fallacies": {
+                    "Absent": {
+                        "source": "self_hosted_llm",
+                        "description": "model gave no confidence",
+                    },
+                    "Garbage": {
+                        "source": "self_hosted_llm",
+                        "confidence": "beaucoup",
+                        "description": "model gave a word",
+                    },
+                    "Flag": {
+                        "source": "self_hosted_llm",
+                        "confidence": True,
+                        "description": "model gave a boolean",
+                    },
+                }
+            },
+            state,
+            {},
+        )
+        assert len(state.neural_fallacy_scores) == 3
+        for entry in state.neural_fallacy_scores:
+            assert entry["confidence"] is None, (
+                f"#3029: {entry['label']!r} must store None — an unmeasured "
+                "confidence is not a number"
+            )
+
 
 class TestConversationalModeCamemBERT:
     """Verify CamemBERT available in conversational mode via FrenchFallacyPlugin."""

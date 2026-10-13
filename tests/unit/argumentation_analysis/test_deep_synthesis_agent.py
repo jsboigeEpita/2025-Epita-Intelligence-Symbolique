@@ -313,6 +313,30 @@ class TestSectionBuilders:
         md_with = DeepSynthesisAgent.render_markdown(report_with)
         assert md_with != md_without
 
+    def test_s3_unmeasured_neural_confidence_says_unmeasured(self, state):
+        """#3029 (b) — a neural detection whose confidence was never measured
+        renders as « non mesurée » in the conclusion, never as a fabricated
+        0.50 (the plugin path used to fill 0.5/0.7 the moment the model gave
+        none, so the value printed as a measurement)."""
+        state.neural_fallacy_scores.append(
+            {
+                "id": "nf_1",
+                "text_segment": "",
+                "label": "Appel à la pitié",
+                "confidence": None,
+                "detector": "self_hosted_llm",
+            }
+        )
+        report = _build_report_from_state(state)
+        md = DeepSynthesisAgent.render_markdown(report)
+        assert "non mesurée" in md, (
+            "#3029: the conclusion must name the unmeasured confidence, "
+            "not print a number"
+        )
+        assert (
+            "0.50" not in md and "0.00" not in md
+        ), "#3029: a fabricated confidence must not appear as a measurement"
+
     def test_s4_formal_findings(self, state):
         findings = DeepSynthesisAgent._build_formal_findings(state)
         assert len(findings) >= 1
