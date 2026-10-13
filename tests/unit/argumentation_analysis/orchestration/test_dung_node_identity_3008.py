@@ -98,6 +98,8 @@ class _RecordingState(SimpleNamespace):
         extensions: Optional[Dict[str, Any]] = None,
         argument_labels: Optional[Dict[str, str]] = None,
         argument_ids_absent_reason: Optional[str] = None,
+        population_total: Optional[int] = None,
+        dropped_unresolved: Optional[int] = None,
     ) -> str:
         df_id = f"dung_{len(self.dung_frameworks) + 1}"
         entry: Dict[str, Any] = {
@@ -110,6 +112,12 @@ class _RecordingState(SimpleNamespace):
             entry["argument_labels"] = argument_labels
         if argument_ids_absent_reason is not None:
             entry["argument_ids_absent_reason"] = argument_ids_absent_reason
+        # #3014 item 2: the identity counters ride the entry when set —
+        # mirrors the real ``UnifiedAnalysisState`` sink.
+        if population_total is not None:
+            entry["population_total"] = population_total
+        if dropped_unresolved is not None:
+            entry["dropped_unresolved"] = dropped_unresolved
         self.dung_frameworks[df_id] = entry
         return df_id
 
