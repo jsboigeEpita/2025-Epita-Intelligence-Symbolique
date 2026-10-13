@@ -406,7 +406,10 @@ class TestIdentifiedFallacyModel:
             explanation="Attacks the person",
         )
         assert f.fallacy_type == "Ad Hominem"
-        assert f.confidence == 0.0
+        # #3029 — a detection whose confidence was never measured defaults
+        # to None, not 0.0 (the schema half of the fix; None and 0.0 stay
+        # distinct, #1019 family).
+        assert f.confidence is None
         assert f.navigation_trace == []
 
     def test_with_all_fields(self):

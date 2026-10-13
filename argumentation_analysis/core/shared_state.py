@@ -1419,10 +1419,16 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self,
         text_segment: str,
         label: str,
-        confidence: float,
+        confidence: Optional[float] = None,
         detector: str = "camembert",
     ) -> str:
-        """Add a neural fallacy detection score."""
+        """Add a neural fallacy detection score.
+
+        #3029 — ``confidence`` is Optional: ``None`` means the model's reply
+        carried no usable number (``fallacy_measured_fields``), and the
+        detection is kept with an honest None — same doctrine as
+        ``add_fallacy`` (None and 0.0 stay distinct, #1019 family).
+        """
         nf_id = self._generate_id("nf", self.neural_fallacy_scores)
         entry = {
             "id": nf_id,
@@ -1432,8 +1438,11 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "detector": detector,
         }
         self.neural_fallacy_scores.append(entry)
+        confidence_repr = (
+            f"{confidence:.2f}" if confidence is not None else "non mesurée"
+        )
         state_logger.info(
-            f"Neural fallacy score added: {nf_id} ({label}: {confidence:.2f})"
+            f"Neural fallacy score added: {nf_id} ({label}: {confidence_repr})"
         )
         return nf_id
 
