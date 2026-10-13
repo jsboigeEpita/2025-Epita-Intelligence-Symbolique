@@ -74,6 +74,18 @@ def _expected_selection_texts(state: UnifiedAnalysisState, budget: int) -> list:
     return [u.text for u in selection.selected]
 
 
+def _expected_selection_ids(state: UnifiedAnalysisState, budget: int) -> list:
+    from argumentation_analysis.orchestration.selection import (
+        merged_population_units,
+        select_for_budget,
+        state_text_length,
+    )
+
+    units = merged_population_units(state)
+    selection = select_for_budget(units, budget, text_length=state_text_length(state))
+    return [u.unit_id for u in selection.selected]
+
+
 def _capturing_translator(captured: list):
     """Patch NLToLogicTranslator.translate_batch to record the texts it got.
 
@@ -84,6 +96,30 @@ def _capturing_translator(captured: list):
     async def _capture(self, texts, logic_type=None, check_consistency=False):
         captured.extend(texts)
         return SimpleNamespace(translations=[])
+
+    return _capture
+
+
+def _succeeding_translator(captured: list, n_valid: int = 3):
+    """#3030 residual (coord review R1088) — a translator whose fallback
+    SUCCEEDS: it returns ``n_valid`` valid translations of the texts sent.
+    The run then stops at the fallback arm (the PL template only fires on
+    empty), so the coverage record must describe the units the fallback
+    ATTEMPTED — the 4-unit head — not the 10-unit selection Pass 2 failed
+    to translate.
+    """
+
+    async def _capture(self, texts, logic_type=None, check_consistency=False):
+        captured.extend(texts)
+        translations = [
+            SimpleNamespace(
+                is_valid=True,
+                formula=f"p_sel_{i} => q_sel_{i}",
+                original_text=t,
+            )
+            for i, t in enumerate(texts[:n_valid])
+        ]
+        return SimpleNamespace(translations=translations)
 
     return _capture
 
@@ -283,3 +319,93 @@ class TestNLToLogicIsUnaffected:
         # behaviour of merged_population_units) — and 6 ≤ 6 units means the
         # identity selection, so the window texts pass through in order.
         assert captured == _WINDOW
+
+
+class TestFallbackSuccessReRecordsAttempted:
+    """#3030 residual (coord review R1088) — Pass 2 yields nothing AND the
+    NL fallback SUCCEEDS: the record written at the Pass 2 gate says k=10,
+    but at most 4 units were attempted. When the fallback is the producing
+    arm it must re-record the coverage over the units it ATTEMPTED (the
+    4-unit head), bands and span recomputed — not only the validly
+    translated ones, like Pass 2 counts its batches."""
+
+    def _run_pl(self, state, ctx):
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_propositional_logic,
+        )
+
+        pass1 = _mock_response({"propositions": ["unit_present", "corpus_anchor"]})
+        no_formula = _mock_response({"formulas": []})
+        client = AsyncMock()
+        client.chat.completions.create = AsyncMock(
+            side_effect=[pass1] + [no_formula] * 8
+        )
+        captured: list = []
+        with patch("openai.AsyncOpenAI", return_value=client), patch.dict(
+            "os.environ", {"OPENAI_API_KEY": "test-key"}
+        ), patch(
+            "argumentation_analysis.services.nl_to_logic.NLToLogicTranslator.translate_batch",
+            _succeeding_translator(captured, n_valid=3),
+        ):
+            result = asyncio.get_event_loop().run_until_complete(
+                _invoke_propositional_logic(state.raw_text, ctx)
+            )
+        return result, captured
+
+    def _run_fol(self, state, ctx):
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_fol_reasoning,
+        )
+
+        pass1 = _mock_response(
+            {"sorts": {"Person": ["socrates"]}, "predicates": {"Mortal": ["Person"]}}
+        )
+        no_formula = _mock_response({"formulas": []})
+        client = AsyncMock()
+        client.chat.completions.create = AsyncMock(
+            side_effect=[pass1] + [no_formula] * 8
+        )
+        captured: list = []
+        with patch("openai.AsyncOpenAI", return_value=client), patch.dict(
+            "os.environ", {"OPENAI_API_KEY": "test-key"}
+        ), patch(
+            "argumentation_analysis.services.nl_to_logic.NLToLogicTranslator.translate_batch",
+            _succeeding_translator(captured, n_valid=3),
+        ):
+            result = asyncio.get_event_loop().run_until_complete(
+                _invoke_fol_reasoning(state.raw_text, ctx)
+            )
+        return result, captured
+
+    def test_pl_record_names_the_attempted_head_when_fallback_produces(self):
+        state = _populated_state()
+        expected_texts = _expected_selection_texts(state, 10)
+        expected_ids = _expected_selection_ids(state, 10)
+        result, captured = self._run_pl(state, _context(state))
+
+        # The fallback fired on the selection's head and produced.
+        assert captured == expected_texts[:4]
+        assert result["pl_metrics"]["fallback_nl"] == 3
+        assert len(result["formulas"]) == 3
+        # The record now names the units ATTEMPTED by the producing arm —
+        # 4, not 10 — with the same population denominator and the same
+        # text-band geometry.
+        record = state.analysis_coverage["propositional_logic"]
+        assert record["k"] == 4
+        assert record["N"] == 12
+        assert record["unit_ids"] == expected_ids[:4]
+        assert record["bands_total"] == 3
+
+    def test_fol_record_names_the_attempted_head_when_fallback_produces(self):
+        state = _populated_state()
+        expected_texts = _expected_selection_texts(state, 10)
+        expected_ids = _expected_selection_ids(state, 10)
+        result, captured = self._run_fol(state, _context(state))
+
+        assert captured == expected_texts[:4]
+        assert len(result["formulas"]) == 3
+        record = state.analysis_coverage["fol_reasoning"]
+        assert record["k"] == 4
+        assert record["N"] == 12
+        assert record["unit_ids"] == expected_ids[:4]
+        assert record["bands_total"] == 3

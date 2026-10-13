@@ -686,7 +686,11 @@ REGISTRY = {
     ),
     # #3030 — the NL-fallback head slices: the base moved from the raw
     # extraction window (args) to the recorded selection (_pl_targets /
-    # _fol_targets); the cap and the contract are unchanged.
+    # _fol_targets); the cap and the contract are unchanged. #3030 residual
+    # (coord review R1088): when the fallback PRODUCES, the coverage record
+    # is re-recorded over these 4 attempted units — the rest is NOT picked
+    # up by the PL template in that case (it only fires on an empty
+    # fallback), so the remainder stays unanalysed on both axes.
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
         "_pl_targets",
@@ -694,7 +698,7 @@ REGISTRY = {
         1,
     ): (
         "population_cap",
-        "first 4 in text order of the RECORDED selection; rest left to the template arm (whole selection)",
+        "first 4 in text order of the recorded selection; on fallback success the record re-names these 4 (attempted) and the rest is unanalysed; on fallback failure the template arm takes the whole selection",
         "silent — debt #2850",
     ),
     (
@@ -704,7 +708,7 @@ REGISTRY = {
         1,
     ): (
         "population_cap",
-        "first 4 in text order of the RECORDED selection; rest unanalysed (FOL has no template arm)",
+        "first 4 in text order of the recorded selection; on fallback success the record re-names these 4 (attempted) and the rest is unanalysed; FOL has no template arm",
         "silent — debt #2850",
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "arguments", "4", 1): (

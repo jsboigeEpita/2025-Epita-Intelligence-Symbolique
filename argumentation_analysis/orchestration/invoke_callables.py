@@ -8718,6 +8718,39 @@ async def _invoke_propositional_logic(
                             t.formula[:30]: t.original_text[:60] for t in valid
                         }
                         pl_metrics["fallback_nl"] = len(valid)
+                        # #3030 residual (coord review R1088): when THIS arm
+                        # is the producer, the record written at the Pass 2
+                        # gate over-claims (k=10 attempted by Pass 2's empty
+                        # batches, ≤4 attempted here). Re-record over the
+                        # units this arm ATTEMPTED — the 4-unit head — bands
+                        # and span recomputed by the selector's identity
+                        # pass over the subset; n_total stays the population
+                        # (record_analysis_coverage overwrites by design).
+                        # Attempted, not validly translated: same counting
+                        # rule as Pass 2's batches.
+                        _pl_attempted = _pl_selection.selected[:4]
+                        _pl_attempted_sel = select_for_budget(
+                            list(_pl_attempted),
+                            len(_pl_attempted),
+                            text_length=state_text_length(state_obj),
+                        )
+                        if state_obj is not None and hasattr(
+                            state_obj, "record_analysis_coverage"
+                        ):
+                            state_obj.record_analysis_coverage(
+                                "propositional_logic",
+                                _pl_attempted_sel.k,
+                                _pl_selection.n_total,
+                                _pl_attempted_sel.bands_covered,
+                                _pl_attempted_sel.bands_total,
+                                span=_pl_attempted_sel.span,
+                                largest_uncovered_stretch=(
+                                    _pl_attempted_sel.largest_uncovered_stretch
+                                ),
+                                unit_ids=[
+                                    u.unit_id for u in _pl_attempted_sel.selected
+                                ],
+                            )
                         logger.info(
                             f"NL-to-logic translated {len(valid)}/{len(_pl_targets)} "
                             f"arguments to PL"
@@ -9224,6 +9257,34 @@ async def _invoke_fol_reasoning(
                                 f = f.strip()
                                 if f:
                                     formulas.append(f)
+                        # #3030 residual (coord review R1088): mirror of the
+                        # PL gesture — when this arm produces, re-record the
+                        # coverage over the units it ATTEMPTED (the 4-unit
+                        # head), bands and span recomputed; n_total stays the
+                        # population. Attempted, not validly translated.
+                        _fol_attempted = _fol_selection.selected[:4]
+                        _fol_attempted_sel = select_for_budget(
+                            list(_fol_attempted),
+                            len(_fol_attempted),
+                            text_length=state_text_length(state_obj),
+                        )
+                        if state_obj is not None and hasattr(
+                            state_obj, "record_analysis_coverage"
+                        ):
+                            state_obj.record_analysis_coverage(
+                                "fol_reasoning",
+                                _fol_attempted_sel.k,
+                                _fol_selection.n_total,
+                                _fol_attempted_sel.bands_covered,
+                                _fol_attempted_sel.bands_total,
+                                span=_fol_attempted_sel.span,
+                                largest_uncovered_stretch=(
+                                    _fol_attempted_sel.largest_uncovered_stretch
+                                ),
+                                unit_ids=[
+                                    u.unit_id for u in _fol_attempted_sel.selected
+                                ],
+                            )
                         logger.info(
                             f"NL-to-logic translated {len(valid)}/{len(_fol_targets)} "
                             f"arguments to FOL"
