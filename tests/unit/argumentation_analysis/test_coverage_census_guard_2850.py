@@ -684,14 +684,27 @@ REGISTRY = {
         "argument excerpt inside the LLM quality-enrichment prompt",
         "silent — debt #2850",
     ),
-    ("argumentation_analysis/orchestration/invoke_callables.py", "args", "4", 1): (
+    # #3030 — the NL-fallback head slices: the base moved from the raw
+    # extraction window (args) to the recorded selection (_pl_targets /
+    # _fol_targets); the cap and the contract are unchanged.
+    (
+        "argumentation_analysis/orchestration/invoke_callables.py",
+        "_pl_targets",
+        "4",
+        1,
+    ): (
         "population_cap",
-        "first 4 in insertion order; rest unanalysed",
+        "first 4 in text order of the RECORDED selection; rest left to the template arm (whole selection)",
         "silent — debt #2850",
     ),
-    ("argumentation_analysis/orchestration/invoke_callables.py", "args", "4", 2): (
+    (
+        "argumentation_analysis/orchestration/invoke_callables.py",
+        "_fol_targets",
+        "4",
+        1,
+    ): (
         "population_cap",
-        "first 4 in insertion order; rest unanalysed",
+        "first 4 in text order of the RECORDED selection; rest unanalysed (FOL has no template arm)",
         "silent — debt #2850",
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "arguments", "4", 1): (
