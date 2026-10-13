@@ -234,6 +234,137 @@ class TestInvokeCamemBERTFallacy:
         assert "qwen3.5-35b-a3b" in reason
         assert "localhost:5000" in reason
 
+    async def test_plugin_detection_reaches_the_state(self):
+        """#2130 born-red witness (a): one fake-plugin detection ⇒ one
+        ``neural_fallacy_scores`` entry in the state, through the REAL
+        invoker and the REAL writer.
+
+        The R1070 measure: the invoker emits ``detected_fallacies`` (a dict)
+        while the writer read ``detections`` (a list no producer emits) — so
+        even with a valid key and a responding service, nothing reached the
+        state. On main ``314c04555`` this chain writes 0 entries.
+        """
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_camembert_fallacy,
+            _write_camembert_to_state,
+        )
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
+        mock_plugin = MagicMock()
+        mock_plugin.run_guided_analysis = AsyncMock(
+            return_value=json.dumps(
+                {
+                    "fallacies": [
+                        {
+                            "fallacy_type": "Ad Hominem",
+                            "confidence": 0.92,
+                            "explanation": "Attack on person",
+                            "taxonomy_pk": "1.1",
+                        }
+                    ],
+                    "exploration_method": "self_hosted",
+                }
+            )
+        )
+
+        env = {
+            "SELF_HOSTED_LLM_ENDPOINT": "http://localhost:5000/v1",
+            "SELF_HOSTED_LLM_MODEL": "test-model",
+        }
+
+        with _patch_invokecallables_env_get(env), patch("openai.AsyncOpenAI"), patch(
+            "semantic_kernel.kernel.Kernel", autospec=True
+        ), patch("semantic_kernel.connectors.ai.open_ai.OpenAIChatCompletion"):
+            with patch.dict(
+                "sys.modules",
+                {
+                    "openai": MagicMock(AsyncOpenAI=MagicMock()),
+                    "semantic_kernel.kernel": MagicMock(Kernel=create_autospec(Kernel)),
+                    "semantic_kernel.connectors.ai.open_ai": MagicMock(
+                        OpenAIChatCompletion=MagicMock()
+                    ),
+                    "argumentation_analysis.plugins.fallacy_workflow_plugin": MagicMock(
+                        FallacyWorkflowPlugin=MagicMock(return_value=mock_plugin)
+                    ),
+                },
+            ):
+                result = await _invoke_camembert_fallacy("Argument ad hominem.", {})
+
+        state = UnifiedAnalysisState("test text")
+        _write_camembert_to_state(result, state, {})
+
+        assert len(state.neural_fallacy_scores) == 1, (
+            "the producer's detection must reach the state — a writer reading "
+            "a key the producer never emits writes nothing (#2130)"
+        )
+        entry = state.neural_fallacy_scores[0]
+        assert entry["label"] == "Ad Hominem"
+        assert entry["confidence"] == 0.92
+        assert entry["detector"] == "self_hosted_llm"
+
+    async def test_plugin_error_is_the_degradation_reason(self):
+        """#2130 born-red witness (b): a plugin that RETURNS an error (no
+        exception — one-shot failed with 401, the shape measured on the
+        R1070 paid run) makes the phase output name THAT error as the
+        degradation reason, not the taxonomy bypass marker that also rode
+        along.
+
+        On main, the invoker drops ``error`` entirely and publishes only
+        ``wide-net funnel bypassed (empty_taxonomy_navigator, …)`` — the run
+        log says 401, the state says taxonomy.
+        """
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_camembert_fallacy,
+        )
+
+        # The real-run double marker (R1070): taxonomy absent (bypass) AND
+        # the one-shot itself failed with the 401.
+        mock_plugin = MagicMock()
+        mock_plugin.run_guided_analysis = AsyncMock(
+            return_value=json.dumps(
+                {
+                    "error": "Error code: 401 - {'error': 'Unauthorized'}",
+                    "fallacies": [],
+                    "fallback_reason": "empty_taxonomy_navigator",
+                    "taxonomy_state": "none",
+                }
+            )
+        )
+
+        env = {
+            "SELF_HOSTED_LLM_ENDPOINT": "http://localhost:5000/v1",
+            "SELF_HOSTED_LLM_MODEL": "test-model",
+        }
+
+        with _patch_invokecallables_env_get(env), patch("openai.AsyncOpenAI"), patch(
+            "semantic_kernel.kernel.Kernel", autospec=True
+        ), patch("semantic_kernel.connectors.ai.open_ai.OpenAIChatCompletion"):
+            with patch.dict(
+                "sys.modules",
+                {
+                    "openai": MagicMock(AsyncOpenAI=MagicMock()),
+                    "semantic_kernel.kernel": MagicMock(Kernel=create_autospec(Kernel)),
+                    "semantic_kernel.connectors.ai.open_ai": MagicMock(
+                        OpenAIChatCompletion=MagicMock()
+                    ),
+                    "argumentation_analysis.plugins.fallacy_workflow_plugin": MagicMock(
+                        FallacyWorkflowPlugin=MagicMock(return_value=mock_plugin)
+                    ),
+                },
+            ):
+                result = await _invoke_camembert_fallacy("Argument ad hominem.", {})
+
+        assert result["degraded"] is True
+        reason = result["degradation_reason"]
+        # The reason names the error the plugin carried — the 401 the run
+        # log shows — not the taxonomy marker that also rode along.
+        assert (
+            "401" in reason
+        ), f"the plugin's error must be the degradation reason, got {reason!r}"
+        assert "Unauthorized" in reason
+        # The carried error is part of the phase output, not swallowed.
+        assert "401" in result.get("error", "")
+
 
 class TestCamemBERTRegistryRegistration:
     """Tests for neural_fallacy_detection registration in setup_registry."""

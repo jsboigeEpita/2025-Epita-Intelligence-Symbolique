@@ -230,14 +230,18 @@ MOCK_GOVERNANCE_OUTPUT = {
 }
 
 MOCK_CAMEMBERT_OUTPUT = {
-    # _write_camembert_to_state reads "detections" (list of {text, label, confidence})
-    "detections": [
-        {
-            "text": "Pensez à vos enfants",
-            "label": "Appel à l'émotion",
+    # _write_camembert_to_state reads "detected_fallacies" — the dict the
+    # producer (_invoke_camembert_fallacy) actually emits, keyed by fallacy
+    # type (#2130: the old "detections" list was a shape no producer ever
+    # emitted, so the golden mock fed a fiction the writer could not read).
+    "detected_fallacies": {
+        "Appel à l'émotion": {
+            "source": "self_hosted_llm",
             "confidence": 0.78,
+            "description": "Émotion plutôt qu'argument",
+            "taxonomy_pk": "3.1",
         },
-    ],
+    },
 }
 
 

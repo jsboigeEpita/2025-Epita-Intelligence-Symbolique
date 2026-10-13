@@ -867,19 +867,38 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
 
 
 def _write_camembert_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
-    """Write CamemBERT neural fallacy results to UnifiedAnalysisState."""
+    """Write self-hosted neural fallacy results to UnifiedAnalysisState.
+
+    #2130 (R1070 measure): the producer — ``_invoke_camembert_fallacy`` —
+    emits ``detected_fallacies``, a dict keyed by fallacy type whose values
+    carry ``source``/``confidence``/``description``. This writer used to read
+    ``detections``, a list no producer ever emitted, so even a working
+    service with a valid key wrote nothing to the state. One shape, read
+    once: the producer's, with no try-both-keys fallback.
+    """
     if not output or not isinstance(output, dict):
         return
-    detections = output.get("detections", [])
-    if not isinstance(detections, list):
+    detected = output.get("detected_fallacies")
+    if not isinstance(detected, dict):
         return
-    for det in detections:
-        if not isinstance(det, dict):
+    for fallacy_type, info in detected.items():
+        if not isinstance(info, dict):
             continue
+        raw_confidence = info.get("confidence", 0.5)
+        if isinstance(raw_confidence, bool) or not isinstance(
+            raw_confidence, (int, float)
+        ):
+            # The producer's own emission default — garbage from the LLM is
+            # not a measurement, and a bool is not a confidence (#3015).
+            raw_confidence = 0.5
         state.add_neural_fallacy_score(
-            text_segment=str(det.get("text", "")),
-            label=str(det.get("label", "unknown")),
-            confidence=float(det.get("confidence", 0.0)),
+            # One-shot detection runs on the whole text: the producer names
+            # no segment, and an invented one would be corpus-shaped matter
+            # the sanitizer then has to drop anyway (#1019).
+            text_segment="",
+            label=str(fallacy_type),
+            confidence=float(raw_confidence),
+            detector=str(info.get("source", "self_hosted_llm")),
         )
 
 

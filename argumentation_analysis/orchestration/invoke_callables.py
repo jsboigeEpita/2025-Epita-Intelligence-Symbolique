@@ -3801,6 +3801,15 @@ async def _invoke_camembert_fallacy(
                     "taxonomy_pk": f.get("taxonomy_pk", ""),
                 }
 
+        # #2130 (R1070 measure): a plugin that FAILS without raising returns
+        # {"error": ..., "fallacies": []} — on the measured paid run (401 on
+        # every call) the invoker dropped that error and published only the
+        # taxonomy bypass marker as the degradation reason, so the run log
+        # said 401 while the state said taxonomy. The error is the real
+        # reason the phase produced nothing; it outranks the bypass marker
+        # and is carried verbatim into the phase output.
+        plugin_error = result.get("error")
+
         _ret = {
             "detected_fallacies": detected,
             "arguments": {},
@@ -3825,6 +3834,15 @@ async def _invoke_camembert_fallacy(
                 f"taxonomy_state={result.get('taxonomy_state', 'unknown')})"
             )
             _ret["taxonomy_state"] = result.get("taxonomy_state", "unknown")
+        if plugin_error:
+            # #2130: overrides the bypass marker above — the analysis did not
+            # merely degrade its funnel, it produced nothing (measured: the
+            # one-shot failed with 401 while the marker also rode along).
+            _ret["degraded"] = True
+            _ret["degradation_reason"] = (
+                f"self-hosted LLM fallacy analysis failed: {plugin_error}"
+            )
+            _ret["error"] = plugin_error
         if _strat_ids_cam:
             _ret["strategic_objective_ids"] = _strat_ids_cam
         return _ret
