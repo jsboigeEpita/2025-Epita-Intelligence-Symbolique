@@ -8417,6 +8417,23 @@ async def _invoke_propositional_logic(
     # Retrieve state object for atomic_propositions storage
     state_obj = context.get("_state_object")
 
+    # #3030 — ONE selection for every arm. The Pass 2 gate used to compute
+    # the stratified selection (from the merged state population) while the
+    # degraded arms below (NL fallback, template) formalised the EXTRACTION
+    # WINDOW — a run whose Pass 2 yields no formula recorded a coverage it
+    # never translated. The selection is computed once, before the arms, so
+    # Pass 2 batches, the NL fallback and the template all read the same
+    # ``_pl_targets`` the coverage record names. Cheap by construction:
+    # state reads + a deterministic pick, no LLM. Stateless fallback: the
+    # args chain minted as units (stable head, stated).
+    _pl_units = merged_population_units(state_obj) or [
+        SelectableUnit(unit_id=f"arg_{i + 1}", text=str(a)) for i, a in enumerate(args)
+    ]
+    _pl_selection = select_for_budget(
+        _pl_units, 10, text_length=state_text_length(state_obj)
+    )
+    _pl_targets = [u.text for u in _pl_selection.selected]
+
     # Track formula pipeline metrics (#655 Track MM)
     pl_metrics: Dict[str, int] = {
         "upstream_nl": 0,
@@ -8529,29 +8546,26 @@ async def _invoke_propositional_logic(
                             state_obj.atomic_propositions[source_id] = shared_atoms
 
                     # ── Pass 2: Parallel batched formula generation (#729 Track XX) ──
-                    if shared_atoms and args:
+                    # #3030 — the gate reads the population, not the window:
+                    # `_extract_arguments_from_context` is non-empty on every
+                    # branch except the degenerate `scores: {}` dict (measured
+                    # in test_logic_arms_share_selection_3030), so the old
+                    # `and args` half only guarded that one path — which the
+                    # emptiness of `_pl_targets` subsumes (no population AND
+                    # no window = nothing to formalise).
+                    if shared_atoms and _pl_targets:
                         atoms_json = _json.dumps(
                             {"propositions": shared_atoms}, indent=2
                         )
                         _pl_batch_size = 3
                         # #2850 slice A — the target budget (10, unchanged)
-                        # now selects STRATIFIED units from the merged
-                        # population instead of taking the first 10: the
-                        # tail of a long document gets its formulas too.
-                        # Stateless fallback: the args chain minted as units.
-                        _pl_state = context.get("_state_object")
-                        _pl_units = merged_population_units(_pl_state) or [
-                            SelectableUnit(unit_id=f"arg_{i+1}", text=str(a))
-                            for i, a in enumerate(args)
-                        ]
-                        _pl_selection = select_for_budget(
-                            _pl_units, 10, text_length=state_text_length(_pl_state)
-                        )
-                        _pl_targets = [u.text for u in _pl_selection.selected]
-                        if _pl_state is not None and hasattr(
-                            _pl_state, "record_analysis_coverage"
+                        # selects STRATIFIED units from the merged population
+                        # (computed once above, #3030: every arm reads it) —
+                        # the tail of a long document gets its formulas too.
+                        if state_obj is not None and hasattr(
+                            state_obj, "record_analysis_coverage"
                         ):
-                            _pl_state.record_analysis_coverage(
+                            state_obj.record_analysis_coverage(
                                 "propositional_logic",
                                 _pl_selection.k,
                                 _pl_selection.n_total,
@@ -8691,7 +8705,11 @@ async def _invoke_propositional_logic(
                         max_retries=2, logic_type="propositional"
                     )
                     batch = await translator.translate_batch(
-                        args[:4], logic_type="propositional", check_consistency=False
+                        # #3030 — the selection's head, not the window's:
+                        # the coverage record names this population.
+                        _pl_targets[:4],
+                        logic_type="propositional",
+                        check_consistency=False,
                     )
                     valid = [t for t in batch.translations if t.is_valid]
                     if valid:
@@ -8701,7 +8719,7 @@ async def _invoke_propositional_logic(
                         }
                         pl_metrics["fallback_nl"] = len(valid)
                         logger.info(
-                            f"NL-to-logic translated {len(valid)}/{len(args)} "
+                            f"NL-to-logic translated {len(valid)}/{len(_pl_targets)} "
                             f"arguments to PL"
                         )
                 except Exception as e:
@@ -8711,10 +8729,12 @@ async def _invoke_propositional_logic(
             # Final fallback: meaning-preserving readable atoms (#1260).
             # Previously opaque p1,p2 — now derive a readable slug per argument
             # via the existing _pl_atom() so the belief set stays interpretable.
-            prop_vars = [_pl_atom(a) for a in args]
+            # #3030 — over the SELECTION, not the window: the recorded
+            # coverage (k units) and the template's atom count now agree.
+            prop_vars = [_pl_atom(a) for a in _pl_targets]
             formulas = list(prop_vars)
             pl_metrics["template"] = len(prop_vars)
-            argument_mapping = {prop_vars[i]: a[:60] for i, a in enumerate(args)}
+            argument_mapping = {prop_vars[i]: a[:60] for i, a in enumerate(_pl_targets)}
             # #1637: the belief set is built from the source arguments ONLY.
             # This fallback used to append `!{prop_vars[-1]}` whenever the
             # upstream fallacy axis had detected anything — planting a
@@ -8804,7 +8824,8 @@ async def _invoke_propositional_logic(
             "query_count": 0,  # PL consistency is a satisfiability check (no entailment query)
             "message": msg,
             "logic_type": "propositional",
-            "argument_mapping": argument_mapping or {_pl_atom(a): a[:60] for a in args},
+            "argument_mapping": argument_mapping
+            or {_pl_atom(a): a[:60] for a in _pl_targets},
             "pl_metrics": pl_metrics,
             **(
                 {"pl_backend_comparison": pl_backend_comparison}
@@ -8872,7 +8893,7 @@ async def _invoke_propositional_logic(
                 "message": iso_msg,
                 "logic_type": "propositional",
                 "argument_mapping": argument_mapping
-                or {_pl_atom(a): a[:60] for a in args},
+                or {_pl_atom(a): a[:60] for a in _pl_targets},
                 "isolation_retry": True,
                 "rejected_count": len(formulas) - len(valid_formulas),
                 "pl_metrics": pl_metrics,
@@ -8925,6 +8946,20 @@ async def _invoke_fol_reasoning(
 
     # Retrieve state object for fol_shared_signature storage
     state_obj = context.get("_state_object")
+
+    # #3030 — ONE selection for every arm, mirroring the PL hoist: the
+    # stratified selection is computed once, before the arms, so the Pass 2
+    # batches and the NL fallback below read the same ``_fol_targets`` the
+    # coverage record names. Cheap by construction: state reads + a
+    # deterministic pick, no LLM. Stateless fallback: the args chain minted
+    # as units (stable head, stated).
+    _fol_units = merged_population_units(state_obj) or [
+        SelectableUnit(unit_id=f"arg_{i + 1}", text=str(a)) for i, a in enumerate(args)
+    ]
+    _fol_selection = select_for_budget(
+        _fol_units, 10, text_length=state_text_length(state_obj)
+    )
+    _fol_targets = [u.text for u in _fol_selection.selected]
 
     # Track FOL formula pipeline metrics (#655 Track MM)
     # #1630: widened from Dict[str, int] to carry the rejected-formula NAMES
@@ -9054,27 +9089,23 @@ async def _invoke_fol_reasoning(
                             )
 
                         # ── Pass 2: Parallel batched FOL formula generation (#729) ──
-                        if args:
+                        # #3030 — the gate reads the population, not the
+                        # window: `_extract_arguments_from_context` is
+                        # non-empty on every branch except the degenerate
+                        # `scores: {}` dict (measured in
+                        # test_logic_arms_share_selection_3030), which the
+                        # emptiness of `_fol_targets` subsumes.
+                        if _fol_targets:
                             sig_json = json.dumps(sig_data, indent=2)
                             _fol_batch_size = 3
                             # #2850 slice A — same gesture as the PL pass: the
                             # budget (10, unchanged) selects stratified units
-                            # from the merged population.
-                            _fol_state = context.get("_state_object")
-                            _fol_units = merged_population_units(_fol_state) or [
-                                SelectableUnit(unit_id=f"arg_{i+1}", text=str(a))
-                                for i, a in enumerate(args)
-                            ]
-                            _fol_selection = select_for_budget(
-                                _fol_units,
-                                10,
-                                text_length=state_text_length(_fol_state),
-                            )
-                            _fol_targets = [u.text for u in _fol_selection.selected]
-                            if _fol_state is not None and hasattr(
-                                _fol_state, "record_analysis_coverage"
+                            # from the merged population (computed once above,
+                            # #3030: every arm reads it).
+                            if state_obj is not None and hasattr(
+                                state_obj, "record_analysis_coverage"
                             ):
-                                _fol_state.record_analysis_coverage(
+                                state_obj.record_analysis_coverage(
                                     "fol_reasoning",
                                     _fol_selection.k,
                                     _fol_selection.n_total,
@@ -9179,7 +9210,11 @@ async def _invoke_fol_reasoning(
 
                     translator = NLToLogicTranslator(max_retries=2, logic_type="fol")
                     batch = await translator.translate_batch(
-                        args[:4], logic_type="fol", check_consistency=False
+                        # #3030 — the selection's head, not the window's:
+                        # the coverage record names this population.
+                        _fol_targets[:4],
+                        logic_type="fol",
+                        check_consistency=False,
                     )
                     valid = [t for t in batch.translations if t.is_valid]
                     if valid:
@@ -9190,7 +9225,7 @@ async def _invoke_fol_reasoning(
                                 if f:
                                     formulas.append(f)
                         logger.info(
-                            f"NL-to-logic translated {len(valid)}/{len(args)} "
+                            f"NL-to-logic translated {len(valid)}/{len(_fol_targets)} "
                             f"arguments to FOL"
                         )
                 except Exception as e:
@@ -9241,7 +9276,8 @@ async def _invoke_fol_reasoning(
             "FOL reasoning: no formulas translated from %d argument(s) — "
             "marking axis unavailable:no-translation (not 'trivially "
             "consistent sur vide', #1278/#1019).",
-            len(args),
+            # #3030 — the selection is what the run tried to translate.
+            len(_fol_targets),
         )
         return {
             "formulas": [],
