@@ -86,13 +86,11 @@ MUTATORS = {
 # ── The measured allowlist ──────────────────────────────────────────────────
 # (voie, phase name) -> (fields, qualification measured on main).
 # Each qualification names WHERE the reader is and WHY it is not on this voie.
+# RESOLVED — ("spectacular", "neural_detect") left this list when #1626 item 1
+# wired deep_synthesis's `_build_fallacy_diagnoses` to read
+# `neural_fallacy_scores` (the spectacular conclusion's fallacy count carries
+# the neural detections; see test_the_1626_case_stays_resolved below).
 KNOWN_CROSS_ORPHANS = {
-    ("spectacular", "neural_detect"): (
-        frozenset({"neural_fallacy_scores"}),
-        "read by plugins/narrative_synthesis_plugin.py:81 build_narrative() "
-        "on standard/full — the capability #1115 removed from spectacular. "
-        "This is #1626's own case.",
-    ),
     ("spectacular", "atms"): (
         frozenset({"atms_contexts", "jtms_beliefs"}),
         "atms_contexts read by _invoke_narrative_synthesis (populated-field "
@@ -501,11 +499,18 @@ def test_cross_voie_orphans_match_the_measured_allowlist():
         )
 
 
-def test_the_1626_case_is_in_the_list():
-    """The issue's own case stays pinned: a guard that lost it proves nothing."""
+def test_the_1626_case_stays_resolved():
+    """The issue's own case stays RESOLVED, and stays pinned as such.
+
+    #1626 item 1 wired deep_synthesis's `_build_fallacy_diagnoses` to read
+    `neural_fallacy_scores`, so spectacular's conclusion (the fallacy count
+    and family lines of Section 4) carries what neural_detect produced. If
+    the key reappears in KNOWN_CROSS_ORPHANS, the wiring broke or was
+    reverted — the equality census reddens on the new orphan anyway; this
+    pin makes the regression legible as THE #1626 case.
+    """
     key = ("spectacular", "neural_detect")
-    assert key in KNOWN_CROSS_ORPHANS
-    assert "neural_fallacy_scores" in KNOWN_CROSS_ORPHANS[key][0]
+    assert key not in KNOWN_CROSS_ORPHANS
 
 
 def test_census_fails_a_synthetic_cross_voie_orphan():

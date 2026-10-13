@@ -459,9 +459,8 @@ class DeepSynthesisAgent(BaseAgent):
 
     @staticmethod
     def _build_fallacy_diagnoses(state: Any) -> List[FallacyDiagnosis]:
-        fallacies = getattr(state, "identified_fallacies", {})
-        if not fallacies:
-            return []
+        fallacies = getattr(state, "identified_fallacies", {}) or {}
+        neural = getattr(state, "neural_fallacy_scores", None) or []
         entries = []
         for fid, fdata in fallacies.items():
             ftype = fdata.get("type", "unknown")
@@ -483,6 +482,29 @@ class DeepSynthesisAgent(BaseAgent):
                         if fdata.get("target_argument_id")
                         else []
                     ),
+                )
+            )
+        # #1626 item 1 — neural_detect's whole-text detections join the
+        # diagnoses so the fallacy count and family lines the conclusion
+        # asserts (Section 4) carry what the self-hosted detector found. One
+        # detection = one entry: no span, no argument anchor — the Track NN
+        # adjudication files that shape as "claimed / wide-net", which is its
+        # honest status, and the provenance rides in the commentary.
+        for i, entry in enumerate(neural):
+            label = str(entry.get("label", "unknown"))
+            family = DeepSynthesisAgent._fallacy_family(label)
+            entries.append(
+                FallacyDiagnosis(
+                    fallacy_id=str(entry.get("id", f"neural_{i}")),
+                    family=family,
+                    taxonomy_path=f"fallacy/{family}/{label}",
+                    textual_span="",
+                    commentary=(
+                        f"{entry.get('detector', 'self_hosted_llm')} whole-text "
+                        f"detection (confidence "
+                        f"{float(entry.get('confidence', 0.0)):.2f})"
+                    ),
+                    impacted_args=[],
                 )
             )
         return entries
