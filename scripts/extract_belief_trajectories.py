@@ -963,10 +963,13 @@ def _setup_logging(verbose: bool) -> None:
 
 def _ensure_api_key() -> Optional[str]:
     """Return the active LLM provider name, or None if absent (skip run)."""
-    from dotenv import load_dotenv
+    # #3019 — route through env_loader, never a raw load_dotenv: the raw
+    # call fills a name the caller neutralised ("" must win over .env via
+    # set_by_caller, and the carrier must be honoured in children).
+    from argumentation_analysis.config.env_loader import load_env_file
 
     # Root .env via a path anchored to this file (#2708) — no upward walk.
-    load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+    load_env_file(Path(__file__).resolve().parents[1] / ".env")
     if os.environ.get("OPENROUTER_API_KEY") and os.environ.get("OPENROUTER_BASE_URL"):
         return "openrouter"
     if os.environ.get("OPENAI_API_KEY"):
