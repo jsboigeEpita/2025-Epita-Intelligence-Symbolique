@@ -115,6 +115,8 @@ class _RecordingState(SimpleNamespace):
         extensions: Optional[Dict[str, Any]] = None,
         argument_labels: Optional[Dict[str, str]] = None,
         argument_ids_absent_reason: Optional[str] = None,
+        population_total: Optional[int] = None,
+        dropped_unresolved: Optional[int] = None,
     ) -> str:
         df_id = f"dung_{len(self.dung_frameworks) + 1}"
         entry: Dict[str, Any] = {
@@ -127,6 +129,7 @@ class _RecordingState(SimpleNamespace):
             entry["argument_labels"] = argument_labels
         if argument_ids_absent_reason is not None:
             entry["argument_ids_absent_reason"] = argument_ids_absent_reason
+        self._counters(entry, population_total, dropped_unresolved)
         self.dung_frameworks[df_id] = entry
         return df_id
 
@@ -134,12 +137,29 @@ class _RecordingState(SimpleNamespace):
     # positional call AND the labelled one, so the witness runs red on the
     # old tree by ASSERTION, not by TypeError.
     def _curated(
-        self, base: Dict[str, Any], argument_labels: Any, reason: Any
+        self,
+        base: Dict[str, Any],
+        argument_labels: Any,
+        reason: Any,
+        population_total: Any = None,
+        dropped_unresolved: Any = None,
     ) -> Dict[str, Any]:
         if argument_labels is not None:
             base["argument_labels"] = argument_labels
         if reason is not None:
             base["argument_ids_absent_reason"] = reason
+        return self._counters(base, population_total, dropped_unresolved)
+
+    def _counters(
+        self, base: Dict[str, Any], population_total: Any, dropped_unresolved: Any
+    ) -> Dict[str, Any]:
+        """#3014 item 2: the two identity counters ride the entry when set —
+        mirrors the real ``UnifiedAnalysisState`` sinks, so the writer's
+        ``**_identity_counts(output)`` pass-through lands by ASSERTION."""
+        if population_total is not None:
+            base["population_total"] = population_total
+        if dropped_unresolved is not None:
+            base["dropped_unresolved"] = dropped_unresolved
         return base
 
     def add_ranking_result(
@@ -149,11 +169,15 @@ class _RecordingState(SimpleNamespace):
         comparisons: List[Dict[str, Any]],
         argument_labels: Optional[Dict[str, str]] = None,
         argument_ids_absent_reason: Optional[str] = None,
+        population_total: Optional[int] = None,
+        dropped_unresolved: Optional[int] = None,
     ) -> str:
         entry = self._curated(
             {"method": method, "arguments": arguments, "comparisons": comparisons},
             argument_labels,
             argument_ids_absent_reason,
+            population_total,
+            dropped_unresolved,
         )
         self.ranking_results.append(entry)
         return f"rank_{len(self.ranking_results)}"
@@ -164,11 +188,15 @@ class _RecordingState(SimpleNamespace):
         acceptance_probs: Dict[str, float],
         argument_labels: Optional[Dict[str, str]] = None,
         argument_ids_absent_reason: Optional[str] = None,
+        population_total: Optional[int] = None,
+        dropped_unresolved: Optional[int] = None,
     ) -> str:
         entry = self._curated(
             {"arguments": arguments, "acceptance_probabilities": acceptance_probs},
             argument_labels,
             argument_ids_absent_reason,
+            population_total,
+            dropped_unresolved,
         )
         self.probabilistic_results.append(entry)
         return f"prob_{len(self.probabilistic_results)}"
@@ -182,6 +210,8 @@ class _RecordingState(SimpleNamespace):
         articulation_points: Optional[List[Dict[str, Any]]] = None,
         argument_labels: Optional[Dict[str, str]] = None,
         argument_ids_absent_reason: Optional[str] = None,
+        population_total: Optional[int] = None,
+        dropped_unresolved: Optional[int] = None,
     ) -> str:
         entry = self._curated(
             {
@@ -193,6 +223,8 @@ class _RecordingState(SimpleNamespace):
             },
             argument_labels,
             argument_ids_absent_reason,
+            population_total,
+            dropped_unresolved,
         )
         self.bipolar_results.append(entry)
         return f"bipolar_{len(self.bipolar_results)}"
@@ -205,6 +237,8 @@ class _RecordingState(SimpleNamespace):
         attacks: Optional[List[Dict[str, Any]]] = None,
         argument_labels: Optional[Dict[str, str]] = None,
         argument_ids_absent_reason: Optional[str] = None,
+        population_total: Optional[int] = None,
+        dropped_unresolved: Optional[int] = None,
     ) -> str:
         entry = self._curated(
             {
@@ -215,6 +249,8 @@ class _RecordingState(SimpleNamespace):
             },
             argument_labels,
             argument_ids_absent_reason,
+            population_total,
+            dropped_unresolved,
         )
         self.aspic_results.append(entry)
         return f"aspic_{len(self.aspic_results)}"
@@ -227,11 +263,15 @@ class _RecordingState(SimpleNamespace):
         minimal_retraction: Optional[Dict[str, Any]] = None,
         argument_labels: Optional[Dict[str, str]] = None,
         argument_ids_absent_reason: Optional[str] = None,
+        population_total: Optional[int] = None,
+        dropped_unresolved: Optional[int] = None,
     ) -> str:
         entry = self._curated(
             {"method": method, "original": original, "revised": revised},
             argument_labels,
             argument_ids_absent_reason,
+            population_total,
+            dropped_unresolved,
         )
         if minimal_retraction is not None:
             entry["minimal_retraction"] = minimal_retraction
@@ -245,11 +285,15 @@ class _RecordingState(SimpleNamespace):
         trace: List[Dict[str, Any]],
         argument_labels: Optional[Dict[str, str]] = None,
         argument_ids_absent_reason: Optional[str] = None,
+        population_total: Optional[int] = None,
+        dropped_unresolved: Optional[int] = None,
     ) -> str:
         entry = self._curated(
             {"topic": topic, "outcome": outcome, "trace": trace},
             argument_labels,
             argument_ids_absent_reason,
+            population_total,
+            dropped_unresolved,
         )
         self.dialogue_results.append(entry)
         return f"dialogue_{len(self.dialogue_results)}"
@@ -1973,3 +2017,66 @@ class TestDroppedUnresolvedIsCounted:
             result = await ic._invoke_dung_extensions(_UNIT_1, context)
 
         assert result.get("dropped_unresolved") == 0, member
+        # #3014 body item 2: the same census holds the pre-cap population
+        # total — a member that stops carrying it loses the "40 of 94" line.
+        assert result.get("population_total") == 2, member
+
+
+class TestPopulationTotalIsThePreCapCount:
+    """#3014 body item 2 — the 40-node budget cap is NAMED, never silent.
+
+    ``_population_node_units`` returns ``units[:40]`` (budget parity with the
+    historical extraction) and, beside it, the size of the population BEFORE
+    the cap: a 94-unit state yields a 40-node frame whose payload says 94 —
+    the reader can say « 40 retenus sur 94 », pre-fix it could only say 40.
+    """
+
+    def test_the_builder_returns_the_pre_cap_total(self) -> None:
+        state = _RecordingState(
+            identified_arguments={
+                f"arg_{i + 1}": (
+                    f"Unité argumentative synthétique numéro {i + 1}, assez "
+                    "longue pour ressembler à un vrai argument extrait."
+                )
+                for i in range(45)
+            }
+        )
+        context = _measured_context(state)
+        pairs, no_id_reason, total = ic._population_node_units(_UNIT_1, context)
+        assert no_id_reason is None
+        assert len(pairs) == 40, "the frame keeps its 40-node budget cap"
+        assert total == 45, "the payload names what the cap cut"
+
+    def test_a_frame_under_the_cap_reports_its_own_size(self) -> None:
+        # Below the cap the total equals the frame size — the reader's
+        # « N sur M » collapses honestly to the plain frame.
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        context = _measured_context(state)
+        pairs, no_id_reason, total = ic._population_node_units(_UNIT_1, context)
+        assert no_id_reason is None
+        assert len(pairs) == 2
+        assert total == 2
+
+    def test_the_caller_seam_population_also_names_its_total(self) -> None:
+        # The ``context["arguments"]`` fallback (no state population, no
+        # extract output) mints positional ids — its total is the caller
+        # list's size, not the capped frame's.
+        context: Dict[str, Any] = {
+            "arguments": [_UNIT_1, _UNIT_2],
+        }
+        node_ids, _labels, _by_label, payload = ic._af_family_frame(_UNIT_1, context)
+        assert len(node_ids) == 2
+        assert payload["population_total"] == 2
+
+    def test_a_45_unit_caller_seam_names_45(self) -> None:
+        context: Dict[str, Any] = {
+            "arguments": [
+                f"Argument synthétique fourni par l'appelant numéro {i}."
+                for i in range(45)
+            ],
+        }
+        node_ids, _labels, _by_label, payload = ic._af_family_frame(_UNIT_1, context)
+        assert len(node_ids) == 40
+        assert payload["population_total"] == 45

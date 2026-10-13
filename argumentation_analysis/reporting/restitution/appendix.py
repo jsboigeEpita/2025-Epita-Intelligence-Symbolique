@@ -471,10 +471,30 @@ def _dung_machinery_section(
         accepted = decode_accepted_members(fw.get("extensions")) or set()
         lines.append(f"#### {appendix_ref(sem)}")
         lines.append("")
-        lines.append(
-            f"- graphe : {len(fw_args)} arguments, {len(fw_attacks)} relations "
-            "d'attaque"
-        )
+        # #3014 body item 2: name the cap when it bites — the frame's 40-node
+        # budget cap can hold 40 of 94 units, and the entry carries the
+        # pre-cap total (``population_total``) for exactly this line. Without
+        # it the reader cannot tell a 40-unit corpus from a 94-unit one.
+        total = fw.get("population_total")
+        if isinstance(total, int) and total > len(fw_args):
+            lines.append(
+                f"- graphe : {len(fw_args)} arguments retenus sur {total} "
+                f"unités identifiées (plafond de budget), {len(fw_attacks)} "
+                "relations d'attaque"
+            )
+        else:
+            lines.append(
+                f"- graphe : {len(fw_args)} arguments, {len(fw_attacks)} relations "
+                "d'attaque"
+            )
+        # #3014 follow-up: a caller name the label→id join could not resolve
+        # is counted on the entry — a non-zero count reaches the reader here;
+        # zero stays silent (the payload's census default, not report noise).
+        dropped = fw.get("dropped_unresolved")
+        if isinstance(dropped, int) and dropped > 0:
+            lines.append(
+                f"- noms d'arguments non résolus, écartés du graphe : {dropped}"
+            )
         if accepted:
             members = ", ".join(sorted(str(m) for m in accepted))
             lines.append(f"- extension acceptée : {members}")

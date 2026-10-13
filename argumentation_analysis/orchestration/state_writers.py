@@ -42,6 +42,24 @@ _STRUCTURED_ARG_FORMALISM_NAME: Dict[str, str] = {
 }
 
 
+def _identity_counts(output: Any) -> Dict[str, int]:
+    """#3014 body item 2 — the AF-family frame's two counters, int-guarded
+    for the ``add_*`` pass-through: ``population_total`` (the population size
+    the frame was built from BEFORE its 40-node budget cap — the frame can
+    hold 40 of 94 units) and ``dropped_unresolved`` (the count of caller
+    names the label→id join could not resolve). They ride the invoke's
+    ``identity_payload``; absent or malformed on the output ⇒ the key stays
+    out of the entry (honest absence, the #3009 contract)."""
+    if not isinstance(output, dict):
+        return {}
+    counts: Dict[str, int] = {}
+    for key in ("population_total", "dropped_unresolved"):
+        val = output.get(key)
+        if isinstance(val, int) and not isinstance(val, bool) and val >= 0:
+            counts[key] = val
+    return counts
+
+
 def _setaf_collective_count(attacks: Any) -> Optional[int]:
     """Count SetAF attacks that are genuinely collective (#1647).
 
@@ -1064,6 +1082,7 @@ def _write_ranking_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> Non
         comparisons,
         argument_labels=output.get("argument_labels") or None,
         argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+        **_identity_counts(output),
     )
 
 
@@ -1109,6 +1128,7 @@ def _write_aspic_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         # make the extensions/attacks joinable to the population.
         argument_labels=output.get("argument_labels") or None,
         argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+        **_identity_counts(output),
     )
 
 
@@ -1142,6 +1162,7 @@ def _write_belief_revision_to_state(
         minimal_retraction,
         argument_labels=output.get("argument_labels") or None,
         argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+        **_identity_counts(output),
     )
 
 
@@ -1162,6 +1183,7 @@ def _write_dialogue_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> No
         trace,
         argument_labels=output.get("argument_labels") or None,
         argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+        **_identity_counts(output),
     )
 
 
@@ -1183,6 +1205,7 @@ def _write_probabilistic_to_state(output: Any, state: Any, ctx: dict[str, Any]) 
         acceptance,
         argument_labels=output.get("argument_labels") or None,
         argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+        **_identity_counts(output),
     )
 
 
@@ -1221,6 +1244,7 @@ def _write_bipolar_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> Non
         # lives in argument_labels.
         argument_labels=output.get("argument_labels") or None,
         argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+        **_identity_counts(output),
     )
 
 
@@ -1251,6 +1275,7 @@ def _write_aba_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         extensions={"aba_extensions": extensions},
         argument_labels=output.get("argument_labels") or None,
         argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+        **_identity_counts(output),
     )
     # #1648 Wave-2 sidecar: preserve the contraries the handler echoes
     # under ``output["contraries"]``. Empty mapping ⇒ sidecar still present
@@ -1290,6 +1315,7 @@ def _write_adf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         extensions={"adf_models": interpretations},
         argument_labels=output.get("argument_labels") or None,
         argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+        **_identity_counts(output),
     )
     # #2063 sidecar: carry the provenance the handler supplied — presence of
     # the key, not its truthiness, gates each field (``degraded: False`` is
@@ -1776,6 +1802,7 @@ def _write_dung_extensions_to_state(
             extensions=extensions if isinstance(extensions, dict) else {},
             argument_labels=labels,
             argument_ids_absent_reason=absent_reason,
+            **_identity_counts(output),
         )
     ]
     # Store additional semantics if computed
@@ -1790,6 +1817,7 @@ def _write_dung_extensions_to_state(
                         extensions=ext,
                         argument_labels=labels,
                         argument_ids_absent_reason=absent_reason,
+                        **_identity_counts(output),
                     )
                 )
     # #1698 (R791 item 1): the honest submitted/retained/dropped accounting
@@ -2063,6 +2091,7 @@ def _write_setaf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         extensions={"setaf_extensions": output.get("extensions", [])},
         argument_labels=output.get("argument_labels") or None,
         argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+        **_identity_counts(output),
     )
     # #1648 Wave-2 sidecar: preserve the joint attacks the handler
     # returns under ``output["attacks"]``. Empty list ⇒ sidecar stays
@@ -2121,6 +2150,7 @@ def _write_weighted_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> No
         extensions={"weighted_extensions": output.get("extensions", [])},
         argument_labels=output.get("argument_labels") or None,
         argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+        **_identity_counts(output),
     )
     # #1648 Wave-2 sidecar: preserve the per-attack weight the handler
     # returns under ``output["attacks"]`` (and the aggregate statistics
@@ -2174,6 +2204,7 @@ def _write_social_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None
         extensions={"social_ranking": ranking, "social_scores": scores},
         argument_labels=output.get("argument_labels") or None,
         argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+        **_identity_counts(output),
     )
     # #1698 (R791 item 1): carry the honest accounting onto the curated entry
     # (no contradiction guard: social has ranking/scores, not acceptance
@@ -2206,6 +2237,7 @@ def _write_eaf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         extensions={"eaf_extensions": output.get("extensions", [])},
         argument_labels=output.get("argument_labels") or None,
         argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+        **_identity_counts(output),
     )
     # #1648 Wave-2 sidecar: preserve the per-agent epistemic beliefs the
     # handler returns under ``output["epistemic_beliefs"]``. Empty dict

@@ -9932,7 +9932,7 @@ async def _invoke_modal_logic(
 
 def _population_node_units(
     input_text: str, context: Dict[str, Any]
-) -> Tuple[List[Tuple[str, str]], Optional[str]]:
+) -> Tuple[List[Tuple[str, str]], Optional[str], int]:
     """#3008 — the AF frame's nodes as ``(unit_id, label)`` pairs.
 
     #3014: renamed from ``_dung_node_units`` — five AF-family members
@@ -9951,10 +9951,14 @@ def _population_node_units(
     was built over free text: 0/7 exact joins to the units on the measured
     real state, rejections that quote prose where the id should be.
 
-    Returns ``(pairs, no_id_reason)``. ``no_id_reason`` is set only when no
-    population minted any id and the historical text extractor's fallback
-    built the nodes: the nodes then carry real content but NO unit identity,
-    and the record says so explicitly (never a guessed id).
+    Returns ``(pairs, no_id_reason, population_total)``. ``no_id_reason`` is
+    set only when no population minted any id and the historical text
+    extractor's fallback built the nodes: the nodes then carry real content
+    but NO unit identity, and the record says so explicitly (never a guessed
+    id). ``population_total`` (#3014 body item 2) is the size of the
+    population the frame was built from, BEFORE the 40-node budget cap — the
+    payload carries it beside the (capped) frame so a reader can say
+    "40 of 94" instead of letting the cap bite silently.
     """
     state = context.get("_state_object")
     units = merged_population_units(state)
@@ -9967,7 +9971,7 @@ def _population_node_units(
     if units:
         # Budget parity with the previous extraction (its lists were capped
         # at 40 too).
-        return [(str(u.unit_id), str(u.text)) for u in units[:40]], None
+        return [(str(u.unit_id), str(u.text)) for u in units[:40]], None, len(units)
     # Last resort: delegate to the HISTORICAL text extractor's own tail
     # (claims, then real sentences, then the whole input) — one fallback
     # implementation, and its #2850 census windows stay where they are
@@ -9975,9 +9979,13 @@ def _population_node_units(
     # nodes then carry real content but NO unit identity, and the record
     # says so explicitly (never a guessed id).
     texts = _extract_arguments_from_context(input_text, context)
-    return [(text, text) for text in texts], (
-        "no identified_arguments population — fallback nodes carry no unit "
-        "id (#3008)"
+    return (
+        [(text, text) for text in texts],
+        (
+            "no identified_arguments population — fallback nodes carry no unit "
+            "id (#3008)"
+        ),
+        len(texts),
     )
 
 
@@ -9997,9 +10005,12 @@ def _af_family_frame(
       those seams return back into node ids;
     - ``identity_payload`` — the ``argument_labels`` (+ absence reason)
       dict every return site carries, so the writer curates labels the way
-      #3009's Dung entry does.
+      #3009's Dung entry does. #3014 body item 2: it also carries
+      ``population_total``, the population size before the frame's 40-node
+      budget cap — the frame can silently hold 40 of 94 units, the payload
+      never may.
     """
-    pairs, no_id_reason = _population_node_units(input_text, context)
+    pairs, no_id_reason, population_total = _population_node_units(input_text, context)
     if no_id_reason is not None:
         # The family's historical caller seam: before #3014 every member read
         # ``context["arguments"]`` FIRST (naked texts). When neither the state
@@ -10012,6 +10023,7 @@ def _af_family_frame(
             if units:
                 pairs = [(str(u.unit_id), str(u.text)) for u in units[:40]]
                 no_id_reason = None
+                population_total = len(units)
     node_by_label: Dict[str, str] = {}
     for unit_id, label in pairs:
         # R1084 review item 1: the join key is the STRIPPED label. Every
@@ -10022,7 +10034,8 @@ def _af_family_frame(
     payload: Dict[str, Any] = {
         "argument_labels": (
             {unit_id: label for unit_id, label in pairs} if no_id_reason is None else {}
-        )
+        ),
+        "population_total": population_total,
     }
     if no_id_reason is not None:
         payload["argument_ids_absent_reason"] = no_id_reason

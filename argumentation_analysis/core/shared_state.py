@@ -1285,6 +1285,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         extensions: Optional[Dict[str, List[str]]] = None,
         argument_labels: Optional[Dict[str, str]] = None,
         argument_ids_absent_reason: Optional[str] = None,
+        population_total: Optional[int] = None,
+        dropped_unresolved: Optional[int] = None,
     ) -> str:
         """Add a Dung argumentation framework.
 
@@ -1294,7 +1296,13 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         reader keyed by "opaque arg_id" (``native_dung.rejected_by_arg``)
         reads the node. ``argument_ids_absent_reason`` names the honest case
         where no population minted ids and the nodes carry no unit identity.
-        Optional fields are stored only when set (honest absence).
+        #3014 body item 2: ``population_total`` is the population size the
+        frame was built from BEFORE its 40-node budget cap (the frame can
+        hold 40 of 94 units), and ``dropped_unresolved`` the count of caller
+        names the label→id join could not resolve — both counters travel on
+        the entry so a reader names the reduction instead of letting the cap
+        bite silently. Optional fields are stored only when set (honest
+        absence).
         """
         df_id = self._generate_id("dung", self.dung_frameworks)
         entry: Dict[str, Any] = {
@@ -1307,6 +1315,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             entry["argument_labels"] = argument_labels
         if argument_ids_absent_reason is not None:
             entry["argument_ids_absent_reason"] = argument_ids_absent_reason
+        if population_total is not None:
+            entry["population_total"] = population_total
+        if dropped_unresolved is not None:
+            entry["dropped_unresolved"] = dropped_unresolved
         self.dung_frameworks[df_id] = entry
         state_logger.info(
             f"Dung framework added: {df_id} ({len(arguments)} args, {len(attacks)} attacks)"
@@ -1476,13 +1488,17 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         comparisons: List[Dict[str, Any]],
         argument_labels: Optional[Dict[str, str]] = None,
         argument_ids_absent_reason: Optional[str] = None,
+        population_total: Optional[int] = None,
+        dropped_unresolved: Optional[int] = None,
     ) -> str:
         """Add a ranking semantics result.
 
         #3014 — ``arguments`` are the frame's NODES: unit ids (``arg_N``) on
         a pipeline run. The argument's TEXT travels in ``argument_labels``
-        (``{node: label}``) — same contract as ``add_dung_framework`` (#3009).
-        Optional fields are stored only when set (honest absence).
+        (``{node: label}``) — same contract as ``add_dung_framework`` (#3009),
+        and the frame's two counters (``population_total`` pre-cap,
+        ``dropped_unresolved``) ride with it. Optional fields are stored only
+        when set (honest absence).
         """
         rk_id = self._generate_id("rank", self.ranking_results)
         entry: Dict[str, Any] = {
@@ -1495,6 +1511,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             entry["argument_labels"] = argument_labels
         if argument_ids_absent_reason is not None:
             entry["argument_ids_absent_reason"] = argument_ids_absent_reason
+        if population_total is not None:
+            entry["population_total"] = population_total
+        if dropped_unresolved is not None:
+            entry["dropped_unresolved"] = dropped_unresolved
         self.ranking_results.append(entry)
         state_logger.info(f"Ranking result added: {rk_id} (method: {method})")
         return rk_id
@@ -1507,6 +1527,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         attacks: Optional[List[Dict[str, Any]]] = None,
         argument_labels: Optional[Dict[str, str]] = None,
         argument_ids_absent_reason: Optional[str] = None,
+        population_total: Optional[int] = None,
+        dropped_unresolved: Optional[int] = None,
     ) -> str:
         """Add an ASPIC+ analysis result.
 
@@ -1525,7 +1547,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         writer does, post-handler.
         """
         as_id = self._generate_id("aspic", self.aspic_results)
-        entry = {
+        entry: Dict[str, Any] = {
             "id": as_id,
             "reasoner_type": reasoner_type,
             "extensions": extensions,
@@ -1540,6 +1562,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             entry["argument_labels"] = argument_labels
         if argument_ids_absent_reason is not None:
             entry["argument_ids_absent_reason"] = argument_ids_absent_reason
+        if population_total is not None:
+            entry["population_total"] = population_total
+        if dropped_unresolved is not None:
+            entry["dropped_unresolved"] = dropped_unresolved
         self.aspic_results.append(entry)
         state_logger.info(f"ASPIC+ result added: {as_id} (reasoner: {reasoner_type})")
         return as_id
@@ -1552,6 +1578,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         minimal_retraction: Optional[Dict[str, Any]] = None,
         argument_labels: Optional[Dict[str, str]] = None,
         argument_ids_absent_reason: Optional[str] = None,
+        population_total: Optional[int] = None,
+        dropped_unresolved: Optional[int] = None,
     ) -> str:
         """Add a belief revision result.
 
@@ -1583,6 +1611,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             entry["argument_labels"] = argument_labels
         if argument_ids_absent_reason is not None:
             entry["argument_ids_absent_reason"] = argument_ids_absent_reason
+        if population_total is not None:
+            entry["population_total"] = population_total
+        if dropped_unresolved is not None:
+            entry["dropped_unresolved"] = dropped_unresolved
         self.belief_revision_results.append(entry)
         state_logger.info(f"Belief revision result added: {br_id} (method: {method})")
         return br_id
@@ -1594,6 +1626,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         trace: List[Dict[str, Any]],
         argument_labels: Optional[Dict[str, str]] = None,
         argument_ids_absent_reason: Optional[str] = None,
+        population_total: Optional[int] = None,
+        dropped_unresolved: Optional[int] = None,
     ) -> str:
         """Add a dialogue protocol result.
 
@@ -1615,6 +1649,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             entry["argument_labels"] = argument_labels
         if argument_ids_absent_reason is not None:
             entry["argument_ids_absent_reason"] = argument_ids_absent_reason
+        if population_total is not None:
+            entry["population_total"] = population_total
+        if dropped_unresolved is not None:
+            entry["dropped_unresolved"] = dropped_unresolved
         self.dialogue_results.append(entry)
         state_logger.info(
             f"Dialogue result added: {dl_id} (topic: {topic[:50]}, outcome: {outcome})"
@@ -1627,6 +1665,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         acceptance_probs: Dict[str, float],
         argument_labels: Optional[Dict[str, str]] = None,
         argument_ids_absent_reason: Optional[str] = None,
+        population_total: Optional[int] = None,
+        dropped_unresolved: Optional[int] = None,
     ) -> str:
         """Add a probabilistic argumentation result.
 
@@ -1646,6 +1686,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             entry["argument_labels"] = argument_labels
         if argument_ids_absent_reason is not None:
             entry["argument_ids_absent_reason"] = argument_ids_absent_reason
+        if population_total is not None:
+            entry["population_total"] = population_total
+        if dropped_unresolved is not None:
+            entry["dropped_unresolved"] = dropped_unresolved
         self.probabilistic_results.append(entry)
         state_logger.info(
             f"Probabilistic result added: {pr_id} ({len(arguments)} args)"
@@ -1661,6 +1705,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         articulation_points: Optional[List[Dict[str, Any]]] = None,
         argument_labels: Optional[Dict[str, str]] = None,
         argument_ids_absent_reason: Optional[str] = None,
+        population_total: Optional[int] = None,
+        dropped_unresolved: Optional[int] = None,
     ) -> str:
         """Add a bipolar argumentation framework result.
 
@@ -1691,6 +1737,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             entry["argument_labels"] = argument_labels
         if argument_ids_absent_reason is not None:
             entry["argument_ids_absent_reason"] = argument_ids_absent_reason
+        if population_total is not None:
+            entry["population_total"] = population_total
+        if dropped_unresolved is not None:
+            entry["dropped_unresolved"] = dropped_unresolved
         self.bipolar_results.append(entry)
         state_logger.info(f"Bipolar result added: {bp_id} (type: {framework_type})")
         return bp_id

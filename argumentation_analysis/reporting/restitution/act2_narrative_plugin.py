@@ -302,6 +302,13 @@ class DungSolverTrace:
     # shape could not be decoded — no accepted/rejected verdict can be drawn.
     # Surfaced so the reader sees "non concluable", never "all rejected".
     non_concluable: bool = False
+    # #3014 body item 2: the population size the frame was built from BEFORE
+    # its 40-node budget cap, as the entry records it — the reader names the
+    # reduction ("40 retenus sur 94 identifiées") instead of re-deriving the
+    # total from the state, which diverges when the frame came from a
+    # fallback population the state's inventory does not hold. None on
+    # pre-repair entries (the state bridge stays the fallback).
+    population_total: Optional[int] = None
 
 
 @dataclass
@@ -502,6 +509,11 @@ def _collect_dung_trace(state: Any) -> DungSolverTrace:
     fw_args = fw_args if isinstance(fw_args, list) else []
     fw_attacks = primary.get("attacks", []) or []
     fw_attacks = fw_attacks if isinstance(fw_attacks, list) else []
+    # #3014 body item 2: the entry's own pre-cap population total, when the
+    # producer recorded it (int-guarded — anything else keeps None and the
+    # state bridge below).
+    fw_total = primary.get("population_total")
+    fw_total = fw_total if isinstance(fw_total, int) and fw_total >= 0 else None
 
     # Accepted extension members (opaque arg_ids) — None = shape unknown.
     decoded = decode_accepted_members(primary.get("extensions"))
@@ -521,6 +533,7 @@ def _collect_dung_trace(state: Any) -> DungSolverTrace:
             n_attacks=len(fw_attacks),
             non_concluable=True,
             sample_attacks=sample_attacks,
+            population_total=fw_total,
         )
     accepted: List[str] = sorted(decoded)
 
@@ -553,6 +566,7 @@ def _collect_dung_trace(state: Any) -> DungSolverTrace:
         accepted_members=accepted,
         rejected_args=rejected,
         sample_attacks=sample_attacks,
+        population_total=fw_total,
     )
 
 
@@ -1200,9 +1214,18 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
         # #2037: the Acte I inventory (identified_arguments) and the graph's
         # nodes are two populations — pass the total so the consequence can
         # NAME the reduction instead of reusing the inventory's syntagme
-        # with the graph's number.
+        # with the graph's number. #3014 body item 2: the ENTRY's own
+        # pre-cap total wins when the producer recorded it — the state
+        # bridge diverges exactly when the frame came from a fallback
+        # population (extract output) the inventory does not hold, which is
+        # when the cap bites silently.
         _inv = getattr(state, "identified_arguments", {}) or {}
-        n_identified = len(_inv) if isinstance(_inv, dict) else 0
+        n_identified = (
+            dung_trace.population_total
+            if isinstance(dung_trace.population_total, int)
+            and dung_trace.population_total > 0
+            else (len(_inv) if isinstance(_inv, dict) else 0)
+        )
         verdict = (
             f"{reader_consequence(dung_trace.n_arguments, dung_trace.n_attacks, n_rej, dung_trace.semantics_label, n_identified=n_identified)}. "
             f"{EPISTEMIC_CAVEAT}."
@@ -1217,9 +1240,15 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
         # #1908: a decodable graph with zero rejections still deserves its
         # digested sentence — « every support survives » is a finding, not a
         # silence (the pre-fix code only spoke when something was rejected).
-        # #2037: same inventory bridge as the rejection branch.
+        # #2037: same inventory bridge as the rejection branch — entry total
+        # first (#3014), state inventory as the pre-repair fallback.
         _inv = getattr(state, "identified_arguments", {}) or {}
-        n_identified = len(_inv) if isinstance(_inv, dict) else 0
+        n_identified = (
+            dung_trace.population_total
+            if isinstance(dung_trace.population_total, int)
+            and dung_trace.population_total > 0
+            else (len(_inv) if isinstance(_inv, dict) else 0)
+        )
         verdict = (
             f"{reader_consequence(dung_trace.n_arguments, dung_trace.n_attacks, 0, dung_trace.semantics_label, n_identified=n_identified)}. "
             f"{EPISTEMIC_CAVEAT}."

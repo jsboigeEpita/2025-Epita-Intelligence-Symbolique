@@ -157,9 +157,12 @@ class _WriteState:
         extensions,
         argument_labels=None,
         argument_ids_absent_reason=None,
+        population_total=None,
+        dropped_unresolved=None,
     ):
         # #3014: the four AF-family writers now curate the node identity
         # fields (#3009 shape) — the sink records them like the real state.
+        # #3014 item 2: the identity counters ride the entry when set.
         entry = {
             "name": name,
             "arguments": arguments,
@@ -170,6 +173,10 @@ class _WriteState:
             entry["argument_labels"] = argument_labels
         if argument_ids_absent_reason is not None:
             entry["argument_ids_absent_reason"] = argument_ids_absent_reason
+        if population_total is not None:
+            entry["population_total"] = population_total
+        if dropped_unresolved is not None:
+            entry["dropped_unresolved"] = dropped_unresolved
         self.dung_frameworks[name] = entry
         return name
 
