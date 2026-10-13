@@ -219,11 +219,23 @@ class TestStateWriters:
         )
 
         state = UnifiedAnalysisState("test")
+        # The producer's shape (#2130): "detected_fallacies", a dict keyed
+        # by fallacy type — not the "detections" list nothing emits.
         output = {
-            "detections": [
-                {"text": "you're dumb", "label": "ad_hominem", "confidence": 0.92},
-                {"text": "everyone knows", "label": "ad_populum", "confidence": 0.78},
-            ]
+            "detected_fallacies": {
+                "ad_hominem": {
+                    "source": "self_hosted_llm",
+                    "confidence": 0.92,
+                    "description": "attack the person",
+                    "taxonomy_pk": "1.1",
+                },
+                "ad_populum": {
+                    "source": "self_hosted_llm",
+                    "confidence": 0.78,
+                    "description": "everyone knows",
+                    "taxonomy_pk": "2.1",
+                },
+            }
         }
         ctx = {}
         _write_camembert_to_state(output, state, ctx)

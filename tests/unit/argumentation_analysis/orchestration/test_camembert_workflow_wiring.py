@@ -96,7 +96,15 @@ class TestCamemBERTStateWriter:
     """Verify CamemBERT state writer correctly processes output."""
 
     def test_write_camembert_to_state(self):
-        """CamemBERT detections written to state.neural_fallacy_scores."""
+        """Self-hosted detections written to state.neural_fallacy_scores.
+
+        #2130 (R1070 measure): this test used to feed ``{"detections": [...]}``
+        — a shape no producer ever emitted. ``_invoke_camembert_fallacy``
+        emits ``detected_fallacies``, a dict keyed by fallacy type, so the
+        old green test pinned a fiction: even a fully working service wrote
+        nothing to the state. The input below is the producer's actual
+        output shape (invoke_callables, ``detected[ftype] = {...}``).
+        """
         from argumentation_analysis.orchestration.unified_pipeline import (
             _write_camembert_to_state,
         )
@@ -104,16 +112,50 @@ class TestCamemBERTStateWriter:
 
         state = UnifiedAnalysisState("test text")
         output = {
-            "detections": [
-                {"text": "argument 1", "label": "Ad Hominem", "confidence": 0.85},
-                {"text": "argument 2", "label": "Strawman", "confidence": 0.72},
-            ]
+            "detected_fallacies": {
+                "Ad Hominem": {
+                    "source": "self_hosted_llm",
+                    "confidence": 0.85,
+                    "description": "Attack on person",
+                    "taxonomy_pk": "1.1",
+                },
+                "Strawman": {
+                    "source": "self_hosted_llm",
+                    "confidence": 0.72,
+                    "description": "Distorted opponent position",
+                    "taxonomy_pk": "2.3",
+                },
+            },
+            "total_fallacies": 2,
         }
         _write_camembert_to_state(output, state, {})
 
         assert len(state.neural_fallacy_scores) == 2
-        assert state.neural_fallacy_scores[0]["label"] == "Ad Hominem"
-        assert state.neural_fallacy_scores[0]["confidence"] == 0.85
+        first = state.neural_fallacy_scores[0]
+        assert first["label"] == "Ad Hominem"
+        assert first["confidence"] == 0.85
+        assert first["detector"] == "self_hosted_llm"
+        # One-shot detection runs on the whole text: the producer names no
+        # segment, and the writer must not invent one (#1019).
+        assert first["text_segment"] == ""
+
+    def test_write_camembert_ignores_the_shape_no_producer_emits(self):
+        """The ``detections`` list this writer used to read is emitted by
+        nothing (#2130) — a writer reading it back would be a try-both-keys
+        fallback the dispatch forbids. An output carrying only that legacy
+        key writes nothing."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _write_camembert_to_state,
+        )
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
+        state = UnifiedAnalysisState("test text")
+        _write_camembert_to_state(
+            {"detections": [{"text": "x", "label": "Y", "confidence": 0.9}]},
+            state,
+            {},
+        )
+        assert len(state.neural_fallacy_scores) == 0
 
     def test_write_camembert_handles_empty_output(self):
         """State writer handles empty/None output gracefully."""
@@ -127,6 +169,11 @@ class TestCamemBERTStateWriter:
         assert len(state.neural_fallacy_scores) == 0
 
         _write_camembert_to_state({}, state, {})
+        assert len(state.neural_fallacy_scores) == 0
+
+        # The producer's honest empty — a configured-but-failed run or a
+        # clean zero — is a dict with no entries, not a missing key.
+        _write_camembert_to_state({"detected_fallacies": {}}, state, {})
         assert len(state.neural_fallacy_scores) == 0
 
 

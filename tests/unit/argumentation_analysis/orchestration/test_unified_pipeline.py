@@ -1825,43 +1825,55 @@ class TestStateWriters:
         assert len(state.governance_decisions) == 0
 
     def test_write_camembert_to_state(self):
-        """_write_camembert_to_state writes fallacy detections."""
+        """_write_camembert_to_state writes the producer's detections."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _write_camembert_to_state,
         )
 
         state = self._make_state()
+        # The producer's shape (#2130): "detected_fallacies", a dict keyed
+        # by fallacy type — not the "detections" list nothing emits.
         output = {
-            "detections": [
-                {
-                    "text": "attack the person",
-                    "label": "ad_hominem",
+            "detected_fallacies": {
+                "ad_hominem": {
+                    "source": "self_hosted_llm",
                     "confidence": 0.92,
+                    "description": "attack the person",
+                    "taxonomy_pk": "1.1",
                 },
-                {"text": "straw man", "label": "straw_man", "confidence": 0.78},
-            ]
+                "straw_man": {
+                    "source": "self_hosted_llm",
+                    "confidence": 0.78,
+                    "description": "straw man",
+                    "taxonomy_pk": "1.2",
+                },
+            }
         }
         _write_camembert_to_state(output, state, {})
         assert len(state.neural_fallacy_scores) == 2
 
-    def test_write_camembert_to_state_non_list_detections(self):
-        """_write_camembert_to_state handles non-list detections."""
+    def test_write_camembert_to_state_non_dict_detected(self):
+        """_write_camembert_to_state handles a non-dict detected_fallacies."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _write_camembert_to_state,
         )
 
         state = self._make_state()
-        _write_camembert_to_state({"detections": "not a list"}, state, {})
+        _write_camembert_to_state({"detected_fallacies": "not a dict"}, state, {})
         assert len(state.neural_fallacy_scores) == 0
 
     def test_write_camembert_to_state_non_dict_detection(self):
-        """_write_camembert_to_state skips non-dict items in detections."""
+        """_write_camembert_to_state skips non-dict values in the dict."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _write_camembert_to_state,
         )
 
         state = self._make_state()
-        _write_camembert_to_state({"detections": ["not_a_dict", 42]}, state, {})
+        _write_camembert_to_state(
+            {"detected_fallacies": {"not_a_dict": 42, "also": "not-a-dict"}},
+            state,
+            {},
+        )
         assert len(state.neural_fallacy_scores) == 0
 
     def test_write_semantic_index_to_state(self):
