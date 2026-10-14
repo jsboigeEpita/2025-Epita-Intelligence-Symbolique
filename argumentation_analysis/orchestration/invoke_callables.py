@@ -2644,16 +2644,57 @@ async def _invoke_governance(
     # #2969: positions carry the unit's TEXT — ``str(dict)`` of an extract
     # record is the repr of a mapping, and the conflict detector read that
     # repr (all 15 conflicts degenerate at level 1.0 on doc_A).
+    # #2850 batch 1 — shape (a): the positions read the MERGED population
+    # through the coverage layer (slice-A pattern, like the jtms/atms
+    # premises), so conflict detection no longer covers the document's
+    # opening only; ``record_analysis_coverage("governance")`` names the
+    # selection. The window head survives for stateless contexts (named
+    # fallback, no state to record into). Claims are LLM-produced facts,
+    # not the argument population (same rule as the jtms premises): the
+    # cap stays — shape (b) — and the record then says k of N claims.
     positions = {}
-    if arguments:
+    _gov_state = context.get("_state_object")
+    _gov_units = merged_population_units(_gov_state)
+    if _gov_units:
+        _gov_selection = select_for_budget(
+            _gov_units, 6, text_length=state_text_length(_gov_state)
+        )
+        for i, _gov_unit in enumerate(_gov_selection.selected):
+            positions[f"agent_{i+1}"] = _gov_unit.text
+        if _gov_state is not None and hasattr(_gov_state, "record_analysis_coverage"):
+            _gov_state.record_analysis_coverage(
+                "governance",
+                _gov_selection.k,
+                _gov_selection.n_total,
+                _gov_selection.bands_covered,
+                _gov_selection.bands_total,
+                span=_gov_selection.span,
+                largest_uncovered_stretch=_gov_selection.largest_uncovered_stretch,
+                unit_ids=[u.unit_id for u in _gov_selection.selected],
+            )
+    elif arguments:
         for i, arg in enumerate(arguments[:6]):
             positions[f"agent_{i+1}"] = str(
                 arg.get("text", arg) if isinstance(arg, dict) else arg
             )
-    elif claims:
-        for i, claim in enumerate(claims[:6]):
+    else:
+        _gov_claim_head = claims[:6]
+        for i, claim in enumerate(_gov_claim_head):
             positions[f"agent_{i+1}"] = str(
                 claim.get("text", claim) if isinstance(claim, dict) else claim
+            )
+        if (
+            _gov_state is not None
+            and claims
+            and hasattr(_gov_state, "record_analysis_coverage")
+        ):
+            _gov_state.record_analysis_coverage(
+                "governance",
+                len(_gov_claim_head),
+                len(claims),
+                0,
+                0,
+                unit_ids=[f"claim_{i + 1}" for i in range(len(_gov_claim_head))],
             )
 
     conflicts = []
@@ -3037,11 +3078,18 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             for i, a in enumerate(_fallback_args)
         ]
     claim_beliefs = [_text(c) for c in raw_claims[:6]]
+    # #2850 batch 1 — the sub-population caps stay (shape (b): claims,
+    # fallacies and counters are produced facts/detections, not the argument
+    # population), but their totals are carried so the drop is no longer
+    # silent: k of N on the payload and the trace summary.
+    _jtms_claims_total = len(raw_claims)
+    _jtms_sentences_total: Optional[int] = None
 
     if not _raw_arg_texts and not claim_beliefs:
         sentences = [s.strip() for s in input_text.split(".") if len(s.strip()) > 10]
         _raw_arg_texts = [s[:73] for s in sentences[:8]]
         _raw_arg_ids = [f"arg_{i + 1}" for i in range(len(_raw_arg_texts))]
+        _jtms_sentences_total = len(sentences)
 
     # Prefix each belief name with the unit's id so compute_argument_convergence
     # can index JTMS signals by arg_id (startswith "arg_N:") — #2895: the N is
@@ -3101,8 +3149,10 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
 
     # ── Step 4: Fallacies → retract undermined beliefs + propagation ─
     fallacy_beliefs = []
+    _jtms_fallacy_head = detected_fallacies[:6]
+    _jtms_fallacies_total = len(detected_fallacies)
     session.jtms.enable_tracing()  # type: ignore[no-untyped-call]  # Track retraction cascades (#350)
-    for i, f in enumerate(detected_fallacies[:6]):
+    for i, f in enumerate(_jtms_fallacy_head):
         if not isinstance(f, dict):
             continue
         fallacy_type = f.get("type", f.get("fallacy_type", f"fallacy_{i+1}"))
@@ -3198,7 +3248,9 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             session.jtms.set_belief_validity(target_arg, False)
 
     # ── Step 5: Counter-arguments → competing beliefs ────────────────
-    for i, ca in enumerate(counter_args[:4]):
+    _jtms_counter_head = counter_args[:4]
+    _jtms_counters_total = len(counter_args)
+    for i, ca in enumerate(_jtms_counter_head):
         if not isinstance(ca, dict):
             continue
         ca_text = ca.get("counter_argument", f"counter_arg_{i+1}")[:80]
@@ -3327,8 +3379,18 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
         ),
         "fallacy_count": len(fallacy_beliefs),
         "counter_argument_count": len(
-            [ca for ca in counter_args[:4] if isinstance(ca, dict)]
+            [ca for ca in _jtms_counter_head if isinstance(ca, dict)]
         ),
+        # #2850 batch 1 — shape (b): the caps stay, the drops are said.
+        # k of N travels on the payload (programmatic readers) AND the
+        # trace summary below (read by deep-synthesis's trace sections and
+        # the text_sequence restitution) — never only in a comment.
+        "claims_in_network": len(claim_beliefs),
+        "claims_total": _jtms_claims_total,
+        "fallacies_considered": len(_jtms_fallacy_head),
+        "fallacies_total": _jtms_fallacies_total,
+        "counter_arguments_considered": len(_jtms_counter_head),
+        "counter_arguments_total": _jtms_counters_total,
         "has_real_dependencies": bool(
             arg_beliefs and (claim_beliefs or fallacy_beliefs)
         ),
@@ -3337,6 +3399,11 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
         "consistency_checks": session.consistency_checks,
         "retraction_chain": session.jtms.get_retraction_chain(),
     }
+    if _jtms_sentences_total is not None:
+        # The sentence fallback fired: its cap is disclosed too (honest
+        # absence otherwise — the branch did not run).
+        _jtms_result["arguments_from_sentences"] = len(_raw_arg_texts)
+        _jtms_result["sentences_total"] = _jtms_sentences_total
     # Trace entry for JTMS specialist
     _state = context.get("_state_object")
     _n_beliefs_raw = _jtms_result.get("belief_count", 0)
@@ -3347,11 +3414,26 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             if isinstance(_jtms_result.get("undermined_count"), int)
             else 0
         )
+        # #2850 batch 1 — the trace line NAMES what each cap dropped (k de
+        # N), so the render surfaces that read analysis_trace (deep-synthesis
+        # sections, text_sequence restitution) can say it too.
+        _disclosures = [
+            f"{_jtms_result['fallacies_considered']} de {_jtms_result['fallacies_total']} sophismes",
+            f"{_jtms_result['counter_arguments_considered']} de {_jtms_result['counter_arguments_total']} contre-arguments",
+            f"{_jtms_result['claims_in_network']} de {_jtms_result['claims_total']} claims",
+        ]
+        if "arguments_from_sentences" in _jtms_result:
+            _disclosures.append(
+                f"{_jtms_result['arguments_from_sentences']} de {_jtms_result['sentences_total']} phrases"
+            )
         _state.add_trace_entry(
             phase="jtms",
             agent="JTMSAgent",
             reacts_to=["hierarchical_fallacy"],
-            summary=f"{_n_beliefs} croyances ajoutées — {_n_retracted} rétractées par sophismes. Réseau de dépendances JTMS propagé.",
+            summary=(
+                f"{_n_beliefs} croyances ajoutées — {_n_retracted} rétractées par sophismes. "
+                f"Réseau de dépendances JTMS propagé — {', '.join(_disclosures)} soumis au réseau."
+            ),
         )
     return _jtms_result
 

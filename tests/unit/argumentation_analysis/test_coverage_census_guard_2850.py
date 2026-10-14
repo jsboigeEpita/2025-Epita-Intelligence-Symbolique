@@ -699,7 +699,7 @@ REGISTRY = {
     ): (
         "population_cap",
         "first 4 in text order of the recorded selection; on fallback success the record re-names these 4 (attempted) and the rest is unanalysed; on fallback failure the template arm takes the whole selection",
-        "silent — debt #2850",
+        "recorded via record_analysis_coverage('propositional_logic') over the attempted head — the cap itself stays debt #2850",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -709,7 +709,7 @@ REGISTRY = {
     ): (
         "population_cap",
         "first 4 in text order of the recorded selection; on fallback success the record re-names these 4 (attempted) and the rest is unanalysed; FOL has no template arm",
-        "silent — debt #2850",
+        "recorded via record_analysis_coverage('fol_reasoning') over the attempted head — the cap itself stays debt #2850",
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "arguments", "4", 1): (
         "population_cap",
@@ -728,8 +728,8 @@ REGISTRY = {
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "arguments", "6", 1): (
         "population_cap",
-        "first 6 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "stateless fallback: first 6 of the extract window become the conflict-detector positions; with a state the positions are the stratified merged-population selection",
+        "fallback named — #2850 slice A (recorded via record_analysis_coverage('governance') when a state exists)",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -753,8 +753,8 @@ REGISTRY = {
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "claims", "6", 1): (
         "population_cap",
-        "first 6 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "first 6 claims become the conflict-detector positions when neither a population nor extract arguments exist",
+        "recorded via record_analysis_coverage('governance') k of N claims when a state exists — cap stays debt #2850 (claims are produced facts, not the argument population)",
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "claims", "8", 1): (
         "population_cap",
@@ -768,18 +768,8 @@ REGISTRY = {
         1,
     ): (
         "population_cap",
-        "first 4 in insertion order; rest unanalysed",
-        "silent — debt #2850",
-    ),
-    (
-        "argumentation_analysis/orchestration/invoke_callables.py",
-        "counter_args",
-        "4",
-        2,
-    ): (
-        "population_cap",
-        "first 4 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "first 4 counter-arguments become competing beliefs; the rest is unanalysed",
+        "recorded via counter_arguments_considered/_total on the phase payload and the jtms trace summary (deep-synthesis trace reader) — cap stays debt #2850",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -808,8 +798,8 @@ REGISTRY = {
         2,
     ): (
         "population_cap",
-        "first 6 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "first 6 detected fallacies feed the retraction network; the rest is unanalysed",
+        "recorded via fallacies_considered/_total on the phase payload and the jtms trace summary (deep-synthesis trace reader) — cap stays debt #2850",
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "fallacies", "3", 1): (
         "population_cap",
@@ -947,8 +937,8 @@ REGISTRY = {
         1,
     ): (
         "population_cap",
-        "first 6 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "first 6 claims become belief-network claims; the rest is unanalysed",
+        "recorded via claims_in_network/claims_total on the phase payload and the jtms trace summary (deep-synthesis trace reader) — cap stays debt #2850 (claims are produced facts, not the argument population)",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -1077,8 +1067,8 @@ REGISTRY = {
         1,
     ): (
         "population_cap",
-        "only the first 8 sentences become argument atoms; rest unanalysed",
-        "silent — debt #2850",
+        "only the first 8 sentences become argument atoms (fallback when no arguments and no claims); rest unanalysed",
+        "recorded via arguments_from_sentences/sentences_total on the phase payload and the jtms trace summary (deep-synthesis trace reader) — cap stays debt #2850",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
