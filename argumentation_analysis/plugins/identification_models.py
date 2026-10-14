@@ -82,6 +82,15 @@ class IdentifiedFallacy(BaseModel):
             "(#1019 family, #3029)"
         ),
     )
+    confidence_note: str = Field(
+        default="",
+        description=(
+            "Why the confidence is None, when it is (the rejected input, or "
+            "the omitted argument) — empty for a faithful read. The note is "
+            "the degradation's name: it travels with the detection so no "
+            "reader mistakes an unmeasured confidence for a low one (#3029)"
+        ),
+    )
     navigation_trace: List[str] = Field(
         default_factory=list,
         description="List of taxonomy node PKs visited during iterative deepening",

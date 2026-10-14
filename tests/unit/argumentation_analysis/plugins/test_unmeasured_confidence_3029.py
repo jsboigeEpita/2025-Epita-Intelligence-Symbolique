@@ -7,9 +7,20 @@ carried no ``confidence``, so the writer's None rule could never fire there —
 and #3027 started printing the fabricated value in spectacular's conclusion.
 
 Measured on the committed cassette population (678 files,
-``tests/fixtures/llm_cassettes``): **zero** replies of the three plugin
-prompts exist in the population — the defect is latent, so the fix is the
-schema change plus these witnesses, not a campaign (issue #3029).
+``tests/fixtures/llm_cassettes``): the plugin calls exist in the Semantic
+Kernel shape (``value[i].function_calls[j]``, 158 calls — 113 explore, 37
+confirm, 8 conclude), and **every recorded ``confirm_fallacy`` carries a
+usable confidence** (30 lexical levels, 7 numerics; zero absent, zero
+garbage) — the defect is latent on replay, so the fix is the schema change
+plus these witnesses, not a campaign (issue #3029; the first measurement
+here said "zero tool_calls", which is true of the OpenAI wire shape only —
+corrected by the R1089 dispatch measure).
+
+The exploration layer (#2746's ``_UNREADABLE_CONFIDENCE_SCORE`` 0.7) is the
+second half, dispatched R1089: the named default had NO reader
+(``confidence_note`` was produced and never consumed), so the named 0.7
+reached the comparators as an ordinary number and beat measured ones. There,
+unreadable or omitted ⇒ None, with the note travelling downstream.
 
 These tests script the LLM dependency, never the classifier (#1097), and the
 seam is the one #2746 established (real plugin, scripted service).
@@ -21,6 +32,7 @@ from unittest.mock import AsyncMock, MagicMock, create_autospec
 
 import pytest
 from semantic_kernel import Kernel
+from semantic_kernel.contents import FunctionCallContent
 
 from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 from argumentation_analysis.orchestration.invoke_callables import (
@@ -212,3 +224,160 @@ def test_merge_two_measured_still_keeps_the_higher():
     per_arg = [{"taxonomy_pk": "p", "fallacy_type": "T", "confidence": 0.4}]
     merged = _merge_fallacy_results(wide, per_arg)
     assert merged[0]["confidence"] == 0.9
+
+
+# ---------------------------------------------------------------------------
+# R1089 — the exploration layer: the 0.7 "named" default had no reader
+# ---------------------------------------------------------------------------
+
+
+def _script_leaf_confirm(plugin, confirm_args: dict):
+    """The #2746 descent seam: wide-net Phase 1 resolves the root, Phase 2's
+    leaf call is a scripted ``confirm_fallacy`` with exactly ``confirm_args``
+    (the caller decides whether the confidence key is present at all)."""
+    plugin.llm_service.get_chat_message_content = AsyncMock(
+        return_value=json.dumps(
+            [
+                {
+                    "fallacy_name": LEAF_NAME,
+                    "root_category": LEAF_NAME,
+                    "confidence": 0.9,
+                }
+            ]
+        )
+    )
+    plugin.llm_service.get_chat_message_contents = AsyncMock(
+        return_value=[
+            SimpleNamespace(
+                items=[
+                    FunctionCallContent(
+                        name="confirm_fallacy",
+                        arguments=json.dumps(confirm_args),
+                    )
+                ]
+            )
+        ]
+    )
+    return plugin
+
+
+async def _run_descent(plugin):
+    result = await plugin.run_guided_analysis(
+        "Ce sera la fin de tout si vous ne suivez pas notre avis."
+    )
+    return json.loads(result)
+
+
+_CONFIRM_BASE = {
+    "node_pk": LEAF_PK,
+    "justification": "fear drives the persuasion",
+}
+
+
+@pytest.mark.asyncio
+async def test_unreadable_confirm_confidence_is_none_with_note_travelling():
+    """DoD R1089 (a): a ``confirm_fallacy`` whose confidence is unreadable
+    confirms the fallacy with ``confidence is None`` — and the reason stays
+    readable downstream: the note naming the rejected input travels to the
+    ``IdentifiedFallacy``. The old layer returned a "named" 0.7 whose note no
+    production code read (#3029 measure), so it beat measured 0.6s in the
+    dedup comparators."""
+    plugin = _script_leaf_confirm(
+        _make_plugin(), {**_CONFIRM_BASE, "confidence": "tres sur"}
+    )
+    parsed = await _run_descent(plugin)
+    assert parsed["fallacies"], "the confirmation was dropped"
+    entry = parsed["fallacies"][0]
+    assert entry["confidence"] is None, (
+        "#3029: an unreadable confidence must not surface as a number — "
+        f"found {entry['confidence']!r}"
+    )
+    note = entry.get("confidence_note", "")
+    assert "tres sur" in note, (
+        "the reason for the missing measurement must travel with the "
+        f"detection, found note {note!r}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_omitted_confirm_confidence_is_none_not_medium():
+    """DoD R1089 (b): a ``confirm_fallacy`` sent WITHOUT a confidence argument
+    (the tool's parameter default, previously ``"medium"``) is unmeasured —
+    None, not a fabricated 0.7."""
+    plugin = _script_leaf_confirm(_make_plugin(), dict(_CONFIRM_BASE))
+    parsed = await _run_descent(plugin)
+    assert parsed["fallacies"], "the confirmation was dropped"
+    entry = parsed["fallacies"][0]
+    assert entry["confidence"] is None, (
+        f"#3029: an omitted confidence became {entry['confidence']!r} — the "
+        "signature default must not measure anything"
+    )
+    assert entry.get(
+        "confidence_note"
+    ), "an omitted confidence carries its own note (absent, not unreadable)"
+
+
+@pytest.mark.asyncio
+async def test_measured_lexical_confirm_confidence_stays_faithful():
+    """Anti-'empty the guard': the lexical levels the recorded cassettes use
+    (30 of the 37 committed confirms) keep their mapped score."""
+    plugin = _script_leaf_confirm(
+        _make_plugin(), {**_CONFIRM_BASE, "confidence": "high"}
+    )
+    parsed = await _run_descent(plugin)
+    entry = parsed["fallacies"][0]
+    assert entry["confidence"] == 0.9
+    assert not entry.get("confidence_note"), "a faithful read needs no note"
+
+
+# ---------------------------------------------------------------------------
+# the tool's own contract, exercised directly (no LLM in the loop)
+# ---------------------------------------------------------------------------
+
+
+def _tool_confirm(**kwargs):
+    from argumentation_analysis.plugins.exploration_plugin import ExplorationPlugin
+    from argumentation_analysis.agents.utils.taxonomy_navigator import (
+        TaxonomyNavigator,
+    )
+
+    tool = ExplorationPlugin(TaxonomyNavigator(_leaf_root_taxonomy()))
+    return json.loads(tool.confirm_fallacy(**kwargs))
+
+
+def test_tool_unreadable_confidence_is_none_with_named_note():
+    result = _tool_confirm(node_pk=LEAF_PK, confidence="tres sur", justification="x")
+    assert result["confirmed"] is True, "the confirmation must survive"
+    assert result["confidence"] is None
+    assert "tres sur" in result["confidence_note"]
+
+
+def test_tool_absent_confidence_is_none_with_absent_note():
+    """The signature default is absence (``""``): omitted ⇒ None, with a note
+    that says the confidence was absent — a different reason from unreadable."""
+    result = _tool_confirm(node_pk=LEAF_PK, justification="x")
+    assert result["confirmed"] is True
+    assert result["confidence"] is None
+    note = result.get("confidence_note", "")
+    assert note, "omission must be named too, not silent"
+    assert "absent" in note.lower() or "absente" in note.lower()
+
+
+def test_tool_lexical_and_numeric_readings_unchanged():
+    """The faithful readings the cassettes rely on: levels and numbers."""
+    assert (
+        _tool_confirm(node_pk=LEAF_PK, confidence="high", justification="x")[
+            "confidence"
+        ]
+        == 0.9
+    )
+    assert (
+        _tool_confirm(node_pk=LEAF_PK, confidence="0,85", justification="x")[
+            "confidence"
+        ]
+        == 0.85
+    )
+    measured = _tool_confirm(node_pk=LEAF_PK, confidence="high", justification="x")
+    assert (
+        "confidence_note" not in measured
+    ), "a faithful read produces no note — the note is the degradation's name"
