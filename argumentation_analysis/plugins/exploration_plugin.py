@@ -22,28 +22,27 @@ logger = logging.getLogger(__name__)
 #: prompt feuille énonce est un nombre (#2746).
 _CONFIDENCE_LEVELS = {"high": 0.9, "medium": 0.7, "low": 0.4}
 
-#: Ce qu'une confiance illisible dégrade : le défaut "medium" du paramètre,
-#: même valeur que le lecteur aval (fallacy_workflow_plugin lit
-#: ``lr.get("confidence", 0.7)``). L'entrée rejetée est nommée dans la note,
-#: jamais silencieuse.
-_UNREADABLE_CONFIDENCE_SCORE = 0.7
 
-
-def _confidence_score(raw: object) -> Tuple[float, str]:
+def _confidence_score(raw: object) -> Tuple[Optional[float], str]:
     """Le contrat unique de ``confirm_fallacy`` : un nombre dans ``[0, 1]``
     (ce que le prompt feuille demande) ou un nom de niveau.
 
     Rend ``(score, note)``. La note est vide quand l'entrée a été lue
-    fidèlement ; sinon elle nomme l'entrée rejetée. Jamais d'exception — un
-    appel de confirmation valide ne doit pas se perdre sur la forme de sa
-    confiance (#2746).
+    fidèlement ; sinon elle nomme la raison — l'entrée rejetée, ou l'argument
+    absent. Jamais d'exception — un appel de confirmation valide ne doit pas
+    se perdre sur la forme de sa confiance (#2746).
+
+    #3029 (R1089) : une confiance illisible ou absente est **None**, pas un
+    nombre dégradé. Le 0.7 « nommé » d'avant n'avait AUCUN lecteur — la note
+    était produite et jamais consommée (mesure : ``git grep confidence_note``
+    ne rend que le producteur), donc le 0.7 atteignait les comparateurs comme
+    un nombre ordinaire et y battait un 0.6 mesuré. La note voyage maintenant
+    avec la détection ; voir ``IdentifiedFallacy.confidence_note``.
     """
-    rejected = (
-        f"unreadable confidence {raw!r}, defaulted to "
-        f"{_UNREADABLE_CONFIDENCE_SCORE}"
-    )
+    if isinstance(raw, str) and not raw.strip():
+        return None, "confidence absente (argument omis par le modèle)"
     if isinstance(raw, bool) or raw is None:
-        return _UNREADABLE_CONFIDENCE_SCORE, rejected
+        return None, f"unreadable confidence {raw!r}, not measured"
     if isinstance(raw, (int, float)):
         value = float(raw)
     elif isinstance(raw, str):
@@ -54,11 +53,11 @@ def _confidence_score(raw: object) -> Tuple[float, str]:
         try:
             value = float(text.replace(",", "."))
         except ValueError:
-            return _UNREADABLE_CONFIDENCE_SCORE, rejected
+            return None, f"unreadable confidence {raw!r}, not measured"
     else:
-        return _UNREADABLE_CONFIDENCE_SCORE, rejected
+        return None, f"unreadable confidence {raw!r}, not measured"
     if math.isnan(value) or math.isinf(value):
-        return _UNREADABLE_CONFIDENCE_SCORE, rejected
+        return None, f"unreadable confidence {raw!r}, not measured"
     return min(max(value, 0.0), 1.0), ""
 
 
@@ -151,8 +150,9 @@ class ExplorationPlugin:
         confidence: Annotated[
             str,
             "Confidence: a number between 0.0 and 1.0 (as the leaf prompt "
-            "specifies), or a level 'high'/'medium'/'low'",
-        ] = "medium",
+            "specifies), or a level 'high'/'medium'/'low'. Omitted or "
+            "unreadable ⇒ not measured (None), never a default number (#3029)",
+        ] = "",
         matches: Annotated[
             bool,
             "true ONLY if the text genuinely exhibits this node's fallacy. "
@@ -184,6 +184,12 @@ class ExplorationPlugin:
         pour une raison étrangère au fix. L'absence de verdict vaut donc la
         sémantique d'avant #2972, et c'est le prompt qui rend la réponse
         obligatoire.
+
+        #3029 (R1089) : le défaut de ``confidence`` est l'ABSENCE (``""``) —
+        un appel sans confiance est non mesuré (``None`` + note), jamais un
+        0.7 « medium » fabriqué. Les cassettes commitées portent toutes une
+        confiance exploitable (30 niveaux lexicaux, 7 numériques — mesure
+        R1089), donc aucun rejeu ne change.
         """
         node = self.taxonomy_navigator.get_node(node_pk)
         if not node:

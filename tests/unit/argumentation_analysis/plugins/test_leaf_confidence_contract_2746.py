@@ -143,7 +143,14 @@ async def test_level_name_still_confirms_with_its_mapped_score():
 
 @pytest.mark.asyncio
 async def test_malformed_confidence_keeps_the_confirmation_named():
-    """Unreadable confidence must not drop the confirmation nor stay silent."""
+    """Unreadable confidence must not drop the confirmation nor stay silent.
+
+    #3029 (R1089) contract change, made on measurement: the 0.7 "named"
+    default had NO reader — ``confidence_note`` was produced and never
+    consumed, so the 0.7 reached the dedup comparators as an ordinary number
+    and beat measured 0.6s. An unreadable confidence is now None, and the
+    note naming the rejected input travels to the IdentifiedFallacy.
+    """
     plugin = _script_llm(_make_plugin(), "tres sur")
     parsed = await _run(plugin)
     assert parsed["exploration_method"] == "wide_net_parallel", (
@@ -151,10 +158,13 @@ async def test_malformed_confidence_keeps_the_confirmation_named():
         "into no confirmation"
     )
     assert parsed["fallacies"], "the confirmation was dropped entirely"
-    assert parsed["fallacies"][0]["confidence"] == 0.7, (
-        "unreadable confidence must degrade to the documented medium default, "
-        "not to the old silent 0.5"
+    assert parsed["fallacies"][0]["confidence"] is None, (
+        "unreadable confidence must surface as None (not measured), not as "
+        "the old named-but-unread 0.7"
     )
+    assert "tres sur" in parsed["fallacies"][0].get(
+        "confidence_note", ""
+    ), "the degradation must be named AND the name must travel downstream"
 
 
 # ---------------------------------------------------------------------------
@@ -195,7 +205,9 @@ def test_tool_maps_level_names_as_before():
 def test_tool_names_the_unreadable_input_instead_of_ignoring_it():
     result = _confirmed("tres sur")
     assert result["confirmed"] is True
-    assert result["confidence"] == 0.7
+    # #3029 (R1089): None, not the named-but-unread 0.7 (contract change on
+    # the measurement that confidence_note had no reader).
+    assert result["confidence"] is None
     assert (
         "tres sur" in result["confidence_note"]
     ), "the degradation must be named, not silent (#2746)"

@@ -1009,6 +1009,11 @@ class FallacyWorkflowPlugin:
                             taxonomy_path=current_node.get("path", ""),
                             explanation=lr.get("justification", ""),
                             confidence=lr.get("confidence"),
+                            # #3029 (R1089) — the tool's note travels with the
+                            # detection: the reason a confidence is None stays
+                            # readable downstream instead of dying in the tool
+                            # result (it had no reader before this field).
+                            confidence_note=lr.get("confidence_note") or "",
                             navigation_trace=navigation_trace,
                             family=current_node.get("Famille", ""),
                             depth=leaf_depth,
@@ -1260,6 +1265,8 @@ class FallacyWorkflowPlugin:
                     taxonomy_path=confirm_result.get("path", ""),
                     explanation=full_explanation,
                     confidence=confirm_result.get("confidence"),
+                    # #3029 (R1089) — same as the leaf site: the note travels.
+                    confidence_note=confirm_result.get("confidence_note") or "",
                     navigation_trace=navigation_trace,
                     family=current_node.get("Famille", ""),
                     depth=confirmed_depth,
