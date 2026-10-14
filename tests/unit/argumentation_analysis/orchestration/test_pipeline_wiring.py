@@ -678,7 +678,9 @@ class TestDebateCrossKB:
         prompt = captured.get("user", "")
         assert prompt, "the debate never reached the LLM path — cross-KB read skipped"
         # Quality scores were read: note_finale and the fallacy penalty marker.
-        assert "QUALITY SCORES:" in prompt
+        # #2850 batch 2: the header now carries its k-de-N count — assert the
+        # parenthesised form so a silent header cannot pass by prefix match.
+        assert "QUALITY SCORES (2 de 2 arguments scorés):" in prompt
         # #1907: the denominator is the number of dimensions that were
         # applicable to this unit, never a fixed 10. Asserting the whole line
         # (not a substring) keeps this as strong as the "9.0/10" it replaces:

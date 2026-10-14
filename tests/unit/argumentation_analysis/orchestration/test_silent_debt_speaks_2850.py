@@ -216,3 +216,146 @@ class TestJtmsSubPopulationCapsAreDisclosed:
         jtms_trace = [t for t in state.analysis_trace if t.get("phase") == "jtms"]
         assert jtms_trace, "jtms trace entry missing"
         assert "8 de 12 phrases" in jtms_trace[-1]["summary"]
+
+
+# ---------------------------------------------------------------------------
+# Batch 2 (dispatch R1089, slice 2) — aspic + debate speak; the jtms
+# detected_fallacies contract moves to its true site (the census walk is BFS,
+# not file order: ord=1 is the jtms site, ord=2 the enrichment prompt).
+# ---------------------------------------------------------------------------
+
+
+class _FakeAspicHandler:
+    """Stands in for the JVM-bound handler so the witness runs in the gate
+    filter — the selection, the record and the trace all fire before it."""
+
+    seen = None
+
+    def analyze_aspic_framework(self, strict, defeasible, axioms):
+        type(self).seen = {
+            "strict": strict,
+            "defeasible": defeasible,
+            "axioms": axioms,
+        }
+        return {"extensions": [[]]}
+
+
+class TestAspicDefeasibleRulesReadTheSelection:
+    """Shape (a): the defeasible rules cite the stratified selection of the
+    frame's units — join-safe ids, never the extraction window's head."""
+
+    def test_rules_record_and_trace_name_the_selection(self):
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock, patch as _patch
+
+        from argumentation_analysis.orchestration.invoke_callables import _invoke_aspic
+
+        state = _populated_state()
+        selection = _expected_selection(state, 4)
+        expected_ids = [u.unit_id for u in selection.selected]
+        expected_texts = [u.text for u in selection.selected]
+        ctx = _context(state)
+        ctx["phase_extract_output"]["claims"] = [
+            {"text": f"measured claim number {i}"} for i in range(9)
+        ]
+        ctx["phase_hierarchical_fallacy_output"] = {
+            "fallacies": [{"type": f"fallacy_{i}"} for i in range(7)]
+        }
+        # The translator is an LLM-consuming seam with its own client path
+        # (not the mocked openai.AsyncOpenAI): scripted empty so the witness
+        # pays for no network and the derived-rules branch stays active.
+        _no_translate = SimpleNamespace(
+            relations=[], cause="witness_no_translate", error=None
+        )
+        with _patch(
+            "argumentation_analysis.agents.core.logic.aspic_handler.ASPICHandler",
+            _FakeAspicHandler,
+        ), _patch(
+            "argumentation_analysis.orchestration.structured_arg_translator."
+            "translate_to_aspic_rules",
+            AsyncMock(return_value=_no_translate),
+        ):
+            result = asyncio.get_event_loop().run_until_complete(
+                _invoke_aspic(state.raw_text, ctx)
+            )
+
+        # The rules cite the SELECTION's unit ids, never the window's texts.
+        rule_bodies = [
+            r["body"][0]
+            for r in _FakeAspicHandler.seen["defeasible"]
+            if str(r.get("name", "")).startswith("def_arg")
+        ]
+        assert rule_bodies == expected_ids
+        assert not any(w in str(_FakeAspicHandler.seen) for w in _WINDOW)
+        # The record names the selection; the payload and trace say k of N.
+        record = state.analysis_coverage["aspic"]
+        assert record["k"] == 4
+        assert record["N"] == 12
+        assert record["unit_ids"] == expected_ids
+        assert result["aspic_units_considered"] == 4
+        assert result["aspic_units_total"] == 12
+        assert result["aspic_claims_considered"] == 4
+        assert result["aspic_claims_total"] == 9
+        assert result["aspic_fallacies_considered"] == 3
+        assert result["aspic_fallacies_total"] == 7
+        aspic_trace = [t for t in state.analysis_trace if t.get("phase") == "aspic"]
+        assert aspic_trace, "aspic trace entry missing"
+        summary = aspic_trace[-1]["summary"]
+        assert "4 de 12 unités" in summary
+        assert "4 de 9 claims" in summary
+        assert "3 de 7 sophismes" in summary
+
+
+class TestDebateMaterialReadsTheSelection:
+    """Shape (a): the ARGUMENTS block lists the recorded stratified
+    selection, and the material's headers name every sub-population cap."""
+
+    def test_material_headers_and_record_name_the_population(self):
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_debate_analysis,
+        )
+
+        state = _populated_state()
+        selection = _expected_selection(state, 6)
+        expected_texts = [u.text for u in selection.selected]
+        expected_ids = [u.unit_id for u in selection.selected]
+        ctx = _context(state)
+        ctx["phase_hierarchical_fallacy_output"] = {
+            "fallacies": [{"type": f"fallacy_{i}"} for i in range(12)]
+        }
+        ctx["phase_quality_output"] = {
+            "per_argument_scores": {f"arg_{i}": {"note_finale": 7.0} for i in range(9)}
+        }
+        captured = {}
+
+        def _capture(**kw):
+            captured["messages"] = kw["messages"]
+            return _mock_json_response('{"winner": "Agent A", "debate_quality": 4}')
+
+        client = MagicMock()
+        client.chat.completions.create = MagicMock(side_effect=_capture)
+        with patch("openai.AsyncOpenAI", return_value=client), patch.dict(
+            "os.environ", {"OPENAI_API_KEY": "test-key"}
+        ):
+            asyncio.get_event_loop().run_until_complete(
+                _invoke_debate_analysis(state.raw_text, ctx)
+            )
+
+        user_prompt = str(captured["messages"][-1]["content"])
+        # The ARGUMENTS block is the selection, never the window's head.
+        for text in expected_texts:
+            assert text in user_prompt
+        assert not any(w in user_prompt for w in _WINDOW)
+        assert "(6 de 12 unités de la population, sélection stratifiée)" in user_prompt
+        assert "FALLACIES detected (5 de 12)" in user_prompt
+        assert "QUALITY SCORES (6 de 9 arguments scorés)" in user_prompt
+        record = state.analysis_coverage["debate"]
+        assert record["k"] == 6
+        assert record["N"] == 12
+        assert record["unit_ids"] == expected_ids
+        debate_trace = [t for t in state.analysis_trace if t.get("phase") == "debate"]
+        assert debate_trace, "debate trace entry missing"
+        summary = debate_trace[-1]["summary"]
+        assert "6 de 12 unités débattues" in summary
+        assert "5 de 12 sophismes" in summary
+        assert "6 de 9 scores de qualité" in summary

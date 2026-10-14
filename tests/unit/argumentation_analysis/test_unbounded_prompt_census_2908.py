@@ -302,7 +302,22 @@ ALLOWED = {
         "fstring",
         "text",
         1,
-    ): ("line 1605 — scored argument UNIT texts in the target list"),
+    ): (
+        "line 2170 — debate ARGUMENTS lines: unit texts of the stratified "
+        "selection (k of N, #2850 batch 2, record_analysis_coverage('debate') "
+        "names it); the stateless fallback arm reads _txt(a) heads"
+    ),
+    (
+        "argumentation_analysis/orchestration/invoke_callables.py",
+        "fstring",
+        "text",
+        2,
+    ): (
+        "line 1803 — scored argument UNIT texts in the counter-argument "
+        "target list (#3035); renumbered #1→#2 by the debate lines above, "
+        "which ast.walk (BFS) visits first at a shallower depth — ordinal "
+        "order is walk order, not file order"
+    ),
     (
         "argumentation_analysis/orchestration/state_writers.py",
         "fstring",
