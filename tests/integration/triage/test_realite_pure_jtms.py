@@ -29,9 +29,9 @@ import asyncio
 
 import pytest
 from semantic_kernel import Kernel
-from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
 from argumentation_analysis.config.settings import AppSettings
+from argumentation_analysis.core.llm_service import create_llm_service
 
 # Configuration de base
 logging.basicConfig(level=logging.INFO)
@@ -45,8 +45,17 @@ def kernel():
     """Fixture pour le kernel Semantic Kernel."""
     try:
         k = Kernel()
-        chat_service = OpenAIChatCompletion(
-            service_id="gpt-5-mini", ai_model_id="gpt-5-mini"
+        # #2932: the cached path — create_llm_service's single exit wraps the
+        # service with CachedChatCompletion (argumentation_analysis/core/
+        # llm_service.py:563), so the record lane persists this test's
+        # responses and the replay band raises LLMCacheMiss on a miss instead
+        # of making a live POST under its dummy key. The raw OpenAIChatCompletion
+        # built here before bypassed that wrapper. This fixture is consumed only
+        # by the requires_api test below, so no keyless construction path is
+        # needed (a bare kernel used to be built even when the test was
+        # deselected — the fixture only runs when its test runs).
+        chat_service = create_llm_service(
+            service_id="gpt-5-mini", model_id="gpt-5-mini", force_authentic=True
         )
         k.add_service(chat_service)
         return k
