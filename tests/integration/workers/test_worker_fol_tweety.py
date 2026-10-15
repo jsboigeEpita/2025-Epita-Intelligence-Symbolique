@@ -960,6 +960,25 @@ class TestModuleLoopScope2936:
     async def test_tests_run_on_the_module_loop(self, _module_event_loop_2936):
         assert asyncio.get_running_loop() is _module_event_loop_2936
 
+    def test_no_test_shadows_the_module_loop_scope(self, request):
+        """Garde collection-level (review po-2023 sur #3037) : le témoin
+        ci-dessus n'asserte que SA propre boucle — une marque asyncio NUE
+        remise sur un AUTRE test du module serait son mark le plus proche,
+       shaderait le ``loop_scope="module"`` et rouvrirait le cross-loop send
+        avec un témoin vert. Chaque item du module doit voir son mark asyncio
+        le plus proche porter ``loop_scope="module"`` (ou n'en porter aucun).
+        """
+        shadowing = []
+        for item in request.session.items:
+            if item.path != pathlib.Path(__file__):
+                continue
+            marker = item.get_closest_marker("asyncio")
+            if marker is not None and marker.kwargs.get("loop_scope") != "module":
+                shadowing.append(item.nodeid)
+        assert shadowing == [], (
+            f"bare @pytest.mark.asyncio shadows the module loop_scope on: {shadowing}"
+        )
+
 
 # La sérialisation est maintenant la seule stratégie par défaut, la paramétrisation n'est plus nécessaire.
 # La fixture use_serialization a été supprimée.
