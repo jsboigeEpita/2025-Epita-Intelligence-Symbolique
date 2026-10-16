@@ -74,7 +74,6 @@ class ComprehensiveDocumentationRecovery:
                     ".env.template": "config/.env.template",
                     ".env.example": "config/.env.example",
                     ".env.test": "config/.env.test",
-                    "pytest.ini": "config/pytest.ini",
                     "pyproject.toml": "pyproject.toml",
                     "jpype.config": "config/jpype.config",
                 },
