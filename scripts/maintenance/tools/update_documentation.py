@@ -746,7 +746,6 @@ jobs:
 ## 🔧 Scripts et Maintenance
 
 ### Scripts Maintenance v2.1.0
-- **[Organisation Fichiers](../scripts/maintenance/organize_root_files.py)** - 🆕 Nettoyage projet
 - **[Refactorisation Oracle](../scripts/maintenance/refactor_oracle_system.py)** - 🆕 Refactorisation code
 - **[Mise à jour Tests](../scripts/maintenance/update_test_coverage.py)** - 🆕 Extension couverture
 - **[Mise à jour Documentation](../scripts/maintenance/update_documentation.py)** - 🆕 Génération docs
