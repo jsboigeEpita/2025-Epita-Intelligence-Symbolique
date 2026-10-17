@@ -28,9 +28,9 @@ class _FakeState:
     """Minimal state stub mirroring add_fallacy's storage (shared_state.py:110).
 
     Records each add_fallacy call exactly as the real state does: stores
-    family/taxonomy_path/target_argument_id/problematic_quote only when
-    non-empty, and confidence only when measured (``None`` is not ``0.0``,
-    #2972).
+    family/taxonomy_path/target_argument_id/problematic_quote/confidence_note
+    only when non-empty, and confidence only when measured (``None`` is not
+    ``0.0``, #2972).
     """
 
     def __init__(self) -> None:
@@ -53,6 +53,7 @@ class _FakeState:
         taxonomy_path: str = "",
         confidence=None,
         problematic_quote=None,
+        confidence_note: str = "",
     ) -> str:
         self._counter += 1
         fid = f"fallacy_{self._counter}"
@@ -65,6 +66,8 @@ class _FakeState:
             entry["confidence"] = float(confidence)
         if problematic_quote:
             entry["problematic_quote"] = str(problematic_quote)
+        if confidence_note:
+            entry["confidence_note"] = str(confidence_note)
         if target_arg_id:
             entry["target_argument_id"] = target_arg_id
         self.identified_fallacies[fid] = entry
