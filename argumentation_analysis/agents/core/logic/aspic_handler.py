@@ -13,6 +13,9 @@ import jpype
 import logging
 from typing import List, Dict, Any, Optional
 
+from .af_handler import AFHandler
+from .tweety_initializer import ready_initializer
+
 logger = logging.getLogger(__name__)
 
 
@@ -126,13 +129,41 @@ class ASPICHandler:
             # reasoner.getModels(theory) → AttributeError on every real run.)
             inv = self.Proposition("aspic_pl_formula")
             dung_theory = reasoner.getDungTheory(theory, inv)
-            dung_reasoner = self.SimplePreferredReasoner()
-            extensions = dung_reasoner.getModels(dung_theory)
-
-            ext_list = []
-            for ext in extensions:
-                ext_elements = [str(arg) for arg in ext]
-                ext_list.append(sorted(ext_elements))
+            # #3050: the induced Dung theory goes through AFHandler's sized
+            # enumeration (weak components + G ∪ G⁺ reduction). The previous
+            # direct ``SimplePreferredReasoner().getModels(dung_theory)``
+            # submitted the SAME unbounded enumeration the AF-family
+            # callables were repaired from — an induced theory over a rich
+            # rule set reached the reference reasoner with no bound and no
+            # refusal. Preferred is complete-based, so the reduction applies.
+            induced_arguments = [str(node) for node in dung_theory]
+            induced_attacks = [
+                [str(edge.getAttacker()), str(edge.getAttacked())]
+                for edge in dung_theory.getAttacks()
+            ]
+            af_handler = AFHandler(ready_initializer())
+            ext_list = af_handler._sized_models(
+                "preferred", induced_arguments, induced_attacks
+            )
+            if isinstance(ext_list, dict) and ext_list.get("refused"):
+                # Refusal by name (#3050): the dict travels verbatim in the
+                # extensions slot (the #3050 Dung contract) and is mirrored
+                # under statistics — the aspic state writer passes statistics
+                # through whole while flattening a non-list extensions value.
+                return {
+                    "reasoner_type": reasoner_type,
+                    "extensions": ext_list,
+                    "attacks": [],
+                    "statistics": {
+                        "strict_rules_count": len(strict_rules),
+                        "defeasible_rules_count": len(defeasible_rules),
+                        "axioms_count": len(axioms) if axioms else 0,
+                        "extensions_count": ext_list.get("extensions_count"),
+                        "attacks_count": 0,
+                        "dung_attacks_count": len(induced_attacks),
+                        "refused": True,
+                    },
+                }
 
             # #1678: count the REAL Dung attacks materialized in the generated
             # framework. The qualification below is derived from the rule INPUTS

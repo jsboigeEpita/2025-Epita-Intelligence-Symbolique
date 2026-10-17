@@ -92,9 +92,25 @@ def reader_consequence(
     return consequence
 
 
+#: Native status that rides the semantics-label slot when the pipeline files
+#: a framework whose extensions were never computed (``verification_unavailable``
+#: in compare mode, or a ``degraded: True`` entry): the label parsed back from
+#: the name is a STATUS, not a semantics (#3050). Nothing was computed, so
+#: there is nothing to cite.
+UNAVAILABLE_STATUS = "unavailable"
+
+
 def appendix_ref(semantics_label: str) -> str:
-    """Stable opaque appendix reference, citable from Act II and Act III."""
+    """Stable opaque appendix reference, citable from Act II and Act III.
+
+    Returns ``""`` when the label is the native *unavailable* status (#3050):
+    no semantics was computed, so no appendix holds machinery to cite — the
+    prose names the status itself (see Act II's non-concluable branch), never
+    a phantom anchor ``Annexe Dung[unavailable]``.
+    """
     label = (semantics_label or "dung").strip().lower().replace(" ", "-")
+    if label == UNAVAILABLE_STATUS:
+        return ""
     return f"Annexe Dung[{label}]"
 
 
