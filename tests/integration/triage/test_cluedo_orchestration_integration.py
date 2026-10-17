@@ -262,14 +262,10 @@ class TestCluedoOrchestrationRealIntegration:
     @pytest.mark.skipif(
         not REAL_COMPONENTS_AVAILABLE, reason="Vraies classes système non disponibles"
     )
-    @pytest.mark.skipif(
-        not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY required"
-    )
-    # #1988 (résiduel): this test invokes sherlock.get_current_case_description()
-    # via asyncio.wait_for — a real LLM POST, not a creation-only path.
-    # The pure creation/availability tests below it stay runnable because they
-    # invoke no LLM (see the sibling-note comment above).
-    @pytest.mark.requires_api
+    # #3039: no LLM on this path — measured 2026-10-15 (replay, empty cache,
+    # dummy key): 0 cache keys, the method reads local state. The requires_api
+    # marker and the stale #1988 note (which claimed "a real LLM POST") went
+    # with the measurement; the test now runs under the gate filter, keyless.
     async def test_real_sherlock_case_description(self, real_kernel, cluedo_case_data):
         """Test de la VRAIE méthode get_current_case_description de Sherlock"""
         if not real_kernel:
@@ -279,30 +275,15 @@ class TestCluedoOrchestrationRealIntegration:
         factory = AgentFactory(real_kernel, "chat_completion")
         sherlock = factory.create_sherlock_agent(agent_name="Sherlock_Case_Test")
 
-        try:
-            # Appel de la VRAIE méthode (pas une fausse méthode)
-            description = await asyncio.wait_for(
-                sherlock.get_current_case_description(), timeout=15.0
-            )
+        # Appel de la VRAIE méthode (pas une fausse méthode)
+        description = await sherlock.get_current_case_description()
 
-            # Vérification du résultat de la vraie méthode
-            if description is not None:
-                assert isinstance(description, str)
-                assert len(description) > 0
-                logger.info(
-                    f"✅ VRAIE méthode get_current_case_description réussie: {description[:100]}..."
-                )
-            else:
-                # Normal sans plugin configuré
-                logger.info(
-                    "✅ VRAIE méthode appelée (résultat None normal sans plugin)"
-                )
-
-        except asyncio.TimeoutError:
-            pytest.skip("Real method call timeout")
-        except Exception as e:
-            # Exception normale sans plugin configuré
-            logger.info(f"✅ VRAIE méthode appelée (exception normale: {e})")
+        # Vérification du résultat de la vraie méthode
+        assert isinstance(description, str)
+        assert len(description) > 0
+        logger.info(
+            f"✅ VRAIE méthode get_current_case_description réussie: {description[:100]}..."
+        )
 
     @pytest.mark.skipif(
         not REAL_COMPONENTS_AVAILABLE, reason="Vraies classes système non disponibles"
@@ -310,11 +291,13 @@ class TestCluedoOrchestrationRealIntegration:
     @pytest.mark.skipif(
         not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY required"
     )
-    # #1988 (résiduel): same shape as test_real_sherlock_case_description —
-    # invokes watson.analyze_text() under skipif alone.
+    # #3039: analyze_text was removed with the watson arm (#2122 A4) — the old
+    # body swallowed the AttributeError and stayed green. Repaired onto
+    # text_to_belief_set, the inherited LLM-backed conversion (two LLM stages,
+    # then Tweety validation); the marker is truthful again.
     @pytest.mark.requires_api
     async def test_real_watson_analysis(self, real_kernel, cluedo_case_data):
-        """Test de la VRAIE méthode analyze_text de Watson"""
+        """Test de la VRAIE méthode text_to_belief_set de Watson"""
         if not real_kernel:
             pytest.skip("Cannot create real kernel")
 
@@ -322,27 +305,18 @@ class TestCluedoOrchestrationRealIntegration:
         factory = AgentFactory(real_kernel, "chat_completion")
         watson = factory.create_watson_agent(agent_name="Watson_Analysis_Test")
 
-        try:
-            # Appel de la VRAIE méthode (pas une fausse méthode)
-            analysis = await asyncio.wait_for(
-                watson.analyze_text(cluedo_case_data["description"]), timeout=15.0
-            )
+        # Appel de la VRAIE méthode (pas une fausse méthode)
+        belief_set, message = await watson.text_to_belief_set(
+            cluedo_case_data["description"]
+        )
 
-            # Vérification du résultat de la vraie méthode
-            if analysis is not None:
-                # Le résultat peut être un dict, string, ou objet selon la vraie implémentation
-                logger.info(
-                    f"✅ VRAIE méthode analyze_text réussie: {str(analysis)[:100]}..."
-                )
-            else:
-                # Normal si pas configuré
-                logger.info("✅ VRAIE méthode appelée (résultat None normal)")
-
-        except asyncio.TimeoutError:
-            pytest.skip("Real method call timeout")
-        except Exception as e:
-            # Exception normale sans configuration complète
-            logger.info(f"✅ VRAIE méthode appelée (exception normale: {e})")
+        # Vérification du résultat de la vraie méthode
+        assert belief_set is not None, f"la conversion a échoué: {message}"
+        assert isinstance(belief_set.content, str)
+        assert len(belief_set.content) > 0
+        logger.info(
+            f"✅ VRAIE méthode text_to_belief_set réussie: {belief_set.content[:100]}..."
+        )
 
 
 # Test d'intégration complet avec VRAIES classes
