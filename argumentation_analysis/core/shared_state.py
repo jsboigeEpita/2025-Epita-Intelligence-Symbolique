@@ -360,6 +360,7 @@ class RhetoricalAnalysisState:
         taxonomy_path: str = "",
         confidence: Optional[float] = None,
         problematic_quote: Optional[str] = None,
+        confidence_note: str = "",
     ) -> str:
         """Ajoute un sophisme identifié et retourne son ID.
 
@@ -372,6 +373,11 @@ class RhetoricalAnalysisState:
 
         ``None`` et ``0.0`` restent distincts : une lane qui n'a pas mesuré
         de confiance n'en déclare pas une nulle (famille #1019).
+
+        #3054 — ``confidence_note`` voyage à côté de la confiance : la raison
+        pour laquelle elle est absente (note #3034) atteint l'état, pas
+        seulement le JSON de descente. Stockée seulement si non vide — une
+        lecture fidèle n'a pas de note, et une clé vide serait du bruit.
         """
         fallacy_id = self._generate_id("fallacy", self.identified_fallacies)
         entry: Dict[str, Any] = {"type": fallacy_type, "justification": justification}
@@ -383,6 +389,8 @@ class RhetoricalAnalysisState:
             entry["confidence"] = float(confidence)
         if problematic_quote:
             entry["problematic_quote"] = str(problematic_quote)
+        if confidence_note:
+            entry["confidence_note"] = str(confidence_note)
         log_target_info = ""
         if target_arg_id:
             if target_arg_id not in self.identified_arguments:
@@ -1421,6 +1429,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         label: str,
         confidence: Optional[float] = None,
         detector: str = "camembert",
+        confidence_note: str = "",
     ) -> str:
         """Add a neural fallacy detection score.
 
@@ -1428,6 +1437,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         carried no usable number (``fallacy_measured_fields``), and the
         detection is kept with an honest None — same doctrine as
         ``add_fallacy`` (None and 0.0 stay distinct, #1019 family).
+
+        #3054 — ``confidence_note`` travels beside the confidence here too:
+        stored only when the producer emitted one (the neural one-shot
+        producer does not today — an empty note invents nothing).
         """
         nf_id = self._generate_id("nf", self.neural_fallacy_scores)
         entry = {
@@ -1437,6 +1450,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "confidence": confidence,
             "detector": detector,
         }
+        if confidence_note:
+            entry["confidence_note"] = str(confidence_note)
         self.neural_fallacy_scores.append(entry)
         confidence_repr = (
             f"{confidence:.2f}" if confidence is not None else "non mesurée"

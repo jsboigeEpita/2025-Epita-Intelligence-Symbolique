@@ -18,6 +18,8 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
+from argumentation_analysis.plugins.identification_models import confidence_note_reason
+
 from .fr_accord import accord
 
 # Keys that carry corpus plaintext (directly or via derived fields). Stripped
@@ -424,6 +426,42 @@ def _provenance_counts(state: Mapping[str, Any]) -> Dict[str, Any]:
     return counts
 
 
+def _confidence_provenance_section(state: Mapping[str, Any]) -> List[str]:
+    """#3054 (#1914 criterion 6) — confidence provenance, counts only.
+
+    A subsection beside the dimensional table: how many located fallacies
+    carry a measured confidence, how many carry none, by reason class
+    (``confidence_note_reason``). Absent entirely when every confidence is
+    measured or no fallacy was located — the subsection exists only when
+    there is a provenance to report. Counts only, never the notes
+    themselves (a note quotes the model's rejected input, which is model
+    output): a reason class is a name for the note, not the note. No
+    fabricated number — a None stays None and is never rendered as 0
+    (#1019, #3029). The acts stay free of any sentence about the
+    confidences: this folded block is the surface the #1914 contract names
+    (anti-pendulum, coordinator R1092).
+    """
+    fallacies = state.get("identified_fallacies")
+    if not isinstance(fallacies, Mapping) or not fallacies:
+        return []
+    entries = [e for e in fallacies.values() if isinstance(e, Mapping)]
+    unmeasured = [e for e in entries if e.get("confidence") is None]
+    if not unmeasured:
+        return []
+    by_reason: Dict[str, int] = {}
+    for e in unmeasured:
+        reason = confidence_note_reason(str(e.get("confidence_note") or ""))
+        by_reason[reason] = by_reason.get(reason, 0) + 1
+    detail = ", ".join(f"{r} : {n}" for r, n in sorted(by_reason.items()))
+    return [
+        "### Confiances des sophismes localisés (provenance)",
+        "",
+        f"- mesurées : {len(entries) - len(unmeasured)}/{len(entries)}",
+        f"- non mesurées : {len(unmeasured)} ({detail})",
+        "",
+    ]
+
+
 def _dung_machinery_section(
     state: Mapping[str, Any], *, include_full: bool
 ) -> List[str]:
@@ -812,6 +850,10 @@ def render_appendix(
             f"| {label} | {value} | {mobilisation.get(label, 'non déclarée')} |"
         )
     lines.append("")
+
+    # #3054 (#1914 criterion 6): confidence provenance — same folded block,
+    # right after the table it completes. Absent when nothing to report.
+    lines.extend(_confidence_provenance_section(state))
 
     # #1908: the Dung machinery the narration references — same folded block,
     # after the dimensional table, before any opt-in full dump.

@@ -916,6 +916,10 @@ def _write_camembert_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> N
             label=str(fallacy_type),
             confidence=confidence,
             detector=str(info.get("source", "self_hosted_llm")),
+            # #3054 — the note travels when the producer emitted one; the
+            # neural one-shot producer does not today, and an empty string
+            # invents no reason (#1019).
+            confidence_note=str(info.get("confidence_note") or ""),
         )
 
 
@@ -965,6 +969,10 @@ def _write_hierarchical_fallacy_to_state(
         # — une seule règle, les deux lanes ne peuvent plus diverger (un
         # booléen n'est pas une mesure, repris de #3015).
         confidence, problematic_quote = fallacy_measured_fields(f)
+        # #3054 — la note voyage à côté de la confiance : la raison d'une
+        # confiance absente atteint l'état, pas seulement le JSON de descente
+        # (la lane qui écrit None sans la note est le défaut que l'issue nomme).
+        confidence_note = str(f.get("confidence_note") or "")
         trace = f.get("navigation_trace", [])
         family = f.get("family", "")
         taxonomy_path = f.get("taxonomy_path", "")
@@ -985,6 +993,7 @@ def _write_hierarchical_fallacy_to_state(
             taxonomy_path=taxonomy_path,
             confidence=confidence,
             problematic_quote=problematic_quote,
+            confidence_note=confidence_note,
         )
 
     # FB-35 (#1121): state-level fail-loud marker when the agentic descent was
