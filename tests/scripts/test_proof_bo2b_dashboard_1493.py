@@ -352,18 +352,25 @@ def test_proof_script_cli_runs(tmp_path: pathlib.Path) -> None:
     )
 
 
-@pytest.mark.requires_api
 @pytest.mark.slow
 def test_proof_script_cli_real_llm_path(tmp_path: pathlib.Path) -> None:
-    """The real (non-stub) LLM path still exits 0 — kept for who has a key.
+    """The non-stub path still exits 0 — decided or degraded, honestly.
 
-    #1547 DoD #4: the hermetic test above covers the stub path; this test
-    guards the real path so it is not silently dropped. It is marked
-    ``requires_api`` (skipped without a key) AND ``slow`` (the real path takes
-    3-4 min, so it must not run in the default CI sweep). It does NOT assert
-    a specific verdict — the real path may DECIDED or DEGRADE honestly
-    depending on key quota / pipeline availability; we only assert it exits 0
-    and emits a payload of the expected shape.
+    #1547 DoD #4: the hermetic test above covers the force-stub branch; this
+    test runs the script WITHOUT ``--no-llm``, so the force-stub branch is
+    the only one it refuses (the ``force-stub`` note must be absent). It does
+    NOT assert a specific verdict: with a working key the pipeline decides
+    (3-4 min, measured in #1547); without one it degrades honestly and exits
+    0 (~30 s keyless, measured in #3049 tranche 5 — the same run that found
+    the degraded-path crash the script fix repairs: a failed phase carries
+    ``output: None`` (#2902 shape) and the script used to die at the verdict
+    read with exit 1, which made this test red keyless for the wrong reason).
+
+    ``requires_api`` is deliberately absent: the test passes without a real
+    key (the degrade branch is an accepted outcome by design), so the marker
+    over-claimed — measured after the None-guard fix. ``slow`` keeps it out
+    of the CI gate (``-m "not slow and not requires_api"`` deselects via
+    slow), and the #1872 leaker guard does not list this file.
     """
     out_path = tmp_path / "data.json"
     # 300 s borne: the real path measures 178-259 s firsthand (#1547 body);
