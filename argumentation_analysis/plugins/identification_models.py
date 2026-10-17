@@ -32,6 +32,26 @@ def fallacy_measured_fields(
     return confidence, fallacy.get("problematic_quote") or None
 
 
+def confidence_note_reason(note: str) -> str:
+    """Classify a ``confidence_note`` into its reason class (#3054).
+
+    ``_confidence_score`` (#3034) produces exactly two note shapes — the
+    omitted argument (``"confidence absente ..."``) and the unreadable input
+    (``"unreadable confidence ..."``). The appendix counts unmeasured
+    detections by these classes; an empty note (a producer that emits none,
+    e.g. the neural one-shot) is counted as such, never guessed — the class is
+    a name for the note, not an inference beyond it (#1019).
+    """
+    text = (note or "").strip().lower()
+    if not text:
+        return "raison non fournie"
+    if text.startswith("confidence absente"):
+        return "omise"
+    if text.startswith("unreadable confidence"):
+        return "illisible"
+    return "autre"
+
+
 def confidence_outranks(new: Optional[float], incumbent: Optional[float]) -> bool:
     """None-safe confidence ordering for every dedup comparator (#3029).
 

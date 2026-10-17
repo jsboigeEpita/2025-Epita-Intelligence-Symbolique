@@ -3063,6 +3063,11 @@ async def _run_parent_harness_fallback(
             # rule for both lanes (a boolean flag is not a measurement,
             # taken from #3015).
             confidence, problematic_quote = fallacy_measured_fields(f)
+            # #3054 — same rule as the pipeline writer: the note travels
+            # beside the confidence, so a None-with-note detection reaching
+            # the state keeps its reason (a lane writing None without the
+            # note is the defect #3054 names).
+            confidence_note = str(f.get("confidence_note") or "")
             # #1633 site 3: resolve through the same ladder the pipeline lane
             # uses. This used to read ``source_arg_id or target_argument_id``,
             # which inverted the precedence AND skipped the membership guard —
@@ -3078,6 +3083,7 @@ async def _run_parent_harness_fallback(
                         target_arg_id=target_arg_id,
                         confidence=confidence,
                         problematic_quote=problematic_quote,
+                        confidence_note=confidence_note,
                     )
                     added += 1
                 elif hasattr(state, "add_identified_fallacy"):
