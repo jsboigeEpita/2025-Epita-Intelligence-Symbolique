@@ -8,8 +8,10 @@ verdict. This test exercises the demo's own driver on 2 propositions to prove:
   - the verdict is readable (winner + ≥1 voting method + consensus);
   - the table renderer does not crash on real output.
 
-Privacy HARD: synthetic domain-public propositions only (no corpus). Marked
-``requires_api``+``slow``: the workflow needs a real LLM per proposition.
+Privacy HARD: synthetic domain-public propositions only (no corpus). The LLM
+test carries ``requires_api``+``slow`` (the workflow needs a real LLM per
+proposition, #3049 tranche 4); the static privacy test below runs keyless —
+class-level markers would blanket it out of every keyless run.
 """
 
 import os
@@ -22,16 +24,20 @@ def _demo_on_path(monkeypatch):
     """Make the examples package importable so the driver's intra-package import resolves."""
     import pathlib
 
-    demo_dir = pathlib.Path(__file__).resolve().parents[3] / "examples" / "democratech_deliberation"
+    demo_dir = (
+        pathlib.Path(__file__).resolve().parents[3]
+        / "examples"
+        / "democratech_deliberation"
+    )
     monkeypatch.syspath_prepend(str(demo_dir))
     yield
 
 
-@pytest.mark.requires_api
-@pytest.mark.slow
 class TestDemocratechDemo:
     """DoD: demo renders a firsthand, readable verdict per proposition."""
 
+    @pytest.mark.requires_api
+    @pytest.mark.slow
     @pytest.mark.asyncio
     async def test_demo_renders_firsthand_verdict_per_prop(self):
         # Import after syspath_prepend.
