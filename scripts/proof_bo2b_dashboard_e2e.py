@@ -170,12 +170,15 @@ async def run_democratech_flow(store: ProposalStore, force_stub: bool = False) -
     results = final_proposal.analysis_results if final_proposal else None
 
     # 6. Extract the governance verdict marker (if present) — BO-2 #1472 honest.
-    gov_output = (
-        (results or {})
-        .get("phases", {})
-        .get("democratic_vote", {})
-        .get("output", {})
-    )
+    # #2902 shape (measured, #3049 tranche 5): a failed phase carries
+    # ``output: None``, and ``.get(key, default)`` returns None — not the
+    # default — when the key exists with a None value. The old chained-default
+    # read returned None for gov_output and crashed the script at the verdict
+    # line (exit 1) exactly when the pipeline degraded (LLM extract failed),
+    # instead of degrading honestly. Same idiom as ``_vote_phase_of`` in
+    # api/proposal_service.py, which already tolerates every present-but-None hop.
+    vote_phase = ((results or {}).get("phases") or {}).get("democratic_vote") or {}
+    gov_output = vote_phase.get("output") or {}
     verdict = gov_output.get("governance_verdict") or {}
     decided_firsthand = bool(gov_output.get("governance_decided_firsthand"))
     degraded = bool(gov_output.get("degraded"))
