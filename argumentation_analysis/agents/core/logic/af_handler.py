@@ -74,6 +74,31 @@ _ENUMERATING_SEMANTICS = frozenset(
     name for name in SEMANTICS_REASONERS if name != "grounded"
 )
 
+#: Complete-based semantics: every extension CONTAINS the grounded extension
+#: G and EXCLUDES everything G attacks (G⁺). They are solved after the
+#: G ∪ G⁺ reduction (#3050 follow-up, measured cliff: a 17-node attack chain
+#: was refused under the flat component cap although base solved it instantly
+#: — G absorbs a chain, leaving exactly one extension). ``conflict_free``,
+#: ``admissible``, ``naive`` and ``stage`` do NOT contain G (an isolated
+#: self-attacker is conflict-free yet grounded-free) and keep the flat cap.
+#:
+#: Modularization proof (E extension of F ⟺ E = G ∪ S, S extension of the
+#: reduct F↾R with R = Args ∖ (G ∪ G⁺)):
+#: - no admissible set attacks a grounded argument (Dung; the characteristic
+#:   function defeats every such attacker at a finite stage), so no
+#:   residue→G attack exists, and no G→residue attack exists by the
+#:   definition of G⁺ — the reduct is closed on both sides;
+#: - every admissible E is conflict-free with G⁺ (G ⊆ E attacks G⁺), and
+#:   G ⊆ E for every complete E, so E = G ∪ S with S ⊆ R; defence transfers
+#:   because G⁺ attackers of R nodes are defeated by G ⊆ E;
+#: - semi_stable: E⁺_F = (G ∪ G⁺) ∪ S⁺_reduct — the G ∪ G⁺ part is CONSTANT
+#:   across complete extensions, so range-maximality reduces to the reduct;
+#: - ideal: ⋂ preferred(F) = G ∪ (⋂ preferred(reduct)) — intersection
+#:   distributes over the constant G part.
+_DUNG_COMPLETE_BASED = frozenset(
+    {"preferred", "stable", "complete", "semi_stable", "ideal"}
+)
+
 
 def weak_components(
     arguments: List[str], attacks: List[List[str]]
@@ -219,16 +244,73 @@ class AFHandler:
         contract as :meth:`_extensions_to_python`) or a REFUSAL dict —
         ``{"error": <named reason>, "refused": True, ...}`` carrying the exact
         count when it is known — never a silent ``{"error": ...}``. See the
-        module-level ``#3050`` block for the decomposition argument.
+        module-level ``#3050`` block for the decomposition argument and
+        ``_DUNG_COMPLETE_BASED`` for the reduction one.
         """
-        components = weak_components(arguments, attacks)
+        if semantics_key in _DUNG_COMPLETE_BASED:
+            return self._complete_based_models(semantics_key, arguments, attacks)
+        return self._component_product_models(
+            semantics_key, weak_components(arguments, attacks), component_scope=""
+        )
+
+    def _complete_based_models(
+        self, semantics_key: str, arguments: List[str], attacks: List[List[str]]
+    ) -> Any:
+        """(#3050) Complete-based semantics over the G ∪ G⁺ reduct.
+
+        Computes the grounded extension G first (polynomial, bounded — the
+        only call made before the gate), reduces the frame to the residue
+        R = Args ∖ (G ∪ G⁺), then enumerates the semantics on the residue's
+        components and re-joins ``G ∪ S`` per model. Modularization: see the
+        ``_DUNG_COMPLETE_BASED`` block. When G absorbs the whole frame the
+        single extension is G itself — the measured 40/1 and attack-chain
+        shapes, instant on base and previously refused under the flat cap.
+        """
+        theory, _ = self._build_framework(arguments, attacks)
+        grounded = self._extensions_to_python(
+            self._get_reasoner("grounded").getModels(theory)
+        )
+        g = grounded[0] if grounded else []
+        g_set = set(g)
+        attacked_by_g = {t for s, t in attacks if s in g_set}
+        residue = [a for a in arguments if a not in g_set and a not in attacked_by_g]
+        if not residue:
+            return [sorted(g)]
+
+        residue_set = set(residue)
+        residue_attacks = [
+            [s, t] for s, t in attacks if s in residue_set and t in residue_set
+        ]
+        return self._component_product_models(
+            semantics_key,
+            weak_components(residue, residue_attacks),
+            component_scope="residue ",
+            prefix=g,
+        )
+
+    def _component_product_models(
+        self,
+        semantics_key: str,
+        components: List[Tuple[List[str], List[List[str]]]],
+        component_scope: str = "",
+        prefix: Optional[List[str]] = None,
+    ) -> Any:
+        """(#3050) Per-component enumeration, cross-product under the ceiling.
+
+        ``component_scope`` names what the components are of ("" = the whole
+        frame, "residue " = after the G ∪ G⁺ reduction) in the refusal
+        messages. ``prefix`` carries the constant part re-joined onto every
+        model (G on the reduced path).
+        """
+        prefix = prefix or []
         largest = max((len(comp_args) for comp_args, _ in components), default=0)
         if largest > _DUNG_COMPONENT_MAX_NODES:
             return {
                 "error": (
                     f"enumeration refused (#3050): the largest "
-                    f"weakly-connected component holds {largest} nodes, over "
-                    f"the {_DUNG_COMPONENT_MAX_NODES}-node enumerable bound — "
+                    f"{component_scope}weakly-connected component holds "
+                    f"{largest} nodes, over the "
+                    f"{_DUNG_COMPONENT_MAX_NODES}-node enumerable bound — "
                     f"the {semantics_key} reasoner would walk its search "
                     f"space unbounded"
                 ),
@@ -264,8 +346,8 @@ class AFHandler:
             }
 
         combined = [
-            sorted(arg for combo in combos for arg in combo)
-            for combos in itertools.product(*per_component)
+            sorted(prefix + [arg for model in combo for arg in model])
+            for combo in itertools.product(*per_component)
         ]
         return sorted(combined)
 
@@ -323,7 +405,8 @@ class AFHandler:
                 },
             }
             logger.info(
-                f"Analysis successful. Found {len(extensions)} {semantics_key} extensions."
+                f"Analysis successful. {extensions_count} {semantics_key} "
+                f"extensions (or refusal count)."
             )
             return result
 

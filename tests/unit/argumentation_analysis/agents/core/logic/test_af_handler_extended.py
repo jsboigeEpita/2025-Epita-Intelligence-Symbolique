@@ -175,15 +175,18 @@ class TestAFHandlerExtended:
             arguments=["a", "b", "c"],
             # #3050: the frame is ONE weakly-connected component (b->c joins
             # it), so the sized path submits exactly one theory and this test
-            # still exercises the conversion/sorting contract; the previous
-            # frame (a->b only) left c isolated and the mock reasoner's fixed
-            # answer now multiplies per component, which is the sized path's
-            # documented behaviour, not a sorting defect.
+            # still exercises the conversion/sorting contract. #3050
+            # follow-up: the semantics is ``naive`` — a flat-cap semantics,
+            # because the reduction path for complete-based semantics queries
+            # the GROUNDED reasoner first and a fixed-answer mock cannot
+            # represent two reasoners at once (its grounded answer would be
+            # its preferred answer). The conversion/sorting contract under
+            # test is semantics-independent.
             attacks=[["a", "b"], ["b", "c"]],
-            semantics="preferred",
+            semantics="naive",
         )
 
-        extensions = result["extensions"]["preferred"]
+        extensions = result["extensions"]["naive"]
         # Each inner list should be sorted, outer list should be sorted
         assert extensions == [["a", "c"], ["b"]]
 
