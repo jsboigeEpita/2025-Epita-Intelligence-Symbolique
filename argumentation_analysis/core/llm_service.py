@@ -38,7 +38,6 @@ if not logger.handlers and not logger.propagate:
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
-logger.info("<<<<< MODULE llm_service.py LOADED >>>>>")
 
 
 # Modèles retirés : toute résolution les remplace, quelle que soit la source
@@ -435,7 +434,6 @@ def create_llm_service(
         ValueError: Si la configuration requise est manquante.
         RuntimeError: Si la création du service échoue.
     """
-    logger.critical("<<<<< create_llm_service FUNCTION CALLED >>>>>")
     logger.info(f"--- Configuration du Service LLM ({service_id}) ---")
 
     # Gestion des mocks pour les tests
