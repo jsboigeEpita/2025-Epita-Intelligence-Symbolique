@@ -366,7 +366,6 @@ La refactorisation complète du système **Sherlock-Watson-Moriarty Oracle Enhan
 └── DOCUMENTATION_COMPLETE_SHERLOCK_WATSON.md # ✅ Refactorisation impact
 
 🛠️ Scripts Maintenance (/scripts/maintenance/):
-├── organize_root_files.py          # 🆕 Organisation projet
 ├── refactor_oracle_system.py       # 🆕 Refactorisation code
 ├── update_test_coverage.py         # 🆕 Extension tests
 ├── update_documentation.py         # 🆕 Génération documentation
