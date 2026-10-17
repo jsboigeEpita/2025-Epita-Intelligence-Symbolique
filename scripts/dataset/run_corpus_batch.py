@@ -237,7 +237,18 @@ def parse_legacy_label(source_name: str) -> Dict[str, str]:
             _DATE_NUMERIC_RE.search(inner)
             or _DATE_FRENCH_RE.search(inner)
             or _FORMAT_TAG_RE.match(inner)
+            or inner.isupper()
         ):
+            # #3051 — an all-caps parenthetical is an acronym, and an acronym
+            # names its issuer (publisher, agency, broadcaster), never the
+            # arena. Filing it as ``venue`` staged speeches at the publisher
+            # of the transcript (Acts I/III rendered it as the place and the
+            # audience; census over the corpus parentheticals: 2 of 3 were
+            # misfiled, no explicit metadata field exists to settle it, so the
+            # shape is the decider). Omitted rather than re-keyed as a
+            # provenance tag: no reader renders one, and a produced key with
+            # no reader is #1019's family. The mixed-case institution shape
+            # still files as venue.
             meta["venue"] = inner
 
     lowered = text.lower()
