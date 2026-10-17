@@ -42,6 +42,7 @@ try:
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
     from config.unified_config import UnifiedConfig
     from argumentation_analysis.config.settings import AppSettings
+    from argumentation_analysis.core.llm_service import create_llm_service
 
     REAL_COMPONENTS_AVAILABLE = True
 except ImportError as e:
@@ -63,7 +64,6 @@ class TestCluedoOrchestrationRealIntegration:
         try:
             kernel = Kernel()
 
-            # Correction : Instancier directement le service avec le bon service_id
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key:
                 # #2411: construction-only. The agent-creation and
@@ -71,13 +71,26 @@ class TestCluedoOrchestrationRealIntegration:
                 # ones that do are requires_api and skip keyless), so a dummy
                 # key builds the real classes keyless — a bare kernel used to
                 # fail mid-test on the missing service instead.
-                api_key = "sk-construction-only-2411"
-
-            llm_service = OpenAIChatCompletion(
-                service_id="chat_completion",  # ID attendu par SherlockEnqueteAgent
-                ai_model_id="gpt-5-mini",
-                api_key=api_key,
-            )
+                llm_service = OpenAIChatCompletion(
+                    service_id="chat_completion",  # ID attendu par SherlockEnqueteAgent
+                    ai_model_id="gpt-5-mini",
+                    api_key="sk-construction-only-2411",
+                )
+            else:
+                # #2932: with a key present (record lane, replay band, a seat
+                # with a .env) the service comes from create_llm_service, whose
+                # single exit wraps it with CachedChatCompletion
+                # (argumentation_analysis/core/llm_service.py:563). The raw
+                # OpenAIChatCompletion built here before bypassed that wrapper:
+                # the record lane persisted nothing for this test, and the
+                # replay band would have made a live POST under its dummy key
+                # instead of raising a loud LLMCacheMiss. Same service id, same
+                # model, same key source as before.
+                llm_service = create_llm_service(
+                    service_id="chat_completion",  # ID attendu par SherlockEnqueteAgent
+                    model_id="gpt-5-mini",
+                    force_authentic=True,
+                )
 
             kernel.add_service(llm_service)
             logger.info("Service LLM 'chat_completion' ajouté au kernel pour le test.")
