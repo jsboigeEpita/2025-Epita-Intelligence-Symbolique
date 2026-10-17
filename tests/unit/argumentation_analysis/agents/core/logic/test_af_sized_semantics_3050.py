@@ -157,25 +157,105 @@ class TestSparse40NodesCompletesWithinBudget:
 
     @pytest.mark.timeout(30)
     def test_oversized_component_refused_before_any_jvm_call(self):
-        # A 17-node path (over _DUNG_COMPONENT_MAX_NODES) connected as a chain
-        # plus 3 isolated nodes: the chain component is refused by name with
-        # its size, before any getModels call — nothing can leak past a
-        # deadline because no unbounded call is submitted.
-        chain = [f"c{i}" for i in range(1, 18)]
-        attacks = [[chain[i], chain[i + 1]] for i in range(16)]
+        # #3050 follow-up: the refusal must keep pinning the reduction path.
+        # An 18-node EVEN CYCLE has G = ∅ (every node attacked, none
+        # defended), so the G ∪ G⁺ residue is the whole 18-node component —
+        # over the bound, refused by name with its size, before any
+        # enumerating getModels call (the only JVM work already done is the
+        # polynomial grounded computation).
+        cycle = [f"y{i}" for i in range(1, 19)]
+        attacks = [[cycle[i], cycle[(i + 1) % 18]] for i in range(18)]
         handler = _handler()
-        result = handler.analyze_multi_semantics(
-            chain + ["x1", "x2", "x3"], attacks, ["conflict_free"]
-        )
-        refusal = result["extensions"]["conflict_free"]
+        result = handler.analyze_multi_semantics(cycle, attacks, ["preferred"])
+        refusal = result["extensions"]["preferred"]
         assert isinstance(refusal, dict) and refusal.get("refused") is True
-        assert refusal["largest_component_nodes"] == _DUNG_COMPONENT_MAX_NODES + 1
-        assert "17 nodes" in refusal["error"]
-        # Grounded stays polynomial and direct even on the chain.
-        grounded = handler.analyze_multi_semantics(
-            chain + ["x1", "x2", "x3"], attacks, ["grounded"]
-        )
+        assert refusal["largest_component_nodes"] == _DUNG_COMPONENT_MAX_NODES + 2
+        assert "18 nodes" in refusal["error"] and "residue" in refusal["error"]
+        # The flat cap still pins its own path: conflict_free (which does not
+        # contain G) on a 17-node chain is refused on the WHOLE frame, not a
+        # residue.
+        chain = [f"c{i}" for i in range(1, 18)]
+        chain_attacks = [[chain[i], chain[i + 1]] for i in range(16)]
+        flat = handler.analyze_multi_semantics(chain, chain_attacks, ["conflict_free"])
+        flat_refusal = flat["extensions"]["conflict_free"]
+        assert flat_refusal.get("refused") is True
+        assert flat_refusal["largest_component_nodes"] == _DUNG_COMPONENT_MAX_NODES + 1
+        assert "residue" not in flat_refusal["error"]
+        # Grounded stays polynomial and direct even on the cycle.
+        grounded = handler.analyze_multi_semantics(cycle, attacks, ["grounded"])
         assert isinstance(grounded["extensions"]["grounded"], list)
+
+
+_REDUCTION_CHAIN = [f"c{i}" for i in range(1, 18)]
+_REDUCTION_ATTACKS = [[_REDUCTION_CHAIN[i], _REDUCTION_CHAIN[i + 1]] for i in range(16)]
+# c1, c3, …, c17 — measured == the f385fa662 base verdict.
+_REDUCTION_G = sorted(_REDUCTION_CHAIN[0::2])
+
+
+@_JVM
+@_TWEETY
+class TestGroundedReduction:
+    """#3050 follow-up — the 16-node cliff repaired by G ∪ G⁺ reduction.
+
+    Measured on base ``f385fa662`` (direct whole-theory call): the 17-node
+    attack chain solves instantly with exactly one extension per complete-
+    based semantics — G absorbs it. #3055's flat component cap REFUSED the
+    same frame (the cliff). The reduction computes G first (polynomial),
+    removes G and everything G attacks, and enumerates the residue — here
+    the residue is empty, so the extension is G itself.
+    """
+
+    _CHAIN = _REDUCTION_CHAIN
+    _ATTACKS = _REDUCTION_ATTACKS
+    _G = _REDUCTION_G
+
+    @pytest.mark.timeout(30)
+    @pytest.mark.parametrize(
+        "semantics", ["preferred", "stable", "complete", "semi_stable", "ideal"]
+    )
+    def test_chain_17_not_refused_one_extension(self, semantics):
+        result = _handler().analyze_dung_framework(
+            self._CHAIN, self._ATTACKS, semantics
+        )
+        extensions = result["extensions"][semantics]
+        assert isinstance(extensions, list), f"{semantics}: {extensions}"
+        assert extensions == [self._G], f"{semantics}: {extensions}"
+
+    @pytest.mark.timeout(30)
+    def test_reduction_with_residue_product(self):
+        # A frame G does NOT fully absorb: 5-chain (G = {c1, c3, c5}) plus a
+        # disconnected mutual pair {p, q} — the residue IS the pair, and the
+        # two preferred extensions are G ∪ {p} and G ∪ {q}. This pins the
+        # prefix re-join on the product path.
+        args = [f"c{i}" for i in range(1, 6)] + ["p", "q"]
+        attacks = [
+            ["c1", "c2"],
+            ["c2", "c3"],
+            ["c3", "c4"],
+            ["c4", "c5"],
+            ["p", "q"],
+            ["q", "p"],
+        ]
+        result = _handler().analyze_dung_framework(args, attacks, "preferred")
+        extensions = result["extensions"]["preferred"]
+        assert isinstance(extensions, list), extensions
+        g = ["c1", "c3", "c5"]
+        assert extensions == [sorted(g + ["p"]), sorted(g + ["q"])]
+
+    @pytest.mark.timeout(30)
+    def test_dense_20_clique_still_refused(self):
+        # The accepted tradeoff (coordinator review): a 20-clique has G = ∅,
+        # the residue is the whole frame, still over the bound. f385fa662
+        # solved it in 0.06 s (20 singleton extensions); #3055's flat cap
+        # already refused it; the reduction neither widens nor repairs this
+        # shape — it keeps the named refusal.
+        clique = [f"k{i}" for i in range(1, 21)]
+        attacks = [[a, b] for a in clique for b in clique if a != b]
+        result = _handler().analyze_dung_framework(clique, attacks, "preferred")
+        refusal = result["extensions"]["preferred"]
+        assert isinstance(refusal, dict) and refusal.get("refused") is True
+        assert refusal["largest_component_nodes"] == 20
+        assert "residue" in refusal["error"]
 
 
 @_JVM
@@ -266,7 +346,8 @@ class TestWeightedSized:
         handler = _weighted()
         with pytest.raises(TypeError):
             handler.analyze_weighted_framework(
-                [f"a{i}" for i in range(1, 8)], [("a1", "a2", 0.8)],
+                [f"a{i}" for i in range(1, 8)],
+                [("a1", "a2", 0.8)],
                 "conflict_free",
             )
 
@@ -283,3 +364,64 @@ class TestWeightedSized:
             assert out["extensions_count"] == count, f"{sem}: {out}"
             assert sorted({len(e) for e in out["extensions"]}) == sizes, sem
             assert not out.get("refused"), sem
+
+
+# --- ASPIC+ leg (#3050): the induced Dung theory goes through the sized path -
+
+from argumentation_analysis.agents.core.logic.aspic_handler import (  # noqa: E402
+    ASPICHandler,
+)
+
+
+@_JVM
+@_TWEETY
+class TestAspicSizedInducedTheory:
+    """Born red on base ``0b6a3209c`` (real JVM, offline witness, 2026-10-17):
+    24 mutual-pair rules — 48 induced arguments, 2**24 preferred extensions —
+    crashed the DIRECT ``SimplePreferredReasoner().getModels(dung_theory)``
+    call at ``aspic_handler.py:130`` with ``OutOfMemoryError: Java heap
+    space`` (inside SimpleSccCompleteReasoner). The sized routing refuses by
+    name with the exact count in milliseconds; the small #1678-shaped theory
+    keeps its base-measured verdict table through the same routing.
+    """
+
+    def test_small_theory_keeps_base_verdicts(self):
+        handler = ASPICHandler()  # type: ignore[no-untyped-call]
+        result = handler.analyze_aspic_framework(
+            [{"head": "d", "body": ["a"]}],
+            [
+                {"head": "b", "body": ["a"], "name": "r1"},
+                {"head": "b", "body": ["a"], "name": "r2", "head_negated": True},
+            ],
+            ["a"],
+        )
+        # Base-measured table (f385fa662 and 0b6a3209c agree): 2 extensions
+        # (the r1/r2 rebut pair), 2 materialized Dung edges, one rebut.
+        assert len(result["extensions"]) == 2
+        assert result["statistics"]["extensions_count"] == 2
+        assert result["statistics"]["dung_attacks_count"] == 2
+        assert [a["scope"] for a in result["attacks"]] == ["rebut"]
+
+    @pytest.mark.timeout(30)
+    def test_24_mutual_pairs_refused_with_exact_count(self):
+        handler = ASPICHandler()  # type: ignore[no-untyped-call]
+        rules: list = []
+        axioms: list = []
+        for i in range(24):
+            axioms.append(f"b{i}")
+            rules.append({"head": f"c{i}", "body": [f"b{i}"], "name": f"p{i}"})
+            rules.append(
+                {
+                    "head": f"c{i}",
+                    "body": [f"b{i}"],
+                    "name": f"n{i}",
+                    "head_negated": True,
+                }
+            )
+        result = handler.analyze_aspic_framework([], rules, axioms)
+        refusal = result["extensions"]
+        assert isinstance(refusal, dict) and refusal.get("refused") is True
+        assert refusal["extensions_count"] == 2**24
+        assert refusal["per_component_counts"] == [2] * 24
+        assert result["statistics"]["refused"] is True
+        assert result["statistics"]["extensions_count"] == 2**24
