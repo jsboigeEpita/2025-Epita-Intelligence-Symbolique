@@ -993,10 +993,11 @@ class FallacyWorkflowPlugin:
                             return None
                         leaf_depth = int(current_node.get("depth", 0))
                         # Register leaf confirmation for supersession (RA-3 #1048).
-                        # #3029 — no fabricated 0.7: confirm_fallacy's result
-                        # always carries the measured (or #2746-named-default)
-                        # confidence, and if that contract ever breaks the
-                        # honest value is None, not an invented number.
+                        # #3029 — no fabricated number: the confidence is
+                        # whatever confirm_fallacy measured, legitimately None
+                        # when the model omitted or garbled it (the reason then
+                        # travels in confidence_note, #3034); the tracker gets
+                        # the measurement, not an invented default.
                         if supersession_tracker is not None:
                             supersession_tracker.register(
                                 current_pk,
