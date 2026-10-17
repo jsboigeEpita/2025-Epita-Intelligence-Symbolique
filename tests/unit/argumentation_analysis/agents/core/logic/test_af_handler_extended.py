@@ -173,7 +173,13 @@ class TestAFHandlerExtended:
 
         result = handler.analyze_dung_framework(
             arguments=["a", "b", "c"],
-            attacks=[["a", "b"]],
+            # #3050: the frame is ONE weakly-connected component (b->c joins
+            # it), so the sized path submits exactly one theory and this test
+            # still exercises the conversion/sorting contract; the previous
+            # frame (a->b only) left c isolated and the mock reasoner's fixed
+            # answer now multiplies per component, which is the sized path's
+            # documented behaviour, not a sorting defect.
+            attacks=[["a", "b"], ["b", "c"]],
             semantics="preferred",
         )
 
