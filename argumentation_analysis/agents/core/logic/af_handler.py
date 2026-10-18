@@ -1,6 +1,7 @@
+import itertools
 import jpype
 import logging
-from typing import List, Dict, Any, Set, Optional
+from typing import List, Dict, Any, Set, Optional, Tuple
 
 from .tweety_initializer import TweetyInitializer
 
@@ -25,6 +26,124 @@ SEMANTICS_REASONERS = {
     "ideal": "org.tweetyproject.arg.dung.reasoner.SimpleIdealReasoner",
     "naive": "org.tweetyproject.arg.dung.reasoner.SimpleNaiveReasoner",
 }
+
+
+# --- #3050: sized enumeration over weakly-connected components -------------
+#
+# Since #3017 the AF-family callables hand these reasoners frames drawn from
+# the merged population (budget-capped at 40 nodes). On the standing
+# one-document pass that frame is SPARSE (40 nodes, 1 attack): preferred,
+# grounded, stable and complete return instantly, but the semantics that
+# materialize their whole search space (admissible, conflict_free — and
+# semi_stable/stage/ideal, which walk the same families) enumerate 2^N-scale
+# collections until the JVM heap dies. Measured on base `f385fa662`
+# (2026-10-17, real JVM, offline witness): admissible on a 40/1 frame
+# exhausted the 2 GB heap after 223 s, and the executor thread kept running
+# past its phase deadline (the #2080 shape). Tweety's ``Simple*`` are
+# reference implementations: no bound, no refusal.
+#
+# The repair decomposes the frame into weakly-connected components. Dung
+# semantics compose over disconnected components — every extension of the
+# whole frame is the union of one extension per component — so each component
+# is solved on its own (small) theory and the global models are the product:
+#
+# - every component within ``_DUNG_COMPONENT_MAX_NODES``: exact per-component
+#   models through the SAME Simple* reasoners (each call bounded — the only
+#   JVM work submitted, so no thread can outlive its phase enumerating);
+# - product of the per-component counts over ``_DUNG_ENUMERATION_CEILING``:
+#   the count stays exact and is reported, the enumeration is refused BY NAME
+#   (never a silent ``{"error": ...}``);
+# - any component over ``_DUNG_COMPONENT_MAX_NODES``: refused BEFORE any JVM
+#   call, naming the component size.
+#
+# ``grounded`` keeps the direct single-theory call: its characteristic
+# function iteration is polynomial (measured instant at 40 nodes) and
+# decomposing it would change nothing.
+
+#: A component up to this size is brute-forced by the Simple* reasoners
+#: (2**16 subsets worst case — sub-second); larger ones are refused.
+_DUNG_COMPONENT_MAX_NODES = 16
+
+#: Aligned with the #2930 measured knee (512 -> 2.7 s, 1024 -> 46.7 s
+#: student / 78.2 s tweety, po-2025 2026-10-04): past this many models the
+#: enumeration is reported by count and refused.
+_DUNG_ENUMERATION_CEILING = 1024
+
+#: Semantics that materialize their search space; ``grounded`` is polynomial.
+_ENUMERATING_SEMANTICS = frozenset(
+    name for name in SEMANTICS_REASONERS if name != "grounded"
+)
+
+#: Complete-based semantics: every extension CONTAINS the grounded extension
+#: G and EXCLUDES everything G attacks (G⁺). They are solved after the
+#: G ∪ G⁺ reduction (#3050 follow-up, measured cliff: a 17-node attack chain
+#: was refused under the flat component cap although base solved it instantly
+#: — G absorbs a chain, leaving exactly one extension). ``conflict_free``,
+#: ``admissible``, ``naive`` and ``stage`` do NOT contain G (an isolated
+#: self-attacker is conflict-free yet grounded-free) and keep the flat cap.
+#:
+#: Modularization proof (E extension of F ⟺ E = G ∪ S, S extension of the
+#: reduct F↾R with R = Args ∖ (G ∪ G⁺)):
+#: - no admissible set attacks a grounded argument (Dung; the characteristic
+#:   function defeats every such attacker at a finite stage), so no
+#:   residue→G attack exists, and no G→residue attack exists by the
+#:   definition of G⁺ — the reduct is closed on both sides;
+#: - every admissible E is conflict-free with G⁺ (G ⊆ E attacks G⁺), and
+#:   G ⊆ E for every complete E, so E = G ∪ S with S ⊆ R; defence transfers
+#:   because G⁺ attackers of R nodes are defeated by G ⊆ E;
+#: - semi_stable: E⁺_F = (G ∪ G⁺) ∪ S⁺_reduct — the G ∪ G⁺ part is CONSTANT
+#:   across complete extensions, so range-maximality reduces to the reduct;
+#: - ideal: ⋂ preferred(F) = G ∪ (⋂ preferred(reduct)) — intersection
+#:   distributes over the constant G part.
+_DUNG_COMPLETE_BASED = frozenset(
+    {"preferred", "stable", "complete", "semi_stable", "ideal"}
+)
+
+
+def weak_components(
+    arguments: List[str], attacks: List[List[str]]
+) -> List[Tuple[List[str], List[List[str]]]]:
+    """Split a frame into weakly-connected components (#3050).
+
+    Returns one ``(component_arguments, component_attacks)`` pair per
+    component, in first-appearance order (deterministic). An attack naming an
+    unknown endpoint is skipped exactly like ``AFHandler._build_framework``
+    skips it, so the components always match the theory actually built.
+    Isolated nodes form singleton components — that is where sparse frames
+    get their 2^N product from.
+    """
+    index = {name: i for i, name in enumerate(arguments)}
+    parent = list(range(len(arguments)))
+
+    def find(i: int) -> int:
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    def union(i: int, j: int) -> None:
+        ri, rj = find(i), find(j)
+        if ri != rj:
+            parent[rj] = ri
+
+    kept: List[List[str]] = []
+    for source, target in attacks:
+        src, dst = index.get(source), index.get(target)
+        if src is None or dst is None:
+            continue
+        kept.append([source, target])
+        union(src, dst)
+
+    members: Dict[int, List[str]] = {}
+    for name in arguments:
+        members.setdefault(find(index[name]), []).append(name)
+
+    components: List[Tuple[List[str], List[List[str]]]] = []
+    for comp_args in members.values():
+        comp = set(comp_args)
+        comp_attacks = [e for e in kept if e[0] in comp and e[1] in comp]
+        components.append((comp_args, comp_attacks))
+    return components
 
 
 class AFHandler:
@@ -116,6 +235,122 @@ class AFHandler:
             result.append(sorted(extension_args))
         return sorted(result)
 
+    def _sized_models(
+        self, semantics_key: str, arguments: List[str], attacks: List[List[str]]
+    ) -> Any:
+        """(#3050) Exact models for an enumerating semantics, size-gated.
+
+        Returns the enumerated extensions (``List[List[str]]``, sorted, same
+        contract as :meth:`_extensions_to_python`) or a REFUSAL dict —
+        ``{"error": <named reason>, "refused": True, ...}`` carrying the exact
+        count when it is known — never a silent ``{"error": ...}``. See the
+        module-level ``#3050`` block for the decomposition argument and
+        ``_DUNG_COMPLETE_BASED`` for the reduction one.
+        """
+        if semantics_key in _DUNG_COMPLETE_BASED:
+            return self._complete_based_models(semantics_key, arguments, attacks)
+        return self._component_product_models(
+            semantics_key, weak_components(arguments, attacks), component_scope=""
+        )
+
+    def _complete_based_models(
+        self, semantics_key: str, arguments: List[str], attacks: List[List[str]]
+    ) -> Any:
+        """(#3050) Complete-based semantics over the G ∪ G⁺ reduct.
+
+        Computes the grounded extension G first (polynomial, bounded — the
+        only call made before the gate), reduces the frame to the residue
+        R = Args ∖ (G ∪ G⁺), then enumerates the semantics on the residue's
+        components and re-joins ``G ∪ S`` per model. Modularization: see the
+        ``_DUNG_COMPLETE_BASED`` block. When G absorbs the whole frame the
+        single extension is G itself — the measured 40/1 and attack-chain
+        shapes, instant on base and previously refused under the flat cap.
+        """
+        theory, _ = self._build_framework(arguments, attacks)
+        grounded = self._extensions_to_python(
+            self._get_reasoner("grounded").getModels(theory)
+        )
+        g = grounded[0] if grounded else []
+        g_set = set(g)
+        attacked_by_g = {t for s, t in attacks if s in g_set}
+        residue = [a for a in arguments if a not in g_set and a not in attacked_by_g]
+        if not residue:
+            return [sorted(g)]
+
+        residue_set = set(residue)
+        residue_attacks = [
+            [s, t] for s, t in attacks if s in residue_set and t in residue_set
+        ]
+        return self._component_product_models(
+            semantics_key,
+            weak_components(residue, residue_attacks),
+            component_scope="residue ",
+            prefix=g,
+        )
+
+    def _component_product_models(
+        self,
+        semantics_key: str,
+        components: List[Tuple[List[str], List[List[str]]]],
+        component_scope: str = "",
+        prefix: Optional[List[str]] = None,
+    ) -> Any:
+        """(#3050) Per-component enumeration, cross-product under the ceiling.
+
+        ``component_scope`` names what the components are of ("" = the whole
+        frame, "residue " = after the G ∪ G⁺ reduction) in the refusal
+        messages. ``prefix`` carries the constant part re-joined onto every
+        model (G on the reduced path).
+        """
+        prefix = prefix or []
+        largest = max((len(comp_args) for comp_args, _ in components), default=0)
+        if largest > _DUNG_COMPONENT_MAX_NODES:
+            return {
+                "error": (
+                    f"enumeration refused (#3050): the largest "
+                    f"{component_scope}weakly-connected component holds "
+                    f"{largest} nodes, over the "
+                    f"{_DUNG_COMPONENT_MAX_NODES}-node enumerable bound — "
+                    f"the {semantics_key} reasoner would walk its search "
+                    f"space unbounded"
+                ),
+                "refused": True,
+                "largest_component_nodes": largest,
+            }
+
+        reasoner = self._get_reasoner(semantics_key)
+        per_component: List[List[List[str]]] = []
+        for comp_args, comp_attacks in components:
+            theory, _ = self._build_framework(comp_args, comp_attacks)
+            per_component.append(self._extensions_to_python(reasoner.getModels(theory)))
+
+        total = 1
+        for models in per_component:
+            total *= len(models)
+        if total == 0:
+            # A component with no model (e.g. stable on an even cycle) leaves
+            # the whole frame without one — that IS the verdict, not a refusal.
+            return []
+        if total > _DUNG_ENUMERATION_CEILING:
+            return {
+                "error": (
+                    f"enumeration refused (#3050): the frame admits exactly "
+                    f"{total} {semantics_key} extensions (product over "
+                    f"{len(per_component)} components), over the "
+                    f"{_DUNG_ENUMERATION_CEILING}-model ceiling — the count "
+                    f"is exact, the extensions are not materialized"
+                ),
+                "refused": True,
+                "extensions_count": total,
+                "per_component_counts": [len(m) for m in per_component],
+            }
+
+        combined = [
+            sorted(prefix + [arg for model in combo for arg in model])
+            for combo in itertools.product(*per_component)
+        ]
+        return sorted(combined)
+
     def analyze_dung_framework(
         self,
         arguments: List[str],
@@ -133,7 +368,10 @@ class AFHandler:
                       ideal, naive. (cf2 is NOT available in the vendored build.)
 
         Returns:
-            Dict with keys: semantics, extensions, statistics.
+            Dict with keys: semantics, extensions, statistics. Enumerating
+            semantics run through the #3050 sized path (component
+            decomposition; over-ceiling counts are reported with a named
+            refusal instead of being materialized).
         """
         semantics_key = semantics.lower().replace("-", "_")
         logger.info(
@@ -143,10 +381,19 @@ class AFHandler:
 
         try:
             dung_theory, arg_map = self._build_framework(arguments, attacks)
-            reasoner = self._get_reasoner(semantics_key)
 
-            extensions_java = reasoner.getModels(dung_theory)
-            extensions = self._extensions_to_python(extensions_java)
+            # #3050: enumerating semantics go through the sized, decomposed
+            # path; grounded stays on the direct (polynomial) call.
+            if semantics_key in _ENUMERATING_SEMANTICS:
+                extensions = self._sized_models(semantics_key, arguments, attacks)
+            else:
+                reasoner = self._get_reasoner(semantics_key)
+                extensions = self._extensions_to_python(reasoner.getModels(dung_theory))
+
+            if isinstance(extensions, dict):
+                extensions_count: Optional[int] = extensions.get("extensions_count")
+            else:
+                extensions_count = len(extensions)
 
             result = {
                 "semantics": semantics_key,
@@ -154,11 +401,12 @@ class AFHandler:
                 "statistics": {
                     "arguments_count": len(arguments),
                     "attacks_count": len(attacks),
-                    "extensions_count": len(extensions),
+                    "extensions_count": extensions_count,
                 },
             }
             logger.info(
-                f"Analysis successful. Found {len(extensions)} {semantics_key} extensions."
+                f"Analysis successful. {extensions_count} {semantics_key} "
+                f"extensions (or refusal count)."
             )
             return result
 
@@ -188,7 +436,10 @@ class AFHandler:
                            ["grounded", "preferred", "stable", "complete"].
 
         Returns:
-            Dict with all requested semantics results.
+            Dict with all requested semantics results. Enumerating semantics
+            run through the #3050 sized path (component decomposition;
+            over-ceiling counts are reported with a named refusal instead of
+            being materialized).
         """
         if semantics_list is None:
             semantics_list = ["grounded", "preferred", "stable", "complete"]
@@ -204,11 +455,22 @@ class AFHandler:
             for sem in semantics_list:
                 sem_key = sem.lower().replace("-", "_")
                 try:
-                    reasoner = self._get_reasoner(sem_key)
-                    extensions_java = reasoner.getModels(dung_theory)
-                    extensions = self._extensions_to_python(extensions_java)
+                    # #3050: enumerating semantics go through the sized,
+                    # decomposed path; grounded stays on the direct
+                    # (polynomial) call over the whole theory.
+                    if sem_key in _ENUMERATING_SEMANTICS:
+                        extensions = self._sized_models(sem_key, arguments, attacks)
+                    else:
+                        reasoner = self._get_reasoner(sem_key)
+                        extensions = self._extensions_to_python(
+                            reasoner.getModels(dung_theory)
+                        )
                     all_extensions[sem_key] = extensions
-                    statistics[f"{sem_key}_count"] = len(extensions)
+                    statistics[f"{sem_key}_count"] = (
+                        len(extensions)
+                        if isinstance(extensions, list)
+                        else extensions.get("extensions_count")
+                    )
                 except Exception as e:
                     logger.warning(f"Failed to compute {sem_key} semantics: {e}")
                     all_extensions[sem_key] = {"error": str(e)}

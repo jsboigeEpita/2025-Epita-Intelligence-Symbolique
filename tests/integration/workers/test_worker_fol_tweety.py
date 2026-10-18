@@ -45,6 +45,13 @@ pytestmark = [
         _jpype_is_mocked,
         reason="FOL-Tweety tests require real JVM (jpype mocked by --disable-jvm-session)",
     ),
+    # #2936 : le kernel LLM de ``fol_agent_with_kernel`` (module-scoped) partage
+    # un pool httpx entre les tests. Des boucles function-scoped laissent au pool
+    # des connexions liées à des boucles fermées — ``RuntimeError: Event loop is
+    # closed`` au premier envoi du test suivant, guérie par le retry du SDK
+    # (3× au run record 38088104412). Une seule boucle pour le module retire la
+    # traversée ; le témoin TestModuleLoopScope2936 garde l'alignement.
+    pytest.mark.asyncio(loop_scope="module"),
 ]
 
 # Import a shared fixture to manage the JVM lifecycle
@@ -98,7 +105,6 @@ class TestFOLTweetyCompatibility:
         }
 
     @pytest.mark.skipif(not TWEETY_AVAILABLE, reason="TweetyBridge non disponible")
-    @pytest.mark.asyncio
     async def test_fol_formula_tweety_compatibility(
         self, fol_agent_with_kernel, jvm_session
     ):
@@ -119,7 +125,6 @@ class TestFOLTweetyCompatibility:
             pytest.fail(f"Une syntaxe FOL valide a été rejetée: {e}")
 
     @pytest.mark.skipif(not TWEETY_AVAILABLE, reason="TweetyBridge non disponible")
-    @pytest.mark.asyncio
     async def test_fol_predicate_declaration_validation(
         self, fol_agent_with_kernel, jvm_session
     ):
@@ -143,7 +148,6 @@ Mortal(socrate)
             pytest.fail(f"Erreur Tweety inattendue pour une déclaration valide: {e}")
 
     @pytest.mark.skipif(not TWEETY_AVAILABLE, reason="TweetyBridge non disponible")
-    @pytest.mark.asyncio
     async def test_fol_quantifier_binding_validation(
         self, fol_agent_with_kernel, jvm_session
     ):
@@ -167,7 +171,6 @@ forall X: (P(X) => Q(X))
         except Exception as e:
             pytest.fail(f"Variables bien liées ont causé une erreur inattendue: {e}")
 
-    @pytest.mark.asyncio
     async def test_programmatic_belief_set_creation_and_consistency(
         self, fol_agent_with_kernel, jvm_session
     ):
@@ -230,7 +233,6 @@ forall X: (P(X) => Q(X))
 class TestRealTweetyFOLAnalysis:
     """Tests analyse FOL avec Tweety authentique."""
 
-    @pytest.mark.asyncio
     async def test_real_tweety_fol_syllogism_analysis(
         self, fol_agent_with_kernel, jvm_session
     ):
@@ -262,7 +264,6 @@ Man(socrate)
 
         logger.info("✅ Analyse du syllogisme par chaîne de caractères réussie.")
 
-    @pytest.mark.asyncio
     async def test_query_on_a_constant_declared_only_in_a_sort(
         self, fol_agent_with_kernel, jvm_session
     ):
@@ -304,7 +305,6 @@ forall X: (Mortal(X))
         entailed, msg = handler.execute_fol_query(java_bs, "Mortal(platon)")
         assert entailed is True, msg
 
-    @pytest.mark.asyncio
     async def test_a_query_that_cannot_be_parsed_decides_nothing(
         self, fol_agent_with_kernel, jvm_session
     ):
@@ -324,7 +324,6 @@ Mortal(socrate)
         assert entailed is None, msg
         assert "aristote" in msg
 
-    @pytest.mark.asyncio
     @pytest.mark.requires_api
     async def test_end_to_end_fol_syllogism_with_llm(
         self, fol_agent_with_kernel, jvm_session, caplog
@@ -371,7 +370,6 @@ Mortal(socrate)
 
         logger.info("✅ Test d'intégration de bout en bout avec LLM et Tweety réussi.")
 
-    @pytest.mark.asyncio
     async def test_real_tweety_fol_inconsistency_detection(
         self, fol_agent_with_kernel, jvm_session
     ):
@@ -422,7 +420,6 @@ Mortal(socrate)
             f"✅ Incohérence programmatique (P ∧ ¬P) correctement détectée. Message: {consistency_msg}"
         )
 
-    @pytest.mark.asyncio
     async def test_real_tweety_fol_inference_generation(
         self, fol_agent_with_kernel, jvm_session
     ):
@@ -455,7 +452,6 @@ Mortal(socrate)
         ), "L'inférence 'est_intelligent(marie)' devrait être acceptée."
         logger.info("✅ Inférence 'est_intelligent(marie)' validée.")
 
-    @pytest.mark.asyncio
     async def test_validate_argument_on_the_real_solver(
         self, fol_agent_with_kernel, jvm_session
     ):
@@ -479,7 +475,6 @@ class TestFOLErrorHandling:
         """Analyseur d'erreurs Tweety."""
         return TweetyErrorAnalyzer()
 
-    @pytest.mark.asyncio
     async def test_fol_predicate_declaration_error_handling(self, error_analyzer):
         """Test gestion erreurs déclaration prédicats."""
         # Erreur typique Tweety
@@ -496,7 +491,6 @@ class TestFOLErrorHandling:
         else:
             logger.warning("⚠️ Erreur non reconnue par l'analyseur")
 
-    @pytest.mark.asyncio
     @pytest.mark.requires_api
     async def test_fol_syntax_error_recovery(self, fol_agent_with_kernel):
         """
@@ -536,7 +530,6 @@ class TestFOLErrorHandling:
                 pytrace=True,
             )
 
-    @pytest.mark.asyncio
     async def test_fol_timeout_handling(self, fol_agent_with_kernel, jvm_session):
         """Test gestion timeouts analyse FOL."""
         if not jvm_session:
@@ -576,7 +569,6 @@ class TestFOLErrorHandling:
 class TestFOLPerformanceVsModal:
     """Tests performance FOL vs Modal Logic."""
 
-    @pytest.mark.asyncio
     async def test_fol_vs_modal_performance_comparison(
         self, fol_agent_with_kernel, jvm_session
     ):
@@ -612,7 +604,6 @@ class TestFOLPerformanceVsModal:
 
         logger.info(f"✅ Performance FOL (programmatique): {fol_time:.2f}s")
 
-    @pytest.mark.asyncio
     async def test_fol_stability_multiple_analyses(self, fol_agent_with_kernel):
         """Test stabilité FOL sur analyses multiples."""
         agent = fol_agent_with_kernel
@@ -657,7 +648,6 @@ class TestFOLPerformanceVsModal:
         logger.info(f"✅ Stabilité FOL: {len(results)} analyses en {total_time:.2f}s")
         logger.info(f"Temps moyen: {avg_time:.2f}s")
 
-    @pytest.mark.asyncio
     @pytest.mark.requires_api
     async def test_fol_memory_usage_stability(self, fol_agent_with_kernel):
         """Test stabilité mémoire agent FOL."""
@@ -675,7 +665,6 @@ class TestFOLPerformanceVsModal:
 class TestFOLRealWorldIntegration:
     """Tests intégration monde réel pour FOL."""
 
-    @pytest.mark.asyncio
     async def test_fol_complex_argumentation_analysis(
         self, fol_agent_with_kernel, jvm_session
     ):
@@ -721,7 +710,6 @@ class TestFOLRealWorldIntegration:
 
         logger.info(f"✅ Analyse complexe terminée avec succès.")
 
-    @pytest.mark.asyncio
     @pytest.mark.requires_api
     async def test_fol_multilingual_support(self, fol_agent_with_kernel, jvm_session):
         """Test la capacité du LLM à comprendre et traduire une autre langue (espagnol) en logique."""
@@ -798,7 +786,6 @@ class TestAnalyzeReachesTheSolver:
             kernel=kernel, service_id="fake", tweety_bridge=TweetyBridge()
         )
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "formulas, verdict",
         [
@@ -841,7 +828,6 @@ class TestAnalyzeReachesTheSolver:
         assert result.consistency_check is verdict, result.consistency_message
         assert result.formulas_source == "llm"
 
-    @pytest.mark.asyncio
     async def test_text_to_belief_set_answers_the_syllogism_query(self, jvm_session):
         """#2447 item 5: ``text_to_belief_set`` converts through the model, and
         its belief set carries the declarations, so the real solver answers
@@ -884,7 +870,6 @@ class TestPipelineFolPhaseNames:
         "est_valide(été)",
     ]
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "extra, verdict", [([], True), (["!Mortel(socrate)"], False)]
     )
@@ -953,6 +938,46 @@ def setup_logging():
 def check_tweety_availability():
     """Vérifie disponibilité Tweety pour session."""
     return TWEETY_AVAILABLE and setup_real_tweety_environment()
+
+
+@pytest_asyncio.fixture(scope="module")
+async def _module_event_loop_2936():
+    """Boucle du scope module — témoin #2936.
+
+    ``fol_agent_with_kernel`` est module-scoped : son client LLM partage un pool
+    httpx entre tous les tests du module. Sur des boucles function-scoped, la
+    première requête d'un test peut recevoir du pool une connexion liée à la
+    boucle (fermée) du test précédent — ``RuntimeError: Event loop is closed``,
+    guérie par le retry du SDK openai (mesuré 3× au run record 38088104412, les
+    messages portés par le census #2939). Le ``loop_scope="module"`` de ce module
+    aligne fixtures et tests sur UNE boucle ; le témoin rougit si cet
+    alignement se perd.
+    """
+    return asyncio.get_running_loop()
+
+
+class TestModuleLoopScope2936:
+    async def test_tests_run_on_the_module_loop(self, _module_event_loop_2936):
+        assert asyncio.get_running_loop() is _module_event_loop_2936
+
+    def test_no_test_shadows_the_module_loop_scope(self, request):
+        """Garde collection-level (review po-2023 sur #3037) : le témoin
+        ci-dessus n'asserte que SA propre boucle — une marque asyncio NUE
+        remise sur un AUTRE test du module serait son mark le plus proche,
+       shaderait le ``loop_scope="module"`` et rouvrirait le cross-loop send
+        avec un témoin vert. Chaque item du module doit voir son mark asyncio
+        le plus proche porter ``loop_scope="module"`` (ou n'en porter aucun).
+        """
+        shadowing = []
+        for item in request.session.items:
+            if item.path != pathlib.Path(__file__):
+                continue
+            marker = item.get_closest_marker("asyncio")
+            if marker is not None and marker.kwargs.get("loop_scope") != "module":
+                shadowing.append(item.nodeid)
+        assert shadowing == [], (
+            f"bare @pytest.mark.asyncio shadows the module loop_scope on: {shadowing}"
+        )
 
 
 # La sérialisation est maintenant la seule stratégie par défaut, la paramétrisation n'est plus nécessaire.

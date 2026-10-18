@@ -513,6 +513,10 @@ class DeepSynthesisAgent(BaseAgent):
                         f"detection (confidence {conf_repr})"
                     ),
                     impacted_args=[],
+                    # #2927 — carries the channel on the entry itself: shape
+                    # sniffing (empty span / no impacted arg) cannot tell a
+                    # neural claim from an unanchored hierarchical diagnosis.
+                    unanchored_claim=True,
                 )
             )
         return entries
@@ -1737,13 +1741,41 @@ class DeepSynthesisAgent(BaseAgent):
             else:
                 grounded_line = "not computed"
             rhetoric_section = "\n[SECTION 4 DATA — Ressorts rhétoriques]\n"
+            # #2927 — the headline never sums the two detection channels
+            # blind: anchored diagnoses (hierarchical, one per taxonomy_pk)
+            # and unanchored claims (neural, one per whole-text detection
+            # keyed by a free-text label) share no reliable type-level key,
+            # so the count splits instead of fusing. With an empty neural
+            # channel (every real run today) the lines are byte-identical
+            # to the previous single-channel rendering.
+            _anchored = [f for f in report.fallacy_diagnoses if not f.unanchored_claim]
+            _claims = [f for f in report.fallacy_diagnoses if f.unanchored_claim]
+            if _claims:
+                _fallacies_line = (
+                    f"Fallacies: {len(report.fallacy_diagnoses)} "
+                    f"({len(_anchored)} anchored + "
+                    f"{len(_claims)} unanchored neural claims). "
+                )
+                _anchored_fams = (
+                    ", ".join(sorted({f.family for f in _anchored})) or "none"
+                )
+                _claim_fams = ", ".join(sorted({f.family for f in _claims}))
+                _families_line = (
+                    f"Key fallacy families: {_anchored_fams} (anchored); "
+                    f"{_claim_fams} (unanchored claims). "
+                )
+            else:
+                _fallacies_line = f"Fallacies: {len(report.fallacy_diagnoses)}. "
+                _families_line = (
+                    f"Key fallacy families: "
+                    f"{', '.join(set(f.family for f in report.fallacy_diagnoses)) or 'none'}. "
+                )
             rhetoric_section += (
                 f"  Arguments: {len(report.argument_map)}. "
-                f"Fallacies: {len(report.fallacy_diagnoses)}. "
+                f"{_fallacies_line}"
                 f"Formal findings: {len(report.formal_findings)}. "
                 f"Counter-arguments: {len(report.counter_arguments)}.\n"
-                f"  Key fallacy families: "
-                f"{', '.join(set(f.family for f in report.fallacy_diagnoses)) or 'none'}. "
+                f"  {_families_line}"
                 f"Dung grounded extension: {grounded_line}.\n"
             )
             if report.fallacy_diagnoses:
@@ -1753,8 +1785,9 @@ class DeepSynthesisAgent(BaseAgent):
                     reverse=True,
                 )[:3]
                 for f in top_3:
+                    _claim_tag = " [unanchored claim]" if f.unanchored_claim else ""
                     rhetoric_section += (
-                        f"  Fallacy: {f.family} ({f.taxonomy_path}): "
+                        f"  Fallacy: {f.family} ({f.taxonomy_path}){_claim_tag}: "
                         f"{f.commentary[:150]}\n"
                     )
             if report.counter_arguments:

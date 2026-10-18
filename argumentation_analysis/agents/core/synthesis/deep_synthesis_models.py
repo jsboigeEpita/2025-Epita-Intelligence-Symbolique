@@ -56,6 +56,12 @@ class FallacyDiagnosis:
     textual_span: str
     commentary: str
     impacted_args: List[str] = field(default_factory=list)
+    # #2927 — a whole-text neural claim (no span, no argument anchor, key =
+    # free-text label) vs an anchored hierarchical diagnosis (one per
+    # taxonomy_pk). Two classes of finding: a reader that counts must not sum
+    # the channels blind — the only key they share (_fallacy_family) is
+    # family-granular and heuristic, not a type-level match.
+    unanchored_claim: bool = False
 
 
 @dataclass

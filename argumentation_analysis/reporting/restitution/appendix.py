@@ -18,6 +18,8 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
+from argumentation_analysis.plugins.identification_models import confidence_note_reason
+
 from .fr_accord import accord
 
 # Keys that carry corpus plaintext (directly or via derived fields). Stripped
@@ -424,6 +426,42 @@ def _provenance_counts(state: Mapping[str, Any]) -> Dict[str, Any]:
     return counts
 
 
+def _confidence_provenance_section(state: Mapping[str, Any]) -> List[str]:
+    """#3054 (#1914 criterion 6) — confidence provenance, counts only.
+
+    A subsection beside the dimensional table: how many located fallacies
+    carry a measured confidence, how many carry none, by reason class
+    (``confidence_note_reason``). Absent entirely when every confidence is
+    measured or no fallacy was located — the subsection exists only when
+    there is a provenance to report. Counts only, never the notes
+    themselves (a note quotes the model's rejected input, which is model
+    output): a reason class is a name for the note, not the note. No
+    fabricated number — a None stays None and is never rendered as 0
+    (#1019, #3029). The acts stay free of any sentence about the
+    confidences: this folded block is the surface the #1914 contract names
+    (anti-pendulum, coordinator R1092).
+    """
+    fallacies = state.get("identified_fallacies")
+    if not isinstance(fallacies, Mapping) or not fallacies:
+        return []
+    entries = [e for e in fallacies.values() if isinstance(e, Mapping)]
+    unmeasured = [e for e in entries if e.get("confidence") is None]
+    if not unmeasured:
+        return []
+    by_reason: Dict[str, int] = {}
+    for e in unmeasured:
+        reason = confidence_note_reason(str(e.get("confidence_note") or ""))
+        by_reason[reason] = by_reason.get(reason, 0) + 1
+    detail = ", ".join(f"{r} : {n}" for r, n in sorted(by_reason.items()))
+    return [
+        "### Confiances des sophismes localisés (provenance)",
+        "",
+        f"- mesurées : {len(entries) - len(unmeasured)}/{len(entries)}",
+        f"- non mesurées : {len(unmeasured)} ({detail})",
+        "",
+    ]
+
+
 def _dung_machinery_section(
     state: Mapping[str, Any], *, include_full: bool
 ) -> List[str]:
@@ -439,7 +477,7 @@ def _dung_machinery_section(
     Reuses the shared ``native_dung`` decoders — a third decoder in the
     appendix would be a third way to misread an extension shape (#1912).
     """
-    from .dung_reader import appendix_ref, backend_provenance
+    from .dung_reader import UNAVAILABLE_STATUS, appendix_ref, backend_provenance
     from .formal_derivation import is_machine_shaped
     from .native_dung import decode_accepted_members, native_semantics_label
 
@@ -464,12 +502,27 @@ def _dung_machinery_section(
     ]
     for fw in natives:
         sem = native_semantics_label(fw) or "dung"
+        # #3050 (R1093): the compare-mode degraded entry files the STATUS in
+        # the semantics slot; appendix_ref folds it to "" (nothing was
+        # computed, nothing to cite). The heading names the status instead of
+        # rendering an empty "#### " title, and no admission line may read —
+        # no argument is "absent" from an extension that was never computed.
+        unavailable = sem.strip().lower() == UNAVAILABLE_STATUS
         fw_args = fw.get("arguments") or []
         fw_args = fw_args if isinstance(fw_args, list) else []
         fw_attacks = fw.get("attacks") or []
         fw_attacks = fw_attacks if isinstance(fw_attacks, list) else []
-        accepted = decode_accepted_members(fw.get("extensions")) or set()
-        lines.append(f"#### {appendix_ref(sem)}")
+        accepted = (
+            set()
+            if unavailable
+            else decode_accepted_members(fw.get("extensions")) or set()
+        )
+        ref = appendix_ref(sem)
+        lines.append(
+            f"#### {ref}"
+            if ref
+            else "#### Cadre de Dung non évalué (aucune sémantique calculée)"
+        )
         lines.append("")
         # #3014 body item 2: name the cap when it bites — the frame's 40-node
         # budget cap can hold 40 of 94 units, and the entry carries the
@@ -498,19 +551,36 @@ def _dung_machinery_section(
         if accepted:
             members = ", ".join(sorted(str(m) for m in accepted))
             lines.append(f"- extension acceptée : {members}")
+        elif unavailable:
+            # The honest status line (same reader language as Act II) — not
+            # the #1912 « non décodable » line, which would claim a form was
+            # read when the reasoner never ran (#3050).
+            lines.append(
+                "- sémantique : aucune sémantique n'a été calculée (cadre de "
+                "Dung indisponible) — aucun argument n'a de verdict "
+                "d'admission (#3050)"
+            )
         else:
             lines.append(
                 "- extension acceptée : forme non décodable — aucun rejet "
                 "déductible (#1912)"
             )
-        rejected = [str(a) for a in fw_args if str(a) not in accepted]
-        # #2882: the canonical line reads the ONE shared admission rule —
-        # the previous inline predicate (R1 bare) admits underscore-joined
-        # sentence transcriptions (invisible here only because Dung atoms
-        # keep their spaces: 0/717 real atoms passed it — measured on the
-        # campaign dumps).
-        canonical = [a for a in rejected if is_machine_shaped(a)]
-        raw = [a for a in rejected if a not in canonical]
+        # Nothing was computed under ``unavailable``: every argument would be
+        # listed « absent » from an extension that does not exist — the
+        # admission-derived lines are skipped entirely (the graph lines above
+        # stay: the frame WAS built, #3014's cap/dropped contract included).
+        if not unavailable:
+            rejected = [str(a) for a in fw_args if str(a) not in accepted]
+            # #2882: the canonical line reads the ONE shared admission rule —
+            # the previous inline predicate (R1 bare) admits underscore-joined
+            # sentence transcriptions (invisible here only because Dung atoms
+            # keep their spaces: 0/717 real atoms passed it — measured on the
+            # campaign dumps).
+            canonical = [a for a in rejected if is_machine_shaped(a)]
+            raw = [a for a in rejected if a not in canonical]
+        else:
+            canonical = []
+            raw = []
         if canonical:
             lines.append(f"- absents de l'extension : {', '.join(sorted(canonical))}")
         if raw:
@@ -812,6 +882,10 @@ def render_appendix(
             f"| {label} | {value} | {mobilisation.get(label, 'non déclarée')} |"
         )
     lines.append("")
+
+    # #3054 (#1914 criterion 6): confidence provenance — same folded block,
+    # right after the table it completes. Absent when nothing to report.
+    lines.extend(_confidence_provenance_section(state))
 
     # #1908: the Dung machinery the narration references — same folded block,
     # after the dimensional table, before any opt-in full dump.

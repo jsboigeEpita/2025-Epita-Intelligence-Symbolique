@@ -7,10 +7,16 @@ for quantitative reasoning about argument acceptability.
 Uses Tweety's arg.weighted module: org.tweetyproject.arg.weighted
 """
 
+import itertools
 import jpype
 import logging
 from typing import Dict, List, Any, Optional, Tuple
 
+from .af_handler import (
+    _DUNG_COMPONENT_MAX_NODES,
+    _DUNG_ENUMERATION_CEILING,
+    weak_components,
+)
 from .tweety_initializer import TweetyInitializer
 
 logger = logging.getLogger(__name__)
@@ -87,42 +93,114 @@ class WeightedHandler:
                 below this are considered too weak to count.
 
         Returns:
-            Dict with extensions and weight statistics.
+            Dict with extensions and weight statistics. The models are
+            computed through the #3050 sized path: per weakly-connected
+            component (attack weights ride the edges, so components compose
+            exactly like the Dung side), product-gated by the same ceiling —
+            an over-ceiling count is reported exactly with a named refusal
+            instead of being materialized.
         """
         try:
-            # #1178: build a Fuzzy (Double-typed) framework so numeric weights
-            # and the (min, max) bounds passed to getModels are type-consistent.
-            framework = self._WeightedAF(self._FuzzySemiring())
-
             # Create arguments
             arg_map = {}
             for name in arguments:
-                arg = self._Argument(name)
-                arg_map[name] = arg
-                framework.add(arg)
+                arg_map[name] = self._Argument(name)
 
-            # Create weighted attacks
+            # Weighted attacks with both endpoints present (the full-framework
+            # build below skips the others exactly like this).
+            kept_attacks: List[Tuple[str, str, float]] = []
             weights = []
             for src, tgt, weight in attacks:
                 if src in arg_map and tgt in arg_map:
-                    attack = self._Attack(arg_map[src], arg_map[tgt])
-                    framework.setWeight(attack, jpype.JDouble(weight))
+                    kept_attacks.append((src, tgt, weight))
                     weights.append(weight)
 
-            # Compute extensions. getModels(WAF, T min, T max) requires the
-            # weight bounds; with FuzzySemiring these are Doubles in [0,1].
-            # A non-None weight_threshold raises the lower bound (weak attacks
-            # below it are discounted).
-            extensions = []
-            if semantics in self._reasoners:
+            lower = weight_threshold if weight_threshold is not None else 0.0
+
+            def _solve(
+                comp_args: List[str], comp_attacks: List[Tuple[str, str, float]]
+            ) -> List[List[str]]:
+                # #1178: build a Fuzzy (Double-typed) framework so numeric
+                # weights and the (min, max) bounds passed to getModels are
+                # type-consistent.
+                framework = self._WeightedAF(self._FuzzySemiring())
+                comp_set = set(comp_args)
+                for name in comp_args:
+                    framework.add(arg_map[name])
+                for src, tgt, weight in comp_attacks:
+                    if src in comp_set and tgt in comp_set:
+                        attack = self._Attack(arg_map[src], arg_map[tgt])
+                        framework.setWeight(attack, jpype.JDouble(weight))
                 reasoner = self._reasoners[semantics]()
-                lower = weight_threshold if weight_threshold is not None else 0.0
                 models = reasoner.getModels(
                     framework, jpype.JDouble(lower), jpype.JDouble(1.0)
                 )
-                for ext in models:
-                    ext_args = sorted([str(a) for a in ext])
-                    extensions.append(ext_args)
+                return sorted(sorted(str(a) for a in ext) for ext in models)
+
+            extensions: List[List[str]] = []
+            refused: Optional[Dict[str, Any]] = None
+            if semantics in self._reasoners:
+                # #3050: decompose over weakly-connected components; the
+                # weights ride the edges, so the compositional argument is
+                # the Dung one verbatim.
+                pairs = weak_components(
+                    arguments, [[src, tgt] for src, tgt, _ in kept_attacks]
+                )
+                components = [
+                    (
+                        comp_args,
+                        [
+                            (src, tgt, weight)
+                            for src, tgt, weight in kept_attacks
+                            if src in set(comp_args) and tgt in set(comp_args)
+                        ],
+                    )
+                    for comp_args, _ in pairs
+                ]
+                largest = max(
+                    (len(comp_args) for comp_args, _ in components), default=0
+                )
+                if largest > _DUNG_COMPONENT_MAX_NODES:
+                    refused = {
+                        "refusal_reason": (
+                            f"enumeration refused (#3050): the largest "
+                            f"weakly-connected component holds {largest} "
+                            f"nodes, over the {_DUNG_COMPONENT_MAX_NODES}-node "
+                            f"enumerable bound — the {semantics} weighted "
+                            f"reasoner would walk its search space unbounded"
+                        ),
+                        "extensions_count": None,
+                        "largest_component_nodes": largest,
+                    }
+                else:
+                    per_component = [
+                        _solve(comp_args, comp_attacks)
+                        for comp_args, comp_attacks in components
+                    ]
+                    total = 1
+                    for models in per_component:
+                        total *= len(models)
+                    if total == 0:
+                        extensions = []
+                    elif total > _DUNG_ENUMERATION_CEILING:
+                        refused = {
+                            "refusal_reason": (
+                                f"enumeration refused (#3050): the weighted "
+                                f"frame admits exactly {total} {semantics} "
+                                f"extensions (product over "
+                                f"{len(per_component)} components), over the "
+                                f"{_DUNG_ENUMERATION_CEILING}-model ceiling — "
+                                f"the count is exact, the extensions are not "
+                                f"materialized"
+                            ),
+                            "extensions_count": total,
+                            "per_component_counts": [len(m) for m in per_component],
+                        }
+                    else:
+                        extensions = sorted(
+                            sorted(arg for combo in combos for arg in combo)
+                            for combos in itertools.product(*per_component)
+                        )
 
             # Weight statistics
             weight_stats = {}
@@ -133,14 +211,16 @@ class WeightedHandler:
                     "avg_weight": sum(weights) / len(weights),
                 }
 
-            return {
+            result: Dict[str, Any] = {
                 "semantics": semantics,
                 "arguments": sorted(arguments),
                 "attacks": [
                     {"source": s, "target": t, "weight": w} for s, t, w in attacks
                 ],
                 "extensions": extensions,
-                "extensions_count": len(extensions),
+                "extensions_count": (
+                    refused["extensions_count"] if refused else len(extensions)
+                ),
                 "weight_statistics": weight_stats,
                 "statistics": {
                     "arguments_count": len(arguments),
@@ -148,6 +228,10 @@ class WeightedHandler:
                     "handler": "WeightedHandler",
                 },
             }
+            if refused is not None:
+                result["refused"] = True
+                result["refusal_reason"] = refused["refusal_reason"]
+            return result
         except jpype.JException as e:
             logger.error(f"Java exception in weighted AF analysis: {e}")
             raise RuntimeError(f"Weighted AF analysis failed: {e}") from e

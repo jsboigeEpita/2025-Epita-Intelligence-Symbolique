@@ -239,3 +239,44 @@ class TestNoSeriesIsFiledAsASpeaker2877:
         parsed = _load_runner().parse_legacy_label("Tertius Discours 1899")
         assert parsed["speaker"] == "Tertius"
         assert parsed["genre"] == "discours"
+
+
+class TestAcronymIsNotAVenue3051:
+    """#3051: an all-caps parenthetical names its issuer, not the arena.
+
+    The venue branch filed any parenthetical that was neither a date nor a
+    file-format tag as ``venue``. A publisher-shaped acronym in the label (the
+    transcription's issuer) then staged the speech *at the publisher* — Act I
+    framed it as the indicated place, Act III titled the audience after it,
+    the stakes prompt told the model it was the venue, and the synthesis
+    overview wrote ``at <acronym>``. Census over the corpus parentheticals:
+    the all-caps shape misfiles (publisher), the mixed-case institution shape
+    is a real venue, and no explicit metadata field exists to settle it — the
+    shape is the only decider (#3051 measure; counts only, no corpus label).
+
+    Omitted rather than re-keyed as provenance: no reader renders a
+    provenance tag, and a produced key without a reader is #1019's family.
+    Synthetic labels only — no corpus label, no tag value, no speaker name.
+    """
+
+    def test_publisher_shaped_acronym_is_not_a_venue(self):
+        """Born-red on the unfixed branch: it asserted the acronym as the
+        venue, handing the model a false fact about where the speech happened."""
+        parsed = _load_runner().parse_legacy_label("Speaker_A Discours (PUB_XYZ)")
+        assert "venue" not in parsed
+        assert parsed["speaker"] == "Speaker_A"  # the label was read, not skipped
+
+    def test_institution_shaped_parenthetical_still_yields_venue(self):
+        """The other half of the DoD: the mixed-case institution shape is the
+        one the census files correctly, and it must keep filing as venue."""
+        parsed = _load_runner().parse_legacy_label(
+            "Speaker_A-Speaker_B Genreword_X 1 (Institution_X)"
+        )
+        assert parsed["venue"] == "Institution_X"
+
+    def test_acronym_venue_never_reaches_the_merged_metadata(self):
+        """Wiring control: the parser sits in the production merge chain, so
+        the omission must survive the merge, not just the unit call."""
+        merged = _merge("Speaker_A Discours (PUB_XYZ)", "", {})
+        assert "venue" not in merged
+        assert merged["speaker"] == "Speaker_A"
