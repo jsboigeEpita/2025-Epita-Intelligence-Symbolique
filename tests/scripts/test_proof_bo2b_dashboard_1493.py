@@ -445,62 +445,114 @@ def test_proof_script_cli_real_llm_path(tmp_path: pathlib.Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-class TestDegradedReadToleratesOutputNone:
-    """#3049 tranche 5 / R1093 — the keyless, in-gate witness of the
-    degraded read.
+class TestVerdictReadTwoLevels:
+    """R1094 — the verdict read sees the executor's TWO degradation levels,
+    and ``STUB`` requires stub evidence (never a fall-through label).
 
-    A failed/degraded phase carries ``output: None`` (#2902 shape —
-    ``.get(key, default)`` returns None, not the default, when the key
-    exists with a None value). The script's verdict read used to die on that
-    shape (AttributeError, exit 1 — measured keyless in the tranche-5
-    witness), which made the CLI real-path test red without a key for the
-    wrong reason. The CLI test keeps ``requires_api`` (the band is the only
-    CI run with a key); THIS witness runs keyless in the gate, feeds the
-    read the exact degraded-vote shape at the service boundary (DT-1 #1499:
-    a degraded vote phase is the honest no-verdict outcome — it traverses
-    ``set_analysis_results``, where the crash lived), and asserts the
-    honest result: the flow completes, no verdict is fabricated, and the
-    failed shape travels whole into the payload.
+    The witnesses feed REAL ``PhaseResult`` objects through
+    ``sanitize_workflow_result`` — the shapes the executor actually emits
+    (``_compute_workflow_degraded``, workflow_dsl.py:1119-1127, counts a
+    phase degraded on the phase-level flag OR a completed output
+    self-declaring ``degraded``):
 
-    Why top-level ``degraded`` stays False: the flag reads a marker INSIDE
-    the phase output — which is the None being fed. Fabricating True would
-    dress an absent verdict as a measured one (#1019); the honest outcome
-    is decided=False + empty verdict + the degraded vote visible in
-    ``results`` and the completed deliberation record.
+    * DT-1 #1499 — the degraded vote: ``FAILED`` + phase ``degraded=True`` +
+      ``output=None`` (a failed phase carries ``output: None``, #2902). The
+      tranche-5 witness fed ``status: "degraded"`` — a value no
+      ``PhaseStatus`` carries — and froze ``degraded is False``, pinning the
+      one-level read this class replaces: inside a None output the marker
+      the executor sets lives BESIDE the output, not inside it.
+    * the tranche-7 measured shape — a failed extract skips the vote:
+      ``SKIPPED`` + ``output=None`` + not degraded. The honest label is
+      ``NO_VERDICT``: the run took the pipeline path (tranche 5 measured 3
+      LLM attempts keyless); ``STUB`` would name a proof the run lacks.
+    * #2971 — a ``COMPLETED`` phase whose output self-declares
+      ``degraded: True``.
+
+    The flow-level witnesses go through ``run_deliberation_workflow``, so
+    the shared reader is exercised at both production call sites (the
+    WebSocket broadcast and the proof script's payload read).
     """
 
-    def test_degraded_vote_output_none_completes_without_verdict(self):
+    @staticmethod
+    def _vote_phase(status_name, *, degraded=False, output=None):
+        from argumentation_analysis.orchestration.workflow_dsl import (
+            PhaseResult,
+            PhaseStatus,
+        )
+
+        return PhaseResult(
+            phase_name="democratic_vote",
+            status=getattr(PhaseStatus, status_name),
+            capability="governance_simulation",
+            output=output,
+            error="extract failed" if status_name == "FAILED" else None,
+            degraded=degraded,
+        )
+
+    @staticmethod
+    def _sanitized_results(vote_phase_result):
+        from api.proposal_service import sanitize_workflow_result
+
+        return sanitize_workflow_result(
+            {
+                "workflow": "democratech",
+                "phases": {"democratic_vote": vote_phase_result},
+            }
+        )
+
+    def _run_flow_with(self, mod_name, vote_phase_result, *, force_stub=False):
         from unittest.mock import patch
 
         import api.proposal_service as proposal_service
         from api.proposal_service import ProposalStore
 
-        proof_mod = _load_module(PROOF_SCRIPT, "proof_bo2b_1493_deg")
+        proof_mod = _load_module(PROOF_SCRIPT, mod_name)
+        results = self._sanitized_results(vote_phase_result)
 
-        async def _degraded_vote_pipeline(text, workflow, options):
-            return {
-                "workflow": workflow,
-                "phases": {
-                    "democratic_vote": {
-                        "status": "degraded",
-                        "degraded": True,
-                        "output": None,
-                    }
-                },
-            }
+        async def _pipeline(text, workflow, options):
+            return results
 
-        with patch.object(proposal_service, "_run_pipeline", _degraded_vote_pipeline):
+        with patch.object(proposal_service, "_run_pipeline", _pipeline):
             payload = asyncio.run(
-                proof_mod.run_democratech_flow(ProposalStore(), force_stub=False)
+                proof_mod.run_democratech_flow(ProposalStore(), force_stub=force_stub)
             )
+        return payload, proof_mod
 
-        # No crash (base: AttributeError at the verdict read, exit 1) and no
-        # fabricated verdict.
+    def test_failed_degraded_vote_is_degraded_never_stub(self):
+        payload, mod = self._run_flow_with(
+            "proof_bo2b_1493_r1094_failed",
+            self._vote_phase("FAILED", degraded=True, output=None),
+        )
+
         assert payload["governance_decided_firsthand"] is False
         assert payload["governance_verdict"] == {}
-        assert payload["degraded"] is False  # nothing measured → nothing claimed
-        # The degraded vote stays visible where it happened — never masked.
+        # The executor's phase-level flag, read where it lives — not a
+        # marker fabricated inside the None output (#1019).
+        assert payload["degraded"] is True
+        assert mod._verdict_status(payload, force_stub=False) == "DEGRADED"
         vote = payload["results"]["phases"]["democratic_vote"]
-        assert vote["status"] == "degraded"
-        assert vote["output"] is None
+        assert vote["status"] == "failed" and vote["output"] is None
         assert payload["deliberation"]["status"] == "completed"
+
+    def test_skipped_vote_without_stub_evidence_is_no_verdict(self):
+        payload, mod = self._run_flow_with(
+            "proof_bo2b_1493_r1094_skipped",
+            self._vote_phase("SKIPPED", degraded=False, output=None),
+        )
+
+        assert payload["degraded"] is False
+        # No stub evidence (no --no-llm, no force-stub note): the honest
+        # label names the absent verdict, not a stub the run is not.
+        assert mod._verdict_status(payload, force_stub=False) == "NO_VERDICT"
+        # STUB only on evidence — here the explicit flag IS the evidence.
+        assert mod._verdict_status(payload, force_stub=True) == "STUB"
+        assert payload["deliberation"]["status"] == "completed"
+
+    def test_completed_self_declared_degraded_output_counts(self):
+        payload, _mod = self._run_flow_with(
+            "proof_bo2b_1493_r1094_completed",
+            self._vote_phase("COMPLETED", degraded=False, output={"degraded": True}),
+        )
+
+        assert payload["degraded"] is True
+        assert payload["governance_decided_firsthand"] is False
