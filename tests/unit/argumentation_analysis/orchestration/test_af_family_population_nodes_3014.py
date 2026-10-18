@@ -347,11 +347,12 @@ def _install_fake_translator(
     seen: List[List[str]],
 ) -> None:
     """Stand in for the #1698 translator: answer label-referencing relations
-    and record the inventory it was fed (the seam keeps reading TEXTS). The
-    ``**kwargs`` absorbs the #3014 ``atomizer`` the ASPIC seam passes."""
+    and record the inventory it was fed (the seam keeps reading TEXTS). Takes
+    the seam's named ``atomizer`` (#3014) under its real name — an absorbing
+    ``**kwargs`` certifies call shapes the real site never makes (#3064)."""
     import argumentation_analysis.orchestration.structured_arg_translator as sat
 
-    async def _fake(text: str, arguments: List[str], **kwargs: Any) -> Any:
+    async def _fake(text: str, arguments: List[str], atomizer: Any = None) -> Any:
         seen.append(list(arguments))
         return SimpleNamespace(relations=relations, cause="evaluated", error="")
 
@@ -1346,37 +1347,27 @@ class TestAspicNodesAreUnits:
     async def test_the_theory_atoms_are_unit_ids(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        # #3064: the REAL translator runs. The old double replaced it and
+        # called the atomizer one-arg — exactly what the real validators did
+        # NOT do (they passed ``prefix=`` and every real run died in TypeError
+        # → ``translator_failed`` since #3017). The seam is now one level
+        # lower: the LLM relation extraction answers one genuine rule
+        # (premise arg1 → conclusion arg2 over the LABELS) and the real
+        # validators + the real ``_atom`` of ``_invoke_aspic`` run under it.
         state = _RecordingState(
             identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
         )
         context = _measured_context(state)
         handler_seen: List[Dict[str, Any]] = []
+        llm_seen: List[Any] = []
 
-        # The fake translator mirrors the real one: it builds each rule
-        # member's atom THROUGH the injected atomizer (#3014) and answers
-        # over the LABELS it was fed.
         import argumentation_analysis.orchestration.structured_arg_translator as sat
 
-        translator_seen: List[Any] = []
+        async def _llm_one_rule(text: str, arguments: List[str], relation_kind: str):
+            llm_seen.append((list(arguments), relation_kind))
+            return {"rules": [{"premises": ["arg1"], "conclusion": "arg2"}]}
 
-        async def _fake_aspic(text: str, arguments: List[str], atomizer: Any = None):
-            translator_seen.append((list(arguments), atomizer))
-            from argumentation_analysis.orchestration.invoke_callables import _pl_atom
-
-            atoms = (
-                atomizer
-                if atomizer is not None
-                else (lambda t: _pl_atom(t, prefix="arg"))
-            )
-            return SimpleNamespace(
-                relations=[
-                    {"head": atoms(_UNIT_2), "body": [atoms(_UNIT_1)], "name": "def_1"}
-                ],
-                cause="evaluated",
-                error="",
-            )
-
-        monkeypatch.setattr(sat, "translate_to_aspic_rules", _fake_aspic)
+        monkeypatch.setattr(sat, "_llm_extract_relations", _llm_one_rule)
         _install_fake_handler(
             monkeypatch,
             "aspic_handler",
@@ -1389,19 +1380,44 @@ class TestAspicNodesAreUnits:
 
         result = await ic._invoke_aspic(_UNIT_1, context)
 
-        # The seam kept reading TEXTS and received the atomizer.
-        assert translator_seen[0][0] == [_UNIT_1, _UNIT_2]
-        assert callable(translator_seen[0][1])
+        # The seam kept reading TEXTS (the LLM-facing inventory is labels).
+        assert llm_seen[0] == ([_UNIT_1, _UNIT_2], "aspic_rules")
         assert result.get("argument_labels") == _LABELS
         assert "argument_ids_absent_reason" not in result
-        strict, defeasible, _axioms = handler_seen[0]["args"]
+        # The translator survived the real validators (#3064): the axis is
+        # labelled evaluated, not translator_failed.
+        from argumentation_analysis.orchestration.state_writers import (
+            _record_structured_arg_status,
+            _translation_cause_key,
+        )
+
+        assert (
+            context.get(_translation_cause_key("aspic_plus_reasoning")) == "evaluated"
+        )
         # The translator-derived rule cites the unit IDS — joinable atoms,
         # not slug+hash atoms derived from prose.
-        assert defeasible[0] == {"head": "arg_2", "body": ["arg_1"], "name": "def_1"}
-        # The translator's relations persisted into the context cite ids too.
-        assert context["defeasible_rules"] == [
-            {"head": "arg_2", "body": ["arg_1"], "name": "def_1"}
-        ]
+        expected_rule = {"head": "arg_2", "body": ["arg_1"], "name": "def_rule_1"}
+        assert context["defeasible_rules"] == [expected_rule]
+        strict, defeasible, _axioms = handler_seen[0]["args"]
+        assert defeasible[0] == expected_rule
+
+        # The real recorder labels the axis "evaluated" from this context
+        # (the structured_arg_status shape the DoD names).
+        class _StatusState:
+            def __init__(self) -> None:
+                self.rows: List[Any] = []
+
+            def add_structured_arg_status(self, *row: Any) -> None:
+                self.rows.append(row)
+
+        status_state = _StatusState()
+        _record_structured_arg_status(
+            status_state, "aspic_plus_reasoning", result, context
+        )
+        assert status_state.rows, "the recorder filed nothing for the axis"
+        assert status_state.rows[0][0] == "aspic_plus_reasoning"
+        assert status_state.rows[0][1] == "evaluated"
+        assert status_state.rows[0][2] is False
 
     async def test_the_writer_curates_labels(
         self, monkeypatch: pytest.MonkeyPatch
