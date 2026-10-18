@@ -34,7 +34,6 @@ from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass, asdict
 from enum import Enum
-from dotenv import load_dotenv
 
 # Correction du chemin pour les imports internes
 # Le script est dans D:/.../scripts/apps/webapp/ ; la racine du projet est 3 niveaux au-dessus.
@@ -43,12 +42,16 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 # Charger les variables d'environnement du fichier .env à la racine du projet
-dotenv_path = project_root / ".env"
-if dotenv_path.exists():
-    load_dotenv(dotenv_path=dotenv_path, override=True)
-    print(f"INFO: Fichier .env chargé depuis {dotenv_path}")
+# via le loader unique (#3062) : la valeur posée par l'appelant gagne, même
+# vide (#2472) — un import ne recharge plus le .env par-dessus une session
+# neutralisée (l'incident : 12 705 appels payés depuis un run keyless).
+from argumentation_analysis.config.env_loader import EnvironmentManager
+
+_environment = EnvironmentManager()
+if _environment.dotenv_path:
+    print(f"INFO: Fichier .env chargé depuis {_environment.dotenv_path}")
 else:
-    print(f"WARNING: Fichier .env non trouvé à l'emplacement {dotenv_path}")
+    print(f"WARNING: Fichier .env non trouvé à l'emplacement {project_root / '.env'}")
 
 
 # Imports internes

@@ -1,6 +1,5 @@
 import sys
 from pathlib import Path
-from dotenv import load_dotenv
 import os
 
 
@@ -13,23 +12,20 @@ def load_environment():
     # Chemin vers la racine du projet, calculé à partir de l'emplacement de ce script
     project_root = Path(__file__).resolve().parent.parent.parent
 
-    # Chemin vers le fichier .env
-    dotenv_path = project_root / ".env"
-
-    # Chargement des variables d'environnement depuis le fichier .env
-    # override=True garantit que les valeurs du .env écrasent les valeurs existantes
-    if dotenv_path.exists():
-        load_dotenv(dotenv_path=dotenv_path, override=True)
-        # print(f"Variables d'environnement chargées depuis : {dotenv_path}")
-    else:
-        print(f"AVERTISSEMENT: Fichier .env introuvable à : {dotenv_path}")
-
     # Ajout de la racine du projet au PYTHONPATH si elle n'y est pas déjà.
-    # Cela permet aux scripts de trouver les modules du projet
-    # (par exemple, 'argumentation_analysis', 'project_core').
+    # D'abord : le loader unique vit sous la racine, il doit être importable
+    # avant de charger quoi que ce soit.
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
-        # print(f"Racine du projet ajoutée au PYTHONPATH : {project_root}")
+
+    # Chargement des variables d'environnement via le loader unique (#3062) :
+    # la valeur posée par l'appelant gagne, même vide (#2472) — plus
+    # d'override=True qui recharge le .env par-dessus une session neutralisée.
+    from argumentation_analysis.config.env_loader import EnvironmentManager
+
+    manager = EnvironmentManager()
+    if not manager.dotenv_path:
+        print(f"AVERTISSEMENT: Fichier .env introuvable à : {project_root / '.env'}")
 
 
 if __name__ == "__main__":

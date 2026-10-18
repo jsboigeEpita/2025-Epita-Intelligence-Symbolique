@@ -13,7 +13,6 @@ from unittest.mock import MagicMock, patch
 
 import os
 import semantic_kernel as sk
-from pathlib import Path
 from semantic_kernel.functions import KernelArguments
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from argumentation_analysis.core.llm_service import (
@@ -30,10 +29,12 @@ class TestLLMService:
     def setup_and_teardown(self):
         """Initialisation et nettoyage pour chaque test."""
         self.original_env = os.environ.copy()
-        from dotenv import load_dotenv
+        # #3062 : le loader unique remplace load_dotenv(override=True) — la
+        # valeur posée par l'appelant gagne, même vide (#2472), et un run
+        # neutralisé ne charge plus les clés réelles du .env.
+        from argumentation_analysis.config.env_loader import EnvironmentManager
 
-        dotenv_path = Path(__file__).resolve().parent.parent.parent.parent / ".env"
-        load_dotenv(dotenv_path=dotenv_path, override=True)
+        EnvironmentManager()
 
         self.api_key = os.environ.get("OPENAI_API_KEY")
         # Un .env encore sur un modèle retiré (ex: gpt-5-mini) est substitué par

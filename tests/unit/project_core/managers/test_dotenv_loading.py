@@ -1,7 +1,9 @@
 """Tests for deterministic multi-.env loading in EnvironmentManager (#1295).
 
 Verifies:
-  - root .env always wins (override=True) even when OPENAI_API_KEY is pre-set in os.environ
+  - root .env always wins over a value set in-process before it (a sub-.env,
+    #1295) — a value the caller started the process with wins over the root
+    .env (#2472); this file's monkeypatch is in-process by construction
   - divergence WARNING is emitted when a secondary .env carries a different key
   - no WARNING when secondary .env has the same key as root
 """
@@ -31,7 +33,7 @@ class TestDotenvLoadingDeterministic:
     def test_root_env_overrides_pre_existing_env_var(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Root .env (override=True) must replace a stale value set by a prior sub-.env."""
+        """Root .env must replace a stale value set in-process by a prior sub-.env (#1295)."""
         root_env = tmp_path / ".env"
         _write_env(root_env, "OPENAI_API_KEY", "sk-root-VALID")
 
@@ -43,15 +45,15 @@ class TestDotenvLoadingDeterministic:
 
         assert (
             os.environ.get("OPENAI_API_KEY") == "sk-root-VALID"
-        ), "Root .env should have overridden the stale value via override=True"
+        ), "Root .env should have overridden the in-process stale value (#1295)"
 
     def test_dotenv_path_points_to_root_env(self, tmp_path: Path) -> None:
         """dotenv_path attribute must reflect the root .env location."""
         root_env = tmp_path / ".env"
         root_env.write_text("DUMMY=1\n", encoding="utf-8")
 
-        # #1794: EnvironmentManager's load_dotenv(override=True) writes the real
-        # os.environ — sandbox it so the fixture key cannot leak into the session.
+        # #1794: EnvironmentManager writes the real os.environ — sandbox it so
+        # the fixture key cannot leak into the session.
         with patch.dict("os.environ", {}, clear=True), patch.object(
             _em_mod, "_find_repo_root", return_value=tmp_path
         ):
