@@ -23,6 +23,9 @@ from argumentation_analysis.orchestration.state_writers import (
 from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
     _collect_formal_findings,
 )
+from argumentation_analysis.reporting.restitution.appendix import (
+    _dung_machinery_section,
+)
 from argumentation_analysis.reporting.restitution.dung_reader import (
     UNAVAILABLE_STATUS,
     appendix_ref,
@@ -105,3 +108,48 @@ class TestAct2UnavailableProse:
             "non concluable" in finding.verdict
             or "n'est pas concluable" in finding.verdict
         )
+
+
+class TestDungMachinerySectionUnavailable:
+    """R1093 return: the appendix is the THIRD ``appendix_ref`` reader, and
+    the witness above covered Act II only. On the R1090 shape the subsection
+    heading rendered ``#### `` (empty title) and the body listed every
+    argument as « absents de l'extension » of an extension that was never
+    computed. The heading must name the status; nothing may read as an
+    admission verdict."""
+
+    def _render(self, state: UnifiedAnalysisState) -> str:
+        # The render pipeline hands the section the state's snapshot dict
+        # (the production caller at appendix.py:860 works on the mapped
+        # payload; get_state_snapshot is the serializer that carries
+        # dung_frameworks).
+        return "\n".join(
+            _dung_machinery_section(state.get_state_snapshot(), include_full=True)
+        )
+
+    def test_unavailable_frame_gets_a_named_heading_not_an_empty_one(self):
+        rendered = self._render(_unavailable_state())
+        assert "#### Cadre de Dung non évalué (aucune sémantique calculée)" in rendered
+        # Never an empty heading, never the phantom anchor.
+        assert "\n#### \n" not in rendered
+        assert not any(line.strip() == "####" for line in rendered.splitlines())
+        assert "Annexe Dung[" not in rendered
+
+    def test_unavailable_frame_lists_no_admission_verdict(self):
+        rendered = self._render(_unavailable_state())
+        # Nothing was computed: no argument is « absent » from anything, and
+        # the #1912 « non décodable » line would claim a form was read.
+        assert "absents de l'extension" not in rendered
+        assert "forme non décodable" not in rendered
+        assert "non canonique" not in rendered
+        # The honest status line, in the reader's language.
+        assert "aucune sémantique n'a été calculée" in rendered
+        # The graph itself WAS built — its lines stay (the cap/dropped/edges
+        # lines carry #3014's reader contract).
+        assert "- graphe :" in rendered
+        assert "- arêtes d'attaque :" in rendered
+
+    def test_undecodable_control_keeps_the_1912_shape(self):
+        rendered = self._render(_undecodable_state())
+        assert "#### Annexe Dung[preferred]" in rendered
+        assert "forme non décodable" in rendered
