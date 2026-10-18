@@ -47,6 +47,7 @@ from .dung_reader import (  # #1908: one shared meaning for act2 and act3
     ACCEPTED_MEANS,
     EPISTEMIC_CAVEAT,
     REJECTED_MEANS,
+    UNAVAILABLE_STATUS,
     appendix_ref,
     appendix_refs_in,
     reader_consequence,
@@ -1183,22 +1184,38 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
         # #1912: a native framework exists but its extension shape is
         # undecodable — say so. Never render "N rejected" from a shape the
         # decoder could not read (the accepted-empty fallacy).
-        findings.append(
-            FormalFinding(
-                kind="dung",
-                verdict=(
-                    f"le graphe d'attaque construit sur les arguments extraits "
-                    f"n'est pas concluable en sémantique "
-                    f"{dung_trace.semantics_label} (forme d'extension non "
-                    "décodable) — aucun argument n'est fragilisé par ce "
-                    "verdict d'indécidabilité"
-                ),
-                detail=(
-                    f"machinerie complète et protocole : {appendix_ref(dung_trace.semantics_label)} ; "
-                    f"{EPISTEMIC_CAVEAT} (#1912 : ni accepté-vide ni inventé)"
-                ),
+        # #3050: when the label is the native ``unavailable`` STATUS (no
+        # semantics was computed — compare mode's degraded entry), the prose
+        # names the status in the reader's language and the appendix anchor
+        # is DROPPED (appendix_ref returns ""): nothing was computed, so
+        # there is no machinery to cite — never a phantom
+        # ``Annexe Dung[unavailable]`` and never « sémantique unavailable ».
+        _label = dung_trace.semantics_label
+        if _label.strip().lower() == UNAVAILABLE_STATUS:
+            _verdict = (
+                "le graphe d'attaque construit sur les arguments extraits "
+                "n'a pu être évalué : aucune sémantique n'a été calculée "
+                "(cadre de Dung indisponible) — il ne fragilise ni ne "
+                "valide aucun de ces mouvements"
             )
-        )
+            _detail = (
+                "machinerie non exécutée (solveur Dung indisponible) ; "
+                f"{EPISTEMIC_CAVEAT} (#3050 : aucune sémantique calculée, "
+                "aucune annexe à citer)"
+            )
+        else:
+            _verdict = (
+                f"le graphe d'attaque construit sur les arguments extraits "
+                f"n'est pas concluable en sémantique "
+                f"{_label} (forme d'extension non "
+                "décodable) — aucun argument n'est fragilisé par ce "
+                "verdict d'indécidabilité"
+            )
+            _detail = (
+                f"machinerie complète et protocole : {appendix_ref(_label)} ; "
+                f"{EPISTEMIC_CAVEAT} (#1912 : ni accepté-vide ni inventé)"
+            )
+        findings.append(FormalFinding(kind="dung", verdict=_verdict, detail=_detail))
     elif dung_trace.available and dung_trace.rejected_args:
         # #1908: the prose COUNTS the rejections but never NAMES non-canonical
         # entries — the framework's ``arguments`` list can carry raw position
