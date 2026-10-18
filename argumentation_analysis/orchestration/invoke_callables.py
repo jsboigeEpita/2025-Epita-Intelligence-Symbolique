@@ -2730,6 +2730,11 @@ async def _invoke_governance(
 
     # Enrich with LLM-based governance and deliberation assessment
     llm_governance = None
+    # #2850 lot 3 — fallacy-types k of N, initialized before the enrichment
+    # block so the payload keys are unconditional (0 of 0 when no client /
+    # no context was built — honest zeros, not absent keys).
+    _gov_fallacy_types_considered = 0
+    _gov_fallacy_types_total = 0
     try:
         client, model_id = _get_openai_client()
         if client:
@@ -2802,11 +2807,18 @@ async def _invoke_governance(
                 else []
             )
             if raw_fallacies:
+                # #2850 lot 3 — the deliberation prompt stays byte-identical
+                # (the comprehension is unchanged over the same 5-element
+                # head); the k of N disclosure lands on the phase payload,
+                # never inside the LLM input (cassette-key stability).
+                _gov_fallacy_types_total = len(raw_fallacies)
+                _gov_fallacy_head = raw_fallacies[:5]
                 ftypes: list[str] = [
                     str(f.get("type", f.get("fallacy_type", "unknown")))
-                    for f in raw_fallacies[:5]
+                    for f in _gov_fallacy_head
                     if isinstance(f, dict)
                 ]
+                _gov_fallacy_types_considered = len(ftypes)
                 context_parts.append(f"Fallacies detected: {', '.join(ftypes)}")
             if isinstance(jtms_output, dict):
                 retracted = [
@@ -2911,6 +2923,10 @@ async def _invoke_governance(
         # 9/9 success — the theatre #1019 forbids (Constat n°5: degraded !=
         # used). Mirrors the existing canon in state_writers / fallacy_detection.
         "degraded": bool(governance_verdict.get("degraded", False)),
+        # #2850 lot 3 — shape (b): the deliberation context names at most 5
+        # fallacy types (byte-identical prompt); the payload says k of N.
+        "fallacy_types_considered": _gov_fallacy_types_considered,
+        "fallacy_types_total": _gov_fallacy_types_total,
     }
     if vote_result:
         result["vote_result"] = vote_result
@@ -2946,6 +2962,12 @@ async def _invoke_governance(
             if _decided
             else f"verdict dégradé ({_verdict.get('reason', 'n/a')})"
         )
+        _fallacy_note = (
+            f" Types de sophismes cités: {_gov_fallacy_types_considered} de "
+            f"{_gov_fallacy_types_total}. (#2850)"
+            if _gov_fallacy_types_total
+            else ""
+        )
         _state.add_trace_entry(
             phase="governance",
             agent="GovernanceModule",
@@ -2971,7 +2993,7 @@ async def _invoke_governance(
             )[0],
             summary=(
                 f"{_n_conflicts} conflits détectés — {_verdict_kind}. "
-                f"Gagnants distincts: {_distinct}. (GE-4 #1462, #2969)"
+                f"Gagnants distincts: {_distinct}.{_fallacy_note} (GE-4 #1462, #2969)"
             ),
         )
     return result
@@ -3512,15 +3534,24 @@ async def _invoke_atms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
         arg_names.append(name)
         arg_ids.append(u.unit_id)
 
+    _atms_sentences_total: Optional[int] = None
+    _atms_sentences_considered = 0
     if not arg_names:
         sentences = [s.strip() for s in input_text.split(".") if len(s.strip()) > 10]
+        _atms_sentences_total = len(sentences)
         for s in sentences[:6]:
             atms.add_assumption(s[:60])
             arg_names.append(s[:60])
+            _atms_sentences_considered += 1
 
     # ── Step 2: Claims → derived nodes with justifications ───────────
+    # #2850 lot 3 — shape (b), the batch-1 rule: the cap stays (claims are
+    # produced facts, not the argument population), the drop is said — k
+    # of N on the payload and the atms trace summary below.
+    _atms_claims_total = len(raw_claims)
+    _atms_claims_head = raw_claims[:4]
     claim_names = []
-    for i, c in enumerate(raw_claims[:4]):
+    for i, c in enumerate(_atms_claims_head):
         name = _text(c)
         atms.add_node(name)
         claim_names.append(name)
@@ -3535,9 +3566,14 @@ async def _invoke_atms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
     # at the justification call — the ATMS strips nogood environments from
     # ⊥'s own label, so this list is the only place they survive.
     nogoods: List[Tuple[str, FrozenSet[str]]] = []
+    # #2850 lot 3 — same shape (b) rule: k of N detections became CONTRA
+    # nodes; the rest is said on the payload and the trace, not hidden.
+    _atms_fallacies_total = len(detected_fallacies)
+    _atms_fallacies_considered = 0
     for i, f in enumerate(detected_fallacies[:4]):
         if not isinstance(f, dict):
             continue
+        _atms_fallacies_considered += 1
         fallacy_type = f.get("type", f.get("fallacy_type", f"fallacy_{i+1}"))
         contra_name = f"CONTRA:{fallacy_type}"[:60]
         atms.add_node(contra_name)
@@ -3587,6 +3623,11 @@ async def _invoke_atms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
                     consistent_envs.append({"belief": node_name, "environment": env})
 
     # ── Step 5: Multi-context hypothesis testing (#349) ──────────────
+    # #2850 lot 3 — _generate_hypotheses reads the first 6 detections as
+    # h_fallacy_excluded's exclusion targets; that second head over the
+    # same population is said too (k of N, payload + trace).
+    _atms_hypo_targets_total = len(detected_fallacies)
+    _atms_hypo_targets_considered = min(6, _atms_hypo_targets_total)
     hypotheses = _generate_hypotheses(
         arg_names,
         claim_names,
@@ -3636,7 +3677,7 @@ async def _invoke_atms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             }
         )
 
-    return {
+    _atms_result = {
         "assumption_count": len(assumptions),
         "assumptions": assumptions,
         "node_count": len(atms.nodes) - 1,  # exclude ⊥
@@ -3651,7 +3692,55 @@ async def _invoke_atms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             {"belief": name, "environment": sorted(env)} for name, env in nogoods
         ],
         "atms_contexts": atms_contexts,
+        # #2850 lot 3 — shape (b): the caps stay, the drops are said. k of
+        # N travels on the payload (programmatic readers) AND the trace
+        # summary below (deep-synthesis's Section 5 and text_sequence read
+        # analysis_trace) — never only in a comment.
+        "claims_considered": len(claim_names),
+        "claims_total": _atms_claims_total,
+        "fallacies_considered": _atms_fallacies_considered,
+        "fallacies_total": _atms_fallacies_total,
+        "hypothesis_fallacy_targets_considered": _atms_hypo_targets_considered,
+        "hypothesis_fallacy_targets_total": _atms_hypo_targets_total,
     }
+    if _atms_sentences_total is not None:
+        # The sentence fallback fired: its cap is disclosed too (honest
+        # absence otherwise — the branch did not run).
+        _atms_result["assumptions_from_sentences"] = _atms_sentences_considered
+        _atms_result["sentences_total"] = _atms_sentences_total
+    # Trace entry for the ATMS specialist (#2850 lot 3 — the atms phase
+    # wrote no trace entry at all; the render surfaces that read
+    # analysis_trace never saw an atms line).
+    if _atms_state is not None and arg_names:
+        _disclosures = [
+            f"{len(claim_names)} de {_atms_claims_total} claims",
+            f"{_atms_fallacies_considered} de {_atms_fallacies_total} sophismes",
+            (
+                f"{_atms_hypo_targets_considered} de {_atms_hypo_targets_total} "
+                "cibles d'exclusion"
+            ),
+        ]
+        if "assumptions_from_sentences" in _atms_result:
+            _disclosures.append(
+                f"{_atms_sentences_considered} de {_atms_sentences_total} phrases"
+            )
+        _atms_state.add_trace_entry(
+            phase="atms",
+            agent="ATMSModule",
+            reacts_to=_consumed_react_targets(
+                [
+                    ("extract", raw_args or raw_claims),
+                    ("hierarchical_fallacy", detected_fallacies),
+                    ("quality", per_arg_scores),
+                ]
+            )[0],
+            summary=(
+                f"ATMS propagé — {len(atms_contexts)} contextes d'hypothèses. "
+                f"Environnements d'hypothèses calculés — {', '.join(_disclosures)} "
+                "soumis au réseau."
+            ),
+        )
+    return _atms_result
 
 
 def _generate_hypotheses(

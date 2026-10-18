@@ -651,8 +651,11 @@ REGISTRY = {
         1,
     ): (
         "population_cap",
-        "first expr in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "claim i's justification cites the first min(i+2, len) assumptions in "
+        "selection order — an edge-construction head over the recorded "
+        "selection (every selected assumption is already in the network; no "
+        "unit is dropped from analysis)",
+        "the selection is recorded via record_analysis_coverage('atms'); the edge head stays debt #2850 lot 3",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -661,8 +664,10 @@ REGISTRY = {
         2,
     ): (
         "population_cap",
-        "first expr in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "h_partial_accept's assumption set is every selected assumption but "
+        "the last — a hypothesis-design partition over the recorded "
+        "selection, not a corpus drop",
+        "the atms trace summary names the hypothesis contexts; the partition stays debt #2850 lot 3",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -671,8 +676,10 @@ REGISTRY = {
         1,
     ): (
         "population_cap",
-        "first mid in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "h_first_half's assumption set is the first half of the selected "
+        "assumptions — a hypothesis-design partition over the recorded "
+        "selection, not a corpus drop",
+        "the atms trace summary names the hypothesis contexts; the partition stays debt #2850 lot 3",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -778,8 +785,8 @@ REGISTRY = {
         1,
     ): (
         "population_cap",
-        "first 4 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "first 4 detections become CONTRA contradiction nodes; the rest is unanalysed",
+        "recorded via fallacies_considered/fallacies_total on the phase payload and the atms trace summary (deep-synthesis trace reader) — cap stays debt #2850",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -808,8 +815,8 @@ REGISTRY = {
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "fallacies", "6", 1): (
         "population_cap",
-        "first 6 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "only the first 6 detections feed h_fallacy_excluded's exclusion targets; targets beyond the head leave their arguments inside the hypothesis",
+        "recorded via hypothesis_fallacy_targets_considered/_total on the phase payload and the atms trace summary — cap stays debt #2850 lot 3",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -907,8 +914,12 @@ REGISTRY = {
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "raw_args", "8", 1): (
         "population_cap",
-        "first 8 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "STATELESS FALLBACK ONLY: with a merged state population the atms "
+        "assumptions are select_for_budget(stratified) at the same budget "
+        "through the coverage layer (#2896 c, record_analysis_coverage("
+        "'atms')); this head slice survives for contexts carrying no state "
+        "object",
+        "fallback named — #2850 lot 3",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -927,8 +938,8 @@ REGISTRY = {
         1,
     ): (
         "population_cap",
-        "first 4 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "first 4 claims become derived ATMS nodes with justifications; the rest is unanalysed",
+        "recorded via claims_considered/claims_total on the phase payload and the atms trace summary (deep-synthesis trace reader) — cap stays debt #2850 (claims are produced facts, not the argument population)",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -947,8 +958,8 @@ REGISTRY = {
         1,
     ): (
         "population_cap",
-        "first 5 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "the governance deliberation context names at most 5 fallacy types; detections beyond the head stay unnamed in the deliberation input",
+        "recorded via fallacy_types_considered/fallacy_types_total on the phase payload and the governance trace summary (when it fires) — cap stays debt #2850 lot 3 (the prompt itself stays byte-identical, cassette-key stability)",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -1057,8 +1068,8 @@ REGISTRY = {
         1,
     ): (
         "population_cap",
-        "only the first 6 sentences become the assumption base; rest unanalysed",
-        "silent — debt #2850",
+        "only the first 6 sentences become the assumption base (fallback when the selection is empty); rest unanalysed",
+        "recorded via assumptions_from_sentences/sentences_total on the phase payload and the atms trace summary (deep-synthesis trace reader) — cap stays debt #2850",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
