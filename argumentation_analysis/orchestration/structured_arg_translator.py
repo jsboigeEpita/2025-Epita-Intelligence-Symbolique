@@ -42,6 +42,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from argumentation_analysis.core.reading_window import (
@@ -409,7 +410,7 @@ def _sanitize_rule_name(raw: Any) -> str:
 def _validate_aspic_rules(
     data: Dict[str, Any],
     arg_by_id: Dict[str, str],
-    atom_fn: Callable[..., str],
+    atom_fn: Callable[[str], str],
 ) -> List[Dict[str, Any]]:
     """Validate LLM defeasible-rule proposals against the real inventory.
 
@@ -420,7 +421,10 @@ def _validate_aspic_rules(
     conclusion (a rule concluding one of its own premises is vacuous).
 
     Ids are mapped to canonical argument text, then to stable PL atoms via
-    ``atom_fn``. All argument atoms share the ``arg`` prefix so that an argument
+    ``atom_fn`` — called with the member ONLY (#3064: the declared contract is
+    ``Callable[[str], str]``; the ``arg`` prefix binding belongs to the callable
+    — the default is ``_pl_atom`` bound to ``arg`` — never to the validators).
+    All argument atoms share that prefix so that an argument
     used as a conclusion of one rule and as a premise of another maps to the SAME
     atom — genuine ASPIC+ rule chaining. Returns handler-shaped
     ``{head, body, name}`` dicts. Dedup on ``(head, frozenset(body))``.
@@ -454,11 +458,11 @@ def _validate_aspic_rules(
         prem_ids = [pid for pid in prem_ids if pid != concl_id]
         if not prem_ids:
             continue  # only premise was the conclusion itself → vacuous
-        head_atom = atom_fn(arg_by_id[concl_id], prefix="arg")
+        head_atom = atom_fn(arg_by_id[concl_id])
         body_atoms: List[str] = []
         body_seen: set[str] = set()
         for pid in prem_ids:
-            a = atom_fn(arg_by_id[pid], prefix="arg")
+            a = atom_fn(arg_by_id[pid])
             if a not in body_seen:
                 body_seen.add(a)
                 body_atoms.append(a)
@@ -494,7 +498,7 @@ def _unique_rule_name(base: str, used: set[str]) -> str:
 def _validate_aspic_contradictions(
     data: Dict[str, Any],
     arg_by_id: Dict[str, str],
-    atom_fn: Callable[..., str],
+    atom_fn: Callable[[str], str],
     used_names: set[str],
 ) -> List[Dict[str, Any]]:
     """Validate LLM contradiction proposals into negated-head defeasible rules.
@@ -523,8 +527,8 @@ def _validate_aspic_contradictions(
             continue  # fabricated id → dropped
         if atk_id == tgt_id:
             continue  # self-contradiction → vacuous
-        head_atom = atom_fn(arg_by_id[tgt_id], prefix="arg")
-        body_atom = atom_fn(arg_by_id[atk_id], prefix="arg")
+        head_atom = atom_fn(arg_by_id[tgt_id])
+        body_atom = atom_fn(arg_by_id[atk_id])
         name = _unique_rule_name("def_con", used_names)
         used_names.add(name)
         out.append(
@@ -541,7 +545,7 @@ def _validate_aspic_contradictions(
 def _validate_aspic_undercuts(
     data: Dict[str, Any],
     arg_by_id: Dict[str, str],
-    atom_fn: Callable[..., str],
+    atom_fn: Callable[[str], str],
     valid_rule_names: set[str],
     used_names: set[str],
 ) -> List[Dict[str, Any]]:
@@ -571,7 +575,7 @@ def _validate_aspic_undercuts(
         sanitized = _sanitize_rule_name(tgt_rule) if tgt_rule else ""
         if not sanitized or sanitized not in valid_rule_names:
             continue  # references a rule that does not exist → dropped
-        body_atom = atom_fn(arg_by_id[atk_id], prefix="arg")
+        body_atom = atom_fn(arg_by_id[atk_id])
         name = _unique_rule_name("def_unc", used_names)
         used_names.add(name)
         out.append(
@@ -822,7 +826,9 @@ async def translate_to_aspic_rules(
 
     ``atomizer`` maps an inventory member to its PL atom — injectable so the
     caller can mint unit ids as atoms (#3014: a member's atom is its ``arg_N``
-    when the population minted one). Defaults to ``_pl_atom`` (slug + hash).
+    when the population minted one). Defaults to ``_pl_atom`` bound to the
+    ``arg`` prefix (slug + hash). It is called with the member only — the
+    prefix binding belongs to the callable, never to the validators (#3064).
 
     Only **defeasible** rules are derived: natural-language argumentation is
     defeasible, and strict rules / preference orderings are not reliably
@@ -850,7 +856,11 @@ async def translate_to_aspic_rules(
     # _pl_atom lives in invoke_callables (lazy import — no module-load cycle).
     from argumentation_analysis.orchestration.invoke_callables import _pl_atom
 
-    _atoms = atomizer if atomizer is not None else _pl_atom
+    # #3064: the declared contract is Callable[[str], str] — the validators
+    # call the atomizer with the member only. The default keeps producing the
+    # very same atoms as before (slug + hash under ``arg``) by binding the
+    # prefix HERE instead of passing it at each validator call site.
+    _atoms = atomizer if atomizer is not None else partial(_pl_atom, prefix="arg")
     rules = _validate_aspic_rules(data, arg_by_id, _atoms)
     # #1678: the contradictions + undercuts channels. Contradictions render as
     # negated-head rules (rebut/undermine, qualified structurally by the

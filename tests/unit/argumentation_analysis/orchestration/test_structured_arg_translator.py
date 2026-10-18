@@ -585,6 +585,27 @@ class TestAspicTranslator:
         ]
         assert out.relations[0]["name"] == "def_rule_1"
 
+    async def test_injected_one_arg_atomizer_survives_the_validators(self, monkeypatch):
+        """#3064: the declared contract is ``Callable[[str], str]`` — the
+        validators call the injected atomizer with the member only. The
+        prefix binding is the atomizer's own (the default is ``_pl_atom``
+        bound to ``arg``), never a keyword the callable may not take."""
+        _patch_llm(
+            monkeypatch,
+            {"rules": [{"premises": ["arg1"], "conclusion": "arg2"}]},
+        )
+
+        def _unit_atomizer(member: str) -> str:
+            return "unit_" + member.replace(" ", "_")
+
+        out = await translate_to_aspic_rules(
+            "text", ["Alpha", "Beta"], atomizer=_unit_atomizer
+        )
+        assert out.cause == CAUSE_EVALUATED
+        assert out.relations == [
+            {"head": "unit_Beta", "body": ["unit_Alpha"], "name": "def_rule_1"}
+        ]
+
 
 def _inject_fake_aspic_module(monkeypatch, payload):
     """Inject a fake ASPICHandler so _invoke_aspic runs without a JVM."""
@@ -611,9 +632,9 @@ class TestAspicHandlerWiring:
         _inject_fake_aspic_module(monkeypatch, {"extensions": []})
         genuine = [{"head": "arg:h", "body": ["arg:b"], "name": "def_rule_1"}]
 
-        # #3014: the invoke passes the label→id ``atomizer`` — the fake
-        # absorbs it (it answers pre-shaped rules).
-        async def _fake_rules(text, args, **kwargs):
+        # #3014/#3064: the invoke passes the label→id ``atomizer`` — the fake
+        # takes the real signature and answers pre-shaped rules.
+        async def _fake_rules(text, args, atomizer=None):
             return TranslationResult(relations=genuine, cause=CAUSE_EVALUATED)
 
         monkeypatch.setattr(
@@ -630,7 +651,7 @@ class TestAspicHandlerWiring:
     async def test_does_not_override_caller_supplied_rules(self, monkeypatch):
         called = {"n": 0}
 
-        async def _fake_rules(text, args, **kwargs):
+        async def _fake_rules(text, args, atomizer=None):
             called["n"] += 1
             return TranslationResult(
                 relations=[
