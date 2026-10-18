@@ -73,6 +73,27 @@ class TestReasonClassification3054:
         # note) is counted as such — the class is never guessed (#1019).
         assert confidence_note_reason("") == "raison non fournie"
 
+    def test_the_classifier_reads_the_real_producers_notes(self):
+        """R1093 follow-up (#3056 review): the classes pin through
+        ``_confidence_score`` itself, not through copied literals — if the
+        producer rewords a note, this reddens instead of silently counting
+        the reworded notes as ``autre`` in the appendix."""
+        from argumentation_analysis.plugins.exploration_plugin import (
+            _confidence_score,
+        )
+        from argumentation_analysis.plugins.identification_models import (
+            confidence_note_reason,
+        )
+
+        for raw, expected in (
+            ("", "omise"),  # the model omitted the argument
+            (None, "illisible"),  # absent raw lands in the unreadable branch
+            ("x !", "illisible"),  # unparseable raw
+        ):
+            score, note = _confidence_score(raw)
+            assert score is None, raw  # every shape here is unmeasured
+            assert confidence_note_reason(note) == expected, (raw, note)
+
 
 class TestCarry3054:
     def test_add_fallacy_stores_the_note_beside_confidence(self):
