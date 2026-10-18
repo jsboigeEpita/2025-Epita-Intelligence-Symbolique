@@ -328,6 +328,15 @@ User mandate 2026-09-17 (verbatim): « Il faut réparer tout ce qui est défectu
 - **A workaround discovered is a defect to open and repair, never a documentation item.** Carried env pins (`JVM_TWEETY_VERSION` per-process), mandatory secret flags, manual steps that "everyone knows", tolerated "baselined" failures — each masks a repairable root. Measured instance: the fleet-wide `JVM_TWEETY_VERSION=1.28` pin masked "`initialize_jvm()` returns False despite a complete local classpath" — repaired in #2278 as the common root of #2277's ×40 WARN motif and #2276's 11 failed phases.
 - **Burial requires proof of non-utility.** The Cleanup Gate bar applies equally to `pytest.ini` ignores, `PENDING_TRIAGE` entries and `_archives/`/`docs/archives/` moves: burying useful code is the same failure as deleting it, and a workaround must not outlive its repair. Instance: `test_analysis_service_mock.py` stayed ignored in `addopts` for months after the root conflict was fixed in conftest (un-buried in #2279).
 
+## When the Tunnel Is Done — Stopping Criterion
+
+User decision 2026-10-19 (option « b »). Reading the rendered report keeps finding defects, so "done" is a stopping criterion, not a date. The tunnel is done when **both** hold:
+
+1. **Two consecutive paid one-document passes** on the same document find **no new defect readable in the render**, and the tracker holds **no open defect on what the report says**.
+2. **The full-corpus campaign (#2841)** has run and **the user has read it**.
+
+Native failures and revival epics are not part of the tunnel. They continue as ordinary improvement work. The coordinator's DONE entries report the count of clean consecutive passes for item 1 (it resets to 0 whenever a pass finds a new defect).
+
 ## Dataset Privacy Discipline
 
 The canonical dataset is `argumentation_analysis/data/extract_sources.json.gz.enc` (encrypted, tracked). Passphrase is in `.env` (`TEXT_CONFIG_PASSPHRASE`). It contains politically sensitive speeches (historical dictators, current heads of state, domestic politics). **Never let plaintext or downstream analysis leave the machine via git.**
