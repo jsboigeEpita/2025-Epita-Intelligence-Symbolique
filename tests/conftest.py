@@ -1340,3 +1340,73 @@ def e2e_servers(request, e2e_api_token):
             backend_log_file.close()
 
         logger.info("Serveurs E2E terminés.")
+
+
+# --- #3080 : port local du fix amont pytest#14635, jusqu'à sa release -------
+#
+# pytest 9.1.1 : quand un arg fichier nu (ex. tests/unit/test_x.py) est
+# intercalé entre un arg répertoire et un arg fichier sous ce répertoire
+# (argv « R F P »), le walk de F re-collecte le parent avec
+# handle_dupes=False (_pytest/main.py, Session.collect) et ses enfants
+# Directory NEUFS remplacent les nœuds cachés. Le matching des fixtures se
+# fait par IDENTITÉ de nœud (_pytest/fixtures.py, _matchfactories) : les
+# conftest de répertoire enregistrées sous les anciens nœuds deviennent
+# invisibles aux items collectés sous les nouveaux. Deux pertes : BRUYANTE
+# (« fixture 'dung_attacks_offline' not found ») et SILENCIEUSE (l'autouse
+# _shutdown_leaked_communication_threads disparaît de la closure).
+#
+# Amont : pytest-dev/pytest#14971, corrigé par #14635 (fc8f56bd2), backport
+# #14968 fusionné dans la branche 9.1.x le 2026-09-06 — aucune release ne le
+# porte à ce jour (dernière : 9.1.1 du 2026-06-19 ; conda-forge idem). Ce
+# bloc porte le fix amont à l'identique : à la re-collecte d'un collecteur,
+# réutiliser les enfants Directory déjà vus (par chemin) ; les Module/File
+# restent recréés pour préserver --keep-duplicates. Il s'autodésactive dès
+# que le pytest installé porte le fix (>= 9.1.2) — le supprimer au bump.
+# Témoin né-rouge : tests/unit/test_conftest_argv_order_3080.py.
+
+import _pytest.main as _pytest_main_3080  # noqa: E402
+import _pytest.nodes as _pytest_nodes_3080  # noqa: E402
+
+
+def _pytest_porte_le_fix_14971() -> bool:
+    """Vrai si le pytest installé réconcilie déjà les Directory re-collectés."""
+    try:
+        parts = tuple(int(x) for x in pytest.__version__.split(".")[:3])
+    except ValueError:
+        return False
+    return parts >= (9, 1, 2)
+
+
+if not _pytest_porte_le_fix_14971():
+    _orig_collect_one_node_3080 = _pytest_main_3080.Session._collect_one_node
+    _prev_directory_children_3080: dict = {}
+
+    def _collect_one_node_reconciled_3080(self, node, handle_dupes=True):
+        """#3080 : réutilise les enfants Directory déjà vus (pytest#14635).
+
+        Équivalent du patch amont, en wrapper : après un `_collect_one_node`
+        qui a ré-collecté (dup=False, report passé), les enfants Directory du
+        résultat sont remplacés par ceux vus au passage précédent du même
+        nœud — l'identité des Package/Directory est ainsi préservée d'un walk
+        à l'autre, et avec elle la visibilité des fixtures de conftest.
+        """
+        rep, dup = _orig_collect_one_node_3080(self, node, handle_dupes)
+        if not dup and rep.passed and node in _prev_directory_children_3080:
+            prev_dirs = _prev_directory_children_3080[node]
+            rep.result = [
+                (
+                    prev_dirs.get(child.path, child)
+                    if isinstance(child, _pytest_nodes_3080.Directory)
+                    else child
+                )
+                for child in rep.result
+            ]
+        if not dup and rep.passed:
+            _prev_directory_children_3080[node] = {
+                child.path: child
+                for child in rep.result
+                if isinstance(child, _pytest_nodes_3080.Directory)
+            }
+        return rep, dup
+
+    _pytest_main_3080.Session._collect_one_node = _collect_one_node_reconciled_3080

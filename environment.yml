@@ -103,7 +103,7 @@ dependencies:
   - clingo
 
   # Testing
-  - pytest==9.1.1  # #2566: CI gate run 36264473973 uses 9.1.1; 8.4.2 silently narrows collection for DIR plus DIR/file.py.
+  - pytest==9.1.1  # #2566: CI gate run 36264473973 uses 9.1.1; 8.4.2 silently narrows collection for DIR plus DIR/file.py. #3080: 9.1.1 also loses directory-conftest fixtures when a bare file arg interleaves a directory and a deeper file (pytest-dev/pytest#14971; fix #14635 backported to the 9.1.x branch by #14968 on 2026-09-06, NO release carries it yet) — tests/conftest.py ports the upstream fix until then; at the bump past 9.1.1, delete that shim block (it self-disables ≥9.1.2).
   - pytest-cov
   - pytest-mock
   - pytest-asyncio==1.4.0  # #2566: CI gate run 36264473973 reports asyncio-1.4.0.
