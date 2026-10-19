@@ -56,6 +56,11 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set, Tuple
 
+from .arena_record import (  # #3073: shared arena record with act1
+    ArenaRecord,
+    build_arena_record,
+    format_arena_line,
+)
 from .dung_reader import (  # #1908: shared meaning with act2
     REJECTED_MEANS,
     appendix_ref,
@@ -547,6 +552,11 @@ class Act3Evidence:
     # questioner. Same field, same cap and same honest-absence branch as Acte I,
     # which is the act that has always carried it.
     metadata: Dict[str, str] = field(default_factory=dict)
+    # #3073 — l'arène : l'enregistrement partagé avec l'Acte I (valeur +
+    # provenance). L'Acte III ne lisait que ``source_metadata`` et disait donc
+    # « l'arène n'est pas documentée » là où l'Acte I imprimait l'inférence de
+    # l'extracteur sous un titre « vérifié ». Même ligne, même étiquette.
+    arena: ArenaRecord = field(default_factory=ArenaRecord)
 
 
 @dataclass
@@ -2287,6 +2297,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
             getattr(state, "interpretive_question", "") or ""
         ).strip(),
         metadata=metadata_view,
+        arena=build_arena_record(state),
     )
 
 
@@ -2710,7 +2721,8 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
     else:
         meta_block = (
             "  (aucune métadonnée renseignée — le locuteur et l'arène ne sont "
-            "pas documentés par ce run)"
+            "pas documentés par ce run ; pour l'arène, voir le bloc ARÈNE "
+            "DISCURSIVE ci-dessous, qui dit d'où vient sa valeur)"
         )
 
     opaque_block = f"{_OPAQUE_ID_DIRECTIVE}\n\n" if not evidence.deanonymized else ""
@@ -2721,8 +2733,9 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         "doit pouvoir s'y retrouver, relier le verdict à ce qui a été dit, et se\n"
         "faire son propre avis. Va chercher le lecteur dans sa connaissance du\n"
         "contexte et des locuteurs. Trois battements en prose :\n"
-        "1. Ce que le discours dit vraiment : nomme le locuteur et l'arène (via\n"
-        "   les métadonnées), et CITE ce qui a réellement été dit (les\n"
+        "1. Ce que le discours dit vraiment : nomme le locuteur et l'arène (d'après\n"
+        "   les blocs de données ci-dessus, chacun avec sa provenance étiquetée),\n"
+        "   et CITE ce qui a réellement été dit (les\n"
         "   revendications extraites ci-dessous) — le lecteur doit reconnaître\n"
         "   le discours qu'il a entendu.\n"
         "2. Ce qui tient et ce qui ne tient pas : un verdict en langage clair sur\n"
@@ -2739,6 +2752,12 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         "DONNÉES VERIFIÉES DANS LE STATE (ne citer que celles-ci) :\n\n"
         f"[MÉTADONNÉES DE LA SOURCE — l'origine du discours, telle qu'enregistrée]"
         f"\n{meta_block}\n\n"
+        # #3073 — l'arène vient du MÊME enregistrement que celui de l'Acte I
+        # (valeur + provenance) : deux actes, une valeur, une étiquette. Elle
+        # sort du bloc « telle qu'enregistrée » — une inférence du texte n'y a
+        # pas sa place (c'était la moitié Acte III de la contradiction).
+        f"[ARÈNE DISCURSIVE — provenance de la valeur]\n"
+        f"  {format_arena_line(evidence.arena)}\n\n"
         f"[CE QUI A ÉTÉ DIT — revendications extraites]\n{claims_block}\n\n"
         f"[VERDICT GATED — plafond de claim honnête]\n{synthesis_block}\n\n"
         f"[CE QUI TIENT — forces (qualité)]\n{strengths_lines}\n\n"
@@ -2758,8 +2777,10 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         f"{consigne_virtue}"
         "- Rédige 3 paragraphes thématiques (un par battement), en prose lisible,\n"
         "  pas une liste de champs. Titres thématiques en ###.\n"
-        "- OUVRE en nommant le locuteur et l'arène d'après le bloc MÉTADONNÉES DE\n"
-        "  LA SOURCE ci-dessus, et en citant la (les) revendication(s) centrale(s)\n"
+        "- OUVRE en nommant le locuteur d'après le bloc MÉTADONNÉES DE LA SOURCE\n"
+        "  et l'arène d'après le bloc ARÈNE DISCURSIVE ci-dessus — chacun avec sa\n"
+        "  provenance étiquetée : une arène INFÉRÉE du texte se dit comme telle,\n"
+        "  jamais comme vérifiée — et en citant la (les) revendication(s) centrale(s)\n"
         "  du discours — le lecteur doit raccrocher à ce qu'il a entendu.\n"
         "  Reformule fidèlement, ne galvaude pas le propos.\n"
         "- UN NOM DE PERSONNE CITÉ DANS LES REVENDICATIONS EST UN INTERLOCUTEUR\n"
