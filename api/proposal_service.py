@@ -293,6 +293,26 @@ def _vote_phase_of(results: Dict[str, Any]) -> Dict[str, Any]:
     return (results.get("phases") or {}).get("democratic_vote") or {}
 
 
+def _vote_degraded(vote_phase: Dict[str, Any]) -> bool:
+    """True when the executor marked the vote phase degraded, at either level.
+
+    Mirrors ``WorkflowExecutor._compute_workflow_degraded``
+    (``workflow_dsl.py:1119-1127``): the phase-level ``degraded`` flag
+    (DT-1 #1499 — an optional phase that failed after retries, orchestrator
+    continued with ``output: None``), or a ``completed`` phase whose output
+    dict self-declares ``degraded: True`` (#2971). R1094: the broadcast and
+    the BO-2b proof script both read this — a one-level read inside the
+    output reports ``False`` on exactly the degraded-vote shape, because
+    the flag the executor sets lives BESIDE the ``None`` output.
+    """
+    if vote_phase.get("degraded"):
+        return True
+    if vote_phase.get("status") != "completed":
+        return False
+    output = vote_phase.get("output")
+    return isinstance(output, dict) and output.get("degraded") is True
+
+
 def _verdict_of(vote_phase: Dict[str, Any]) -> Dict[str, Any]:
     """The governance verdict of a vote phase, ``{}`` when it did not decide."""
     return ((vote_phase.get("output") or {}).get("governance_verdict")) or {}
@@ -324,7 +344,7 @@ async def _broadcast_ws_deliberation_result(
             decided_firsthand=bool(
                 gov_output.get("governance_decided_firsthand", False)
             ),
-            degraded=bool(gov_output.get("degraded", False)),
+            degraded=_vote_degraded(vote_phase),
             summary={
                 "governance_verdict": verdict,
                 "capabilities_degraded": results.get("capabilities_degraded", []),

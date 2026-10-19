@@ -37,7 +37,15 @@ from typing import Any, Dict
 import pytest
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
-PROPOSAL_API = REPO_ROOT / "services" / "web_api" / "interface-web-argumentative" / "src" / "services" / "proposalApi.js"
+PROPOSAL_API = (
+    REPO_ROOT
+    / "services"
+    / "web_api"
+    / "interface-web-argumentative"
+    / "src"
+    / "services"
+    / "proposalApi.js"
+)
 PROPOSAL_ENDPOINTS = REPO_ROOT / "api" / "proposal_endpoints.py"
 PROOF_SCRIPT = REPO_ROOT / "scripts" / "proof_bo2b_dashboard_e2e.py"
 RENDER_SCRIPT = REPO_ROOT / "scripts" / "render_bo2b_dashboard_static.py"
@@ -77,14 +85,20 @@ class TestStaticCablageContract:
         assert "/api/propose" in api_src
         assert re.search(r'@proposal_router\.post\(\s*"/propose"', endpoints_src)
 
-    def test_proposals_list_endpoint_wired(self, api_src: str, endpoints_src: str) -> None:
+    def test_proposals_list_endpoint_wired(
+        self, api_src: str, endpoints_src: str
+    ) -> None:
         assert "/api/proposals" in api_src
         assert re.search(r'@proposal_router\.get\(\s*"/proposals"', endpoints_src)
 
-    def test_proposal_get_endpoint_wired(self, api_src: str, endpoints_src: str) -> None:
+    def test_proposal_get_endpoint_wired(
+        self, api_src: str, endpoints_src: str
+    ) -> None:
         # /api/proposals/{id} in client, /proposals/{proposal_id} in router.
         assert re.search(r"/api/proposals/\$\{", api_src)
-        assert re.search(r'@proposal_router\.get\(\s*"/proposals/\{proposal_id\}"', endpoints_src)
+        assert re.search(
+            r'@proposal_router\.get\(\s*"/proposals/\{proposal_id\}"', endpoints_src
+        )
 
     def test_vote_endpoint_wired(self, api_src: str, endpoints_src: str) -> None:
         assert "/vote" in api_src
@@ -94,22 +108,37 @@ class TestStaticCablageContract:
         assert "/api/deliberate" in api_src
         assert re.search(r'@proposal_router\.post\(\s*"/deliberate"', endpoints_src)
 
-    def test_deliberation_status_endpoint_wired(self, api_src: str, endpoints_src: str) -> None:
+    def test_deliberation_status_endpoint_wired(
+        self, api_src: str, endpoints_src: str
+    ) -> None:
         assert re.search(r"/api/deliberate/.*status", api_src)
-        assert re.search(r'@proposal_router\.get\(\s*"/deliberate/\{delib_id\}/status"', endpoints_src)
+        assert re.search(
+            r'@proposal_router\.get\(\s*"/deliberate/\{delib_id\}/status"',
+            endpoints_src,
+        )
 
-    def test_capabilities_endpoint_wired(self, api_src: str, endpoints_src: str) -> None:
+    def test_capabilities_endpoint_wired(
+        self, api_src: str, endpoints_src: str
+    ) -> None:
         assert "/api/capabilities" in api_src
         assert re.search(r'@proposal_router\.get\(\s*"/capabilities"', endpoints_src)
 
-    def test_custom_workflow_endpoint_wired(self, api_src: str, endpoints_src: str) -> None:
+    def test_custom_workflow_endpoint_wired(
+        self, api_src: str, endpoints_src: str
+    ) -> None:
         assert "/api/workflow/custom" in api_src
-        assert re.search(r'@proposal_router\.post\(\s*"/workflow/custom"', endpoints_src)
+        assert re.search(
+            r'@proposal_router\.post\(\s*"/workflow/custom"', endpoints_src
+        )
 
     def test_npm_run_build_documented_in_readme(self) -> None:
-        readme = (REPO_ROOT / "services" / "web_api" / "interface-web-argumentative" / "README.md").read_text(
-            encoding="utf-8"
-        )
+        readme = (
+            REPO_ROOT
+            / "services"
+            / "web_api"
+            / "interface-web-argumentative"
+            / "README.md"
+        ).read_text(encoding="utf-8")
         assert "npm run build" in readme
         # BO-2b DoD #1 satisfied.
 
@@ -148,7 +177,9 @@ class TestProofRuntimeContract:
         for forbidden in ("raw_text", "full_text", "verbatim"):
             assert forbidden not in text, f"Privacy leak: {forbidden!r} in PROPOSITION"
 
-    def test_run_democratech_flow_produces_payload(self, proof_mod: types.ModuleType) -> None:
+    def test_run_democratech_flow_produces_payload(
+        self, proof_mod: types.ModuleType
+    ) -> None:
         from api.proposal_service import ProposalStore
 
         store = ProposalStore()
@@ -185,7 +216,9 @@ class TestProofRuntimeContract:
         status = payload["deliberation"]["status"]
         assert status in ("pending", "analyzing", "decided", "completed", "failed")
 
-    def test_json_roundtrip(self, proof_mod: types.ModuleType, tmp_path: pathlib.Path) -> None:
+    def test_json_roundtrip(
+        self, proof_mod: types.ModuleType, tmp_path: pathlib.Path
+    ) -> None:
         """The payload MUST be JSON-serializable end-to-end (FastAPI safe)."""
         from api.proposal_service import ProposalStore
 
@@ -193,7 +226,9 @@ class TestProofRuntimeContract:
         # #1547 sibling: hermetic — see test_run_democratech_flow_produces_payload.
         payload = asyncio.run(proof_mod.run_democratech_flow(store, force_stub=True))
         out = tmp_path / "dashboard_data.json"
-        out.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        out.write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
         reloaded = json.loads(out.read_text(encoding="utf-8"))
         assert reloaded["proposal"]["id"] == payload["proposal"]["id"]
 
@@ -285,7 +320,13 @@ class TestRenderContract:
             "governance_verdict": {},
             "governance_decided_firsthand": False,
             "degraded": True,
-            "provenance": {"script": "x", "workflow": "y", "domain": "z", "privacy": "opaque_ids", "synthetic": True},
+            "provenance": {
+                "script": "x",
+                "workflow": "y",
+                "domain": "z",
+                "privacy": "opaque_ids",
+                "synthetic": True,
+            },
         }
         html_out = render_mod.render(payload)
         # Honest absent: degraded branch visible.
@@ -335,8 +376,7 @@ def test_proof_script_cli_runs(tmp_path: pathlib.Path) -> None:
         cwd=str(REPO_ROOT),
     )
     assert result.returncode == 0, (
-        f"proof script failed:\nSTDOUT:\n{result.stdout}\n"
-        f"STDERR:\n{result.stderr}"
+        f"proof script failed:\nSTDOUT:\n{result.stdout}\n" f"STDERR:\n{result.stderr}"
     )
     assert out_path.exists()
     payload = json.loads(out_path.read_text(encoding="utf-8"))
@@ -359,11 +399,17 @@ def test_proof_script_cli_real_llm_path(tmp_path: pathlib.Path) -> None:
 
     #1547 DoD #4: the hermetic test above covers the stub path; this test
     guards the real path so it is not silently dropped. It is marked
-    ``requires_api`` (skipped without a key) AND ``slow`` (the real path takes
-    3-4 min, so it must not run in the default CI sweep). It does NOT assert
-    a specific verdict — the real path may DECIDED or DEGRADE honestly
-    depending on key quota / pipeline availability; we only assert it exits 0
-    and emits a payload of the expected shape.
+    ``requires_api`` (the gate's keyless sweep must not attempt a real call)
+    AND ``slow`` (the real path takes 3-4 min, so it must not run in the
+    default CI sweep). The full ``requires_api`` band is the only CI run
+    with a key — R1093: removing the marker left this test running NOWHERE
+    in CI (the gate deselects via ``slow``, the band via the missing
+    marker), so the marker is restored. It does NOT assert a specific
+    verdict — the real path may DECIDED or DEGRADE honestly depending on
+    key quota / pipeline availability; we only assert it exits 0 and emits
+    a payload of the expected shape. The keyless side of the degraded read
+    (a failed phase carries ``output: None``, #2902 shape) has its own
+    fast witness below — no subprocess, runs in the gate.
     """
     out_path = tmp_path / "data.json"
     # 300 s borne: the real path measures 178-259 s firsthand (#1547 body);
@@ -392,3 +438,121 @@ def test_proof_script_cli_real_llm_path(tmp_path: pathlib.Path) -> None:
     assert payload["proposal"]["author"].startswith("prop_")
     # Real path: the force-stub note must be ABSENT (we did not pass --no-llm).
     assert "force-stub" not in payload["results"].get("note", "")
+
+
+# ---------------------------------------------------------------------------
+# 5) Degraded-read witness — keyless, non-slow, no subprocess (R1093)
+# ---------------------------------------------------------------------------
+
+
+class TestVerdictReadTwoLevels:
+    """R1094 — the verdict read sees the executor's TWO degradation levels,
+    and ``STUB`` requires stub evidence (never a fall-through label).
+
+    The witnesses feed REAL ``PhaseResult`` objects through
+    ``sanitize_workflow_result`` — the shapes the executor actually emits
+    (``_compute_workflow_degraded``, workflow_dsl.py:1119-1127, counts a
+    phase degraded on the phase-level flag OR a completed output
+    self-declaring ``degraded``):
+
+    * DT-1 #1499 — the degraded vote: ``FAILED`` + phase ``degraded=True`` +
+      ``output=None`` (a failed phase carries ``output: None``, #2902). The
+      tranche-5 witness fed ``status: "degraded"`` — a value no
+      ``PhaseStatus`` carries — and froze ``degraded is False``, pinning the
+      one-level read this class replaces: inside a None output the marker
+      the executor sets lives BESIDE the output, not inside it.
+    * the tranche-7 measured shape — a failed extract skips the vote:
+      ``SKIPPED`` + ``output=None`` + not degraded. The honest label is
+      ``NO_VERDICT``: the run took the pipeline path (tranche 5 measured 3
+      LLM attempts keyless); ``STUB`` would name a proof the run lacks.
+    * #2971 — a ``COMPLETED`` phase whose output self-declares
+      ``degraded: True``.
+
+    The flow-level witnesses go through ``run_deliberation_workflow``, so
+    the shared reader is exercised at both production call sites (the
+    WebSocket broadcast and the proof script's payload read).
+    """
+
+    @staticmethod
+    def _vote_phase(status_name, *, degraded=False, output=None):
+        from argumentation_analysis.orchestration.workflow_dsl import (
+            PhaseResult,
+            PhaseStatus,
+        )
+
+        return PhaseResult(
+            phase_name="democratic_vote",
+            status=getattr(PhaseStatus, status_name),
+            capability="governance_simulation",
+            output=output,
+            error="extract failed" if status_name == "FAILED" else None,
+            degraded=degraded,
+        )
+
+    @staticmethod
+    def _sanitized_results(vote_phase_result):
+        from api.proposal_service import sanitize_workflow_result
+
+        return sanitize_workflow_result(
+            {
+                "workflow": "democratech",
+                "phases": {"democratic_vote": vote_phase_result},
+            }
+        )
+
+    def _run_flow_with(self, mod_name, vote_phase_result, *, force_stub=False):
+        from unittest.mock import patch
+
+        import api.proposal_service as proposal_service
+        from api.proposal_service import ProposalStore
+
+        proof_mod = _load_module(PROOF_SCRIPT, mod_name)
+        results = self._sanitized_results(vote_phase_result)
+
+        async def _pipeline(text, workflow, options):
+            return results
+
+        with patch.object(proposal_service, "_run_pipeline", _pipeline):
+            payload = asyncio.run(
+                proof_mod.run_democratech_flow(ProposalStore(), force_stub=force_stub)
+            )
+        return payload, proof_mod
+
+    def test_failed_degraded_vote_is_degraded_never_stub(self):
+        payload, mod = self._run_flow_with(
+            "proof_bo2b_1493_r1094_failed",
+            self._vote_phase("FAILED", degraded=True, output=None),
+        )
+
+        assert payload["governance_decided_firsthand"] is False
+        assert payload["governance_verdict"] == {}
+        # The executor's phase-level flag, read where it lives — not a
+        # marker fabricated inside the None output (#1019).
+        assert payload["degraded"] is True
+        assert mod._verdict_status(payload, force_stub=False) == "DEGRADED"
+        vote = payload["results"]["phases"]["democratic_vote"]
+        assert vote["status"] == "failed" and vote["output"] is None
+        assert payload["deliberation"]["status"] == "completed"
+
+    def test_skipped_vote_without_stub_evidence_is_no_verdict(self):
+        payload, mod = self._run_flow_with(
+            "proof_bo2b_1493_r1094_skipped",
+            self._vote_phase("SKIPPED", degraded=False, output=None),
+        )
+
+        assert payload["degraded"] is False
+        # No stub evidence (no --no-llm, no force-stub note): the honest
+        # label names the absent verdict, not a stub the run is not.
+        assert mod._verdict_status(payload, force_stub=False) == "NO_VERDICT"
+        # STUB only on evidence — here the explicit flag IS the evidence.
+        assert mod._verdict_status(payload, force_stub=True) == "STUB"
+        assert payload["deliberation"]["status"] == "completed"
+
+    def test_completed_self_declared_degraded_output_counts(self):
+        payload, _mod = self._run_flow_with(
+            "proof_bo2b_1493_r1094_completed",
+            self._vote_phase("COMPLETED", degraded=False, output={"degraded": True}),
+        )
+
+        assert payload["degraded"] is True
+        assert payload["governance_decided_firsthand"] is False

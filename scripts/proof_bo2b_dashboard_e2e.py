@@ -47,6 +47,7 @@ from api.proposal_models import (  # noqa: E402
 )
 from api.proposal_service import (  # noqa: E402
     ProposalStore,
+    _vote_degraded,
     run_deliberation_workflow,
 )
 
@@ -103,6 +104,27 @@ def _serialize_deliberation(d) -> Dict[str, Any]:
         "results": d.results,
         "error": d.error,
     }
+
+
+def _verdict_status(payload: Dict[str, Any], force_stub: bool = False) -> str:
+    """Classify the run honestly: DECIDED / DEGRADED / STUB / NO_VERDICT.
+
+    R1094 — ``STUB`` is a label read from stub evidence, never a fall-through:
+    the explicit ``force_stub`` flag, or the pipeline's own stub ``note``
+    (``_run_pipeline`` writes one on every stub branch). A run that produced
+    no verdict, did not degrade and shows no stub evidence reports
+    ``NO_VERDICT`` (e.g. a vote phase skipped by the executor) instead of
+    borrowing the stub label — anti-théâtre #1019, the mirror side of
+    fabricating ``degraded`` from a verdict's absence.
+    """
+    if payload.get("governance_decided_firsthand"):
+        return "DECIDED"
+    if payload.get("degraded"):
+        return "DEGRADED"
+    note = str((payload.get("results") or {}).get("note") or "")
+    if force_stub or "stub" in note.lower():
+        return "STUB"
+    return "NO_VERDICT"
 
 
 async def run_democratech_flow(store: ProposalStore, force_stub: bool = False) -> Dict[str, Any]:
@@ -170,15 +192,22 @@ async def run_democratech_flow(store: ProposalStore, force_stub: bool = False) -
     results = final_proposal.analysis_results if final_proposal else None
 
     # 6. Extract the governance verdict marker (if present) — BO-2 #1472 honest.
-    gov_output = (
-        (results or {})
-        .get("phases", {})
-        .get("democratic_vote", {})
-        .get("output", {})
-    )
+    # #2902 shape (measured, #3049 tranche 5): a failed phase carries
+    # ``output: None``, and ``.get(key, default)`` returns None — not the
+    # default — when the key exists with a None value. The old chained-default
+    # read returned None for gov_output and crashed the script at the verdict
+    # line (exit 1) exactly when the pipeline degraded (LLM extract failed),
+    # instead of degrading honestly. Same idiom as ``_vote_phase_of`` in
+    # api/proposal_service.py, which already tolerates every present-but-None hop.
+    # R1094: `degraded` reads the executor's TWO levels (the phase-level flag
+    # beside the output, or a self-declaring completed output) through the
+    # shared reader the WebSocket broadcast uses — a one-level read inside a
+    # None output is always False on exactly the degraded-vote shape.
+    vote_phase = ((results or {}).get("phases") or {}).get("democratic_vote") or {}
+    gov_output = vote_phase.get("output") or {}
     verdict = gov_output.get("governance_verdict") or {}
     decided_firsthand = bool(gov_output.get("governance_decided_firsthand"))
-    degraded = bool(gov_output.get("degraded"))
+    degraded = _vote_degraded(vote_phase)
 
     return {
         "proposal": _serialize_proposal(final_proposal),
@@ -241,11 +270,9 @@ def main() -> int:
     elapsed = time.monotonic() - t0
 
     # Honest status line (anti-théâtre #1019 — degraded is a VALID outcome).
-    verdict_status = (
-        "DECIDED" if payload["governance_decided_firsthand"]
-        else "DEGRADED" if payload["degraded"]
-        else "STUB"
-    )
+    # R1094: STUB requires stub evidence; a non-degraded no-verdict run
+    # reports NO_VERDICT instead of borrowing the stub label.
+    verdict_status = _verdict_status(payload, force_stub=args.no_llm)
 
     args.output.write_text(
         json.dumps(payload, indent=2, ensure_ascii=False),
@@ -256,12 +283,18 @@ def main() -> int:
     print(f"[BO-2b #1493] Proposal: {payload['proposal']['id']} (synthetic, opaque ID)")
     print(f"[BO-2b #1493] Deliberation: {payload['deliberation']['id']} -> {payload['deliberation']['status']}")
     print(f"[BO-2b #1493] Votes: {len(payload['votes'])}")
-    if payload["governance_decided_firsthand"]:
+    if verdict_status == "DECIDED":
         print(f"[BO-2b #1493] Verdict: {payload['governance_verdict'].get('decision', '?')}")
-    elif payload["degraded"]:
-        print("[BO-2b #1493] Deliberation degraded (env or pipeline unavailable) — verdict honest-absent.")
-    else:
+    elif verdict_status == "DEGRADED":
+        print(
+            "[BO-2b #1493] Vote phase degraded by the executor — verdict honest-absent."
+        )
+    elif verdict_status == "STUB":
         print("[BO-2b #1493] Stub pipeline ran (no LLM path). Verdict absent.")
+    else:
+        print(
+            "[BO-2b #1493] No verdict, no degradation marker, no stub evidence."
+        )
 
     return 0
 
