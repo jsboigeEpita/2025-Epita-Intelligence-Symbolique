@@ -61,6 +61,12 @@ from .arena_record import (  # #3073: shared arena record with act1
     build_arena_record,
     format_arena_line,
 )
+from .speaker_record import (  # #3082: shared speaker record with act1/act2
+    SPEAKER_NAMING_RULE,
+    SpeakerRecord,
+    build_speaker_record,
+    format_speaker_line,
+)
 from .dung_reader import (  # #1908: shared meaning with act2
     REJECTED_MEANS,
     appendix_ref,
@@ -563,6 +569,11 @@ class Act3Evidence:
     # « l'arène n'est pas documentée » là où l'Acte I imprimait l'inférence de
     # l'extracteur sous un titre « vérifié ». Même ligne, même étiquette.
     arena: ArenaRecord = field(default_factory=ArenaRecord)
+    # #3082 — le locuteur : le même partage, étendu aux trois actes. La
+    # métadonnée n'est qu'un des deux producteurs — le stakeholder « speaker »
+    # de l'extracteur est l'autre — et le nommage se lie à l'enregistrement,
+    # plus au bloc MÉTADONNÉES seul.
+    speaker: SpeakerRecord = field(default_factory=SpeakerRecord)
 
 
 @dataclass
@@ -2309,6 +2320,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         ).strip(),
         metadata=metadata_view,
         arena=build_arena_record(state),
+        speaker=build_speaker_record(state),
     )
 
 
@@ -2746,8 +2758,9 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
     else:
         meta_block = (
             "  (aucune métadonnée renseignée — le locuteur et l'arène ne sont "
-            "pas documentés par ce run ; pour l'arène, voir le bloc ARÈNE "
-            "DISCURSIVE ci-dessous, qui dit d'où vient sa valeur)"
+            "pas documentés par ce run ; pour chacun, voir les blocs LOCUTEUR "
+            "et ARÈNE DISCURSIVE ci-dessous, qui disent d'où vient chaque "
+            "valeur — un locuteur INFÉRÉ du texte n'est pas une métadonnée)"
         )
 
     opaque_block = f"{_OPAQUE_ID_DIRECTIVE}\n\n" if not evidence.deanonymized else ""
@@ -2784,6 +2797,13 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         "une donnée vérifiée) :\n\n"
         f"[MÉTADONNÉES DE LA SOURCE — l'origine du discours, telle qu'enregistrée]"
         f"\n{meta_block}\n\n"
+        # #3082 — le locuteur vient du MÊME enregistrement que celui des
+        # Actes I et II (valeur + provenance) : trois actes, une valeur, une
+        # étiquette. Le bloc MÉTADONNÉES reste « telle qu'enregistrée » —
+        # c'est le registre brut ; l'enregistrement partagé est ici, et il
+        # sait aussi dire « inféré du texte ».
+        f"[LOCUTEUR — provenance de la valeur]\n"
+        f"  {format_speaker_line(evidence.speaker)}\n\n"
         # #3073 — l'arène vient du MÊME enregistrement que celui de l'Acte I
         # (valeur + provenance) : deux actes, une valeur, une étiquette. Elle
         # sort du bloc « telle qu'enregistrée » — une inférence du texte n'y a
@@ -2809,16 +2829,21 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         f"{consigne_virtue}"
         "- Rédige 3 paragraphes thématiques (un par battement), en prose lisible,\n"
         "  pas une liste de champs. Titres thématiques en ###.\n"
-        "- OUVRE en nommant le locuteur d'après le bloc MÉTADONNÉES DE LA SOURCE\n"
-        "  et l'arène d'après le bloc ARÈNE DISCURSIVE ci-dessus — chacun avec sa\n"
-        "  provenance étiquetée : une arène INFÉRÉE du texte se dit comme telle,\n"
-        "  jamais comme vérifiée — et en citant la (les) revendication(s) centrale(s)\n"
-        "  du discours — le lecteur doit raccrocher à ce qu'il a entendu.\n"
-        "  Reformule fidèlement, ne galvaude pas le propos.\n"
+        "- OUVRE en nommant le locuteur d'après le bloc LOCUTEUR et l'arène\n"
+        "  d'après le bloc ARÈNE DISCURSIVE ci-dessus — chacun avec sa\n"
+        "  provenance étiquetée : une valeur INFÉRÉE du texte se dit comme\n"
+        "  telle, jamais comme vérifiée — et en citant la (les) revendication(s)\n"
+        "  centrale(s) du discours — le lecteur doit raccrocher à ce qu'il a\n"
+        "  entendu. Reformule fidèlement, ne galvaude pas le propos.\n"
         "- UN NOM DE PERSONNE CITÉ DANS LES REVENDICATIONS EST UN INTERLOCUTEUR\n"
         "  (celui à qui le discours répond), JAMAIS le locuteur : ne lui attribue\n"
-        "  aucune position. Si le bloc métadonnées ne renseigne pas le locuteur,\n"
-        "  DIS-LE et n'en nomme aucun — ne l'invente jamais.\n"
+        "  aucune position.\n"
+        # #3082 — la clause « Si le bloc métadonnées ne renseigne pas le
+        # locuteur, DIS-LE et n'en nomme aucun » disait l'intention, pas la
+        # phrase : le writer la recopiait comme règle au lecteur. La règle
+        # partagée (celle des Actes I et II) donne maintenant la phrase à
+        # écrire, tel quel.
+        f"{SPEAKER_NAMING_RULE}\n"
         "- Le verdict formel (Tweety/Dung) est un APPUI, jamais un titre : formule-\n"
         "  le comme « l'analyse formelle invalide ce raisonnement » (théorie\n"
         "  inconsistante), « l'analyse formelle confirme la cohérence de ce\n"
