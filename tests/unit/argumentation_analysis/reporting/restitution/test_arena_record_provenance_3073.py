@@ -30,6 +30,10 @@ from argumentation_analysis.reporting.restitution.act1_framing_plugin import (
     build_act1_evidence,
     build_act1_prompt,
 )
+from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
+    build_act2_evidence,
+    build_act2_prompt,
+)
 from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
     build_act3_evidence,
     build_act3_prompt,
@@ -97,6 +101,27 @@ def test_no_inferred_field_sits_under_a_verified_heading():
     ), "the Acte III heading says 'verified' while the INFÉRÉE arena line lives under it"
     assert "DONNÉES DU STATE" in p1, "the provenance-labelled heading"
     assert "DONNÉES DU STATE" in p3, "the provenance-labelled heading (Acte III)"
+
+
+def test_act2_heading_names_its_blocks_it_does_not_verify_them():
+    """#3081 — the #3073 class, one act away: Acte II's blocks are the
+    specialists' readings of the text (extracted units, detected procedures),
+    and its global heading still promoted them to « vérifiées ». Born red on
+    main; restoring the old heading must redden it again. « ne citer que
+    celles-ci » stays (it says what to cite, not what is verified), and TENUE
+    FORMELLE keeps « ancres vérifiées » — solver verdicts are the one thing
+    verified here."""
+    p2 = build_act2_prompt(build_act2_evidence(_state()))
+    assert (
+        "DONNÉES VERIFIÉES DANS LE STATE" not in p2
+    ), "the Acte II heading promotes model readings to 'verified'"
+    assert "DONNÉES DU STATE" in p2, "the #3075 wording family (Acte II)"
+    assert (
+        "ne citer que celles-ci" in p2
+    ), "the citation clause stays — it says what to cite, not what is verified"
+    assert (
+        "ancres vérifiées" in p2
+    ), "solver verdicts keep their 'verified' wording (anti-pendule pin)"
 
 
 def test_a_documented_arena_is_labelled_a_recorded_metadata_fact():
