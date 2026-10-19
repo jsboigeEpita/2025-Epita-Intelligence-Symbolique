@@ -1,8 +1,13 @@
 """
-Tests d'intégration pour run_einstein_oracle_demo.py avec GPT-4o-mini réel.
+Tests d'intégration pour run_einstein_oracle_demo.py — le vrai script, de bout en bout.
+
+Chaque test lance le script réel en sous-processus avec ``--integration-test`` :
+les agents ne sont pas utilisés et les réponses sont scriptées côté script
+(run_einstein_oracle_demo.py:197). Aucune clé n'est nécessaire — la suite
+existait déjà keyless en CI, elle existe maintenant partout (#3077).
 
 Tests couvrant:
-- Test complet run_einstein_oracle_demo.py avec GPT-4o-mini
+- Exécution complète de run_einstein_oracle_demo.py (mode integration-test)
 - Validation indices progressifs Moriarty
 - Test résolution puzzle Einstein par Sherlock/Watson
 """
@@ -18,19 +23,21 @@ from pathlib import Path
 from unittest.mock import patch, Mock
 from typing import Dict, Any, List
 
-# Configuration pour tests réels GPT-4o-mini
+# #3077 — la clé est portée si présente (CI) mais n'est plus exigée : chaque
+# invocation passe --integration-test, le script scripte les réponses et
+# n'utilise pas les agents. L'ancienne garde (pas de clé → skip) rendait les
+# 9 tests absents de tout run keyless alors qu'aucune invocation n'en a besoin.
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-REAL_GPT_AVAILABLE = OPENAI_API_KEY is not None and len(OPENAI_API_KEY) > 10
 
 # Chemins des scripts
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 SCRIPTS_DIR = PROJECT_ROOT / "scripts" / "sherlock_watson"
 EINSTEIN_DEMO_SCRIPT = SCRIPTS_DIR / "run_einstein_oracle_demo.py"
 
-# Skip si pas d'API key ou script manquant
+# Skip si script manquant (la clé n'est plus un critère — #3077)
 pytestmark = pytest.mark.skipif(
-    not REAL_GPT_AVAILABLE or not EINSTEIN_DEMO_SCRIPT.exists(),
-    reason="Tests nécessitent OPENAI_API_KEY et run_einstein_oracle_demo.py",
+    not EINSTEIN_DEMO_SCRIPT.exists(),
+    reason="Tests nécessitent run_einstein_oracle_demo.py",
 )
 
 
@@ -38,13 +45,19 @@ pytestmark = pytest.mark.skipif(
 def einstein_test_environment():
     """Configuration d'environnement pour tests Einstein."""
     env = os.environ.copy()
-    env["OPENAI_API_KEY"] = OPENAI_API_KEY
+    if OPENAI_API_KEY:
+        env["OPENAI_API_KEY"] = OPENAI_API_KEY
+    else:
+        # Keyless : ne PAS poser une entrée None — create_subprocess_exec
+        # refuse un env avec des valeurs non-str sous Windows (#3077).
+        env.pop("OPENAI_API_KEY", None)
     env["PYTHONPATH"] = str(PROJECT_ROOT)
     env["PUZZLE_MODE"] = "einstein"
     env["TEST_MODE"] = "true"
     env["PROGRESSIVE_HINTS"] = "true"
-    # Remove PYTEST_CURRENT_TEST so subprocess uses real LLM
-    # (create_llm_service auto-mocks when it detects this env var)
+    # Remove PYTEST_CURRENT_TEST so the script's own integration-test branch
+    # decides the LLM mode (create_llm_service auto-mocks when it detects
+    # this env var) — that branch scripts every response (#3077).
     env.pop("PYTEST_CURRENT_TEST", None)
     return env
 
