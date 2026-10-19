@@ -300,6 +300,16 @@ def pytest_configure(config):
         LLMEgressPlugin(_llm_egress), name="llm_egress_counter"
     )
 
+    # Hermeticity guard (#3069) — the POLICY consumer of the counter above.
+    # Fails an unmarked test that makes a live watched-LLM request (outside
+    # LLM_CACHE_MODE=record) and stops the session after it, so an ad-hoc -k
+    # selection on a seat with a real .env key cannot silently spend (586
+    # live calls, #3069). The counter stays observation-only; this plugin
+    # owns the enforcement.
+    from tests.llm_egress_guard import LLMEgressGuard
+
+    config.pluginmanager.register(LLMEgressGuard(_llm_egress), name="llm_egress_guard")
+
 
 class _NullCache:
     """#1820 : cache de secours quand ``-p no:cacheprovider`` est passé —

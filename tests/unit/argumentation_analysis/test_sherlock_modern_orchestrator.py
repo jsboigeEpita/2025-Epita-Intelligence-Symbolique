@@ -45,6 +45,20 @@ class TestSherlockModernOrchestrator:
     tests; marked `slow` so the per-push gate excludes them (#1336, R535).
     """
 
+    @pytest.fixture(autouse=True)
+    def _hermetic_llm(self, monkeypatch: pytest.MonkeyPatch):
+        """#3069: these tests assert the investigation's STRUCTURE (>=7
+        steps, required fields, phase coverage) — not LLM quality — yet they
+        ran the real pipeline against whatever key the seat's ``.env``
+        carries (230/179/161 live calls measured under ``-k "trace"``, the
+        marker deselects nothing an ad-hoc ``-k`` selects). The empty-string
+        neutralization is the #2472 caller-wins form: the orchestrator takes
+        its keyless degraded path — the very path the keyless gate
+        exercises — so no watched-LLM request can leave, key or no key."""
+        for var in ("OPENAI_API_KEY", "OPENROUTER_API_KEY", "OPENROUTER_BASE_URL"):
+            monkeypatch.setenv(var, "")
+        yield
+
     def test_investigate_returns_result(self):
         orch = SherlockModernOrchestrator()
         result = _run(orch.investigate(SAMPLE_DISCOURSE))
