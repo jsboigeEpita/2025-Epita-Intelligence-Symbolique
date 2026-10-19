@@ -101,6 +101,127 @@ def fresh_store_and_manager(monkeypatch):
     yield svc._store, fresh_manager
 
 
+def _raw_result_with_vote(vote: PhaseResult) -> dict:
+    """A raw ``run_unified_analysis``-shaped dict carrying ``vote`` as its
+    ``democratic_vote`` phase — real ``PhaseResult`` objects, so the REAL
+    ``_run_pipeline`` runs ``sanitize_workflow_result`` over them (the same
+    construction the #3058 script witness uses).
+
+    #3070: the existing cable test asserts ``degraded is False`` only on a
+    non-degraded COMPLETED run — nothing pinned what the broadcast sends on
+    the degraded shapes (#3049 tranche 5 measured: mutating the broadcast
+    line back to a one-level read kept 63 neighbours green).
+    """
+    extract = PhaseResult(
+        phase_name="extract",
+        status=PhaseStatus.COMPLETED,
+        capability="fact_extraction",
+        output={"arguments": ["arg_1", "arg_2"]},
+        error=None,
+    )
+    return {
+        "workflow_name": "democratech",
+        "phases": {"extract": extract, "democratic_vote": vote},
+        "summary": {"completed": 10, "failed": 1, "skipped": 0, "total": 11},
+        "capabilities_used": ["fact_extraction", "governance_simulation"],
+        "capabilities_degraded": ["governance_simulation"],
+        "capabilities_missing": [],
+        "state_snapshot": {"argument_count": 6, "governance_decision_count": 0},
+    }
+
+
+class TestDegradedVoteStreamsDegradedTrue:
+    """#3070 — the broadcast reads the executor's TWO degradation levels.
+
+    The script side is pinned (``TestVerdictReadTwoLevels``); this class pins
+    the WebSocket side of the same shared reader: a degraded vote phase is a
+    COMPLETED deliberation whose streamed result event carries
+    ``degraded is True`` — never a silent ``False`` and never a fabricated
+    verdict.
+    """
+
+    async def _streamed_result_event(self, fresh_store_and_manager, vote):
+        store, manager = fresh_store_and_manager
+        proposal = store.create_proposal(
+            type(
+                "P",
+                (),
+                {
+                    "text": "Synthetic degraded-vote proposal",
+                    "author": "src0",
+                    "title": None,
+                    "tags": [],
+                },
+            )()
+        )
+        delib = store.create_deliberation(proposal.id, "democratech")
+
+        sock = _FakeSocket()
+        manager._connections[delib.id] = {sock}
+
+        with patch(
+            "argumentation_analysis.orchestration.unified_pipeline.run_unified_analysis",
+            new=AsyncMock(return_value=_raw_result_with_vote(vote)),
+        ):
+            await run_deliberation_workflow(
+                store, delib.id, proposal.text, "democratech", {}
+            )
+        return (
+            store,
+            delib,
+            next(m for m in sock.received if m["type"] == "deliberation_result"),
+        )
+
+    @pytest.mark.asyncio
+    async def test_failed_phase_level_degraded_flag_streams_true(
+        self, fresh_store_and_manager
+    ):
+        """DT-1 #1499 shape: FAILED + ``degraded=True`` + ``output=None``.
+
+        The flag the executor sets lives BESIDE the None output — a read
+        inside the output reports False on exactly this shape (#3049
+        tranche 5). The deliberation still completes (the phase is optional,
+        the orchestrator continued) and the event says it degraded.
+        """
+        vote = PhaseResult(
+            phase_name="democratic_vote",
+            status=PhaseStatus.FAILED,
+            capability="governance_simulation",
+            output=None,
+            error="vote phase failed after retries (optional, continued)",
+            degraded=True,
+        )
+        store, delib, event = await self._streamed_result_event(
+            fresh_store_and_manager, vote
+        )
+
+        assert event["degraded"] is True
+        assert event["governance_decided_firsthand"] is False
+        assert event["winner"] is None
+        # Degraded is not failed: the cable completed the deliberation.
+        assert store.get_deliberation(delib.id).status.value == "completed"
+
+    @pytest.mark.asyncio
+    async def test_completed_self_declared_degraded_output_streams_true(
+        self, fresh_store_and_manager
+    ):
+        """#2971 shape: COMPLETED whose output dict declares ``degraded``."""
+        vote = PhaseResult(
+            phase_name="democratic_vote",
+            status=PhaseStatus.COMPLETED,
+            capability="governance_simulation",
+            output={"degraded": True, "governance_verdict": {}},
+            error=None,
+            degraded=False,
+        )
+        _store, _delib, event = await self._streamed_result_event(
+            fresh_store_and_manager, vote
+        )
+
+        assert event["degraded"] is True
+        assert event["governance_decided_firsthand"] is False
+
+
 class TestWSCableBroadcastsLifecycleAndVerdict:
     """A connected client receives running -> verdict -> completed (the cable)."""
 
