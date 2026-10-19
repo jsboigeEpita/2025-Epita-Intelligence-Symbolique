@@ -142,3 +142,43 @@ def test_an_already_failed_report_is_not_rewritten():
     report = _FakeReport(passed=False)
     guard.flip_report_if_violated(report, "tests/x.py::test_broken")
     assert report.outcome == "failed" and report.longrepr is None
+
+
+# ── census mode (#3074) — record every offender, stop at none ────────────
+
+
+def test_census_mode_records_without_stopping(monkeypatch: pytest.MonkeyPatch):
+    """The census needs the whole population of one run, not the first one."""
+    monkeypatch.setenv("LLM_EGRESS_GUARD_CENSUS", "1")
+    counter, guard = _guard()
+    item = _FakeItem("tests/x.py::test_census_spender")
+    guard.pytest_runtest_setup(item)
+
+    _feed(counter, "tests/x.py::test_census_spender", LLM_URL, network=True)
+
+    assert "tests/x.py::test_census_spender" in guard._violations
+    assert item.session.shouldstop is None, "census records; it never stops the run"
+    report = _FakeReport(passed=True)
+    guard.flip_report_if_violated(report, "tests/x.py::test_census_spender")
+    assert report.outcome == "passed", "the census measures attempts, not tests"
+
+
+def test_census_mode_lists_several_offenders_in_one_pass(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv("LLM_EGRESS_GUARD_CENSUS", "true")
+    counter, guard = _guard()
+    for nodeid in ("tests/x.py::test_a", "tests/x.py::test_b"):
+        guard.pytest_runtest_setup(_FakeItem(nodeid))
+        _feed(counter, nodeid, LLM_URL, network=True)
+    assert set(guard._violations) == {"tests/x.py::test_a", "tests/x.py::test_b"}
+
+
+def test_enforcing_mode_is_the_default(monkeypatch: pytest.MonkeyPatch):
+    """Control: the same feed without the switch still stops the session."""
+    monkeypatch.delenv("LLM_EGRESS_GUARD_CENSUS", raising=False)
+    counter, guard = _guard()
+    item = _FakeItem("tests/x.py::test_enforced")
+    guard.pytest_runtest_setup(item)
+    _feed(counter, "tests/x.py::test_enforced", LLM_URL, network=True)
+    assert item.session.shouldstop, "the enforcing form remains the default"

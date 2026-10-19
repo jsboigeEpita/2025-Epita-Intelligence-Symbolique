@@ -790,15 +790,20 @@ class TestRealInvocationViaUnifiedAnalysis:
         )
 
     @pytest.mark.asyncio
-    async def test_light_workflow_produces_quality_output(self):
+    async def test_light_workflow_produces_quality_output(self, monkeypatch):
         """Light workflow quality phase produces real evaluation scores."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             run_unified_analysis,
         )
 
-        with self._valid_extraction(), patch(
-            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1913")
-        ):
+        # #3074 census: patching ``openai.AsyncOpenAI`` (the #1913 idiom) left
+        # the quality phase's own sync client (#2331) to resolve the env key —
+        # 2 refused-loopback requests per run. Per-test census (unit-api lane,
+        # unmarked population): this test and its sibling below were the only
+        # two of the class that still leaked. The route itself is cut now, as
+        # #2444 prescribes.
+        cut_llm_route(monkeypatch)
+        with self._valid_extraction():
             result = await run_unified_analysis(
                 "Les vaccins sont efficaces car les études scientifiques le prouvent.",
                 workflow_name="light",
@@ -809,15 +814,16 @@ class TestRealInvocationViaUnifiedAnalysis:
         assert "note_finale" in quality_phase.output
 
     @pytest.mark.asyncio
-    async def test_light_workflow_chains_quality_to_counter(self):
+    async def test_light_workflow_chains_quality_to_counter(self, monkeypatch):
         """Light workflow chains quality output to counter-argument phase."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             run_unified_analysis,
         )
 
-        with self._valid_extraction(), patch(
-            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1913")
-        ):
+        # #3074 census: same leak as the sibling above — the SDK-class patch
+        # left a second client path resolving the env key (2 requests/run).
+        cut_llm_route(monkeypatch)
+        with self._valid_extraction():
             result = await run_unified_analysis(
                 "La peine de mort est nécessaire car elle dissuade les criminels.",
                 workflow_name="light",
@@ -830,14 +836,16 @@ class TestRealInvocationViaUnifiedAnalysis:
         assert counter_phase.output["quality_context"] is not None
 
     @pytest.mark.asyncio
-    async def test_context_param_passed_through(self):
+    async def test_context_param_passed_through(self, monkeypatch):
         """Custom context is available to invoke callables."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             run_unified_analysis,
         )
 
-        # Same #1591 hermeticity as TestRunUnifiedAnalysis: shape verdict only,
-        # no LLM output read — pin the client factory to its no-key return.
+        # #1591's factory pin (``_no_llm_client``) was NOT enough here — the
+        # #3074 census recorded 2 live requests through this test. The route
+        # cut is what closes it (#2444); the factory pin stays as its twin.
+        cut_llm_route(monkeypatch)
         with TestRunUnifiedAnalysis._no_llm_client(), self._valid_extraction():
             result = await run_unified_analysis(
                 "Argument test.",
@@ -859,7 +867,7 @@ class TestStateViaRunUnifiedAnalysis:
     run 28582260688: ~68s). Marked `slow` for the per-push gate (#1336, R535)."""
 
     @pytest.mark.asyncio
-    async def test_state_returned_by_default(self):
+    async def test_state_returned_by_default(self, monkeypatch):
         """run_unified_analysis returns unified_state and state_snapshot by default."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             run_unified_analysis,
@@ -867,6 +875,9 @@ class TestStateViaRunUnifiedAnalysis:
         )
         from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 
+        # #3074 census: 9 live requests per run — the class never cut the
+        # route. State/snapshot presence is structure, not model output.
+        cut_llm_route(monkeypatch)
         registry = setup_registry(include_optional=False)
         result = await run_unified_analysis(
             "L'argument est valide car il est logiquement cohérent.",
@@ -881,13 +892,15 @@ class TestStateViaRunUnifiedAnalysis:
         assert "counter_argument_count" in result["state_snapshot"]
 
     @pytest.mark.asyncio
-    async def test_create_state_false_omits_state(self):
+    async def test_create_state_false_omits_state(self, monkeypatch):
         """run_unified_analysis with create_state=False omits state from result."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             run_unified_analysis,
             setup_registry,
         )
 
+        # #3074 census: 9 live requests per run — key presence is structure.
+        cut_llm_route(monkeypatch)
         registry = setup_registry(include_optional=False)
         result = await run_unified_analysis(
             "Test.", workflow_name="light", registry=registry, create_state=False
@@ -2462,13 +2475,16 @@ class TestRunUnifiedAnalysisEdgeCases:
     Real-invocation tests: call run_unified_analysis end-to-end (CI tally
     run 28582260688: ~114s). Marked `slow` for the per-push gate (#1336, R535)."""
 
-    async def test_run_with_auto_routing_fallback(self):
+    async def test_run_with_auto_routing_fallback(self, monkeypatch):
         """run_unified_analysis with workflow_name='auto' falls back to standard on error."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             run_unified_analysis,
             setup_registry,
         )
 
+        # #3074 census: 9 live requests per run on the refused loopback — the
+        # verdict reads the fallback workflow name, never model output.
+        cut_llm_route(monkeypatch)
         registry = setup_registry(include_optional=False)
         with patch(
             "argumentation_analysis.orchestration.router.TextAnalysisRouter",
@@ -2479,7 +2495,7 @@ class TestRunUnifiedAnalysisEdgeCases:
             )
         assert result["workflow_name"] == "standard_analysis"
 
-    async def test_run_with_provided_state(self):
+    async def test_run_with_provided_state(self, monkeypatch):
         """run_unified_analysis uses provided state object."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             run_unified_analysis,
@@ -2487,6 +2503,8 @@ class TestRunUnifiedAnalysisEdgeCases:
         )
         from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 
+        # #3074 census: 9 live requests per run — identity is structure.
+        cut_llm_route(monkeypatch)
         registry = setup_registry(include_optional=False)
         state = UnifiedAnalysisState("Custom state text")
         result = await run_unified_analysis(
@@ -2494,13 +2512,16 @@ class TestRunUnifiedAnalysisEdgeCases:
         )
         assert result["unified_state"] is state
 
-    async def test_run_with_state_snapshot_error(self):
+    async def test_run_with_state_snapshot_error(self, monkeypatch):
         """run_unified_analysis handles get_state_snapshot failure."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             run_unified_analysis,
             setup_registry,
         )
 
+        # #3074 census: 9 live requests per run — the verdict is the None
+        # snapshot and the identity of the provided state.
+        cut_llm_route(monkeypatch)
         registry = setup_registry(include_optional=False)
         mock_state = MagicMock()
         mock_state.get_state_snapshot.side_effect = Exception("snapshot error")
@@ -2510,13 +2531,16 @@ class TestRunUnifiedAnalysisEdgeCases:
         assert result["unified_state"] is mock_state
         assert result["state_snapshot"] is None
 
-    async def test_run_unified_analysis_state_import_error(self):
+    async def test_run_unified_analysis_state_import_error(self, monkeypatch):
         """run_unified_analysis handles UnifiedAnalysisState import failure."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             run_unified_analysis,
             setup_registry,
         )
 
+        # #3074 census: 9 live requests per run — the verdict is that the
+        # result still carries phases and summary.
+        cut_llm_route(monkeypatch)
         registry = setup_registry(include_optional=False)
         with patch(
             "argumentation_analysis.orchestration.unified_pipeline.setup_registry",
@@ -2536,13 +2560,16 @@ class TestRunUnifiedAnalysisEdgeCases:
         assert "phases" in result
         assert "summary" in result
 
-    async def test_run_summary_lists_phases(self):
+    async def test_run_summary_lists_phases(self, monkeypatch):
         """run_unified_analysis summary includes phase name lists."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             run_unified_analysis,
             setup_registry,
         )
 
+        # #3074 census: 9 live requests per run — the verdict is the summary's
+        # keys and types, never model output.
+        cut_llm_route(monkeypatch)
         registry = setup_registry(include_optional=False)
         result = await run_unified_analysis(
             "Test argument text.",
