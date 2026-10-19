@@ -890,10 +890,17 @@ async def _invoke_quality_evaluator(
                 },
             }
             if detected_fallacies:
-                output["fallacy_cross_reference"] = {
+                _fallacy_cross: Dict[str, Any] = {
                     "fallacies_found": len(detected_fallacies),
                     "arguments_penalized": len(fallacy_targets),
                 }
+                # #2850 lot 5 — the enrichment prompt shows only the first 6
+                # fallacies; the cross-reference pairs shown de found.
+                if isinstance(llm_enrichment, dict):
+                    _fallacy_cross["prompt_shown"] = llm_enrichment.get(
+                        "basis", {}
+                    ).get("fallacies_in_prompt", 0)
+                output["fallacy_cross_reference"] = _fallacy_cross
             if llm_enrichment:
                 output["llm_enrichment"] = llm_enrichment
             # Trace entry for quality evaluation specialist
@@ -985,6 +992,20 @@ def _quality_trace_summary(n_evaluated: int, output: Any) -> str:
                 f" {n_deg} unité(s) dégradée(s) en lexical après échec de "
                 "chaîne agentic (#2331)."
             )
+    # #2850 lot 5 — the LLM enrichment pass reads each unit through a
+    # 200-char excerpt and shows the first 6 fallacies; the trace says what
+    # the model was shown (counts only, #2908).
+    enrichment = output.get("llm_enrichment") if isinstance(output, dict) else None
+    if isinstance(enrichment, dict) and isinstance(enrichment.get("basis"), dict):
+        eb = enrichment["basis"]
+        shown = eb.get("fallacies_in_prompt", 0)
+        clause = (
+            f" Enrichissement LLM : extraits de "
+            f"{eb.get('unit_excerpt_chars')} caractères par unité"
+        )
+        if eb.get("fallacies_available"):
+            clause += f", {shown} de {eb.get('fallacies_available')} sophismes montrés"
+        body += clause + ". (#2850)"
     return body
 
 
@@ -1132,7 +1153,23 @@ async def _llm_enrich_quality(
         start = text_content.find("{")
         end = text_content.rfind("}") + 1
         if start >= 0 and end > start:
-            return json.loads(text_content[start:end])  # type: ignore[no-any-return]
+            parsed = json.loads(text_content[start:end])
+            # #2850 lot 5 — the enrichment prompt is built from excerpts: a
+            # 200-char head per unit (:1068) and the first 6 fallacies
+            # (:1078). The parsed dict rides the quality payload (lot 4's
+            # ``llm_enrichment`` key), so the basis rides WITH it — the
+            # reader of an llm_assessment learns what the model was shown.
+            # Counts only; the prompt itself is byte-identical.
+            if isinstance(parsed, dict):
+                parsed["basis"] = {
+                    "unit_excerpt_chars": 200,
+                    "units_in_prompt": len(score_summary),
+                    "fallacies_in_prompt": (
+                        len(fallacy_lines) if detected_fallacies else 0
+                    ),
+                    "fallacies_available": len(detected_fallacies or []),
+                }
+            return parsed  # type: ignore[no-any-return]
     except LLMCacheMiss:
         # #2320: a replay miss is a lane defect (missing/drifting cassette),
         # never a product degradation — it must traverse, not be dropped.
@@ -1858,17 +1895,35 @@ async def _invoke_counter_argument(
         # #2850 lot 4 — when no unit could be targeted, the counter reads the
         # document through a 500-char window; the trace says so (counts only,
         # no source text — #2908).
+        # #2850 lot 5 — two tightenings: the clause fires only when the
+        # window actually TRUNCATED (k < n — a short text is fully read and
+        # must not be dressed as a window), and a second clause counts the
+        # counters the evaluator scored against the document's 200-char
+        # opening (dicts with no target_argument echo — #2850 :1971).
         _ca_window_note = (
             f" Lecture de repli : {_ca_fallback_k} de {_ca_fallback_n} "
             "caractères. (#2850)"
-            if _ca_fallback_k
+            if _ca_fallback_k and _ca_fallback_k < _ca_fallback_n
+            else ""
+        )
+        _ca_default_k = sum(
+            1
+            for c in llm_counters
+            if isinstance(c, dict)
+            and isinstance(c.get("evaluation"), dict)
+            and c["evaluation"].get("target_basis") == "default_opening"
+        )
+        _ca_default_note = (
+            f" Évaluation contre l'ouverture du document (200 caractères) : "
+            f"{_ca_default_k} de {_n_ca}. (#2850)"
+            if _ca_default_k
             else ""
         )
         _state.add_trace_entry(
             phase="counter",
             agent="CounterArgumentAgent",
             reacts_to=["extract", "quality"],
-            summary=f"{_n_ca} contre-arguments générés — stratégie dominante: {_top_strat or 'mixte'}. Analyse par 5 stratégies rhétoriques.{_ca_window_note}",
+            summary=f"{_n_ca} contre-arguments générés — stratégie dominante: {_top_strat or 'mixte'}. Analyse par 5 stratégies rhétoriques.{_ca_window_note}{_ca_default_note}",
         )
     return result
 
@@ -1996,6 +2051,10 @@ def _evaluate_counter_arguments(
                 rhetorical_strategy=strategy_used,
             )
             evaluation = evaluator.evaluate(original, ca_obj)
+            # #2850 lot 5 — name what the scores were computed against: the
+            # echoed target, or (dict without a target_argument echo) the
+            # document's 200-char opening — a real read the payload must not
+            # hide. Counts-only downstream; the text never leaves the state.
             ca_dict["evaluation"] = {
                 "overall_score": round(evaluation.overall_score, 3),
                 "relevance": round(evaluation.relevance, 3),
@@ -2004,6 +2063,11 @@ def _evaluate_counter_arguments(
                 "originality": round(evaluation.originality, 3),
                 "clarity": round(evaluation.clarity, 3),
                 "recommendations": evaluation.recommendations,
+                "target_basis": (
+                    "default_opening"
+                    if "target_argument" not in ca_dict
+                    else "named_target"
+                ),
             }
             if strength is None:
                 # #2344: the model's strength is off the scale or missing. The
@@ -4480,7 +4544,7 @@ async def _invoke_speech_transcription(
 
 
 def _extract_arguments_from_context(
-    input_text: str, context: Dict[str, Any]
+    input_text: str, context: Dict[str, Any], basis: Optional[Dict[str, Any]] = None
 ) -> List[str]:
     """Extract argument labels from upstream phase outputs.
 
@@ -4488,6 +4552,12 @@ def _extract_arguments_from_context(
     1. ``arguments`` list from extract/quality phases (LLM-extracted, best quality)
     2. ``claims`` list from extract phase (heuristic fallback, still real text)
     3. Sentence splitting from input_text (last resort before placeholder)
+
+    #2850 lot 5 — ``basis`` (optional, never required): the caller's out-dict.
+    Each return path fills it with the k-of-N it applied (``path``,
+    ``selected``, ``available``) so the stateless arms can name where their
+    translated population came from instead of silently narrowing it. The
+    caps themselves are UNCHANGED (anti-pendulum: named, not widened).
     """
     # Try various upstream phase outputs — check extract first (best source)
     for phase_key in [
@@ -4505,21 +4575,38 @@ def _extract_arguments_from_context(
             if "arguments" in phase_out:
                 args = phase_out["arguments"]
                 if isinstance(args, list) and args:
-                    return [
+                    selected = [
                         a.get("text", str(a)) if isinstance(a, dict) else str(a)
                         for a in args[:40]
                     ]
+                    if basis is not None:
+                        basis.update(
+                            path="extract_arguments",
+                            selected=len(selected),
+                            available=len(args),
+                        )
+                    return selected
             # Secondary: claims list (from fact_extraction heuristic fallback)
             if "claims" in phase_out:
                 claims = phase_out["claims"]
                 if isinstance(claims, list) and claims:
-                    return [
+                    selected = [
                         c.get("text", str(c)) if isinstance(c, dict) else str(c)
                         for c in claims[:8]
                     ]
+                    if basis is not None:
+                        basis.update(
+                            path="extract_claims",
+                            selected=len(selected),
+                            available=len(claims),
+                        )
+                    return selected
             # Tertiary: scores dict keyed by argument ID
             if "scores" in phase_out and isinstance(phase_out["scores"], dict):
-                return list(phase_out["scores"].keys())
+                keys = list(phase_out["scores"].keys())
+                if basis is not None:
+                    basis.update(path="scores", selected=len(keys), available=len(keys))
+                return keys
 
     # Fall back: use actual text sentences as argument content (not opaque labels)
     sentences = [
@@ -4529,8 +4616,17 @@ def _extract_arguments_from_context(
     ]
     if len(sentences) >= 2:
         # Use truncated real sentences so downstream consumers have meaningful content
-        return [s[:120] for s in sentences[: min(len(sentences), 6)]]
+        selected = [s[:120] for s in sentences[: min(len(sentences), 6)]]
+        if basis is not None:
+            basis.update(
+                path="sentences",
+                selected=len(selected),
+                available=len(sentences),
+            )
+        return selected
     # Absolute fallback: use the input text itself as a single argument
+    if basis is not None:
+        basis.update(path="document_opening", selected=1, available=1, window_chars=200)
     return [input_text[:200] if len(input_text) > 10 else "argument_placeholder"]
 
 
@@ -5556,6 +5652,13 @@ async def _invoke_aba(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
     # caller overrides resolve through ``_node_id_for`` — an endpoint that
     # already IS an id passes through (idempotent, R1084 review item 1).
     assumptions, rules = _aba_rules_from_context(node_ids, context)
+    # #2850 lot 5 — the assumptions are the first min(3, N) arguments (the
+    # open premises under test): the payload says tested de N, never a
+    # silent head-slice (#4763's cap).
+    identity_payload["assumptions_basis"] = {
+        "tested": len(assumptions),
+        "of": len(node_ids),
+    }
     dropped = len(assumptions)
     assumptions = [
         node_id
@@ -8797,7 +8900,9 @@ async def _invoke_propositional_logic(
     (#208-H: wire NL-to-logic as pre-processing)
     """
     # Build propositional formulas from upstream arguments
-    args = _extract_arguments_from_context(input_text, context)
+    # #2850 lot 5 — the stateless population basis (filled by the helper).
+    _pl_basis: Dict[str, Any] = {}
+    args = _extract_arguments_from_context(input_text, context, basis=_pl_basis)
     # #705 Track LL: upstream formulas (DAG path: context["formulas"] or the
     # nl_to_logic phase) are whole-text/complex and frequently fail Tweety. We
     # capture them separately and run the robust 2-pass coordinated generator
@@ -8830,7 +8935,8 @@ async def _invoke_propositional_logic(
     # ``_pl_targets`` the coverage record names. Cheap by construction:
     # state reads + a deterministic pick, no LLM. Stateless fallback: the
     # args chain minted as units (stable head, stated).
-    _pl_units = merged_population_units(state_obj) or [
+    _pl_merged = merged_population_units(state_obj)
+    _pl_units = _pl_merged or [
         SelectableUnit(unit_id=f"arg_{i + 1}", text=str(a)) for i, a in enumerate(args)
     ]
     _pl_selection = select_for_budget(
@@ -8839,7 +8945,7 @@ async def _invoke_propositional_logic(
     _pl_targets = [u.text for u in _pl_selection.selected]
 
     # Track formula pipeline metrics (#655 Track MM)
-    pl_metrics: Dict[str, int] = {
+    pl_metrics: Dict[str, Any] = {
         "upstream_nl": 0,
         "pass1_atoms": 0,
         "pass2_candidates": 0,
@@ -8851,6 +8957,12 @@ async def _invoke_propositional_logic(
         "wide_net_extras": 0,
         "isolation_survivors": 0,
     }
+    # #2850 lot 5 — on the STATELESS arm (no merged population: the helper's
+    # caps are the only narrowing between extract and the translation), the
+    # metrics name where the translated population came from. A state run
+    # reads its units from the state and gets no stateless basis.
+    if not _pl_merged and _pl_basis:
+        pl_metrics["arguments_basis"] = dict(_pl_basis)
 
     if not formulas:
         # Ensure formulas is a list for mypy
@@ -9407,7 +9519,9 @@ async def _invoke_fol_reasoning(
     if _strat_text_fol:
         input_text = f"{_strat_text_fol}\n\n{input_text}"
 
-    args = _extract_arguments_from_context(input_text, context)
+    # #2850 lot 5 — the stateless population basis (filled by the helper).
+    _fol_basis: Dict[str, Any] = {}
+    args = _extract_arguments_from_context(input_text, context, basis=_fol_basis)
     # #705 Track LL: capture upstream FOL formulas (DAG nl_to_logic /
     # context["formulas"]) separately and run the robust 2-pass generator
     # ALWAYS, then UNION the upstream extras — mirrors the PL fix so the
@@ -9435,7 +9549,8 @@ async def _invoke_fol_reasoning(
     # coverage record names. Cheap by construction: state reads + a
     # deterministic pick, no LLM. Stateless fallback: the args chain minted
     # as units (stable head, stated).
-    _fol_units = merged_population_units(state_obj) or [
+    _fol_merged = merged_population_units(state_obj)
+    _fol_units = _fol_merged or [
         SelectableUnit(unit_id=f"arg_{i + 1}", text=str(a)) for i, a in enumerate(args)
     ]
     _fol_selection = select_for_budget(
@@ -9460,6 +9575,9 @@ async def _invoke_fol_reasoning(
         "post_tweety": 0,
         "isolation_survivors": 0,
     }
+    # #2850 lot 5 — same stateless disclosure as the PL arm (see there).
+    if not _fol_merged and _fol_basis:
+        fol_metrics["arguments_basis"] = dict(_fol_basis)
 
     if not formulas:
         # Ensure formulas is a list for mypy
@@ -10177,7 +10295,9 @@ async def _invoke_nl_to_logic(
     """
     from argumentation_analysis.services.nl_to_logic import NLToLogicTranslator
 
-    args = _extract_arguments_from_context(input_text, context)
+    # #2850 lot 5 — the stateless population basis (filled by the helper).
+    _ntl_basis: Dict[str, Any] = {}
+    args = _extract_arguments_from_context(input_text, context, basis=_ntl_basis)
     logic_type = context.get("logic_type", "propositional")
 
     # #2850 slice A — the translation budget (6, unchanged) selects
@@ -10185,7 +10305,8 @@ async def _invoke_nl_to_logic(
     # formulas now span the text. Stateless fallback: the args chain minted
     # as units (stable head, stated).
     _ntl_state = context.get("_state_object")
-    _ntl_units = merged_population_units(_ntl_state) or [
+    _ntl_merged = merged_population_units(_ntl_state)
+    _ntl_units = _ntl_merged or [
         SelectableUnit(unit_id=f"arg_{i+1}", text=str(a)) for i, a in enumerate(args)
     ]
     _ntl_selection = select_for_budget(
@@ -10225,7 +10346,7 @@ async def _invoke_nl_to_logic(
         )
 
     valid_count = sum(1 for t in translations if t["is_valid"])
-    return {
+    payload: Dict[str, Any] = {
         "translations": translations,
         "total": len(translations),
         "valid_count": valid_count,
@@ -10234,6 +10355,11 @@ async def _invoke_nl_to_logic(
         "method": batch_result.method,
         "logic_type": logic_type,
     }
+    # #2850 lot 5 — stateless arm: the payload names where the translated
+    # population came from (the helper's caps are the only narrowing).
+    if not _ntl_merged and _ntl_basis:
+        payload["arguments_basis"] = dict(_ntl_basis)
+    return payload
 
 
 async def _invoke_modal_logic(
@@ -10571,13 +10697,21 @@ def _population_node_units(
     # registered. #3008 mints ids; it does not fork the tail fallback. The
     # nodes then carry real content but NO unit identity, and the record
     # says so explicitly (never a guessed id).
-    texts = _extract_arguments_from_context(input_text, context)
+    # #2850 lot 5 — the tail also names the population basis the helper
+    # applied (counts only), so the frame's echo says k de N, not just "no id".
+    _tail_basis: Dict[str, Any] = {}
+    texts = _extract_arguments_from_context(input_text, context, basis=_tail_basis)
+    _tail_note = (
+        "no identified_arguments population — fallback nodes carry no unit id (#3008)"
+    )
+    if _tail_basis:
+        _tail_note += (
+            f"; population {_tail_basis.get('path')} : "
+            f"{_tail_basis.get('selected')} de {_tail_basis.get('available')}"
+        )
     return (
         [(text, text) for text in texts],
-        (
-            "no identified_arguments population — fallback nodes carry no unit "
-            "id (#3008)"
-        ),
+        _tail_note,
         len(texts),
     )
 

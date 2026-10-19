@@ -528,7 +528,8 @@ REGISTRY = {
     ): (
         "population_cap",
         "first 6 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "recorded — the no-key fallback payload's arguments_basis names the "
+        "stateless_arguments k de N (#2850 lot 5)",
     ),
     (
         "argumentation_analysis/orchestration/collaborative_debate.py",
@@ -538,7 +539,8 @@ REGISTRY = {
     ): (
         "population_cap",
         "first 8 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "recorded — the debate payload's arguments_basis names the "
+        "extract_arguments k de N (#2850 lot 5)",
     ),
     (
         "argumentation_analysis/orchestration/collaborative_debate.py",
@@ -548,7 +550,8 @@ REGISTRY = {
     ): (
         "population_cap",
         "first 8 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "recorded — the debate payload's arguments_basis names the "
+        "extract_claims k de N (#2850 lot 5)",
     ),
     (
         "argumentation_analysis/orchestration/collaborative_debate.py",
@@ -558,7 +561,8 @@ REGISTRY = {
     ): (
         "population_cap",
         "only the first 6 sentences are debated; rest unanalysed",
-        "silent — debt #2850",
+        "recorded — the debate payload's arguments_basis names the sentences "
+        "k de N (#2850 lot 5)",
     ),
     (
         "argumentation_analysis/orchestration/collaborative_debate.py",
@@ -568,7 +572,9 @@ REGISTRY = {
     ): (
         "window",
         "1500-char window from the selected offset",
-        "record_reading_window; Acts silent — #2850",
+        "record_reading_window; measured live (lot 5): reachable when no "
+        "sentence exceeds 15 chars — witness pins it; Acts silent — #2850 "
+        "(lot 6 owns the Acts clause)",
     ),
     (
         "argumentation_analysis/orchestration/conversation_orchestrator.py",
@@ -689,7 +695,9 @@ REGISTRY = {
     ): (
         "window",
         "argument excerpt inside the LLM quality-enrichment prompt",
-        "silent — debt #2850",
+        "recorded — lot 4's llm_enrichment payload key became the persisted "
+        "reader: basis.unit_excerpt_chars + units_in_prompt ride the parsed "
+        "dict, and the quality trace names the 200-char excerpts (#2850 lot 5)",
     ),
     # #3030 — the NL-fallback head slices: the base moved from the raw
     # extraction window (args) to the recorded selection (_pl_targets /
@@ -729,7 +737,9 @@ REGISTRY = {
     ("argumentation_analysis/orchestration/invoke_callables.py", "args", "40", 1): (
         "population_cap",
         "first 40 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "recorded — the helper fills the caller's basis dict; the stateless "
+        "arms carry it (pl_metrics/fol_metrics arguments_basis, the nl_to_logic "
+        "phase payload, the population tail note) (#2850 lot 5)",
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "args", "mid", 1): (
         "population_cap",
@@ -750,8 +760,9 @@ REGISTRY = {
         1,
     ): (
         "population_cap",
-        "first expr in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "the first min(3, N) arguments become the ABA assumptions under test",
+        "recorded — assumptions_basis (tested de N) on the ABA payload's "
+        "identity echo (#2850 lot 5)",
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "ca_text", "20", 1): (
         "display",
@@ -773,7 +784,8 @@ REGISTRY = {
     ("argumentation_analysis/orchestration/invoke_callables.py", "claims", "8", 1): (
         "population_cap",
         "first 8 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "recorded — the helper's extract_claims basis, carried by the stateless "
+        "arms as for args[:40] (#2850 lot 5)",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -817,9 +829,10 @@ REGISTRY = {
     ): (
         "population_cap",
         "first 6 detections build the quality-enrichment prompt's fallacy context",
-        "silent — debt #2850 (the count dies with the prompt: no persisted "
-        "reader exists for the enrichment context, so the honest row stays "
-        "silent rather than naming a fake one)",
+        "recorded — lot 4 kept this one unnamed for want of a persisted "
+        "reader; lot 4's own llm_enrichment payload became one: basis."
+        "fallacies_in_prompt de fallacies_available + fallacy_cross_reference."
+        "prompt_shown pair shown de found (#2850 lot 5)",
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "fallacies", "3", 1): (
         "population_cap",
@@ -840,8 +853,10 @@ REGISTRY = {
         1,
     ): (
         "window",
-        "the debate topic defaults to the first 200 chars",
-        "silent — debt #2850",
+        "the stateless argument population's absolute fallback: the document's "
+        "first 200 chars stand in as the single argument",
+        "recorded — the helper's document_opening basis path (window_chars) "
+        "carried by the stateless arms (#2850 lot 5)",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -850,9 +865,9 @@ REGISTRY = {
         2,
     ): (
         "population_cap",
-        "the argument population falls back to the document's first 200 chars",
-        "topic default named — #2850: when the caller names no topic the "
-        "document's opening stands in, and the reader is the dialogue trace's "
+        "the dialogue topic defaults to the document's first 200 chars when "
+        "the caller names none",
+        "topic default named — #2850: the reader is the dialogue trace's "
         "round-1 assertion (the handler echoes the topic as the debated "
         "argument; topic_accepted says whether it grounds); the analysis "
         "population is the frame's nodes, not this slice",
@@ -865,7 +880,10 @@ REGISTRY = {
     ): (
         "window",
         "the UnifiedAnalysisState carries only the first 200 chars",
-        "silent — debt #2850",
+        "reclassified — constructor ballast (#2850 lot 5): measured, NO "
+        "consumer reads the seeded text's content (the only reflection is "
+        "Act II's source_length len()); un-seeding is a restitution-reader "
+        "change, serialized with #3082 (lot 6)",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -875,7 +893,10 @@ REGISTRY = {
     ): (
         "window",
         "the UnifiedAnalysisState carries only the first 200 chars",
-        "silent — debt #2850",
+        "reclassified — constructor ballast (#2850 lot 5): measured, NO "
+        "consumer reads the seeded text's content (the only reflection is "
+        "Act II's source_length len()); un-seeding is a restitution-reader "
+        "change, serialized with #3082 (lot 6)",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -885,7 +906,10 @@ REGISTRY = {
     ): (
         "window",
         "the UnifiedAnalysisState carries only the first 200 chars",
-        "silent — debt #2850",
+        "reclassified — constructor ballast (#2850 lot 5): measured, NO "
+        "consumer reads the seeded text's content (the only reflection is "
+        "Act II's source_length len()); un-seeding is a restitution-reader "
+        "change, serialized with #3082 (lot 6)",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -895,7 +919,10 @@ REGISTRY = {
     ): (
         "window",
         "the UnifiedAnalysisState carries only the first 200 chars",
-        "silent — debt #2850",
+        "reclassified — constructor ballast (#2850 lot 5): measured, NO "
+        "consumer reads the seeded text's content (the only reflection is "
+        "Act II's source_length len()); un-seeding is a restitution-reader "
+        "change, serialized with #3082 (lot 6)",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -905,7 +932,9 @@ REGISTRY = {
     ): (
         "window",
         "the counter-argument target defaults to the first 200 chars",
-        "silent — debt #2850",
+        "recorded — each evaluation dict carries target_basis "
+        "(default_opening/named_target) and the counter trace counts k de n "
+        "evaluations against the opening (#2850 lot 5)",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -1129,7 +1158,8 @@ REGISTRY = {
     ): (
         "population_cap",
         "only the first min(len, 6) sentences become argument units; rest unanalysed",
-        "silent — debt #2850",
+        "recorded — the helper's sentences basis path (k de N), carried by "
+        "the stateless arms (#2850 lot 5)",
     ),
     (
         "argumentation_analysis/orchestration/plugins/enquete_state_manager_plugin.py",
@@ -1432,7 +1462,9 @@ REGISTRY = {
     ("argumentation_analysis/services/nl_to_logic.py", "arguments", "10", 1): (
         "population_cap",
         "first 10 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "recorded — TranslationBatchResult.requested_population pairs the "
+        "translations with what the caller sent (k de N); the cap bites only "
+        "on the plugin surface — the invoke arms select ≤10 first (#2850 lot 5)",
     ),
     (
         "argumentation_analysis/services/nl_to_logic.py",
@@ -1457,22 +1489,26 @@ REGISTRY = {
     ("argumentation_analysis/services/nl_to_logic.py", "sentences", "3", 1): (
         "population_cap",
         "only the first 3 sentences are propositionalised; rest unanalysed",
-        "silent — debt #2850",
+        "recorded — the heuristic modal message carries k atomes sur N "
+        "phrases (#2850 lot 5)",
     ),
     ("argumentation_analysis/services/nl_to_logic.py", "sentences", "5", 1): (
         "population_cap",
         "only the first 5 sentences are propositionalised; rest unanalysed",
-        "silent — debt #2850",
+        "recorded — the heuristic propositional message carries k atomes sur "
+        "N phrases (#2850 lot 5)",
     ),
     ("argumentation_analysis/services/nl_to_logic.py", "sentences", "5", 2): (
         "population_cap",
         "only the first 5 sentences are propositionalised; rest unanalysed",
-        "silent — debt #2850",
+        "recorded — the heuristic FOL message carries k prédicats sur N "
+        "phrases (#2850 lot 5)",
     ),
     ("argumentation_analysis/services/nl_to_logic.py", "text", "80", 1): (
         "window",
         "the formula variable maps to only the first 80 chars of its source",
-        "silent — debt #2850",
+        "recorded — the degenerate atom's message carries atome décrit par 80 "
+        "de N caractères (#2850 lot 5)",
     ),
     (
         "argumentation_analysis/services/web_api/services/analysis_service.py",

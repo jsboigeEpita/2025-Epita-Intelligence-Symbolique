@@ -374,13 +374,22 @@ class TestCounterFallbackDisclosed:
     def test_no_window_claim_without_a_prefix(self) -> None:
         """A run whose unit population is empty (no state units, no extract)
         is the only path to the fallback — a SHORT text is fully read, and
-        the trace must not claim a truncation that did not happen."""
+        the trace must not claim a truncation that did not happen.
+
+        #2850 lot 5 tightened: the pre-lot-5 form asserted the window NUMBER
+        was absent — but the clause never printed the window, only k de n,
+        so the assertion could not fail on a run that emitted "29 de 29
+        caractères" (a full read dressed as a window). The honest assertion
+        is the absence of the CLAUSE itself: a fully-read text has no
+        "Lecture de repli" to declare. The emission is gated on k < n
+        (an actual truncation) in _invoke_counter_argument."""
         state = _Recorder()
         self._run("Texte court mais suffisant.", state)
         summary = state.entry_for("counter")["summary"]
-        assert str(_COUNTER_ARGUMENT_FALLBACK_WINDOW) not in summary or (
-            "0 " in summary
-        ), summary
+        assert "Lecture de repli" not in summary, (
+            "a short text is fully read (k == n) — the fallback clause must "
+            f"not be emitted, got: {summary!r}"
+        )
 
 
 class TestDebateFallbackIsDead:
