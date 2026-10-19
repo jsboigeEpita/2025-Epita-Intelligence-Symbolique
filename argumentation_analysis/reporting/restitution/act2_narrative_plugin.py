@@ -1790,7 +1790,15 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         f"{opaque_block}"
         f"{_WEAVING_RULE}\n\n"
         f"{virtuous_section}"
-        "DONNÉES VERIFIÉES DANS LE STATE (ne citer que celles-ci) :\n\n"
+        # #3081 — the #3073 class one act away: the blocks under this heading
+        # are the specialists' readings of the text (extracted units, detected
+        # procedures), not verified facts. The heading says what they are;
+        # « ne citer que celles-ci » stays — it says what to cite, not what is
+        # verified. TENUE FORMELLE below is different: solver verdicts keep
+        # their « ancres vérifiées ».
+        "DONNÉES DU STATE (ne citer que celles-ci — extraits et procédures "
+        "détectées : lectures du texte par les spécialistes, jamais des "
+        "données vérifiées) :\n\n"
         f"{chr(10).join(blocks)}\n\n"
         f"{coverage_note}"
         f"{unattributed_block}"
