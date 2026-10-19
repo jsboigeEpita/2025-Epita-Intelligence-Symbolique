@@ -46,8 +46,17 @@ controls (``test_llm_egress_transport_2422.py``) would trip this guard on
 such a seat. Those controls exercise the real socket deliberately and never
 leave the machine; if that seat exists, mark them — measured first, not
 speculatively (#3049 recipe).
+
+Census mode (#3074): ``LLM_EGRESS_GUARD_CENSUS=1`` turns the guard into a
+pure recorder — every offender of the run is listed, ``shouldstop`` is
+never set and no report is flipped. The enforcing form surfaces one
+offender per lane/dispatch (the run halts); the census needs the whole
+population in one zero-spend pass (loopback endpoint, refused port). The
+switch is read per entry, not cached at import, so the run's own env is
+what decides.
 """
 
+import os
 from typing import Any, Dict, List
 
 import pytest
@@ -60,6 +69,12 @@ from tests.llm_egress_counter import (
 )
 
 _MARKER = "requires_api"
+_CENSUS_ENV = "LLM_EGRESS_GUARD_CENSUS"
+
+
+def _census_mode() -> bool:
+    """#3074 — census switch: record every offender, never stop the run."""
+    return os.environ.get(_CENSUS_ENV, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 class LLMEgressGuard:
@@ -98,6 +113,10 @@ class LLMEgressGuard:
         self._violations.setdefault(nodeid, []).append(
             {"host": str(entry.get("host")), "path": str(entry.get("path"))}
         )
+        if _census_mode():
+            # #3074 — the census lists the whole population; halting on the
+            # first offender is exactly what it must not do.
+            return
         # Halt the run after this test — the rest of the selection must not
         # repeat the leak (586-call incident was one -k away from more).
         item = self._items.get(nodeid)
@@ -134,10 +153,11 @@ class LLMEgressGuard:
         """Flip a PASSED call report to failed when its test violated.
 
         Split out of the hookwrapper so the policy is unit-testable without
-        pluggy machinery.
+        pluggy machinery. Census mode (#3074) leaves reports untouched: the
+        census measures attempts, it does not judge the tests.
         """
         violations = self._violations.get(nodeid)
-        if not violations or not report.passed:
+        if not violations or not report.passed or _census_mode():
             return
         report.outcome = "failed"
         report.longrepr = self._violation_longrepr(nodeid, violations)
@@ -152,10 +172,11 @@ class LLMEgressGuard:
     def pytest_terminal_summary(self, terminalreporter: Any, exitstatus: Any) -> None:
         if not self._violations:
             return
+        census = _census_mode()
         terminalreporter.write_sep(
             "=",
             f"hermeticity guard (#3069): {len(self._violations)} unmarked "
-            "test(s) made live LLM requests",
+            "test(s) made live LLM requests" + (" [CENSUS MODE]" if census else ""),
         )
         for nodeid, violations in sorted(self._violations.items()):
             hosts = sorted({v["host"] for v in violations})

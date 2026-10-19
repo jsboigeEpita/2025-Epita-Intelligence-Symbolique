@@ -19,6 +19,7 @@ exist on StrategicAdapter). The fix is in
 
 import pytest
 
+from tests.support.llm_route import cut_llm_route
 from argumentation_analysis.orchestration.hierarchical.orchestrator import (
     run_hierarchical_analysis,
 )
@@ -41,11 +42,19 @@ class TestHierarchicalBridgeModeFirsthandDecision:
     """
 
     @pytest.mark.asyncio
-    async def test_bridge_mode_decides_end_to_end_with_real_agents(self) -> None:
+    async def test_bridge_mode_decides_end_to_end_with_real_agents(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Bridge mode completes all 4 phases with REAL CapabilityRegistry
         services, reaches a strategic conclusion, and does NOT crash in
         Phase 4 (``publish_strategic_decision`` regression guard).
         """
+        # #3074 census (unit-api lane, unmarked population): this test made 9
+        # live requests per run with every connection refused, and still
+        # passed — the verdict below reads the workflow's shape (summary
+        # counts, a conclusion string, the selected mode), never model
+        # output. The route is cut so the run costs nothing anywhere.
+        cut_llm_route(monkeypatch)
         result = await run_hierarchical_analysis(SYNTHETIC_FALLACY_TEXT)
 
         # --- Workflow + phase outcomes ---------------------------------
