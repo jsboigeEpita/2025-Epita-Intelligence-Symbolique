@@ -21,6 +21,7 @@ Each test verifies:
 """
 
 import asyncio
+import os
 import pytest
 
 from argumentation_analysis.orchestration.unified_pipeline import (
@@ -37,6 +38,36 @@ from argumentation_analysis.orchestration.unified_pipeline import (
 # (`-m "not slow and not requires_api"`) excludes them; they still run in the
 # on-demand Extended Test Lane (#1336, R535).
 pytestmark = pytest.mark.slow
+
+# #3069: every test here asserts the RESULT's structure (no crash, summary
+# shape, state usable) — not LLM quality — yet on a seat whose ``.env``
+# carries a key, any ``-k`` that selects these parametrizations (the 8
+# ``debate_governance`` ones measured 16 live calls) runs the real pipeline
+# against the real key. The module is therefore hermetic: the empty-string
+# neutralization is the #2472 caller-wins form, and the workflows exercise
+# their keyless degraded path — deterministic, and exactly what a structural
+# robustness suite wants. MODULE-scoped on purpose: it must precede
+# ``shared_registry`` below, so the registry binds its services under the
+# neutralized env, and every per-call service selection inside
+# ``run_unified_analysis`` re-reads it. Tests that truly need live LLM
+# belong in the ``requires_api`` band, marked as such.
+_LLM_ENV_VARS = ("OPENAI_API_KEY", "OPENROUTER_API_KEY", "OPENROUTER_BASE_URL")
+
+
+@pytest.fixture(autouse=True, scope="module")
+def _hermetic_llm_module():
+    saved = {v: os.environ.get(v) for v in _LLM_ENV_VARS}
+    for v in _LLM_ENV_VARS:
+        os.environ[v] = ""
+    try:
+        yield
+    finally:
+        for v, val in saved.items():
+            if val is None:
+                os.environ.pop(v, None)
+            else:
+                os.environ[v] = val
+
 
 # ============================================================
 # Fixtures

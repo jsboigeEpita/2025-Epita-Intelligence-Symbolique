@@ -37,6 +37,12 @@ Observation only — never blocks. Blocking is a gate (legitimate after #1591),
 not an instrument. No pricing: a count, not an amount. The gate that blocks
 is ``scripts/ci/llm_egress_gate.py`` (#2444): the CI job fails when the
 report's ``per_test_llm_network`` is not empty, and names the tests.
+
+#3069: the counter can also *notify* — ``on_entry``, an optional callback
+invoked once per completed request with the final entry (class + transport +
+outcome known). Still observation: the instrument reports, the policy lives
+in the consumer (``tests/llm_egress_guard.py`` enforces hermeticity at run
+time; the CI gate enforces it after the run).
 """
 
 import contextvars
@@ -130,6 +136,10 @@ class LLMEgressCounter:
         self._per_test: "OrderedDict[str, int]" = OrderedDict()  # llm only
         self._per_test_unknown: "OrderedDict[str, int]" = OrderedDict()
         self.current_test: Optional[str] = None
+        # #3069: optional per-entry notification, invoked (outside the lock)
+        # once the outcome is attached. The instrument never blocks; whatever
+        # this callback decides is the consumer's policy, not the counter's.
+        self.on_entry: Optional[Any] = None
         self._installed = False
         self._patched_mods: List[Any] = []
         # Immutable snapshot of patched transport names, set at install and
@@ -227,6 +237,14 @@ class LLMEgressCounter:
                     entry["status"] = int(response.status_code)
         except Exception:  # noqa: BLE001 — instrument must not break the measured run
             pass
+        # #3069: notify the consumer OUTSIDE the lock — a callback that
+        # re-enters the counter (snapshot, per_test) must not deadlock.
+        callback = self.on_entry
+        if callback is not None:
+            try:
+                callback(entry)
+            except Exception:  # noqa: BLE001 — consumer policy must not break the run
+                pass
 
     @staticmethod
     def observe_network_transport() -> None:
