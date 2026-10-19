@@ -239,7 +239,9 @@ def _truncate(text: Any, cap: int) -> str:
     return s if len(s) <= cap else s[:cap].rstrip() + " […]"
 
 
-def _derive_genre(state: Any) -> Tuple[str, str]:
+def _derive_genre(
+    state: Any, arena_record: ArenaRecord | None = None
+) -> Tuple[str, str]:
     """Derive the discourse genre (the concrete discursive domain) from the state.
 
     The arena is preferred over the register because the taxonomy
@@ -249,10 +251,12 @@ def _derive_genre(state: Any) -> Tuple[str, str]:
     the framing (``evidence.rhetorical_register`` → stakes_block), so no signal
     is lost. #3073: the arena is read from the shared record — the genre then
     follows the same container both acts quote (a documented arena beats an
-    inferred one instead of the reverse). Returns (genre_lowercased,
-    source_label); unknown → (``_GENRE_UNKNOWN``, "").
+    inferred one instead of the reverse). A caller that already holds the
+    record (``build_act1_evidence``) passes it; ``build_arena_record`` stays
+    the default so direct calls see the same resolution. Returns
+    (genre_lowercased, source_label); unknown → (``_GENRE_UNKNOWN``, "").
     """
-    arena_record = build_arena_record(state)
+    arena_record = arena_record or build_arena_record(state)
     if arena_record.value:
         return arena_record.value.lower(), arena_record.source_key
     stakes = getattr(state, "stakes_and_stakeholders", {}) or {}
@@ -367,7 +371,11 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
                         )
                     )
 
-    genre, genre_source = _derive_genre(state)
+    # #3073 — one record per build: the evidence's ``arena`` and the genre
+    # derivation read the SAME resolution (a second build_arena_record call
+    # here recomputed a pure function for nothing — cross-review cosmetic).
+    arena_record = build_arena_record(state)
+    genre, genre_source = _derive_genre(state, arena_record)
     families = _load_families()
     spectrum_available = bool(families)
     expected_spectrum, spectrum_general = _derive_expected_spectrum(families, genre)
@@ -397,7 +405,7 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
         stakes=stakes_list,
         rhetorical_register=register,
         has_stakes=has_stakes,
-        arena=build_arena_record(state),
+        arena=arena_record,
         expected_spectrum=expected_spectrum,
         spectrum_general=spectrum_general,
         spectrum_available=spectrum_available,

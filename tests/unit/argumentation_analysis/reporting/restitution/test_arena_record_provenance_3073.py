@@ -84,12 +84,19 @@ def test_both_acts_carry_the_inferred_arena_with_the_same_provenance_tag():
 
 
 def test_no_inferred_field_sits_under_a_verified_heading():
-    """Stakes, register and arena are inferences — the heading must not say otherwise."""
-    p1, _ = _prompts(_state(arena=_ARENA_INFERRED))
+    """Stakes, register and arena are inferences — neither act's heading may
+    say otherwise. Acte III kept its global « DONNÉES VERIFIÉES » title with
+    the INFÉRÉE arena line living under it (cross-review): the attenuated form
+    of the very contradiction this issue repairs."""
+    p1, p3 = _prompts(_state(arena=_ARENA_INFERRED))
     assert (
         "DONNÉES VERIFIÉES DANS LE STATE" not in p1
-    ), "the block heading still promotes the whole bundle to 'verified'"
+    ), "the Acte I heading still promotes the whole bundle to 'verified'"
+    assert (
+        "DONNÉES VERIFIÉES DANS LE STATE" not in p3
+    ), "the Acte III heading says 'verified' while the INFÉRÉE arena line lives under it"
     assert "DONNÉES DU STATE" in p1, "the provenance-labelled heading"
+    assert "DONNÉES DU STATE" in p3, "the provenance-labelled heading (Acte III)"
 
 
 def test_a_documented_arena_is_labelled_a_recorded_metadata_fact():

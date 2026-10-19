@@ -2749,7 +2749,14 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         f"{_WEAVING_RULE}\n\n"
         f"{_FAIL_LOUD_INSTRUCTION}\n\n"
         f"{virtuous_section}"
-        "DONNÉES VERIFIÉES DANS LE STATE (ne citer que celles-ci) :\n\n"
+        # #3073 (cross-review) — même requalification que l'Acte I : le titre
+        # disait « vérifiées » alors que l'arène peut être INFÉRÉE du texte et
+        # les revendications extraites sont une lecture de modèle. Chaque bloc
+        # porte sa provenance ; le titre n'en promet plus une seule.
+        "DONNÉES DU STATE — provenance étiquetée bloc à bloc "
+        "(ne citer que ces données ; « métadonnée enregistrée » = lu dans "
+        "source_metadata ; « inférée du texte » = lecture de modèle, jamais "
+        "une donnée vérifiée) :\n\n"
         f"[MÉTADONNÉES DE LA SOURCE — l'origine du discours, telle qu'enregistrée]"
         f"\n{meta_block}\n\n"
         # #3073 — l'arène vient du MÊME enregistrement que celui de l'Acte I
