@@ -1,0 +1,48 @@
+{
+  "key": "6c9083737757eba3c722169a66b3b5345a8745d742733720a1056eb57ab89fef",
+  "value": {
+    "id": "chatcmpl-EaV4frdFOCtQ7MpFeo4z2nwqRbOo4",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Les points 1 et 2 sont distincts mais se recoupent partiellement sur l’attribution du changement climatique aux activités humaines. Le point 2 ajoute toutefois une idée nouvelle sur les prévisions des modèles et leur convergence. Le point 3 étant tronqué (« se produi… »), sa redondance ne peut pas être évaluée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367965,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 185,
+      "prompt_tokens": 285,
+      "total_tokens": 470,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 93,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

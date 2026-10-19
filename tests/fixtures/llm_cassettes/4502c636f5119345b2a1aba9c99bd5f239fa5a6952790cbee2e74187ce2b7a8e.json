@@ -1,0 +1,48 @@
+{
+  "key": "4502c636f5119345b2a1aba9c99bd5f239fa5a6952790cbee2e74187ce2b7a8e",
+  "value": {
+    "id": "chatcmpl-EaV3CsyH25ejcLKot1ZC8kqzQb2Vx",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"obstacle_genuinely_opaque\":false,\"clarity_verdict\":\"résolvable_contexte\",\"reasoning\":\"Même si « elle » n’a pas d’antécédent explicite, le contexte de l’exécution, de la dissuasion et des crimes graves permet d’inférer qu’il s’agit de la peine de mort.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367874,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 225,
+      "prompt_tokens": 361,
+      "total_tokens": 586,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 144,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

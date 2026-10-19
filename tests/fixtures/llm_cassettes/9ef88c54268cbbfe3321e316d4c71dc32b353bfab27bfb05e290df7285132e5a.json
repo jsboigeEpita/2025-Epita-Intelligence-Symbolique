@@ -1,0 +1,48 @@
+{
+  "key": "9ef88c54268cbbfe3321e316d4c71dc32b353bfab27bfb05e290df7285132e5a",
+  "value": {
+    "id": "chatcmpl-EaV3aYzjyagxbsk63qpC0JJIi6Joe",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Les trois points abordent des idées distinctes : dangerosité permanente et justification de la peine de mort (1), possibilité d’erreurs judiciaires (2), puis réduction de ce risque grâce aux avancées de l’ADN (3). Une redondance partielle relie les points 2 et 3 autour de la fiabilité du système judiciaire, mais le troisième précise et nuance le second plutôt que de le répéter.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367898,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 169,
+      "prompt_tokens": 300,
+      "total_tokens": 469,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 60,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

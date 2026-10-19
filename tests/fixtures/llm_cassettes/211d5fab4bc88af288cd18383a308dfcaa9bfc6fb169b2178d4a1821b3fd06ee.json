@@ -1,0 +1,48 @@
+{
+  "key": "211d5fab4bc88af288cd18383a308dfcaa9bfc6fb169b2178d4a1821b3fd06ee",
+  "value": {
+    "id": "chatcmpl-EaUrxBgLqIwx4P7I3EIdPLjb8KD1q",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Si nous n'agissons pas maintenant, le système s'effondrera dans cinq ans.\",\"conclusion\":\"La réforme est urgente et il faut agir maintenant.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367177,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 192,
+      "prompt_tokens": 322,
+      "total_tokens": 514,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 141,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

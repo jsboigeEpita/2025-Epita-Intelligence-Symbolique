@@ -1,0 +1,48 @@
+{
+  "key": "ab3ffffdb202312b42c5c38ac8599c4f4b31d56126bfcf7ddaadce48295b77fe",
+  "value": {
+    "id": "chatcmpl-EaUref6Y9Plq2YdmaOgTc0LrbHQxY",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Jargon technique non défini (« sophisme naturaliste », « PIB ») et anaphore potentiellement ambiguë dans la citation (« si nous n’agissons p… »), mais ces obstacles sont résolvables par le contexte ; le sens global reste accessible.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367158,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 116,
+      "prompt_tokens": 271,
+      "total_tokens": 387,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 43,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

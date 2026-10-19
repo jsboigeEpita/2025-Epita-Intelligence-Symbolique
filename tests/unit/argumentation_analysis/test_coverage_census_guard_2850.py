@@ -721,7 +721,10 @@ REGISTRY = {
     ("argumentation_analysis/orchestration/invoke_callables.py", "arguments", "4", 1): (
         "population_cap",
         "first 4 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "stateless fallback named — #2850 slice A: when a state mints units the "
+        "defeasible rules cite the stratified selection of the frame's units "
+        "(record_analysis_coverage('aspic') + aspic_units_considered/_total on "
+        "the payload); this [:4] head is what a stateless run reads",
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "args", "40", 1): (
         "population_cap",
@@ -731,7 +734,9 @@ REGISTRY = {
     ("argumentation_analysis/orchestration/invoke_callables.py", "args", "mid", 1): (
         "population_cap",
         "first mid in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "partition, not a cap — #2850: the head half is the proponent's side "
+        "and the tail (args[mid:]) is the opponent's; no unit is dropped by "
+        "this slice (the split is the dialogue's two-player design)",
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "arguments", "6", 1): (
         "population_cap",
@@ -756,7 +761,9 @@ REGISTRY = {
     ("argumentation_analysis/orchestration/invoke_callables.py", "claims", "4", 1): (
         "population_cap",
         "first 4 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "recorded via aspic_claims_considered/_total on the phase payload and "
+        "the aspic trace summary (deep-synthesis trace reader) — cap stays "
+        "debt #2850 (claims are produced facts, not the argument population)",
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "claims", "6", 1): (
         "population_cap",
@@ -795,8 +802,12 @@ REGISTRY = {
         1,
     ): (
         "population_cap",
-        "first 6 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "first 6 detected fallacies feed the retraction network; the rest is unanalysed",
+        "recorded via fallacies_considered/_total on the phase payload and the "
+        "jtms trace summary (deep-synthesis trace reader) — cap stays debt "
+        "#2850 (batch 1 had put this contract on ord=2 by reading the walk as "
+        "file order; ast.walk is BFS, and the census maps ord=1 to the jtms "
+        "site at :3152)",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -805,13 +816,17 @@ REGISTRY = {
         2,
     ): (
         "population_cap",
-        "first 6 detected fallacies feed the retraction network; the rest is unanalysed",
-        "recorded via fallacies_considered/_total on the phase payload and the jtms trace summary (deep-synthesis trace reader) — cap stays debt #2850",
+        "first 6 detections build the quality-enrichment prompt's fallacy context",
+        "silent — debt #2850 (the count dies with the prompt: no persisted "
+        "reader exists for the enrichment context, so the honest row stays "
+        "silent rather than naming a fake one)",
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "fallacies", "3", 1): (
         "population_cap",
         "first 3 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "recorded via aspic_fallacies_considered/_total on the phase payload "
+        "and the aspic trace summary (deep-synthesis trace reader) — cap "
+        "stays debt #2850",
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "fallacies", "6", 1): (
         "population_cap",
@@ -836,7 +851,11 @@ REGISTRY = {
     ): (
         "population_cap",
         "the argument population falls back to the document's first 200 chars",
-        "silent — debt #2850",
+        "topic default named — #2850: when the caller names no topic the "
+        "document's opening stands in, and the reader is the dialogue trace's "
+        "round-1 assertion (the handler echoes the topic as the debated "
+        "argument; topic_accepted says whether it grounds); the analysis "
+        "population is the frame's nodes, not this slice",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -902,7 +921,9 @@ REGISTRY = {
     ): (
         "population_cap",
         "first 6 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "recorded in the debate material's QUALITY SCORES header (k de N) and "
+        "the debate trace summary (deep-synthesis trace reader) — cap stays "
+        "debt #2850",
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "raw_args", "10", 1): (
         "population_cap",
@@ -929,7 +950,10 @@ REGISTRY = {
     ): (
         "population_cap",
         "first 6 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "stateless fallback named — #2850 slice A: when a state mints units "
+        "the ARGUMENTS block reads the stratified selection "
+        "(record_analysis_coverage('debate') names it, the header says k de "
+        "N); this [:6] head is what a stateless run reads",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -969,7 +993,9 @@ REGISTRY = {
     ): (
         "population_cap",
         "first 5 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "recorded in the debate material's FALLACIES header (k de N) and the "
+        "debate trace summary (deep-synthesis trace reader) — cap stays debt "
+        "#2850",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -1057,9 +1083,11 @@ REGISTRY = {
         "30",
         1,
     ): (
-        "population_cap",
-        "first 30 in insertion order; rest unanalysed",
-        "silent — debt #2850",
+        "display",
+        "first 30 chars of the defeat's human-readable belief name",
+        "display head — #2850: the defeat's identity travels in full via the "
+        "justification endpoints (the add_justification argument lists carry "
+        "the whole target_arg); the [:30] slice only shortens the name",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",

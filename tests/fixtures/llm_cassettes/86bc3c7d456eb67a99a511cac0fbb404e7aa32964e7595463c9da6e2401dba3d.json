@@ -1,0 +1,40 @@
+{
+  "key": "86bc3c7d456eb67a99a511cac0fbb404e7aa32964e7595463c9da6e2401dba3d",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_aIdvEPUf5KZYEw3weORHwdyw",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"72\",\"confidence\":\"medium\",\"matches\":true,\"justification\":\"Le président, autorité en place, affirme lui-même le succès de la politique économique; l'énoncé présente cette affirmation comme suffisante pour établir le succès, sans fournir d'éléments indépendants.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EaUu9QwkKJWodE8WdN6Gzkfj3rOyz",
+        "created": 1792367313,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1567,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 539,
+            "cached_tokens": 1025,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 77,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

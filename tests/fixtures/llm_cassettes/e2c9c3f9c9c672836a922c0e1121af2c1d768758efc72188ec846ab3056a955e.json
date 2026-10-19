@@ -1,0 +1,40 @@
+{
+  "key": "e2c9c3f9c9c672836a922c0e1121af2c1d768758efc72188ec846ab3056a955e",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_SD2B17hwKyPSGqpX69VeQjqF",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"91\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"L’argument affirme que « les experts » sont unanimes sans identifier ni permettre de vérifier ces experts ; cette référence anonyme sert de preuve de la vérité.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EaUuvIbRUxZO3omYAw33N7Zamw1Cv",
+        "created": 1792367361,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1429,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 401,
+            "cached_tokens": 1025,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 67,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

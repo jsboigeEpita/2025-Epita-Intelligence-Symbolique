@@ -6,26 +6,26 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_a9xy5TwF1rkUEAfEZtxwaFpv",
-          "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"2\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"L'affirmation présente le succès de la politique économique comme incontestable, sans fournir de données, d'exemples ou de preuves solides; elle repose donc sur une généralisation non étayée.\"}"
+          "id": "call_d9IDRQ4ZMUDfkZTlX6wrcMhh",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\":\"3\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EXZC87km8zzXXIiPS9QwZizzXQAZV",
-        "created": 1791668820,
+        "id": "chatcmpl-EaUu6hryU1vSimV6FaiUpsv6NJz2o",
+        "created": 1792367310,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 1926,
+          "prompt_tokens": 1945,
           "prompt_tokens_details": {
             "audio_tokens": 0,
-            "cache_write_tokens": 1923,
-            "cached_tokens": 0,
+            "cache_write_tokens": 917,
+            "cached_tokens": 1025,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 76,
+          "completion_tokens": 22,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

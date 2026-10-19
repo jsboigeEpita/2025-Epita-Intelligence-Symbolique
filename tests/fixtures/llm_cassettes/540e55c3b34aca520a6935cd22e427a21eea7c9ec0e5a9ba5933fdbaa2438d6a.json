@@ -1,0 +1,48 @@
+{
+  "key": "540e55c3b34aca520a6935cd22e427a21eea7c9ec0e5a9ba5933fdbaa2438d6a",
+  "value": {
+    "id": "chatcmpl-EaV4DQrv62ZZF7ByBv0phzal0p7F0",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Le terme technique « ère préindustrielle » n’est pas défini et peut être difficile à situer précisément. « Modèles prédictifs » est également employé sans expliquer de quels modèles il s’agit.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367937,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 316,
+      "prompt_tokens": 279,
+      "total_tokens": 595,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 249,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

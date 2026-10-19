@@ -1,14 +1,14 @@
 {
   "key": "e13cc231cf44b3e93d0f75ab15841eb28c64d397f447e4760a40e8b30bdcc140",
   "value": {
-    "id": "chatcmpl-EXZBXQ8V4ti2XtGL3lxGu7NXaLUI6",
+    "id": "chatcmpl-EaUtWfvwB5Y1dPeHdPjvoxcv3aQjS",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"formulas\":[\"NiceWeather()\"],\"predicates\":{\"NiceWeather\":[]},\"sorts\":{},\"constants\":{},\"confidence\":0.99}",
+          "content": "{\"formulas\":[\"NiceWeather(weather)\"],\"predicates\":{\"NiceWeather\":[\"Thing\"]},\"sorts\":{\"Thing\":[\"weather\"]},\"constants\":{\"weather\":\"the current weather\"},\"confidence\":0.98}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1791668783,
+    "created": 1792367274,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 155,
+      "completion_tokens": 168,
       "prompt_tokens": 391,
-      "total_tokens": 546,
+      "total_tokens": 559,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 114,
+        "reasoning_tokens": 117,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

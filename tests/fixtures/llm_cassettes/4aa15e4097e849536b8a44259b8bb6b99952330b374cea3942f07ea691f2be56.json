@@ -1,0 +1,40 @@
+{
+  "key": "4aa15e4097e849536b8a44259b8bb6b99952330b374cea3942f07ea691f2be56",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_9zS5Tq9iXBPZFq4K0gh0IdGn",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"78\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"Le président affirme que la politique économique est un succès, et l'énoncé présente cette affirmation comme incontestable en raison de l'autorité présidentielle plutôt que sur la base d'éléments économiques.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EaUu9T9px10CHIVdBAuFnIUWPO9A3",
+        "created": 1792367313,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1565,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 537,
+            "cached_tokens": 1025,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 75,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

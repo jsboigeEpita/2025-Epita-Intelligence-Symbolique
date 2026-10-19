@@ -1,0 +1,48 @@
+{
+  "key": "cc41b7d22686a46cb58c61dd221542f42250d823f6a0f350dad600dff5b4237a",
+  "value": {
+    "id": "chatcmpl-EaV4X44leOY6HDrgJvu2n6Zz1RqRK",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne reconstruite affirme que les modèles prédictifs sont unanimes sur l’impact des activités humaines et que le changement climatique actuel se produit à une vitesse sans précédent, puis conclut que les activités humaines en sont la cause et que ses conséquences sont prévisibles. Verdict : saut logique net, car ces prémisses ne suffisent pas à établir toute la conclusion.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367957,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 132,
+      "prompt_tokens": 293,
+      "total_tokens": 425,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 38,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

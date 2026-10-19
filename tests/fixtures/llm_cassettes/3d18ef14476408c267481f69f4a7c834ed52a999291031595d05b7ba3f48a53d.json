@@ -1,0 +1,48 @@
+{
+  "key": "3d18ef14476408c267481f69f4a7c834ed52a999291031595d05b7ba3f48a53d",
+  "value": {
+    "id": "chatcmpl-EaV4YVMrIU6WyjNH0MI9EHrwa2SbJ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\":true,\"redundancy_verdict\":\"redondance_sémantique\",\"located_redundancy\":\"Les points 1 et 2 sont répétés ensemble dans la phrase sur la nécessité et l’avantage économique de la transition énergétique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367958,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 270,
+      "prompt_tokens": 379,
+      "total_tokens": 649,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 202,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

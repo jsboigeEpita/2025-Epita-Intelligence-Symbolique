@@ -6,8 +6,8 @@
       "content": "{\"propositions\":[\"logic_is_coherent\",\"we_find_a_proof\"],\"modal_formulas\":[\"[](logic_is_coherent)\",\"<>(we_find_a_proof)\"]}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EXZJeiizmJ4W2Hj85Q9MwV0ZJG8pz",
-        "created": 1791669286,
+        "id": "chatcmpl-EaV1FwbTCLMCJCd5hQeSfktjATmfN",
+        "created": 1792367753,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 308,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 108,
+          "completion_tokens": 99,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 63,
+            "reasoning_tokens": 54,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

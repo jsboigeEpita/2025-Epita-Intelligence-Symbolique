@@ -1,0 +1,48 @@
+{
+  "key": "7d10869d7732869987dac36564e83d339da30bc4329d95f5536a0d4bd2befe91",
+  "value": {
+    "id": "chatcmpl-EaV4av5Res6c62FDMbCGulQABoiue",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Les activités humaines sont une cause du changement climatique actuel.\\n2. Les modèles scientifiques prévoient les conséquences du changement climatique et convergent sur l’impact des activités humaines.\\n3. Le changement climatique actuel se produit à une vitesse sans précédent, ce que les sceptiques omettent.\\n4. Les personnes qui minimisent la crise climatique utilisent souvent des données sélectionnées pour appuyer leur position.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367960,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 221,
+      "prompt_tokens": 241,
+      "total_tokens": 462,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 123,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

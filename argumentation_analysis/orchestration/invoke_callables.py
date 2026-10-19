@@ -2150,18 +2150,59 @@ async def _invoke_debate_analysis(
                     item.get("text", str(item)) if isinstance(item, dict) else str(item)
                 )
 
+            # #2850 batch 2 — shape (a) for the debate material: the
+            # ARGUMENTS block reads the merged population through the
+            # coverage layer (slice-A pattern) and
+            # record_analysis_coverage("debate") names the selection; the
+            # extraction head [:6] survives as the named stateless fallback.
+            _deb_state = context.get("_state_object")
+            _deb_units = merged_population_units(_deb_state)
+            _deb_selection = None
+            if (
+                _deb_state is not None
+                and _deb_units
+                and hasattr(_deb_state, "record_analysis_coverage")
+            ):
+                _deb_selection = select_for_budget(
+                    _deb_units, 6, text_length=state_text_length(_deb_state)
+                )
+                _deb_argument_lines = [
+                    f"  A{i + 1}. {u.text}"
+                    for i, u in enumerate(_deb_selection.selected)
+                ]
+                _deb_state.record_analysis_coverage(
+                    "debate",
+                    _deb_selection.k,
+                    _deb_selection.n_total,
+                    _deb_selection.bands_covered,
+                    _deb_selection.bands_total,
+                    span=_deb_selection.span,
+                    largest_uncovered_stretch=_deb_selection.largest_uncovered_stretch,
+                    unit_ids=[u.unit_id for u in _deb_selection.selected],
+                )
+            else:
+                _deb_argument_lines = [
+                    f"  A{i + 1}. {_txt(a)}" for i, a in enumerate(raw_arguments[:6])
+                ]
+
             # Build structured debate material
             debate_parts = []
             if raw_arguments:
                 debate_parts.append(
-                    "ARGUMENTS identified:\n"
-                    + "\n".join(
-                        f"  A{i+1}. {_txt(a)}" for i, a in enumerate(raw_arguments[:6])
+                    "ARGUMENTS identified"
+                    + (
+                        f" ({_deb_selection.k} de {_deb_selection.n_total} "
+                        "unités de la population, sélection stratifiée)"
+                        if _deb_selection is not None
+                        else ""
                     )
+                    + ":\n"
+                    + "\n".join(_deb_argument_lines)
                 )
             if raw_fallacies:
                 debate_parts.append(
-                    "FALLACIES detected:\n"
+                    f"FALLACIES detected ({min(5, len(raw_fallacies))} de "
+                    f"{len(raw_fallacies)}):\n"
                     + "\n".join(
                         f"  F{i+1}. {_txt(f)} — {f.get('justification', '')[:80] if isinstance(f, dict) else ''}"
                         for i, f in enumerate(raw_fallacies[:5])
@@ -2198,7 +2239,11 @@ async def _invoke_debate_analysis(
                         )
                         quality_lines.append(f"  {key}: {note}{scale}{suffix}")
                 if quality_lines:
-                    debate_parts.append("QUALITY SCORES:\n" + "\n".join(quality_lines))
+                    debate_parts.append(
+                        f"QUALITY SCORES ({min(6, len(per_arg_scores))} de "
+                        f"{len(per_arg_scores)} arguments scorés):\n"
+                        + "\n".join(quality_lines)
+                    )
             # (#289) Cross-KB: JTMS beliefs inform debate about retracted claims
             if isinstance(jtms_output, dict) and jtms_output.get("beliefs"):
                 retracted = [
@@ -2319,10 +2364,38 @@ async def _invoke_debate_analysis(
     if _state is not None and base_scores:
         _winner = base_scores.get("winner", "indéterminé")
         # GE-5 #1467 — honest rendering: None displayed as "—/5", not "0/5".
+        _quality_value = base_scores.get("debate_quality")
         _quality_str = (
             f"{int(round(_quality_value))}/5"
             if isinstance(_quality_value, (int, float))
             else "—/5"
+        )
+        # #2850 batch 2 — the material's caps speak in the trace summary
+        # (recomputed from the context, like reacts_to above): the coverage
+        # record names the debated units, the headers name the rest.
+        _deb_fallacies_ctx = _phase_field(
+            context.get("phase_hierarchical_fallacy_output"), "fallacies"
+        )
+        _deb_scores_ctx = _phase_field(
+            context.get("phase_quality_output"), "per_argument_scores"
+        )
+        _deb_cov = _state.analysis_coverage.get("debate", {})
+        _deb_bits = []
+        if _deb_cov:
+            _deb_bits.append(
+                f"{_deb_cov.get('k')} de {_deb_cov.get('N')} unités débattues "
+                "(sélection stratifiée)"
+            )
+        if _deb_fallacies_ctx:
+            _deb_bits.append(
+                f"{min(5, len(_deb_fallacies_ctx))} de {len(_deb_fallacies_ctx)} sophismes"
+            )
+        if _deb_scores_ctx:
+            _deb_bits.append(
+                f"{min(6, len(_deb_scores_ctx))} de {len(_deb_scores_ctx)} scores de qualité"
+            )
+        _deb_material = (
+            f" Matériel du débat : {', '.join(_deb_bits)}." if _deb_bits else ""
         )
         _state.add_trace_entry(
             phase="debate",
@@ -2363,7 +2436,7 @@ async def _invoke_debate_analysis(
             summary=(
                 f"Débat complété (source={_quality_source}) — "
                 f"vainqueur: {_winner}, qualité: {_quality_str}. "
-                f"Évaluation adversariale multi-agent."
+                f"Évaluation adversariale multi-agent." + _deb_material
             ),
         )
     return base_scores  # type: ignore[no-any-return]
@@ -5712,6 +5785,12 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
         fallacy_output.get("fallacies", []) if isinstance(fallacy_output, dict) else []
     )
 
+    # #2850 batch 2 — derived-cap counters (bound when the derived branches
+    # below run; the payload guards re-read the same conditions).
+    _aspic_targets: List[str] = []
+    _aspic_selection = None
+    _aspic_claims_total = 0
+
     strict = context.get("strict_rules")
     if not strict:
         strict = []
@@ -5724,6 +5803,9 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
         claims = (
             extract_output.get("claims", []) if isinstance(extract_output, dict) else []
         )
+        # #2850 batch 2 — the derived strict-rule cap speaks: k of N claims
+        # on the payload, mirrored by the trace summary line below.
+        _aspic_claims_total = len(claims)
         for i, claim in enumerate(claims[:4]):
             text = (
                 claim.get("text", str(claim)) if isinstance(claim, dict) else str(claim)
@@ -5740,9 +5822,45 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
     defeasible = context.get("defeasible_rules")
     if not defeasible:
         defeasible = []
-        # Defeasible rules: arguments that could be undermined. #3014: the
-        # premise atom is the unit's id when the population minted one.
-        for i, arg in enumerate(arguments[:4]):
+        # #2850 batch 2 — shape (a) for the defeasible rules: they cite a
+        # STRATIFIED selection of the frame's population (slice-A pattern),
+        # recorded via record_analysis_coverage("aspic"); the [:4] insertion
+        # head survives as the named stateless fallback. Join-safe by
+        # construction: the selection draws from the frame's own units, so
+        # every body atom is a node id (_node_id_for's idempotent arm) — a
+        # selection over the uncapped population could name units beyond the
+        # frame's 40-node budget, which _atom would rewrite (identity break).
+        _aspic_state = context.get("_state_object")
+        _aspic_frame_units = [
+            u
+            for u in merged_population_units(_aspic_state)
+            if str(u.unit_id) in set(arguments)
+        ]
+        _aspic_selection = None
+        if (
+            _aspic_state is not None
+            and _aspic_frame_units
+            and hasattr(_aspic_state, "record_analysis_coverage")
+        ):
+            _aspic_selection = select_for_budget(
+                _aspic_frame_units,
+                4,
+                text_length=state_text_length(_aspic_state),
+            )
+            _aspic_targets = [str(u.unit_id) for u in _aspic_selection.selected]
+            _aspic_state.record_analysis_coverage(
+                "aspic",
+                _aspic_selection.k,
+                _aspic_selection.n_total,
+                _aspic_selection.bands_covered,
+                _aspic_selection.bands_total,
+                span=_aspic_selection.span,
+                largest_uncovered_stretch=_aspic_selection.largest_uncovered_stretch,
+                unit_ids=_aspic_targets,
+            )
+        else:
+            _aspic_targets = arguments[:4]
+        for i, arg in enumerate(_aspic_targets):
             defeasible.append(
                 {
                     "head": f"plausible_conclusion_{i+1}",
@@ -5796,6 +5914,52 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
             handler.analyze_aspic_framework, strict, defeasible, axioms
         )
         result.update(identity_payload)
+        # #2850 batch 2 — the derived caps speak (k of N on the payload; a
+        # caller who supplied rules carries no derived cap — honest absence).
+        # The trace summary is the render surface: deep-synthesis reads
+        # analysis_trace for its sections, text_sequence renders it.
+        if not context.get("strict_rules"):
+            result["aspic_claims_considered"] = min(4, _aspic_claims_total)
+            result["aspic_claims_total"] = _aspic_claims_total
+        if not context.get("defeasible_rules"):
+            result["aspic_units_considered"] = len(_aspic_targets)
+            result["aspic_units_total"] = (
+                _aspic_selection.n_total
+                if _aspic_selection is not None
+                else len(arguments)
+            )
+            result["aspic_fallacies_considered"] = min(3, len(fallacies))
+            result["aspic_fallacies_total"] = len(fallacies)
+        _aspic_trace_state = context.get("_state_object")
+        if _aspic_trace_state is not None and hasattr(
+            _aspic_trace_state, "add_trace_entry"
+        ):
+            _aspic_disclosures = []
+            if "aspic_claims_total" in result:
+                _aspic_disclosures.append(
+                    f"{result['aspic_claims_considered']} de "
+                    f"{result['aspic_claims_total']} claims en règles strictes"
+                )
+            if "aspic_units_total" in result:
+                _aspic_disclosures.append(
+                    f"{result['aspic_units_considered']} de "
+                    f"{result['aspic_units_total']} unités en règles déféasibles "
+                    "(sélection stratifiée)"
+                )
+            if "aspic_fallacies_total" in result:
+                _aspic_disclosures.append(
+                    f"{result['aspic_fallacies_considered']} de "
+                    f"{result['aspic_fallacies_total']} sophismes en défeaters"
+                )
+            if _aspic_disclosures:
+                _aspic_trace_state.add_trace_entry(
+                    phase="aspic",
+                    agent="ASPICHandler",
+                    reacts_to=["extract", "hierarchical_fallacy"],
+                    summary=(
+                        "Réseau ASPIC+ évalué — " + " ; ".join(_aspic_disclosures)
+                    ),
+                )
         return result
     except Exception as e:
         logger.info(f"ASPIC+ handler failed ({e}); failing loud with the cause (#1826)")

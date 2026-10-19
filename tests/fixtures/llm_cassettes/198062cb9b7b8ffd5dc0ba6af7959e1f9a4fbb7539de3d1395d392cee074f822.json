@@ -1,0 +1,40 @@
+{
+  "key": "198062cb9b7b8ffd5dc0ba6af7959e1f9a4fbb7539de3d1395d392cee074f822",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_JHgDYTI6vFtg5NqsNvWMcgKq",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"89\",\"matches\":false,\"justification\":\"Le texte invoque l’unanimité des experts et exclut l’avis des non-experts, ce qui relève plutôt d’un argument d’autorité et d’une autorité non pertinente. Il ne prétend pas invoquer de nombreux faux spécialistes pour nier l’existence d’un consensus, comme l’exige ce nœud.\",\"confidence\":\"0.99\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EaUv2Nwy989JSQDvuZZK4n5wzsyvJ",
+        "created": 1792367368,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 800,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 103,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

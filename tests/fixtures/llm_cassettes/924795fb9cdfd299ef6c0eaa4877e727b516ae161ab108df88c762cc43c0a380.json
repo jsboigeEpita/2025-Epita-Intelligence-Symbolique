@@ -1,0 +1,48 @@
+{
+  "key": "924795fb9cdfd299ef6c0eaa4877e727b516ae161ab108df88c762cc43c0a380",
+  "value": {
+    "id": "chatcmpl-EaUzPmRgtTsSA74ze4aIDuNho5yWs",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La position adverse est identifiée : investir les 2000 euros dans du matériel pédagogique neuf, notamment des échiquiers, des horloges et des supports de cours, puisque les échiquiers actuels sont usés. Toutefois, le verdict indique une absence de réfutation constructive : cette position n’est pas réellement contestée ni réfutée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367639,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 85,
+      "prompt_tokens": 290,
+      "total_tokens": 375,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

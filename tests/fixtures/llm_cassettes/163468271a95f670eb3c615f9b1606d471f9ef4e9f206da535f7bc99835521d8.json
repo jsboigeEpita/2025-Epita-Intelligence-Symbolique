@@ -1,0 +1,48 @@
+{
+  "key": "163468271a95f670eb3c615f9b1606d471f9ef4e9f206da535f7bc99835521d8",
+  "value": {
+    "id": "chatcmpl-EaUsBHBbUY9Fzk2sFF8hfkmqKtwbD",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points abordent des dimensions distinctes : l’urgence alléguée et le risque d’effondrement (1), la qualification rhétorique en appel à la peur (2), et la présentation comme argument d’autorité (3, bien que le point soit tronqué). Le point 2 explicite la nature persuasive du point 1 sans le répéter substantiellement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367191,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 210,
+      "prompt_tokens": 297,
+      "total_tokens": 507,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 114,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

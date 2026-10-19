@@ -1,0 +1,48 @@
+{
+  "key": "b14ff3227e96001be50c631388af5297e9aa266b89d0831e0d59d79feb70fb0e",
+  "value": {
+    "id": "chatcmpl-EaUzRkJccFE4sd6Klf5Y1uL9LHaFk",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\":false,\"structure_verdict\":\"saut_logique\",\"reasoning\":\"Le fait que les échiquiers soient usés justifie éventuellement leur remplacement, mais ne suffit pas à conclure qu'il faut investir intégralement les 2000 euros dans l'ensemble du matériel neuf plutôt que retenir une autre option.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367641,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 130,
+      "prompt_tokens": 466,
+      "total_tokens": 596,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 53,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

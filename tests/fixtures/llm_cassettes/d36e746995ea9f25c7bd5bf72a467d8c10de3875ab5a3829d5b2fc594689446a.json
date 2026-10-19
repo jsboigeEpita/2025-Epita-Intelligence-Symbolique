@@ -1,0 +1,48 @@
+{
+  "key": "d36e746995ea9f25c7bd5bf72a467d8c10de3875ab5a3829d5b2fc594689446a",
+  "value": {
+    "id": "chatcmpl-EaUsN8LTzLSTiIxX10UesS3wXVtpO",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La position adverse est identifiée comme proposant la suppression des retraites, mais l'engagement est jugé constituer un homme de paille ; aucune réfutation constructive réelle de cette position n'est donc démontrée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367203,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 95,
+      "prompt_tokens": 267,
+      "total_tokens": 362,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 31,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

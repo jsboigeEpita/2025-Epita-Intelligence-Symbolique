@@ -1,0 +1,48 @@
+{
+  "key": "e3f1023805701ed243a6b933122f2e2eb770f5f09ab34000182424f8b8bf3675",
+  "value": {
+    "id": "chatcmpl-EaV4Khyr8Yggfx66jf4xzAPIu4oCy",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Le changement climatique n'est pas une réalité scientifique établie et peut être contesté.\",\"main_thesis\":\"Le changement climatique est une réalité scientifique incontestable et ne devrait pas être contesté, comme le montrent notamment les mesures indiquant une hausse de 1,1 degré depuis l'ère préindustrielle.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367944,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 200,
+      "prompt_tokens": 249,
+      "total_tokens": 449,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 114,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

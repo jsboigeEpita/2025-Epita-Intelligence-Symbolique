@@ -1,0 +1,40 @@
+{
+  "key": "27a6ad2f7b74a3db37fa2605ec27eabb704285305d9e3341388770d499c9d263",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_YSbi1y8HjqdSSvqAwSyj7d6R",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"212\",\"matches\":true,\"confidence\":\"medium\",\"justification\":\"L’expression « succès incontestable » est fortement connotée et présente la réussite de la politique comme moralement et discursivement acquise, sans fournir de justification ni de données.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EaUu9JMcOyMNLHfhAFVaHvlNRSgc6",
+        "created": 1792367313,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1627,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 599,
+            "cached_tokens": 1025,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 71,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "key": "a5a23d76f0ac7cd5e205c6104ad3cb997671452b2eec3237e2e3a3f55c2b0722",
+  "value": {
+    "id": "chatcmpl-EaUs6fTOgXUtfG4l5vIHxJ4yhWP3u",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne indique seulement que le ministre utilise une projection de déficit pour justifier une intervention, puis conclut que cette projection est contestable et insuffisante. Aucun élément ne relie logiquement la prémisse à cette conclusion ; le verdict « progression_logique » n’est donc pas démontré.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367186,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 190,
+      "prompt_tokens": 294,
+      "total_tokens": 484,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 110,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

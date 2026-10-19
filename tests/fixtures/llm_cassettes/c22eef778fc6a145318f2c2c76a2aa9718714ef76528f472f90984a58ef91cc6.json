@@ -1,0 +1,40 @@
+{
+  "key": "c22eef778fc6a145318f2c2c76a2aa9718714ef76528f472f90984a58ef91cc6",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_5TFM5XYQfOqaVM0JJrW5A4vr",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"699\",\"matches\":false,\"justification\":\"Les arguments invoquent un consensus d’experts et disqualifient l’avis des non-experts ; ils ne reposent pas circulairement sur l’acceptation préalable de leur conclusion.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EaUvSKyJHfBcTt6Zp8X20Ktk02uIS",
+        "created": 1792367394,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1471,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 443,
+            "cached_tokens": 1025,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 71,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

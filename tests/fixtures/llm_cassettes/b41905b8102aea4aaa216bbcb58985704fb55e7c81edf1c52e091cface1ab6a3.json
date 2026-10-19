@@ -1,0 +1,40 @@
+{
+  "key": "b41905b8102aea4aaa216bbcb58985704fb55e7c81edf1c52e091cface1ab6a3",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_xMcVWc5jLmPlZEAlLm85T7Z8",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"133\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L’affirmation catégorique d’un « succès incontestable » tire une conclusion excessivement forte sans fournir aucun élément ou preuve permettant de l’étayer.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EaUu8poq1goaG5vLRr4sfvwPsDzEh",
+        "created": 1792367312,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1903,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 875,
+            "cached_tokens": 1025,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 66,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

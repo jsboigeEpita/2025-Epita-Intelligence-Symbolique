@@ -1,0 +1,48 @@
+{
+  "key": "55ea9f0c98a0608ae0bd676e473f345785d77cb12eac87e4bba15d2264e77baf",
+  "value": {
+    "id": "chatcmpl-EaV4hsrIAiEZ1hNyfA3q485jOpHOj",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne relie l’unanimité des modèles prédictifs et la sélection des informations par les minimisateurs de la crise climatique à la conclusion que la transition énergétique est économiquement avantageuse, mais ce lien ne fournit pas l’inférence nécessaire : saut logique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367967,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 106,
+      "prompt_tokens": 289,
+      "total_tokens": 395,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 33,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

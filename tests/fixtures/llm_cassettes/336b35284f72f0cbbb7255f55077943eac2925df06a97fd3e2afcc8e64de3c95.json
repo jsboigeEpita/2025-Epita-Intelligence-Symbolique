@@ -1,0 +1,48 @@
+{
+  "key": "336b35284f72f0cbbb7255f55077943eac2925df06a97fd3e2afcc8e64de3c95",
+  "value": {
+    "id": "chatcmpl-EaV4cKlpejhB8OTFBtlR0KV5FI1tn",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Les mesures indiquent une hausse de 1,1 degré depuis l’ère préindustrielle et les modèles prédictifs sont présentés comme unanimes, puis la conclusion affirme que la vitesse du changement climatique actuel est sans précédent et réfute l’idée que le climat a toujours changé. Le verdict est un saut logique : les prémisses ne suffisent pas à établir l’absence de précédent ni la réfutation de l’argument.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367962,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 145,
+      "prompt_tokens": 301,
+      "total_tokens": 446,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 37,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

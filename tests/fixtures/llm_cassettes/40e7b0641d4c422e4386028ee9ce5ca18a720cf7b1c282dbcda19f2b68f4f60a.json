@@ -1,0 +1,40 @@
+{
+  "key": "40e7b0641d4c422e4386028ee9ce5ca18a720cf7b1c282dbcda19f2b68f4f60a",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_R1iOPhg6AaEnQkoa3I1ITce0",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"88\",\"matches\":false,\"justification\":\"Le texte invoque « les experts » comme autorité, mais ne prétend pas que leur titre est factice. Le problème relève plutôt d'un appel à l'autorité et d'une disqualification de l'avis des non-experts; le nœud « Professeur de rien » ne correspond donc pas.\",\"confidence\":\"high\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EaUv7rLpDc2kWQYW6rWMzaAnEVVYR",
+        "created": 1792367373,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 786,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 97,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

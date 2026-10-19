@@ -1,0 +1,48 @@
+{
+  "key": "358cddd437cead4ad24925f26b859e6f44c012b43def7085a34be708711c18a4",
+  "value": {
+    "id": "chatcmpl-EaUs52l1Mc5RWCBIVkJozeEhnxtdF",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La chaîne reconstruite présente une progression logique entre une prémisse dénonçant le sophisme naturaliste de la présentation gouvernementale et une conclusion contestant le caractère naturel et incontestable du travail plus longtemps. Toutefois, les deux segments sont tronqués et l’inférence reste donc partielle et imprécise ; verdict : progression_logique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367185,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 190,
+      "prompt_tokens": 295,
+      "total_tokens": 485,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 104,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
