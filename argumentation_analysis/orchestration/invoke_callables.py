@@ -30,7 +30,6 @@ from typing import (
 )
 
 from argumentation_analysis.core.reading_window import (
-    DEBATE_FALLBACK_WINDOW,
     LLM_EXTRACTION_WINDOW,
     LOGIC_ARGUMENT_WINDOW,
     LOGIC_READING_WINDOW,
@@ -1713,6 +1712,11 @@ async def _invoke_counter_argument(
     # key). Surfaced via the pipeline rollup
     # (unified_pipeline.run_unified_analysis → capabilities_degraded).
     llm_enrichment_failed = False
+    # #2850 lot 4 — the text fallback's k of N, initialized BEFORE the branch
+    # that sets it (the sibling lesson: a name bound only inside `if not
+    # targets` would raise NameError on every other path). 0 = never ran.
+    _ca_fallback_k = 0
+    _ca_fallback_n = 0
     try:
         client, model_id = _get_openai_client()
         if client:
@@ -1816,6 +1820,9 @@ async def _invoke_counter_argument(
                     )
                 ]
                 target_ids = [None]
+                # #2850 lot 4 — the window's k of N, read by the trace below.
+                _ca_fallback_k = len(targets[0])
+                _ca_fallback_n = len(input_text)
 
             llm_counters = await _generate_counters_for_targets(
                 client, model_id, targets, target_ids=target_ids
@@ -1848,11 +1855,20 @@ async def _invoke_counter_argument(
         _top_strat = ""
         if _n_ca > 0 and isinstance(llm_counters[0], dict):
             _top_strat = str(llm_counters[0].get("strategy_used", ""))
+        # #2850 lot 4 — when no unit could be targeted, the counter reads the
+        # document through a 500-char window; the trace says so (counts only,
+        # no source text — #2908).
+        _ca_window_note = (
+            f" Lecture de repli : {_ca_fallback_k} de {_ca_fallback_n} "
+            "caractères. (#2850)"
+            if _ca_fallback_k
+            else ""
+        )
         _state.add_trace_entry(
             phase="counter",
             agent="CounterArgumentAgent",
             reacts_to=["extract", "quality"],
-            summary=f"{_n_ca} contre-arguments générés — stratégie dominante: {_top_strat or 'mixte'}. Analyse par 5 stratégies rhétoriques.",
+            summary=f"{_n_ca} contre-arguments générés — stratégie dominante: {_top_strat or 'mixte'}. Analyse par 5 stratégies rhétoriques.{_ca_window_note}",
         )
     return result
 
@@ -2260,16 +2276,13 @@ async def _invoke_debate_analysis(
                         "WARNING: Formal inconsistency detected in PL/FOL analysis"
                     )
 
-            debate_material = (
-                "\n\n".join(debate_parts)
-                if debate_parts
-                else selected_text(
-                    input_text,
-                    DEBATE_FALLBACK_WINDOW,
-                    "debate_analysis",
-                    state=reading_state_from_context(context),
-                )
-            )
+            # #2850 lot 4 — the text fallback that stood here was DEAD code:
+            # this phase returns at :2063 when ``raw_arguments`` is empty
+            # (``no_arguments_upstream``) and appends the ARGUMENTS block
+            # unconditionally at :2190 whenever it is not, so ``debate_parts``
+            # is never empty on any path that reaches this line. Subtract the
+            # read rather than disclose one that never happens.
+            debate_material = "\n\n".join(debate_parts)
 
             det_params = _get_determinism_params()
             # G8 (#1184): hand the LLM the restored Walton scheme table so
@@ -2808,6 +2821,11 @@ async def _invoke_governance(
     # no context was built — honest zeros, not absent keys).
     _gov_fallacy_types_considered = 0
     _gov_fallacy_types_total = 0
+    # #2850 lot 4 — the deliberation window's k of N, initialized before the
+    # enrichment block (0 = the structured parts fed the prompt, the window
+    # never ran).
+    _gov_window_k = 0
+    _gov_window_n = 0
     try:
         client, model_id = _get_openai_client()
         if client:
@@ -2916,6 +2934,13 @@ async def _invoke_governance(
                     state=reading_state_from_context(context),
                 )
             )
+            # #2850 lot 4 — the fallback reads a 2,000-char head of the
+            # document: the trace (gated below on conflicts OR this window)
+            # names the k of N, so even a run with no material at all says
+            # what it read.
+            if not context_parts:
+                _gov_window_k = len(deliberation_input)
+                _gov_window_n = len(input_text)
 
             det_params = _get_determinism_params()
             response = await _guarded_chat_completion(
@@ -2982,6 +3007,10 @@ async def _invoke_governance(
         "conflicts": conflicts,
         "resolutions": resolutions,
         "conflict_count": len(conflicts),
+        # #2850 lot 4 — the deliberation window's k of N (0/0 when the
+        # structured parts were the material).
+        "deliberation_window_chars": _gov_window_k,
+        "deliberation_source_length": _gov_window_n,
         "extraction_method": "llm" if llm_governance else "heuristic",
         # GE-4 #1462 — the genuine verdict: a formal vote aggregation (or an
         # honest-degraded marker). NOT LLM-scored; the LLM assessment below is
@@ -3023,7 +3052,11 @@ async def _invoke_governance(
         result["consensus_potential"] = llm_governance.get("consensus_potential")
     # Trace entry for governance specialist
     _state = context.get("_state_object")
-    if _state is not None and result.get("conflict_count", 0) > 0:
+    # #2850 lot 4 — the window is its own reason to speak: the fallback only
+    # fires on a run with no material at all, where conflicts are 0 — gating
+    # the trace on conflicts alone kept that run silent about a 2,000-char
+    # head reading as if it were the document.
+    if _state is not None and (result.get("conflict_count", 0) > 0 or _gov_window_k):
         _n_conflicts = result.get("conflict_count", 0)
         _decided = result.get("governance_decided_firsthand", False)
         _verdict = result.get("governance_verdict", {})
@@ -3039,6 +3072,12 @@ async def _invoke_governance(
             f" Types de sophismes cités: {_gov_fallacy_types_considered} de "
             f"{_gov_fallacy_types_total}. (#2850)"
             if _gov_fallacy_types_total
+            else ""
+        )
+        _window_note = (
+            f" Lecture de repli : {_gov_window_k} de {_gov_window_n} "
+            "caractères. (#2850)"
+            if _gov_window_k
             else ""
         )
         _state.add_trace_entry(
@@ -3066,7 +3105,8 @@ async def _invoke_governance(
             )[0],
             summary=(
                 f"{_n_conflicts} conflits détectés — {_verdict_kind}. "
-                f"Gagnants distincts: {_distinct}.{_fallacy_note} (GE-4 #1462, #2969)"
+                f"Gagnants distincts: {_distinct}.{_fallacy_note}{_window_note} "
+                "(GE-4 #1462, #2969)"
             ),
         )
     return result
@@ -8539,6 +8579,16 @@ async def _invoke_fact_extraction(
         # corpus's JSON output is not silently truncated by the default
         # completion ceiling (the root cause of ``Expecting value (char ~3033)``).
         use_max_tokens = _EXTRACTION_MAX_TOKENS > 0
+        # #2850 lot 4 — the window is selected ONCE per call (same site and
+        # same selection as before: the retry loop re-computed an identical
+        # slice) so the payload and the trace can name the k of N the reader
+        # actually saw. Counts only downstream: no source text (#2908).
+        _extraction_reading = selected_text(
+            input_text,
+            LLM_EXTRACTION_WINDOW,
+            "fact_extraction",
+            state=reading_state_from_context(context),
+        )
         for attempt in range(1, _EXTRACTION_MAX_ATTEMPTS + 1):
             try:
                 llm_kwargs: Dict[str, Any] = dict(det_params)
@@ -8562,12 +8612,7 @@ async def _invoke_fact_extraction(
                         {"role": "system", "content": system_content},
                         {
                             "role": "user",
-                            "content": selected_text(
-                                input_text,
-                                LLM_EXTRACTION_WINDOW,
-                                "fact_extraction",
-                                state=reading_state_from_context(context),
-                            ),
+                            "content": _extraction_reading,
                         },
                     ],
                     **llm_kwargs,
@@ -8590,6 +8635,9 @@ async def _invoke_fact_extraction(
                         "claim_count": len(claims),
                         "argument_count": len(arguments),
                         "source_length": len(input_text),
+                        # #2850 lot 4 — the k of the k-of-N pair: how many
+                        # characters of the source the extraction read.
+                        "reading_window_chars": len(_extraction_reading),
                         "extraction_method": "llm",
                         "extraction_status": "ok",
                     }
@@ -8598,11 +8646,19 @@ async def _invoke_fact_extraction(
                     if _state is not None:
                         _n_args = _extract_result.get("argument_count", 0)
                         _n_claims = _extract_result.get("claim_count", 0)
+                        # #2850 lot 4 — a window that read less than the
+                        # document says so, in counts (no source text).
+                        _extract_window_note = (
+                            f" Lecture : {len(_extraction_reading)} des "
+                            f"{len(input_text)} caractères. (#2850)"
+                            if len(_extraction_reading) < len(input_text)
+                            else ""
+                        )
                         _state.add_trace_entry(
                             phase="extract",
                             agent="FactExtractor",
                             reacts_to=[],
-                            summary=f"{_n_args} arguments et {_n_claims} claims identifiés — extraction LLM. Phase fondatrice du pipeline.",
+                            summary=f"{_n_args} arguments et {_n_claims} claims identifiés — extraction LLM. Phase fondatrice du pipeline.{_extract_window_note}",
                         )
                     return _extract_result
                 # No parseable JSON — retry (the LLM is nondeterministic; a
@@ -8851,6 +8907,11 @@ async def _invoke_propositional_logic(
                         "propositional_logic",
                         state=reading_state_from_context(context),
                     )
+                    # #2850 lot 4 — the document window's k of N on the
+                    # payload; the trace entry at the selection gate below
+                    # names it too (counts only, no source text — #2908).
+                    pl_metrics["reading_window_chars"] = len(pl_reading)
+                    pl_metrics["source_total"] = len(input_text)
                     # ── Pass 1: Atom inventory from full source text ──
                     pass1_prompt = (
                         "You are an expert in propositional logic. Your task is to identify "
@@ -8924,6 +8985,46 @@ async def _invoke_propositional_logic(
                                     _pl_selection.largest_uncovered_stretch
                                 ),
                                 unit_ids=[u.unit_id for u in _pl_selection.selected],
+                            )
+
+                        # #2850 lot 4 — two capped reads touch this
+                        # population: the document window feeding Pass 1, and
+                        # the per-argument window a single-unit batch reads
+                        # through. Both are named — payload counts plus ONE
+                        # trace entry (the phase wrote none before: a reader
+                        # could not see that its formalisation read a head).
+                        _pl_over_cap = [
+                            t for t in _pl_targets if len(t) > LOGIC_ARGUMENT_WINDOW
+                        ]
+                        pl_metrics["argument_window_cap"] = LOGIC_ARGUMENT_WINDOW
+                        pl_metrics["argument_window_population"] = len(_pl_targets)
+                        pl_metrics["argument_window_over_cap"] = len(_pl_over_cap)
+                        _pl_window_bits = []
+                        if len(pl_reading) < len(input_text):
+                            _pl_window_bits.append(
+                                f"lecture {len(pl_reading)} des "
+                                f"{len(input_text)} caractères"
+                            )
+                        if _pl_over_cap:
+                            _pl_window_bits.append(
+                                f"fenêtre par argument ({LOGIC_ARGUMENT_WINDOW} car.) "
+                                f"dépassée par {len(_pl_over_cap)} des "
+                                f"{len(_pl_targets)} unités formalisées"
+                            )
+                        if (
+                            _pl_window_bits
+                            and state_obj is not None
+                            and hasattr(state_obj, "add_trace_entry")
+                        ):
+                            state_obj.add_trace_entry(
+                                phase="propositional_logic",
+                                agent="PropositionalLogicAgent",
+                                reacts_to=["extract"],
+                                summary=(
+                                    "Lecture limitée : "
+                                    + ", ".join(_pl_window_bits)
+                                    + ". (#2850)"
+                                ),
                             )
 
                         async def _pl_batch_coro(_batch: list[str]) -> list[str]:
@@ -9409,6 +9510,11 @@ async def _invoke_fol_reasoning(
                         "fol_reasoning",
                         state=reading_state_from_context(context),
                     )
+                    # #2850 lot 4 — same k-of-N pair as the PL arm, over the
+                    # ORIGINAL document: `_doc_text_fol`, never the
+                    # directive-prepended `input_text`.
+                    fol_metrics["reading_window_chars"] = len(fol_reading)
+                    fol_metrics["source_total"] = len(_doc_text_fol)
                     # ── Pass 1: Shared FOL signature from full text ──
                     pass1_prompt = (
                         "You are a formal logic expert. Analyze the text and extract a "
@@ -9499,6 +9605,48 @@ async def _invoke_fol_reasoning(
                                     unit_ids=[
                                         u.unit_id for u in _fol_selection.selected
                                     ],
+                                )
+
+                            # #2850 lot 4 — same disclosure as the PL arm:
+                            # document window and per-argument window, on the
+                            # payload and in one trace entry.
+                            _fol_over_cap = [
+                                t
+                                for t in _fol_targets
+                                if len(t) > LOGIC_ARGUMENT_WINDOW
+                            ]
+                            fol_metrics["argument_window_cap"] = LOGIC_ARGUMENT_WINDOW
+                            fol_metrics["argument_window_population"] = len(
+                                _fol_targets
+                            )
+                            fol_metrics["argument_window_over_cap"] = len(_fol_over_cap)
+                            _fol_window_bits = []
+                            if len(fol_reading) < len(_doc_text_fol):
+                                _fol_window_bits.append(
+                                    f"lecture {len(fol_reading)} des "
+                                    f"{len(_doc_text_fol)} caractères"
+                                )
+                            if _fol_over_cap:
+                                _fol_window_bits.append(
+                                    f"fenêtre par argument "
+                                    f"({LOGIC_ARGUMENT_WINDOW} car.) dépassée par "
+                                    f"{len(_fol_over_cap)} des "
+                                    f"{len(_fol_targets)} unités formalisées"
+                                )
+                            if (
+                                _fol_window_bits
+                                and state_obj is not None
+                                and hasattr(state_obj, "add_trace_entry")
+                            ):
+                                state_obj.add_trace_entry(
+                                    phase="fol_reasoning",
+                                    agent="FOLLogicAgent",
+                                    reacts_to=["extract"],
+                                    summary=(
+                                        "Lecture limitée : "
+                                        + ", ".join(_fol_window_bits)
+                                        + ". (#2850)"
+                                    ),
                                 )
 
                             async def _fol_batch_coro(_batch: list[str]) -> list[str]:

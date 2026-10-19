@@ -1000,22 +1000,17 @@ REGISTRY = {
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
         "selected_text",
-        "DEBATE_FALLBACK_WINDOW",
-        1,
-    ): (
-        "window",
-        "1500-char window from the selected offset",
-        "record_reading_window; Acts silent — #2850",
-    ),
-    (
-        "argumentation_analysis/orchestration/invoke_callables.py",
-        "selected_text",
         "_GOVERNANCE_DELIBERATION_WINDOW",
         1,
     ): (
         "window",
-        "2000-char window from the selected offset",
-        "record_reading_window; Acts silent — #2850",
+        "2000-char window from the selected offset; the fallback fires only "
+        "on a run with no material at all (no arguments and no debate/counter/"
+        "quality/fallacy/jtms outputs)",
+        "recorded via deliberation_window_chars/deliberation_source_length on "
+        "the governance payload and the governance trace summary (Lecture de "
+        "repli : k de N) — the trace now also fires on a zero-conflict run, "
+        "the only shape that reaches the window. Cap stays debt #2850 lot 4",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -1024,8 +1019,11 @@ REGISTRY = {
         1,
     ): (
         "window",
-        "2000-char window from the selected offset",
-        "record_reading_window; Acts silent — #2850",
+        "2000-char window of ONE unit's text, read when a batch holds a single "
+        "unit (PL arm); units longer than it are truncated there",
+        "recorded via pl_metrics argument_window_cap/population/over_cap and "
+        "the propositional_logic trace entry (Lecture limitée) — cap stays "
+        "debt #2850 lot 4",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -1034,8 +1032,11 @@ REGISTRY = {
         2,
     ): (
         "window",
-        "2000-char window from the selected offset",
-        "record_reading_window; Acts silent — #2850",
+        "2000-char window of ONE unit's text, read when a batch holds a single "
+        "unit (FOL arm); units longer than it are truncated there",
+        "recorded via fol_metrics argument_window_cap/population/over_cap and "
+        "the fol_reasoning trace entry (Lecture limitée) — cap stays debt "
+        "#2850 lot 4",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -1044,8 +1045,11 @@ REGISTRY = {
         1,
     ): (
         "window",
-        "3000-char window from the selected offset",
-        "record_reading_window; Acts silent — #2850",
+        "3000-char window from the selected offset — the phase that produces "
+        "identified_arguments",
+        "recorded via reading_window_chars/source_length on the extract "
+        "payload and the extract trace summary (Lecture : k des N caractères) "
+        "— cap stays debt #2850 lot 4",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -1054,8 +1058,11 @@ REGISTRY = {
         1,
     ): (
         "window",
-        "4000-char window from the selected offset",
-        "record_reading_window; Acts silent — #2850",
+        "4000-char window from the selected offset, read by the PL arm's "
+        "Pass 1 atom inventory",
+        "recorded via pl_metrics reading_window_chars/source_total and the "
+        "propositional_logic trace entry (Lecture limitée) — cap stays debt "
+        "#2850 lot 4",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -1064,8 +1071,11 @@ REGISTRY = {
         2,
     ): (
         "window",
-        "4000-char window from the selected offset",
-        "record_reading_window; Acts silent — #2850",
+        "4000-char window of the ORIGINAL document (_doc_text_fol, not the "
+        "directive-prepended input), read by the FOL arm's Pass 1 signature",
+        "recorded via fol_metrics reading_window_chars/source_total and the "
+        "fol_reasoning trace entry (Lecture limitée) — cap stays debt #2850 "
+        "lot 4",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -1074,8 +1084,10 @@ REGISTRY = {
         1,
     ): (
         "window",
-        "500-char window from the selected offset",
-        "record_reading_window; Acts silent — #2850",
+        "500-char window from the selected offset; the fallback fires when no "
+        "unit could be targeted (empty population and no quality scores)",
+        "recorded via the counter trace summary (Lecture de repli : k de N "
+        "caractères) — cap stays debt #2850 lot 4",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -1350,26 +1362,20 @@ REGISTRY = {
     ),
     (
         "argumentation_analysis/reporting/restitution/act3_conclusion_plugin.py",
-        "args",
+        "citable_args",
         "_MAX_CLAIM_EXCERPTS",
         1,
     ): (
         "population_cap",
-        "the dict head fills only excerpt budget the citations leave "
-        "unused (#2965); cited units always come first",
-        "silent on the unfilled remainder — debt #2850",
-    ),
-    (
-        "argumentation_analysis/reporting/restitution/act3_conclusion_plugin.py",
-        "cited_args",
-        "_MAX_CLAIM_EXCERPTS",
-        1,
-    ): (
-        "population_cap",
-        "the claims block is bounded at the _MAX_CLAIM_EXCERPTS most-cited "
-        "units (winner, salience, targets — #2965); citations beyond the "
-        "bound are unexcerpted",
-        "silent — debt #2850",
+        "the writer's excerpt list is bounded at the _MAX_CLAIM_EXCERPTS "
+        "most-cited units (winner, salience, targets — #2965); the dict fills "
+        "only the budget the citations leave unused. The old `args[:cap]` "
+        "second cap is GONE (#2850 lot 4): it could never bind before the "
+        "budget did, so the population is now the whole dict and the selected "
+        "set is byte-identical",
+        "recorded via claim_excerpts_total (cited units plus the dict's, "
+        "distinct) and the writer-prompt truncation notice — the #1622 idiom "
+        "the counters list already uses. Cap stays debt #2850 lot 4",
     ),
     ("argumentation_analysis/reporting/summary_generator.py", "argument", "50", 1): (
         "display",
