@@ -499,6 +499,12 @@ class Act3Evidence:
     # ``CITED_UNIT_TEXT_CAP`` (#2974's allocation), not the 240-char excerpt
     # cut that kept 31 % of the governance winner.
     claim_excerpts: List[Tuple[str, str]] = field(default_factory=list)
+    # #2850 lot 4 — the population ``claim_excerpts`` was cut from: the
+    # cited units plus the dict's remaining ones, distinct. The writer-prompt
+    # notice fires from the gap between what is listed and what exists, never
+    # from the cap alone — the ``counters_total`` precedent (#1622), so a run
+    # below the cap stays silent (no false alarm).
+    claim_excerpts_total: int = 0
     # #2965 (Acte III slice) — the governance winner's own text, capped.
     # The writer does not join an id to its unit across a long prompt
     # (measured on the saved state: wrong unit 4 of 5 samples, R1071), so
@@ -2231,14 +2237,18 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
                 _cite(anchor)
     for unit_id in sorted(cited_unit_ids(state)):
         _cite(unit_id)
-    selected_args = cited_args[:_MAX_CLAIM_EXCERPTS]
-    # The dict head fills only budget the citations leave unused — a state
-    # that cites fewer than the cap still hands the reader a few claims.
-    for unit_id in list(args)[:_MAX_CLAIM_EXCERPTS]:
-        if len(selected_args) >= _MAX_CLAIM_EXCERPTS:
-            break
-        if unit_id not in selected_args:
-            selected_args.append(unit_id)
+    # #2850 lot 4 — one population, one cap. The dict used to be a SECOND,
+    # silent cap (``list(args)[:_MAX_CLAIM_EXCERPTS]``): the fill draws after
+    # the citations and can only consume ``_MAX_CLAIM_EXCERPTS - len(cited)``
+    # entries, at most that many of the head's five are already cited, so
+    # the selected set and its order are IDENTICAL — what changes is that
+    # the population is now the whole dict and is named
+    # (``claim_excerpts_total``), which the prompt notice below reads.
+    citable_args = list(cited_args)
+    for unit_id in args:
+        if unit_id not in citable_args:
+            citable_args.append(unit_id)
+    selected_args = citable_args[:_MAX_CLAIM_EXCERPTS]
     claim_excerpts: List[Tuple[str, str]] = [
         (u, truncate_at_boundary(args[u], CITED_UNIT_TEXT_CAP))
         for u in selected_args
@@ -2277,6 +2287,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         debate_exchanges=debate_exchanges,
         deanonymized=bool(getattr(state, "deanonymized", True)),
         claim_excerpts=claim_excerpts,
+        claim_excerpts_total=len(citable_args),
         governance_winner_text=governance_winner_text,
         governance_divergent_texts=governance_divergent_texts,
         absent_dimensions=_collect_absent_dimensions(state),
@@ -2529,6 +2540,20 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         )
     else:
         claims_block = "  (aucune revendication extraite — G1 non passé)"
+    # #2850 lot 4 — same idiom as the counters notice above (#1622): the
+    # excerpt list is capped and is the ONLY place the writer sees claim
+    # text, so it must say it is capped or the conclusion writes as if the
+    # five units were the whole inventory. Fires from the gap between what
+    # is listed and what the selection could have listed, never from the cap
+    # alone — a run below the cap stays silent. Counts only: no source text.
+    _omitted_excerpts = evidence.claim_excerpts_total - len(evidence.claim_excerpts)
+    if _omitted_excerpts > 0:
+        claims_block += (
+            f"\n  (liste tronquée : {len(evidence.claim_excerpts)} revendications "
+            f"listées sur {evidence.claim_excerpts_total} citables au total, "
+            f"{_omitted_excerpts} non énumérées ici. N'écris pas, et ne laisse "
+            f"pas entendre, que cette liste est exhaustive.)"
+        )
 
     what_next_block = (
         "  Comment se faire son avis : aide le lecteur à relier le verdict à ce "

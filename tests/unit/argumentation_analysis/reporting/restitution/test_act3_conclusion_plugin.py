@@ -1493,11 +1493,17 @@ class TestCounterTruncationIsAnnounced:
         """Anti-pendule: a systematic notice would be a false alarm.
 
         A run that fits under the cap loses nothing; saying otherwise would tell
-        the LLM to hedge a complete list.
+        the LLM to hedge a complete list. Scoped to the COUNTER notice (#2850
+        lot 4): the same prompt now carries the excerpt notice whenever the
+        unit population exceeds its own cap — a different list, judged by its
+        own gap in ``test_act3_excerpts_population_2850_lot4`` — so a bare
+        "tronquée" grep would confuse the two.
         """
         for n in (0, 1, _COUNTER_LIST_CAP - 1, _COUNTER_LIST_CAP):
             prompt = _prompt_with_counters(n)
-            assert "tronquée" not in prompt, f"false truncation notice at n={n}"
+            assert (
+                "contre-arguments listés sur" not in prompt
+            ), f"false counter truncation notice at n={n}"
             assert "non énumérés" not in prompt, f"false omission notice at n={n}"
 
     def test_two_states_differing_only_in_count_yield_different_prompts(self) -> None:
