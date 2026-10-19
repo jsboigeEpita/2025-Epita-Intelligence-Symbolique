@@ -1,0 +1,48 @@
+{
+  "key": "03e7bf883622e689e2868edf758a4d3da877134a5a94c7e3f4771f909a38fb2f",
+  "value": {
+    "id": "chatcmpl-EaV0BaW20dj1sNIFQq8BMHROMdIw1",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.62,\"fairness_assessment\":\"Une décision par préférence collective est plus équitable qu’une simple sélection du gagnant du débat, car elle prend en compte les bénéfices, risques et priorités de chaque option. Un vote pondéré ou un classement préférentiel devrait éviter qu’une seule dimension, comme la qualité argumentative, domine.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"Agent A\",\"position\":\"Privilégie un tournoi inter-villes financé à hauteur de 2000 euros pour accroître la visibilité et recruter des membres.\",\"influence\":0.32},{\"agent\":\"Agent B\",\"position\":\"Privilégie l’investissement intégral dans du matériel pédagogique neuf afin de répondre à un besoin concret et immédiat.\",\"influence\":0.4},{\"agent\":\"Agent C\",\"position\":\"Propose une répartition égale du budget entre un tournoi réduit et du matériel pédagogique pour équilibrer visibilité et qualité de l’activité.\",\"influence\":0.28}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"Les options poursuivent des objectifs légitimes mais les preuves concernant le recrutement et l’impact du matériel restent incertaines. Une procédure de choix social, idéalement avec classement préférentiel et critères explicites, permettrait de départager équitablement les options. La meilleure résolution est un compromis conditionnel : financer d’abord le matériel le plus urgent, puis organiser un tournoi à coût réduit ou rechercher des sponsors, avec une évaluation ultérieure des résultats.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367687,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 412,
+      "prompt_tokens": 620,
+      "total_tokens": 1032,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 83,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

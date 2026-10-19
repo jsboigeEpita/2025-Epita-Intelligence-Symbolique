@@ -1,0 +1,48 @@
+{
+  "key": "98293594f27f87bd0ebeac46b50fd64a6b30e49333d682fb025c59d6f45cd545",
+  "value": {
+    "id": "chatcmpl-EaV2IHuVuPKL8Bqijkrsq1K7TD7v5",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Les personnes qui affirment que les vaccins sont dangereux ignorent des décennies de recherche clinique ; l’affirmation selon laquelle les entreprises pharmaceutiques cachent les effets secondaires est une théorie du complot sans fondement ; des taux de vaccination élevés protègent aussi les personnes qui ne peuvent pas être vaccinées grâce à l’immunité collective.\",\"conclusion\":\"Les vaccins ne sont pas dangereux et l’affirmation selon laquelle les entreprises pharmaceutiques dissimulent leurs effets secondaires doit être rejetée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367818,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 293,
+      "prompt_tokens": 276,
+      "total_tokens": 569,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 169,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

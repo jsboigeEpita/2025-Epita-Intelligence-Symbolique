@@ -1,0 +1,48 @@
+{
+  "key": "30464996c7f28baf2063585e9e4987eef86fe4cf03a922193f4d4f2853b3308f",
+  "value": {
+    "id": "chatcmpl-EaUxX2XENEsGFuev5WeVHx4k4thcb",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\":false,\"engagement_verdict\":\"pas_de_refutation\",\"reasoning\":\"Aucune réfutation distincte n’est fournie : le texte présente seulement les options B et C, sans objection adressée à la préférence pour l’option B.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367523,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 135,
+      "prompt_tokens": 335,
+      "total_tokens": 470,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 70,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

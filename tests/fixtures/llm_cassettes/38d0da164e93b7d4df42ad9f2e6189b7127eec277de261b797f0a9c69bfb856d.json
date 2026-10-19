@@ -1,14 +1,14 @@
 {
   "key": "38d0da164e93b7d4df42ad9f2e6189b7127eec277de261b797f0a9c69bfb856d",
   "value": {
-    "id": "chatcmpl-EXZCJL8Oc2Ek4t0fixe8VY9t251TK",
+    "id": "chatcmpl-EaUuJNmz5clfNNLwNDAroVg3XOAAq",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"formulas\":[\"President(president)\",\"EconomicPolicy(economicPolicy)\",\"Success(economicPolicy)\",\"Incontestable(economicPolicy)\",\"Affirms(president, economicPolicy)\"],\"predicates\":{\"President\":[\"Person\"],\"EconomicPolicy\":[\"Policy\"],\"Success\":[\"Policy\"],\"Incontestable\":[\"Policy\"],\"Affirms\":[\"Person\",\"Policy\"]},\"sorts\":{\"Person\":[\"president\"],\"Policy\":[\"economicPolicy\"]},\"constants\":{\"president\":\"the president\",\"economicPolicy\":\"the economic policy\"},\"confidence\":0.86}",
+          "content": "{\"formulas\":[\"AffirmeSuccesIncontestable(president, politiqueEconomique)\"],\"predicates\":{\"AffirmeSuccesIncontestable\":[\"Person\",\"Policy\"]},\"sorts\":{\"Person\":[\"president\"],\"Policy\":[\"politiqueEconomique\"]},\"constants\":{\"president\":\"the president\",\"politiqueEconomique\":\"the economic policy\"},\"confidence\":0.95}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1791668831,
+    "created": 1792367323,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 495,
+      "completion_tokens": 364,
       "prompt_tokens": 295,
-      "total_tokens": 790,
+      "total_tokens": 659,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 375,
+        "reasoning_tokens": 280,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

@@ -1,0 +1,48 @@
+{
+  "key": "477f55a9ec655c69b7a9f78042a18d0b7b1ac4e3370f1527efdb19b5f0a22779",
+  "value": {
+    "id": "chatcmpl-EaV24xHDUkBBmHTj0H8BMEsx35uKG",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"L'affirmation selon laquelle les entreprises pharmaceutiques dissimulent les effets secondaires des vaccins est une théorie du complot sans fondement, et les vaccins ne sont pas dangereux.\",\"digressions\":\"« Les taux de vaccination élevés protègent aussi ceux qui ne peuvent pas être vaccinés grâce à l'immunité collective. » Cette proposition est pertinente pour défendre la vaccination, mais elle ne réfute pas directement l'accusation de dissimulation des effets secondaires.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367804,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 219,
+      "prompt_tokens": 263,
+      "total_tokens": 482,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 102,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

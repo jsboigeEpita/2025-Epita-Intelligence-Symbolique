@@ -6,26 +6,26 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_0ICzanKmRD4DDoZV9LYDhEzw",
-          "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"759\",\"confidence\":\"medium\",\"matches\":true,\"justification\":\"L'affirmation présente le succès de la politique économique comme incontestable sans fournir de données, critères ni preuves suffisantes; elle tire donc une conclusion trop vite.\"}"
+          "id": "call_SneZaj9SnoAKaaRYXklbSTwk",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\":\"760\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EXZCEfxB5FiEFC4AKpjeZCPV6vH8Y",
-        "created": 1791668826,
+        "id": "chatcmpl-EaUuDc6WjwvSVspj0fCTXKUkqJH6D",
+        "created": 1792367317,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 1859,
+          "prompt_tokens": 1878,
           "prompt_tokens_details": {
             "audio_tokens": 0,
-            "cache_write_tokens": 1856,
-            "cached_tokens": 0,
+            "cache_write_tokens": 850,
+            "cached_tokens": 1025,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 68,
+          "completion_tokens": 22,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

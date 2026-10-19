@@ -1,0 +1,48 @@
+{
+  "key": "73a5f7c8c3bf97ec384b90b26b9989fc2be86262a8679ce4d8e4a76d3167d6a4",
+  "value": {
+    "id": "chatcmpl-EaV3b1BQqSni6QGVnGqpWYpZBoTka",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les trois points portent sur des idées distinctes : le risque d’erreur irréversible, le danger permanent posé par certains criminels et le coût comparé des procédures. Aucune redondance sémantique notable n’est identifiable.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367899,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 117,
+      "prompt_tokens": 298,
+      "total_tokens": 415,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 49,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

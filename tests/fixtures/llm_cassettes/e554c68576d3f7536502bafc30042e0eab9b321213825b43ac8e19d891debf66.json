@@ -1,0 +1,48 @@
+{
+  "key": "e554c68576d3f7536502bafc30042e0eab9b321213825b43ac8e19d891debf66",
+  "value": {
+    "id": "chatcmpl-EaUsWfyABrOMVLihMrt8oUO7yPLp2",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. L’appel à « penser à vos enfants » est une mobilisation émotionnelle qui détourne l’attention des questions techniques relatives au financement.\\n2. L’opposition construit un homme de paille en prétendant que quelqu’un aurait proposé de supprimer les retraites, alors qu’il a seulement été proposé de les réformer différemment.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367212,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 141,
+      "prompt_tokens": 233,
+      "total_tokens": 374,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 57,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

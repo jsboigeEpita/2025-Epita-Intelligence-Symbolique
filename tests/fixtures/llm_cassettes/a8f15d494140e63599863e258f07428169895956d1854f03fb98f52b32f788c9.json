@@ -6,26 +6,26 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_BZeQC0FsSch6OPkBK5tw02qz",
-          "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"798\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"Les phrases « Le soleil brille. Il fait beau. » ne contiennent aucune subtilité linguistique utilisée pour convaincre ni définition biaisée, comparaison trompeuse ou ambiguïté fallacieuse.\"}"
+          "id": "call_TXADhTzXeXaE1sjLoWC2DDvz",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"Les phrases « Le soleil brille. Il fait beau. » sont des énoncés simples et explicites, sans subtilité linguistique, définition biaisée, comparaison trompeuse ni ambiguïté exploitée.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EXZBOIwD6whd4zlabBADJ6ycmGW6i",
-        "created": 1791668774,
+        "id": "chatcmpl-EaUtNhiBYFdTGT98HvIUBISwPNc5V",
+        "created": 1792367265,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 1718,
+          "prompt_tokens": 1737,
           "prompt_tokens_details": {
             "audio_tokens": 0,
-            "cache_write_tokens": 1715,
+            "cache_write_tokens": 1734,
             "cached_tokens": 0,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 76,
+          "completion_tokens": 68,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

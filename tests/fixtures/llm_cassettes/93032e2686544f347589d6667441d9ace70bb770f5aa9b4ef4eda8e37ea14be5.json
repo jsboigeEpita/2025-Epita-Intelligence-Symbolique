@@ -6,26 +6,31 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_sDiShymspOWj5cHtz0QBWAIM",
+          "id": "call_E551upWK0zHsf6owIQkhPwVh",
           "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\":\"74\"}"
+          "arguments": "{\"node_pk\": \"74\"}"
+        },
+        {
+          "id": "call_hcJNvvJupAehbG4K988p2OIw",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\": \"73\", \"matches\": true, \"confidence\": \"high\", \"justification\": \"Les deux arguments traitent l’autorité ou le statut d’expert comme une garantie suffisante de vérité et disqualifient les avis des non-experts sans examiner les raisons. Cela correspond genuinement à l’obéissance aveugle à une autorité jugée suprême.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EXZDgGAYeLNnTXPDJ6pQyk03c2pl4",
-        "created": 1791668916,
+        "id": "chatcmpl-EaUvDTj7Ews0MvjTf14eIHGB2pDS1",
+        "created": 1792367379,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 1467,
+          "prompt_tokens": 1486,
           "prompt_tokens_details": {
             "audio_tokens": 0,
-            "cache_write_tokens": 1464,
-            "cached_tokens": 0,
+            "cache_write_tokens": 458,
+            "cached_tokens": 1025,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 22,
+          "completion_tokens": 128,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

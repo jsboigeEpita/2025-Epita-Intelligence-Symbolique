@@ -1,0 +1,48 @@
+{
+  "key": "d28428f4c3929c90a7ed17946d7d015f442db5d432b650d209c74b0c05444baa",
+  "value": {
+    "id": "chatcmpl-EaUrow5M5fcwl0kV9VJq5lIt45DWx",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Le gouvernement soutient qu'il faut réformer d'urgence, car sans action immédiate le système s'effondrera dans cinq ans, et que travailler plus longtemps serait « dans l'ordre des choses ».\",\"main_thesis\":\"Les justifications du gouvernement en faveur de la réforme sont fallacieuses et insuffisantes : elles reposent notamment sur un appel à la peur, un argument d'autorité et un sophisme naturaliste.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367168,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 194,
+      "prompt_tokens": 330,
+      "total_tokens": 524,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 84,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

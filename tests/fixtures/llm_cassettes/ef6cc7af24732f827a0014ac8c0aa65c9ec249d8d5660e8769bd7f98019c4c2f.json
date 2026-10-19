@@ -1,0 +1,48 @@
+{
+  "key": "ef6cc7af24732f827a0014ac8c0aa65c9ec249d8d5660e8769bd7f98019c4c2f",
+  "value": {
+    "id": "chatcmpl-EaV3UealHLWw1LH9ypCdRCRwvIfcO",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La prémisse établit que la peine de mort est irréversible et qu’une erreur judiciaire y est fatale ; cette conséquence fonde directement la conclusion selon laquelle il faut reconnaître la gravité particulière de ces erreurs. Verdict : progression_logique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367892,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 152,
+      "prompt_tokens": 280,
+      "total_tokens": 432,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 83,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

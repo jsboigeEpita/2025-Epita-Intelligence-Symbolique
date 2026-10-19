@@ -6,22 +6,22 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_MdxtNJyMSMV717UKL6tLahyY",
+          "id": "call_S00IzYoUxbOSwvl0X3dc9SLy",
           "name": "Exploration-explore_branch",
           "arguments": "{\"node_pk\":\"758\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EXZC8o9PSg0fUdMbwr21Cf8KbBlAy",
-        "created": 1791668820,
+        "id": "chatcmpl-EaUu60euqP8Ddd8A5uNk0MAdHj5pc",
+        "created": 1792367310,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 1753,
+          "prompt_tokens": 1772,
           "prompt_tokens_details": {
             "audio_tokens": 0,
-            "cache_write_tokens": 1750,
-            "cached_tokens": 0,
+            "cache_write_tokens": 744,
+            "cached_tokens": 1025,
             "image_tokens": null,
             "text_tokens": null
           },

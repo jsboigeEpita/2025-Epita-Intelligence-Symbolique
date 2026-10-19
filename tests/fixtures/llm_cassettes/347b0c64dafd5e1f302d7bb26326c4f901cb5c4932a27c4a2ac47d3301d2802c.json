@@ -6,18 +6,18 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_aMGWbXkfwU94EC3EytEKeKdC",
+          "id": "call_BFOqHPKofQZCUVlExHf56GYB",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"1389\",\"matches\":true,\"confidence\":0.99,\"justification\":\"L’argument 2 rejette l’avis d’une personne au seul motif qu’elle n’est pas experte, au lieu de répondre à sa critique ou d’examiner ses raisons. Cela correspond directement à la réponse de courtier. L’argument 1 relève également d’un appel non justifié à l’unanimité des experts, mais cela ne change pas l’adéquation de ce nœud à l’argument 2.\"}"
+          "arguments": "{\"node_pk\":\"1389\",\"matches\":true,\"justification\":\"Le deuxième argument écarte l’avis d’une personne uniquement parce qu’elle n’est pas experte, au lieu de répondre à la critique elle-même. Cela correspond directement à la réponse de courtier. Le premier argument relève séparément d’un appel à l’autorité, mais ne change pas l’identification de ce nœud.\",\"confidence\":\"high\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EXZDl9fMukkgvW36M116wItGiLYoO",
-        "created": 1791668921,
+        "id": "chatcmpl-EaUvWqGLCQ4ftwH0r2BaNVPGPcuiF",
+        "created": 1792367398,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 773,
+          "prompt_tokens": 792,
           "prompt_tokens_details": {
             "audio_tokens": 0,
             "cache_write_tokens": 0,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 129,
+          "completion_tokens": 104,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

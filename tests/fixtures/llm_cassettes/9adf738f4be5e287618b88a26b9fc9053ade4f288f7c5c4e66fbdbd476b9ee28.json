@@ -1,0 +1,40 @@
+{
+  "key": "9adf738f4be5e287618b88a26b9fc9053ade4f288f7c5c4e66fbdbd476b9ee28",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_Tdkpb9Ga5BG8N82SwIkJ7e4J",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"795\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"L'affirmation présente le succès de la politique économique comme incontestable sans fournir de prémisses ni de preuves justificatives; elle repose donc sur une prémisse supplémentaire non justifiée.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EaUuACcaCAcP68jbX3g9yFB9oLoZc",
+        "created": 1792367314,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1436,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 408,
+            "cached_tokens": 1025,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 72,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

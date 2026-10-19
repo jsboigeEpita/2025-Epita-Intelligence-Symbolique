@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "[\n  {\n    \"fallacy_name\": \"Non sequitur implicite\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.72\n  },\n  {\n    \"fallacy_name\": \"Confusion entre condition suffisante et condition simplement corrélée\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.68\n  },\n  {\n    \"fallacy_name\": \"Causalité simpliste implicite\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.48\n  },\n  {\n    \"fallacy_name\": \"Généralisation hâtive à partir d’un seul indice météorologique\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.42\n  },\n  {\n    \"fallacy_name\": \"Assertion gratuite\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.5\n  },\n  {\n    \"fallacy_name\": \"Absence de justification ou de preuve\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.45\n  },\n  {\n    \"fallacy_name\": \"Vaguité du terme « beau »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.74\n  },\n  {\n    \"fallacy_name\": \"Équivoque sur le sens de « beau »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.55\n  },\n  {\n    \"fallacy_name\": \"Appel implicite au sens commun\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.25\n  },\n  {\n    \"fallacy_name\": \"Sélection partielle des informations météorologiques\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.3\n  }\n]",
+      "content": "[\n  {\n    \"fallacy_name\": \"Assertion non étayée\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.82\n  },\n  {\n    \"fallacy_name\": \"Vaguité lexicale (« beau »)\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.95\n  },\n  {\n    \"fallacy_name\": \"Subjectivité présentée comme un fait objectif\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.72\n  },\n  {\n    \"fallacy_name\": \"Non sequitur implicite\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.48\n  },\n  {\n    \"fallacy_name\": \"Confusion entre corrélation et implication\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.35\n  },\n  {\n    \"fallacy_name\": \"Généralisation hâtive concernant les conditions météorologiques\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.28\n  },\n  {\n    \"fallacy_name\": \"Évidence anecdotique\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.25\n  }\n]",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EXZBEohaSCENqWWQh7ii4BmeIrbSl",
-        "created": 1791668764,
+        "id": "chatcmpl-EaUtHV2Ro56wVqj3J2KK5ZeI59Jnr",
+        "created": 1792367259,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 203,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 1254,
+          "completion_tokens": 569,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 835,
+            "reasoning_tokens": 281,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

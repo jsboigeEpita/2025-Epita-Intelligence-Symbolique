@@ -1,0 +1,40 @@
+{
+  "key": "98501fa5da72599f46c255b2f4de5d2a1440b559137e11de94ba197ad41f734e",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_xCR34TrEuQI9w7zog3PXk0sZ",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"186\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L’assertion « succès incontestable » est une formule concise, catégorique et accrocheuse utilisée comme argument, sans fournir d’éléments pour établir le succès ou son caractère incontestable.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EaUuBAf8nhwH6crRihdRABZEUcRvM",
+        "created": 1792367315,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 761,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 75,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

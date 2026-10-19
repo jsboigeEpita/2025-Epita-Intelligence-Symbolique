@@ -1,0 +1,48 @@
+{
+  "key": "b1f07d577f3a84fc8b5d6a57128c8ecf166afa05573f9ba1874f25ba2d4344d0",
+  "value": {
+    "id": "chatcmpl-EaV3JW854T9XmxZC6zMSBnbvkXTIv",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\":false,\"engagement_verdict\":\"pas_de_refutation\",\"reasoning\":\"La remarque sur l’irréversibilité et le risque d’erreur fatale n’invalide ni ne conteste l’argument du coût élevé des appels et des procédures, qui est simplement répété.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367881,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 169,
+      "prompt_tokens": 320,
+      "total_tokens": 489,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 96,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

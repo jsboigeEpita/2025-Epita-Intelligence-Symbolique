@@ -6,41 +6,36 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_3o1eUfnKAHlvALNUaVXjgZu0",
+          "id": "call_HtnYzP3JKYknNqzN8L7sJJ5X",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"697\"}"
+        },
+        {
+          "id": "call_6mEWRPhMEy3afLUCaS9euR2t",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"726\"}"
+        },
+        {
+          "id": "call_Mtyoj4KcNB4o7vWBcvghCp6d",
           "name": "Exploration-explore_branch",
           "arguments": "{\"node_pk\": \"758\"}"
-        },
-        {
-          "id": "call_VIiGGsLXFWcbvWvyWNGfCX9Q",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"759\"}"
-        },
-        {
-          "id": "call_bqj5lXL1a4CSpwtRP9R5E37R",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"784\"}"
-        },
-        {
-          "id": "call_mkrSyuiMVkMoAjWQL5KfrSF2",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"735\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EXZDK8OVgR52USQfa4MXOfwa77yls",
-        "created": 1791668894,
+        "id": "chatcmpl-EaUvN4LpQkHp3qAGJk5cwCa7IsEVg",
+        "created": 1792367389,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 1772,
+          "prompt_tokens": 1791,
           "prompt_tokens_details": {
             "audio_tokens": 0,
-            "cache_write_tokens": 1769,
-            "cached_tokens": 0,
+            "cache_write_tokens": 763,
+            "cached_tokens": 1025,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 95,
+          "completion_tokens": 76,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

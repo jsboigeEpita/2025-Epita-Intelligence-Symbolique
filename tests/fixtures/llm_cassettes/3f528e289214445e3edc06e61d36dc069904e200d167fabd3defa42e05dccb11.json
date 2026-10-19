@@ -1,0 +1,48 @@
+{
+  "key": "3f528e289214445e3edc06e61d36dc069904e200d167fabd3defa42e05dccb11",
+  "value": {
+    "id": "chatcmpl-EaV4fL3YLSef5k0iG20pYYVpJZ4OA",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Les prémisses indiquent une hausse de 1,1 °C depuis l’ère préindustrielle et une vitesse de changement actuelle exceptionnellement élevée, tandis que la conclusion attribue principalement ce changement aux activités humaines et rejette une explication alternative. Le verdict est un saut logique : les données énoncées ne suffisent pas, à elles seules, à établir cette attribution causale.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367965,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 146,
+      "prompt_tokens": 300,
+      "total_tokens": 446,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 45,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

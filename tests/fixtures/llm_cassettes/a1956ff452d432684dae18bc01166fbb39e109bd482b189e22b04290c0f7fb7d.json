@@ -6,27 +6,27 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_8TBPgNIQqpwfAlr9XTaQfNt1",
+          "id": "call_J0ZxMfSqlPbf3PHk2Lrfgjcb",
           "name": "Exploration-explore_branch",
           "arguments": "{\"node_pk\": \"190\"}"
         },
         {
-          "id": "call_5xwZcSkv8kEAHfZL74F0OwFE",
+          "id": "call_LMXqO3bShMYvq64YVd5LiZ4K",
           "name": "Exploration-explore_branch",
           "arguments": "{\"node_pk\": \"177\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EXZD4d9eh8K3YArRngSaG1S75l6OF",
-        "created": 1791668878,
+        "id": "chatcmpl-EaUvLAQbPj67wRazk8W6LGW9NWiUG",
+        "created": 1792367387,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 2049,
+          "prompt_tokens": 2068,
           "prompt_tokens_details": {
             "audio_tokens": 0,
-            "cache_write_tokens": 2046,
-            "cached_tokens": 0,
+            "cache_write_tokens": 1040,
+            "cached_tokens": 1025,
             "image_tokens": null,
             "text_tokens": null
           },

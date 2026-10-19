@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\"propositions\":[\"it_is_raining\",\"the_street_is_wet\"]}",
+      "content": "{\"propositions\":[\"il_pleut\",\"la_rue_est_mouillee\"]}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EXZJi5LnQ731GvssMyVfbmr4f8Chk",
-        "created": 1791669290,
+        "id": "chatcmpl-EaV1JXeyKjTRuxUDqxtAJ3e5ntFRh",
+        "created": 1792367757,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 220,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 120,
+          "completion_tokens": 102,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 94,
+            "reasoning_tokens": 75,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

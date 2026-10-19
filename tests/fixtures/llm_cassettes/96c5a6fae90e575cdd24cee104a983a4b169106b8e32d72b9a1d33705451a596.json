@@ -1,0 +1,48 @@
+{
+  "key": "96c5a6fae90e575cdd24cee104a983a4b169106b8e32d72b9a1d33705451a596",
+  "value": {
+    "id": "chatcmpl-EaUrvchzfxOj0yzamURxFiNTjoIFO",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Prémisse : tous les pays européens ont déjà réformé leur système de retraite. Conclusion : la réforme des retraites est nécessaire. Verdict : saut logique, car le fait que d’autres pays aient réformé leur système ne suffit pas à démontrer la nécessité de cette réforme.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367175,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 72,
+      "prompt_tokens": 265,
+      "total_tokens": 337,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

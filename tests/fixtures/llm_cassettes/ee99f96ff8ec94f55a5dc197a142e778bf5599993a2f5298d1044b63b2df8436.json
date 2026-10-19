@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"Test(test_memoire_numero_8)\",\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"chose\"\n  },\n  \"reasoning\": \"La première phrase est interprétée comme le fait que test_memoire_numero_8 est un test. La seconde phrase affirme que tout objet qui est un test est important.\"\n}",
+      "content": "{\n  \"formulas\": [\n    \"TestMemoire(test8)\",\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"TestMemoire\": \"est le test mémoire numéro 8\",\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"Le premier énoncé est représenté comme un fait concernant le test mémoire numéro 8. Le second énoncé affirme que tout objet qui est un test est important.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EXZHLoeEGV7QPwBy7Ikdh46J4X9Nv",
-        "created": 1791669143,
+        "id": "chatcmpl-EaUyvI2f6vt6umjZlEXW57Zz06HSE",
+        "created": 1792367609,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 285,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 454,
+          "completion_tokens": 450,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 326,
+            "reasoning_tokens": 314,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

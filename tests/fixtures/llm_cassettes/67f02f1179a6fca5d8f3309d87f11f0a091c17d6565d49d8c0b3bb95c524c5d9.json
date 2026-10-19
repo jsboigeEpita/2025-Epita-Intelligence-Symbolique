@@ -6,26 +6,26 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_QdnhhfaBo66c3dfmZ1dyCjpr",
+          "id": "call_bYdyirsdl1MXKbHGluoSwCrJ",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"190\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"Les deux arguments disqualifient l'avis des non-experts et présentent l'unanimité des experts comme une preuve suffisante, en faisant pression sur l'auditoire pour accepter la conclusion sans examen des raisons ou des preuves.\"}"
+          "arguments": "{\"node_pk\":\"190\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"Les deux arguments intimident en invoquant l’unanimité des experts comme preuve suffisante et en disqualifiant l’avis des non-experts, faisant croire que la contestation est incompétente plutôt que de fournir des raisons.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EXZDICbdsLM9yvwxunOkjVF719PTB",
-        "created": 1791668892,
+        "id": "chatcmpl-EaUvMDLjWfc98f6dNNjlwrxSWfg3u",
+        "created": 1792367388,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 1798,
+          "prompt_tokens": 1817,
           "prompt_tokens_details": {
             "audio_tokens": 0,
-            "cache_write_tokens": 1795,
-            "cached_tokens": 0,
+            "cache_write_tokens": 789,
+            "cached_tokens": 1025,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 83,
+          "completion_tokens": 84,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

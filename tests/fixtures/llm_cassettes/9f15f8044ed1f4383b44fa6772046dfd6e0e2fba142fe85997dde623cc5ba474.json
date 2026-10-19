@@ -1,0 +1,48 @@
+{
+  "key": "9f15f8044ed1f4383b44fa6772046dfd6e0e2fba142fe85997dde623cc5ba474",
+  "value": {
+    "id": "chatcmpl-EaV4VwqpDlx359mYQCa9zHSBF6EUK",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\":false,\"structure_verdict\":\"saut_logique\",\"reasoning\":\"Les prémisses mentionnent l’unanimité des modèles sur l’impact humain et la vitesse du changement, mais ne suffisent pas à établir à elles seules que les activités humaines en sont la cause ni que ses conséquences sont prévisibles.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367955,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 140,
+      "prompt_tokens": 408,
+      "total_tokens": 548,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 63,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

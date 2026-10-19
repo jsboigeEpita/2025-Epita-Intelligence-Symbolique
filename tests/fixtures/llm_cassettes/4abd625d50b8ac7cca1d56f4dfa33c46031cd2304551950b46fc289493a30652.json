@@ -6,26 +6,26 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_OzOOWRlZBE6nRz69UERbLSlO",
+          "id": "call_gomf53S10hAiMzFGisbsu90U",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"1\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"Les deux phrases sont de simples affirmations descriptives, sans argument ni conclusion à démontrer; elles n’exhibent pas une insuffisance argumentative fallacieuse.\"}"
+          "arguments": "{\"node_pk\":\"1\",\"matches\":false,\"justification\":\"Les deux phrases sont de simples assertions descriptives sans conclusion argumentative ni raisonnement insuffisant à démontrer une proposition.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EXZBPK00pRPzog6zzcm2dOYcdJ1zi",
-        "created": 1791668775,
+        "id": "chatcmpl-EaUtNj5SHUkU0fWyejzceqkp3EtWk",
+        "created": 1792367265,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 1751,
+          "prompt_tokens": 1770,
           "prompt_tokens_details": {
             "audio_tokens": 0,
-            "cache_write_tokens": 1748,
+            "cache_write_tokens": 1767,
             "cached_tokens": 0,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 69,
+          "completion_tokens": 54,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

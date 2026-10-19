@@ -1,0 +1,48 @@
+{
+  "key": "9d722e6101a72809f2b1f8e75886a765e8e96d9bd38b5fa8816352e6a28d8699",
+  "value": {
+    "id": "chatcmpl-EaV4INsMQD78piAif9myB0OSHv9zs",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"obstacle_genuinely_opaque\":false,\"clarity_verdict\":\"résolvable_contexte\",\"reasoning\":\"Le contexte climatique permet d’inférer que l’ère préindustrielle désigne la période précédant l’industrialisation et que les modèles prédictifs sont des modèles climatiques, même si leurs limites précises ne sont pas spécifiées.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367942,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 155,
+      "prompt_tokens": 347,
+      "total_tokens": 502,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 70,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

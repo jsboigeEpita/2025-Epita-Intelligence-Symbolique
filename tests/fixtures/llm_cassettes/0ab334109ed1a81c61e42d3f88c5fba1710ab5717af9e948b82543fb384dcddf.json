@@ -1,0 +1,48 @@
+{
+  "key": "0ab334109ed1a81c61e42d3f88c5fba1710ab5717af9e948b82543fb384dcddf",
+  "value": {
+    "id": "chatcmpl-EaUsD2CgPV5Gj7gqCBTZEL6wA7EpK",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points portent sur des idées distinctes : le premier critique le caractère prétendument naturel du fait de travailler plus longtemps, tandis que le second avance une prédiction d’effondrement du système à cinq ans. Aucune redondance substantielle n’est visible.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792367193,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 126,
+      "prompt_tokens": 296,
+      "total_tokens": 422,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 51,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

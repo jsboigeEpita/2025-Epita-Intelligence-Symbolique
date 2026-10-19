@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La phrase « Tous les tests sont importants » se traduit par une implication universelle : pour tout objet X, si X est un test, alors X est important. « Test mémoire numéro 4 » est interprété comme un titre ou une référence au test, et non comme une proposition logique supplémentaire.\"\n}",
+      "content": "{\n  \"formulas\": [\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La phrase « Test mémoire numéro 4 » est interprétée comme un titre ou une indication de contexte, et n'est donc pas formalisée comme une proposition. La phrase « Tous les tests sont importants » se traduit par : pour tout individu X, si X est un test, alors X est important.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EXZH4WRzH9dkl3gHIowRKTuFe94YV",
-        "created": 1791669126,
+        "id": "chatcmpl-EaUygD0sLFMPESwrpISxZ7MmJPeVm",
+        "created": 1792367594,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 285,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 452,
+          "completion_tokens": 362,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 314,
+            "reasoning_tokens": 221,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }
