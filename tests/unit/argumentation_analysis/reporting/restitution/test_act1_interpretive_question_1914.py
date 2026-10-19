@@ -152,12 +152,19 @@ def test_act1_prompt_demands_a_document_specific_question():
         "#1914: the Acte I prompt must instruct the LLM to close the "
         "framing with the interpretive question"
     )
-    # The directive must bind the question to THIS document's verified data
-    # (anti-template) and forbid inventing context (#1906/#1910 frontier).
+    # The directive must bind the question to THIS document's data (anti-template)
+    # and forbid inventing context (#1906/#1910 frontier). #3073 moved the anchor
+    # wording from « ce qui est vérifié » to « métadonnée enregistrée »: the
+    # "verified" heading was exactly what promoted inferred fields (stakes,
+    # register, arena) to facts and put Acte I in contradiction with Acte III.
+    # The intent is unchanged — anchor the question in what the run recorded.
     directive_zone = prompt[prompt.index("QUESTION INTERPRÉTATIVE") :]
     assert (
-        "vérifiée" in directive_zone or "vérifié" in directive_zone
-    ), "the question directive must anchor the question in verified data"
+        "métadonnée enregistrée" in directive_zone
+    ), "the question directive must anchor the question in recorded data"
+    assert (
+        "inférence du texte ne fait" in directive_zone
+    ), "an inference must not pass for a metadata fact (#3073)"
     assert (
         "n'invente" in directive_zone or "JAMAIS" in directive_zone
     ), "the question directive must forbid invented context"

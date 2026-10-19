@@ -45,6 +45,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
+from .arena_record import ArenaRecord, build_arena_record, format_arena_line
 from .fr_accord import accord
 from .llm_weaving import LlmCallable, WeaveOutcome, weave
 from .readability_gate import GateVerdict, ReadabilityGate
@@ -120,8 +121,12 @@ class Act1Evidence:
     # Les enjeux
     stakes: List[str] = field(default_factory=list)
     rhetorical_register: str = ""
-    discursive_arena: str = ""
     has_stakes: bool = False
+    # #3073 — l'arène n'est plus un champ brut mais l'enregistrement partagé
+    # (valeur + provenance) que l'Acte III lit aussi : un seul conteneur, une
+    # seule étiquette. Le champ ``discursive_arena`` (la lecture de
+    # l'extracteur, imprimée sans provenance) est retiré — c'était le défaut.
+    arena: ArenaRecord = field(default_factory=ArenaRecord)
     # Spectre attendu (derived from taxonomy common_contexts)
     expected_spectrum: List[ExpectedFamily] = field(default_factory=list)
     spectrum_general: bool = False  # True when genre unknown → full taxonomy
@@ -234,7 +239,9 @@ def _truncate(text: Any, cap: int) -> str:
     return s if len(s) <= cap else s[:cap].rstrip() + " […]"
 
 
-def _derive_genre(state: Any) -> Tuple[str, str]:
+def _derive_genre(
+    state: Any, arena_record: ArenaRecord | None = None
+) -> Tuple[str, str]:
     """Derive the discourse genre (the concrete discursive domain) from the state.
 
     The arena is preferred over the register because the taxonomy
@@ -242,20 +249,26 @@ def _derive_genre(state: Any) -> Tuple[str, str]:
     not Aristotelian registers (délibératif, polémique) — a register alone never
     narrows the expected spectrum. The register is still surfaced separately in
     the framing (``evidence.rhetorical_register`` → stakes_block), so no signal
-    is lost. Returns (genre_lowercased, source_label); unknown →
-    (``_GENRE_UNKNOWN``, "").
+    is lost. #3073: the arena is read from the shared record — the genre then
+    follows the same container both acts quote (a documented arena beats an
+    inferred one instead of the reverse). A caller that already holds the
+    record (``build_act1_evidence``) passes it; ``build_arena_record`` stays
+    the default so direct calls see the same resolution. Returns
+    (genre_lowercased, source_label); unknown → (``_GENRE_UNKNOWN``, "").
     """
+    arena_record = arena_record or build_arena_record(state)
+    if arena_record.value:
+        return arena_record.value.lower(), arena_record.source_key
     stakes = getattr(state, "stakes_and_stakeholders", {}) or {}
     if isinstance(stakes, dict):
-        arena = str(stakes.get("discursive_arena", "") or "").strip()
-        if arena:
-            return arena.lower(), "discursive_arena"
         register = str(stakes.get("rhetorical_register", "") or "").strip()
         if register:
             return register.lower(), "rhetorical_register"
     metadata = getattr(state, "source_metadata", {}) or {}
     if isinstance(metadata, dict):
-        for key in ("genre", "register", "type", "arena", "context"):
+        # #3073 — pas de clé « arena » ici : le record l'a déjà consommée, et
+        # un « arena: unknown » ne doit pas devenir un genre.
+        for key in ("genre", "register", "type", "context"):
             val = str(metadata.get(key, "") or "").strip()
             if val:
                 return val.lower(), f"source_metadata.{key}"
@@ -333,12 +346,10 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
         stakes_obj.get("stakes") or stakes_obj.get("stakeholders")
     )
     register = ""
-    arena = ""
     stakes_list: List[str] = []
     stakeholders: List[StakeholderInfo] = []
     if isinstance(stakes_obj, dict):
         register = str(stakes_obj.get("rhetorical_register", "") or "").strip()
-        arena = str(stakes_obj.get("discursive_arena", "") or "").strip()
         for s in stakes_obj.get("stakes", []) or []:
             if isinstance(s, dict):
                 desc = s.get("description") or s.get("stake_type") or ""
@@ -360,7 +371,11 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
                         )
                     )
 
-    genre, genre_source = _derive_genre(state)
+    # #3073 — one record per build: the evidence's ``arena`` and the genre
+    # derivation read the SAME resolution (a second build_arena_record call
+    # here recomputed a pure function for nothing — cross-review cosmetic).
+    arena_record = build_arena_record(state)
+    genre, genre_source = _derive_genre(state, arena_record)
     families = _load_families()
     spectrum_available = bool(families)
     expected_spectrum, spectrum_general = _derive_expected_spectrum(families, genre)
@@ -389,8 +404,8 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
         genre_source=genre_source,
         stakes=stakes_list,
         rhetorical_register=register,
-        discursive_arena=arena,
         has_stakes=has_stakes,
+        arena=arena_record,
         expected_spectrum=expected_spectrum,
         spectrum_general=spectrum_general,
         spectrum_available=spectrum_available,
@@ -483,10 +498,13 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         stakes_block = "\n".join(stakes_lines)
         if evidence.rhetorical_register:
             stakes_block += f"\n  Registre rhétorique : {evidence.rhetorical_register}"
-        if evidence.discursive_arena:
-            stakes_block += f"\n  Arène discursive : {evidence.discursive_arena}"
     else:
         stakes_block = "  (enjeux non extraits — cadrage limité au microscope interne)"
+    # #3073 — l'arène est l'enregistrement partagé des deux actes : elle se
+    # rend ICI avec sa provenance, hors du conditionnel `has_stakes` (une
+    # arène peut être renseignée quand les enjeux ne le sont pas), et l'Acte
+    # III en cite la même ligne. Une seule ligne, un seul formateur.
+    stakes_block += f"\n  {format_arena_line(evidence.arena)}"
 
     # --- Spectre attendu (derived) ---
     if not evidence.spectrum_available:
@@ -513,7 +531,9 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         )
         spectrum_note = (
             f"Spectre : DÉRIVÉ du genre « {evidence.genre} » (source : "
-            f"{evidence.genre_source}). Ces familles sont attendues POUR CE "
+            f"{evidence.genre_source} — "
+            f"{'métadonnée enregistrée' if evidence.genre_source.startswith('source_metadata') else 'inférée du texte'}"
+            f"). Ces familles sont attendues POUR CE "
             f"genre — ancre chacune sur le contexte qui la rend probable."
         )
 
@@ -604,32 +624,43 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         f"{_WEAVING_RULE}\n\n"
         f"{_FAIL_LOUD_INSTRUCTION}\n\n"
         f"{virtuous_section}"
-        "DONNÉES VERIFIÉES DANS LE STATE :\n\n"
-        f"[LE TEXTE — métadonnées]\n{meta_block}\n\n"
-        f"[LES ENJEUX]\n{stakes_block}\n\n"
+        # #3073 — le titre étiquetait tout le bloc « vérifié » alors que les
+        # enjeux, le registre et l'arène sont des lectures du texte (le
+        # rédacteur répétait « vérifiée », comme instruit, et l'Acte III
+        # disait l'inverse). Le bloc dit maintenant sa provenance ligne à
+        # ligne : « enregistré » = métadonnée, « inféré » = lecture.
+        "DONNÉES DU STATE — provenance étiquetée bloc à bloc "
+        "(« métadonnée enregistrée » = lu dans source_metadata ; « inférée du "
+        "texte » = lecture de modèle, jamais une donnée vérifiée) :\n\n"
+        f"[LE TEXTE — métadonnées enregistrées]\n{meta_block}\n\n"
+        f"[LES ENJEUX — inférés du texte par l'extracteur (jamais « vérifiés »)]\n{stakes_block}\n\n"
         f"[SPECTRE ATTENDU — dérivation taxonomie]\n{spectrum_note}{spectrum_coda}\n"
         f"{spectrum_block}\n\n"
-        f"[LECTURE GAME-THEORETIC]\n{gt_block}\n{gt_note}\n\n"
+        f"[LECTURE GAME-THEORETIC — parties inférées du texte ; inventaire = état]\n{gt_block}\n{gt_note}\n\n"
         "CONSIGNE DE RÉDACTION :\n"
         "- Rédige 4 paragraphes thématiques (un par battement), en prose lisible,\n"
         "  pas une liste de champs.\n"
         "- OUVRE le premier battement (« Le texte ») en nommant le locuteur,\n"
-        "  l'arène et l'époque réels (via les métadonnées) — un lecteur doit\n"
-        "  situer immédiatement QUI parle, OÙ et dans quel CONTEXTE avant toute\n"
-        "  analyse. Ne reporter pas l'identification aux actes suivants.\n"
+        "  l'arène et l'époque réels — d'après les blocs ci-dessus, chacun avec\n"
+        "  sa provenance étiquetée : une arène INFÉRÉE du texte ne s'annonce\n"
+        "  jamais comme vérifiée. Un lecteur doit situer immédiatement QUI\n"
+        "  parle, OÙ et dans quel CONTEXTE avant toute analyse. Ne reporte pas\n"
+        "  l'identification aux actes suivants.\n"
         "- Pour le spectre, ancre chaque famille sur le contexte qui la rend\n"
         "  probable pour ce genre (ex. « dans un discours politique, l'appel à\n"
         "  l'autorité et l'attaque personnelle sont à guetter car… »).\n"
         "- TERMINE l'Acte I en posant LA QUESTION INTERPRÉTATIVE de ce\n"
         "  document : la question centrale que l'analyse (Acte II) instruit et\n"
         "  que la conclusion (Acte III) devra trancher sur CE discours. Dérive-\n"
-        "  la des données vérifiées ci-dessus (genre, enjeux, parties engagées,\n"
-        "  spectre attendu) : elle doit être spécifique à ce document — une\n"
-        "  question réutilisable sur n'importe quel discours est un échec.\n"
+        "  la des données ci-dessus (genre, enjeux, parties engagées, spectre\n"
+        "  attendu — chacune avec sa provenance étiquetée) : elle doit être\n"
+        "  spécifique à ce document — une question réutilisable sur n'importe\n"
+        "  quel discours est un échec.\n"
         "  Écris-la en DERNIÈRE ligne, au format exact :\n"
         "  QUESTION INTERPRÉTATIVE : <la question en une phrase>\n"
         "  Si des métadonnées manquent, ancre la question dans ce qui est\n"
-        "  vérifié ; n'invente JAMAIS de contexte pour la formuler.\n"
+        "  étiqueté « métadonnée enregistrée » ; une inférence du texte ne fait\n"
+        "  pas une métadonnée — n'invente JAMAIS de contexte pour la formuler.\n"
         "- Le récit doit VARIER selon le contenu réel ci-dessus : pas de prose\n"
         "  générique recyclable.\n"
         "- Rédige en français, markdown léger (titres thématiques en ###). "

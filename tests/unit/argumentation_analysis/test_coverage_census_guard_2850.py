@@ -1377,6 +1377,18 @@ REGISTRY = {
         "distinct) and the writer-prompt truncation notice — the #1622 idiom "
         "the counters list already uses. Cap stays debt #2850 lot 4",
     ),
+    (
+        "argumentation_analysis/reporting/restitution/arena_record.py",
+        "text",
+        "expr",
+        1,
+    ): (
+        "display",
+        "first ARENA_CAP (= 160) chars of an already-produced arena string "
+        "(#3073's shared record: one metadata/extractor field, capped once "
+        "so both acts quote the same extent)",
+        "display only — the […] marker rides the very line both acts render",
+    ),
     ("argumentation_analysis/reporting/summary_generator.py", "argument", "50", 1): (
         "display",
         "first 50 of the rendered collection",
