@@ -309,6 +309,80 @@ def _account_raw_usage(response: Any) -> None:
         logger.warning("Usage accounting (raw path) skipped: %r", exc)
 
 
+# ──── Reasoning-effort knob (#3096 item 5) ────
+#
+# Measured on the doc_A pass: Claude completion tokens run 3-8× the GPT
+# figure for comparable rendered output; the endpoint accepts
+# ``reasoning_effort`` (probe 20/10). ONE run-wide knob rides both funnels —
+# the SK path sets SK's own ``reasoning_effort`` setting, the raw path sends
+# ``extra_body`` — an explicit caller setting always wins, an unknown value
+# fails loud at the first call (never a whole pass at the endpoint default),
+# and the value is stamped in the run's environment manifest.
+
+_REASONING_EFFORT_ENV = "LLM_REASONING_EFFORT"
+_REASONING_EFFORTS = ("low", "medium", "high")
+_effort_unannounced = True
+_effort_barren_types: List[str] = []
+
+
+def reasoning_effort_override() -> Optional[str]:
+    """The run-wide ``LLM_REASONING_EFFORT`` knob, or ``None`` when unset."""
+    global _effort_unannounced
+    raw = (os.environ.get(_REASONING_EFFORT_ENV) or "").strip().lower()
+    if not raw:
+        return None
+    if raw not in _REASONING_EFFORTS:
+        raise ValueError(
+            f"{_REASONING_EFFORT_ENV}={raw!r} — expected one of "
+            f"{'/'.join(_REASONING_EFFORTS)} (#3096 item 5). Fix the value or "
+            "unset the variable; a typo must not run a pass at the endpoint "
+            "default."
+        )
+    if _effort_unannounced:
+        _effort_unannounced = False
+        logger.info("#3096 item 5: reasoning effort set explicitly: %s", raw)
+    return raw
+
+
+def _apply_effort_to_settings(settings: Any, effort: Optional[str]) -> None:
+    """Carry the knob onto an SK settings object (declared field since SK
+    exposes ``reasoning_effort`` natively). Never overrides an explicit
+    caller choice; a settings class that cannot carry it is named once."""
+    if not effort or settings is None:
+        return
+    if getattr(settings, "reasoning_effort", None) is not None:
+        return
+    type_name = type(settings).__name__
+    try:
+        settings.reasoning_effort = effort
+    except (ValueError, AttributeError) as exc:
+        if type_name not in _effort_barren_types:
+            _effort_barren_types.append(type_name)
+            logger.warning(
+                "#3096 item 5: settings class %s cannot carry "
+                "reasoning_effort (%s) — its calls run at the endpoint default",
+                type_name,
+                exc,
+            )
+
+
+def _apply_effort_to_raw_kwargs(
+    kwargs: Dict[str, Any], effort: Optional[str]
+) -> Dict[str, Any]:
+    """Carry the knob into a raw ``chat.completions.create(**kwargs)`` call.
+
+    ``extra_body`` rides the JSON body on every SDK version; a caller that
+    already chose an effort keeps it."""
+    if not effort:
+        return kwargs
+    extra = dict(kwargs.get("extra_body") or {})
+    if extra.get("reasoning_effort") is None:
+        extra["reasoning_effort"] = effort
+    out = dict(kwargs)
+    out["extra_body"] = extra
+    return out
+
+
 def get_cache_mode() -> str:
     """Read LLM_CACHE_MODE env var. Defaults to 'off'."""
     mode = os.getenv("LLM_CACHE_MODE", OFF).lower()
@@ -366,6 +440,9 @@ def _serialize_settings(settings) -> dict:
         "presence_penalty",
         "frequency_penalty",
         "service_id",
+        # #3096 item 5 — unset adds nothing (cassette keys unchanged); set,
+        # the key must differ: two efforts are two different requests.
+        "reasoning_effort",
     ):
         val = getattr(settings, attr, None)
         if val is not None:
@@ -521,6 +598,7 @@ class CachedChatCompletion(ChatCompletionClientBase):
         """Intercept LLM calls with caching logic."""
         if self._mode == OFF or self._cache is None:
             _cache_stats.live += 1
+            _apply_effort_to_settings(settings, reasoning_effort_override())
             response = await self._inner.get_chat_message_contents(
                 chat_history=chat_history, settings=settings, **kwargs
             )
@@ -551,6 +629,7 @@ class CachedChatCompletion(ChatCompletionClientBase):
 
         logger.debug("Cache MISS (record): %s..., calling API", key[:16])
         _cache_stats.miss_record += 1
+        _apply_effort_to_settings(settings, reasoning_effort_override())
         response = await self._inner.get_chat_message_contents(
             chat_history=chat_history, settings=settings, **kwargs
         )
@@ -619,6 +698,7 @@ class CachedChatCompletion(ChatCompletionClientBase):
         **kwargs,
     ):
         """Stream through the inner service, accounting the call (#2849)."""
+        _apply_effort_to_settings(settings, reasoning_effort_override())
         chunks: List[Any] = []
         async for group in self._inner.get_streaming_chat_message_contents(
             chat_history=chat_history, settings=settings, **kwargs
@@ -754,6 +834,7 @@ async def cached_raw_chat_completion(client: Any, **kwargs: Any) -> Any:
     deterministic kwargs only (see ``compute_raw_cache_key``).
     """
     mode = get_cache_mode()
+    kwargs = _apply_effort_to_raw_kwargs(kwargs, reasoning_effort_override())
     if mode == OFF:
         _cache_stats.live += 1
         response = await client.chat.completions.create(**kwargs)
@@ -818,6 +899,7 @@ def cached_raw_chat_completion_sync(client: Any, **kwargs: Any) -> Any:
     live silencieux, même contrat que l'async.
     """
     mode = get_cache_mode()
+    kwargs = _apply_effort_to_raw_kwargs(kwargs, reasoning_effort_override())
     if mode == OFF:
         _cache_stats.live += 1
         response = client.chat.completions.create(**kwargs)
