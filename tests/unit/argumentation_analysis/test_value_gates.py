@@ -19,6 +19,35 @@ import logging
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
 
+# #3097 — no value-gate test may depend on a live LLM key. On a keyed dev
+# seat the translator seam (_llm_extract_relations) made real requests to the
+# provider (the #3069 hermeticity guard then interrupted the whole run); CI
+# is keyless, so the defect only manifested where a worker runs the suite.
+# These gates exercise handler/fallback contracts, never translator quality:
+# the autouse fixture answers an honest EMPTY relation set for every kind —
+# a keyed seat and CI now behave identically. A test that genuinely wants
+# translator behavior patches the same seam itself (its patch wins inside
+# the with-block).
+_EMPTY_RELATION_REPLIES = {
+    "supports": {"supports": []},
+    "contraries": {"contraries": []},
+    "aspic_rules": {"rules": [], "contradictions": [], "undercuts": []},
+    "setaf_attacks": {"attacks": []},
+    "dung_attacks": {"attacks": []},
+    "weighted_attacks": {"attacks": []},
+}
+
+
+@pytest.fixture(autouse=True)
+def _hermetic_translator(monkeypatch):
+    import argumentation_analysis.orchestration.structured_arg_translator as sat
+
+    async def _empty(input_text, arguments, relation_kind):
+        return dict(_EMPTY_RELATION_REPLIES.get(relation_kind, {}))
+
+    monkeypatch.setattr(sat, "_llm_extract_relations", _empty)
+
+
 # =====================================================================
 # 1. Quality — overall > 0 on non-trivial input
 # =====================================================================
