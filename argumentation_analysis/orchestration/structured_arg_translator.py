@@ -45,6 +45,7 @@ from dataclasses import dataclass
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from argumentation_analysis.core.endpoint_compat import resolved_json_response_format
 from argumentation_analysis.core.reading_window import (
     LLM_EXTRACTION_WINDOW,
     selected_text,
@@ -163,6 +164,186 @@ def _build_inventory(
     return arg_by_id, listed
 
 
+# #3096 — the wire form of each relation kind's reply contract. The prose
+# ``shape`` strings in ``_llm_extract_relations`` remain the prompt's source of
+# truth; these schemas are the SAME contract in strict ``json_schema`` form
+# (every property required, ``additionalProperties: false`` throughout — the
+# form Anthropic's OpenAI-compatible endpoint accepts, measured 20/10). The two
+# live one screen apart so a shape change without its schema is visible.
+def _rationale() -> Dict[str, Any]:
+    return {"type": "string"}
+
+
+_STRICT_REPLY_SCHEMAS: Dict[str, Tuple[str, Dict[str, Any]]] = {
+    "supports": (
+        "structured_arg_supports",
+        {
+            "type": "object",
+            "properties": {
+                "supports": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "source": {"type": "string"},
+                            "target": {"type": "string"},
+                            "rationale": _rationale(),
+                        },
+                        "required": ["source", "target", "rationale"],
+                        "additionalProperties": False,
+                    },
+                }
+            },
+            "required": ["supports"],
+            "additionalProperties": False,
+        },
+    ),
+    "contraries": (
+        "structured_arg_contraries",
+        {
+            "type": "object",
+            "properties": {
+                "contraries": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "assumption": {"type": "string"},
+                            "contrary": {"type": "string"},
+                            "rationale": _rationale(),
+                        },
+                        "required": ["assumption", "contrary", "rationale"],
+                        "additionalProperties": False,
+                    },
+                }
+            },
+            "required": ["contraries"],
+            "additionalProperties": False,
+        },
+    ),
+    "aspic_rules": (
+        "structured_arg_aspic_rules",
+        {
+            "type": "object",
+            "properties": {
+                "rules": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "premises": {"type": "array", "items": {"type": "string"}},
+                            "conclusion": {"type": "string"},
+                            "name": {"type": "string"},
+                            "rationale": _rationale(),
+                        },
+                        "required": ["premises", "conclusion", "name", "rationale"],
+                        "additionalProperties": False,
+                    },
+                },
+                "contradictions": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "attacker": {"type": "string"},
+                            "target": {"type": "string"},
+                            "rationale": _rationale(),
+                        },
+                        "required": ["attacker", "target", "rationale"],
+                        "additionalProperties": False,
+                    },
+                },
+                "undercuts": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "attacker": {"type": "string"},
+                            "target_rule": {"type": "string"},
+                            "rationale": _rationale(),
+                        },
+                        "required": ["attacker", "target_rule", "rationale"],
+                        "additionalProperties": False,
+                    },
+                },
+            },
+            "required": ["rules", "contradictions", "undercuts"],
+            "additionalProperties": False,
+        },
+    ),
+    "setaf_attacks": (
+        "structured_arg_setaf_attacks",
+        {
+            "type": "object",
+            "properties": {
+                "attacks": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "attackers": {"type": "array", "items": {"type": "string"}},
+                            "target": {"type": "string"},
+                            "rationale": _rationale(),
+                        },
+                        "required": ["attackers", "target", "rationale"],
+                        "additionalProperties": False,
+                    },
+                }
+            },
+            "required": ["attacks"],
+            "additionalProperties": False,
+        },
+    ),
+    "dung_attacks": (
+        "structured_arg_dung_attacks",
+        {
+            "type": "object",
+            "properties": {
+                "attacks": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "source": {"type": "string"},
+                            "target": {"type": "string"},
+                            "rationale": _rationale(),
+                        },
+                        "required": ["source", "target", "rationale"],
+                        "additionalProperties": False,
+                    },
+                }
+            },
+            "required": ["attacks"],
+            "additionalProperties": False,
+        },
+    ),
+    "weighted_attacks": (
+        "structured_arg_weighted_attacks",
+        {
+            "type": "object",
+            "properties": {
+                "attacks": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "source": {"type": "string"},
+                            "target": {"type": "string"},
+                            "weight": {"type": "number"},
+                            "rationale": _rationale(),
+                        },
+                        "required": ["source", "target", "weight", "rationale"],
+                        "additionalProperties": False,
+                    },
+                }
+            },
+            "required": ["attacks"],
+            "additionalProperties": False,
+        },
+    ),
+}
+
+
 async def _llm_extract_relations(
     input_text: str, arguments: List[str], relation_kind: str
 ) -> Dict[str, Any]:
@@ -175,6 +356,13 @@ async def _llm_extract_relations(
 
     ``relation_kind`` is ``"supports"`` or ``"contraries"`` and drives the prompt
     + the expected JSON shape.
+
+    #3096 — the JSON MODE is the one per-provider decision
+    (:mod:`argumentation_analysis.core.endpoint_compat`): providers that reject
+    ``json_object`` receive the reply contract as ``json_schema`` with
+    ``strict: true`` (the same contract the prompt states in prose — the shapes
+    below are their wire form); other providers keep ``json_object``, the mode
+    every existing cassette was recorded with.
     """
     # Lazy import: invoke_callables imports this module lazily from the handlers,
     # so importing its helpers here is safe at call time (no module-load cycle).
@@ -320,7 +508,17 @@ async def _llm_extract_relations(
 
     det_params = _get_determinism_params()
     llm_kwargs: Dict[str, Any] = dict(det_params)
-    llm_kwargs["response_format"] = {"type": "json_object"}
+    # #3096 — the ONE JSON-mode decision, per provider. ``json_object`` is a
+    # measured 400 on Anthropic's OpenAI-compatible endpoint; there the reply
+    # contract travels as ``json_schema`` with ``strict: true`` (the only
+    # accepted form). On providers without a schema the decision returns None
+    # and the key stays unset (prompt-only JSON).
+    schema_name, reply_schema = _STRICT_REPLY_SCHEMAS[relation_kind]
+    response_format, _base_url = resolved_json_response_format(
+        schema_name, reply_schema
+    )
+    if response_format is not None:
+        llm_kwargs["response_format"] = response_format
     response = await _guarded_chat_completion(
         client,
         model=model_id,

@@ -53,8 +53,43 @@ from argumentation_analysis.agents.core.debate.argumentation_schemes import (
     ArgumentationScheme,
     classify_scheme,
 )
+from argumentation_analysis.core.endpoint_compat import resolved_json_response_format
 
 logger = logging.getLogger(__name__)
+
+# #3096 — the wire forms of this module's two LLM reply contracts (strict
+# ``json_schema``, the form endpoints that reject ``json_object`` accept).
+# The prose shapes in the prompts remain the source of truth for the model;
+# these are the same contract on the wire.
+_CQ_REPLY_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "failed": {"type": "array", "items": {"type": "string"}},
+    },
+    "required": ["failed"],
+    "additionalProperties": False,
+}
+
+_NEURAL_DETECT_REPLY_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "fallacies": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "family": {"type": "string"},
+                    "span_text": {"type": "string"},
+                    "confidence": {"type": "number"},
+                },
+                "required": ["family", "span_text", "confidence"],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "required": ["fallacies"],
+    "additionalProperties": False,
+}
 
 # Prefix for synthetic challenger arguments standing in for unsatisfied Walton
 # critical questions. Caller-supplied candidate ids MUST NOT start with this
@@ -671,7 +706,14 @@ async def _llm_cq_evaluator_async(
 
     det_params = _get_determinism_params()
     llm_kwargs: dict[str, Any] = dict(det_params)
-    llm_kwargs["response_format"] = {"type": "json_object"}
+    # #3096 — ONE JSON-mode decision per provider: on endpoints that reject
+    # ``json_object`` the reply contract rides ``json_schema`` strict; the
+    # key stays unset when the decision says prompt-only.
+    response_format, _base_url = resolved_json_response_format(
+        "walton_cq_failed", _CQ_REPLY_SCHEMA
+    )
+    if response_format is not None:
+        llm_kwargs["response_format"] = response_format
     try:
         response = await _guarded_chat_completion(
             client,
@@ -771,7 +813,12 @@ async def llm_neural_detect_async(
 
     det_params = _get_determinism_params()
     llm_kwargs: dict[str, Any] = dict(det_params)
-    llm_kwargs["response_format"] = {"type": "json_object"}
+    # #3096 — ONE JSON-mode decision per provider (see the CQ evaluator above).
+    response_format, _base_url = resolved_json_response_format(
+        "neural_fallacy_detect", _NEURAL_DETECT_REPLY_SCHEMA
+    )
+    if response_format is not None:
+        llm_kwargs["response_format"] = response_format
     try:
         response = await _guarded_chat_completion(
             client,

@@ -108,6 +108,10 @@ class StakesExtractor:
             "stakeholders": [],
             "rhetorical_register": "",
             "discursive_arena": "",
+            # #3096 — discriminated outcome: an LLM failure must never read
+            # as "completed, empty". The invoke turns llm_error/parse_error
+            # into a degraded phase + state.errors entry.
+            "extraction_status": "no_client",
         }
 
         if llm_client is None:
@@ -154,12 +158,21 @@ class StakesExtractor:
         try:
             params = determinism_params or {}
             call_fn = llm_call or _default_chat_completion
+            # #3096 — sampling params pass through ONLY when configured: no
+            # hardcoded temperature default here. The historical 0.3 default
+            # is injected by the invoke (which can filter it per provider —
+            # measured: the anthropic endpoint rejects ``temperature`` with a
+            # 400, the silent cause of the empty-stakes "completed" phase).
+            call_kwargs: Dict[str, Any] = {}
+            if "temperature" in params:
+                call_kwargs["temperature"] = params["temperature"]
+            if "seed" in params:
+                call_kwargs["seed"] = params["seed"]
             response = await call_fn(
                 llm_client,
                 model=model_id or params.get("model", "gpt-4o-mini"),
                 messages=[{"role": "user", "content": prompt}],
-                temperature=params.get("temperature", 0.3),
-                **({} if "seed" not in params else {"seed": params["seed"]}),
+                **call_kwargs,
             )
             content = response.choices[0].message.content.strip()
             # Strip markdown fences if present
@@ -171,6 +184,7 @@ class StakesExtractor:
             result["stakeholders"] = parsed.get("stakeholders", [])[:10]
             result["rhetorical_register"] = parsed.get("rhetorical_register", "")
             result["discursive_arena"] = parsed.get("discursive_arena", "")
+            result["extraction_status"] = "ok"
 
             logger.info(
                 f"Extracted {len(result['stakes'])} stakes, "
@@ -180,7 +194,11 @@ class StakesExtractor:
 
         except (json.JSONDecodeError, KeyError, IndexError) as e:
             logger.warning(f"Stakes extraction parse error: {e}")
+            result["extraction_status"] = "parse_error"
+            result["error"] = f"{type(e).__name__}: {e}"
         except Exception as e:
             logger.warning(f"Stakes extraction LLM error: {e}")
+            result["extraction_status"] = "llm_error"
+            result["error"] = f"{type(e).__name__}: {e}"
 
         return result

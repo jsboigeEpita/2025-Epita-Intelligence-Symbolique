@@ -50,6 +50,14 @@ from argumentation_analysis.core.llm_service import (
     resolve_chat_endpoint,
     REASONING_MODEL_PREFIXES as _REASONING_MODEL_PREFIXES,
 )
+
+# #3096 — the ONE per-provider wire-compat decision (JSON mode + sampling
+# params). Not in llm_service: the route naming belongs to #3095/#3096
+# item 6 (another lane's file).
+from argumentation_analysis.core.endpoint_compat import (
+    resolved_json_response_format,
+    sampling_kwargs,
+)
 from argumentation_analysis.services.llm_cache import LLMCacheMiss
 from argumentation_analysis.orchestration.kb_atom_renaming import rename_atoms_apart
 from argumentation_analysis.orchestration.selection import (
@@ -6412,9 +6420,18 @@ async def _invoke_probabilistic(
             if (node_id := _node_id_for(node_by_label, k)) is not None
         }
         dropped += len(probs_in) - len(probs)
+        probabilities_source = "caller"
     else:
         probs = {node_id: 0.5 for node_id in args}
+        probabilities_source = "default_0.5"
     identity_payload["dropped_unresolved"] = dropped
+    # #3096 item 3 — the 40 uniform 0.5 values measured on the Claude pass
+    # were THESE defaults: no phase ever supplies ``context["probabilities"]``,
+    # so the axis renders model-looking numbers nobody estimated. The source
+    # is now named in the state entry and available to the render — defaults
+    # stay honest (the semantics need a prior), they just stop impersonating
+    # an estimate.
+    identity_payload["probabilities_source"] = probabilities_source
 
     try:
         from argumentation_analysis.agents.core.logic.probabilistic_handler import (
@@ -8730,7 +8747,14 @@ async def _invoke_fact_extraction(
         # #1290 — strict-JSON-mode where the endpoint supports it. Some
         # OpenRouter-backed models reject response_format; on such a rejection
         # we retry without it (the parse-retry loop still applies).
-        use_json_mode = True
+        # #3096 — the initial value now comes from the ONE per-provider JSON
+        # decision instead of an unconditional ``json_object``: endpoints that
+        # reject it (measured: Anthropic's compatible endpoint, 400) start
+        # prompt-only, so the run no longer spends one rejected request to
+        # discover what the decision table already knows. The adapt-retry
+        # below stays for providers the table does not cover.
+        _extraction_fmt, _extraction_base_url = resolved_json_response_format()
+        use_json_mode = _extraction_fmt is not None
         # #1290 M1 (po-2023 diagnostic) — explicit max_tokens so a dense
         # corpus's JSON output is not silently truncated by the default
         # completion ceiling (the root cause of ``Expecting value (char ~3033)``).
@@ -8749,7 +8773,10 @@ async def _invoke_fact_extraction(
             try:
                 llm_kwargs: Dict[str, Any] = dict(det_params)
                 if use_json_mode:
-                    llm_kwargs["response_format"] = {"type": "json_object"}
+                    # #3096: the decision's format (``json_object`` on
+                    # openai-compatible routes — unchanged, cassette keys
+                    # stable), never a re-spelled literal here.
+                    llm_kwargs["response_format"] = _extraction_fmt
                 if use_max_tokens:
                     # #1936 sampling policy: reasoning families (gpt-5*, o1*,
                     # o3*) reject the max_tokens spelling with a 400. Before
@@ -13654,7 +13681,14 @@ async def _invoke_stakes_extractor(
         client, model_id = _get_openai_client()
         if client is not None:
             llm_client = client
-            determinism_params = _get_determinism_params()
+            det = dict(_get_determinism_params())
+            # #3096 — the extractor's historical temperature=0.3 default is
+            # now explicit HERE (it used to hide inside the call), so the
+            # per-provider filter can see it: the anthropic endpoint rejects
+            # ``temperature`` with a measured 400 — the silent cause behind
+            # the empty-stakes phase that reported ``completed``.
+            det.setdefault("temperature", 0.3)
+            determinism_params = sampling_kwargs(_resolve_llm_route()[1], det)
     except Exception:
         pass
 
@@ -13673,6 +13707,25 @@ async def _invoke_stakes_extractor(
         llm_call=_guarded_chat_completion,
         deanonymized=bool(getattr(state, "deanonymized", True)),
     )
+
+    # #3096 — fail loud: an LLM failure in the extractor is a DEGRADED phase
+    # with the error in state.errors, never a silent "completed, empty". The
+    # extractor returns a discriminated ``extraction_status``; anything other
+    # than ok/no_client marks the output degraded (the workflow-level OR
+    # reads it) and records the reason. The state write below keeps the
+    # honest empty defaults (the writer skips error-carrying outputs).
+    _stakes_status = str(result.get("extraction_status", "ok"))
+    if _stakes_status in ("llm_error", "parse_error"):
+        _stakes_reason = (
+            f"stakes extraction {_stakes_status}: "
+            f"{result.get('error', 'unspecified error')}"
+        )
+        result["degraded"] = True
+        result["degraded_reason"] = _stakes_reason
+        log_error = getattr(state, "log_error", None)
+        if callable(log_error):
+            log_error("StakesExtractor", _stakes_reason)
+        logger.warning("Stakes extraction failed loudly: %s", _stakes_reason)
 
     # Persist via the shared writer so the capability is primary under the
     # duality invariant (the executor re-calls it post-phase; idempotent,
@@ -13693,7 +13746,7 @@ async def _invoke_stakes_extractor(
         f"register={register}, arena={arena}"
     )
 
-    return {
+    stakes_output = {
         "stakes": result.get("stakes", []),
         "stakeholders": result.get("stakeholders", []),
         "rhetorical_register": register,
@@ -13703,6 +13756,14 @@ async def _invoke_stakes_extractor(
             f"register={register}"
         ),
     }
+    # #3096 — the workflow-level degraded OR reads the PHASE OUTPUT
+    # (``_compute_workflow_degraded`` checks ``r.output.get("degraded") is
+    # True``), so the self-declaration must ride this dict — a healthy run
+    # carries no extra key (readers that enumerate output keys stay stable).
+    if result.get("degraded"):
+        stakes_output["degraded"] = True
+        stakes_output["degraded_reason"] = result.get("degraded_reason", "")
+    return stakes_output
 
 
 async def _invoke_ai_shield(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
