@@ -44,6 +44,7 @@ from argumentation_analysis.core.plaintext_destination import (
 )
 from argumentation_analysis.core.reading_window import (
     WIDE_NET_WINDOW,
+    head_selection,
     selected_text,
 )
 from argumentation_analysis.plugins.exploration_plugin import ExplorationPlugin
@@ -256,11 +257,21 @@ class FallacyWorkflowPlugin:
         taxonomy_file_path: Optional[str] = None,
         taxonomy_data: Optional[list] = None,
         logger: Optional[logging.Logger] = None,
+        reading_state: object = None,
     ):
         self.master_kernel = master_kernel
         self.llm_service = llm_service
         self.logger = logger or logging.getLogger(__name__)
         self.language = "fr"
+
+        # #2850 lot 7 — the shared state the reading windows record into
+        # (#1737 table → reading_record → the acts). Only the DOCUMENT-path
+        # constructions pass it: the record is document-scoped by construction
+        # (every line renders "k of N chars" against the document), so a
+        # per-argument instance recording its unit's 500-char read would render
+        # as a false document bound. Per-arg and other stateless callers keep
+        # the default None — their basis stays payload-side.
+        self._reading_state = reading_state
 
         # #2324: marche déterministe de la descente. En mode parallèle
         # (défaut, production inchangée), l'entrelacement des branches dans le
@@ -324,6 +335,26 @@ class FallacyWorkflowPlugin:
                 f"Taxonomy loaded {len(data)} rows but no root node (depth==1) — "
                 "the navigator has no category and the wide-net funnel will resolve no candidate."
             )
+
+    def _record_window(self, text: str, window: int, site: str) -> None:
+        """#2850 lot 7 — mirror a fixed head read into the #1737 table.
+
+        The slices stay exactly where they are (prompts byte-identical); this
+        only records WHAT they read. No-op on the stateless constructions
+        (per-argument instances, agents, benchmarks) — see ``__init__``.
+        """
+        if self._reading_state is None:
+            return
+        recorder = getattr(self._reading_state, "record_reading_window", None)
+        if recorder is None:
+            # Same fail-loud contract as reading_window.selected_text (#1019):
+            # a state that cannot record is a wiring bug, not a shrug.
+            raise TypeError(
+                f"reading site '{site}': state "
+                f"{type(self._reading_state).__name__} has no "
+                "record_reading_window — pass the shared state or None"
+            )
+        recorder(site, head_selection(text, window))
 
     def _create_slave_kernel(self) -> Tuple[Kernel, OpenAIPromptExecutionSettings]:
         """Create a constrained kernel with only ExplorationPlugin available.
@@ -619,6 +650,11 @@ class FallacyWorkflowPlugin:
         the agentic navigation a 2-3 level head start; from there the LLM
         descends freely (multi-level cluster, no depth cap — FB-30 #1107).
         """
+        # #2850 lot 7: the Phase-1 prompt below reads the first
+        # WIDE_NET_WINDOW chars — say it in the record, never lift it (the
+        # bound is the #1087/#2908 backstop; beyond-head coverage is the
+        # per-argument pass's job).
+        self._record_window(argument_text, WIDE_NET_WINDOW, "fallacy_widenet")
         kernel, settings = self._create_one_shot_kernel()
         roots = self.taxonomy_navigator.get_root_nodes()
         roots_text = "\n".join(
@@ -837,6 +873,11 @@ class FallacyWorkflowPlugin:
                 branch confirms a deeper, more specific fallacy, this branch
                 can abandon early if it is exploring an ancestor node.
         """
+        # #2850 lot 7: every prompt this descent emits (leaf confirmation and
+        # navigation alike) carries the same argument_text[:500] head — one
+        # site says it. Idempotent: branches and sub-branches re-record the
+        # same selection.
+        self._record_window(argument_text, 500, "fallacy_descent")
         current_pk = start_pk
         navigation_trace = [start_pk]
         reasoning_history = reasoning_history or []
@@ -1778,8 +1819,16 @@ class FallacyWorkflowPlugin:
         # under the bound the selection is offset 0 by construction, so the
         # prompt is byte-identical to the unbounded form — no replay key can
         # miss.
+        # #2850 lot 7: the stateless call recorded nothing ("the plugin holds
+        # no shared state"). The document-path construction now passes the
+        # shared state, so the selection reaches the #1737 table; per-arg
+        # instances keep state=None and stay unrecorded (unit-relative read,
+        # document-scoped record).
         windowed_text = selected_text(
-            argument_text, WIDE_NET_WINDOW, "fallacy_one_shot"
+            argument_text,
+            WIDE_NET_WINDOW,
+            "fallacy_one_shot",
+            state=self._reading_state,
         )
         prompt = (
             f"Analyze the following text:\n--- TEXT ---\n{windowed_text}\n--- END TEXT ---\n\n"

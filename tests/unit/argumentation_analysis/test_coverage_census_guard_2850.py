@@ -1172,7 +1172,13 @@ REGISTRY = {
         "full_text",
         "4000",
         1,
-    ): ("window", "first 4000 chars of the source text", "silent — debt #2850"),
+    ): (
+        "window",
+        "first 4000 chars of the source text",
+        "conversational surface — no production constructor (agents/factory "
+        "registry name only, the invoke layer never builds it); stateless, "
+        "payload-side basis (reader = result) — #2850 lot 7",
+    ),
     (
         "argumentation_analysis/plugins/coordinated_logic_plugin.py",
         "selected_text",
@@ -1181,7 +1187,8 @@ REGISTRY = {
     ): (
         "window",
         "2000-char window from the selected offset",
-        "record_reading_window; Acts silent — #2850",
+        "conversational surface — no production constructor; stateless call "
+        "(no state passed, nothing records), payload-side basis — #2850 lot 7",
     ),
     (
         "argumentation_analysis/plugins/coordinated_logic_plugin.py",
@@ -1191,7 +1198,8 @@ REGISTRY = {
     ): (
         "window",
         "2000-char window from the selected offset",
-        "record_reading_window; Acts silent — #2850",
+        "conversational surface — no production constructor; stateless call "
+        "(no state passed, nothing records), payload-side basis — #2850 lot 7",
     ),
     (
         "argumentation_analysis/plugins/coordinated_logic_plugin.py",
@@ -1201,7 +1209,8 @@ REGISTRY = {
     ): (
         "window",
         "4000-char window from the selected offset",
-        "record_reading_window; Acts silent — #2850",
+        "conversational surface — no production constructor; stateless call "
+        "(no state passed, nothing records), payload-side basis — #2850 lot 7",
     ),
     (
         "argumentation_analysis/plugins/coordinated_logic_plugin.py",
@@ -1211,7 +1220,8 @@ REGISTRY = {
     ): (
         "window",
         "4000-char window from the selected offset",
-        "record_reading_window; Acts silent — #2850",
+        "conversational surface — no production constructor; stateless call "
+        "(no state passed, nothing records), payload-side basis — #2850 lot 7",
     ),
     (
         "argumentation_analysis/plugins/fallacy_workflow_plugin.py",
@@ -1230,13 +1240,25 @@ REGISTRY = {
         "argument_text",
         "500",
         1,
-    ): ("window", "first 500 chars of the argument text", "silent — debt #2850"),
+    ): (
+        "window",
+        "first 500 chars of the argument text",
+        "recorded at _explore_single_branch entry (site fallacy_descent) on "
+        "the document path; per-arg instances bound a unit (≤ extract "
+        "window) — payload-side, not document-scoped — #2850 lot 7",
+    ),
     (
         "argumentation_analysis/plugins/fallacy_workflow_plugin.py",
         "argument_text",
         "500",
         2,
-    ): ("window", "first 500 chars of the argument text", "silent — debt #2850"),
+    ): (
+        "window",
+        "first 500 chars of the argument text",
+        "recorded at _explore_single_branch entry (site fallacy_descent) on "
+        "the document path; per-arg instances bound a unit (≤ extract "
+        "window) — payload-side, not document-scoped — #2850 lot 7",
+    ),
     (
         "argumentation_analysis/plugins/fallacy_workflow_plugin.py",
         "argument_text",
@@ -1252,7 +1274,9 @@ REGISTRY = {
         "window",
         "the wide-net Phase-1 window — first WIDE_NET_WINDOW (= 8000) chars "
         "of the source text",
-        "silent — debt #2850",
+        "recorded at _wide_net_candidates entry (site fallacy_widenet) on "
+        "the document path; 8000 is the #1087/#2908 backstop, not lifted — "
+        "#2850 lot 7",
     ),
     (
         "argumentation_analysis/plugins/fallacy_workflow_plugin.py",
@@ -1265,8 +1289,9 @@ REGISTRY = {
         "wide-net slice above — R1058: one constant, two readers) from the "
         "selected offset — the one-shot fallback's text, bound by #2908 (was "
         "the pipeline's only unbounded reader); drops the rest of the document",
-        "stateless call — the plugin holds no shared state, so nothing "
-        "records it; Acts silent — #2850",
+        "recorded on the document path (state threaded to the call, site "
+        "fallacy_one_shot) — #2850 lot 7; per-arg instances stay stateless "
+        "(unit ≤ 3000, no cut)",
     ),
     (
         "argumentation_analysis/plugins/kb_to_tweety_plugin.py",
