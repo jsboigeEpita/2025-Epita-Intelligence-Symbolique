@@ -116,13 +116,21 @@ class TestWidenetHeadRecorded:
         }
 
     async def test_widenet_short_text_reads_whole(self):
-        """A text shorter than the window is read whole — the record says
-        short_input, never a truncation."""
+        """A text shorter than the window is read whole. The record takes
+        its window from the mirrored slice (#2908 rework, form (b)): a
+        short text records (selected, 0, len) — the whole text, read —
+        which the reading record's truncated_lines correctly excludes
+        (window == source_chars bounds nothing)."""
         state = _RecordingState()
         plugin = _plugin(state)
         plugin.llm_service.get_chat_message_content = AsyncMock(return_value="[]")
-        await plugin._wide_net_candidates("court, très court.")
-        assert state.reading_window_status["fallacy_widenet"]["status"] == "short_input"
+        short = "court, très court."
+        await plugin._wide_net_candidates(short)
+        assert state.reading_window_status["fallacy_widenet"] == {
+            "status": "selected",
+            "offset": 0,
+            "window": len(short),
+        }
 
 
 class TestDescentWindowRecorded:

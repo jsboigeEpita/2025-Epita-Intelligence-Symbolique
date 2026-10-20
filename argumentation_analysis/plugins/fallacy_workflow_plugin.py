@@ -653,8 +653,13 @@ class FallacyWorkflowPlugin:
         # #2850 lot 7: the Phase-1 prompt below reads the first
         # WIDE_NET_WINDOW chars — say it in the record, never lift it (the
         # bound is the #1087/#2908 backstop; beyond-head coverage is the
-        # per-argument pass's job).
-        self._record_window(argument_text, WIDE_NET_WINDOW, "fallacy_widenet")
+        # per-argument pass's job). The record takes its window from the
+        # slice it mirrors, not from the constant (#2908 pin, R1101
+        # rework): WIDE_NET_WINDOW must back exactly the two reads — this
+        # slice and the one-shot window — a third AST use would blind the
+        # pin to a genuinely new read.
+        wide_net_text = argument_text[:WIDE_NET_WINDOW]
+        self._record_window(argument_text, len(wide_net_text), "fallacy_widenet")
         kernel, settings = self._create_one_shot_kernel()
         roots = self.taxonomy_navigator.get_root_nodes()
         roots_text = "\n".join(
@@ -664,7 +669,7 @@ class FallacyWorkflowPlugin:
 
         prompt = (
             f"Analyze this text exhaustively for logical fallacies:\n\n"
-            f"--- TEXT ---\n{argument_text[:WIDE_NET_WINDOW]}\n--- END ---\n\n"
+            f"--- TEXT ---\n{wide_net_text}\n--- END ---\n\n"
             "List EVERY fallacy you can find. For each, respond with a JSON object:\n"
             '{"fallacy_name": "...", "root_category": "...", "confidence": 0.0-1.0}\n\n'
             "Respond with a JSON array of objects. Be thorough — aim for 10-20 fallacies.\n"
