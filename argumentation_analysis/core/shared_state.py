@@ -1818,6 +1818,26 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
           genuine run. Only ever emitted when the defining property is
           *measurably absent*, never inferred from a low count.
 
+        - ``"phase_failed"`` (#3087) — the phase died at executor level
+          (budget timeout, exception, no invoke-capable provider): the axis
+          never reached its handler, so its writer never ran. Written by the
+          ONE failure father (``workflow_dsl._store_phase_result`` via
+          ``state_writers._record_phase_failed_status``), not by per-axis
+          writers — they only run on COMPLETED. ``degraded`` is ``True``;
+          the reason is the #1608 phase-error message. For ``belief_revision``
+          this is the measured case (180 s budget timeout, three paid passes).
+
+        - ``"unavailable"`` (#3087) — the phase COMPLETED but the axis
+          produced no analysis (measured: belief_revision with the JVM down,
+          #1646, or the retraction search stopped by its own bound, #3091):
+          the handler never ran AND the JVM-free insight was absent or
+          refused. ``degraded`` is ``True``. The reason carries the insight's
+          own ``refusal_detail`` when the search itself stopped, else the
+          output's declared ``message`` / ``absent_reason`` fields — never
+          parsed from ``state.errors``. When the insight WAS computed the
+          writer files ``evaluated`` instead (R1100): the axis's singular
+          analysis survived the handler's absence.
+
         ``extension_count`` is how many result sets came back, not how much they
         contain: ``[[]]`` is one extension and is reported as ``1``. It is a
         description, never a verdict — the ``evaluated`` / ``evaluated_empty``

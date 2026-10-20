@@ -34,6 +34,8 @@ from typing import (
 from dataclasses import dataclass, field
 from enum import Enum
 
+from .state_writers import _record_phase_failed_status  # #3087: failure father
+
 logger = logging.getLogger("WorkflowDSL")
 
 
@@ -1216,6 +1218,16 @@ class WorkflowExecutor:
                     state.log_error(phase_name, str(result.error))
                 except Exception:
                     pass
+            # #3087 — an absence-ledger axis that died at executor level
+            # (timeout, exception, unwired invoke) must reach the ledger
+            # here: state writers run only on COMPLETED, so this failure
+            # sink is the ONE father. Without it the axis vanishes from
+            # Act III's absence list — the report said 2 lost angles when
+            # 3 were, three paid passes in a row.
+            if state is not None:
+                _record_phase_failed_status(
+                    state, result.capability, str(result.error or "")
+                )
 
     async def _execute_loop(
         self,

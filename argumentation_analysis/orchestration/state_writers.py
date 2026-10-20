@@ -341,6 +341,54 @@ def _record_structured_arg_status(
     recorder(capability, status, degraded, reason, ext_count)
 
 
+def _absence_ledger_axes() -> frozenset[str]:
+    """#3087 — the ONE table of absence-ledger axes: the reader's label map.
+
+    ``_ABSENT_DIMENSION_LABELS`` (act3_conclusion_plugin, #1605) already names
+    every axis the reader can render as an absence, so its keys ARE the
+    ledger's membership table: an axis is a ledger axis exactly when the
+    reader can say its French name. A second hand-kept list beside it is the
+    drift the issue forbids. Imported function-level (the restitution package
+    must not become an orchestration import-time dependency — same discipline
+    as invoke_callables' act imports), so the map is read at call time and an
+    axis added to the map is covered by every ledger writer the moment it is
+    labelled.
+    """
+    from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
+        _ABSENT_DIMENSION_LABELS,
+    )
+
+    return frozenset(_ABSENT_DIMENSION_LABELS)
+
+
+def _record_phase_failed_status(state: Any, capability: str, error: str) -> None:
+    """#3087 — executor-level failure → the absence ledger (the missing writer).
+
+    Measured on three paid one-document passes: ``belief_revision`` timed out
+    at its 180 s budget, the only trace was ``state.errors``, and the report
+    said two lost angles when three were. The ledger's five state writers run
+    only on COMPLETED phases, so an axis that dies at executor level —
+    timeout, exception, unwired invoke — left no ledger entry whatever the
+    axis. This is the father: ONE write called from the executor's single
+    failure sink (``workflow_dsl._store_phase_result``), covering every
+    failure sense. The reason is the phase-error message the executor already
+    built (#1608) — never a parse of ``state.errors``.
+
+    Status ``phase_failed`` discriminates from the translation-side statuses
+    (``translator_failed``…): the axis never reached its handler. Degraded is
+    ``True`` — the axis contributed nothing to the run. No-op for a capability
+    outside the label map (the table decides, not this function) and on
+    states that predate ``add_structured_arg_status`` (defensive).
+    """
+    if capability not in _absence_ledger_axes():
+        return
+    recorder = getattr(state, "add_structured_arg_status", None)
+    if not callable(recorder):
+        return
+    reason = str(error).strip() or "phase failed at executor level"
+    recorder(capability, "phase_failed", True, reason, 0)
+
+
 __all__ = [
     "_write_quality_to_state",
     "_write_counter_argument_to_state",
@@ -1125,7 +1173,76 @@ def _write_aspic_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
 def _write_belief_revision_to_state(
     output: Any, state: Any, ctx: dict[str, Any]
 ) -> None:
-    """Write belief revision results to UnifiedAnalysisState."""
+    """Write belief revision results to UnifiedAnalysisState.
+
+    #3087 — belief_revision is a ledger axis (the reader's label map has named
+    it since #1605), so its writer files a ledger entry on every completed
+    run, mirroring the executor-failure father. R1100: the status is decided
+    on the axis's own contribution — the minimal retraction, its singular
+    insight (#1646), computed JVM-free so it survives the handler's absence —
+    NOT on ``output["degraded"]``, which speaks about the Tweety handler:
+
+    * handler ran (not degraded) → ``evaluated`` — the reader stays silent;
+    * insight computed (dict, ``cardinality >= 0``, no ``refusal``) →
+      ``evaluated`` too: the axis produced its structural analysis even
+      though the handler refused by name or the JVM never started — the
+      reason names the handler's state so the entry stays honest;
+    * insight absent or refused AND the handler did not run →
+      ``unavailable``: nothing was produced, the reader says the loss — the
+      reason carries the insight's own ``refusal_detail`` (#3091) when the
+      search itself stopped, else the OUTPUT's declared fields, never
+      something parsed from ``state.errors``.
+
+    Deliberately NOT routed through :func:`_record_structured_arg_status`:
+    that helper's branches read translation causes and extension sets, neither
+    of which exists for this axis — forcing it through would file a successful
+    revision as ``absent_no_translator`` (its no-cause fallback), a lie.
+    """
+    if isinstance(output, dict):
+        recorder = getattr(state, "add_structured_arg_status", None)
+        if callable(recorder):
+            insight = output.get("minimal_retraction")
+            insight_computed = False
+            if isinstance(insight, dict):
+                cardinality = insight.get("cardinality")
+                insight_computed = (
+                    isinstance(cardinality, int)
+                    and not isinstance(cardinality, bool)
+                    and cardinality >= 0
+                    and not insight.get("refusal")
+                )
+            if not output.get("degraded"):
+                recorder(
+                    "belief_revision",
+                    "evaluated",
+                    False,
+                    "The revision ran; the minimal-retraction insight is "
+                    "attached when it was computable.",
+                    0,
+                )
+            elif insight_computed:
+                absent = str(
+                    output.get("absent_reason") or output.get("message") or "degraded"
+                )
+                reason = (
+                    "minimal retraction computed; Tweety revision not run "
+                    f"({absent})"
+                )
+                message = str(output.get("message") or "").strip()
+                if message:
+                    reason = f"{reason} — {message}"
+                recorder("belief_revision", "evaluated", False, reason, 0)
+            else:
+                detail = ""
+                if isinstance(insight, dict):
+                    detail = str(insight.get("refusal_detail") or "").strip()
+                if not detail:
+                    detail = str(
+                        output.get("message")
+                        or output.get("absent_reason")
+                        or "degraded"
+                    )
+                recorder("belief_revision", "unavailable", True, detail, 0)
     if not output or not isinstance(output, dict):
         return
     method = str(output.get("method", "dalal"))
