@@ -48,7 +48,7 @@ _OFFSETS_LLM = (100, 1_500, 2_900)
 _OFFSETS_KB = (23_700, 28_200, 50_200)
 
 
-def _state(with_units=True):
+def _state(with_units=True, llm_offsets=None, kb_offsets=None):
     state = SimpleNamespace()
     state.raw_text = "x" * _DOC_CHARS
     state.source_metadata = {}
@@ -71,16 +71,24 @@ def _state(with_units=True):
             "window": _PL_WINDOW,
         },
         "fol_reasoning": {"status": "selected", "offset": 0, "window": _PL_WINDOW},
+        # The fallacy workflow's sites (lot 7): the descent line must name
+        # its confirmed findings in the reader's French (R1102 rework).
+        "fallacy_widenet": {"status": "selected", "offset": 0, "window": 8000},
+        "fallacy_descent": {"status": "selected", "offset": 0, "window": 500},
     }
+    if llm_offsets is None:
+        llm_offsets = _OFFSETS_LLM
+    if kb_offsets is None:
+        kb_offsets = _OFFSETS_KB
     if with_units:
         prov = {}
-        for i, off in enumerate(_OFFSETS_LLM):
+        for i, off in enumerate(llm_offsets):
             prov[f"arg_{i}"] = {
                 "producer": "llm_extract",
                 "offset": off,
                 "offset_basis": "producer-recorded",
             }
-        for i, off in enumerate(_OFFSETS_KB):
+        for i, off in enumerate(kb_offsets):
             prov[f"arg_{10 + i}"] = {
                 "producer": "kb_heuristic",
                 "offset": off,
@@ -183,3 +191,68 @@ def test_head_only_control_the_basis_is_the_opening():
     )
     # The bounded k-of-N stays sayable in that control.
     assert f"{_EXTRACT_WINDOW} des {_DOC_CHARS}" in p2
+
+
+def test_the_header_follows_the_measured_bands():
+    """R1102 rework: the header's claim follows the measurement (#3073 shape
+    — a label never stronger than its fact). Units anchored in the opening
+    only (1/3 bands): the line states the measured span, never « TEXTE
+    ENTIER »; the corpus campaign hits such documents (extraction stays in
+    the head)."""
+    # All six units anchored in the opening (max 2 100 / 56 430 = 0.04):
+    # 1/3 bands, span 0.00–0.04 — the exact shape the campaign hits when
+    # the extraction never leaves the head.
+    p2, p3 = _prompts(
+        _state(llm_offsets=(100, 1_500, 2_000), kb_offsets=(300, 1_200, 2_100))
+    )
+    for name, p in (("Acte II", p2), ("Acte III", p3)):
+        assert "BASE DU RUN" in p, f"{name}: the basis line stays said"
+        assert "TEXTE ENTIER" not in p, (
+            f"{name}: 1/3 bandes ancrées — le header ne peut pas réclamer le "
+            "texte entier pendant que son propre chiffre dit l'ouverture"
+        )
+        assert (
+            "1/3 bandes" in p and "0.00–0.04" in p
+        ), f"{name}: the measured span must be stated alone"
+
+
+def test_unanchored_units_claim_no_span():
+    """R1102 rework, absent-anchor control: units without offsets make no
+    span claim at all — no « TEXTE ENTIER », the non-measurement is named."""
+    state = _state()
+    prov = state.argument_provenance
+    for entry in prov.values():
+        entry.pop("offset", None)
+    p2, _ = _prompts(state)
+    assert "TEXTE ENTIER" not in p2
+    assert "étendue non dite" in p2
+
+
+def test_producers_render_under_reader_labels():
+    """R1102 rework: raw producer ids never reach a prompt the acts copy
+    from (#2980 shape) — one label table, the way sites have theirs; an
+    unknown producer keeps its id rather than being dropped."""
+    p2, p3 = _prompts(_state())
+    for name, p in (("Acte II", p2), ("Acte III", p3)):
+        assert (
+            "kb_heuristic" not in p and "llm_extract" not in p
+        ), f"{name}: raw producer ids are jargon the narrative can copy"
+    assert "découpage heuristique" in p2 and "extraction LLM" in p2
+
+    from argumentation_analysis.reporting.restitution.reading_record import (
+        _whole_text_basis,
+    )
+
+    odd = SimpleNamespace(argument_provenance={"a": {"producer": "producer_mystery"}})
+    assert "producer_mystery" in _whole_text_basis(odd, 100)
+
+
+def test_fallacy_descent_fed_is_reader_french():
+    """R1102 rework: « au state » is internal jargon — the descent line names
+    its confirmed findings in the reader's French (« retenus »)."""
+    p2, p3 = _prompts(_state())
+    for name, p in (("Acte II", p2), ("Acte III", p3)):
+        assert "au state" not in p, f"{name}: internal jargon in the fed phrase"
+        assert (
+            "1 retenu" in p or "retenus" in p
+        ), f"{name}: the descent's findings must be named readably"

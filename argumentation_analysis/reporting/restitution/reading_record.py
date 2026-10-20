@@ -36,6 +36,15 @@ SITE_LABELS_FR = {
     "fallacy_one_shot": "détection de sophismes — repli en un appel",
 }
 
+# The French label a reader understands, per producer of the run's units —
+# one table, the way sites have theirs (#3099 rework). A producer the table
+# does not carry keeps its raw id rather than being dropped: an unnamed
+# producer still counts, and the id stays traceable to its wiring point.
+PRODUCER_LABELS_FR = {
+    "llm_extract": "extraction LLM",
+    "kb_heuristic": "découpage heuristique",
+}
+
 # The non-selected statuses #1737 defines, in the reader's words.
 _STATUS_PHRASES_FR = {
     "no_punctuated_span_found": (
@@ -111,7 +120,7 @@ def _site_fed(site: str, state: Any) -> str:
         return "les candidats de la détection de sophismes (phase large filet)"
     if site == "fallacy_descent":
         n = len(getattr(state, "identified_fallacies", None) or {})
-        return "les procédés confirmés de la détection de sophismes " f"({n} au state)"
+        return "les procédés confirmés de la détection de sophismes " f"({n} retenus)"
     if site == "fallacy_one_shot":
         return "le repli en un appel de la détection de sophismes"
     if site == "counter_argument":
@@ -150,16 +159,24 @@ def _whole_text_basis(state: Any, source_chars: int) -> str:
         off = p.get("offset")
         if isinstance(off, int) and not isinstance(off, bool) and off >= 0:
             offsets.append(off)
-    parts = " + ".join(f"{v} {k}" for k, v in sorted(by_prod.items()))
-    phrase = f"BASE DU RUN SUR LE TEXTE ENTIER : {len(prov)} unités ({parts})"
-    if offsets and source_chars > 0:
-        bands = len({min(off * 3 // source_chars, 2) for off in offsets})
-        span_lo = min(offsets) / source_chars
-        span_hi = max(offsets) / source_chars
-        phrase += f", {bands}/3 bandes du texte, étendue {span_lo:.2f}–{span_hi:.2f}"
-    else:
-        phrase += " (aucune unité ancrée : étendue non dite)"
-    return phrase
+    parts = " + ".join(
+        f"{v} {PRODUCER_LABELS_FR.get(k, k)}" for k, v in sorted(by_prod.items())
+    )
+    head = f"BASE DU RUN : {len(prov)} unités ({parts})"
+    if not offsets or source_chars <= 0:
+        # Unanchored units make no span claim — « texte entier » would be a
+        # label stronger than its own measurement (#3099 rework).
+        return f"{head} (aucune unité ancrée : étendue non dite)"
+    bands = len({min(off * 3 // source_chars, 2) for off in offsets})
+    span_lo = min(offsets) / source_chars
+    span_hi = max(offsets) / source_chars
+    if bands >= 3:
+        # The whole-text claim is earned by the measurement alone: 3/3 bands.
+        return (
+            f"{head} SUR LE TEXTE ENTIER, "
+            f"{bands}/3 bandes, étendue {span_lo:.2f}–{span_hi:.2f}"
+        )
+    return f"{head}, {bands}/3 bandes, étendue {span_lo:.2f}–{span_hi:.2f}"
 
 
 def build_reading_record(state: Any) -> ReadingRecord:
