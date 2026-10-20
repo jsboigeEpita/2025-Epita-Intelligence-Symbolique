@@ -197,9 +197,15 @@ _ABSENT_DIMENSION_LABELS: Dict[str, str] = {
     "bipolar_argumentation": "les relations de soutien entre arguments",
     "belief_revision": "la révision des croyances (le point de rupture minimal)",
     # #2952 — the three axes wired into Acte III by the sidecar/native
-    # projectors. Pure lookup here (both consumers call ``.get``): adding an
-    # entry does NOT declare an absence — the absence ledger iterates
-    # ``structured_arg_status``, not this map.
+    # projectors.
+    # #3087 — this map's KEYS are the absence-ledger membership table: the
+    # executor-failure father (``state_writers._absence_ledger_axes``)
+    # derives the axes it covers from exactly these keys, so an entry added
+    # here declares an axis whose executor-level death is covered — there is
+    # no second hand-kept list. An entry still does not by itself file an
+    # absence: the ledger iterates ``structured_arg_status`` (writers only);
+    # and both label consumers call ``.get``, so an UNlabelled axis degrades
+    # to its underscore-stripped key rather than disappearing.
     "delp_reasoning": "la décision dialectique sur requêtes défaisables",
     "eaf_reasoning": "les croyances épistémiques par agent",
     "adf_reasoning": "l'acceptation à trois valeurs des énoncés",

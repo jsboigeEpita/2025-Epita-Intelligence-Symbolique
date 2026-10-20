@@ -1177,27 +1177,41 @@ def _write_belief_revision_to_state(
 
     #3087 — belief_revision is a ledger axis (the reader's label map has named
     it since #1605), so its writer files a ledger entry on every completed
-    run, mirroring the executor-failure father: ``evaluated`` when the
-    revision ran (the reader stays silent — an honest presence), and
-    ``unavailable`` on the invoke's honest-absent JVM branch (#1646), where
-    the handler never ran and only the JVM-free insight did — the axis
-    contributed no revision, so it is degraded and the reader says it. The
-    reason is read from the OUTPUT's own declared fields (``message`` /
-    ``absent_reason``), never parsed from ``state.errors``. Deliberately NOT
-    routed through :func:`_record_structured_arg_status`: that helper's
-    branches read translation causes and extension sets, neither of which
-    exists for this axis — forcing it through would file a successful
+    run, mirroring the executor-failure father. R1100: the status is decided
+    on the axis's own contribution — the minimal retraction, its singular
+    insight (#1646), computed JVM-free so it survives the handler's absence —
+    NOT on ``output["degraded"]``, which speaks about the Tweety handler:
+
+    * handler ran (not degraded) → ``evaluated`` — the reader stays silent;
+    * insight computed (dict, ``cardinality >= 0``, no ``refusal``) →
+      ``evaluated`` too: the axis produced its structural analysis even
+      though the handler refused by name or the JVM never started — the
+      reason names the handler's state so the entry stays honest;
+    * insight absent or refused AND the handler did not run →
+      ``unavailable``: nothing was produced, the reader says the loss — the
+      reason carries the insight's own ``refusal_detail`` (#3091) when the
+      search itself stopped, else the OUTPUT's declared fields, never
+      something parsed from ``state.errors``.
+
+    Deliberately NOT routed through :func:`_record_structured_arg_status`:
+    that helper's branches read translation causes and extension sets, neither
+    of which exists for this axis — forcing it through would file a successful
     revision as ``absent_no_translator`` (its no-cause fallback), a lie.
     """
     if isinstance(output, dict):
         recorder = getattr(state, "add_structured_arg_status", None)
         if callable(recorder):
-            if output.get("degraded"):
-                reason = str(
-                    output.get("message") or output.get("absent_reason") or "degraded"
+            insight = output.get("minimal_retraction")
+            insight_computed = False
+            if isinstance(insight, dict):
+                cardinality = insight.get("cardinality")
+                insight_computed = (
+                    isinstance(cardinality, int)
+                    and not isinstance(cardinality, bool)
+                    and cardinality >= 0
+                    and not insight.get("refusal")
                 )
-                recorder("belief_revision", "unavailable", True, reason, 0)
-            else:
+            if not output.get("degraded"):
                 recorder(
                     "belief_revision",
                     "evaluated",
@@ -1206,6 +1220,29 @@ def _write_belief_revision_to_state(
                     "attached when it was computable.",
                     0,
                 )
+            elif insight_computed:
+                absent = str(
+                    output.get("absent_reason") or output.get("message") or "degraded"
+                )
+                reason = (
+                    "minimal retraction computed; Tweety revision not run "
+                    f"({absent})"
+                )
+                message = str(output.get("message") or "").strip()
+                if message:
+                    reason = f"{reason} — {message}"
+                recorder("belief_revision", "evaluated", False, reason, 0)
+            else:
+                detail = ""
+                if isinstance(insight, dict):
+                    detail = str(insight.get("refusal_detail") or "").strip()
+                if not detail:
+                    detail = str(
+                        output.get("message")
+                        or output.get("absent_reason")
+                        or "degraded"
+                    )
+                recorder("belief_revision", "unavailable", True, detail, 0)
     if not output or not isinstance(output, dict):
         return
     method = str(output.get("method", "dalal"))

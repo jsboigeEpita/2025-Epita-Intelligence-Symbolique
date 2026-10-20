@@ -15,20 +15,31 @@ The repair's contract, pinned here:
 * the set of ledger axes comes from ONE table — the reader's own label map
   (``act3_conclusion_plugin._ABSENT_DIMENSION_LABELS``), never a second
   hand-kept list;
-* ``_write_belief_revision_to_state`` files the success side too
-  (``evaluated``), and the invoke's honest-absent JVM branch files
-  ``unavailable`` — reason read from the OUTPUT's declared fields, never
-  parsed from ``state.errors``;
+* ``_write_belief_revision_to_state`` files the success side too — decided on
+  the INSIGHT, not the handler (R1100): the handler ran OR the minimal
+  retraction was computed (``cardinality >= 0``, no ``refusal``) →
+  ``evaluated`` — the reader stays silent even when the Tweety handler
+  refused by name or the JVM never started, because the axis's singular
+  analysis (#1646) survived; the insight absent or refused AND the handler
+  down → ``unavailable`` — reason = the insight's own ``refusal_detail``
+  (#3091) when the search itself stopped, else the OUTPUT's declared fields,
+  never parsed from ``state.errors``;
 * anti-regression: ``no_genuine_relations`` stays unlisted (an honest absence
   is not a degradation).
 
 Every executor-path witness runs the REAL ``WorkflowExecutor.execute`` — the
 timeout is produced by the phase budget, the exception by the provider —
-never by a hand-written ledger entry. No JVM, no LLM (hermetic).
+never by a hand-written ledger entry. The insight witnesses build their
+insight with #3091's real ``build_belief_base``/``minimal_retractions``/
+``shape_minimal_retraction`` — never a hand-written dict. No JVM, no LLM
+(hermetic).
 
 Born red on main ``1b4e7039f``: the four defect witnesses fail (no writer
 exists); the three controls (unlisted honest absence, non-ledger capability,
-table-driven coverage) legitimately pass.
+table-driven coverage) legitimately pass. The R1100 rework's three insight
+witnesses were born red on the pre-rework head ``13ceb9fc8`` (decision keyed
+on ``output["degraded"]``); the handler-ran and no-insight tests are controls
+that legitimately pass before and after.
 """
 
 from __future__ import annotations
@@ -62,6 +73,7 @@ class _FakeState:
     def __init__(self) -> None:
         self.structured_arg_status: Dict[str, Dict[str, Any]] = {}
         self.errors: List[Dict[str, Any]] = []
+        self.belief_revision_results: List[Dict[str, Any]] = []
 
     def add_structured_arg_status(
         self,
@@ -82,8 +94,40 @@ class _FakeState:
     def log_error(self, agent_name: str, message: str) -> None:
         self.errors.append({"agent_name": agent_name, "message": message})
 
-    def add_belief_revision_result(self, *args: Any, **kwargs: Any) -> None:
-        """No-op — the writer's downstream state write is not under test."""
+    def add_belief_revision_result(
+        self,
+        method: str,
+        original: List[str],
+        revised: List[str],
+        minimal_retraction: Optional[Dict[str, Any]] = None,
+        argument_labels: Optional[Dict[str, str]] = None,
+        argument_ids_absent_reason: Optional[str] = None,
+        population_total: Optional[int] = None,
+        dropped_unresolved: Optional[int] = None,
+    ) -> str:
+        """A storing mirror of ``UnifiedAnalysisState.add_belief_revision_result``
+        (same signature, same optional-only-when-set shape) — the finding reader
+        (``_belief_revision_finding``) renders from this list, so the witness can
+        assert the render, not just the ledger entry."""
+
+        entry: Dict[str, Any] = {
+            "id": f"brevision_{len(self.belief_revision_results) + 1}",
+            "method": method,
+            "original": original,
+            "revised": revised,
+        }
+        if minimal_retraction is not None:
+            entry["minimal_retraction"] = minimal_retraction
+        if argument_labels is not None:
+            entry["argument_labels"] = argument_labels
+        if argument_ids_absent_reason is not None:
+            entry["argument_ids_absent_reason"] = argument_ids_absent_reason
+        if population_total is not None:
+            entry["population_total"] = population_total
+        if dropped_unresolved is not None:
+            entry["dropped_unresolved"] = dropped_unresolved
+        self.belief_revision_results.append(entry)
+        return entry["id"]
 
 
 def _absent_capabilities(state: Any) -> List[Any]:
@@ -193,7 +237,7 @@ class TestBeliefRevisionWriterFilesLedgerEntry:
         base.update(extra)
         return base
 
-    def test_success_files_evaluated_not_degraded(self):
+    def test_handler_ran_files_evaluated_not_degraded(self):
         """A completed revision is an honest presence: ``evaluated``,
         ``degraded=False`` — the reader stays silent, and the ledger's
         vocabulary is complete in both directions."""
@@ -205,15 +249,148 @@ class TestBeliefRevisionWriterFilesLedgerEntry:
         assert entry["degraded"] is False
         assert _absent_capabilities(state) == []
 
-    def test_jvm_absent_files_unavailable_degraded(self):
-        """The invoke's honest-absent return (#1646): the handler never ran,
-        only the JVM-free insight did. The axis contributed no revision and
-        the ledger says so — reason read from the OUTPUT's declared message,
-        never parsed from ``state.errors``."""
+    # -- R1100 rework: the status is decided on the INSIGHT, not the handler --
+
+    @staticmethod
+    def _computed_insight() -> Dict[str, Any]:
+        """The axis's singular contribution, built with #3091's real tools:
+        ``build_belief_base`` → decomposed ``minimal_retractions`` →
+        ``shape_minimal_retraction`` (never a hand-written dict — the
+        coordinator's probe measured this exact shape at cardinality 10 /
+        1024 options on the 40-unit / 10-target form)."""
+
+        from argumentation_analysis.agents.core.logic.belief_revision_insight import (
+            build_belief_base,
+            minimal_retractions,
+            shape_minimal_retraction,
+        )
+
+        args = [f"u{i}" for i in range(40)]
+        base, names = build_belief_base(args, negated_indices=range(10))
+        return shape_minimal_retraction(minimal_retractions(base), names)
+
+    @staticmethod
+    def _finding(state: Any) -> Any:
+        from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
+            _belief_revision_finding,
+        )
+
+        return _belief_revision_finding(state)
+
+    def test_size_bound_with_computed_insight_is_not_a_lost_axis(self):
+        """#3091's shape — the handler refused by name, the insight computed.
+        Every real run takes this once both PRs are merged. The axis produced
+        its singular analysis, so the reader must NOT list it — while
+        ``_belief_revision_finding`` keeps rendering the rupture the insight
+        found. Deciding on ``output["degraded"]`` (the handler's state) makes
+        the render say both « n'a pas abouti » and the minimal breaking
+        point — the readable contradiction R1100 sent back."""
+
+        insight = self._computed_insight()
+        assert insight["cardinality"] >= 1  # the form the probe measured
+        state = _FakeState()
+        _write_belief_revision_to_state(
+            self._output(
+                minimal_retraction=insight,
+                degraded=True,
+                absent_reason="handler_size_bound",
+                message=(
+                    "belief revision refused by name: 25 beliefs exceed the "
+                    "measured-safe handler bound of 16"
+                ),
+            ),
+            state,
+            {},
+        )
+        entry = state.structured_arg_status["belief_revision"]
+        assert entry["status"] == "evaluated"
+        assert entry["degraded"] is False
+        assert "handler_size_bound" in entry["reason"]
+        assert _absent_capabilities(state) == []
+        assert self._finding(state) is not None
+
+    def test_jvm_absent_with_computed_insight_is_not_a_lost_axis(self):
+        """#1646's honest-absent return carries the same JVM-free insight:
+        the axis's analysis survived the handler's absence. Same ruling —
+        ``evaluated``, nothing listed, the finding still renders."""
 
         state = _FakeState()
         _write_belief_revision_to_state(
             self._output(
+                minimal_retraction=self._computed_insight(),
+                degraded=True,
+                absent_reason="jvm_not_started",
+                message="belief revision unavailable: JVM not started (honest-absent)",
+            ),
+            state,
+            {},
+        )
+        entry = state.structured_arg_status["belief_revision"]
+        assert entry["status"] == "evaluated"
+        assert entry["degraded"] is False
+        assert "jvm_not_started" in entry["reason"]
+        assert _absent_capabilities(state) == []
+        assert self._finding(state) is not None
+
+    def test_refused_insight_with_bounded_handler_is_a_said_absence(self):
+        """The mirror case: the search itself refused (a named bound stopped
+        it) AND the handler did not run — the axis produced nothing. The
+        ledger lists it, and the reason carries the insight's own
+        ``refusal_detail`` (#3091), not the handler's message."""
+
+        from argumentation_analysis.agents.core.logic.belief_revision_insight import (
+            RetractionResult,
+            shape_minimal_retraction,
+        )
+
+        refusal = shape_minimal_retraction(
+            RetractionResult(
+                cardinality=-1,
+                options=[],
+                options_total=0,
+                touched=(),
+                refusal="subset_budget",
+                refusal_detail=(
+                    "the sweep stopped at k=10: one component exhausted the "
+                    "700000-subset budget"
+                ),
+            ),
+            [f"u{i}" for i in range(40)],
+        )
+        state = _FakeState()
+        _write_belief_revision_to_state(
+            self._output(
+                minimal_retraction=refusal,
+                degraded=True,
+                absent_reason="handler_size_bound",
+                message="belief revision refused by name: 25 beliefs exceed the bound",
+            ),
+            state,
+            {},
+        )
+        entry = state.structured_arg_status["belief_revision"]
+        assert entry["status"] == "unavailable"
+        assert entry["degraded"] is True
+        assert "subset budget" in entry["reason"].replace("-", " ")
+        assert "700000" in entry["reason"]
+        absent = _absent_capabilities(state)
+        assert [d.capability for d in absent] == ["belief_revision"]
+
+    def test_insight_absent_and_handler_down_stays_unavailable(self):
+        """The #1646 ImportError branch: no computable insight at all (a
+        bare degraded dict, no refusal) and the handler never ran — the axis
+        is genuinely lost, and the reason is the output's declared message."""
+
+        state = _FakeState()
+        _write_belief_revision_to_state(
+            self._output(
+                minimal_retraction={
+                    "cardinality": -1,
+                    "options": [],
+                    "base_size": 0,
+                    "touched_count": 0,
+                    "degraded": True,
+                },
                 degraded=True,
                 absent_reason="jvm_not_started",
                 message="belief revision unavailable: JVM not started (honest-absent)",
