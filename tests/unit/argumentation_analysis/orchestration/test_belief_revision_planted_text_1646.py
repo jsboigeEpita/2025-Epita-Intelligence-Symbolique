@@ -60,6 +60,7 @@ from typing import Any, Dict, List, Sequence, Tuple
 from argumentation_analysis.agents.core.logic.belief_revision_insight import (
     build_belief_base,
     minimal_retractions,
+    shape_minimal_retraction,
 )
 from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
     _belief_revision_finding,
@@ -89,22 +90,16 @@ def _insight_chain(
 ) -> Tuple[List[List[int]], List[str], Dict[str, Any]]:
     """Run the full JVM-free insight chain on a planted argument set.
 
-    Returns ``(base, names, mr_dict)`` where ``mr_dict`` is shaped exactly as the
-    producer shapes it (``invoke_callables._invoke_belief_revision`` l.4204-4217):
+    Returns ``(base, names, mr_dict)`` where ``mr_dict`` is shaped by the
+    SHARED shaper both producers call (``shape_minimal_retraction``, #3088):
     cardinality, NAMED options (so the reader can name the rupture), base_size,
-    and touched_count (which drives the B-3 inert signal).
+    and touched_count (which drives the B-3 inert signal). The local
+    re-implementation this used to carry could drift from the producer's shape;
+    calling the producer's own function cannot.
     """
     base, names = build_belief_base(args, negated_indices)
-    card, options = minimal_retractions(base)
-    named_options = [[names[i] for i in opt] for opt in options]
-    touched = len({i for opt in options for i in opt})
-    mr = {
-        "cardinality": card,
-        "options": named_options,
-        "base_size": len(base),
-        "touched_count": touched,
-        "degraded": False,
-    }
+    result = minimal_retractions(base)
+    mr = shape_minimal_retraction(result, names)
     return base, names, mr
 
 

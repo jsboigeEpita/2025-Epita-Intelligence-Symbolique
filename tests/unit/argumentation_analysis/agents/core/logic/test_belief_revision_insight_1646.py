@@ -25,14 +25,17 @@ from argumentation_analysis.agents.core.logic.belief_revision_insight import (
 class TestMinimalRetractions:
     def test_consistent_base_needs_no_retraction(self) -> None:
         """A satisfiable base has cardinality 0 — no insight fabricated."""
-        assert minimal_retractions([[1], [2], [3]]) == (0, [()])
+        result = minimal_retractions([[1], [2], [3]])
+        assert (result.cardinality, result.options) == (0, [()])
+        assert result.refusal is None
 
     def test_single_clause_retraction_cardinality_one(self) -> None:
         """B-1: the canonical case — ONE belief restores consistency (cardinal 1).
 
         base p1, p1->p2, ¬p2 is UNSAT (p1 ∧ (p1->p2) |= p2 contradicts ¬p2).
         """
-        card, opts = minimal_retractions([[1], [-1, 2], [-2]])
+        result = minimal_retractions([[1], [-1, 2], [-2]])
+        card, opts = result.cardinality, result.options
         assert card == 1
         # Three cardinal-1 options exist: drop p1, drop p1->p2, drop ¬p2.
         assert len(opts) == 3
@@ -45,7 +48,8 @@ class TestMinimalRetractions:
         are all returned, same cardinality, leading to incompatible consistent
         bases.
         """
-        card, opts = minimal_retractions([[1], [-1, 2], [-2]])
+        result = minimal_retractions([[1], [-1, 2], [-2]])
+        card, opts = result.cardinality, result.options
         assert card == 1
         assert len(opts) >= 2
         # Each option is a distinct singleton retraction.
@@ -62,7 +66,8 @@ class TestMinimalRetractions:
         this, because it never asks what survives.
         """
         base = [[1], [-1], [5], [6]]
-        card, opts = minimal_retractions(base)
+        result = minimal_retractions(base)
+        card, opts = result.cardinality, result.options
         assert card == 1
         # Every retraction option touches only the clashing beliefs (idx 0,1),
         # never the conclusions (idx 2,3).
@@ -71,7 +76,8 @@ class TestMinimalRetractions:
 
     def test_bare_contradiction_two_clauses(self) -> None:
         """p and ¬p: cardinal 1, two options (drop either)."""
-        card, opts = minimal_retractions([[1], [-1]])
+        result = minimal_retractions([[1], [-1]])
+        card, opts = result.cardinality, result.options
         assert card == 1
         assert (0,) in opts and (1,) in opts
 
@@ -83,32 +89,48 @@ class TestMinimalRetractions:
         cardinality is 2 — one retraction per clash. This is the minimality
         guarantee: the search does not stop at a non-restoring cardinal-1 guess.
         """
-        card, opts = minimal_retractions([[1], [2], [-1], [-2]])
+        result = minimal_retractions([[1], [2], [-1], [-2]])
+        card, opts = result.cardinality, result.options
         assert card == 2
         assert all(len(o) == 2 for o in opts)
 
-    def test_beyond_search_bound_degrades_honestly(self, monkeypatch) -> None:
-        """A base whose minimal retraction exceeds the search bound returns -1
-        (no fabricated minimal set) — fail-loud #1019.
+    def test_beyond_search_bound_refuses_by_name(self, monkeypatch) -> None:
+        """A component beyond the search bound refuses WITH ITS NAME — no
+        fabricated minimal set, and never a bare ``-1`` (#1019, #3088 item 4).
 
-        The bound is calibrated for real-run cardinalities (8-9 measured on
-        corpus; ``_MAX_SEARCH_K = 12`` — see
-        ``test_belief_revision_realrun_bound_1646`` for the real-scale guards);
-        lowered here so the degrade fires fast instead of sweeping the real
-        subset budget. Five independent clashes need cardinal 5, a cap of 4
-        finds no restoring subset.
+        The bound is PER unsatisfiable component (#3088): five independent clash
+        pairs are five components of cardinality 1 each, so they no longer
+        exceed any per-component cap — the refusal is exercised here with four
+        clauses on ONE atom needing cardinality 2, cap lowered to 1 so the
+        refusal fires fast instead of sweeping the real subset budget.
         """
         import argumentation_analysis.agents.core.logic.belief_revision_insight as _bri
 
-        monkeypatch.setattr(_bri, "_MAX_SEARCH_K", 4)
-        five_clashes = [[1], [-1], [2], [-2], [3], [-3], [4], [-4], [5], [-5]]
-        card, opts = minimal_retractions(five_clashes)
-        assert card == -1
-        assert opts == []
+        monkeypatch.setattr(_bri, "_MAX_SEARCH_K", 1)
+        one_dense_clash = [[1], [1], [-1], [-1]]
+        result = minimal_retractions(one_dense_clash)
+        assert result.cardinality == -1
+        assert result.options == []
+        assert result.refusal == "search_k"
+        assert "4 clauses" in result.refusal_detail
+        assert result.degraded is True
+
+    def test_subset_budget_refusal_names_its_figures(self, monkeypatch) -> None:
+        """Past the subset budget the refusal names the budget, the component
+        size and the pass — the reason rides with the figure (#3088 item 4)."""
+        import argumentation_analysis.agents.core.logic.belief_revision_insight as _bri
+
+        monkeypatch.setattr(_bri, "_MAX_SUBSET_BUDGET", 0)
+        result = minimal_retractions([[1], [-1]])
+        assert result.cardinality == -1
+        assert result.refusal == "subset_budget"
+        assert "budget 0" in result.refusal_detail
+        assert "k=1" in result.refusal_detail
 
     def test_empty_base_is_consistent(self) -> None:
         """An empty belief base is trivially satisfiable (no retraction)."""
-        assert minimal_retractions([]) == (0, [()])
+        result = minimal_retractions([])
+        assert (result.cardinality, result.options) == (0, [()])
 
     def test_result_is_deterministic(self) -> None:
         """Same input ⇒ same output across calls (no set-ordering leak)."""
@@ -122,7 +144,8 @@ class TestMinimalRetractions:
         ¬p3. Cardinal 1 — break any link.
         """
         # p1, p1->p2, p2->p3, ¬p3
-        card, opts = minimal_retractions([[1], [-1, 2], [-2, 3], [-3]])
+        result = minimal_retractions([[1], [-1, 2], [-2, 3], [-3]])
+        card, opts = result.cardinality, result.options
         assert card == 1
         assert len(opts) == 4  # p1, p1->p2, p2->p3, ¬p3 each break the chain
 
@@ -148,7 +171,7 @@ class TestBuildBeliefBase:
         base, names = build_belief_base(["x", "y", "z"], [])
         assert base == [[1], [2], [3]]
         assert names == ["x", "y", "z"]
-        assert minimal_retractions(base)[0] == 0
+        assert minimal_retractions(base).cardinality == 0
 
     def test_one_fallacy_creates_real_clash(self) -> None:
         """A fallacy on the first argument adds ¬x → base {[x],[y],[-x]} UNSAT.
@@ -159,7 +182,8 @@ class TestBuildBeliefBase:
         base, names = build_belief_base(["x", "y"], [0])
         assert base == [[1], [2], [-1]]
         assert names == ["x", "y", "¬x"]
-        card, opts = minimal_retractions(base)
+        result = minimal_retractions(base)
+        card, opts = result.cardinality, result.options
         assert card == 1
         # Each retraction touches only the clash (index 0 = x, or 2 = ¬x), never y.
         for opt in opts:
@@ -174,7 +198,8 @@ class TestBuildBeliefBase:
         discriminating figure no contradiction-detector (PL/UNSAT) produces.
         """
         base, names = build_belief_base(["x", "y", "z"], [0])
-        card, opts = minimal_retractions(base)
+        result = minimal_retractions(base)
+        card, opts = result.cardinality, result.options
         assert card == 1
         for opt in opts:
             # Only the clash beliefs (x at 0, ¬x at 3) are ever retracted.
@@ -190,7 +215,8 @@ class TestBuildBeliefBase:
         """
         base, names = build_belief_base(["x", "y"], [0, 1])
         assert base == [[1], [2], [-1], [-2]]
-        card, opts = minimal_retractions(base)
+        result = minimal_retractions(base)
+        card, opts = result.cardinality, result.options
         assert card == 2
         assert all(len(o) == 2 for o in opts)
 
@@ -214,7 +240,8 @@ class TestBuildBeliefBase:
         """
         base, _names = build_belief_base(["x"], [0, 0, 0])
         assert base == [[1], [-1]]
-        card, opts = minimal_retractions(base)
+        result = minimal_retractions(base)
+        card, opts = result.cardinality, result.options
         assert card == 1
         # Two singletons: drop x (index 0) or drop ¬x (index 1).
         assert sorted(opts) == [(0,), (1,)]

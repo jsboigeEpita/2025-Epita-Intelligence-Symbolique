@@ -14,8 +14,14 @@ These guards pin the repair:
   equally-minimal options — not -1;
 * the state shaping caps the stored ``options`` and carries the exact
   ``options_total`` (the Acte III reader names the true multiplicity);
-* a pathological base still degrades to -1 (the bound is a guard, not gone);
+* a component past the search bound still refuses — BY NAME, with its measured
+  reason (#3088 item 4: the bare ``-1`` is what the issue opened on);
 * the reader prefers ``options_total`` over the capped stored list.
+
+#3088: the 40-clash-pair base that used to degrade (flat sweep, budget
+exhausted at k=8) now decomposes exactly — 40 pair-sweeps, cardinality 40,
+``options_total`` 2**40. The per-component bound refuses dense components, not
+wide sparse bases.
 
 Opaque synthetic atoms only (privacy HARD). No JVM, no API key.
 """
@@ -43,14 +49,15 @@ class TestRealRunCardinalityReachable:
 
     def test_doc0_shape_yields_cardinality_8_not_degraded(self):
         base, _names = _realrun_doc0_shape()
-        card, options = minimal_retractions(base)
-        assert card == 8, (
+        result = minimal_retractions(base)
+        assert result.cardinality == 8, (
             "the measured doc_0 base has 8 independent clash pairs: the minimal "
-            f"retraction is cardinal 8, got {card} (the fixed cap muted the "
-            "insight on every real run)"
+            f"retraction is cardinal 8, got {result.cardinality} (the fixed cap "
+            "muted the insight on every real run)"
         )
         # One clause from each clash pair: 2**8 equally-minimal retractions.
-        assert len(options) == 256
+        assert result.options_total == 256
+        assert result.refusal is None
 
     def test_bound_covers_real_run_cardinality(self):
         from argumentation_analysis.agents.core.logic.belief_revision_insight import (
@@ -59,7 +66,10 @@ class TestRealRunCardinalityReachable:
 
         assert _MAX_SEARCH_K >= 8, (
             "real corpus runs measured cardinality 8 (8 fallacy targets); the "
-            "k-cap must sit at or above real-run cardinalities"
+            "k-cap must sit at or above real-run cardinalities. #3088: the cap "
+            "now applies PER unsatisfiable component, whose real-run "
+            "cardinality is 1 (a clash pair) — so this floor is doubly covered, "
+            "and it is the DECOMPOSITION above that makes the total 8 reachable"
         )
 
     def test_budget_is_finite(self):
@@ -71,14 +81,33 @@ class TestRealRunCardinalityReachable:
         # forever. Exact value is calibration, finiteness is the contract.
         assert isinstance(_MAX_SUBSET_BUDGET, int) and 0 < _MAX_SUBSET_BUDGET
 
-    def test_pathological_base_still_degrades_honestly(self):
-        # 40 clash pairs: cardinality 40 is beyond any real-run k-cap — the
-        # search degrades to -1 rather than fabricate (or hang).
+    def test_wide_sparse_base_decomposes_instead_of_degrading(self):
+        """#3088: 40 independent clash pairs = 40 pair-sweeps, cardinality 40.
+
+        The pre-#3088 flat sweep walked C(40, k) over this 80-clause base and
+        exhausted its subset budget at k=8 — the issue's own shape, ~36 s of
+        churn then a bare ``-1``. The decomposition answers EXACTLY: 40
+        components of cardinality 1, an option set of 2**40 (counted, never
+        materialized). This is the shape the standing doc_A passes hit.
+        """
+        import time
+
+        from argumentation_analysis.agents.core.logic.belief_revision_insight import (
+            _OPTIONS_STORED_CAP,
+        )
+
         args = [f"claim_{i}" for i in range(40)]
         base, _names = build_belief_base(args, list(range(40)))
-        card, options = minimal_retractions(base)
-        assert card == -1
-        assert options == []
+        started = time.perf_counter()
+        result = minimal_retractions(base)
+        elapsed = time.perf_counter() - started
+        assert result.cardinality == 40
+        assert result.options_total == 2**40
+        assert result.refusal is None
+        assert len(result.options) == _OPTIONS_STORED_CAP
+        # The stated budget for this shape: seconds, not the flat sweep's ~36 s
+        # churn to a refusal (and never a hang).
+        assert elapsed < 30.0, f"decomposed sweep took {elapsed:.1f} s"
 
 
 class TestStateShapingCapsOptions:
@@ -91,8 +120,8 @@ class TestStateShapingCapsOptions:
         )
 
         base, names = _realrun_doc0_shape()
-        card, options = minimal_retractions(base)
-        shaped = shape_minimal_retraction(card, options, names)
+        result = minimal_retractions(base)
+        shaped = shape_minimal_retraction(result, names)
         assert shaped["cardinality"] == 8
         assert shaped["options_total"] == 256
         assert len(shaped["options"]) == _OPTIONS_STORED_CAP
@@ -109,10 +138,10 @@ class TestStateShapingCapsOptions:
         # The planted-text scale (cardinal 1): no capping artefact.
         args = ["alpha", "beta", "gamma"]
         base, names = build_belief_base(args, [1])
-        card, options = minimal_retractions(base)
-        shaped = shape_minimal_retraction(card, options, names)
+        result = minimal_retractions(base)
+        shaped = shape_minimal_retraction(result, names)
         assert shaped["cardinality"] == 1
-        assert shaped["options_total"] == len(options) == len(shaped["options"])
+        assert shaped["options_total"] == result.options_total == len(shaped["options"])
 
     def test_shape_options_are_labels_not_indices(self):
         from argumentation_analysis.agents.core.logic.belief_revision_insight import (
@@ -120,8 +149,8 @@ class TestStateShapingCapsOptions:
         )
 
         base, names = _realrun_doc0_shape()
-        card, options = minimal_retractions(base)
-        shaped = shape_minimal_retraction(card, options, names)
+        result = minimal_retractions(base)
+        shaped = shape_minimal_retraction(result, names)
         for opt in shaped["options"]:
             assert isinstance(opt, list)
             for label in opt:
@@ -147,8 +176,8 @@ class TestReaderNamesTrueMultiplicity:
         )
 
         base, names = _realrun_doc0_shape()
-        card, options = minimal_retractions(base)
-        shaped = shape_minimal_retraction(card, options, names)
+        result = minimal_retractions(base)
+        shaped = shape_minimal_retraction(result, names)
         finding = self._finding_for(shaped)
         assert finding is not None
         assert "256" in finding.statement

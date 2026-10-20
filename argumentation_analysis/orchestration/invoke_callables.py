@@ -6111,6 +6111,21 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
         )
 
 
+# #3088 item 4 — the Tweety handler's belief count is bounded BY NAME. Measured
+# ladder on this call's own shape (N positive unit beliefs + one new belief,
+# fresh JVM, -Xms256m -Xmx2048m): 8 beliefs -> 0.01 s, 16 -> 2.76 s,
+# 24 -> java.lang.OutOfMemoryError after 112 s. Above the measured-safe count
+# the handler is not called at all: it would OOM the JVM the other phases share
+# (measured, unwrapped) or burn the phase's 180 s budget (the wrapped runs). The
+# refusal names the bound and its measurement; the axis's insight — computed
+# JVM-free — is unaffected.
+_HANDLER_MAX_BELIEFS = 16
+_HANDLER_BOUND_MEASUREMENT = (
+    "fresh JVM, -Xms256m -Xmx2048m: 8 beliefs -> 0.01 s, 16 -> 2.76 s, "
+    "24 -> java.lang.OutOfMemoryError after 112 s"
+)
+
+
 async def _invoke_belief_revision(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -6217,10 +6232,15 @@ async def _invoke_belief_revision(
         )
 
         base, names = build_belief_base(args, negated_indices)
-        card, options = minimal_retractions(base)
+        # #3088: the search decomposes the base into connected components, so the
+        # 40-unit population costs one sweep per clash pair and returns the exact
+        # cardinality and multiplicity (2**n) instead of exhausting the flat
+        # sweep's subset budget at k=8 (~36 s, then a bare -1).
+        retraction = minimal_retractions(base)
         # Named labels + capped stored options + exact options_total (B-2
-        # multiplicity), shared shaping with the conversational producer.
-        minimal_retraction = shape_minimal_retraction(card, options, names)
+        # multiplicity), shared shaping with the conversational producer. A
+        # refusal keeps its name and measured reason in the entry (#3088 item 4).
+        minimal_retraction = shape_minimal_retraction(retraction, names)
     except ImportError:
         # logic/__init__ cascade (#1697) OR missing pysat: the insight is
         # unavailable, not the phase. cardinality -1 → the reader produces
@@ -6267,6 +6287,39 @@ async def _invoke_belief_revision(
         safe_new_belief = _pl_atom(new_belief, prefix="n")
         if not safe_beliefs:
             safe_beliefs = [_pl_atom("initial_belief", prefix="b")]
+
+        # #3088 item 4 — the handler's belief count is bounded BY NAME before the
+        # call (see ``_HANDLER_MAX_BELIEFS``). Above the measured-safe count the
+        # kernel revision OOMs the shared JVM, or spends the phase's whole 180 s
+        # budget on the wrapped runs. Refusing here keeps the axis's insight —
+        # computed JVM-free above — and states the bound and its measurement,
+        # instead of dying silently or freezing. ``revised`` stays [] (tri-state:
+        # not computed).
+        if len(safe_beliefs) > _HANDLER_MAX_BELIEFS:
+            refused = {
+                "method": method,
+                "original": list(beliefs) if isinstance(beliefs, list) else [],
+                "new_belief": new_belief,
+                "revised": [],  # tri-state: not computed (the bound refused it)
+                "statistics": {
+                    "handler": "BeliefRevisionHandler",
+                    "backend": "bound-refused",
+                    "bound": f"beliefs <= {_HANDLER_MAX_BELIEFS}",
+                    "measured": _HANDLER_BOUND_MEASUREMENT,
+                },
+                "minimal_retraction": minimal_retraction,
+                "degraded": True,
+                "absent_reason": "handler_size_bound",
+                "message": (
+                    f"belief revision refused by name: {len(safe_beliefs)} beliefs "
+                    f"exceed the measured-safe handler bound of "
+                    f"{_HANDLER_MAX_BELIEFS} — the Tweety kernel revision needs "
+                    "more heap and time than the shared JVM can give at that size"
+                ),
+            }
+            # #3014: every return site carries the node identity fields.
+            refused.update(identity_payload)
+            return refused
 
         handler = BeliefRevisionHandler()  # type: ignore[no-untyped-call]
         result = await asyncio.to_thread(
