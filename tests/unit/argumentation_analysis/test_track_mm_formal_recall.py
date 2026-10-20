@@ -91,6 +91,10 @@ class TestPLMetricsPresent:
             "post_tweety",
             "wide_net_extras",
             "isolation_survivors",
+            # #2850 lot 5 — disclosure key: the stateless arm names the
+            # population its fallback reading drew from (present whenever
+            # no merged state population exists, which is this test's shape).
+            "arguments_basis",
         }
         assert expected_keys == set(metrics.keys())
 
@@ -200,6 +204,9 @@ class TestFOLMetricsPresent:
             "pre_tweety",
             "post_tweety",
             "isolation_survivors",
+            # #2850 lot 5 — disclosure key: same as the PL arm, the stateless
+            # FOL fallback names the population its reading drew from.
+            "arguments_basis",
         }
         assert expected_keys == set(metrics.keys())
 
