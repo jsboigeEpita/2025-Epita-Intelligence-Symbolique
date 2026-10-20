@@ -125,6 +125,28 @@ class TestTokensArePricedFromTheTable:
     def test_an_unknown_model_suffix_does_not_borrow_a_price(self):
         assert price_tokens("claude-haiku-5-5-20990101", 1_000, 1_000) is None
 
+    def test_the_haiku_row_agrees_with_a_real_bill(self, usage_counter):
+        """Ground truth (coordinator on #3095, 20/10): a real
+        ``claude-haiku-5-5`` pass recorded 564 534 prompt + 258 347
+        completion tokens; the provider's Console billed **$0.19** for it
+        (read by the user). The tier threshold is per REQUEST — the run's
+        564k prompt tokens summed over calls each under 100k — so the run
+        prices at the standard row: computed $0.19 = billed $0.19."""
+        calls = [(94_089, 43_057)] * 5 + [(94_089, 43_062)]
+        assert sum(p for p, _ in calls) == 564_534, "the real run's prompt total"
+        assert sum(c for _, c in calls) == 258_347, "the real run's completion total"
+        _run_sync_calls("claude-haiku-5-5", calls)
+        stats = usage_counter()
+        assert stats["computed_cost_usd"] == pytest.approx(0.1856, abs=0.0005)
+        assert round(stats["computed_cost_usd"], 2) == 0.19, (
+            "the dated table must agree with the provider's bill on the real "
+            "run — computed $0.19 = billed $0.19 (Console, read 20/10)"
+        )
+        line = _load_renderer().render_usage_line(stats)
+        assert (
+            "$0.1856" in line
+        ), "the run's own usage line prints the price the bill confirms"
+
 
 class TestProviderReportedCostIsKeptApart:
     def test_byok_zero_is_labelled_and_is_not_the_run_cost(self, usage_counter):
