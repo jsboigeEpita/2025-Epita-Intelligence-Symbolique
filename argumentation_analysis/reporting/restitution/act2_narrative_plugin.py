@@ -61,6 +61,12 @@ from .native_dung import (  # #1912: single shared decoder — see native_dung.p
 )
 from .fr_accord import accord
 from .formal_derivation import extract_tested_content
+from .speaker_record import (
+    SPEAKER_NAMING_RULE,
+    SpeakerRecord,
+    build_speaker_record,
+    format_speaker_line,
+)
 from .global_projection import GlobalFinding, project_global_findings
 from .llm_weaving import LlmCallable, WeaveOutcome, weave
 from .specialist_roles import (
@@ -438,6 +444,11 @@ class Act2Evidence:
     # « couvrant les positions a–b sur L caractères » (the truncation is said
     # where it is read, with the range it actually covers).
     source_length: int = 0
+    # #3082 — le locuteur : l'enregistrement partagé (valeur + provenance)
+    # que les Actes I et III lisent aussi. L'Acte II ne lisait AUCUN des deux
+    # producteurs (ni la métadonnée, ni le stakeholder « speaker ») — il
+    # portait sa règle de nommage sans la donnée sur laquelle elle tranche.
+    speaker: SpeakerRecord = field(default_factory=SpeakerRecord)
 
 
 @dataclass
@@ -848,6 +859,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         role_assignments=classify_specialist_roles(state),
         text_sequence=collect_text_sequence(state),
         source_length=len(getattr(state, "raw_text", "") or ""),
+        speaker=build_speaker_record(state),
     )
 
 
@@ -1800,6 +1812,14 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         "détectées : lectures du texte par les spécialistes, jamais des "
         "données vérifiées) :\n\n"
         f"{chr(10).join(blocks)}\n\n"
+        # #3082 — le locuteur vient du MÊME enregistrement que celui des
+        # Actes I et III (valeur + provenance) : trois actes, une valeur, une
+        # étiquette. Bloc à titre crocheté, auto-qualifié — il n'est PAS une
+        # lecture du texte par un spécialiste, il ne vit donc pas sous le
+        # titre DONNÉES DU STATE ci-dessus (dont la parenthétique qualifie
+        # ses blocs comme extraits et procédures détectées).
+        f"[LOCUTEUR — provenance de la valeur]\n"
+        f"  {format_speaker_line(evidence.speaker)}\n\n"
         f"{coverage_note}"
         f"{unattributed_block}"
         f"TENUE FORMELLE (ancres vérifiées, à tisser comme PREUVE d'un battement) :\n"
@@ -1824,6 +1844,10 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         "l'argument, son caractère (vertus) si l'axe est disponible, ses procédés "
         "relevés (procédé + descente + contre-argument), et sa tenue formelle "
         "citée comme preuve.\n"
+        # #3082 — la règle de nommage que l'Acte III porte déjà, mot pour mot :
+        # un seul contrat, une seule constante. L'Acte II récitait « le
+        # locuteur » sans jamais lire la donnée qui dit qui il est.
+        f"{SPEAKER_NAMING_RULE}\n"
         "- Un procédé relevé n'est pas un défaut par nature. Pour chacun, dis "
         "d'abord CE QU'IL ACCOMPLIT dans le discours — ce que le locuteur "
         "cherche à obtenir par lui ; la justification le porte le plus souvent "

@@ -47,6 +47,12 @@ import yaml
 
 from .arena_record import ArenaRecord, build_arena_record, format_arena_line
 from .fr_accord import accord
+from .speaker_record import (
+    SPEAKER_NAMING_RULE,
+    SpeakerRecord,
+    build_speaker_record,
+    format_speaker_line,
+)
 from .llm_weaving import LlmCallable, WeaveOutcome, weave
 from .readability_gate import GateVerdict, ReadabilityGate
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
@@ -127,6 +133,10 @@ class Act1Evidence:
     # seule étiquette. Le champ ``discursive_arena`` (la lecture de
     # l'extracteur, imprimée sans provenance) est retiré — c'était le défaut.
     arena: ArenaRecord = field(default_factory=ArenaRecord)
+    # #3082 — le locuteur : le même partage pour le producteur jumeau de
+    # l'arène (métadonnée d'un côté, stakeholder « speaker » de l'extracteur
+    # de l'autre). Un enregistrement, une étiquette, lus par les trois actes.
+    speaker: SpeakerRecord = field(default_factory=SpeakerRecord)
     # Spectre attendu (derived from taxonomy common_contexts)
     expected_spectrum: List[ExpectedFamily] = field(default_factory=list)
     spectrum_general: bool = False  # True when genre unknown → full taxonomy
@@ -376,6 +386,8 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
     # here recomputed a pure function for nothing — cross-review cosmetic).
     arena_record = build_arena_record(state)
     genre, genre_source = _derive_genre(state, arena_record)
+    # #3082 — same share for the speaker: one resolution, read by every act.
+    speaker_record = build_speaker_record(state)
     families = _load_families()
     spectrum_available = bool(families)
     expected_spectrum, spectrum_general = _derive_expected_spectrum(families, genre)
@@ -406,6 +418,7 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
         rhetorical_register=register,
         has_stakes=has_stakes,
         arena=arena_record,
+        speaker=speaker_record,
         expected_spectrum=expected_spectrum,
         spectrum_general=spectrum_general,
         spectrum_available=spectrum_available,
@@ -505,6 +518,10 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
     # arène peut être renseignée quand les enjeux ne le sont pas), et l'Acte
     # III en cite la même ligne. Une seule ligne, un seul formateur.
     stakes_block += f"\n  {format_arena_line(evidence.arena)}"
+    # #3082 — le locuteur, même partage : la même ligne que celle des Actes
+    # II et III, rendue hors du conditionnel `has_stakes` pour les mêmes
+    # raisons (un locuteur documenté n'est pas un enjeu extrait).
+    stakes_block += f"\n  {format_speaker_line(evidence.speaker)}"
 
     # --- Spectre attendu (derived) ---
     if not evidence.spectrum_available:
@@ -646,6 +663,7 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         "  jamais comme vérifiée. Un lecteur doit situer immédiatement QUI\n"
         "  parle, OÙ et dans quel CONTEXTE avant toute analyse. Ne reporte pas\n"
         "  l'identification aux actes suivants.\n"
+        f"{SPEAKER_NAMING_RULE}\n"
         "- Pour le spectre, ancre chaque famille sur le contexte qui la rend\n"
         "  probable pour ce genre (ex. « dans un discours politique, l'appel à\n"
         "  l'autorité et l'attaque personnelle sont à guetter car… »).\n"
