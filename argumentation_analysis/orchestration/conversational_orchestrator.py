@@ -3676,10 +3676,13 @@ def _run_belief_revision_from_state(state: Any) -> Optional[Dict[str, Any]]:
         )
 
         base, names = build_belief_base(original_beliefs, negated_indices)
-        card, options = minimal_retractions(base)
+        # #3088: the search decomposes the base into connected components and
+        # returns the exact cardinality/multiplicity, refusing BY NAME at a bound
+        # instead of churning to a bare -1.
+        retraction = minimal_retractions(base)
         # Named labels + capped stored options + exact options_total (B-2
         # multiplicity), shared shaping with the pipeline producer.
-        minimal_retraction = shape_minimal_retraction(card, options, names)
+        minimal_retraction = shape_minimal_retraction(retraction, names)
     except ImportError:
         # logic/__init__ jpype cascade (#1697) OR missing pysat: the insight
         # degrades honestly (cardinality -1 → reader mute), the phase continues.
