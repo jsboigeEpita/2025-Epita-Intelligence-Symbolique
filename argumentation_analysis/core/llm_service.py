@@ -185,7 +185,10 @@ def _log_resolved_llm_config(
             the resolved route diverges from it (see
             :func:`assert_declared_route`).
     """
-    provider = "OpenRouter" if base_url and "openrouter" in base_url else "OpenAI"
+    provider = {
+        "openrouter": "OpenRouter",
+        "anthropic": "Anthropic",
+    }.get(classify_route(base_url), "OpenAI")
     logger.info(
         "LLM config resolved: provider=%s endpoint=%s model=%s source=%s key=%s",
         provider,
@@ -216,15 +219,21 @@ def classify_route(base_url: str) -> str:
     """Classify a resolved endpoint the way the log line presents it.
 
     Same heuristic as ``_log_resolved_llm_config``: an OpenRouter substring
-    reads as ``openrouter``, everything else as the OpenAI-compatible default
-    (``openai``) — including custom local endpoints, which simply never
-    declare ``LLM_EXPECTED_ROUTE`` and are unaffected.
+    reads as ``openrouter``, Anthropic's compatible endpoint as ``anthropic``
+    (named route, #3096 item 6), everything else as the OpenAI-compatible
+    default (``openai``) — including custom local endpoints, which simply
+    never declare ``LLM_EXPECTED_ROUTE`` and are unaffected.
 
     Public since #2352: the migrated route consumers
     (``orchestration.invoke_callables._resolve_llm_route``) used to spell the
     provider label themselves; the vocabulary belongs to this module.
     """
-    return "openrouter" if base_url and "openrouter" in base_url else "openai"
+    text = base_url or ""
+    if "openrouter" in text:
+        return "openrouter"
+    if "api.anthropic.com" in text:
+        return "anthropic"
+    return "openai"
 
 
 def assert_declared_route(base_url: str, model_id: str, source: str) -> None:
@@ -238,7 +247,9 @@ def assert_declared_route(base_url: str, model_id: str, source: str) -> None:
     - empty string → WARNING + no-op (#2281 — empty ≠ absent);
     - ``openrouter`` or ``openrouter:<model_id>`` → the resolved provider
       (and model, when declared) MUST match, else :class:`LLMRouteDivergenceError`
-      naming both sides. Never auto-corrects.
+      naming both sides. Never auto-corrects. ``anthropic`` and
+      ``anthropic:<model_id>`` (the named route, #3096 item 6) follow the same
+      rule.
 
     Args:
         base_url: the resolved endpoint
@@ -275,6 +286,39 @@ def assert_declared_route(base_url: str, model_id: str, source: str) -> None:
         )
 
 
+_ANTHROPIC_BASE_URL_DEFAULT = "https://api.anthropic.com/v1"
+
+
+def _resolve_named_anthropic_route() -> Optional[Tuple[str, str, str]]:
+    """The NAMED Anthropic route (#3096 item 6), or ``None`` when not chosen.
+
+    ``ANTHROPIC_CHAT_MODEL_ID`` selects it — the model id names the rung of
+    the paid ladder. ``ANTHROPIC_API_KEY`` alone never does: that key is
+    commonly present for unrelated tooling, and an ambient key must not
+    reroute a pipeline by accident. A model id without a key is an explicit
+    declaration that cannot be honoured, so it raises instead of falling
+    back to another provider (#2322's spirit).
+
+    The route reads only ``ANTHROPIC_*`` — it never overwrites ``OPENAI_*``
+    or the OpenRouter triple, so every route stays available on one machine.
+    """
+    model_id = (os.environ.get("ANTHROPIC_CHAT_MODEL_ID") or "").strip()
+    if not model_id:
+        return None
+    api_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+    if not api_key:
+        raise ValueError(
+            "ANTHROPIC_CHAT_MODEL_ID is set but ANTHROPIC_API_KEY is not: the "
+            "named Anthropic route needs its own key. Remove the model id to "
+            "use another provider, or provide the key — an explicitly "
+            "declared route never falls back silently."
+        )
+    base_url = (
+        os.environ.get("ANTHROPIC_BASE_URL") or ""
+    ).strip() or _ANTHROPIC_BASE_URL_DEFAULT
+    return api_key, base_url, model_id
+
+
 def resolve_chat_endpoint(
     default_model: str = DEFAULT_CHAT_MODEL_ID,
 ) -> Tuple[str, str, str]:
@@ -294,6 +338,11 @@ def resolve_chat_endpoint(
     ``OPENROUTER_API_KEY`` first and falls back to ``OPENAI_*``. Do NOT add a
     new knob — every raw-SDK caller must go through this so they no longer hit
     the official OpenAI quota (→ 429 → silent fallback) when OpenRouter is on.
+    #3096 item 6 adds one NAMED route above the toggle (most specific
+    declaration wins): ``ANTHROPIC_CHAT_MODEL_ID`` + ``ANTHROPIC_API_KEY``
+    resolve to Anthropic's compatible endpoint without reading or writing a
+    single ``OPENAI_*`` value. Precedence: named Anthropic → OpenRouter
+    toggle → OpenAI.
 
     Args:
         default_model: model id used when neither ``OPENROUTER_CHAT_MODEL_ID``
@@ -310,6 +359,13 @@ def resolve_chat_endpoint(
     visible without turning "no LLM" into a crash; probes degrade, the
     startup factory :func:`create_llm_service` refuses).
     """
+    named_route = _resolve_named_anthropic_route()
+    if named_route is not None:
+        api_key, base_url, model_id = named_route
+        _log_resolved_llm_config(
+            api_key, base_url, model_id, "ANTHROPIC_API_KEY+ANTHROPIC_CHAT_MODEL_ID"
+        )
+        return api_key, base_url, model_id
     openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL")
     openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
     if openrouter_base_url and openrouter_api_key:
@@ -477,17 +533,45 @@ def create_llm_service(
     # routés vers OpenRouter (API compatible OpenAI). Sinon, le comportement
     # OpenAI officiel reste inchangé. Toggle réversible : retirer
     # OPENROUTER_BASE_URL du .env pour revenir à OpenAI.
+    named_route = _resolve_named_anthropic_route()
     openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL")
     openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
-    use_openrouter = bool(openrouter_base_url and openrouter_api_key)
+    use_openrouter = bool(openrouter_base_url and openrouter_api_key) and (
+        named_route is None
+    )
 
-    if use_openrouter:
+    api_key: Optional[str]
+    client_base_url: Optional[str]
+    log_base_url: str
+    route_source: str
+
+    if named_route is not None:
+        # #3096 item 6 — the named route is the most specific declaration and
+        # wins; it reads only ANTHROPIC_* and never rewrites OPENAI_*.
+        api_key, client_base_url, named_model = named_route
+        if model_id != named_model:
+            logger.info(
+                "Named Anthropic route sets the model id to %s (requested %s).",
+                named_model,
+                model_id,
+            )
+        model_id = named_model
+        org_id = None
+        log_base_url = client_base_url
+        route_source = "ANTHROPIC_API_KEY+ANTHROPIC_CHAT_MODEL_ID"
+    elif use_openrouter:
         api_key = openrouter_api_key
+        client_base_url = openrouter_base_url
         # OpenRouter exige des slugs préfixés par le provider (ex. "openai/gpt-5-mini")
         model_id = substitute_obsolete_model(
             os.getenv("OPENROUTER_CHAT_MODEL_ID", model_id),
             "OPENROUTER_CHAT_MODEL_ID",
         )
+        org_id = os.environ.get("OPENAI_ORG_ID")
+        log_base_url = (
+            openrouter_base_url or "https://api.openai.com/v1"
+        )  # truthy whenever use_openrouter — the fallback never fires
+        route_source = "OPENROUTER_API_KEY+OPENROUTER_BASE_URL"
     else:
         api_key = os.environ.get("OPENAI_API_KEY")
         if api_key == "":
@@ -495,25 +579,20 @@ def create_llm_service(
                 "OPENAI_API_KEY is set to an empty string (#2281). "
                 "Remove the line from .env or provide a real key — empty ≠ absent."
             )
-    org_id = os.environ.get("OPENAI_ORG_ID")
+        client_base_url = None  # the SDK reads OPENAI_BASE_URL itself
+        org_id = os.environ.get("OPENAI_ORG_ID")
+        log_base_url = "https://api.openai.com/v1"
+        route_source = "OPENAI_API_KEY"
 
     if not api_key:
         raise ValueError(
-            "Aucune clé API LLM définie. Définissez OPENAI_API_KEY, ou "
-            "OPENROUTER_API_KEY + OPENROUTER_BASE_URL pour router via OpenRouter."
+            "Aucune clé API LLM définie. Définissez OPENAI_API_KEY, "
+            "OPENROUTER_API_KEY + OPENROUTER_BASE_URL, ou "
+            "ANTHROPIC_API_KEY + ANTHROPIC_CHAT_MODEL_ID pour la route nommée."
         )
 
     # Log the resolved config so silent divergence is visible (#2281)
-    _log_resolved_llm_config(
-        api_key,
-        openrouter_base_url or "https://api.openai.com/v1",
-        model_id,
-        (
-            "OPENROUTER_API_KEY+OPENROUTER_BASE_URL"
-            if use_openrouter
-            else "OPENAI_API_KEY"
-        ),
-    )
+    _log_resolved_llm_config(api_key, log_base_url, model_id, route_source)
 
     resilient_client = get_resilient_async_client()
     # Typed as the SK base so the authentic OpenAI/Azure instance, and the
@@ -523,16 +602,17 @@ def create_llm_service(
 
     try:
         if service_type == "OpenAIChatCompletion":
-            provider_label = (
-                "OpenRouter" if use_openrouter else "l'API OpenAI officielle"
-            )
+            provider_label = {
+                "openrouter": "OpenRouter",
+                "anthropic": "Anthropic (named route)",
+            }.get(classify_route(log_base_url), "l'API OpenAI officielle")
             logger.info(
                 f"Configuration Service: OpenAIChatCompletion pour {provider_label}..."
             )
 
             client_kwargs = {"api_key": api_key, "http_client": resilient_client}
-            if use_openrouter:
-                client_kwargs["base_url"] = openrouter_base_url
+            if client_base_url:
+                client_kwargs["base_url"] = client_base_url
             if org_id:
                 client_kwargs["organization"] = org_id
 
