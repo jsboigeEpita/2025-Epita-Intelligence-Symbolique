@@ -237,7 +237,10 @@ def build_standard_workflow() -> WorkflowDefinition:
         .add_phase(
             "aspic_analysis",
             capability="aspic_plus_reasoning",
-            depends_on=["dung_extensions"],
+            # #1649 case 5: the invoker reads the counter phase's output (the
+            # inference-counter undercut lever) — declared, or it reads a key
+            # that is not written yet (the #2969 silent-empty-read class).
+            depends_on=["dung_extensions", "counter"],
             optional=True,
         )
         # #2890 — see the hierarchical_fallacy comment above: quality reads
@@ -379,7 +382,10 @@ def build_full_workflow() -> WorkflowDefinition:
         .add_phase(
             "aspic_analysis",
             capability="aspic_plus_reasoning",
-            depends_on=["dung_extensions"],
+            # #1649 case 5: the invoker reads the counter phase's output (the
+            # inference-counter undercut lever) — declared, or it reads a key
+            # that is not written yet (the #2969 silent-empty-read class).
+            depends_on=["dung_extensions", "counter"],
             optional=True,
         )
         # Convergence synthesis (II #698): compute the 5-signal convergence
@@ -873,7 +879,11 @@ def build_spectacular_workflow() -> WorkflowDefinition:
         .add_phase(
             "aspic_analysis",
             capability="aspic_plus_reasoning",
-            depends_on=["dung_extensions"],
+            # #1649 case 5: the invoker reads the counter phase's output (the
+            # inference-counter undercut lever) — declared here so the
+            # spectacular DAG writes phase_counter_output before ASPIC runs
+            # (the #2969 silent-empty-read class).
+            depends_on=["dung_extensions", "counter"],
             optional=True,
             timeout_seconds=180,
         )

@@ -797,6 +797,20 @@ REGISTRY = {
         "first 4 counter-arguments become competing beliefs; the rest is unanalysed",
         "recorded via counter_arguments_considered/_total on the phase payload and the jtms trace summary (deep-synthesis trace reader) — cap stays debt #2850",
     ),
+    # #1649 case 5: the undercut lever's counter window (first 4 counters
+    # considered; the rest are not candidates for an inference undercut).
+    (
+        "argumentation_analysis/orchestration/invoke_callables.py",
+        "_aspic_counters",
+        "4",
+        1,
+    ): (
+        "population_cap",
+        "first 4 counters in insertion order are considered for an "
+        "inference undercut; the rest emit nothing and feed no attack",
+        "recorded via aspic_undercut_considered/_total on the phase payload "
+        "and the aspic trace summary — cap stays debt #2850",
+    ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
         "detected_fallacies",
