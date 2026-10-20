@@ -25,6 +25,8 @@ from semantic_kernel.connectors.ai.chat_completion_client_base import (
     ChatCompletionClientBase,
 )
 
+from argumentation_analysis.services.model_prices import price_tokens
+
 logger = logging.getLogger("LLMCache")
 
 CACHE_DIR = Path(os.getenv("LLM_CACHE_DIR", ".cache/llm_responses"))
@@ -135,9 +137,12 @@ def get_cache_miss_keys() -> List[str]:
 #
 # Only LIVE round-trips count (off passthrough and record-mode misses): a
 # replayed response was paid at record time, not by this run — counting it
-# would report a cost this run did not incur. Dollars appear only when the
-# provider returned one (``usage.cost``); absence stays ``None`` so the
-# runner prints "not reported", never a fabricated 0 (#2849 DoD 2).
+# would report a cost this run did not incur. Two dollar figures are kept
+# apart (#3095): ``computed_cost_usd`` prices the run's own tokens through
+# the dated table in ``model_prices``; ``cost_usd`` sums the provider's
+# ``usage.cost`` as reported, and a reported 0 (the BYOK shape) is labelled
+# by the renderer instead of being shown as the run's cost. An unknown model
+# is named, never priced at 0 (#1019).
 #
 # Phase attribution rides a ContextVar set by the workflow executor around
 # each phase (``llm_usage_phase``); a call outside any phase lands under
@@ -176,16 +181,28 @@ def llm_usage_phase(name: str) -> _PhaseScope:
 class UsageStats:
     """Thread-safe per-phase tally of the LIVE token spend of one run (#2849).
 
-    ``{phase: {"prompt_tokens", "completion_tokens", "calls"}}`` plus a single
-    ``cost_usd`` — ``None`` until a provider reports one, a float once one did.
+    ``{phase: {"prompt_tokens", "completion_tokens", "calls"}}`` plus three
+    run-level cost fields, deliberately kept apart (#3095):
+
+    - ``computed_cost_usd`` — the run's price, from its own measured tokens
+      and the dated table in ``model_prices``; ``None`` when no call could be
+      priced (every call on an unknown model), never a fabricated 0.
+    - ``cost_usd`` — the provider-reported figure, summed as reported. On a
+      BYOK route every call reports 0; that zero is the route's shape, not
+      the run's cost, and the renderer labels it.
+    - ``unpriced_calls`` — ``{model_id: call count}`` for calls the table
+      cannot price, so "not priced: <id>" names the model rather than
+      silently shrinking the total.
     """
 
-    __slots__ = ("_lock", "_phases", "_cost_usd")
+    __slots__ = ("_lock", "_phases", "_cost_usd", "_computed_usd", "_unpriced")
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._phases: Dict[str, Dict[str, int]] = {}
         self._cost_usd: Optional[float] = None
+        self._computed_usd: Optional[float] = None
+        self._unpriced: Dict[str, int] = {}
 
     def record(
         self,
@@ -193,6 +210,7 @@ class UsageStats:
         completion_tokens: int,
         cost: Optional[float],
         usage_reported: bool = True,
+        model: Optional[str] = None,
     ) -> None:
         """Tally one live round-trip.
 
@@ -220,17 +238,34 @@ class UsageStats:
                 bucket["calls_without_usage"] += 1
             if cost is not None:
                 self._cost_usd = (self._cost_usd or 0.0) + cost
+            # #3095 — the run's own price. A call whose usage was not reported
+            # has unknown tokens (already named by calls_without_usage); it is
+            # not "unpriced on a model". Every other call either prices from
+            # the table or names its model in unpriced_calls — never 0 (#1019).
+            if usage_reported:
+                priced = price_tokens(
+                    str(model or ""), prompt_tokens, completion_tokens
+                )
+                if priced is None:
+                    key = str(model or "").strip() or "(model inconnu)"
+                    self._unpriced[key] = self._unpriced.get(key, 0) + 1
+                else:
+                    self._computed_usd = (self._computed_usd or 0.0) + priced
 
     def as_dict(self) -> Dict[str, Any]:
         with self._lock:
             out: Dict[str, Any] = {k: dict(v) for k, v in self._phases.items()}
             out["cost_usd"] = self._cost_usd
+            out["computed_cost_usd"] = self._computed_usd
+            out["unpriced_calls"] = dict(self._unpriced)
             return out
 
     def reset(self) -> None:
         with self._lock:
             self._phases.clear()
             self._cost_usd = None
+            self._computed_usd = None
+            self._unpriced.clear()
 
 
 _usage_stats = UsageStats()
@@ -270,13 +305,17 @@ def _usage_fields(usage: Any) -> "tuple[int, int, Optional[float]]":
     )
 
 
-def _account_sk_usage(response: Any) -> None:
+def _account_sk_usage(response: Any, model: Optional[str] = None) -> None:
     """Account the live usage of an SK response (#2849). Never raises into the call.
 
     #2853 review item 3 — a round-trip without usage is STILL a live call:
     streamed chunks and some providers carry no ``metadata.usage``. Record the
     call with ``usage_reported=False`` instead of dropping it, so "unknown
     tokens" never merges with "0 tokens".
+
+    #3095 — ``model`` is the id the call resolved to (settings first, the
+    inner service's default second): the accounting point prices the call
+    from it.
     """
     try:
         for msg in response if isinstance(response, list) else [response]:
@@ -289,22 +328,25 @@ def _account_sk_usage(response: Any) -> None:
             if usage is None:
                 continue
             prompt, completion, _cost = _usage_fields(usage)
-            _usage_stats.record(prompt, completion, None)
+            _usage_stats.record(prompt, completion, None, model=model)
             return  # one usage per round-trip, carried by the first message
-        _usage_stats.record(0, 0, None, usage_reported=False)
+        _usage_stats.record(0, 0, None, usage_reported=False, model=model)
     except Exception as exc:  # noqa: BLE001 — instrument must not break the call
         logger.warning("Usage accounting (SK path) skipped: %r", exc)
 
 
-def _account_raw_usage(response: Any) -> None:
-    """Account the live usage of a raw chat.completions response (#2849)."""
+def _account_raw_usage(response: Any, model: Optional[str] = None) -> None:
+    """Account the live usage of a raw chat.completions response (#2849).
+
+    #3095 — ``model`` is the ``model=`` the direct call sent; the reported
+    ``usage.cost`` is kept apart from the price the table computes."""
     try:
         usage = getattr(response, "usage", None)
         if usage is None:
-            _usage_stats.record(0, 0, None, usage_reported=False)
+            _usage_stats.record(0, 0, None, usage_reported=False, model=model)
             return
         prompt, completion, cost = _usage_fields(usage)
-        _usage_stats.record(prompt, completion, cost)
+        _usage_stats.record(prompt, completion, cost, model=model)
     except Exception as exc:  # noqa: BLE001 — instrument must not break the call
         logger.warning("Usage accounting (raw path) skipped: %r", exc)
 
@@ -512,6 +554,16 @@ class CachedChatCompletion(ChatCompletionClientBase):
     def mode(self) -> str:
         return self._mode
 
+    def _call_model(self, settings: Any) -> Optional[str]:
+        """The model id this SK call resolves to (#3095 pricing needs it).
+
+        Per-call settings win over the inner service's default — the same
+        precedence SK applies — so a phase overriding ``ai_model_id`` is
+        priced as the model it actually called."""
+        return getattr(settings, "ai_model_id", None) or getattr(
+            self._inner, "ai_model_id", None
+        )
+
     async def get_chat_message_contents(
         self,
         chat_history: ChatHistory,
@@ -524,7 +576,9 @@ class CachedChatCompletion(ChatCompletionClientBase):
             response = await self._inner.get_chat_message_contents(
                 chat_history=chat_history, settings=settings, **kwargs
             )
-            _account_sk_usage(response)  # #2849 — live round-trip
+            _account_sk_usage(
+                response, self._call_model(settings)
+            )  # #2849 — live round-trip
             return response
 
         key = compute_cache_key(chat_history, settings)
@@ -555,7 +609,9 @@ class CachedChatCompletion(ChatCompletionClientBase):
             chat_history=chat_history, settings=settings, **kwargs
         )
         _cache_stats.live += 1
-        _account_sk_usage(response)  # #2849 — live round-trip (record miss)
+        _account_sk_usage(
+            response, self._call_model(settings)
+        )  # #2849 — live round-trip (record miss)
         # Record is an observer: it must never change the caller's outcome.
         # A response that cannot be serialized/pickled (mock responses in
         # unit tests) is passed through unrecorded rather than failing the
@@ -626,7 +682,7 @@ class CachedChatCompletion(ChatCompletionClientBase):
             chunks.extend(group)
             yield group
         _account_sk_usage(
-            chunks
+            chunks, self._call_model(settings)
         )  # usage often absent on streamed chunks — still counts as a call
 
     def close(self):
@@ -757,13 +813,13 @@ async def cached_raw_chat_completion(client: Any, **kwargs: Any) -> Any:
     if mode == OFF:
         _cache_stats.live += 1
         response = await client.chat.completions.create(**kwargs)
-        _account_raw_usage(response)  # #2849 — live round-trip
+        _account_raw_usage(response, kwargs.get("model"))  # #2849 — live round-trip
         return response
     cache = get_raw_cache()
     if cache is None:  # diskcache unavailable
         _cache_stats.live += 1
         response = await client.chat.completions.create(**kwargs)
-        _account_raw_usage(response)  # #2849 — live round-trip
+        _account_raw_usage(response, kwargs.get("model"))  # #2849 — live round-trip
         return response
     key = compute_raw_cache_key(**kwargs)
     if mode == REPLAY:
@@ -788,7 +844,9 @@ async def cached_raw_chat_completion(client: Any, **kwargs: Any) -> Any:
     _cache_stats.miss_record += 1
     response = await client.chat.completions.create(**kwargs)
     _cache_stats.live += 1
-    _account_raw_usage(response)  # #2849 — live round-trip (record miss)
+    _account_raw_usage(
+        response, kwargs.get("model")
+    )  # #2849 — live round-trip (record miss)
     # Same observer contract as the SK path: an unstorable response (mock
     # objects in tests) passes through unrecorded instead of raising from
     # inside the cache (#1603).
@@ -821,13 +879,13 @@ def cached_raw_chat_completion_sync(client: Any, **kwargs: Any) -> Any:
     if mode == OFF:
         _cache_stats.live += 1
         response = client.chat.completions.create(**kwargs)
-        _account_raw_usage(response)  # #2849 — live round-trip
+        _account_raw_usage(response, kwargs.get("model"))  # #2849 — live round-trip
         return response
     cache = get_raw_cache()
     if cache is None:  # diskcache unavailable
         _cache_stats.live += 1
         response = client.chat.completions.create(**kwargs)
-        _account_raw_usage(response)  # #2849 — live round-trip
+        _account_raw_usage(response, kwargs.get("model"))  # #2849 — live round-trip
         return response
     key = compute_raw_cache_key(**kwargs)
     if mode == REPLAY:
@@ -852,7 +910,9 @@ def cached_raw_chat_completion_sync(client: Any, **kwargs: Any) -> Any:
     _cache_stats.miss_record += 1
     response = client.chat.completions.create(**kwargs)
     _cache_stats.live += 1
-    _account_raw_usage(response)  # #2849 — live round-trip (record miss)
+    _account_raw_usage(
+        response, kwargs.get("model")
+    )  # #2849 — live round-trip (record miss)
     try:
         cache.set(key, _serialize_chat_completion(response))
     except Exception as exc:  # noqa: BLE001 — best-effort recording
