@@ -67,6 +67,12 @@ from .speaker_record import (  # #3082: shared speaker record with act1/act2
     build_speaker_record,
     format_speaker_line,
 )
+from .reading_record import (  # #2850 lot 6: recorded reading bounds
+    READING_BASIS_RULE,
+    ReadingRecord,
+    build_reading_record,
+    format_reading_block,
+)
 from .dung_reader import (  # #1908: shared meaning with act2
     REJECTED_MEANS,
     appendix_ref,
@@ -574,6 +580,10 @@ class Act3Evidence:
     # de l'extracteur est l'autre — et le nommage se lie à l'enregistrement,
     # plus au bloc MÉTADONNÉES seul.
     speaker: SpeakerRecord = field(default_factory=SpeakerRecord)
+    # #2850 lot 6 — the run's recorded bounded readings (#1737 table): the
+    # basis the Acts never spoke, quoted here beside the speaker so the
+    # reader learns the bounds of the readings the verdicts rest on.
+    readings: ReadingRecord = field(default_factory=ReadingRecord)
 
 
 @dataclass
@@ -2321,6 +2331,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         metadata=metadata_view,
         arena=build_arena_record(state),
         speaker=build_speaker_record(state),
+        readings=build_reading_record(state),
     )
 
 
@@ -2765,6 +2776,12 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
 
     opaque_block = f"{_OPAQUE_ID_DIRECTIVE}\n\n" if not evidence.deanonymized else ""
 
+    # #2850 lot 6 — the recorded reading bounds (empty when nothing was
+    # recorded: the rule's absent case then forbids inventing one).
+    reading_block = format_reading_block(evidence.readings)
+    if reading_block:
+        reading_block += "\n\n"
+
     return (
         "Tu es l'auteur de l'ACTE III d'un rapport de restitution argumentative\n"
         "— la CONCLUSION ORIENTÉE LECTEUR : un lecteur qui a vu ou lu le discours\n"
@@ -2804,6 +2821,7 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         # sait aussi dire « inféré du texte ».
         f"[LOCUTEUR — provenance de la valeur]\n"
         f"  {format_speaker_line(evidence.speaker)}\n\n"
+        f"{reading_block}"
         # #3073 — l'arène vient du MÊME enregistrement que celui de l'Acte I
         # (valeur + provenance) : deux actes, une valeur, une étiquette. Elle
         # sort du bloc « telle qu'enregistrée » — une inférence du texte n'y a
@@ -2844,6 +2862,7 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         # partagée (celle des Actes I et II) donne maintenant la phrase à
         # écrire, tel quel.
         f"{SPEAKER_NAMING_RULE}\n"
+        f"{READING_BASIS_RULE}\n"
         "- Le verdict formel (Tweety/Dung) est un APPUI, jamais un titre : formule-\n"
         "  le comme « l'analyse formelle invalide ce raisonnement » (théorie\n"
         "  inconsistante), « l'analyse formelle confirme la cohérence de ce\n"

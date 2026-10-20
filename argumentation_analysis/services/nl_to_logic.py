@@ -310,10 +310,27 @@ class NLToLogicTranslator:
 
         # Try LLM-based translation with retry loop
         try:
-            return await self._translate_with_llm(text, lt, shared_atoms=shared_atoms)
+            result = await self._translate_with_llm(text, lt, shared_atoms=shared_atoms)
         except Exception as e:
             logger.warning(f"LLM translation failed, using heuristic: {e}")
-            return self._translate_heuristic(text, lt)
+            result = self._translate_heuristic(text, lt)
+        # #2850 lot 6 — the LLM call reads a bounded head of the argument
+        # (_NL_TO_LOGIC_WINDOW, retry at _NL_TO_LOGIC_RETRY_WINDOW); the
+        # result says the k of N (counts only — prompts untouched, cassette
+        # keys cannot move). Only when the LLM actually ran and the text is
+        # really longer than the window: a full read claims no bound.
+        if result.attempts > 0 and len(text) > _NL_TO_LOGIC_WINDOW:
+            note = (
+                f" Lecture LLM : {_NL_TO_LOGIC_WINDOW} des {len(text)} "
+                f"caractères. (#2850)"
+            )
+            if result.attempts > 1 and len(text) > _NL_TO_LOGIC_RETRY_WINDOW:
+                note += (
+                    f" Reprise : {_NL_TO_LOGIC_RETRY_WINDOW} des "
+                    f"{len(text)} caractères."
+                )
+            result.validation_message = (result.validation_message or "") + note
+        return result
 
     async def translate_batch(
         self,

@@ -573,8 +573,8 @@ REGISTRY = {
         "window",
         "1500-char window from the selected offset",
         "record_reading_window; measured live (lot 5): reachable when no "
-        "sentence exceeds 15 chars — witness pins it; Acts silent — #2850 "
-        "(lot 6 owns the Acts clause)",
+        "sentence exceeds 15 chars — witness pins it; the Acts quote the "
+        "recorded bound since lot 6 (reading_record) — #2850",
     ),
     (
         "argumentation_analysis/orchestration/conversation_orchestrator.py",
@@ -872,63 +872,17 @@ REGISTRY = {
         "argument; topic_accepted says whether it grounds); the analysis "
         "population is the frame's nodes, not this slice",
     ),
+    # #2850 lot 6: the four reconstruction-path ballast entries that sat at
+    # ordinals 3-6 here are GONE — the sites were un-seeded (the state no
+    # longer claims a head it never had). Census ordinals renumber, so this
+    # #3 is the counter-argument target default that used to be #7: the key
+    # is semantic in name only, verify the line (invoke_callables.py:2026)
+    # before trusting any row.
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
         "input_text",
         "200",
         3,
-    ): (
-        "window",
-        "the UnifiedAnalysisState carries only the first 200 chars",
-        "reclassified — constructor ballast (#2850 lot 5): measured, NO "
-        "consumer reads the seeded text's content (the only reflection is "
-        "Act II's source_length len()); un-seeding is a restitution-reader "
-        "change, serialized with #3082 (lot 6)",
-    ),
-    (
-        "argumentation_analysis/orchestration/invoke_callables.py",
-        "input_text",
-        "200",
-        4,
-    ): (
-        "window",
-        "the UnifiedAnalysisState carries only the first 200 chars",
-        "reclassified — constructor ballast (#2850 lot 5): measured, NO "
-        "consumer reads the seeded text's content (the only reflection is "
-        "Act II's source_length len()); un-seeding is a restitution-reader "
-        "change, serialized with #3082 (lot 6)",
-    ),
-    (
-        "argumentation_analysis/orchestration/invoke_callables.py",
-        "input_text",
-        "200",
-        5,
-    ): (
-        "window",
-        "the UnifiedAnalysisState carries only the first 200 chars",
-        "reclassified — constructor ballast (#2850 lot 5): measured, NO "
-        "consumer reads the seeded text's content (the only reflection is "
-        "Act II's source_length len()); un-seeding is a restitution-reader "
-        "change, serialized with #3082 (lot 6)",
-    ),
-    (
-        "argumentation_analysis/orchestration/invoke_callables.py",
-        "input_text",
-        "200",
-        6,
-    ): (
-        "window",
-        "the UnifiedAnalysisState carries only the first 200 chars",
-        "reclassified — constructor ballast (#2850 lot 5): measured, NO "
-        "consumer reads the seeded text's content (the only reflection is "
-        "Act II's source_length len()); un-seeding is a restitution-reader "
-        "change, serialized with #3082 (lot 6)",
-    ),
-    (
-        "argumentation_analysis/orchestration/invoke_callables.py",
-        "input_text",
-        "200",
-        7,
     ): (
         "window",
         "the counter-argument target defaults to the first 200 chars",
@@ -1474,7 +1428,11 @@ REGISTRY = {
     ): (
         "window",
         "1000-char window from the selected offset",
-        "record_reading_window; Acts silent — #2850",
+        "named — the translation result's validation_message pairs the retry "
+        "window with the argument's length, counts only (lot 6); the "
+        "'record_reading_window' the census wrote for this row was "
+        "inaccurate: no state reaches this service, so nothing was ever "
+        "recorded — #2850",
     ),
     (
         "argumentation_analysis/services/nl_to_logic.py",
@@ -1484,7 +1442,11 @@ REGISTRY = {
     ): (
         "window",
         "2000-char window from the selected offset",
-        "record_reading_window; Acts silent — #2850",
+        "named — the translation result's validation_message pairs the "
+        "window with the argument's length, counts only (lot 6); the "
+        "'record_reading_window' the census wrote for this row was "
+        "inaccurate: no state reaches this service, so nothing was ever "
+        "recorded — #2850",
     ),
     ("argumentation_analysis/services/nl_to_logic.py", "sentences", "3", 1): (
         "population_cap",
