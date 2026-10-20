@@ -6023,6 +6023,104 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
                     }
                 )
 
+    # #1649 case 5 — the WK-undercut lever, wired consumer-side. The counter
+    # lane carries the adversarial material (the ASPIC translator is
+    # structurally blind to it: its inventory only ever sees the text's own
+    # arguments, and the repaired doc_A run proposed 0 undercuts). This reads
+    # the producer field ``attacked_component`` — only ``inference`` counters
+    # become undercuts (the premise/conclusion emission contracts are not
+    # measured; undermine-via-atom is bounded out by #3050). Every
+    # non-emission path records its reason on the payload; the absent field
+    # says it is absent (the wiring landed before the prompt asks for it).
+    # The WK contract is the R1223-measured shape: a defeasible rule named
+    # after the attacking unit (the counter's minted atom), head_negated on
+    # the TARGET RULE'S NAME, body citing the counter atom — which the
+    # leaf-atom derivation below mints as an ordinary premise, so the
+    # attacker is derivable (#1678 attacker side).
+    _aspic_undercut_reasons: List[str] = []
+    _aspic_undercut_decisions: List[Dict[str, str]] = []
+    _aspic_undercut_emitted = 0
+    _aspic_undercut_considered = 0
+    _aspic_counter_output = _resolve_phase_output(
+        context, "phase_counter_output", "phase_counter_arguments_output"
+    )
+    _aspic_counters = _phase_field(_aspic_counter_output, "llm_counter_arguments")
+    _aspic_counters = _aspic_counters if isinstance(_aspic_counters, list) else []
+    _aspic_undercut_total = len(_aspic_counters)
+    _aspic_any_component = any(
+        isinstance(c, dict) and "attacked_component" in c for c in _aspic_counters
+    )
+    if _aspic_counters and not _aspic_any_component:
+        _aspic_undercut_reasons.append(
+            f"attacked_component absent on all {_aspic_undercut_total} counters "
+            "(producer field not requested yet — the wiring awaits it)"
+        )
+    # The frame's arguments are the units' string ids at runtime (the
+    # ``SelectableUnit`` annotation is wider); ``str`` keeps the membership
+    # check honest for both.
+    _aspic_unit_ids = {str(a) for a in arguments}
+    for c in _aspic_counters[:4]:
+        if not isinstance(c, dict):
+            continue
+        _cid = str(c.get("id", "?"))
+        _component = c.get("attacked_component")
+        if _component != "inference":
+            if _component is None and _aspic_any_component:
+                _aspic_undercut_reasons.append(
+                    f"{_cid}: no attacked_component (producer mixed)"
+                )
+            elif _component is not None:
+                _aspic_undercut_reasons.append(
+                    f"{_cid}: attacked_component={_component!r} emits nothing "
+                    "in this step (inference only)"
+                )
+            continue
+        _aspic_undercut_considered += 1
+        _validation = c.get("validation")
+        if not (isinstance(_validation, dict) and _validation.get("is_valid_attack")):
+            _aspic_undercut_reasons.append(f"{_cid}: is_valid_attack not truthy")
+            continue
+        _target = str(c.get("target_arg_id") or "")
+        if _target not in _aspic_unit_ids:
+            _aspic_undercut_reasons.append(
+                f"{_cid}: target {_target!r} unresolved among the frame units"
+            )
+            continue
+        _target_rule = next(
+            (
+                r
+                for r in defeasible
+                if isinstance(r, dict)
+                and r.get("name")
+                and not r.get("head_negated")
+                and _target in (r.get("body") or [])
+            ),
+            None,
+        )
+        if _target_rule is None:
+            _aspic_undercut_reasons.append(
+                f"{_cid}: target {_target} has no defeasible rule to undercut"
+            )
+            continue
+        _counter_atom = _pl_atom(str(c.get("counter_content", "")), prefix="wk_ca")
+        defeasible.append(
+            {
+                "name": f"wk_{_counter_atom}",
+                "head": str(_target_rule["name"]),
+                "body": [_counter_atom],
+                "head_negated": True,
+            }
+        )
+        _aspic_undercut_decisions.append(
+            {
+                "counter_id": _cid,
+                "counter_atom": _counter_atom,
+                "target_unit": _target,
+                "target_rule": str(_target_rule["name"]),
+            }
+        )
+        _aspic_undercut_emitted += 1
+
     axioms_raw = context.get("axioms")
     # Sanitize axioms too (list of proposition names).
     axioms = None
@@ -6057,6 +6155,17 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
             handler.analyze_aspic_framework, strict, defeasible, axioms
         )
         result.update(identity_payload)
+        # #1649 case 5 — the undercut lever speaks on the payload whatever
+        # the emission count: emitted/considered/total, the two-unit anchor
+        # per emission, and the reason each non-emitting counter was refused
+        # (the absent producer field says it is absent).
+        result["aspic_undercut_emitted"] = _aspic_undercut_emitted
+        result["aspic_undercut_considered"] = _aspic_undercut_considered
+        result["aspic_undercut_total"] = _aspic_undercut_total
+        if _aspic_undercut_decisions:
+            result["aspic_undercut_decisions"] = _aspic_undercut_decisions
+        if _aspic_undercut_reasons:
+            result["aspic_undercut_reasons"] = _aspic_undercut_reasons
         # #2850 batch 2 — the derived caps speak (k of N on the payload; a
         # caller who supplied rules carries no derived cap — honest absence).
         # The trace summary is the render surface: deep-synthesis reads
@@ -6094,11 +6203,22 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
                     f"{result['aspic_fallacies_considered']} de "
                     f"{result['aspic_fallacies_total']} sophismes en défeaters"
                 )
+            if result.get("aspic_undercut_total"):
+                _aspic_disclosures.append(
+                    f"{result['aspic_undercut_emitted']} undercut WK émis "
+                    f"({result['aspic_undercut_considered']} de "
+                    f"{result['aspic_undercut_total']} contre-arguments)"
+                )
             if _aspic_disclosures:
+                _aspic_trace_reacts = ["extract", "hierarchical_fallacy"]
+                if result.get("aspic_undercut_total"):
+                    # #1649: the undercuts were read from the counter phase's
+                    # output — the trace names the input that fed them.
+                    _aspic_trace_reacts.append("counter_arguments")
                 _aspic_trace_state.add_trace_entry(
                     phase="aspic",
                     agent="ASPICHandler",
-                    reacts_to=["extract", "hierarchical_fallacy"],
+                    reacts_to=_aspic_trace_reacts,
                     summary=(
                         "Réseau ASPIC+ évalué — " + " ; ".join(_aspic_disclosures)
                     ),
