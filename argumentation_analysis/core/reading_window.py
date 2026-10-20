@@ -151,6 +151,21 @@ def select_reading_head(
     return WindowSelection(offset, window, STATUS_SELECTED)
 
 
+def head_selection(text: str, window: int) -> WindowSelection:
+    """The selection of a fixed head read — ``text[:window]`` mirrored (#2850 lot 7).
+
+    A site that slices the head by construction reads offset 0, never a sought
+    span: this records what that read actually was without moving the slice.
+    ``STATUS_SHORT_INPUT`` says the text was shorter than the window (read
+    whole); ``STATUS_SELECTED`` that the window truly bounds the text.
+    """
+    if not text or not text.strip():
+        return WindowSelection(0, window, STATUS_EMPTY_INPUT)
+    if len(text) < window:
+        return WindowSelection(0, window, STATUS_SHORT_INPUT)
+    return WindowSelection(0, window, STATUS_SELECTED)
+
+
 def selected_text(text: str, window: int, site: str, state: object = None) -> str:
     """#1737 step 3 wiring point: the slice a reading site feeds onward.
 

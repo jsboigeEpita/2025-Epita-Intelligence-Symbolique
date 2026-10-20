@@ -30,6 +30,10 @@ SITE_LABELS_FR = {
     "governance": "délibération de gouvernance",
     "counter_argument": "contre-argumentation",
     "collaborative_debate": "débat collaboratif",
+    # #2850 lot 7 — the fallacy workflow's document-path windows.
+    "fallacy_widenet": "détection de sophismes — large filet",
+    "fallacy_descent": "détection de sophismes — descente",
+    "fallacy_one_shot": "détection de sophismes — repli en un appel",
 }
 
 # The non-selected statuses #1737 defines, in the reader's words.

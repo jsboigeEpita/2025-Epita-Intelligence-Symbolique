@@ -4108,6 +4108,10 @@ async def _invoke_camembert_fallacy(
             master_kernel=master_kernel,
             llm_service=llm_service,
             taxonomy_file_path=get_taxonomy_source_for_regime(_regime),
+            # #2850 lot 7 — document-path construction: the plugin's windows
+            # (wide-net head, descent prompts, one-shot) record into the
+            # #1737 table so the acts can say them.
+            reading_state=reading_state_from_context(context),
         )
 
         # RA-4 #1049 item 3: inject strategic directives into LLM prompt
@@ -7760,6 +7764,10 @@ async def _invoke_hierarchical_fallacy(
             master_kernel=master_kernel,
             llm_service=llm_service,
             taxonomy_file_path=taxonomy_path,
+            # #2850 lot 7 — document-path construction: the plugin's windows
+            # (wide-net head, descent prompts, one-shot fallback) record
+            # into the #1737 table so the acts can say them.
+            reading_state=reading_state_from_context(context),
         )
 
         # RA-4 #1049 item 3: inject strategic directives into LLM prompt
@@ -8379,6 +8387,11 @@ async def _invoke_hierarchical_fallacy_per_argument(
                     master_kernel=master_kernel,
                     llm_service=shared_llm_service,
                     taxonomy_file_path=taxonomy_path,
+                    # #2850 lot 7 — deliberately stateless: this instance
+                    # reads ONE unit, and the reading record is
+                    # document-scoped (every line renders "k of N chars"
+                    # against the document) — a unit-relative read recorded
+                    # there would render as a false document bound.
                 )
 
                 result_json = await asyncio.wait_for(
