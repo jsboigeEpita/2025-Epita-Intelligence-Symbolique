@@ -151,6 +151,10 @@ async def _invoke_collaborative_analysis(
     )
 
     arg_lines = []
+    # #2850 lot 5 — the chain below selects the debate's WHOLE argument
+    # population in silence; the payload now names the path it took and the
+    # k-of-N it applied (counts only, budgets unchanged).
+    _deb_basis: Dict[str, Any] = {}
     _deb_state = context.get("_state_object")
     _deb_units = merged_population_units(_deb_state)
     if _deb_units:
@@ -170,30 +174,61 @@ async def _invoke_collaborative_analysis(
             )
         for i, u in enumerate(_deb_selection.selected):
             arg_lines.append(f"A{i + 1}. {u.text}")
+        _deb_basis.update(
+            path="merged_selection",
+            selected=_deb_selection.k,
+            available=_deb_selection.n_total,
+        )
     if not arg_lines:
         for i, a in enumerate(arguments[:8]):
             text = a.get("text", str(a)) if isinstance(a, dict) else str(a)
             arg_lines.append(f"A{i + 1}. {text}")
+        if arg_lines:
+            _deb_basis.update(
+                path="extract_arguments",
+                selected=min(8, len(arguments)),
+                available=len(arguments),
+            )
     if not arg_lines:
         for i, c in enumerate(claims[:8]):
             text = c.get("text", str(c)) if isinstance(c, dict) else str(c)
             arg_lines.append(f"C{i + 1}. {text}")
+        if arg_lines:
+            _deb_basis.update(
+                path="extract_claims",
+                selected=min(8, len(claims)),
+                available=len(claims),
+            )
     if not arg_lines:
         # Sentence split fallback
         sentences = [s.strip() for s in input_text.split(".") if len(s.strip()) > 15]
         for i, s in enumerate(sentences[:6]):
             arg_lines.append(f"S{i + 1}. {s}")
+        if arg_lines:
+            _deb_basis.update(
+                path="sentences",
+                selected=min(6, len(sentences)),
+                available=len(sentences),
+            )
 
-    argument_text = (
-        "\n".join(arg_lines)
-        if arg_lines
-        else selected_text(
+    argument_text = "\n".join(arg_lines)
+    if not argument_text:
+        # Measured live (lot 5): reachable when no sentence exceeds 15 chars
+        # and no upstream list exists — the DEBATE_FALLBACK_WINDOW read is
+        # the only material left. Its Acts clause is lot 6's; the basis
+        # records the path here.
+        argument_text = selected_text(
             input_text,
             DEBATE_FALLBACK_WINDOW,
             "collaborative_debate",
             state=reading_state_from_context(context),
         )
-    )
+        _deb_basis.update(
+            path="document_opening",
+            selected=1,
+            available=1,
+            window_chars=DEBATE_FALLBACK_WINDOW,
+        )
 
     # Quality context if available
     quality_summary = ""
@@ -267,6 +302,8 @@ async def _invoke_collaborative_analysis(
         "defeated_arguments": defeated,
         "agents_involved": list(COLLABORATIVE_ROLES.keys()),
         "interaction_type": "sequential_collaborative",
+        # #2850 lot 5 — the population basis the debate actually analyzed.
+        "arguments_basis": _deb_basis,
     }
 
 
@@ -328,14 +365,26 @@ def _fallback_collaborative(input_text: str, context: Dict[str, Any]) -> Dict[st
 
     _fb_state = context.get("_state_object")
     _fb_units = merged_population_units(_fb_state)
-    _fb_feed = (
-        [u.text for u in select_for_budget(_fb_units, 6).selected]
-        if _fb_units
-        else [
+    _fb_basis: Dict[str, Any] = {}
+    if _fb_units:
+        _fb_selection = select_for_budget(_fb_units, 6)
+        _fb_feed = [u.text for u in _fb_selection.selected]
+        _fb_basis.update(
+            path="merged_selection",
+            selected=_fb_selection.k,
+            available=_fb_selection.n_total,
+        )
+    else:
+        _fb_feed = [
             a.get("text", str(a)) if isinstance(a, dict) else str(a)
             for a in arguments[:6]
         ]
-    )
+        # #2850 lot 5 — the stateless [:6] cap names its k-of-N (counts only).
+        _fb_basis.update(
+            path="stateless_arguments",
+            selected=min(6, len(arguments)),
+            available=len(arguments),
+        )
     surviving = []
     for text in _fb_feed:
         surviving.append(
@@ -350,6 +399,7 @@ def _fallback_collaborative(input_text: str, context: Dict[str, Any]) -> Dict[st
         "defeated_arguments": [],
         "agents_involved": [],
         "interaction_type": "fallback_heuristic",
+        "arguments_basis": _fb_basis,
     }
 
 

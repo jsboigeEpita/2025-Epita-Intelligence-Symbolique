@@ -143,12 +143,19 @@ class TranslationResult:
 
 @dataclass
 class TranslationBatchResult:
-    """Result of translating multiple arguments."""
+    """Result of translating multiple arguments.
+
+    #2850 lot 5 — ``requested_population`` pairs the translations with what
+    the caller sent: the batch caps at 10 arguments (:330), and a reader
+    counting translations alone cannot tell a 10-of-12 batch from a 10-arg
+    request. Counts only, set by ``translate_batch``.
+    """
 
     translations: List[TranslationResult] = field(default_factory=list)
     overall_consistency: Optional[bool] = None
     consistency_message: str = ""
     method: str = "llm"  # "llm" or "heuristic"
+    requested_population: Optional[int] = None
 
 
 # ── Prompt templates ─────────────────────────────────────────────────────
@@ -333,7 +340,12 @@ class NLToLogicTranslator:
             result = await self.translate(arg_text, lt)
             translations.append(result)
 
-        batch = TranslationBatchResult(translations=translations)
+        batch = TranslationBatchResult(
+            translations=translations,
+            # #2850 lot 5 — the [:10] cap above is the debt; the batch now
+            # says what was requested next to what it translated.
+            requested_population=len(arguments),
+        )
 
         # Check consistency if requested and we have valid formulas
         valid_formulas = [t.formula for t in translations if t.is_valid]
@@ -1068,7 +1080,12 @@ class NLToLogicTranslator:
                 formula=belief_set,
                 logic_type="modal",
                 is_valid=True,
-                validation_message="Heuristic modal translation (no LLM)",
+                # #2850 lot 5 — the atoms come from the first 3 sentences
+                # only; the message says k de N (counts, #1260/#1019).
+                validation_message=(
+                    "Heuristic modal translation (no LLM) — "
+                    f"{len(constants)} atomes sur {len(sentences)} phrases (#2850)"
+                ),
                 attempts=0,
                 variables={c: c for c in constants},
                 confidence=0.2,
@@ -1108,12 +1125,27 @@ class NLToLogicTranslator:
                 formula = stem
                 variables = {stem: text[:80]}
 
+            # #2850 lot 5 — the atoms come from the first 5 sentences (the
+            # degenerate atom's DESCRIPTION from an 80-char excerpt of the
+            # text); the message says k de N (counts, #1260/#1019).
+            if variables and len(sentences) >= 2:
+                _prop_note = f"{len(variables)} atomes sur {len(sentences)} phrases"
+            elif variables:
+                _prop_note = (
+                    f"atome décrit par {min(80, len(text))} de {len(text)} "
+                    "caractères"
+                )
+            else:
+                _prop_note = "aucun atome"
+
             return TranslationResult(
                 original_text=text,
                 formula=formula,
                 logic_type="propositional",
                 is_valid=True,
-                validation_message="Heuristic translation (no LLM)",
+                validation_message=(
+                    f"Heuristic translation (no LLM) — {_prop_note} (#2850)"
+                ),
                 attempts=0,
                 variables=variables,
                 confidence=0.3,
@@ -1139,7 +1171,12 @@ class NLToLogicTranslator:
                 formula=formula,
                 logic_type="fol",
                 is_valid=True,
-                validation_message="Heuristic FOL translation (no LLM)",
+                # #2850 lot 5 — the predicates come from the first 5
+                # sentences; the message says k de N (counts, #1260/#1019).
+                validation_message=(
+                    "Heuristic FOL translation (no LLM) — "
+                    f"{len(predicates)} prédicats sur {len(sentences)} phrases (#2850)"
+                ),
                 attempts=0,
                 variables=predicates,
                 confidence=0.2,
