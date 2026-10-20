@@ -12295,7 +12295,12 @@ async def _invoke_narrative_synthesis(
     if not isinstance(state, UnifiedAnalysisState):
         # No state was passed — reconstruct from context phase outputs
         # so that build_narrative() has something to work with.
-        state = UnifiedAnalysisState(input_text[:200])
+        # #2850 lot 6 — unseeded (was input_text[:200], lot-5-measured
+        # constructor ballast): no consumer reads the seeded head's content;
+        # the anchor find turned it into wrong offset claims and Act II's
+        # source_length misdocumented the document. The reconstruction never
+        # knew the document — empty raw_text is the honest value.
+        state = UnifiedAnalysisState("")
         populated = 0
         for key, value in context.items():
             if key.startswith("phase_") and key.endswith("_output"):
@@ -12385,7 +12390,12 @@ async def _invoke_act2_narrative(
     # Resolve state (same precedence as _invoke_narrative_synthesis).
     state = context.get("_state_object") or context.get("unified_state")
     if not isinstance(state, UnifiedAnalysisState):
-        state = UnifiedAnalysisState(input_text[:200])
+        # #2850 lot 6 — unseeded (was input_text[:200], lot-5-measured
+        # constructor ballast): no consumer reads the seeded head's content;
+        # the anchor find turned it into wrong offset claims and Act II's
+        # source_length misdocumented the document. The reconstruction never
+        # knew the document — empty raw_text is the honest value.
+        state = UnifiedAnalysisState("")
         populated = 0
         for key, value in context.items():
             if key.startswith("phase_") and key.endswith("_output"):
@@ -12504,7 +12514,12 @@ async def _invoke_act1_framing(
 
     state = context.get("_state_object") or context.get("unified_state")
     if not isinstance(state, UnifiedAnalysisState):
-        state = UnifiedAnalysisState(input_text[:200])
+        # #2850 lot 6 — unseeded (was input_text[:200], lot-5-measured
+        # constructor ballast): no consumer reads the seeded head's content;
+        # the anchor find turned it into wrong offset claims and Act II's
+        # source_length misdocumented the document. The reconstruction never
+        # knew the document — empty raw_text is the honest value.
+        state = UnifiedAnalysisState("")
         populated = 0
         for key, value in context.items():
             if key.startswith("phase_") and key.endswith("_output"):
@@ -12608,7 +12623,12 @@ async def _invoke_act3_conclusion(
 
     state = context.get("_state_object") or context.get("unified_state")
     if not isinstance(state, UnifiedAnalysisState):
-        state = UnifiedAnalysisState(input_text[:200])
+        # #2850 lot 6 — unseeded (was input_text[:200], lot-5-measured
+        # constructor ballast): no consumer reads the seeded head's content;
+        # the anchor find turned it into wrong offset claims and Act II's
+        # source_length misdocumented the document. The reconstruction never
+        # knew the document — empty raw_text is the honest value.
+        state = UnifiedAnalysisState("")
         populated = 0
         for key, value in context.items():
             if key.startswith("phase_") and key.endswith("_output"):

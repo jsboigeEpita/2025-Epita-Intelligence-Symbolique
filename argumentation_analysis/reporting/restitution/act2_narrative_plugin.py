@@ -67,6 +67,12 @@ from .speaker_record import (
     build_speaker_record,
     format_speaker_line,
 )
+from .reading_record import (
+    READING_BASIS_RULE,
+    ReadingRecord,
+    build_reading_record,
+    format_reading_block,
+)
 from .global_projection import GlobalFinding, project_global_findings
 from .llm_weaving import LlmCallable, WeaveOutcome, weave
 from .specialist_roles import (
@@ -449,6 +455,10 @@ class Act2Evidence:
     # producteurs (ni la métadonnée, ni le stakeholder « speaker ») — il
     # portait sa règle de nommage sans la donnée sur laquelle elle tranche.
     speaker: SpeakerRecord = field(default_factory=SpeakerRecord)
+    # #2850 lot 6 — the run's recorded bounded readings (#1737 table), the
+    # basis the "Acts silent" family never spoke: the trace named each
+    # window since lot 4, the acts quoted none of them.
+    readings: ReadingRecord = field(default_factory=ReadingRecord)
 
 
 @dataclass
@@ -860,6 +870,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         text_sequence=collect_text_sequence(state),
         source_length=len(getattr(state, "raw_text", "") or ""),
         speaker=build_speaker_record(state),
+        readings=build_reading_record(state),
     )
 
 
@@ -1795,6 +1806,12 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                 "ont été examinées.\n\n"
             )
 
+    # #2850 lot 6 — the recorded reading bounds (empty when nothing was
+    # recorded: the rule's absent case then forbids inventing one).
+    reading_block = format_reading_block(evidence.readings)
+    if reading_block:
+        reading_block += "\n\n"
+
     return (
         "Tu es l'auteur de l'ACTE II d'un rapport de restitution argumentative.\n"
         "Le récit suit le FIL ARGUMENTATIF (thèse → soutiens → dérapages), découpé\n"
@@ -1820,6 +1837,7 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         # ses blocs comme extraits et procédures détectées).
         f"[LOCUTEUR — provenance de la valeur]\n"
         f"  {format_speaker_line(evidence.speaker)}\n\n"
+        f"{reading_block}"
         f"{coverage_note}"
         f"{unattributed_block}"
         f"TENUE FORMELLE (ancres vérifiées, à tisser comme PREUVE d'un battement) :\n"
@@ -1848,6 +1866,7 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         # un seul contrat, une seule constante. L'Acte II récitait « le
         # locuteur » sans jamais lire la donnée qui dit qui il est.
         f"{SPEAKER_NAMING_RULE}\n"
+        f"{READING_BASIS_RULE}\n"
         "- Un procédé relevé n'est pas un défaut par nature. Pour chacun, dis "
         "d'abord CE QU'IL ACCOMPLIT dans le discours — ce que le locuteur "
         "cherche à obtenir par lui ; la justification le porte le plus souvent "

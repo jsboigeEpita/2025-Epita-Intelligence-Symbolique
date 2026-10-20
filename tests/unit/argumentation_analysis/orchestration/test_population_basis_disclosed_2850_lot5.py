@@ -692,19 +692,41 @@ def _guard_registry() -> Dict[Any, Any]:
 
 
 class TestBallastSeedReclassified:
-    """Rows ``input_text[…:200]#3..#6`` (:12164/:12254/:12373/:12477): the
-    ``UnifiedAnalysisState(input_text[:200])`` reconstruction seeds are
-    CONSTRUCTOR BALLAST — measured: no consumer reads the seeded text's
-    content (the only reflection is Act II's ``source_length`` len());
-    un-seeding is a restitution-reader change, serialized with #3082 (lot 6).
-    The registry says so instead of "silent"."""
+    """Rows ``input_text[…:200]#3..#6`` (the ``UnifiedAnalysisState(
+    input_text[:200])`` reconstruction seeds): lot 5 measured them as
+    CONSTRUCTOR BALLAST — no consumer reads the seeded text's content (the
+    only reflection was Act II's ``source_length`` len()) — and registered
+    them as debt rather than "silent". LOT 6 PAID IT: the four sites are
+    un-seeded and their registry rows are gone, so this class now pins the
+    DEPARTURE. The un-seeding itself is pinned on the behaviour by
+    ``orchestration/test_ballast_unseeded_2850_lot6.py``; here the census
+    invariant is that the class stays empty and that the ordinals the
+    deletion renumbered do not alias a stale render."""
 
-    def test_the_four_reconstruction_rows_are_reclassified(self) -> None:
+    def test_no_ballast_row_survives_in_the_registry(self) -> None:
         registry = _guard_registry()
         invoke_rel = "argumentation_analysis/orchestration/invoke_callables.py"
-        for ordinal in (3, 4, 5, 6):
-            render = registry[(invoke_rel, "input_text", "200", ordinal)][2]
-            assert "ballast" in render, (ordinal, render)
+        ballast = [
+            key
+            for key, value in registry.items()
+            if key[0] == invoke_rel and "ballast" in value[2]
+        ]
+        assert ballast == [], (
+            "lot 6 un-seeded the four reconstruction sites — no registry row "
+            f"may still carry a ballast render: {ballast}"
+        )
+
+    def test_the_renumbered_ordinal_three_is_not_the_old_ballast(self) -> None:
+        """Census ordinals renumber after a deletion: #3 carried the first
+        ballast row before lot 6 and carries the counter-argument target
+        default after it. A stale render riding the new ordinal is the
+        silent failure this pin exists for."""
+        registry = _guard_registry()
+        invoke_rel = "argumentation_analysis/orchestration/invoke_callables.py"
+        kind, drops, render = registry[(invoke_rel, "input_text", "200", 3)]
+        assert kind == "window", kind
+        assert "counter-argument target" in drops, drops
+        assert "ballast" not in render, render
 
 
 class TestSilentRowsGraduated:
@@ -721,7 +743,10 @@ class TestSilentRowsGraduated:
                 ("claims", "8", 1),
                 ("detected_fallacies", "6", 2),
                 ("input_text", "200", 1),
-                ("input_text", "200", 7),
+                # Lot 6 un-seeded the four ballast sites; the census
+                # renumbered, so the counter-argument target this lot
+                # treated at #7 now sits at #3.
+                ("input_text", "200", 3),
                 ("sentences", "expr", 1),
             ],
         ),
