@@ -190,6 +190,7 @@ class _RecordingState(SimpleNamespace):
         argument_ids_absent_reason: Optional[str] = None,
         population_total: Optional[int] = None,
         dropped_unresolved: Optional[int] = None,
+        probabilities_source: Optional[str] = None,
     ) -> str:
         entry = self._curated(
             {"arguments": arguments, "acceptance_probabilities": acceptance_probs},
@@ -198,6 +199,9 @@ class _RecordingState(SimpleNamespace):
             population_total,
             dropped_unresolved,
         )
+        # #3096 item 3 — stored only when set, mirroring the real state sink.
+        if probabilities_source is not None:
+            entry["probabilities_source"] = probabilities_source
         self.probabilistic_results.append(entry)
         return f"prob_{len(self.probabilistic_results)}"
 

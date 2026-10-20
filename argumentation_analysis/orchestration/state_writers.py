@@ -1307,11 +1307,14 @@ def _write_probabilistic_to_state(output: Any, state: Any, ctx: dict[str, Any]) 
     # #3014: pass through the node identity fields (#3009 parity) — the
     # entry's arguments and acceptance keys are unit ids, the text lives in
     # argument_labels.
+    # #3096 item 3: the probabilities' source travels into the state entry —
+    # ``default_0.5`` (uniform prior, nobody estimated them) vs ``caller``.
     state.add_probabilistic_result(
         arguments,
         acceptance,
         argument_labels=output.get("argument_labels") or None,
         argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+        probabilities_source=output.get("probabilities_source"),
         **_identity_counts(output),
     )
 

@@ -1691,6 +1691,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         argument_ids_absent_reason: Optional[str] = None,
         population_total: Optional[int] = None,
         dropped_unresolved: Optional[int] = None,
+        probabilities_source: Optional[str] = None,
     ) -> str:
         """Add a probabilistic argumentation result.
 
@@ -1699,6 +1700,12 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         TEXT travels in ``argument_labels`` (``{node: label}``) — same
         contract as ``add_dung_framework`` (#3009). Optional fields are
         stored only when set (honest absence).
+
+        #3096 item 3 — ``probabilities_source`` names where the acceptance
+        probabilities came from: ``"default_0.5"`` (the uniform prior the
+        invoke assigns when no caller supplies any — measured on the Claude
+        pass as 40 identical 0.5 values nobody estimated) or ``"caller"``.
+        The render may quote it so a prior never impersonates an estimate.
         """
         pr_id = self._generate_id("prob", self.probabilistic_results)
         entry: Dict[str, Any] = {
@@ -1714,6 +1721,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             entry["population_total"] = population_total
         if dropped_unresolved is not None:
             entry["dropped_unresolved"] = dropped_unresolved
+        if probabilities_source is not None:
+            entry["probabilities_source"] = probabilities_source
         self.probabilistic_results.append(entry)
         state_logger.info(
             f"Probabilistic result added: {pr_id} ({len(arguments)} args)"
