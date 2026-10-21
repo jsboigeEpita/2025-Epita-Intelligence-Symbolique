@@ -148,6 +148,55 @@ class TestReadingLicenseCheck:
         )
         assert [f["kind"] for f in result["flags"]] == ["discourse_incoherence"]
 
+    def test_a_consistent_fol_that_decided_nothing_is_not_strength(self):
+        # R1105b (Sonnet pass, coordinator instance): the synthesis called the
+        # discourse robust "at the level of formal consistency" while the FOL
+        # leg returned consistent without answering a single query — Act II of
+        # the same render said it "ran without distinguishing anything, and
+        # that is neither a strength nor a weakness".
+        state = UnifiedAnalysisState("texte")
+        state.add_fol_analysis_result(["P(a)"], True, [], message="consistent")
+        result = check_reading_license(
+            "Le discours est robuste au niveau des ancrages factuels et de la "
+            "cohérence formelle.",
+            state,
+        )
+        assert [f["kind"] for f in result["flags"]] == [
+            "vacuous_consistency_as_strength"
+        ]
+        assert result["flags"][0]["measured"]["fol"] == {
+            "vacuous_consistent": 1,
+            "decisive": 0,
+        }
+
+    def test_a_decisive_fol_entry_licenses_the_strength_claim(self):
+        # Positive control (coordinator): a consistent FOL entry on a theory
+        # that DID decide something — an inference answered — may be cited.
+        state = UnifiedAnalysisState("texte")
+        state.add_fol_analysis_result(
+            ["P(a)", "P(a) => Q(a)"], True, ["Q(a)"], message="consistent"
+        )
+        result = check_reading_license(
+            "Le discours est robuste au niveau de la cohérence formelle.", state
+        )
+        assert result["flags"] == []
+
+    def test_the_flag_carries_the_whole_sentence_not_a_slice(self):
+        # The flag payload is the sentence as produced: a slice could only
+        # hide the qualifier a reader needs (#2850 asked what the cut was
+        # for; the answer was nothing, so the cut is gone).
+        state = _state_with_cause("between_sources")
+        sentence = (
+            "Le discours est incohérent sur la totalité de ses engagements, et "
+            "la synthèse en tire une lecture sévère que rien ne vient tempérer, "
+            "ni la prudence factuelle des ancrages retenus, ni la longueur de "
+            "la démonstration menée au fil des paragraphes de l'analyse."
+        )
+        assert len(sentence) > 240
+        result = check_reading_license(sentence, state)
+        assert [f["kind"] for f in result["flags"]] == ["discourse_incoherence"]
+        assert result["flags"][0]["sentence"] == sentence
+
 
 class TestBriefingCarriesTheNumbers:
     def test_the_dung_line_carries_the_density(self):

@@ -12,6 +12,13 @@ the input never licensed:
   unsatisfiable between source units (``between_sources``) and the synthesis
   concluded that the discourse itself was incoherent, though no single voice
   was shown to contradict itself.
+* **a check that decided nothing, sold as strength** (R1105b, Sonnet pass) —
+  the FOL leg returned ``consistent`` without answering a single query; Act II
+  of the same render said exactly that ("ran without distinguishing anything,
+  and that is neither a strength nor a weakness") and the synthesis still
+  called the discourse robust "at the level of formal consistency". A decided
+  consistency with no inference behind it licenses no robustness claim; an
+  entry that DID answer queries may still be cited as strength.
 
 This module is the deterministic, non-LLM check over a PRODUCED text. It
 flags; it never rewrites — the defect is the inference, and the sentence is
@@ -74,11 +81,19 @@ _QUALIFIERS = re.compile(
     re.IGNORECASE,
 )
 
+#: A formal-consistency word. Combined with a robustness word it claims the
+#: FOL leg as strength; whether that is licensed depends on what the leg
+#: decided (see :func:`_fol_decisions`).
+_FORMAL_CONSISTENCY_MARKERS = re.compile(
+    r"(coh[ée]rence formelle|consistance formelle|vérification formelle|"
+    r"formal consistency|formal(ly)? (?:consistent|sound|verification|check)|"
+    r"formellement|test formel)",
+    re.IGNORECASE,
+)
+
 _NEGATION = re.compile(r"\b(ne|n['’]|pas|jamais|sans|aucun\w*)\b", re.IGNORECASE)
 
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
-
-_SENTENCE_CAP = 240
 
 
 def _sentences(text: str) -> List[str]:
@@ -137,6 +152,27 @@ def _formal_causes(state: Any) -> List[str]:
     return causes
 
 
+def _fol_decisions(state: Any) -> Dict[str, int]:
+    """What the FOL leg actually decided (#3123, R1105b instance).
+
+    ``vacuous_consistent`` counts entries that returned ``consistent`` without
+    answering a single inference — a decided consistency that distinguished
+    nothing. ``decisive`` counts entries that answered queries or decided an
+    inconsistency; as long as one exists, citing formal strength is licensed
+    (the positive control).
+    """
+    vacuous = 0
+    decisive = 0
+    for result in getattr(state, "fol_analysis_results", []) or []:
+        if not isinstance(result, dict):
+            continue
+        if result.get("consistent") is True and not (result.get("inferences") or []):
+            vacuous += 1
+        elif result.get("inferences") or result.get("consistent") is False:
+            decisive += 1
+    return {"vacuous_consistent": vacuous, "decisive": decisive}
+
+
 def check_reading_license(
     text: str,
     state: Any,
@@ -157,10 +193,15 @@ def check_reading_license(
     sentences = _sentences(text or "")
     measurements = _dung_measurements(state)
     causes = _formal_causes(state)
+    fol_decisions = _fol_decisions(state)
     self_contradiction = "self_contradiction" in causes
     sparse_everywhere = bool(measurements) and all(
         m["density"] < dense_threshold for m in measurements
     )
+    # The flags carry the sentence as produced — no slice: a cut could only
+    # hide the qualifier the reader needs, and it never protected a verdict
+    # (detection reads the whole sentence; #2850 asked what the cut was for,
+    # and the answer was nothing).
 
     flags: List[Dict[str, Any]] = []
     for sentence in sentences:
@@ -178,11 +219,28 @@ def check_reading_license(
             flags.append(
                 {
                     "kind": "breadth_as_robustness",
-                    "sentence": sentence[:_SENTENCE_CAP],
+                    "sentence": sentence,
                     "measured": {
                         "threshold": dense_threshold,
                         "frameworks": measurements,
                     },
+                }
+            )
+            continue
+
+        # -- a check that decided nothing, sold as strength (R1105b) --------
+        if (
+            robustness is not None
+            and _FORMAL_CONSISTENCY_MARKERS.search(sentence) is not None
+            and not _is_negated(sentence, robustness.start())
+            and fol_decisions["vacuous_consistent"] > 0
+            and fol_decisions["decisive"] == 0
+        ):
+            flags.append(
+                {
+                    "kind": "vacuous_consistency_as_strength",
+                    "sentence": sentence,
+                    "measured": {"fol": fol_decisions},
                 }
             )
             continue
@@ -197,7 +255,7 @@ def check_reading_license(
             flags.append(
                 {
                     "kind": "discourse_incoherence",
-                    "sentence": sentence[:_SENTENCE_CAP],
+                    "sentence": sentence,
                     "measured": {"recorded_causes": causes},
                 }
             )
@@ -209,6 +267,7 @@ def check_reading_license(
             "dung_frameworks": len(measurements),
             "recorded_causes": causes,
             "self_contradiction_recorded": self_contradiction,
+            "fol_decisions": fol_decisions,
         },
         "threshold": dense_threshold,
     }
