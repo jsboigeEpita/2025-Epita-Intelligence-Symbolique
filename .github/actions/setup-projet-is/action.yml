@@ -42,3 +42,16 @@ runs:
         conda run -n conda-lock-installer --no-capture-output conda-lock install --name projet-is conda-lock.yml
         if ($LASTEXITCODE -ne 0) { throw "conda-lock install failed" }
         conda run -n projet-is --no-capture-output python -c "import sys; print('projet-is python', sys.version.split()[0])"
+
+    # #3093: the CMUdict corpus the readability instruments read (Flesch EN)
+    # is not a conda package, so the lock cannot carry it. Provisioned here —
+    # CI-side, once per runner — instead of a runtime nltk.download in every
+    # process. Idempotent: an already-present corpus costs one log line.
+    - name: Provision the CMUdict corpus (#3093)
+      shell: pwsh
+      run: |
+        conda run -n projet-is --no-capture-output python -c "import nltk; nltk.data.find('corpora/cmudict'); print('cmudict present')"
+        if ($LASTEXITCODE -ne 0) {
+          conda run -n projet-is --no-capture-output python -c "import nltk; nltk.download('cmudict', quiet=False)"
+          if ($LASTEXITCODE -ne 0) { throw "cmudict download failed" }
+        }
