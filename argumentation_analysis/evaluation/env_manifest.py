@@ -132,9 +132,13 @@ def _probe_overrides() -> Dict[str, Any]:
         "JVM_TWEETY_VERSION",
         "OPENAI_CHAT_MODEL_ID",
         "OPENROUTER_CHAT_MODEL_ID",
+        # #3096 item 6 — the named route's rung is a pin like the others.
+        "ANTHROPIC_CHAT_MODEL_ID",
         "LLM_DETERMINISTIC_MODE",
         "LLM_TEMPERATURE",
         "LLM_SEED",
+        # #3096 item 5 — the effort a run explicitly set is part of its record.
+        "LLM_REASONING_EFFORT",
     ]:
         val = os.environ.get(var)
         if val is not None:
