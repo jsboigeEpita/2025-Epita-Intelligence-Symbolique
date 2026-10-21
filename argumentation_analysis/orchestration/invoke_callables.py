@@ -25,6 +25,7 @@ from typing import (
     Iterator,
     Optional,
     List,
+    Sequence,
     Tuple,
     TypeVar,
 )
@@ -61,7 +62,11 @@ from argumentation_analysis.core.endpoint_compat import (
     sampling_kwargs,
 )
 from argumentation_analysis.services.llm_cache import LLMCacheMiss
-from argumentation_analysis.orchestration.fol_cause import classify_inconsistency
+from argumentation_analysis.orchestration.fol_cause import (
+    classify_inconsistency,
+    classify_pl_inconsistency,
+    mus_by_deletion,
+)
 from argumentation_analysis.orchestration.kb_atom_renaming import rename_atoms_apart
 from argumentation_analysis.orchestration.selection import (
     SelectableUnit,
@@ -1604,14 +1609,15 @@ async def _run_formal_logic_from_state(
             pl_out = await _invoke_propositional_logic(input_text, context)
             formulas = pl_out.get("formulas", []) if isinstance(pl_out, dict) else []
             if formulas:
-                # Three states (#1650): same motif as _write_propositional_to_state
-                # — an absent ``satisfiable`` must stay None, never fold onto
-                # False (the readers classify `is True`/`is False`/None).
-                state.add_propositional_analysis_result(
-                    formulas,
-                    pl_out.get("satisfiable"),
-                    pl_out.get("model", {}) or {},
+                # Three states (#1650): the canonical writer keeps an absent
+                # ``satisfiable`` None, never folded onto False — and attaches
+                # the #3122 cause/sources. One writer path, no duplicated
+                # attach logic between the DAG and this arm.
+                from argumentation_analysis.orchestration.state_writers import (
+                    _write_propositional_to_state,
                 )
+
+                _write_propositional_to_state(pl_out, state, context)
                 result["pl_added"] = len(formulas)
         except LLMCacheMiss:
             raise
@@ -9280,6 +9286,12 @@ async def _invoke_propositional_logic(
     upstream_formulas: List[str] = [str(f).strip() for f in (_raw_upstream or []) if f]
     formulas: Optional[List[str]] = None
     argument_mapping: Dict[str, str] = {}
+    # #3122 — aligned with ``formulas``: the source unit id(s) each formula
+    # was translated from, the PL twin of FOL's ``formula_units`` (#3107). A
+    # translation batch names all its texts (the model was not asked to
+    # separate them); a whole-text or upstream formula names none — the
+    # absence is recorded, never invented.
+    formula_units: List[List[str]] = []
     shared_atoms: List[str] = []
 
     # Retrieve state object for atomic_propositions storage
@@ -9544,9 +9556,19 @@ async def _invoke_propositional_logic(
                             if isinstance(_res, BaseException):
                                 logger.debug(f"PL Pass 2 batch {_idx} failed: {_res}")
                                 continue
+                            # #3122 — the batch's unit ids, named for every
+                            # formula it produced (FOL parity: coarse on
+                            # purpose, the batch was one prompt).
+                            _batch_units = [
+                                u.unit_id
+                                for u in _pl_selection.selected[
+                                    _idx * _pl_batch_size : (_idx + 1) * _pl_batch_size
+                                ]
+                            ]
                             for f in _res:
                                 if f and f not in formulas:
                                     formulas.append(f)
+                                    formula_units.append(list(_batch_units))
                                     _src = _pl_targets[_idx * _pl_batch_size][:60]
                                     argument_mapping[f[:30]] = _src
 
@@ -9588,6 +9610,9 @@ async def _invoke_propositional_logic(
                             for f in wt_formulas:
                                 if f and f not in per_arg_set and f not in formulas:
                                     formulas.append(f)
+                                    # #3122 — whole-document formula: no one
+                                    # unit to name, and none is invented.
+                                    formula_units.append([])
                                     argument_mapping[f[:30]] = input_text[:60]
                                     wide_net_extras += 1
                             if wide_net_extras:
@@ -9613,6 +9638,9 @@ async def _invoke_propositional_logic(
             for f in upstream_formulas:
                 if f and f not in formulas:
                     formulas.append(f)
+                    # #3122 — upstream NL-to-logic names no unit here (FOL
+                    # parity): the absence is recorded, not invented.
+                    formula_units.append([])
 
             # Fallback: on-the-fly NL translation only if nothing produced yet
             if not formulas:
@@ -9634,6 +9662,13 @@ async def _invoke_propositional_logic(
                     valid = [t for t in batch.translations if t.is_valid]
                     if valid:
                         formulas = [t.formula for t in valid]
+                        # #3122 — this arm translates the 4-unit head as one
+                        # batch; every formula names all attempted units (the
+                        # FOL NL-fallback rule — coarse beats a false single).
+                        _nl_batch_units = [
+                            u.unit_id for u in _pl_selection.selected[:4]
+                        ]
+                        formula_units = [list(_nl_batch_units) for _ in valid]
                         argument_mapping = {
                             t.formula[:30]: t.original_text[:60] for t in valid
                         }
@@ -9686,6 +9721,9 @@ async def _invoke_propositional_logic(
             # coverage (k units) and the template's atom count now agree.
             prop_vars = [_pl_atom(a) for a in _pl_targets]
             formulas = list(prop_vars)
+            # #3122 — the template mints one atom per selected unit: the
+            # alignment is exact, one unit id per formula.
+            formula_units = [[u.unit_id] for u in _pl_selection.selected]
             pl_metrics["template"] = len(prop_vars)
             argument_mapping = {prop_vars[i]: a[:60] for i, a in enumerate(_pl_targets)}
             # #1637: the belief set is built from the source arguments ONLY.
@@ -9708,6 +9746,10 @@ async def _invoke_propositional_logic(
 
     # Sanitize formulas for Tweety compatibility (#537)
     pl_metrics["pre_sanitize"] = len(formulas)
+    # #3122 — snapshot for the alignment re-map below: the sanitizer rewrites
+    # formula text and drops some, so the unit each formula came from is read
+    # back by re-sanitizing its input (deterministic), never guessed.
+    _pl_pre_sanitized = [str(f) for f in formulas]
     try:
         from argumentation_analysis.agents.core.logic.pl_formula_sanitizer import (
             PLFormulaSanitizer,
@@ -9722,6 +9764,16 @@ async def _invoke_propositional_logic(
                 f"formulas sanitized"
             )
             formulas = san_result.sanitized_formulas
+            if len(formula_units) == len(_pl_pre_sanitized):
+                _san_units: Dict[str, List[str]] = {}
+                for _f, _u in zip(_pl_pre_sanitized, formula_units):
+                    try:
+                        _s = sanitizer.sanitize_formula(_f)
+                    except Exception:
+                        _s = None
+                    if _s is not None:
+                        _san_units.setdefault(str(_s), list(_u))
+                formula_units = [_san_units.get(str(f), []) for f in formulas]
             # Store symbol mapping for interpretation
             if san_result.symbol_mapping:
                 argument_mapping.update(
@@ -9733,6 +9785,54 @@ async def _invoke_propositional_logic(
     # Bind bridge outside the try so the except isolation loop can reference it
     # even if TweetyBridge import/construction itself raises (#697 Track HH).
     bridge = None
+
+    def _pl_cause_for(
+        _checked: List[str],
+        _checked_units: List[List[str]],
+        _verdict: Optional[bool],
+        _bridge: Any,
+    ) -> Dict[str, Any]:
+        """#3122 — the cause of an UNSAT verdict, from facts in hand.
+
+        The PL twin of #3107's ``_cause_for``: nothing for a satisfiable or
+        undecided theory. The conflict site is a minimal unsatisfiable core by
+        deletion (≤ one solver call per formula, the issue's bound); a solver
+        hiccup mid-sweep degrades to the whole theory (``mus`` False) — a
+        coarser honest boundary, never a silent absence.
+        """
+        if _verdict is not False:
+            return {}
+        _speakers: Dict[str, Any] = {}
+        _prov = getattr(state_obj, "argument_provenance", None)
+        if isinstance(_prov, dict):
+            for _uid, _entry in _prov.items():
+                if isinstance(_entry, dict) and isinstance(_entry.get("speaker"), str):
+                    _speakers[str(_uid)] = _entry["speaker"]
+
+        def _oracle(_subset: Sequence[Any]) -> bool:
+            _v, _m = _bridge.check_consistency(
+                "\n".join(str(f) for f in _subset), "propositional"
+            )
+            return _v is False  # a None (degraded) verdict confirms nothing
+
+        try:
+            _core = mus_by_deletion(_checked, _oracle)
+            return {
+                "consistency_cause": classify_pl_inconsistency(
+                    _checked, _checked_units, _speakers, core_indices=_core
+                )
+            }
+        except Exception as _mus_err:
+            logger.warning(
+                f"PL MUS sweep unavailable ({_mus_err}) — classifying the "
+                "whole theory as the honest boundary."
+            )
+            return {
+                "consistency_cause": classify_pl_inconsistency(
+                    _checked, _checked_units, _speakers
+                )
+            }
+
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
@@ -9769,6 +9869,14 @@ async def _invoke_propositional_logic(
                     logger.warning("PL backend %s", _dis)
             except Exception as _cmp_err:
                 logger.warning(f"PL backend comparison skipped ({_cmp_err}).")
+        # #3122 — an UNSAT verdict states its cause (minimal core by deletion,
+        # classified with the shared fol_cause vocabulary) and the theory
+        # carries its per-formula sources whatever the verdict.
+        pl_cause: Dict[str, Any] = {}
+        if is_consistent is False:
+            pl_cause = await asyncio.to_thread(
+                _pl_cause_for, formulas, formula_units, False, bridge
+            )
         return {
             "formulas": formulas,
             "satisfiable": bool(is_consistent),
@@ -9784,6 +9892,14 @@ async def _invoke_propositional_logic(
                 {"pl_backend_comparison": pl_backend_comparison}
                 if pl_backend_comparison is not None
                 else {}
+            ),
+            **(
+                {"formula_sources": [list(u) for u in formula_units]}
+                if len(formula_units) == len(formulas) and any(formula_units)
+                else {}
+            ),
+            **(
+                {"consistency_cause": pl_cause["consistency_cause"]} if pl_cause else {}
             ),
         }
     except Exception as e:
@@ -9804,6 +9920,14 @@ async def _invoke_propositional_logic(
                     valid_formulas.append(formula)
                 except Exception:
                     logger.debug(f"PL formula rejected by Tweety: {formula}")
+        # #3122 — the survivors keep their units, matched by text captured
+        # before any later rewrite (FOL parity with its ``_unit_of``).
+        _unit_of = (
+            {str(f): list(u) for f, u in zip(formulas, formula_units)}
+            if len(formula_units) == len(formulas)
+            else {}
+        )
+        survivor_units = [_unit_of.get(str(f), []) for f in valid_formulas]
 
         # Survivors imply a bridge; the second test only narrows its type.
         if valid_formulas and bridge is not None:
@@ -9837,6 +9961,13 @@ async def _invoke_propositional_logic(
                     iso_err,
                 )
                 iso_msg = f"combined consistency unverified: {iso_err}"
+            # #3122 — same contract as the main path: an UNSAT survivors'
+            # verdict states its cause, and the theory carries its sources.
+            iso_cause: Dict[str, Any] = {}
+            if iso_satisfiable is False:
+                iso_cause = await asyncio.to_thread(
+                    _pl_cause_for, valid_formulas, survivor_units, False, bridge
+                )
             return {
                 "formulas": valid_formulas,
                 "satisfiable": iso_satisfiable,
@@ -9850,6 +9981,16 @@ async def _invoke_propositional_logic(
                 "isolation_retry": True,
                 "rejected_count": len(formulas) - len(valid_formulas),
                 "pl_metrics": pl_metrics,
+                **(
+                    {"formula_sources": [list(u) for u in survivor_units]}
+                    if any(survivor_units)
+                    else {}
+                ),
+                **(
+                    {"consistency_cause": iso_cause["consistency_cause"]}
+                    if iso_cause
+                    else {}
+                ),
             }
 
         # All formulas failed — fail-loud (#1019, RA-8 #1053)

@@ -1473,10 +1473,18 @@ class DeepSynthesisAgent(BaseAgent):
             # that from a decided verdict.
             verdict = DeepSynthesisAgent._verdict_label_pl(r)
             formulas = r.get("formulas") or []
+            # #3122 — the cause travels with the verdict, the PL twin of the
+            # FOL block below. The phrase is the writer's, never re-derived.
+            _cause = r.get("consistency_cause")
+            _cause_text = (
+                f" cause={cause_phrase(_cause)}"
+                if isinstance(_cause, dict) and _cause.get("cause")
+                else ""
+            )
             _add(
                 "propositional_analysis_results",
                 i,
-                f"formulas={len(formulas)} verdict={verdict or 'absent'}",
+                f"formulas={len(formulas)} verdict={verdict or 'absent'}{_cause_text}",
             )
 
         for i, r in enumerate(
