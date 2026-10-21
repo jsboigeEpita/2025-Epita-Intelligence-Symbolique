@@ -42,6 +42,13 @@ from argumentation_analysis.models.extract_definition import ExtractDefinitions
 
 logger = logging.getLogger(__name__)
 
+# #3118 — répertoires qui peuvent légitimement contenir un corpus chiffré,
+# relatifs à la racine du checkout. `settings.config_dir`, `ui.CONFIG_DIR` et
+# `paths.DATA_DIR` pointent tous les trois vers `argumentation_analysis/data` ;
+# le `data/` racine est la convention historique (`main_orchestrator`, éditeur
+# de marqueurs d'extraits). Aucun autre répertoire n'est parcouru.
+ENCRYPTED_CORPUS_DIRS = ("argumentation_analysis/data", "data")
+
 
 class UnifiedSourceType(Enum):
     """Types de sources unifiés - Extension du système existant."""
@@ -443,11 +450,21 @@ class UnifiedSourceManager:
         except Exception as e:
             self.logger.debug(f"Impossible de lister les sources complexes: {e}")
 
-        # Fichiers .enc dans le projet
+        # Fichiers .enc dans le projet (#3118). La marche est bornée aux
+        # répertoires qui peuvent légitimement porter un corpus : le listing
+        # alimente un dict de statut (`source_tests["enc_files"]`, dont aucun
+        # consommateur ne lit les valeurs), et l'ancien glob depuis la racine
+        # du checkout descendait `.git`, `node_modules`, `portable_jdk`, les
+        # caches — 900 s de timeout sur un siège chargé (#2451). Les fixtures
+        # `.enc` de `tests/` ne sont pas des corpus utilisateur.
         project_root = Path(__file__).resolve().parent.parent.parent
-        for enc_file in project_root.glob("**/*.enc"):
-            if enc_file.is_file():
-                sources["enc_files"].append(str(enc_file.relative_to(project_root)))
+        for relative_dir in ENCRYPTED_CORPUS_DIRS:
+            corpus_dir = project_root / relative_dir
+            if not corpus_dir.is_dir():
+                continue
+            for enc_file in sorted(corpus_dir.rglob("*.enc")):
+                if enc_file.is_file():
+                    sources["enc_files"].append(str(enc_file.relative_to(project_root)))
 
         return sources
 
