@@ -11021,6 +11021,9 @@ async def _invoke_modal_logic(
                 "modal_status": (
                     "decided" if is_consistent in (True, False) else "unverified"
                 ),
+                # #3121: this branch decides KB CONSISTENCY — the property is
+                # named so no reader has to trust the ``valid`` key's name.
+                "decided_property": "kb_consistency",
             }
         except Exception as e:
             _modal_failure_reasons.append(f"ModalHandler: {e}")
@@ -11050,6 +11053,9 @@ async def _invoke_modal_logic(
                 "modal_status": (
                     "decided" if accepted in (True, False) else "unverified"
                 ),
+                # #3121: this fallback decides KB ⊨ KB query ACCEPTANCE, not
+                # consistency — named as such, never narrated as validity.
+                "decided_property": "modal_query_acceptance",
             }
         except Exception as e:
             _modal_failure_reasons.append(f"TweetyBridge: {e}")
@@ -13749,6 +13755,9 @@ async def _invoke_external_modal_solver(
                     "degraded": is_consistent is None,
                     "message": msg,
                     "logic_type": "modal",
+                    # #3121: same decision as the internal ModalHandler
+                    # branch — KB consistency, named for the readers.
+                    "decided_property": "kb_consistency",
                 }
             finally:
                 if _loaned:
@@ -13803,6 +13812,9 @@ async def _invoke_external_modal_solver(
             "degraded": accepted is None,
             "message": msg,
             "logic_type": "modal",
+            # #3121: ``check_consistency`` decides KB consistency, named for
+            # the readers.
+            "decided_property": "kb_consistency",
         }
     except Exception as e:
         return {

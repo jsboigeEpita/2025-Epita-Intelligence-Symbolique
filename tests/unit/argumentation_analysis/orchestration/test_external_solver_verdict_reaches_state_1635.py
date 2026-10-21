@@ -126,11 +126,26 @@ class TestExternalModalSolverVerdictReachesState:
         assert len(state.modal_analysis_results) == 1
         assert state.modal_analysis_results[0]["valid"] is None
 
-    def test_repeated_writes_append_not_overwrite(self):
+    def test_repeated_writes_keep_both_verdicts_readable(self):
+        # #1635's intent — a second write must not lose the first verdict —
+        # now holds under the #3121 contract: a repeated write on the SAME
+        # formula set is a re-check that ATTACHES (one analysis per formula
+        # set, the modal sibling of #3106; the attaching case is witnessed in
+        # test_modal_recheck_attaches_3121.py), and only a different formula
+        # set appends. Both verdicts stay readable: the carried one, the
+        # displaced one in ``superseded_verdict``, and the re-check in
+        # ``external_checks``.
         state = UnifiedAnalysisState("texte")
         _write_external_modal_solver_to_state(_modal_handler_output(True), state, {})
         _write_external_modal_solver_to_state(_modal_handler_output(False), state, {})
-        assert len(state.modal_analysis_results) == 2
+        assert len(state.modal_analysis_results) == 1
+        entry = state.modal_analysis_results[0]
+        assert entry["valid"] is False, "the divergent re-check carries"
+        assert (
+            entry["superseded_verdict"]["valid"] is True
+        ), "the displaced verdict must stay readable, not be overwritten away"
+        assert len(entry["external_checks"]) == 1
+        assert entry["external_checks"][0]["agrees"] is False
 
     def test_appendix_reads_the_written_verdict(self):
         state = UnifiedAnalysisState("texte")

@@ -1746,6 +1746,9 @@ def _write_modal_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         valid,
         modalities,
         message=status_message,
+        # #3121: the producer names what it decided; the reader words the
+        # verdict by this, not by the ``valid`` key's name.
+        decided_property=output.get("decided_property"),
     )
 
 
@@ -2813,20 +2816,31 @@ def _normalized_formulas(formulas: Any) -> List[str]:
     return [str(f).strip() for f in formulas]
 
 
-def _attach_external_fol_verdict(
+def _attach_external_recheck(
     state: Any,
+    list_attr: str,
+    verdict_key: str,
+    source_key: str,
+    default_source: str,
     formulas: Any,
-    consistent: Optional[bool],
+    verdict: Optional[bool],
     solver: str,
     provenance: str,
+    displaced_cause_key: Optional[str] = None,
 ) -> bool:
-    """Attach a re-check to the theory it re-ran (#3106); False when none holds it.
+    """Attach a re-check to the analysis it re-ran; False when none holds it.
 
-    The FOL agent and the external solver step can run the SAME formula list:
-    the second one used to append a second theory, so every reader that counts
-    entries counted two analyses and the synthesis presented them as agreeing.
-    One formula set is one theory — the re-check rides the entry it re-ran, in
-    ``external_checks``, naming its solver and whether it agrees.
+    An agent and an external solver can run the SAME formula list: the second
+    decision used to append a second analysis, so every reader that counts
+    entries counted two and the synthesis presented them as agreeing checks.
+    One formula set is one analysis — the re-check rides the entry it re-ran,
+    in ``external_checks``, naming its solver and whether it agrees.
+
+    #3106/#3108 fixed this on the FOL leg; #3121 found the modal sibling
+    untouched because the rule lived in a FOL-only copy. The rule is ONE
+    helper now, parameterized by the state list and the verdict key it
+    carries — FOL (``fol_analysis_results`` / ``consistent``) and modal
+    (``modal_analysis_results`` / ``valid``) both route through it.
 
     Tri-state (#1019): ``agrees`` is None when either side did not decide. The
     external verdict wins in the two cases the dispatch names — it diverges from
@@ -2837,30 +2851,29 @@ def _attach_external_fol_verdict(
     entry's verdict stands untouched. A degraded external answer (None) never
     displaces anything.
 
-    #3107: a stated cause belongs to the verdict that carries it. Promoting
-    the external verdict moves the displaced entry's ``consistency_cause``
-    into ``superseded_verdict`` (the cause of the verdict that no longer
-    speaks); the carrying external verdict states none, because no prover
-    produced one — silence is honest, an inherited cause is not.
+    #3107 (FOL only, via ``displaced_cause_key``): a stated cause belongs to
+    the verdict that carries it. Promoting the external verdict moves the
+    displaced entry's cause into ``superseded_verdict``; the carrying external
+    verdict states none, because no prover produced one — silence is honest,
+    an inherited cause is not.
     """
-    entries = getattr(state, "fol_analysis_results", None)
+    entries = getattr(state, list_attr, None)
     if not isinstance(entries, list):
         return False
     wanted = _normalized_formulas(formulas)
     if not wanted:
-        # A degenerate (empty) list identifies no theory: attaching there would
-        # merge unrelated degraded entries, so it appends like any other set.
+        # A degenerate (empty) list identifies no analysis: attaching there
+        # would merge unrelated degraded entries, so it appends like any
+        # other set.
         return False
     for entry in entries:
         if not isinstance(entry, dict):
             continue
         if _normalized_formulas(entry.get("formulas")) != wanted:
             continue
-        previous = entry.get("consistent")
+        previous = entry.get(verdict_key)
         agrees = (
-            None
-            if previous is None or consistent is None
-            else bool(previous == consistent)
+            None if previous is None or verdict is None else bool(previous == verdict)
         )
         checks = entry.get("external_checks")
         if not isinstance(checks, list):
@@ -2868,26 +2881,28 @@ def _attach_external_fol_verdict(
         checks.append(
             {
                 "solver": solver,
-                "consistent": consistent,
+                verdict_key: verdict,
                 "agrees": agrees,
                 "message": provenance,
             }
         )
         entry["external_checks"] = checks
         # Divergence or an undecided entry: the prover's decision carries (#3106).
-        if consistent is not None and consistent != previous:
+        if verdict is not None and verdict != previous:
             # The cause traveled with the displaced verdict, not with the key
-            # (#3107): it says why THAT verdict read inconsistent.
-            displaced_cause = entry.pop("consistency_cause", None)
+            # (#3107): it says why THAT verdict read against the KB.
+            displaced_cause = (
+                entry.pop(displaced_cause_key, None) if displaced_cause_key else None
+            )
             if previous is not None:
                 entry["superseded_verdict"] = {
-                    "consistent": previous,
-                    "source": entry.get("consistent_source") or "fol_agent",
+                    verdict_key: previous,
+                    "source": entry.get(source_key) or default_source,
                 }
                 if displaced_cause:
                     entry["superseded_verdict"]["cause"] = displaced_cause
-            entry["consistent"] = consistent
-            entry["consistent_source"] = f"external:{solver}"
+            entry[verdict_key] = verdict
+            entry[source_key] = f"external:{solver}"
         return True
     return False
 
@@ -2907,8 +2922,9 @@ def _write_external_fol_solver_to_state(
     (degraded) appends an honest entry, it does not vanish.
 
     #3106: when the checked formula list is one an entry already holds, this is
-    a re-check of that theory, not a second theory — it attaches through
-    :func:`_attach_external_fol_verdict`. Only a different formula set appends.
+    a re-check of that theory, not a second theory — it attaches through the
+    shared :func:`_attach_external_recheck`. Only a different formula set
+    appends.
     """
     if not output or not isinstance(output, dict):
         return
@@ -2917,8 +2933,17 @@ def _write_external_fol_solver_to_state(
         formulas = []
     solver = str(output.get("solver") or "none")
     provenance = _external_provenance(output) or f"external solver ({solver})"
-    if _attach_external_fol_verdict(
-        state, formulas, output.get("consistent"), solver, provenance
+    if _attach_external_recheck(
+        state,
+        "fol_analysis_results",
+        "consistent",
+        "consistent_source",
+        "fol_agent",
+        formulas,
+        output.get("consistent"),
+        solver,
+        provenance,
+        displaced_cause_key="consistency_cause",
     ):
         return
     state.add_fol_analysis_result(
@@ -2940,6 +2965,15 @@ def _write_external_modal_solver_to_state(
     ``external_modal_solver`` / ``external_valid`` dict writes were dead on a
     real run (no reader, wrong ``isinstance`` gate). ``valid`` stays tri-state
     (#1019/#1650): a degraded None appends, never collapses to False.
+
+    #3121: when the checked formula list is one an entry already holds, this
+    is a re-check of that KB, not a second analysis — it attaches through the
+    SAME shared :func:`_attach_external_recheck` the FOL leg uses (#3106's
+    rule; the modal sibling was missed because the rule lived in a FOL-only
+    copy). Only a different formula set appends, and an appended entry
+    carries ``decided_property`` — what the prover decided (KB consistency on
+    every decided branch), so no reader has to guess it from the ``valid``
+    key's name.
     """
     if not output or not isinstance(output, dict):
         return
@@ -2949,11 +2983,26 @@ def _write_external_modal_solver_to_state(
     modalities = output.get("modalities", [])
     if not isinstance(modalities, list):
         modalities = []
+    solver = str(output.get("solver") or "none")
+    provenance = _external_provenance(output) or f"external solver ({solver})"
+    if _attach_external_recheck(
+        state,
+        "modal_analysis_results",
+        "valid",
+        "valid_source",
+        "modal_agent",
+        formulas,
+        output.get("valid"),
+        solver,
+        provenance,
+    ):
+        return
     state.add_modal_analysis_result(
         formulas,
         output.get("valid"),
         modalities,
         message=_external_provenance(output),
+        decided_property=output.get("decided_property"),
     )
 
 
