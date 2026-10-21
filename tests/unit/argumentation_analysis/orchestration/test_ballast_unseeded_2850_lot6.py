@@ -51,6 +51,9 @@ def _act_result() -> Any:
         gate_verdict=None,
         degraded={},
         interpretive_question="",
+        # Wider contract since #3123/R1105c: the act result carries its own
+        # reading-license check, which the invoke callable returns to the trace.
+        read_license={},
     )
 
 

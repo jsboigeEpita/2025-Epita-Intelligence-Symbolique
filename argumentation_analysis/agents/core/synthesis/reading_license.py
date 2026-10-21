@@ -54,11 +54,17 @@ _BREADTH_MARKERS = re.compile(
 )
 
 #: A discourse-level subject: the sentence speaks about the discourse as a
-#: whole (or about a speaker's commitments), not about a source unit.
+#: whole (or about a speaker's commitments), not about a source unit. The
+#: possessive forms below are the #3123/R1105c Act II shape — "the case the
+#: speaker builds does not hold together" charges a recorded cause to the
+#: speaker just as the explicit subjects do.
 _DISCOURSE_SUBJECTS = re.compile(
     r"(le discours|l['’]ensemble des engagements|les engagements du discours|"
     r"les engagements (?:du|d['’]un) locuteur|s[ea]s engagements|"
     r"la position (?:est|s['’]avère|se révèle|reste)|"
+    r"(?:le|la) (?:cas|thèse|these|démonstration|demonstration|argumentation|"
+    r"raisonnement|argumentaire|défense|defense|fil|développement|"
+    r"developpement) (?:que|qu['’]|de |du |d['’])|"
     r"the discourse|the speaker['’]s commitments|the commitments)",
     re.IGNORECASE,
 )

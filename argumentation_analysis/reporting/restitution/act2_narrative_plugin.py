@@ -478,6 +478,11 @@ class Act2Result:
     # True when the narrative was conducted leading with why the argumentation
     # holds (spec §5) — the virtuous reading.
     is_virtuous: bool = False
+    # #3123/R1105c — the reading-license check over the woven Act II text
+    # (flags only; empty when nothing was woven). Act II receives the cause
+    # phrases and can charge a recorded cause to the speaker just as the
+    # synthesis did; the check covers the act, not only the synthesis.
+    read_license: Dict[str, Any] = field(default_factory=dict)
 
 
 # --- deterministic evidence builder (no LLM) ---------------------------------
@@ -2028,6 +2033,20 @@ async def build_act2_narrative(
         )
     narrative = outcome.narrative
 
+    # #3123/R1105c — the reading-license check covers the act, not only the
+    # synthesis: Act II receives the cause phrases and can charge a recorded
+    # cause (a ``between_sources`` inconsistency) to the speaker, though it
+    # licenses nothing about any one voice. Flags only — the check never
+    # rewrites; the summary goes to the trace.
+    from argumentation_analysis.agents.core.synthesis.reading_license import (
+        check_reading_license,
+        summarise_flags,
+    )
+
+    read_license = check_reading_license(narrative, state)
+    if read_license["flags"]:
+        logger.warning("Acte II reading-license: %s", summarise_flags(read_license))
+
     # §4 self-check (honest, never grades on a curve).
     gate = ReadabilityGate()
     verdict = gate.check_body(narrative)
@@ -2055,4 +2074,5 @@ async def build_act2_narrative(
         gate_verdict=verdict,
         degraded=degraded,
         is_virtuous=is_virtuous,
+        read_license=read_license,
     )

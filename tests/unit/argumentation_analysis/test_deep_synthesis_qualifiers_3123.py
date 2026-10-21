@@ -37,6 +37,9 @@ from argumentation_analysis.agents.core.synthesis.reading_license import (
     check_reading_license,
 )
 from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
+    build_act2_narrative,
+)
 
 _SPARSE_TEXT = (
     "L'extension grounded couvre les trois arguments et le propos est robuste."
@@ -323,3 +326,55 @@ class TestSynthesizeStoresTheCheck:
         DeepSynthesisAgent.attach_read_license(report, state)
         check = report.value_gates["read_license"]["grounded"]
         assert [f["kind"] for f in check["flags"]] == ["discourse_incoherence"]
+
+
+class TestActTwoReadsTheLicence:
+    """R1105c (Opus): the cause is charged to the speaker in Act II.
+
+    The Opus pass read ``between_sources`` — a conflict between source
+    units with no speaker recorded — and Act II concluded that the case
+    the speaker builds "does not hold together as a coherent whole".
+    The check must cover the act narratives, not only the synthesis.
+    """
+
+    _CHARGE = (
+        "Le cas que Speaker_A construit ne tient pas debout comme un tout "
+        "coherent au regard des engagements registres."
+    )
+
+    @staticmethod
+    def _act2(state, woven: str):
+        async def _stub(_prompt: str) -> str:
+            return woven
+
+        return asyncio.run(build_act2_narrative(state, llm_callable=_stub))
+
+    def test_an_act_two_sentence_charging_the_speaker_is_flagged(self):
+        state = _state_with_cause("between_sources")
+        state.add_argument("Une revendication du locuteur.")
+        result = self._act2(state, self._CHARGE)
+        kinds = [f["kind"] for f in result.read_license["flags"]]
+        assert kinds == ["discourse_incoherence"]
+
+    def test_the_same_sentence_under_self_contradiction_is_not_flagged(self):
+        # Positive control: a self-contradiction IS the speaker's — the
+        # same sentence under that cause is a finding, not a misreading.
+        state = _state_with_cause("self_contradiction")
+        state.add_argument("Une revendication du locuteur.")
+        result = self._act2(state, self._CHARGE)
+        assert result.read_license["flags"] == []
+
+    def test_the_detector_covers_the_speaker_attribution_forms(self):
+        # The shapes the acts use to charge a cause to the speaker: the
+        # case the speaker builds, the demonstration they build, their
+        # reasoning, their defence.
+        state = _state_with_cause("between_sources")
+        sentences = (
+            "Le cas que Speaker_A construit ne tient pas debout.",
+            "La demonstration qu'il construit ne tient pas.",
+            "Le raisonnement de Speaker_A se contredit.",
+            "La these que Speaker_A defend se contredit.",
+        )
+        for sentence in sentences:
+            kinds = [f["kind"] for f in check_reading_license(sentence, state)["flags"]]
+            assert kinds == ["discourse_incoherence"], sentence

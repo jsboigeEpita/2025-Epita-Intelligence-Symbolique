@@ -13195,6 +13195,10 @@ async def _invoke_act2_narrative(
         "gate_band": gate_band,
         "degraded": bool(result.degraded),
         "degraded_reasons": dict(result.degraded),
+        # #3123/R1105c — the act's own reading-license check, carried out of
+        # the act so the run's trace shows what Act II read without a license.
+        # Flags only: nothing beside this key is rewritten from it.
+        "read_license": dict(result.read_license or {}),
     }
 
 
