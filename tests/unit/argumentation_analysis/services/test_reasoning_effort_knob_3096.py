@@ -160,6 +160,92 @@ class TestTheKnobRidesBothFunnels:
             cached_raw_chat_completion_sync(client, model="m", messages=[])
 
 
+class TestTheEffortIsPartOfTheRequestIdentity:
+    """R1227 review — a cassette recorded at one effort must never answer a
+    call at another effort.
+
+    Measured defect before the fix: the SK path computed its cache key BEFORE
+    applying the knob, and the raw path's key tuple ignored ``extra_body``.
+    Two efforts therefore shared one cassette: a replay at ``high`` served the
+    answer recorded at ``low`` without a miss. The witnesses below drive the
+    REAL record/replay wrappers on a tmp diskcache and pin the consequence
+    (miss/ hit), not the key helper alone.
+    """
+
+    def test_the_sk_cassette_does_not_answer_another_effort(
+        self, _off, monkeypatch, tmp_path
+    ):
+        from argumentation_analysis.services.llm_cache import (
+            LLMCacheMiss,
+            RECORD,
+            REPLAY,
+        )
+
+        def run(wrapper) -> None:
+            import asyncio
+
+            asyncio.get_event_loop_policy().new_event_loop().run_until_complete(
+                wrapper.get_chat_message_contents(
+                    chat_history=_history(), settings=_sk_settings()
+                )
+            )
+
+        monkeypatch.setenv("LLM_REASONING_EFFORT", "low")
+        run(CachedChatCompletion(_CaptureSKInner(), cache_dir=tmp_path, mode=RECORD))
+        # Same effort: the cassette is usable (the knob did not invalidate it).
+        monkeypatch.setenv("LLM_REASONING_EFFORT", "low")
+        run(CachedChatCompletion(_CaptureSKInner(), cache_dir=tmp_path, mode=REPLAY))
+        # Other effort: the request is not the same one — the replay must miss.
+        monkeypatch.setenv("LLM_REASONING_EFFORT", "high")
+        with pytest.raises(LLMCacheMiss):
+            run(
+                CachedChatCompletion(_CaptureSKInner(), cache_dir=tmp_path, mode=REPLAY)
+            )
+
+    def test_the_raw_cassette_does_not_answer_another_effort(
+        self, _off, monkeypatch, tmp_path
+    ):
+        import asyncio
+
+        from argumentation_analysis.services.llm_cache import LLMCacheMiss
+
+        def run() -> None:
+            client = _CaptureRawClient()
+            asyncio.get_event_loop_policy().new_event_loop().run_until_complete(
+                _run_raw(client)
+            )
+
+        monkeypatch.setenv("LLM_CACHE_MODE", "record")
+        monkeypatch.setenv("LLM_CACHE_DIR", str(tmp_path))
+        monkeypatch.setenv("LLM_REASONING_EFFORT", "low")
+        _off._raw_cache = None
+        run()
+        monkeypatch.setenv("LLM_CACHE_MODE", "replay")
+        _off._raw_cache = None
+        monkeypatch.setenv("LLM_REASONING_EFFORT", "high")
+        with pytest.raises(LLMCacheMiss):
+            run()
+
+    def test_unset_effort_leaves_the_raw_key_identity_untouched(self, _off):
+        """Cassette compatibility: with no knob, the request carries no
+        ``extra_body`` and the key is the pre-#3096 one."""
+        from argumentation_analysis.services.llm_cache import (
+            _apply_effort_to_raw_kwargs,
+            compute_raw_cache_key,
+        )
+
+        caller = {"model": "m", "messages": []}
+        assert _apply_effort_to_raw_kwargs(dict(caller), None) == caller
+        assert compute_raw_cache_key(**caller) == compute_raw_cache_key(
+            **_apply_effort_to_raw_kwargs(dict(caller), None)
+        )
+
+    def test_unset_effort_adds_nothing_to_the_sk_settings(self, _off):
+        from argumentation_analysis.services.llm_cache import _serialize_settings
+
+        assert "reasoning_effort" not in _serialize_settings(_sk_settings())
+
+
 class TestTheKnobIsRecorded:
     def test_the_manifest_carries_the_knob(self, monkeypatch):
         monkeypatch.setenv("LLM_REASONING_EFFORT", "low")

@@ -605,6 +605,11 @@ class CachedChatCompletion(ChatCompletionClientBase):
             _account_sk_usage(response)  # #2849 — live round-trip
             return response
 
+        # #3096 item 5 (R1227 review): the effort is part of the request's
+        # identity — applying it AFTER the key let a replay at another effort
+        # read the cassette recorded under this one. Unset still adds nothing
+        # (_serialize_settings skips None), so existing cassettes stay valid.
+        _apply_effort_to_settings(settings, reasoning_effort_override())
         key = compute_cache_key(chat_history, settings)
 
         if self._mode == REPLAY:
@@ -629,7 +634,6 @@ class CachedChatCompletion(ChatCompletionClientBase):
 
         logger.debug("Cache MISS (record): %s..., calling API", key[:16])
         _cache_stats.miss_record += 1
-        _apply_effort_to_settings(settings, reasoning_effort_override())
         response = await self._inner.get_chat_message_contents(
             chat_history=chat_history, settings=settings, **kwargs
         )
@@ -734,6 +738,10 @@ _RAW_CACHE_KEY_FIELDS = (
     "response_format",
     "tool_choice",
     "tools",
+    # #3096 item 5 (R1227 review): the effort rides in extra_body; without it
+    # in the key, two efforts shared one cassette. An unset effort never
+    # creates the field, so pre-existing cassettes keep their keys.
+    "extra_body",
 )
 
 
