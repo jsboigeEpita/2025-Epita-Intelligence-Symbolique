@@ -1056,6 +1056,17 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
             1 for r in pl if isinstance(r, dict) and _pl_verdict(r) is False
         )
         if consistent or inconsistent:
+            # #3122 — the cause each UNSAT theory stated, in its own words,
+            # the PL twin of the FOL block below. Empty when the run stated
+            # none — never invented.
+            pl_causes = [
+                cause_phrase(r["consistency_cause"])
+                for r in pl
+                if isinstance(r, dict)
+                and _pl_verdict(r) is False
+                and isinstance(r.get("consistency_cause"), dict)
+                and r["consistency_cause"].get("cause")
+            ]
             findings.append(
                 FormalFinding(
                     kind="pl",
@@ -1065,7 +1076,10 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                         if inconsistent
                         else f"{accord(consistent, 'inférence PL consistante', 'inférences PL consistantes')}"
                     ),
-                    detail="solveur Tweety (logique propositionnelle)",
+                    detail=(
+                        "solveur Tweety (logique propositionnelle)"
+                        + (" — " + " ; ".join(pl_causes) if pl_causes else "")
+                    ),
                     # #1914 : the refuted records' formulas are the derivation
                     # (what failed) ; on an all-verified axis, a sample of what
                     # passed. Placeholder-only records → None → honest absence.

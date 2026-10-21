@@ -754,6 +754,38 @@ def _fol_stated_causes(state: Any) -> List[str]:
     return causes
 
 
+def _pl_stated_causes(state: Any) -> List[str]:
+    """The causes each UNSAT propositional theory stated (#3122), in entry order.
+
+    The PL twin of :func:`_fol_stated_causes`, reading the same
+    ``consistency_cause`` field the #3122 writer attaches (a minimal
+    unsatisfiable core classified by the shared fol_cause vocabulary).
+    Guest entries (CL/SAT/QBF sidecars) carry no cause and never did.
+    Never inferred here — a cause this reader invented would be exactly the
+    defect the field repairs.
+    """
+    pl = getattr(state, "propositional_analysis_results", None)
+    if not isinstance(pl, list):
+        return []
+    # Lazy on purpose (#2352): the orchestration package ``__init__`` imports
+    # a module that rewrites ``os.environ`` from the root .env at import time
+    # — this renderer must not drag it in module order.
+    from argumentation_analysis.orchestration.fol_cause import cause_phrase
+
+    causes = []
+    for r in pl:
+        if not isinstance(r, dict) or _is_guest_formal_entry(r):
+            continue
+        if _pl_verdict(r) is not False:
+            continue
+        if not isinstance(r.get("consistency_cause"), dict):
+            continue
+        if not r["consistency_cause"].get("cause"):
+            continue
+        causes.append(cause_phrase(r["consistency_cause"]))
+    return causes
+
+
 def _fol_verified(state: Any) -> int:
     """Count FOL theories the Tweety solver verified (any verdict, real-in-state).
 
@@ -788,6 +820,7 @@ def _collect_weak_points(
     pl_inc: int,
     fol_inc: int,
     fol_causes: Optional[List[str]] = None,
+    pl_causes: Optional[List[str]] = None,
 ) -> List[StructuringWeakPoint]:
     """Collect the structuring weak points the reader can target (real-in-state).
 
@@ -828,12 +861,19 @@ def _collect_weak_points(
             )
         )
     if pl_inc:
+        # #3122 — the cause the writer stated, when one was stated. Without
+        # it this label said only "inconsistent", and the conclusion read a
+        # bare UNSAT as the discourse's own incoherence — the PL twin of the
+        # misreading #3107 removed from the FOL leg.
+        pl_cause_text = " ; ".join(pl_causes or [])
         points.append(
             StructuringWeakPoint(
                 source="pl",
                 label=(
                     f"{accord(pl_inc, 'inférence propositionnelle inconsistante', 'inférences propositionnelles inconsistantes')} "
-                    f"(solveur Tweety)"
+                    f"(solveur Tweety"
+                    + (f" — {pl_cause_text}" if pl_cause_text else "")
+                    + ")"
                 ),
                 target_arg_id="—",
             )
@@ -2206,8 +2246,11 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
     # #3107 — the causes the FOL writer stated, read from the same entries
     # ``_fol_inconsistent`` counts. Empty when none was stated.
     fol_causes = _fol_stated_causes(state)
+    # #3122 — same for the PL leg, read from the entries ``_pl_inconsistent``
+    # counts (guest sidecars never carry a cause).
+    pl_causes = _pl_stated_causes(state)
     weak_points = _collect_weak_points(
-        fallacies, dung_rejected, pl_inc, fol_inc, fol_causes
+        fallacies, dung_rejected, pl_inc, fol_inc, fol_causes, pl_causes
     )
     counter_strategies: List[CounterStrategy] = []
     for ca in counters:
@@ -2912,8 +2955,9 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         f"{SPEAKER_NAMING_RULE}\n"
         f"{READING_BASIS_RULE}\n"
         "- Le verdict formel (Tweety/Dung) est un APPUI, jamais un titre. Quand une\n"
-        "  théorie du premier ordre est inconsistante, DIS LA CAUSE que le constat\n"
-        "  porte (elle est écrite dans CE QUE LES CADRES STRUCTURÉS ÉTABLISSENT :\n"
+        "  théorie du premier ordre est inconsistante, ou que l'encodage\n"
+        "  propositionnel est insatisfiable, DIS LA CAUSE que le constat porte\n"
+        "  (elle est écrite dans CE QUE LES CADRES STRUCTURÉS ÉTABLISSENT :\n"
         "  « contradiction entre voix », « auto-contradiction de … », « contradiction\n"
         "  entre unités sources », « cause non établie ») ; n'attribue jamais cette\n"
         "  inconsistance au raisonnement d'un locuteur en particulier, et jamais à\n"

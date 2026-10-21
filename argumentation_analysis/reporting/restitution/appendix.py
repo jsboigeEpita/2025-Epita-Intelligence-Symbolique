@@ -330,6 +330,23 @@ def _pl_axis_status(pl: Any) -> Any:
                 "insatisfiables": sum(1 for r in decided if _pl_verdict_of(r) is False),
                 "verifiees": len(decided),
             }
+            # #3122 — an UNSAT theory's CAUSE travels with the count, the PL
+            # twin of the #3107 attach. The verdict alone (``satisfiable:
+            # False``) forced every reader to supply its own explanation.
+            # Lazy on purpose (#2352): the orchestration package ``__init__``
+            # imports a module that rewrites ``os.environ`` from the root .env
+            # at import time — this renderer must not drag it in module order.
+            from argumentation_analysis.orchestration.fol_cause import cause_phrase
+
+            causes = [
+                cause_phrase(r["consistency_cause"])
+                for r in decided
+                if _pl_verdict_of(r) is False
+                and isinstance(r.get("consistency_cause"), dict)
+                and r["consistency_cause"].get("cause")
+            ]
+            if causes:
+                status["causes"] = causes
             if degraded:
                 status["degradees"] = len(degraded)
             return status

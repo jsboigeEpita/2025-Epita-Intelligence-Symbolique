@@ -1656,6 +1656,19 @@ def _write_propositional_to_state(output: Any, state: Any, ctx: dict[str, Any]) 
     if output.get("message"):
         kwargs["message"] = output["message"]
     state.add_propositional_analysis_result(formulas, satisfiable, model, **kwargs)
+    # #3122 — the PL twin of the #3107 attach: the verdict carries its own
+    # cause (a minimal unsatisfiable core, classified by the shared fol_cause
+    # vocabulary) and each formula the unit it was translated from. Stated
+    # only when the invoke-callable computed them; a cause belongs to an
+    # UNSAT verdict only, and misaligned sources are dropped, never padded.
+    cause = output.get("consistency_cause")
+    sources = output.get("formula_sources")
+    entries = getattr(state, "propositional_analysis_results", None)
+    if isinstance(entries, list) and entries and isinstance(entries[-1], dict):
+        if isinstance(cause, dict) and cause:
+            entries[-1]["consistency_cause"] = cause
+        if isinstance(sources, list) and len(sources) == len(formulas) and any(sources):
+            entries[-1]["formula_sources"] = sources
 
 
 def _write_fol_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
