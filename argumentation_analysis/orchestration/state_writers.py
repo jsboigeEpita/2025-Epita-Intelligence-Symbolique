@@ -449,6 +449,11 @@ def _write_quality_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> Non
                 scores = {}
             overall = result.get("note_finale", 0.0)
             llm_assessment = result.get("llm_assessment")  # (#290)
+            # #3133: the #289 record rides the evaluator result; dropping it
+            # here left a penalised ``overall`` in the state with nothing
+            # saying so, and the convergence read the penalty as a second,
+            # "independent" low-quality witness of the same fallacy.
+            fallacy_penalty = result.get("fallacy_penalty")
             if isinstance(overall, (int, float)) and (scores or overall > 0):
                 resolved = _resolve_target_arg_id(state, str(arg_id))
                 state.add_quality_score(
@@ -457,6 +462,7 @@ def _write_quality_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> Non
                     float(overall),
                     llm_assessment=llm_assessment,
                     resolved_arg_id=resolved,
+                    fallacy_penalty=fallacy_penalty,
                 )
         return
 
