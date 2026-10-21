@@ -548,12 +548,49 @@ class DeepSynthesisAgent(BaseAgent):
 
     @staticmethod
     def _verdict_label_modal(r: Dict[str, Any]) -> str:
-        """#1636: tri-state verdict label for Modal entries. See #1279."""
+        """#1636: tri-state verdict label for Modal entries. See #1279.
+
+        #3121: the words follow the property the producer says it decided
+        (``decided_property``), never the ``valid`` key's name. Every decided
+        branch checks KB consistency, so its True reads "consistent" — the
+        R1104 defect was a consistency verdict narrated as modal validity.
+        The internal TweetyBridge fallback decides query acceptance
+        ("accepted"/"rejected"). An entry that states no property
+        (pre-#3121 shape) keeps the legacy label: the reader cannot know what
+        was decided, and inventing a property would be the #1019 shape.
+        """
         v = r.get("valid")
+        prop = r.get("decided_property")
         if v is True:
+            if prop == "kb_consistency":
+                return "consistent"
+            if prop == "modal_query_acceptance":
+                return "accepted"
             return "valid"
         if v is False:
+            if prop == "kb_consistency":
+                return "inconsistent"
+            if prop == "modal_query_acceptance":
+                return "rejected"
             return "invalid"
+        return ""
+
+    @staticmethod
+    def _modal_operator_note(r: Dict[str, Any]) -> str:
+        """#3121: what ``modalities`` says, in words the narrative can quote.
+
+        ``['none_detected']`` means the pipeline found no modal operator in
+        the source — a consistency verdict over such a KB is not a modal
+        finding, and the synthesis input must say so rather than let the LLM
+        narrate one.
+        """
+        modalities = r.get("modalities")
+        if (
+            isinstance(modalities, list)
+            and modalities
+            and set(modalities) == {"none_detected"}
+        ):
+            return "no modal operator detected"
         return ""
 
     @staticmethod
@@ -600,12 +637,19 @@ class DeepSynthesisAgent(BaseAgent):
         # mapping discipline as PL/FOL.
         for r in getattr(state, "modal_analysis_results", []):
             verdict = DeepSynthesisAgent._verdict_label_modal(r)
+            # #3121: the finding also carries what the operator census said —
+            # "no modal operator detected" keeps a consistency verdict over
+            # such a KB from reading as a modal finding.
+            results = [verdict] if verdict else []
+            note = DeepSynthesisAgent._modal_operator_note(r)
+            if note:
+                results.append(note)
             findings.append(
                 FormalFinding(
                     logic_type="Modal",
                     axioms=list(r.get("formulas", []) or []),
                     queries=[],
-                    results=[verdict] if verdict else [],
+                    results=results,
                     inconsistency_measures={},
                     linked_args=[],
                 )
@@ -1461,10 +1505,15 @@ class DeepSynthesisAgent(BaseAgent):
         ):
             verdict = DeepSynthesisAgent._verdict_label_modal(r)
             formulas = r.get("formulas") or []
+            # #3121: the LLM reads the property the producer decided (the
+            # label above) and the operator census — a KB with no modal
+            # operator must not be narrated as a modal result.
+            note = DeepSynthesisAgent._modal_operator_note(r)
             _add(
                 "modal_analysis_results",
                 i,
-                f"formulas={len(formulas)} verdict={verdict or 'absent'}",
+                f"formulas={len(formulas)} verdict={verdict or 'absent'}"
+                + (f" | {note}" if note else ""),
             )
 
         from argumentation_analysis.reporting.restitution.native_dung import (

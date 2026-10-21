@@ -1961,6 +1961,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         valid: bool,
         modalities: List[str],
         message: Optional[str] = None,
+        decided_property: Optional[str] = None,
     ) -> str:
         """Add a modal logic analysis result.
 
@@ -1969,6 +1970,15 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         ``unavailable:no-translation`` / ``unavailable:no-solver`` (OOM) — so
         downstream consumers can confirm the entry is a real solver decision OR
         an explicit degradation, never a silent None (#1019).
+
+        #3121: ``decided_property`` names WHAT the producer decided — every
+        decided modal branch checks KB consistency (``"kb_consistency"``);
+        the internal TweetyBridge fallback decides modal query acceptance
+        (``"modal_query_acceptance"``). The ``valid`` key keeps its name for
+        compatibility, so a reader that words the verdict reads this field
+        instead of trusting the key's name: a consistency verdict must not
+        reach a narrative as validity. Strictly additive — an entry written
+        without it keeps its exact former shape.
         """
         ml_id = self._generate_id("modal", self.modal_analysis_results)
         entry = {
@@ -1979,6 +1989,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         }
         if message:
             entry["message"] = message
+        if decided_property:
+            entry["decided_property"] = decided_property
         self.modal_analysis_results.append(entry)
         state_logger.info(f"Modal analysis added: {ml_id} (valid={valid})")
         return ml_id
