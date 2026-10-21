@@ -876,8 +876,10 @@ class TestSetupLogging:
 class TestListAvailableSources:
     """Tests for list_available_sources.
 
-    The real method globs for .enc files across the project tree, which is
-    slow. We mock Path.glob to keep tests fast.
+    Since #3118 the walk is bounded to ``ENCRYPTED_CORPUS_DIRS`` (a few
+    megabytes), so the real call is cheap and these tests exercise it — the
+    ``Path.glob`` mocks they used to carry intercepted nothing once the walk
+    stopped being whole-repo and were removed.
     """
 
     def test_returns_expected_keys(self, mocker):
@@ -886,8 +888,6 @@ class TestListAvailableSources:
             "argumentation_analysis.core.source_management.settings",
             passphrase=None,
         )
-        # Mock the glob to avoid scanning the entire filesystem
-        mocker.patch("pathlib.Path.glob", return_value=iter([]))
         config = UnifiedSourceConfig(source_type=UnifiedSourceType.SIMPLE)
         manager = UnifiedSourceManager(config)
         sources = manager.list_available_sources()
@@ -903,7 +903,6 @@ class TestListAvailableSources:
             "argumentation_analysis.core.source_management.settings",
             passphrase=None,
         )
-        mocker.patch("pathlib.Path.glob", return_value=iter([]))
         config = UnifiedSourceConfig(source_type=UnifiedSourceType.SIMPLE)
         manager = UnifiedSourceManager(config)
         sources = manager.list_available_sources()
