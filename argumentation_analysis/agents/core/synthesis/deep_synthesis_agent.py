@@ -24,7 +24,6 @@ from pydantic import PrivateAttr
 from ..abc.agent_bases import BaseAgent
 from ..semantic_setup import prompt_settings
 from argumentation_analysis.core.logic_types import canonical_logic_type  # #2970
-from argumentation_analysis.orchestration.fol_cause import cause_phrase  # #3107
 from argumentation_analysis.reporting.restitution.cited_units import (  # #2967
     CITED_UNIT_TEXT_CAP,
     cited_unit_ids,
@@ -1295,6 +1294,13 @@ class DeepSynthesisAgent(BaseAgent):
         marker — no silent slices.
         """
         lines: List[str] = ["ARTIFACT BRIEFING (cite keys verbatim):"]
+
+        # #3107/#2352 — lazy on purpose: importing ``orchestration.fol_cause``
+        # at module level drags the orchestration package ``__init__``, whose
+        # chain constructs ``EnvironmentManager`` at import and rewrites
+        # ``os.environ`` from the root .env — clobbering values the caller
+        # imposed after the imports (the #2352 seat measures exactly that).
+        from argumentation_analysis.orchestration.fol_cause import cause_phrase
 
         def _add(
             field_name: str, key: Any, summary: str, cap: Optional[int] = None

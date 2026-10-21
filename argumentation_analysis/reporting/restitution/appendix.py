@@ -18,7 +18,6 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
-from argumentation_analysis.orchestration.fol_cause import cause_phrase
 from argumentation_analysis.plugins.identification_models import confidence_note_reason
 
 from .fr_accord import accord
@@ -219,6 +218,11 @@ def _fol_axis_status(fol: Any) -> Any:
             # The verdict alone (``consistent: False``) forced every reader to
             # supply its own explanation; the writer now states one, and the
             # annexe prints it instead of leaving the inference to the prose.
+            # Lazy on purpose (#2352): the orchestration package ``__init__``
+            # imports a module that rewrites ``os.environ`` from the root .env
+            # at import time — this renderer must not drag it in module order.
+            from argumentation_analysis.orchestration.fol_cause import cause_phrase
+
             causes = [
                 cause_phrase(r["consistency_cause"])
                 for r in decided

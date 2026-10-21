@@ -90,7 +90,6 @@ from .cited_units import (  # #2965 (Acte III slice) — same budget as Act II
     render_divergence_clause,
     truncate_at_boundary,
 )
-from argumentation_analysis.orchestration.fol_cause import cause_phrase
 from .fr_accord import accord
 from .global_projection import GlobalFinding, project_global_findings
 from .llm_weaving import LlmCallable, WeaveOutcome, weave
@@ -738,6 +737,11 @@ def _fol_stated_causes(state: Any) -> List[str]:
     fol = getattr(state, "fol_analysis_results", None)
     if not isinstance(fol, list):
         return []
+    # Lazy on purpose (#2352): the orchestration package ``__init__`` imports
+    # a module that rewrites ``os.environ`` from the root .env at import time
+    # — this renderer must not drag it in module order.
+    from argumentation_analysis.orchestration.fol_cause import cause_phrase
+
     causes = []
     for r in fol:
         if not isinstance(r, dict) or r.get("consistent") is not False:
