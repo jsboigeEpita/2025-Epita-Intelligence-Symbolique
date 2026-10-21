@@ -13,6 +13,18 @@ import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 
 
+@pytest.fixture(autouse=True)
+def configured_endpoint(monkeypatch):
+    """#3113: the phase builds its service from ``SELF_HOSTED_LLM_*``.
+
+    These witnesses measure the CONFIGURED path; without this fixture a seat
+    (or CI runner) that declares no triple would hit the ``not_configured``
+    skip and the patched service below would never be built.
+    """
+    monkeypatch.setenv("SELF_HOSTED_LLM_ENDPOINT", "http://local-stub.test/v1")
+    monkeypatch.setenv("SELF_HOSTED_LLM_MODEL", "stub-model")
+
+
 class TestLocalLLMWorkflowPhaseStandard:
     """Validate local_llm phase in standard workflow."""
 
