@@ -4247,12 +4247,35 @@ async def _invoke_local_llm(input_text: str, context: Dict[str, Any]) -> Dict[st
     """Invoke local LLM service for text analysis (#834).
 
     Enriched with state writing: persists results to state.local_llm_results
-    and adds a trace entry. Falls back gracefully when local LLM endpoint
-    is unavailable (returns status=skipped, not an error).
+    and adds a trace entry. Falls back gracefully when the configured
+    endpoint is unreachable (status=skipped: endpoint_unavailable), and
+    says "skipped: not_configured" when no SELF_HOSTED_LLM_ENDPOINT is set
+    (#3113) — two different facts, never one blur.
     """
     from argumentation_analysis.services.local_llm_service import LocalLLMService
 
-    service = LocalLLMService()
+    # #3113 — the service is built from the configuration the self-hosted
+    # tier already declares: the SELF_HOSTED_LLM_* triple
+    # ``_invoke_camembert_fallacy`` reads. A dedicated LOCAL_LLM_* name would
+    # give a second name to one endpoint. "Not configured" is a fact
+    # distinct from "configured, unreachable" — the skip says which one it
+    # is, instead of every seat reporting the unreachable localhost default.
+    endpoint = os.environ.get("SELF_HOSTED_LLM_ENDPOINT", "")
+    api_key = os.environ.get("SELF_HOSTED_LLM_API_KEY", "not-needed")
+    model_id = os.environ.get("SELF_HOSTED_LLM_MODEL", "") or None
+
+    if not endpoint:
+        logger.info("Self-hosted LLM endpoint not configured — skipping")
+        result: Dict[str, Any] = {
+            "status": "skipped: not_configured",
+            "model": model_id,
+        }
+        _state = context.get("_state_object")
+        if _state is not None and hasattr(_state, "local_llm_results"):
+            _state.local_llm_results.append(result)
+        return result
+
+    service = LocalLLMService(endpoint=endpoint, model=model_id, api_key=api_key)
 
     # Check availability first
     try:

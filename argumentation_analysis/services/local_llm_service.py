@@ -85,15 +85,22 @@ class LocalLLMService:
             return {"error": str(e)}
 
     async def is_available(self) -> bool:
-        """Check if the local LLM endpoint is reachable."""
+        """Check if the local LLM endpoint is reachable.
+
+        The probe authenticates exactly like :meth:`chat_completion` (#3113):
+        an endpoint that protects its ``/models`` route must read as up when
+        its key is valid — a key-less probe reports the configured endpoint
+        down whatever the key says.
+        """
         if self._available is not None:
             return self._available
         try:
             import httpx
 
             url = f"{self.endpoint}/models"
+            headers = {"Authorization": f"Bearer {self.api_key}"}
             async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.get(url)
+                response = await client.get(url, headers=headers)
                 self._available = response.status_code == 200
         except Exception:
             self._available = False

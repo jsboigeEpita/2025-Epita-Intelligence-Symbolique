@@ -8,6 +8,18 @@ from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 from argumentation_analysis.orchestration.invoke_callables import _invoke_local_llm
 
 
+@pytest.fixture(autouse=True)
+def configured_endpoint(monkeypatch):
+    """#3113: the phase builds its service from ``SELF_HOSTED_LLM_*``.
+
+    The stub answers every request whatever the base URL; pinning the triple
+    keeps the witness on the configured path on a seat that declares none
+    (CI), where the phase would otherwise skip with ``not_configured``.
+    """
+    monkeypatch.setenv("SELF_HOSTED_LLM_ENDPOINT", "http://local-stub.test/v1")
+    monkeypatch.setenv("SELF_HOSTED_LLM_MODEL", "stub-model")
+
+
 @pytest.mark.parametrize("completion_fails", [True, False])
 async def test_local_completion_status_follows_the_completion(completion_fails):
     requests = []

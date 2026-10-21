@@ -13,14 +13,26 @@ from unittest.mock import patch, MagicMock, AsyncMock
 from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 
 
+@pytest.fixture(autouse=True)
+def configured_endpoint(monkeypatch):
+    """#3113: the phase builds its service from ``SELF_HOSTED_LLM_*``.
+
+    These witnesses measure the CONFIGURED path; without this fixture a seat
+    (or CI runner) that declares no triple would hit the ``not_configured``
+    skip and the patched service below would never be built.
+    """
+    monkeypatch.setenv("SELF_HOSTED_LLM_ENDPOINT", "http://local-stub.test/v1")
+    monkeypatch.setenv("SELF_HOSTED_LLM_MODEL", "stub-model")
+
+
 class TestLocalLLMStateField:
     """Verify local_llm_results field on UnifiedAnalysisState."""
 
     def test_field_exists(self):
         state = UnifiedAnalysisState("text")
-        assert hasattr(state, "local_llm_results"), (
-            "UnifiedAnalysisState should have local_llm_results field"
-        )
+        assert hasattr(
+            state, "local_llm_results"
+        ), "UnifiedAnalysisState should have local_llm_results field"
 
     def test_field_initially_empty(self):
         state = UnifiedAnalysisState("text")
@@ -39,13 +51,17 @@ class TestInvokeLocalLLMStateWriter:
     @pytest.mark.asyncio
     async def test_writes_to_state_on_success(self):
         """Successful LLM call should write to state.local_llm_results."""
-        from argumentation_analysis.orchestration.invoke_callables import _invoke_local_llm
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_local_llm,
+        )
 
         state = UnifiedAnalysisState("text")
 
         mock_service = MagicMock()
         mock_service.is_available = AsyncMock(return_value=True)
-        mock_service.chat_completion = AsyncMock(return_value="Analysis: 2 arguments found")
+        mock_service.chat_completion = AsyncMock(
+            return_value="Analysis: 2 arguments found"
+        )
         mock_service.model_id = "local-test"
 
         with patch(
@@ -65,7 +81,9 @@ class TestInvokeLocalLLMStateWriter:
     @pytest.mark.asyncio
     async def test_writes_to_state_on_unavailable(self):
         """Unavailable endpoint should write skipped status to state."""
-        from argumentation_analysis.orchestration.invoke_callables import _invoke_local_llm
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_local_llm,
+        )
 
         state = UnifiedAnalysisState("text")
 
@@ -85,13 +103,17 @@ class TestInvokeLocalLLMStateWriter:
     @pytest.mark.asyncio
     async def test_writes_to_state_on_error(self):
         """LLM error should write error status to state."""
-        from argumentation_analysis.orchestration.invoke_callables import _invoke_local_llm
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_local_llm,
+        )
 
         state = UnifiedAnalysisState("text")
 
         mock_service = MagicMock()
         mock_service.is_available = AsyncMock(return_value=True)
-        mock_service.chat_completion = AsyncMock(side_effect=RuntimeError("Connection refused"))
+        mock_service.chat_completion = AsyncMock(
+            side_effect=RuntimeError("Connection refused")
+        )
 
         with patch(
             "argumentation_analysis.services.local_llm_service.LocalLLMService",
@@ -107,7 +129,9 @@ class TestInvokeLocalLLMStateWriter:
     @pytest.mark.asyncio
     async def test_works_without_state(self):
         """Should work even without state object (graceful degradation)."""
-        from argumentation_analysis.orchestration.invoke_callables import _invoke_local_llm
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_local_llm,
+        )
 
         mock_service = MagicMock()
         mock_service.is_available = AsyncMock(return_value=True)
@@ -126,7 +150,9 @@ class TestInvokeLocalLLMStateWriter:
     @pytest.mark.asyncio
     async def test_includes_input_length(self):
         """Result should include input_length metadata."""
-        from argumentation_analysis.orchestration.invoke_callables import _invoke_local_llm
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_local_llm,
+        )
 
         mock_service = MagicMock()
         mock_service.is_available = AsyncMock(return_value=True)
@@ -144,7 +170,9 @@ class TestInvokeLocalLLMStateWriter:
     @pytest.mark.asyncio
     async def test_is_available_exception_handled(self):
         """If is_available raises, should treat as unavailable."""
-        from argumentation_analysis.orchestration.invoke_callables import _invoke_local_llm
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_local_llm,
+        )
 
         mock_service = MagicMock()
         mock_service.is_available = AsyncMock(side_effect=Exception("DNS error"))
@@ -160,7 +188,9 @@ class TestInvokeLocalLLMStateWriter:
     @pytest.mark.asyncio
     async def test_model_name_surfaces_in_result(self):
         """Configured model name should surface in result (residue #876 fix)."""
-        from argumentation_analysis.orchestration.invoke_callables import _invoke_local_llm
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_local_llm,
+        )
 
         mock_service = MagicMock()
         mock_service.is_available = AsyncMock(return_value=True)
@@ -173,14 +203,16 @@ class TestInvokeLocalLLMStateWriter:
         ):
             result = await _invoke_local_llm("Test input", {})
 
-        assert result["model"] == "llama3-8b", (
-            f"Expected model='llama3-8b', got model='{result.get('model')}'"
-        )
+        assert (
+            result["model"] == "llama3-8b"
+        ), f"Expected model='llama3-8b', got model='{result.get('model')}'"
 
     @pytest.mark.asyncio
     async def test_model_name_surfaces_when_unavailable(self):
         """Configured model name should surface even when endpoint unavailable."""
-        from argumentation_analysis.orchestration.invoke_callables import _invoke_local_llm
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_local_llm,
+        )
 
         mock_service = MagicMock()
         mock_service.is_available = AsyncMock(return_value=False)
@@ -192,6 +224,6 @@ class TestInvokeLocalLLMStateWriter:
         ):
             result = await _invoke_local_llm("Test input", {})
 
-        assert result["model"] == "mistral-7b", (
-            f"Expected model='mistral-7b', got model='{result.get('model')}'"
-        )
+        assert (
+            result["model"] == "mistral-7b"
+        ), f"Expected model='mistral-7b', got model='{result.get('model')}'"
