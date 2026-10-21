@@ -2,12 +2,23 @@
 """Tests for ArgumentAnalyzer — 8-metric argument quality evaluation."""
 
 import pytest
+from argumentation_analysis.agents.core import text_scoring
 from argumentation_analysis.agents.core.debate.debate_scoring import ArgumentAnalyzer
 from argumentation_analysis.agents.core.debate.debate_definitions import (
     ArgumentMetrics,
     ArgumentType,
     DebatePhase,
     EnhancedArgument,
+)
+
+# #3093: the English readability instrument needs the provisioned CMUdict
+# corpus. On a seat without it the metric is honestly None (#1019) — the
+# measurements below assert real Flesch values and can only run provisioned;
+# the degraded shape is witnessed in test_text_scoring_cmudict_3093.py.
+_en_degraded = text_scoring.degraded_reason("en")
+requires_cmudict = pytest.mark.skipif(
+    _en_degraded is not None,
+    reason=f"English Flesch degraded on this seat ({_en_degraded}) — #3093",
 )
 
 
@@ -167,6 +178,7 @@ class TestEmotionalAppeal:
 
 
 class TestReadability:
+    @requires_cmudict
     def test_short_sentences(self, analyzer):
         text = "Short sentence. Another one. Easy to read."
         # #2588 review: Flesch needs a language; a 6-word text cannot decide
@@ -174,11 +186,13 @@ class TestReadability:
         score = analyzer._assess_readability(text, lang="en")
         assert score > 0.3
 
+    @requires_cmudict
     def test_long_sentences(self, analyzer):
         text = "This is an extremely long and convoluted sentence that goes on and on with many subordinate clauses and parenthetical expressions that make it very difficult for the average reader to follow the argument being presented in a clear and coherent manner."
         score = analyzer._assess_readability(text)
         assert score < 0.8
 
+    @requires_cmudict
     def test_within_range(self, analyzer):
         text = "Normal text. With moderate length sentences. Not too complex."
         score = analyzer._assess_readability(text, lang="en")
@@ -251,7 +265,12 @@ class TestAnalyzeArgument:
         # No context: relevance and novelty are not computed (#2344).
         assert metrics.relevance_score is None
         assert 0 <= metrics.emotional_appeal <= 1.0
-        assert 0 <= metrics.readability_score <= 1.0
+        if _en_degraded:
+            # #3093 x #1019: the instrument is absent, the metric is not
+            # computed — never a silent substitute in its range slot.
+            assert metrics.readability_score is None
+        else:
+            assert 0 <= metrics.readability_score <= 1.0
         assert 0 <= metrics.fact_check_score <= 1.0
         assert metrics.novelty_score is None
         assert 0 <= metrics.persuasiveness <= 1.0
@@ -262,15 +281,18 @@ class TestAnalyzeArgument:
         )
         metrics = analyzer.analyze_argument(arg, [], lang="en")
         # #2344: relevance and novelty are not computed without context, so
-        # their weights drop out and the others are renormalized.
-        expected = min(
-            (
-                metrics.logical_coherence * 0.25
-                + metrics.evidence_quality * 0.25
-                + metrics.readability_score * 0.15
-                + metrics.fact_check_score * 0.10
-            )
-            / 0.75,
-            1.0,
-        )
+        # their weights drop out and the others are renormalized. #3093: a
+        # degraded readability drops its weight out the same way — the combo
+        # renormalizes over what was actually measured, never over a
+        # substituted value.
+        terms = [
+            metrics.logical_coherence * 0.25,
+            metrics.evidence_quality * 0.25,
+            metrics.fact_check_score * 0.10,
+        ]
+        total = 0.60
+        if not _en_degraded:
+            terms.append(metrics.readability_score * 0.15)
+            total += 0.15
+        expected = min(sum(terms) / total, 1.0)
         assert metrics.persuasiveness == pytest.approx(expected, abs=0.01)
