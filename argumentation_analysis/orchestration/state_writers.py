@@ -1021,6 +1021,11 @@ def _write_hierarchical_fallacy_to_state(
         # confiance absente atteint l'état, pas seulement le JSON de descente
         # (la lane qui écrit None sans la note est le défaut que l'issue nomme).
         confidence_note = str(f.get("confidence_note") or "")
+        # #3105 — the path(s) that produced this fallacy (descent, one-shot,
+        # per-argument). The reading record counts per site from this tag;
+        # it must survive the merge into the state or every line would
+        # credit the descent with the union again.
+        detection_paths = f.get("detection_paths")
         trace = f.get("navigation_trace", [])
         family = f.get("family", "")
         taxonomy_path = f.get("taxonomy_path", "")
@@ -1042,6 +1047,7 @@ def _write_hierarchical_fallacy_to_state(
             confidence=confidence,
             problematic_quote=problematic_quote,
             confidence_note=confidence_note,
+            detection_paths=detection_paths,
         )
 
     # FB-35 (#1121): state-level fail-loud marker when the agentic descent was

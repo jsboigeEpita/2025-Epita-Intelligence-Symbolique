@@ -99,7 +99,15 @@ def _state(with_units=True, llm_offsets=None, kb_offsets=None):
         state.argument_provenance = {}
     # The results each capability actually wrote on this synthetic run: the
     # fed phrases must carry their counts from the state, not a hand list.
-    state.identified_fallacies = {"fallacy_1": {"type": "Appel à l'autorité"}}
+    # #3105: real states tag each retained fallacy with the path that
+    # produced it — an untagged entry is legacy, counted apart from the
+    # descent, so this fixture tags its one fallacy as the descent's.
+    state.identified_fallacies = {
+        "fallacy_1": {
+            "type": "Appel à l'autorité",
+            "detection_paths": ["fallacy_descent"],
+        }
+    }
     state.propositional_analysis_results = [{"satisfiable": True}]
     state.fol_analysis_results = [{"satisfiable": True}]
     state.counter_arguments = [{"target": "arg_10"}]

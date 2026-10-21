@@ -258,18 +258,28 @@ class RhetoricalAnalysisState:
             f"Nouvelle instance RhetoricalAnalysisState créée (id: {id(self)}) avec texte (longueur: {len(initial_text)})."
         )
 
-    def record_reading_window(self, site: str, selection: Any) -> None:
+    def record_reading_window(
+        self, site: str, selection: Any, extra: Optional[Dict[str, Any]] = None
+    ) -> None:
         """#1737 — enregistre la sélection de fenêtre d'un site de lecture.
 
         Le statut tri-état (selected / no_punctuated_span_found / empty_input
         / short_input) doit rester visible jusqu'au rapport : un statut que
         personne ne relit est la forme #1019.
+
+        ``extra`` (#3105) porte la forme d'un site qui ne lit pas UNE fenêtre
+        mais un ensemble d'unités : ``units`` lues, ``unit_total`` de la
+        population, ``span_lo``/``span_hi`` en offsets. Les clés de base
+        restent identiques — un site à fenêtre n'ajoute rien.
         """
-        self.reading_window_status[site] = {
+        entry: Dict[str, Any] = {
             "status": getattr(selection, "status", str(selection)),
             "offset": getattr(selection, "offset", 0),
             "window": getattr(selection, "window", 0),
         }
+        if extra:
+            entry.update(extra)
+        self.reading_window_status[site] = entry
 
     def _generate_id(self, prefix: str, current_dict_or_list: Any) -> str:
         """Génère un ID simple basé sur la taille actuelle."""
@@ -361,6 +371,7 @@ class RhetoricalAnalysisState:
         confidence: Optional[float] = None,
         problematic_quote: Optional[str] = None,
         confidence_note: str = "",
+        detection_paths: Optional[List[str]] = None,
     ) -> str:
         """Ajoute un sophisme identifié et retourne son ID.
 
@@ -391,6 +402,11 @@ class RhetoricalAnalysisState:
             entry["problematic_quote"] = str(problematic_quote)
         if confidence_note:
             entry["confidence_note"] = str(confidence_note)
+        # #3105 — la provenance du sophisme voyage jusqu'à l'état : le
+        # registre de lecture crédite chaque site avec ce que SON chemin a
+        # produit, jamais le total de la population.
+        if detection_paths:
+            entry["detection_paths"] = [str(p) for p in detection_paths]
         log_target_info = ""
         if target_arg_id:
             if target_arg_id not in self.identified_arguments:

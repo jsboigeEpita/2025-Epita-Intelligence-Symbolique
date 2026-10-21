@@ -33,6 +33,8 @@ from argumentation_analysis.core.reading_window import (
     LLM_EXTRACTION_WINDOW,
     LOGIC_ARGUMENT_WINDOW,
     LOGIC_READING_WINDOW,
+    STATUS_SELECTED,
+    WindowSelection,
     reading_state_from_context,
     selected_text,
 )
@@ -7958,11 +7960,24 @@ async def _invoke_hierarchical_fallacy(
             )
             wide_fallacies = result.get("fallacies", [])
             per_arg_fallacies = per_arg_result.get("fallacies", [])
-            merged = _merge_fallacy_results(wide_fallacies, per_arg_fallacies)
+            # #3105: tag each retained fallacy with the path that produced it.
+            # The document pass is the descent unless its own result says it
+            # ran one-shot — the reading record then credits each site with
+            # its own share instead of repeating the total under the descent.
+            _document_site = (
+                "fallacy_one_shot"
+                if str(result.get("exploration_method", "")).startswith("one_shot")
+                else "fallacy_descent"
+            )
+            merged = _merge_fallacy_results(
+                wide_fallacies, per_arg_fallacies, document_site=_document_site
+            )
             result["fallacies"] = merged
             # #2920 (R1063 review): the merged list above stays EXACTLY as on
             # main (pk-only dedup) — 11 handlers, the state writer and the
-            # sherlock orchestrator consume it on every real run. The
+            # sherlock orchestrator consume it on every real run. #3105 adds
+            # one provenance key per entry (``detection_paths``) and nothing
+            # else: no entry is added, dropped or reordered. The
             # per-argument detections ALSO leave under their own key so a
             # consumer that needs the per-argument locations (the Dung
             # arbitration stage) can read them without touching the merged
@@ -8114,6 +8129,8 @@ async def _invoke_hierarchical_fallacy(
 def _merge_fallacy_results(
     wide_fallacies: List[Dict[str, Any]],
     per_arg_fallacies: List[Dict[str, Any]],
+    document_site: str = "fallacy_descent",
+    second_site: Optional[str] = "fallacy_per_argument",
 ) -> List[Dict[str, Any]]:
     """Merge wide-net and per-argument fallacy results, deduplicating by taxonomy_pk.
 
@@ -8121,17 +8138,55 @@ def _merge_fallacy_results(
     Wide-net results are kept as the floor; per-argument extras are added
     only if their taxonomy_pk is not already present. #3029: an unmeasured
     confidence (None) loses to a measured one but never crashes the merge.
+
+    #3105 — each retained fallacy carries ``detection_paths``, the path(s)
+    that produced it: ``document_site`` (the descent, or the one-shot when
+    that is what the document pass ran) and/or ``second_site``. A fallacy
+    both paths found carries both, so the reading record can state each
+    site's own share instead of repeating the total under every site.
+
+    ``second_site`` is ``None`` in the full merge: its second list is the
+    hybrid tier, which records no reading window — labelling it
+    ``fallacy_per_argument`` credited the per-argument pass with findings it
+    never made (CI caught it on the #2540 witness). An untagged finding is
+    the honest state; the record says « sans origine enregistrée ».
+
+    Tagging is idempotent: an entry that already carries
+    ``detection_paths`` was settled by a nested merge (the full tier merges
+    the already-merged hierarchical result) and keeps its own provenance.
+    Re-tagging it from the caller's list would credit a path that did not
+    produce it — the #3105 defect one merge higher.
     """
+
+    def _settle(entry: Dict[str, Any], path: Optional[str]) -> None:
+        """Tag an entry this merge is meeting for the first time."""
+        if path and "detection_paths" not in entry:
+            entry["detection_paths"] = [path]
+
+    def _absorb(entry: Dict[str, Any], paths: Any) -> None:
+        """Union tags onto a winner; never drops an existing path."""
+        if not paths:
+            return
+        current = entry.setdefault("detection_paths", [])
+        for path in paths:
+            if path not in current:
+                current.append(path)
+
     seen: Dict[str, Dict[str, Any]] = {}
     for f in wide_fallacies:
         if not isinstance(f, dict):
             continue
         pk = str(f.get("taxonomy_pk") or f.get("fallacy_type") or "")
-        if pk and pk not in seen:
+        if not pk:
+            continue
+        _settle(f, document_site)
+        if pk not in seen:
             seen[pk] = f
-        elif pk and confidence_outranks(
+        elif confidence_outranks(
             f.get("confidence"), seen.get(pk, {}).get("confidence")
         ):
+            # The winner replaces the entry; the loser's tags move with it.
+            _absorb(f, seen[pk].get("detection_paths"))
             seen[pk] = f
 
     for f in per_arg_fallacies:
@@ -8140,12 +8195,21 @@ def _merge_fallacy_results(
         pk = str(f.get("taxonomy_pk") or f.get("fallacy_type") or "")
         if not pk:
             continue
+        _settle(f, second_site)
         if pk not in seen:
             seen[pk] = f
-        elif confidence_outranks(
-            f.get("confidence"), seen.get(pk, {}).get("confidence")
-        ):
+            continue
+        prev = seen[pk]
+        if confidence_outranks(f.get("confidence"), prev.get("confidence")):
+            # The winner replaces the entry; the loser's tags move with it.
+            _absorb(f, prev.get("detection_paths"))
             seen[pk] = f
+        else:
+            _absorb(prev, f.get("detection_paths"))
+
+    for entry in seen.values():
+        if "detection_paths" in entry:
+            entry["detection_paths"] = sorted(set(entry["detection_paths"]))
 
     return list(seen.values())
 
@@ -8325,8 +8389,13 @@ async def _invoke_full_fallacy(
             raise RuntimeError(f"FALLACY_DETECTION_UNAVAILABLE: {reason}")
         raise FallacyDetectionFailed(f"FALLACY_DETECTION_FAILED: {reason}")
 
-    # Merge by taxonomy_pk (or fallacy_type as fallback), keep highest confidence
-    merged = _merge_fallacy_results(llm_fallacies, hybrid_fallacies)
+    # Merge by taxonomy_pk (or fallacy_type as fallback), keep highest confidence.
+    # #3105: ``second_site=None`` — the hybrid tier records no reading window,
+    # so its findings stay untagged (« sans origine enregistrée » in the
+    # record) instead of being credited to the per-argument pass. The LLM
+    # entries arrive already tagged by the nested hierarchical merge and keep
+    # their own provenance.
+    merged = _merge_fallacy_results(llm_fallacies, hybrid_fallacies, second_site=None)
 
     logger.info(
         "Full fallacy merge: llm=%d, hybrid=%d, merged=%d",
@@ -8365,6 +8434,57 @@ async def _invoke_full_fallacy(
     if "descent_calls_made" in llm_result:
         full_result["descent_calls_made"] = llm_result["descent_calls_made"]
     return full_result
+
+
+def _record_per_argument_reading(
+    input_text: str,
+    context: Dict[str, Any],
+    arguments: List[Tuple[str, str]],
+) -> None:
+    """#3105 — record the per-argument pass as its own reading site.
+
+    This pass reads whole UNITS, never a document head: recording a
+    unit-relative window as a document bound would be false (the reason the
+    plugin instances above stay stateless, #2850 lot 7). The site therefore
+    carries what it read — units read out of the population, and the span
+    the read units cover — so the reading record credits these detections to
+    this path instead of the descent line absorbing the union.
+
+    Silent when no state is reachable, the same rule as every reading site
+    (``_record_window`` no-ops without a state).
+    """
+    state: Any = reading_state_from_context(context)
+    if state is None:
+        return
+    offsets: List[int] = []
+    span_hi = 0
+    for _arg_id, arg_text in arguments:
+        needle = (arg_text or "").strip()
+        if not needle:
+            continue
+        off = input_text.find(needle)
+        if off >= 0:
+            offsets.append(off)
+            span_hi = max(span_hi, off + len(needle))
+    prov = getattr(state, "argument_provenance", None)
+    unit_total = len(prov) if isinstance(prov, dict) and prov else len(arguments)
+    span_lo = min(offsets) if offsets else 0
+    extra: Dict[str, Any] = {
+        "units": len(arguments),
+        "unit_total": unit_total,
+    }
+    if offsets:
+        extra["span_lo"] = span_lo
+        extra["span_hi"] = min(span_hi, len(input_text))
+    state.record_reading_window(
+        "fallacy_per_argument",
+        WindowSelection(
+            offset=span_lo,
+            window=max(extra.get("span_hi", 0) - span_lo, 0),
+            status=STATUS_SELECTED,
+        ),
+        extra=extra,
+    )
 
 
 async def _invoke_hierarchical_fallacy_per_argument(
@@ -8667,6 +8787,8 @@ async def _invoke_hierarchical_fallacy_per_argument(
                 f"{len(run_failures)}/{len(per_arg_results)} per-argument fallacy "
                 f"runs got no answer: {run_failures[0]}"
             )
+        # #3105 — the reading this pass actually did, on its own site.
+        _record_per_argument_reading(input_text, context, arguments)
         return per_arg_output
 
     except FallacyDetectionFailed:
