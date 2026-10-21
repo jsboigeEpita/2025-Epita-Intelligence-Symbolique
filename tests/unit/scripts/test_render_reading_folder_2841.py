@@ -34,8 +34,12 @@ DOCS = {
         "speaker": "Locuteur A",
         "year": "1940",
         "raw_text": "x" * 1200,
-        "args": ["a1", "a2", "a3"],
-        "fallacies": ["f1"],
+        # The REAL campaign states carry these collections as dicts
+        # {arg_N: text} (measured on the anchor doc: 134 entries) — the
+        # synthetic campaign must plant that shape, not lists: a list-only
+        # counter passed every witness while zeroing the real render.
+        "args": {"arg_1": "a", "arg_2": "b", "arg_3": "c"},
+        "fallacies": {"fallacy_1": "f"},
         "fol": [{"r": 1}],
         "answer": "Réponse zero-shot alpha, intégrale. " * 20,
     },
@@ -44,8 +48,8 @@ DOCS = {
         "speaker": "Locuteur B",
         "year": "1960",
         "raw_text": "y" * 3400,
-        "args": ["b%d" % i for i in range(6013)],
-        "fallacies": ["f1", "f2"],
+        "args": {f"arg_{i}": "b" for i in range(6013)},
+        "fallacies": {"fallacy_1": "f1", "fallacy_2": "f2"},
         "fol": [],
         "answer": "Réponse zero-shot beta, intégrale. " * 20,
     },
@@ -54,8 +58,8 @@ DOCS = {
         "speaker": "Locuteur C",
         "year": "2000",
         "raw_text": "z" * 800,
-        "args": ["g1"],
-        "fallacies": [],
+        "args": {"arg_1": "g"},
+        "fallacies": {},
         "fol": [],
         "answer": "Réponse zero-shot gamma. " * 5,
     },
@@ -130,6 +134,12 @@ def _plant_campaign(tmp_path: Path) -> Path:
         (zs_dir / f"{doc_id}.json").write_text(
             json.dumps(zs, ensure_ascii=False), encoding="utf-8"
         )
+    # A decoy state from ANOTHER campaign: the states dir holds older runs'
+    # dumps (90 files where this campaign has 49) and the annexes must not
+    # absorb them.
+    (states_dir / "state_full_decoy_old_campaign.json").write_text(
+        json.dumps({"raw_text": "ancien"}), encoding="utf-8"
+    )
     return root
 
 
@@ -211,6 +221,19 @@ class TestNoHoles:
                     str(root / "campaign_2841_lecture"),
                 ]
             )
+
+
+class TestAnnexesFilter:
+    """The annexes carry THIS campaign's artifacts — the states dir also
+    holds older campaigns' dumps and must not leak into the folder."""
+
+    def test_annexes_states_carry_only_campaign_docs(self, tmp_path, monkeypatch):
+        out = _run_producer(tmp_path, monkeypatch)
+        states = sorted(p.name for p in (out / "04_annexes" / "states").glob("*.json"))
+        assert len(states) == len(DOCS)
+        assert not any("decoy" in name for name in states)
+        for doc_id in DOCS:
+            assert f"state_full_{doc_id}.json" in states
 
 
 class TestFullActs:

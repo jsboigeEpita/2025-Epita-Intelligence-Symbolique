@@ -83,7 +83,7 @@ DESIGNATED_ORDER: List[Tuple[str, str]] = [
     ),
     (
         "00b283cf_ext9",
-        "worst extraction flood: 6013 'arguments' where the corpus median is 23 — a higher tier must rank, not enumerate",
+        "worst extraction flood of the corpus: 6013 'arguments', two orders of magnitude above the table's median — a higher tier must rank, not enumerate",
     ),
     (
         "00b283cf_ext7",
@@ -113,7 +113,28 @@ DESIGNATED_ORDER: List[Tuple[str, str]] = [
 
 # Render-affecting defects already tracked (coordinator dispatch R1105:
 # the reader must not rediscover a known defect). Opaque wording only.
+# Ordered by visibility in the render: the formal-verdict family first.
 KNOWN_DEFECTS: List[Tuple[str, str]] = [
+    (
+        "#3135",
+        "76 of the 82 formal findings in the deep synthesis are untranslated stubs of the shape <first-word>(X) — the formal-verdict columns count them as results",
+    ),
+    (
+        "#3136",
+        "logic lines credit FOL/propositional verdicts to the document's first 4000 characters only",
+    ),
+    (
+        "#3137",
+        "Act III's 'best score' is a maximum over 8 arguments, not a corpus-wide figure",
+    ),
+    (
+        "#3134",
+        "the restitution quotes a 500-character descent as the fallacy-detection bound",
+    ),
+    (
+        "#3133",
+        "Convergence double-counts the fallacy signal the acts already carry",
+    ),
     (
         "#3121",
         "modal analysis: one analysis per formula set — a render may show a single modal verdict where earlier renders showed several partial ones",
@@ -214,8 +235,15 @@ def zeroshot_cost_usd(record: Dict[str, Any]) -> Optional[float]:
 
 
 def _count(value: Any) -> int:
-    """List-like state fields count as their length; anything else as 0."""
-    if isinstance(value, list):
+    """Collection state fields count as their length; anything else as 0.
+
+    The real campaign states carry ``identified_arguments`` as a dict
+    ``{arg_N: text}`` (measured: 134 entries on the anchor doc) and the
+    formal results as lists — a list-only counter zeroed the whole numbers
+    layer of the first real render (caught by the reading-folder QC, not by
+    the synthetic witnesses, which had planted lists).
+    """
+    if isinstance(value, (list, dict)):
         return len(value)
     return 0
 
@@ -569,8 +597,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         "\n".join(lines) + "\n", encoding="utf-8"
     )
 
-    # 04_annexes — the machine artifacts, for verification.
+    # 04_annexes — the machine artifacts of THIS campaign, for verification.
+    # The states dir also holds older campaigns' dumps (90 files where the
+    # campaign has 49): copy by the campaign's doc ids, never the whole dir.
     annexes = args.out / "04_annexes"
+    campaign_ids = set(by_id)
     for sub, src_dir, pattern in (
         ("signatures", args.signatures_dir, "signature_*.json"),
         ("states", args.states_dir, "state_full_*.json"),
@@ -579,6 +610,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         dst = annexes / sub
         dst.mkdir(parents=True, exist_ok=True)
         for src in src_dir.glob(pattern):
+            stem = src.stem
+            doc_id = stem.replace("signature_", "").replace("state_full_", "")
+            if doc_id not in campaign_ids:
+                continue
             shutil.copy2(src, dst / src.name)
 
     if args.report and args.report.exists():
