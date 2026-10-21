@@ -156,6 +156,10 @@ class TestTokensArePricedFromTheTable:
         table a fit rather than a price."""
         row = next(r for r in PRICE_TABLE if r.model_id == "gpt-5.6-luna")
         assert "openai.com" in row.source, "cite the provider's published page"
+        assert row.verified_against_bill is False, (
+            "the field, not only the prose, must say the row is unchecked — "
+            "the usage line reads the field (#3102)"
+        )
         assert "NOT verified against a bill" in row.source, (
             "a published price that misses a measured bill must say so — "
             "silence would read as verification"
@@ -218,3 +222,74 @@ class TestProviderReportedCostIsKeptApart:
         line = _load_renderer().render_usage_line(usage_counter())
         assert "$0.0035" in line
         assert "provider-reported" not in line or "not reported" in line
+
+
+class TestAPriceIsNotABill:
+    """#3102 — a computed total says which rows no provider bill confirmed.
+
+    The Haiku standard row was reconciled with a real Console bill (0.1856 $
+    computed vs 0.19 $ billed); the Sonnet/Opus/Fable rows and the long-prompt
+    tier are published rates nobody checked. A line that shows only dollars
+    lets a reader take every figure for a checked one.
+    """
+
+    def test_a_row_never_reconciled_names_its_model(self, usage_counter):
+        """Born red on the pre-#3102 shape: the usage dict had no field for
+        this, so the line could not say the Sonnet price was unchecked."""
+        _run_sync_calls("claude-sonnet-5-5", [(10_000, 1_000)])
+        stats = usage_counter()
+        assert stats["unverified_price_calls"] == {"claude-sonnet-5-5": 1}, (
+            "a priced call whose row no bill confirmed must be counted — the "
+            "price stands, its provenance is named"
+        )
+        line = _load_renderer().render_usage_line(stats)
+        assert "unverified against a bill: claude-sonnet-5-5" in line
+        assert "$0.0300" in line, "the price still counts, only labelled"
+
+    def test_the_bill_verified_row_is_not_named(self, usage_counter):
+        """The other direction: the Haiku standard row WAS reconciled with a
+        real bill, so naming it would cry wolf and teach readers to ignore
+        the label."""
+        _run_sync_calls("claude-haiku-5-5", [(30_000, 1_000)])
+        stats = usage_counter()
+        assert stats["unverified_price_calls"] == {}
+        line = _load_renderer().render_usage_line(stats)
+        assert "unverified against a bill" not in line
+
+    def test_the_batch_total_names_the_models(self):
+        """The batch total prices nothing itself, but carries each signature's
+        provenance into one line; a total that drops it hides which rows were
+        never checked."""
+        line = _load_renderer().render_usage_total(
+            [
+                {
+                    "llm_usage": {
+                        "phase_a": {
+                            "prompt_tokens": 10_000,
+                            "completion_tokens": 1_000,
+                            "calls": 2,
+                            "calls_without_usage": 0,
+                        },
+                        "computed_cost_usd": 0.06,
+                        "cost_usd": None,
+                        "unpriced_calls": {},
+                        "unverified_price_calls": {"claude-sonnet-5-5": 2},
+                    }
+                },
+                {
+                    "llm_usage": {
+                        "phase_a": {
+                            "prompt_tokens": 30_000,
+                            "completion_tokens": 1_000,
+                            "calls": 1,
+                            "calls_without_usage": 0,
+                        },
+                        "computed_cost_usd": 0.0035,
+                        "cost_usd": None,
+                        "unpriced_calls": {},
+                        "unverified_price_calls": {"claude-sonnet-5-5": 1},
+                    }
+                },
+            ]
+        )
+        assert "unverified against a bill: claude-sonnet-5-5" in line

@@ -25,7 +25,10 @@ from semantic_kernel.connectors.ai.chat_completion_client_base import (
     ChatCompletionClientBase,
 )
 
-from argumentation_analysis.services.model_prices import price_tokens
+from argumentation_analysis.services.model_prices import (
+    price_tokens,
+    resolve_price_row,
+)
 
 logger = logging.getLogger("LLMCache")
 
@@ -193,9 +196,20 @@ class UsageStats:
     - ``unpriced_calls`` — ``{model_id: call count}`` for calls the table
       cannot price, so "not priced: <id>" names the model rather than
       silently shrinking the total.
+    - ``unverified_price_calls`` — ``{model_id: call count}`` for priced
+      calls whose row was never reconciled with a provider bill (#3102).
+      The price still counts; the line says which models it rests on an
+      unpublished check for, so a computed total is not read as a billed one.
     """
 
-    __slots__ = ("_lock", "_phases", "_cost_usd", "_computed_usd", "_unpriced")
+    __slots__ = (
+        "_lock",
+        "_phases",
+        "_cost_usd",
+        "_computed_usd",
+        "_unpriced",
+        "_unverified",
+    )
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
@@ -203,6 +217,7 @@ class UsageStats:
         self._cost_usd: Optional[float] = None
         self._computed_usd: Optional[float] = None
         self._unpriced: Dict[str, int] = {}
+        self._unverified: Dict[str, int] = {}
 
     def record(
         self,
@@ -251,6 +266,12 @@ class UsageStats:
                     self._unpriced[key] = self._unpriced.get(key, 0) + 1
                 else:
                     self._computed_usd = (self._computed_usd or 0.0) + priced
+                    # #3102: the price stands, but the line must be able to
+                    # say which models it rests on a row no bill confirmed.
+                    row = resolve_price_row(str(model or ""), prompt_tokens)
+                    if row is not None and not row.verified_against_bill:
+                        key = str(model or "").strip() or "(model inconnu)"
+                        self._unverified[key] = self._unverified.get(key, 0) + 1
 
     def as_dict(self) -> Dict[str, Any]:
         with self._lock:
@@ -258,6 +279,7 @@ class UsageStats:
             out["cost_usd"] = self._cost_usd
             out["computed_cost_usd"] = self._computed_usd
             out["unpriced_calls"] = dict(self._unpriced)
+            out["unverified_price_calls"] = dict(self._unverified)
             return out
 
     def reset(self) -> None:
@@ -266,6 +288,7 @@ class UsageStats:
             self._cost_usd = None
             self._computed_usd = None
             self._unpriced.clear()
+            self._unverified.clear()
 
 
 _usage_stats = UsageStats()

@@ -42,6 +42,12 @@ class PriceRow:
     # 0 is the standard tier; a larger value selects the row only once the
     # call's prompt reaches it (whole request billed at that tier).
     prompt_threshold_tokens: int = 0
+    # #3102: True only where a real provider bill was compared to this row
+    # (the comparison lives in ``source``). A published rate nobody reconciled
+    # stays False, and the usage line names the model it priced that way —
+    # a tableau that cannot say which of its figures were checked lets a
+    # reader take every figure for a checked one.
+    verified_against_bill: bool = False
 
 
 PRICE_TABLE: List[PriceRow] = [
@@ -62,13 +68,18 @@ PRICE_TABLE: List[PriceRow] = [
         model_id="claude-haiku-5-5",
         input_per_mtok=0.10,
         output_per_mtok=0.50,
-        source=_ANTHROPIC,
+        source=(
+            f"{_ANTHROPIC} — verified against a real Console bill: the "
+            "564 534 + 258 347 token pass priced 0.1856 $ where the provider "
+            "billed 0.19 $ (read 2026-10-20)"
+        ),
+        verified_against_bill=True,
     ),
     PriceRow(
         model_id="claude-haiku-5-5",
         input_per_mtok=0.50,
         output_per_mtok=2.50,
-        source=f"{_ANTHROPIC} — long-prompt tier (>100k prompt tokens)",
+        source=f"{_ANTHROPIC} — long-prompt tier (>100k prompt tokens); no bill exercised this tier yet",
         prompt_threshold_tokens=100_000,
     ),
     PriceRow(

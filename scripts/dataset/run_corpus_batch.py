@@ -490,6 +490,7 @@ def render_usage_line(usage: Optional[Dict[str, Any]]) -> str:
     totals = _usage_totals(usage)
     computed = usage.get("computed_cost_usd")
     unpriced = usage.get("unpriced_calls") or {}
+    unverified = usage.get("unverified_price_calls") or {}
     reported = usage.get("cost_usd")
     without_usage = totals["calls_without_usage"]
     tokens_txt = (
@@ -514,6 +515,11 @@ def render_usage_line(usage: Optional[Dict[str, Any]]) -> str:
     else:
         cost_txt = "not reported"
 
+    # #3102 — a price is not a bill: name the models whose row no provider
+    # bill ever confirmed, so the computed figure is not read as a billed one.
+    if unverified:
+        cost_txt += " — unverified against a bill: " + ", ".join(sorted(unverified))
+
     if isinstance(reported, (int, float)):
         cost_txt += f" — provider-reported: ${reported:.4f}"
         if reported == 0 and totals["calls"]:
@@ -533,6 +539,7 @@ def render_usage_total(signatures: List[Dict[str, Any]]) -> str:
     whose signature predates the accounting point instead of dropping them."""
     prompt = completion = calls = 0
     without_usage = 0
+    unverified: Dict[str, int] = {}
     for sig in signatures:
         usage = sig.get("llm_usage")
         if not isinstance(usage, dict) or not _usage_totals(usage)["calls"]:
@@ -542,11 +549,17 @@ def render_usage_total(signatures: List[Dict[str, Any]]) -> str:
         prompt += totals["prompt_tokens"]
         completion += totals["completion_tokens"]
         calls += totals["calls"]
+        # #3102 — the batch total also names the models it priced from a row
+        # no bill confirmed; a reader must not take the total for a billed one.
+        for model, count in (usage.get("unverified_price_calls") or {}).items():
+            unverified[model] = unverified.get(model, 0) + int(count)
     tail = (
         f" ({without_usage} signature(s) without usage — pre-#2849)"
         if without_usage
         else ""
     )
+    if unverified:
+        tail += " — unverified against a bill: " + ", ".join(sorted(unverified))
     return (
         f"Batch LLM usage: {prompt} prompt + {completion} completion tokens "
         f"across {calls} call(s){tail}"
