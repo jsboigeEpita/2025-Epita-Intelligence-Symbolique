@@ -128,7 +128,10 @@ def ensure_dotenv_loaded(start_path: str = None, silent: bool = True) -> bool:
 if __name__ != "__main__":
     from project_core.managers.environment_manager import EnvironmentManager
 
-    EnvironmentManager()
+    # Import-time auto-load: fills what the process lacks, never replaces a
+    # value imposed after startup (#3116); the explicit helper above keeps the
+    # replacing policy (#1295).
+    EnvironmentManager(fill_only=True)
 
 
 if __name__ == "__main__":
