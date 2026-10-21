@@ -8130,6 +8130,7 @@ def _merge_fallacy_results(
     wide_fallacies: List[Dict[str, Any]],
     per_arg_fallacies: List[Dict[str, Any]],
     document_site: str = "fallacy_descent",
+    second_site: Optional[str] = "fallacy_per_argument",
 ) -> List[Dict[str, Any]]:
     """Merge wide-net and per-argument fallacy results, deduplicating by taxonomy_pk.
 
@@ -8140,15 +8141,36 @@ def _merge_fallacy_results(
 
     #3105 — each retained fallacy carries ``detection_paths``, the path(s)
     that produced it: ``document_site`` (the descent, or the one-shot when
-    that is what the document pass ran) and/or ``fallacy_per_argument``. A
-    fallacy both paths found carries both, so the reading record can state
-    each site's own share instead of repeating the total under every site.
+    that is what the document pass ran) and/or ``second_site``. A fallacy
+    both paths found carries both, so the reading record can state each
+    site's own share instead of repeating the total under every site.
+
+    ``second_site`` is ``None`` in the full merge: its second list is the
+    hybrid tier, which records no reading window — labelling it
+    ``fallacy_per_argument`` credited the per-argument pass with findings it
+    never made (CI caught it on the #2540 witness). An untagged finding is
+    the honest state; the record says « sans origine enregistrée ».
+
+    Tagging is idempotent: an entry that already carries
+    ``detection_paths`` was settled by a nested merge (the full tier merges
+    the already-merged hierarchical result) and keeps its own provenance.
+    Re-tagging it from the caller's list would credit a path that did not
+    produce it — the #3105 defect one merge higher.
     """
 
-    def _tag(entry: Dict[str, Any], path: str) -> None:
-        paths = entry.setdefault("detection_paths", [])
-        if path not in paths:
-            paths.append(path)
+    def _settle(entry: Dict[str, Any], path: Optional[str]) -> None:
+        """Tag an entry this merge is meeting for the first time."""
+        if path and "detection_paths" not in entry:
+            entry["detection_paths"] = [path]
+
+    def _absorb(entry: Dict[str, Any], paths: Any) -> None:
+        """Union tags onto a winner; never drops an existing path."""
+        if not paths:
+            return
+        current = entry.setdefault("detection_paths", [])
+        for path in paths:
+            if path not in current:
+                current.append(path)
 
     seen: Dict[str, Dict[str, Any]] = {}
     for f in wide_fallacies:
@@ -8157,12 +8179,14 @@ def _merge_fallacy_results(
         pk = str(f.get("taxonomy_pk") or f.get("fallacy_type") or "")
         if not pk:
             continue
-        _tag(f, document_site)
+        _settle(f, document_site)
         if pk not in seen:
             seen[pk] = f
         elif confidence_outranks(
             f.get("confidence"), seen.get(pk, {}).get("confidence")
         ):
+            # The winner replaces the entry; the loser's tags move with it.
+            _absorb(f, seen[pk].get("detection_paths"))
             seen[pk] = f
 
     for f in per_arg_fallacies:
@@ -8171,22 +8195,21 @@ def _merge_fallacy_results(
         pk = str(f.get("taxonomy_pk") or f.get("fallacy_type") or "")
         if not pk:
             continue
-        _tag(f, "fallacy_per_argument")
+        _settle(f, second_site)
         if pk not in seen:
             seen[pk] = f
             continue
         prev = seen[pk]
         if confidence_outranks(f.get("confidence"), prev.get("confidence")):
             # The winner replaces the entry; the loser's tags move with it.
-            for path in prev.get("detection_paths", []):
-                _tag(f, path)
+            _absorb(f, prev.get("detection_paths"))
             seen[pk] = f
         else:
-            for path in f.get("detection_paths", []):
-                _tag(prev, path)
+            _absorb(prev, f.get("detection_paths"))
 
     for entry in seen.values():
-        entry["detection_paths"] = sorted(set(entry.get("detection_paths", [])))
+        if "detection_paths" in entry:
+            entry["detection_paths"] = sorted(set(entry["detection_paths"]))
 
     return list(seen.values())
 
@@ -8366,8 +8389,13 @@ async def _invoke_full_fallacy(
             raise RuntimeError(f"FALLACY_DETECTION_UNAVAILABLE: {reason}")
         raise FallacyDetectionFailed(f"FALLACY_DETECTION_FAILED: {reason}")
 
-    # Merge by taxonomy_pk (or fallacy_type as fallback), keep highest confidence
-    merged = _merge_fallacy_results(llm_fallacies, hybrid_fallacies)
+    # Merge by taxonomy_pk (or fallacy_type as fallback), keep highest confidence.
+    # #3105: ``second_site=None`` — the hybrid tier records no reading window,
+    # so its findings stay untagged (« sans origine enregistrée » in the
+    # record) instead of being credited to the per-argument pass. The LLM
+    # entries arrive already tagged by the nested hierarchical merge and keep
+    # their own provenance.
+    merged = _merge_fallacy_results(llm_fallacies, hybrid_fallacies, second_site=None)
 
     logger.info(
         "Full fallacy merge: llm=%d, hybrid=%d, merged=%d",

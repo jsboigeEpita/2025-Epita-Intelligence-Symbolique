@@ -29,8 +29,9 @@ class _FakeState:
 
     Records each add_fallacy call exactly as the real state does: stores
     family/taxonomy_path/target_argument_id/problematic_quote/confidence_note
-    only when non-empty, and confidence only when measured (``None`` is not
-    ``0.0``, #2972).
+    only when non-empty, confidence only when measured (``None`` is not
+    ``0.0``, #2972), and ``detection_paths`` only when non-empty there too
+    (#3105, shared_state.py:110).
     """
 
     def __init__(self) -> None:
@@ -54,6 +55,7 @@ class _FakeState:
         confidence=None,
         problematic_quote=None,
         confidence_note: str = "",
+        detection_paths=None,
     ) -> str:
         self._counter += 1
         fid = f"fallacy_{self._counter}"
@@ -68,6 +70,8 @@ class _FakeState:
             entry["problematic_quote"] = str(problematic_quote)
         if confidence_note:
             entry["confidence_note"] = str(confidence_note)
+        if detection_paths:
+            entry["detection_paths"] = [str(p) for p in detection_paths]
         if target_arg_id:
             entry["target_argument_id"] = target_arg_id
         self.identified_fallacies[fid] = entry

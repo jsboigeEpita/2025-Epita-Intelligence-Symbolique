@@ -115,6 +115,11 @@ async def test_full_tier_names_the_tier_that_did_not_run(failing_llm, monkeypatc
 
     assert result["fallacies"] == HYBRID_ANSWER["fallacies"]
     assert result["llm_count"] == 0
+    # #3105 contract, named rather than incidental: the full merge invents no
+    # reading origin. The hybrid tier records no reading window, so its
+    # findings stay untagged (the record says « sans origine enregistrée »)
+    # instead of being credited to the per-argument pass or the descent.
+    assert all("detection_paths" not in f for f in result["fallacies"])
     assert result["degraded"] is True
     assert result["last_error"].startswith(
         "llm tier did not run: FALLACY_DETECTION_FAILED: tier=llm"

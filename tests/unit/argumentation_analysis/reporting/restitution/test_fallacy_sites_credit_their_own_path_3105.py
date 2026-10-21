@@ -190,6 +190,44 @@ class TestTheMergeKeepsBothTags:
         )
         assert merged[0]["detection_paths"] == [_ONE_SHOT]
 
+    def test_a_settled_entry_keeps_its_own_provenance(self):
+        """The full tier merges the already-merged hierarchical result: the
+        outer merge must not re-tag those entries from its own list, or a
+        per-argument finding would gain a descent credit it never had — the
+        #3105 defect one merge higher (caught by the #2540 witness)."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _merge_fallacy_results,
+        )
+
+        merged = _merge_fallacy_results(
+            [{"taxonomy_pk": "pk_p", "type": "P", "detection_paths": [_PER_ARG]}],
+            [],
+            document_site=_DESCENT,
+        )
+        assert merged[0]["detection_paths"] == [_PER_ARG]
+
+    def test_no_second_site_invents_no_provenance(self):
+        """The full merge's second list is the hybrid tier, which records no
+        reading window: ``second_site=None`` leaves it untagged (the record
+        says « sans origine enregistrée ») instead of crediting a path."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _merge_fallacy_results,
+        )
+
+        merged = _merge_fallacy_results(
+            [{"taxonomy_pk": "pk_y", "type": "Y", "detection_paths": [_DESCENT]}],
+            [{"taxonomy_pk": "pk_h", "type": "H"}],
+            document_site=_DESCENT,
+            second_site=None,
+        )
+        by_pk = {f["taxonomy_pk"]: f for f in merged}
+        assert by_pk["pk_h"].get("detection_paths") is None, (
+            "an untagged hybrid finding must stay keyless — an empty list "
+            "would read as a recorded (empty) provenance"
+        )
+        # The settled LLM entry keeps its own tag, untouched by the outer merge.
+        assert by_pk["pk_y"]["detection_paths"] == [_DESCENT]
+
 
 class TestTheStateCarriesTheTag:
     def test_the_writer_forwards_the_paths_to_the_state(self):
