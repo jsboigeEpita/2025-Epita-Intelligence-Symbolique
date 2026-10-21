@@ -313,10 +313,20 @@ ALLOWED = {
         "text",
         2,
     ): (
-        "line 1803 — scored argument UNIT texts in the counter-argument "
-        "target list (#3035); renumbered #1→#2 by the debate lines above, "
-        "which ast.walk (BFS) visits first at a shallower depth — ordinal "
-        "order is walk order, not file order"
+        "line 4305 — local-tier prompt lines: unit texts of the #2850 "
+        "selection (12 of N) the local_llm phase sends (#3124); the document "
+        "itself never rides the prompt — no-unit contexts get the registered "
+        "12000-char window instead"
+    ),
+    (
+        "argumentation_analysis/orchestration/invoke_callables.py",
+        "fstring",
+        "text",
+        3,
+    ): (
+        "line 1855 — scored argument UNIT texts in the counter-argument "
+        "target list (#3035); renumbered #2→#3 by the #3124 local-tier lines "
+        "above — ordinal order is walk order, not file order"
     ),
     (
         "argumentation_analysis/orchestration/state_writers.py",

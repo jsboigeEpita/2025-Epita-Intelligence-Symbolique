@@ -4243,6 +4243,115 @@ async def _invoke_camembert_fallacy(
         }
 
 
+_LOCAL_LLM_UNIT_BUDGET = 12
+_LOCAL_LLM_WINDOW_CHARS = 12000
+_DEFAULT_LOCAL_LLM_TIMEOUT_S = 60.0
+
+
+def _local_llm_timeout_s() -> float:
+    """``SELF_HOSTED_LLM_TIMEOUT`` decides the per-request budget (#3124).
+
+    Default 60.0 keeps the pre-#3124 behavior where nothing is declared. A
+    declared value that is not a positive number is a configuration error:
+    logged, and the default applies — the phase never crashes on its config.
+    """
+    raw = os.environ.get("SELF_HOSTED_LLM_TIMEOUT", "")
+    if not raw:
+        return _DEFAULT_LOCAL_LLM_TIMEOUT_S
+    try:
+        value = float(raw)
+    except ValueError:
+        value = 0.0
+    if value <= 0:
+        logger.warning(
+            "SELF_HOSTED_LLM_TIMEOUT=%r is not a positive number — using %.1f s",
+            raw,
+            _DEFAULT_LOCAL_LLM_TIMEOUT_S,
+        )
+        return _DEFAULT_LOCAL_LLM_TIMEOUT_S
+    return value
+
+
+def _local_llm_input(
+    input_text: str, context: Dict[str, Any]
+) -> Tuple[str, Dict[str, Any]]:
+    """Decide WHAT the local tier is asked to analyse, and record it (#3124).
+
+    With an extracted population the phase sends the #2850 selection of units
+    — what the docstring always promised ("optionally include upstream
+    extract results") and what every other budgeted phase sends. Without one
+    it sends a bounded head window of the document and records the
+    truncation: never the whole document under one fixed budget (measured on
+    doc_A: 56 430 chars, 60.2 s wall, empty error).
+    """
+    from argumentation_analysis.orchestration.selection import (
+        merged_population_units,
+        select_for_budget,
+        state_text_length,
+    )
+
+    state = context.get("_state_object")
+    extract_output = context.get("phase_extract_output", {})
+    fallback_args = (
+        extract_output.get("arguments", []) if isinstance(extract_output, dict) else []
+    )
+    units = merged_population_units(state, fallback_args=fallback_args)
+    if units:
+        selection = select_for_budget(
+            units, _LOCAL_LLM_UNIT_BUDGET, text_length=state_text_length(state)
+        )
+        lines = [
+            "Arguments extracted from the document (a bounded selection):",
+            *(f"- [{u.unit_id}] {u.text}" for u in selection.selected),
+            "",
+            "Analyse these arguments for rhetorical strategy, fallacies and "
+            "logical structure.",
+        ]
+        facts: Dict[str, Any] = {
+            "input_mode": "selected_units",
+            "input_units": selection.k,
+            "input_units_total": selection.n_total,
+        }
+        return "\n".join(lines), facts
+    window = input_text[:_LOCAL_LLM_WINDOW_CHARS]
+    facts = {
+        "input_mode": "document_window",
+        "input_truncated": len(input_text) > _LOCAL_LLM_WINDOW_CHARS,
+        "input_chars_total": len(input_text),
+    }
+    return window, facts
+
+
+def _read_local_answer(
+    response: Any,
+) -> Tuple[Optional[str], Any, Optional[str]]:
+    """(served_model, content, finish_reason) from an OpenAI-shaped envelope.
+
+    The shared hub serves an alias with another model by design (#3124): the
+    response's own ``model`` field names the model that answered, next to the
+    alias that was requested. ``content`` can be ``None`` on a reasoning
+    model that spent its budget reasoning — ``finish_reason`` carries that
+    fact. A shape this reader cannot parse is returned as JSON text: kept,
+    never silently dropped.
+    """
+    if not isinstance(response, dict):
+        return None, str(response), None
+    served = response.get("model")
+    served_model = str(served) if served else None
+    finish_reason = None
+    choices = response.get("choices")
+    if isinstance(choices, list) and choices and isinstance(choices[0], dict):
+        finish_reason = choices[0].get("finish_reason")
+        message = choices[0].get("message")
+        if isinstance(message, dict) and isinstance(message.get("content"), str):
+            return served_model, message["content"], finish_reason
+    return (
+        served_model,
+        json.dumps(response, ensure_ascii=False, sort_keys=True),
+        finish_reason,
+    )
+
+
 async def _invoke_local_llm(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
     """Invoke local LLM service for text analysis (#834).
 
@@ -4252,7 +4361,10 @@ async def _invoke_local_llm(input_text: str, context: Dict[str, Any]) -> Dict[st
     says "skipped: not_configured" when no SELF_HOSTED_LLM_ENDPOINT is set
     (#3113) — two different facts, never one blur.
     """
-    from argumentation_analysis.services.local_llm_service import LocalLLMService
+    from argumentation_analysis.services.local_llm_service import (
+        LocalLLMService,
+        describe_exception,
+    )
 
     # #3113 — the service is built from the configuration the self-hosted
     # tier already declares: the SELF_HOSTED_LLM_* triple
@@ -4275,7 +4387,10 @@ async def _invoke_local_llm(input_text: str, context: Dict[str, Any]) -> Dict[st
             _state.local_llm_results.append(result)
         return result
 
-    service = LocalLLMService(endpoint=endpoint, model=model_id, api_key=api_key)
+    timeout_s = _local_llm_timeout_s()
+    service = LocalLLMService(
+        endpoint=endpoint, model=model_id, api_key=api_key, timeout=timeout_s
+    )
 
     # Check availability first
     try:
@@ -4293,13 +4408,14 @@ async def _invoke_local_llm(input_text: str, context: Dict[str, Any]) -> Dict[st
             _state.local_llm_results.append(result)
         return result
 
-    # Build prompt — optionally include upstream extract results for context
-    extract_output = context.get("phase_extract_output", {})
+    # #3124 — the phase decides what it sends (extracted units, or a bounded
+    # window when no population exists) and records which, instead of the
+    # whole document under one fixed budget.
+    user_content, input_facts = _local_llm_input(input_text, context)
     system_prompt = (
         "You are an argument analysis assistant. "
         "Analyze the text for arguments, fallacies, and logical structure."
     )
-    user_content = input_text
 
     messages = [
         {"role": "system", "content": system_prompt},
@@ -4309,17 +4425,29 @@ async def _invoke_local_llm(input_text: str, context: Dict[str, Any]) -> Dict[st
     try:
         response = await service.chat_completion(messages)
     except Exception as exc:
-        logger.warning("Local LLM call failed: %s", exc)
-        response = {"error": str(exc)}
+        logger.warning("Local LLM call failed: %s", describe_exception(exc, timeout_s))
+        response = {"error": describe_exception(exc, timeout_s)}
 
     if isinstance(response, dict) and "error" in response:
-        result = {"status": "error", "error": str(response["error"])}
+        result = {
+            "status": "error",
+            "error": str(response["error"]),
+            "model": getattr(service, "model", None),
+            "timeout_s": timeout_s,
+            "input_length": len(user_content),
+            **input_facts,
+        }
     else:
+        served_model, content, finish_reason = _read_local_answer(response)
         result = {
             "status": "completed",
-            "response": response if isinstance(response, str) else str(response),
-            "model": getattr(service, "model", "local"),
-            "input_length": len(input_text),
+            "response": content,
+            "model": getattr(service, "model", None),
+            "served_model": served_model,
+            "finish_reason": finish_reason,
+            "timeout_s": timeout_s,
+            "input_length": len(user_content),
+            **input_facts,
         }
 
     # Write to shared state
@@ -4334,7 +4462,10 @@ async def _invoke_local_llm(input_text: str, context: Dict[str, Any]) -> Dict[st
             summary=(
                 f"Local LLM: error ({result['error']})"
                 if result["status"] == "error"
-                else f"Local LLM: completed ({result['input_length']} chars input)"
+                else (
+                    f"Local LLM: completed ({result['input_length']} chars, "
+                    f"{result['input_mode']})"
+                )
             ),
         )
 
