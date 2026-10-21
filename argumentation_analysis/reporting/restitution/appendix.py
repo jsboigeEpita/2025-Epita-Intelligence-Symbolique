@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
+from argumentation_analysis.orchestration.fol_cause import cause_phrase
 from argumentation_analysis.plugins.identification_models import confidence_note_reason
 
 from .fr_accord import accord
@@ -214,6 +215,19 @@ def _fol_axis_status(fol: Any) -> Any:
                 "inconsistantes": inconsistent,
                 "verifiees": len(decided),
             }
+            # #3107 — an inconsistent theory's CAUSE travels with the count.
+            # The verdict alone (``consistent: False``) forced every reader to
+            # supply its own explanation; the writer now states one, and the
+            # annexe prints it instead of leaving the inference to the prose.
+            causes = [
+                cause_phrase(r["consistency_cause"])
+                for r in decided
+                if r.get("consistent") is False
+                and isinstance(r.get("consistency_cause"), dict)
+                and r["consistency_cause"].get("cause")
+            ]
+            if causes:
+                status["causes"] = causes
             # #1276 (po-2023 R487): when a corpus mixes decided + degraded
             # theories (e.g. corpus_B/C: 1 consistent + 1 parse-fail), the
             # degraded entry must be SURFACED, not silently dropped — otherwise

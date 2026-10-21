@@ -82,6 +82,7 @@ from .specialist_roles import (
     classify_specialist_roles,
 )
 from .readability_gate import GateVerdict, ReadabilityGate
+from argumentation_analysis.orchestration.fol_cause import cause_phrase
 from argumentation_analysis.orchestration.selection import (
     SelectableUnit,
     select_for_budget,
@@ -1083,6 +1084,17 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
             1 for r in fol if isinstance(r, dict) and r.get("consistent") is False
         )
         if consistent or inconsistent:
+            # #3107 — the cause each inconsistent theory stated, in its own
+            # words. Empty when the run stated none (an older artefact, or a
+            # theory whose cause could not be established) — never invented.
+            fol_causes = [
+                cause_phrase(r["consistency_cause"])
+                for r in fol
+                if isinstance(r, dict)
+                and r.get("consistent") is False
+                and isinstance(r.get("consistency_cause"), dict)
+                and r["consistency_cause"].get("cause")
+            ]
             findings.append(
                 FormalFinding(
                     kind="fol",
@@ -1092,7 +1104,10 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                         if inconsistent
                         else f"{accord(consistent, 'théorie FOL consistante', 'théories FOL consistantes')}"
                     ),
-                    detail="solveur Tweety (logique du premier ordre)",
+                    detail=(
+                        "solveur Tweety (logique du premier ordre)"
+                        + (" — " + " ; ".join(fol_causes) if fol_causes else "")
+                    ),
                     tested=extract_tested_content(
                         fol,
                         lambda r: (

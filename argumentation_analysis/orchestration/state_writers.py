@@ -1687,6 +1687,19 @@ def _write_fol_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         float(confidence),
         message=status_message,
     )
+    # #3107 — the verdict carries its own cause and each formula the unit it
+    # came from. ``_invoke_fol_reasoning`` states both only for an INCONSISTENT
+    # theory (there is no cause to state otherwise, and an empty one on a
+    # consistent theory would read as a cause). Attached to the entry just
+    # appended — the canonical list every reader consumes.
+    cause = output.get("consistency_cause")
+    sources = output.get("formula_sources")
+    entries = getattr(state, "fol_analysis_results", None)
+    if isinstance(entries, list) and entries and isinstance(entries[-1], dict):
+        if isinstance(cause, dict) and cause:
+            entries[-1]["consistency_cause"] = cause
+        if isinstance(sources, list) and len(sources) == len(formulas) and any(sources):
+            entries[-1]["formula_sources"] = sources
     # Store FOL signature metadata (#348)
     fol_signature = output.get("fol_signature", [])
     if isinstance(fol_signature, list) and fol_signature:
