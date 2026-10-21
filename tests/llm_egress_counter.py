@@ -50,6 +50,8 @@ import contextvars
 import json
 import os
 import threading
+
+import pytest
 from collections import OrderedDict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -398,6 +400,48 @@ class LLMEgressCounter:
         with self._lock:
             return dict(self._per_test)
 
+    def absorb_records(self, records: Any) -> None:
+        """Replay another process's recorded requests into this counter (#3120).
+
+        The records are this counter's own privacy-clean shape (test, host,
+        method, path, class, transport, status/error) — never bodies.
+        Unknown keys are dropped, so a shape change on the sending side
+        cannot contaminate the aggregate; a record whose ``class`` is not one
+        of the three known classes is skipped likewise.
+        """
+        if not isinstance(records, list):
+            return
+        fields = (
+            "test",
+            "host",
+            "method",
+            "path",
+            "class",
+            "transport",
+            "status",
+            "error",
+        )
+        with self._lock:
+            for raw in records:
+                if not isinstance(raw, dict) or raw.get("class") not in (
+                    CLASS_LLM,
+                    CLASS_NON_LLM,
+                    CLASS_UNKNOWN,
+                ):
+                    continue
+                entry = {k: raw[k] for k in fields if k in raw}
+                entry.setdefault("test", SESSION_BUCKET)
+                entry.setdefault("transport", TRANSPORT_IN_PROCESS)
+                self._requests.append(entry)
+                if entry["class"] == CLASS_LLM:
+                    self._per_test[entry["test"]] = (
+                        self._per_test.get(entry["test"], 0) + 1
+                    )
+                elif entry["class"] == CLASS_UNKNOWN:
+                    self._per_test_unknown[entry["test"]] = (
+                        self._per_test_unknown.get(entry["test"], 0) + 1
+                    )
+
     def snapshot(self) -> Dict[str, Any]:
         with self._lock:
             requests = [dict(r) for r in self._requests]
@@ -452,6 +496,10 @@ def _outcome_label(entry: Dict[str, Any]) -> str:
 
 # ── session singleton ──────────────────────────────────────────────────
 
+# #3120: key under which a worker ships its request records to the
+# controller (``config.workeroutput`` → ``pytest_testnodedown``).
+XDIST_WORKER_KEY = "llm_egress_snapshot"
+
 _SESSION_COUNTER: Optional[LLMEgressCounter] = None
 
 
@@ -467,6 +515,48 @@ def activate() -> LLMEgressCounter:
 def get_counter() -> Optional[LLMEgressCounter]:
     """The session counter, or None when not activated (plain pytest import)."""
     return _SESSION_COUNTER
+
+
+def merged_snapshot(
+    worker_payloads: List[Dict[str, Any]], base: Dict[str, Any]
+) -> Dict[str, Any]:
+    """One aggregate over every xdist worker plus the controller (#3120).
+
+    ``base`` is the controller's own snapshot; each payload carries a
+    worker's raw ``requests``. The union is replayed through a scratch
+    counter — the same aggregation code as a single-process run — so every
+    key and derivation of the report keeps its exact single-process shape.
+    ``hosts_watched`` / ``transports_patched`` describe the process
+    configuration rather than the tally, so they come from ``base``.
+    """
+    scratch = LLMEgressCounter(frozenset(base.get("hosts_watched") or ()))
+    scratch._transports_names = list(base.get("transports_patched") or ())
+    scratch.absorb_records(base.get("requests") or [])
+    for payload in worker_payloads:
+        if isinstance(payload, dict):
+            scratch.absorb_records(payload.get("requests") or [])
+    return scratch.snapshot()
+
+
+def _xdist_distributed(config: Any) -> bool:
+    """True when this session is a distributed xdist run (#3120).
+
+    ``-n <k>`` / ``-n auto`` sets ``option.dist`` to a distribution mode; a
+    serial session keeps ``"no"``. Probing the plugin registry instead would
+    be wrong: xdist is installed in the env even when the run is serial.
+    """
+    dist = getattr(getattr(config, "option", None), "dist", "no")
+    return bool(dist) and dist != "no"
+
+
+class _SnapshotView:
+    """A merged aggregate with the one method ``write_report`` reads (#3120)."""
+
+    def __init__(self, snapshot: Dict[str, Any]) -> None:
+        self._snapshot = snapshot
+
+    def snapshot(self) -> Dict[str, Any]:
+        return dict(self._snapshot)
 
 
 def write_report(counter: LLMEgressCounter, config: Any) -> Optional[Path]:
@@ -499,6 +589,19 @@ class LLMEgressPlugin:
 
     def __init__(self, counter: LLMEgressCounter) -> None:
         self.counter = counter
+        # #3120: under xdist the controller runs no test, so this plugin's
+        # own counter sees nothing; workers ship their records here instead.
+        self._worker_payloads: List[Dict[str, Any]] = []
+
+    @pytest.hookimpl(optionalhook=True)
+    def pytest_testnodedown(self, node: Any, error: Any) -> None:
+        # #3120: one worker's records, shipped in its ``workeroutput`` at
+        # ``pytest_sessionfinish``. Absent when the worker died before that
+        # hook — the aggregate then says "unavailable" rather than print the
+        # controller's own vacuous 0.
+        payload = (getattr(node, "workeroutput", None) or {}).get(XDIST_WORKER_KEY)
+        if isinstance(payload, dict):
+            self._worker_payloads.append(payload)
 
     def pytest_runtest_setup(self, item: Any) -> None:
         self.counter.current_test = item.nodeid
@@ -510,7 +613,22 @@ class LLMEgressPlugin:
         self.counter.current_test = None
 
     def pytest_terminal_summary(self, terminalreporter: Any, exitstatus: Any) -> None:
+        config = terminalreporter.config
         snap = self.counter.snapshot()
+        if _xdist_distributed(config):
+            # #3120: the controller runs no test — its own counter is empty.
+            # The aggregate is the workers' union, or an explicit
+            # "unavailable" when none shipped (never a measured-looking 0).
+            if not self._worker_payloads:
+                terminalreporter.write_sep(
+                    "=",
+                    "LLM egress (#1787): UNAVAILABLE in this xdist session — "
+                    "no worker snapshot reached the controller, so the count "
+                    "is not measurable here (this is NOT a zero). Re-run the "
+                    "file single-process for a measurement.",
+                )
+                return
+            snap = merged_snapshot(self._worker_payloads, snap)
         t = snap["totals_by_class"]
         by_transport = snap["llm_by_transport"]
         line = (
@@ -574,9 +692,21 @@ class LLMEgressPlugin:
                     unknown_hosts[r["host"]] = unknown_hosts.get(r["host"], 0) + 1
             for host, n in sorted(unknown_hosts.items(), key=lambda kv: -kv[1]):
                 terminalreporter.write_line(f"  {n:5d}  {host}")
-        report_path = write_report(self.counter, terminalreporter.config)
+        report_path = write_report(_SnapshotView(snap), terminalreporter.config)
         if report_path:
             terminalreporter.write_line(f"Egress report: {report_path}")
 
     def pytest_sessionfinish(self, session: Any) -> None:
+        # #3120: a worker ships its records to the controller before the
+        # counter is uninstalled — ``workeroutput`` is what
+        # ``pytest_testnodedown`` reads on the other side. Guarded: the
+        # instrument must never break the measured run.
+        config = session.config
+        if hasattr(config, "workerinput"):
+            try:
+                config.workeroutput[XDIST_WORKER_KEY] = {
+                    "requests": self.counter.snapshot()["requests"]
+                }
+            except Exception:  # noqa: BLE001
+                pass
         self.counter.uninstall()
