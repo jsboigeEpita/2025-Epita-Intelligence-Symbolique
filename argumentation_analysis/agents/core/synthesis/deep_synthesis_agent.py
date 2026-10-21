@@ -1295,6 +1295,13 @@ class DeepSynthesisAgent(BaseAgent):
         """
         lines: List[str] = ["ARTIFACT BRIEFING (cite keys verbatim):"]
 
+        # #3107/#2352 — lazy on purpose: importing ``orchestration.fol_cause``
+        # at module level drags the orchestration package ``__init__``, whose
+        # chain constructs ``EnvironmentManager`` at import and rewrites
+        # ``os.environ`` from the root .env — clobbering values the caller
+        # imposed after the imports (the #2352 seat measures exactly that).
+        from argumentation_analysis.orchestration.fol_cause import cause_phrase
+
         def _add(
             field_name: str, key: Any, summary: str, cap: Optional[int] = None
         ) -> None:
@@ -1433,10 +1440,20 @@ class DeepSynthesisAgent(BaseAgent):
         ):
             verdict = DeepSynthesisAgent._verdict_label_fol(r)
             formulas = r.get("formulas") or []
+            # #3107 — the cause travels with the verdict. Without it the
+            # synthesis was handed "inconsistent" and supplied its own cause:
+            # on a two-speaker document it pinned a ground contradiction on
+            # quantifier scope. The phrase is the writer's, never re-derived.
+            _cause = r.get("consistency_cause")
+            _cause_text = (
+                f" cause={cause_phrase(_cause)}"
+                if isinstance(_cause, dict) and _cause.get("cause")
+                else ""
+            )
             _add(
                 "fol_analysis_results",
                 i,
-                f"formulas={len(formulas)} verdict={verdict or 'absent'}",
+                f"formulas={len(formulas)} verdict={verdict or 'absent'}{_cause_text}",
             )
 
         for i, r in enumerate(

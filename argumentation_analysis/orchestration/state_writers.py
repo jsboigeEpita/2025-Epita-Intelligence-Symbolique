@@ -1693,6 +1693,19 @@ def _write_fol_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         float(confidence),
         message=status_message,
     )
+    # #3107 — the verdict carries its own cause and each formula the unit it
+    # came from. ``_invoke_fol_reasoning`` states both only for an INCONSISTENT
+    # theory (there is no cause to state otherwise, and an empty one on a
+    # consistent theory would read as a cause). Attached to the entry just
+    # appended — the canonical list every reader consumes.
+    cause = output.get("consistency_cause")
+    sources = output.get("formula_sources")
+    entries = getattr(state, "fol_analysis_results", None)
+    if isinstance(entries, list) and entries and isinstance(entries[-1], dict):
+        if isinstance(cause, dict) and cause:
+            entries[-1]["consistency_cause"] = cause
+        if isinstance(sources, list) and len(sources) == len(formulas) and any(sources):
+            entries[-1]["formula_sources"] = sources
     # Store FOL signature metadata (#348)
     fol_signature = output.get("fol_signature", [])
     if isinstance(fol_signature, list) and fol_signature:
@@ -2823,6 +2836,12 @@ def _attach_external_fol_verdict(
     the disagreement is recorded rather than erased. When both sides agree, the
     entry's verdict stands untouched. A degraded external answer (None) never
     displaces anything.
+
+    #3107: a stated cause belongs to the verdict that carries it. Promoting
+    the external verdict moves the displaced entry's ``consistency_cause``
+    into ``superseded_verdict`` (the cause of the verdict that no longer
+    speaks); the carrying external verdict states none, because no prover
+    produced one — silence is honest, an inherited cause is not.
     """
     entries = getattr(state, "fol_analysis_results", None)
     if not isinstance(entries, list):
@@ -2857,11 +2876,16 @@ def _attach_external_fol_verdict(
         entry["external_checks"] = checks
         # Divergence or an undecided entry: the prover's decision carries (#3106).
         if consistent is not None and consistent != previous:
+            # The cause traveled with the displaced verdict, not with the key
+            # (#3107): it says why THAT verdict read inconsistent.
+            displaced_cause = entry.pop("consistency_cause", None)
             if previous is not None:
                 entry["superseded_verdict"] = {
                     "consistent": previous,
                     "source": entry.get("consistent_source") or "fol_agent",
                 }
+                if displaced_cause:
+                    entry["superseded_verdict"]["cause"] = displaced_cause
             entry["consistent"] = consistent
             entry["consistent_source"] = f"external:{solver}"
         return True

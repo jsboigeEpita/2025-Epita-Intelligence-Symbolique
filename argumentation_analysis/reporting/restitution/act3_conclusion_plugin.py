@@ -725,6 +725,35 @@ def _fol_inconsistent(state: Any) -> int:
     )
 
 
+def _fol_stated_causes(state: Any) -> List[str]:
+    """The causes each INCONSISTENT FOL theory stated (#3107), in entry order.
+
+    Read from ``consistency_cause`` — computed by the writer from the formulas
+    and their source units. Empty when no theory stated one: an artefact from
+    before the field existed, or a run whose cause could not be established.
+    Never inferred here — a cause this reader invented would be exactly the
+    defect the field repairs.
+    """
+    fol = getattr(state, "fol_analysis_results", None)
+    if not isinstance(fol, list):
+        return []
+    # Lazy on purpose (#2352): the orchestration package ``__init__`` imports
+    # a module that rewrites ``os.environ`` from the root .env at import time
+    # — this renderer must not drag it in module order.
+    from argumentation_analysis.orchestration.fol_cause import cause_phrase
+
+    causes = []
+    for r in fol:
+        if not isinstance(r, dict) or r.get("consistent") is not False:
+            continue
+        if not isinstance(r.get("consistency_cause"), dict):
+            continue
+        if not r["consistency_cause"].get("cause"):
+            continue
+        causes.append(cause_phrase(r["consistency_cause"]))
+    return causes
+
+
 def _fol_verified(state: Any) -> int:
     """Count FOL theories the Tweety solver verified (any verdict, real-in-state).
 
@@ -758,6 +787,7 @@ def _collect_weak_points(
     dung_rejected: Dict[str, str],
     pl_inc: int,
     fol_inc: int,
+    fol_causes: Optional[List[str]] = None,
 ) -> List[StructuringWeakPoint]:
     """Collect the structuring weak points the reader can target (real-in-state).
 
@@ -809,12 +839,19 @@ def _collect_weak_points(
             )
         )
     if fol_inc:
+        # #3107 — the cause the writer stated, when one was stated. Without
+        # it this label said only "inconsistent", and the conclusion supplied
+        # the rest: on a two-speaker document it read as one speaker's
+        # reasoning invalidated, pinned on quantifier scope by the synthesis.
+        cause_text = " ; ".join(fol_causes or [])
         points.append(
             StructuringWeakPoint(
                 source="fol",
                 label=(
                     f"{accord(fol_inc, 'théorie du premier ordre inconsistante', 'théories du premier ordre inconsistantes')} "
-                    f"(solveur Tweety)"
+                    f"(solveur Tweety"
+                    + (f" — {cause_text}" if cause_text else "")
+                    + ")"
                 ),
                 target_arg_id="—",
             )
@@ -2166,7 +2203,12 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
     if dung_rejected:
         axes_nontrivial.append(_AXIS_DUNG)
 
-    weak_points = _collect_weak_points(fallacies, dung_rejected, pl_inc, fol_inc)
+    # #3107 — the causes the FOL writer stated, read from the same entries
+    # ``_fol_inconsistent`` counts. Empty when none was stated.
+    fol_causes = _fol_stated_causes(state)
+    weak_points = _collect_weak_points(
+        fallacies, dung_rejected, pl_inc, fol_inc, fol_causes
+    )
     counter_strategies: List[CounterStrategy] = []
     for ca in counters:
         if not isinstance(ca, dict):
@@ -2869,12 +2911,18 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         # écrire, tel quel.
         f"{SPEAKER_NAMING_RULE}\n"
         f"{READING_BASIS_RULE}\n"
-        "- Le verdict formel (Tweety/Dung) est un APPUI, jamais un titre : formule-\n"
-        "  le comme « l'analyse formelle invalide ce raisonnement » (théorie\n"
-        "  inconsistante), « l'analyse formelle confirme la cohérence de ce\n"
-        "  raisonnement » (théorie consistante — un résultat aussi) ou « le cadre\n"
-        "  d'argumentation isole cette revendication comme rejetée » — toujours\n"
-        "  au service du jugement du lecteur, jamais en sous-section isolée.\n"
+        "- Le verdict formel (Tweety/Dung) est un APPUI, jamais un titre. Quand une\n"
+        "  théorie du premier ordre est inconsistante, DIS LA CAUSE que le constat\n"
+        "  porte (elle est écrite dans CE QUE LES CADRES STRUCTURÉS ÉTABLISSENT :\n"
+        "  « contradiction entre voix », « auto-contradiction de … », « contradiction\n"
+        "  entre unités sources », « cause non établie ») ; n'attribue jamais cette\n"
+        "  inconsistance au raisonnement d'un locuteur en particulier, et jamais à\n"
+        "  la portée des quantificateurs quand la cause porte une paire de\n"
+        "  littéraux ground. « l'analyse formelle confirme la cohérence de ce\n"
+        "  raisonnement » (théorie consistante — un résultat aussi) et « le cadre\n"
+        "  d'argumentation isole cette revendication comme rejetée » restent\n"
+        "  disponibles — toujours au service du jugement du lecteur, jamais en\n"
+        "  sous-section isolée.\n"
         "- Respecte STRICTEMENT le plafond de claim de la bande : ne formule rien\n"
         "  au-delà de ce qu'elle autorise.\n"
         "- JARGON INTERNE INTERDIT dans la prose : ne recopie JAMAIS un\n"

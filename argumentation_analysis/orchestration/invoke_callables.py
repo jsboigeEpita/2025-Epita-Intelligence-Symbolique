@@ -61,6 +61,7 @@ from argumentation_analysis.core.endpoint_compat import (
     sampling_kwargs,
 )
 from argumentation_analysis.services.llm_cache import LLMCacheMiss
+from argumentation_analysis.orchestration.fol_cause import classify_inconsistency
 from argumentation_analysis.orchestration.kb_atom_renaming import rename_atoms_apart
 from argumentation_analysis.orchestration.selection import (
     SelectableUnit,
@@ -9866,6 +9867,12 @@ async def _invoke_fol_reasoning(
         str(f).strip() for f in (context.get("formulas") or []) if f
     ]
     formulas: Optional[List[str]] = None
+    # #3107 — where each formula came from, aligned with ``formulas``: the
+    # source unit id(s) of the translation batch that produced it. A batch of
+    # several texts names them ALL (the model returns one flat list per batch,
+    # so a single unit would be a fabrication); formulas whose origin this
+    # phase does not know (upstream NL-to-logic) keep an empty entry.
+    formula_units: List[List[str]] = []
     fol_metadata_shared: Dict[str, Any] = {}
     # #900/#939: Default to eprover (robust), tweety is fallback of last resort
     fol_solver_choice = context.get("fol_solver", "eprover")
@@ -10154,6 +10161,16 @@ async def _invoke_fol_reasoning(
                                         f"FOL Pass 2 batch {_idx} failed: {_res}"
                                     )
                                     continue
+                                # #3107 — the batch this answer came from: its
+                                # texts are the provenance of its formulas.
+                                _batch_units = [
+                                    u.unit_id
+                                    for u in _fol_selection.selected[
+                                        _idx
+                                        * _fol_batch_size : (_idx + 1)
+                                        * _fol_batch_size
+                                    ]
+                                ]
                                 for f in _res:
                                     f = (
                                         f.strip()
@@ -10162,6 +10179,7 @@ async def _invoke_fol_reasoning(
                                     )
                                     if f and f not in formulas:
                                         formulas.append(f)
+                                        formula_units.append(list(_batch_units))
 
                             if formulas:
                                 fol_metrics["pass2_candidates"] = len(formulas)
@@ -10182,6 +10200,9 @@ async def _invoke_fol_reasoning(
             for f in upstream_formulas:
                 if f and f not in formulas:
                     formulas.append(f)
+                    # #3107 — upstream NL-to-logic names no unit here: the
+                    # absence is recorded, not invented.
+                    formula_units.append([])
 
             # Fallback: on-the-fly NL translation only if nothing produced yet
             if not formulas:
@@ -10201,11 +10222,19 @@ async def _invoke_fol_reasoning(
                     valid = [t for t in batch.translations if t.is_valid]
                     if valid:
                         formulas = []
+                        # #3107 — the NL translator answers one batch for its
+                        # head of texts; the batch is the provenance boundary,
+                        # and the cause names it as coarse rather than
+                        # pretending to know which text produced which formula.
+                        _nl_batch_units = [
+                            u.unit_id for u in _fol_selection.selected[:4]
+                        ]
                         for t in valid:
                             for f in t.formula.split(";"):
                                 f = f.strip()
                                 if f:
                                     formulas.append(f)
+                                    formula_units.append(list(_nl_batch_units))
                         # #3030 residual (coord review R1088): mirror of the
                         # PL gesture — when this arm produces, re-record the
                         # coverage over the units it ATTEMPTED (the 4-unit
@@ -10254,6 +10283,7 @@ async def _invoke_fol_reasoning(
 
     if not isinstance(formulas, list):
         formulas = [str(formulas)]
+        formula_units = [[]]
 
     # #1631: `inferences` carries what the FOL reasoning produced — nothing
     # else. It used to be filled, BEFORE any formula reached Tweety, with one
@@ -10271,6 +10301,33 @@ async def _invoke_fol_reasoning(
     # Tweety can do deduction; wiring it is a separate question. Until then the
     # honest value is the empty list, and the field marks the place.
     inferences: List[str] = []
+
+    def _cause_for(
+        _checked: List[str],
+        _checked_units: List[List[str]],
+        _verdict: Optional[bool],
+    ) -> Dict[str, Any]:
+        """#3107 — the cause of an INCONSISTENT verdict, from facts in hand.
+
+        Nothing is returned for a consistent or undecided theory: there is no
+        cause to state, and an empty cause on a consistent theory would read
+        as one. Speakers come only from what an extractor recorded
+        (``argument_provenance[unit]["speaker"]``) — the branch is never
+        invented, and a missing speaker lowers the claim to source units.
+        """
+        if _verdict is not False:
+            return {}
+        _speakers: Dict[str, Any] = {}
+        _prov = getattr(state_obj, "argument_provenance", None)
+        if isinstance(_prov, dict):
+            for _uid, _entry in _prov.items():
+                if isinstance(_entry, dict) and isinstance(_entry.get("speaker"), str):
+                    _speakers[str(_uid)] = _entry["speaker"]
+        return {
+            "consistency_cause": classify_inconsistency(
+                _checked, _checked_units, _speakers
+            )
+        }
 
     # Track B #1278: gate fol_handler.py:830 from the caller. When NO real FOL
     # formula was translated from the source arguments, do NOT hand an empty
@@ -10414,6 +10471,11 @@ async def _invoke_fol_reasoning(
             len(valid_formulas),
             len(formulas),
         )
+        # #3107 — the survivors' provenance, read BEFORE the renaming below
+        # rewrites their text: the alignment is by formula, and the formulas
+        # are unique (the merge dedups on the string).
+        _unit_of = {str(_f): _u for _f, _u in zip(formulas or [], formula_units)}
+        survivor_units = [_unit_of.get(str(_f), []) for _f in valid_formulas]
         surv_meta = FOLLogicAgent.extract_fol_metadata(valid_formulas)
         surv_signature = surv_meta["signature_lines"]
         # #2468: the belief set and the report pair the signature with the
@@ -10460,6 +10522,12 @@ async def _invoke_fol_reasoning(
             "isolation_retry": True,
             "rejected_count": len(rejected_formulas),
             "fol_metrics": fol_metrics,
+            # #3107 — each surviving formula keeps the unit(s) it came from.
+            "formula_sources": [list(_u) for _u in survivor_units],
+            # #3107 — an inconsistent survivor set states its cause too;
+            # dropping it here would silence exactly the path taken when the
+            # combined theory failed to parse.
+            **_cause_for(valid_formulas, survivor_units, iso_consistent),
             **({"strategic_objective_ids": _strat_ids_fol} if _strat_ids_fol else {}),
         }
 
@@ -10553,6 +10621,12 @@ async def _invoke_fol_reasoning(
             "logic_type": "first_order",
             "argument_count": len(args),
             "fol_metrics": fol_metrics,
+            # #3107 — each formula keeps the unit(s) it came from.
+            "formula_sources": [list(_u) for _u in formula_units],
+            # #3107 — an inconsistent theory states WHY, from its own
+            # formulas and their source units: the acts then write the cause
+            # instead of inferring "quantifier scope" from the verdict.
+            **_cause_for(formulas, formula_units, is_consistent),
             **(
                 {"fol_backend_comparison": fol_backend_comparison}
                 if fol_backend_comparison is not None
