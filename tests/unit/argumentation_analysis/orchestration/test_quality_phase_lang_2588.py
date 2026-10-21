@@ -22,6 +22,9 @@ import asyncio
 from typing import Any, Dict
 from unittest.mock import patch
 
+import pytest
+
+from argumentation_analysis.agents.core import text_scoring
 from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_quality_evaluator,
 )
@@ -69,6 +72,11 @@ def _clarte_comment(output: Dict[str, Any], arg_id: str = "arg_1") -> str:
     return output["per_argument_scores"][arg_id]["rapport_detaille"]["clarte"]
 
 
+@pytest.mark.skipif(
+    text_scoring.degraded_reason("en") is not None,
+    reason="English Flesch degraded on this seat (cmudict absent) — #3093; "
+    "the degraded twin below carries the absent case",
+)
 def test_short_argument_inherits_the_document_flesch_scale():
     """Le témoin demandé au 2ᵉ tour : la formule du document, pas l'heuristique."""
     output = _run(
@@ -77,6 +85,27 @@ def test_short_argument_inherits_the_document_flesch_scale():
     comment = _clarte_comment(output)
     assert "Flesch en" in comment, comment
     assert "langue du document" in comment, comment
+    assert "heuristique" not in comment, comment
+
+
+@pytest.mark.skipif(
+    text_scoring.degraded_reason("en") is None,
+    reason="corpus provisioned on this seat — the measured twin above carries "
+    "the provisioned case (#3093)",
+)
+def test_short_argument_states_the_named_degrade_when_the_instrument_is_absent():
+    """#3093 x #1019 : instrument absent ⇒ dégradation nommée, pas d'heuristique.
+
+    La langue EST décidée (celle du document) ; c'est l'instrument anglais
+    qui manque. Le commentaire le dit — il ne remplace pas la mesure par
+    l'heuristique « mots courts », qui se présenterait comme un Flesch.
+    """
+    output = _run(
+        EN_DOCUMENT, [{"text": SHORT_EN_ARGUMENT, "source_quote": NOT_IN_DOCUMENT}]
+    )
+    comment = _clarte_comment(output)
+    assert "indisponible" in comment, comment
+    assert "cmudict-missing" in comment, comment
     assert "heuristique" not in comment, comment
 
 

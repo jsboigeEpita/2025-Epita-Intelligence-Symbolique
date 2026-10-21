@@ -464,6 +464,17 @@ def detect_clarte(text: str, lang: Optional[str] = None) -> Tuple[float, str]:
             return 0.5, comment + "Texte moyennement clair."
         else:
             return 0.2, comment + "Texte difficile à comprendre."
+    degraded = text_scoring.degraded_reason(used_lang)
+    if degraded:
+        # #3093 x #1019 — the instrument is absent, the text is NOT
+        # unmeasurable-by-nature: a neutral score with the cause named,
+        # never the word-length heuristic below presenting its number as a
+        # measurement (a silent substitute is the defect #1019 forbids).
+        return (
+            0.5,
+            f"Lisibilité non mesurée (Flesch {used_lang} indisponible : "
+            f"{degraded}) — valeur neutre, instrument absent.",
+        )
     # No Flesch constants for the detected language: named fallback heuristic.
     words = text.split()
     avg_len = sum(len(w) for w in words) / max(len(words), 1)
