@@ -34,6 +34,8 @@ SITE_LABELS_FR = {
     "fallacy_widenet": "détection de sophismes — large filet",
     "fallacy_descent": "détection de sophismes — descente",
     "fallacy_one_shot": "détection de sophismes — repli en un appel",
+    # #3105 — the per-argument pass reads UNITS, not the document head.
+    "fallacy_per_argument": "détection de sophismes — lecture par argument",
 }
 
 # The French label a reader understands, per producer of the run's units —
@@ -69,6 +71,13 @@ class ReadingLine:
     # by whole-unit specialists: a line that names its own results lets the
     # narrative tie the bound to them, and to nothing else.
     fed: str = ""
+    # #3105 — a units-reading site (the per-argument pass) speaks in units
+    # and span, not in a document head: "5 unités sur 10" says how much of
+    # the population it read, ``span_lo``/``span_hi`` where those units sit.
+    units: int = 0
+    unit_total: int = 0
+    span_lo: int = 0
+    span_hi: int = 0
 
 
 @dataclass
@@ -92,6 +101,62 @@ class ReadingRecord:
             for ln in self.lines
             if ln.status == "selected" and 0 < ln.window < self.source_chars
         ]
+
+
+def _fallacy_counts(state: Any) -> "tuple[Dict[str, int], int, int]":
+    """#3105 — how the state's retained fallacies split across the paths.
+
+    Returns ``(per_path, untagged, shared)`` from each entry's
+    ``detection_paths`` tag. An entry the merge never tagged (a legacy
+    state, or a writer that dropped the tag) is counted as ``untagged``,
+    never credited to a path — crediting the total to the descent is the
+    #3105 defect itself.
+    """
+    per_path: Dict[str, int] = {}
+    untagged = 0
+    shared = 0
+    fallacies = getattr(state, "identified_fallacies", None) or {}
+    entries = fallacies.values() if isinstance(fallacies, dict) else fallacies
+    for f in entries:
+        paths = f.get("detection_paths") if isinstance(f, dict) else None
+        if not isinstance(paths, list) or not paths:
+            untagged += 1
+            continue
+        seen = {str(p) for p in paths}
+        if len(seen) > 1:
+            shared += 1
+        for p in seen:
+            per_path[p] = per_path.get(p, 0) + 1
+    return per_path, untagged, shared
+
+
+def _count_fr(n: int) -> str:
+    """« 1 retenu » / « 3 retenus » / « 0 retenu »."""
+    return f"{n} retenu" + ("s" if n > 1 else "")
+
+
+def _fallacy_fed(site: str, state: Any) -> str:
+    """#3105 — one fallacy site's OWN share, from the state's tags."""
+    per_path, untagged, shared = _fallacy_counts(state)
+    n = per_path.get(site, 0)
+    if site == "fallacy_descent":
+        base = (
+            "les procédés confirmés de la détection de sophismes " f"({_count_fr(n)})"
+        )
+        other = "la lecture par argument"
+    elif site == "fallacy_one_shot":
+        base = f"le repli en un appel de la détection de sophismes ({_count_fr(n)})"
+        other = "la lecture par argument"
+    else:
+        base = f"les procédés retenus de la lecture par argument ({_count_fr(n)})"
+        other = "la descente"
+    if shared:
+        base += f" — dont {shared} partagé{'s' if shared > 1 else ''} avec {other}"
+    if untagged and site == "fallacy_descent":
+        # Legacy states carry no tag: say how many are unattributed rather
+        # than let the descent absorb them silently (R1101 dump).
+        base += f" — {untagged} sans origine enregistrée"
+    return base
 
 
 def _site_fed(site: str, state: Any) -> str:
@@ -118,11 +183,8 @@ def _site_fed(site: str, state: Any) -> str:
         return f"la traduction FOL et ses {n} verdict(s) formel(s)"
     if site == "fallacy_widenet":
         return "les candidats de la détection de sophismes (phase large filet)"
-    if site == "fallacy_descent":
-        n = len(getattr(state, "identified_fallacies", None) or {})
-        return "les procédés confirmés de la détection de sophismes " f"({n} retenus)"
-    if site == "fallacy_one_shot":
-        return "le repli en un appel de la détection de sophismes"
+    if site in ("fallacy_descent", "fallacy_one_shot", "fallacy_per_argument"):
+        return _fallacy_fed(site, state)
     if site == "counter_argument":
         n = len(getattr(state, "counter_arguments", None) or [])
         return f"la contre-argumentation ({n} contre-argument(s))"
@@ -194,6 +256,10 @@ def build_reading_record(state: Any) -> ReadingRecord:
                     offset=int(entry.get("offset", 0) or 0),
                     window=int(entry.get("window", 0) or 0),
                     fed=_site_fed(str(site), state),
+                    units=int(entry.get("units", 0) or 0),
+                    unit_total=int(entry.get("unit_total", 0) or 0),
+                    span_lo=int(entry.get("span_lo", 0) or 0),
+                    span_hi=int(entry.get("span_hi", 0) or 0),
                 )
             )
     record.basis = _whole_text_basis(state, record.source_chars)
@@ -206,6 +272,19 @@ def format_reading_line(line: ReadingLine, source_chars: int) -> str:
     if line.status != "selected":
         phrase = _STATUS_PHRASES_FR.get(line.status, line.status)
         base = f"« {label} » : {phrase}"
+    elif line.units and line.unit_total and 0 < source_chars:
+        # #3105 — a units-reading site: it read units, not a document head,
+        # and says both how many and where they sit.
+        if line.span_hi or line.span_lo:
+            span = (
+                f"étendue {line.span_lo / source_chars:.2f}–"
+                f"{line.span_hi / source_chars:.2f} du texte"
+            )
+        else:
+            span = "étendue non dite"
+        base = (
+            f"« {label} » : {line.units} unités sur {line.unit_total} lues " f"({span})"
+        )
     elif 0 < source_chars and line.window >= source_chars:
         base = (
             f"« {label} » : document lu en entier "
