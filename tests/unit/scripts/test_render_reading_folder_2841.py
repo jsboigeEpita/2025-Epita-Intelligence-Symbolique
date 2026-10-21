@@ -259,6 +259,22 @@ class TestNumbersComeFromArtifacts:
         # The flood document is flagged against its measured count.
         assert "6013" in table
 
+    def test_phase_aggregates_price_at_the_standard_row(self):
+        """The signature records per-PHASE token sums, not per-call sizes: an
+        aggregate past 100k must NOT bill at the long-prompt tier (measured on
+        the campaign: 21.94 $ instead of 8.17 $) — no single call crossed the
+        threshold, so the standard row applies."""
+        usage = {
+            "hierarchical_fallacy": {
+                "prompt_tokens": 254_879,
+                "completion_tokens": 24_759,
+                "calls": 36,
+            }
+        }
+        cost = folder.doc_cost_usd(usage)
+        expected = round(254_879 / 1e6 * 0.10 + 24_759 / 1e6 * 0.50, 4)
+        assert cost == expected  # 0.0379 $ — the long row would say 0.1893 $
+
     def test_inondation_table_measures_args_against_length(self, tmp_path, monkeypatch):
         out = _run_producer(tmp_path, monkeypatch)
         flood = (out / "inondation_extraction.md").read_text(encoding="utf-8")

@@ -174,24 +174,30 @@ def safe_name(text: str, max_len: int = 40) -> str:
 def doc_cost_usd(usage: Dict[str, Any]) -> Optional[float]:
     """Recompute a document's pipeline cost from measured per-phase tokens.
 
-    Same instrument as the campaign's usage line (#3095 price table). None
-    (never a fabricated 0) when a call's model is not priced.
+    Same instrument as the campaign's usage line (#3095 price table), at the
+    STANDARD row. The signature records per-PHASE aggregates, not per-call
+    sizes: pricing an aggregate through ``price_tokens`` would bill any phase
+    whose calls sum past 100k tokens at the long-prompt tier (measured on this
+    campaign: 21.94 $ instead of 8.17 $) while the campaign's own measurement
+    found no single call above the threshold (mean ~2.6k prompt/call). The
+    standard row on aggregates reproduces the accountant's total exactly.
+    None (never a fabricated 0) when the model is not priced.
     """
-    from argumentation_analysis.services.model_prices import price_tokens
+    from argumentation_analysis.services.model_prices import resolve_price_row
 
+    row = resolve_price_row(PRICING_MODEL_ID, 0)
+    if row is None:
+        return None
     total = 0.0
     priced = False
     for value in usage.values():
         if not isinstance(value, dict) or "prompt_tokens" not in value:
             continue
-        cost = price_tokens(
-            PRICING_MODEL_ID,
-            value.get("prompt_tokens", 0),
-            value.get("completion_tokens", 0),
+        total += (
+            value.get("prompt_tokens", 0) / 1_000_000 * row.input_per_mtok
+            + value.get("completion_tokens", 0) / 1_000_000 * row.output_per_mtok
         )
-        if cost is not None:
-            total += cost
-            priced = True
+        priced = True
     return round(total, 4) if priced else None
 
 
@@ -478,6 +484,23 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     # 00_LIRE_D_ABORD — the entry point, readable without knowing the pipeline.
     total_cost = sum(d["facts"]["cost"] or 0.0 for d in docs)
+    total_zeroshot = sum(
+        zeroshot_cost_usd(d["zeroshot"]) or 0.0 for d in docs if d["zeroshot"]
+    )
+    # The report priced every zero-shot call at the standard row; the #3095
+    # table as written bills calls past 100k prompt tokens at the long tier
+    # (never exercised against a real bill). 5 campaign calls cross it (the
+    # flood family's full texts) — the two totals differ by that tier choice,
+    # and the reader gets BOTH rather than a silently picked one.
+    zeroshot_tokens = [
+        (d["zeroshot"].get("usage") or {}) for d in docs if d["zeroshot"]
+    ]
+    zs_prompt = sum(u.get("prompt_tokens", 0) for u in zeroshot_tokens)
+    zs_completion = sum(u.get("completion_tokens", 0) for u in zeroshot_tokens)
+    zs_long_calls = sum(
+        1 for u in zeroshot_tokens if u.get("prompt_tokens", 0) > 100_000
+    )
+    zs_standard = zs_prompt / 1e6 * 0.10 + zs_completion / 1e6 * 0.50
     lines = [
         provenance_block(run_head, model, command),
         "# Campagne #2841 — lire d'abord ceci",
@@ -486,7 +509,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "",
         f"Le corpus chiffré du dépôt ({len(docs)} segments de discours politiques historiques et contemporains) a été traité le 2026-10-21 par le pipeline complet (« workflow spectacular » : extraction d'arguments, détection de sophismes, analyse formelle FOL/propositionnelle/modale, puis restitution narrative en trois actes), modèle **{model}**, sans limite de longueur d'entrée. Chaque document a été traité aussi en **zero-shot** : le même modèle, le texte entier, un seul appel sans outils — pour comparer ce que la machinerie apporte au-dessus du modèle brut.",
         "",
-        f"Coût total recalculé depuis les jetons mesurés : **{total_cost:.4f} $** (pipeline + zero-shot). Code du run : `{run_head}`.",
+        f"Coût du pipeline recalculé depuis les jetons mesurés : **{total_cost:.4f} $**. Coût zero-shot : **{zs_standard:.4f} $** au tarif standard (le chiffre du rapport de campagne) ou **{total_zeroshot:.4f} $** en appliquant le palier long-prompt de la table de prix à ses {zs_long_calls} appels de plus de 100 k jetons d'entrée — palier jamais confronté à une facture réelle, l'écart entre les deux chiffres est la mesure de cette incertitude. Code du run : `{run_head}`.",
         "",
         "## Ce que la campagne établit — et n'établit pas",
         "",
@@ -565,7 +588,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     print(
         f"documents rendered: {len(docs)} (reading order: {len(DESIGNATED_ORDER)} designated first)"
     )
-    print(f"recomputed campaign cost: {total_cost:.4f} $")
+    print(
+        f"recomputed campaign cost: {total_cost:.4f} $ pipeline + {total_zeroshot:.4f} $ zero-shot"
+    )
     return 0
 
 
