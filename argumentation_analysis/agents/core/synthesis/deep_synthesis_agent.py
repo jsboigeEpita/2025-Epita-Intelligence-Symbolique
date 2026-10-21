@@ -362,6 +362,9 @@ class DeepSynthesisAgent(BaseAgent):
         report.value_gates = self.validate_value_gates(
             report.grounded_synthesis, report.populated_artifact_fields
         )
+        # #3123 — the deterministic check on what the writer actually produced
+        # (both texts): flags, never rewrites.
+        self.attach_read_license(report, state)
 
         # Metadata
         report.total_state_fields = self._count_state_fields(state)
@@ -595,6 +598,24 @@ class DeepSynthesisAgent(BaseAgent):
 
     @staticmethod
     def _build_formal_findings(state: Any) -> List[FormalFinding]:
+        # #3123 — Section 9 used to drop the cause: the writer stored it beside
+        # the verdict, the briefing carried it, and this builder rebuilt
+        # ``results=[verdict]`` — so the one section that writes prose lost the
+        # fact that says whose inconsistency it is. Lazy import, same reason as
+        # ``build_artifact_briefing`` (#2352).
+        from argumentation_analysis.orchestration.fol_cause import cause_phrase
+
+        def _with_cause(result_entry: Any, verdict: str) -> str:
+            cause = (
+                result_entry.get("consistency_cause")
+                if isinstance(result_entry, dict)
+                else None
+            )
+            if not isinstance(cause, dict) or not cause.get("cause"):
+                return verdict
+            phrase = cause_phrase(cause)
+            return f"{verdict} — {phrase}" if verdict else phrase
+
         findings = []
         # PL results — #1636: only the keys that the real PL writer actually
         # stores (``formulas``, ``satisfiable``, ``model``, ``axiom_count``,
@@ -606,12 +627,13 @@ class DeepSynthesisAgent(BaseAgent):
         # content of "axioms" here. ``satisfiable`` is the tri-state verdict.
         for r in getattr(state, "propositional_analysis_results", []):
             verdict = DeepSynthesisAgent._verdict_label_pl(r)
+            _result = _with_cause(r, verdict)
             findings.append(
                 FormalFinding(
                     logic_type="PL",
                     axioms=list(r.get("formulas", []) or []),
                     queries=[],
-                    results=[verdict] if verdict else [],
+                    results=[_result] if _result else [],
                     inconsistency_measures={},
                     linked_args=[],
                 )
@@ -622,12 +644,13 @@ class DeepSynthesisAgent(BaseAgent):
         # tri-state verdict label preserving None vs True vs False.
         for r in getattr(state, "fol_analysis_results", []):
             verdict = DeepSynthesisAgent._verdict_label_fol(r)
+            _result = _with_cause(r, verdict)
             findings.append(
                 FormalFinding(
                     logic_type="FOL",
                     axioms=list(r.get("formulas", []) or []),
                     queries=[],
-                    results=[verdict] if verdict else [],
+                    results=[_result] if _result else [],
                     inconsistency_measures={},
                     linked_args=[],
                 )
@@ -698,6 +721,11 @@ class DeepSynthesisAgent(BaseAgent):
         if df is None:
             return DungStructure()
         grounded = by_semantics.get("grounded") or [[]]
+
+        def _count(key: str) -> Optional[int]:
+            value = df.get(key)
+            return value if isinstance(value, int) else None
+
         return DungStructure(
             framework_name=df.get("name", ""),
             arguments=df.get("arguments", []),
@@ -707,6 +735,10 @@ class DeepSynthesisAgent(BaseAgent):
             stable_extensions=by_semantics.get("stable", []),
             computed_semantics=sorted(by_semantics),
             interpretation=DeepSynthesisAgent._interpret_dung(df, by_semantics),
+            # #3123 — the retention accounting reaches Section 9 instead of
+            # dying in the state entry.
+            attacks_submitted=_count("attacks_submitted"),
+            attacks_retained=_count("attacks_retained"),
         )
 
     @staticmethod
@@ -1533,12 +1565,34 @@ class DeepSynthesisAgent(BaseAgent):
             # #2672: only the extensions this entry computed; a formalism
             # sidecar's own keys are not Dung extensions.
             lists = extension_lists(df) or {}
+            _df_args = df.get("arguments", []) or []
+            _df_attacks = df.get("attacks", []) or []
+            # #3123 — breadth is not robustness. The density (attacks per
+            # argument in the EVALUATED graph) and the retention accounting
+            # (#1698: submitted vs retained) were both in the state and never
+            # reached the writer, so an extension covering everything on a
+            # graph with fewer attacks than arguments read as resilience.
+            _density = (
+                f" attack_density={len(_df_attacks) / len(_df_args):.2f}"
+                if _df_args
+                else ""
+            )
+            _submitted = df.get("attacks_submitted")
+            _retained = df.get("attacks_retained")
+            _retention = (
+                f" attacks_retained={_retained if isinstance(_retained, int) else '?'}"
+                f"/submitted={_submitted if isinstance(_submitted, int) else '?'}"
+                if isinstance(_submitted, int) or isinstance(_retained, int)
+                else ""
+            )
             _add(
                 "dung_frameworks",
                 df_id,
                 f"name={df.get('name', df_id)} "
-                f"args={len(df.get('arguments', []))} "
-                f"attacks={len(df.get('attacks', []))}"
+                f"args={len(_df_args)} "
+                f"attacks={len(_df_attacks)}"
+                + _density
+                + _retention
                 + "".join(f" {sem}_extensions={exts}" for sem, exts in lists.items()),
             )
 
@@ -1587,6 +1641,42 @@ class DeepSynthesisAgent(BaseAgent):
                     f"score={v.score} methods={', '.join(v.methods)}",
                 )
 
+        # #3123 — what the numbers above license. The briefing used to hand
+        # breadth and a bare cause without saying what either licenses, and
+        # the synthesis supplied the missing inference itself: breadth → "the
+        # argumentation is robust", between_sources → "the discourse is
+        # incoherent". The rule states the limit; the deterministic check
+        # (reading_license.check_reading_license) flags what still slips.
+        lines.append("")
+        lines.append("READING RULES (what the artifacts above license):")
+        lines.append(
+            "- attack_density = attacks / arguments in the evaluated graph. "
+            "Below "
+            f"{DeepSynthesisAgent.SPARSE_ATTACK_DENSITY:g}, the frame carries "
+            "fewer attacks than arguments: the breadth of an extension there "
+            "measures the sparsity of the frame (or edges dropped before it "
+            "was built), NOT the discourse's robustness."
+        )
+        lines.append(
+            "- cause=self_contradiction: the conflict sits inside one voice — "
+            "it may be attributed to that voice."
+        )
+        lines.append(
+            "- cause=between_voices: two speakers disagree; neither one's own "
+            "reasoning is shown inconsistent."
+        )
+        lines.append(
+            "- cause=between_sources / batch_attribution: the conflict sits "
+            "between source units (or inside an unsplittable translation "
+            "batch) with no recorded speaker. It is NOT evidence that the "
+            "discourse is incoherent, and says nothing about any single "
+            "speaker's commitments."
+        )
+        lines.append(
+            "- cause=undetermined: no conflict site is established — state the "
+            "verdict, never a cause."
+        )
+
         return "\n".join(lines)
 
     async def grounded_transversal_synthesis(
@@ -1630,6 +1720,12 @@ class DeepSynthesisAgent(BaseAgent):
         except Exception as e:
             logger.warning(f"Grounded transversal synthesis failed: {e}")
             return ""
+
+    #: #3123 — below one attack per argument, the breadth of an extension
+    #: measures the frame's sparsity, not the discourse's resistance. ONE
+    #: threshold: the briefing rule states it and the read-license check
+    #: measures against it, so the reader and the check never disagree.
+    SPARSE_ATTACK_DENSITY: ClassVar[float] = 1.0
 
     REQUIRED_GROUNDED_SECTIONS: ClassVar[List[str]] = [
         "## Transversal Patterns",
@@ -1698,6 +1794,34 @@ class DeepSynthesisAgent(BaseAgent):
             "vg4_transversal_insight": {"pass": vg4_pass},
             "all_pass": vg1_pass and vg2_pass and vg3_pass and vg4_pass,
         }
+
+    @staticmethod
+    def attach_read_license(report: DeepSynthesisReport, state: Any) -> Dict[str, Any]:
+        """#3123 — run the deterministic read-license check on both texts.
+
+        Stored beside the value gates, which ``_write_deep_synthesis_to_state``
+        already persists on ``state.workflow_results`` — so the flags reach the
+        state without a new writer, and a reader can tell a misread synthesis
+        from a clean one without re-reading the prose.
+        """
+        from argumentation_analysis.agents.core.synthesis.reading_license import (
+            check_reading_license,
+        )
+
+        license_report: Dict[str, Any] = {
+            "grounded": check_reading_license(
+                report.grounded_synthesis or "",
+                state,
+                dense_threshold=DeepSynthesisAgent.SPARSE_ATTACK_DENSITY,
+            ),
+            "final_synthesis": check_reading_license(
+                report.final_synthesis or "",
+                state,
+                dense_threshold=DeepSynthesisAgent.SPARSE_ATTACK_DENSITY,
+            ),
+        }
+        report.value_gates["read_license"] = license_report
+        return license_report
 
     async def _llm_convergence_prose(self, state: Any) -> str:
         """Track GG #644 — LLM prose for the convergence section.
@@ -1852,6 +1976,29 @@ class DeepSynthesisAgent(BaseAgent):
                 f"  {_families_line}"
                 f"Dung grounded extension: {grounded_line}.\n"
             )
+            # #3123 — breadth is not robustness: the density and the retention
+            # accounting ride WITH the extension, and a sparse frame says so
+            # before the writer can turn breadth into a resilience claim.
+            if _ds.attack_density is not None:
+                _measure = (
+                    f"  Attack density: {_ds.attack_density:.2f} "
+                    f"({len(_ds.attacks)} attacks / {len(_ds.arguments)} arguments"
+                )
+                if (
+                    _ds.attacks_submitted is not None
+                    and _ds.attacks_retained is not None
+                ):
+                    _measure += (
+                        f"; {_ds.attacks_retained} retained of "
+                        f"{_ds.attacks_submitted} submitted"
+                    )
+                _measure += ")."
+                if _ds.attack_density < DeepSynthesisAgent.SPARSE_ATTACK_DENSITY:
+                    _measure += (
+                        " Breadth of the extension here measures the frame's "
+                        "sparsity, NOT the discourse's robustness."
+                    )
+                rhetoric_section += _measure + "\n"
             if report.fallacy_diagnoses:
                 top_3 = sorted(
                     report.fallacy_diagnoses,
