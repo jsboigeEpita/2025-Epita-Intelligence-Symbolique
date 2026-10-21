@@ -103,16 +103,30 @@ def set_by_caller(name: str) -> bool:
     )
 
 
-def load_env_file(path: Union[str, Path]) -> bool:
+def load_env_file(path: Union[str, Path], fill_only: bool = False) -> bool:
     """Load ``path`` into os.environ, except the variables the caller set.
 
     Its values replace any value set in-process before (another ``.env``), never
     a value the process was started with (#2472). Returns True when the file
     declares at least one variable, as ``load_dotenv`` does.
+
+    ``fill_only=True`` is the import-time contract (#3116): a name the process
+    already carries is left alone, whatever set it and whenever — so an
+    auto-load triggered by an unrelated import can never stomp a value a caller
+    imposed after ``_CALLER_ENVIRONMENT`` was captured. Names the process lacks
+    are still filled, which is what importing ``core.environment`` for
+    "auto-activation" promises its consumers (#2130). Explicit constructions
+    keep the replacing policy (#1295).
     """
     values = dotenv_values(dotenv_path=str(path))
     for name, value in values.items():
-        if value is not None and not set_by_caller(name):
+        if value is None:
+            continue
+        if fill_only:
+            if name not in os.environ:
+                os.environ[name] = value
+            continue
+        if not set_by_caller(name):
             os.environ[name] = value
     return bool(values)
 
@@ -141,9 +155,13 @@ class EnvironmentManager:
        walked up from this module, past the checkout, and loaded the first .env
        it met, above the checkout too (a worktree under D: loaded another
        project's .env). A checkout without its .env is a keyless run.
+
+    ``fill_only=True`` is for the import-time auto-loads (#3116): they fill the
+    names the process lacks and never replace one it carries. An explicit
+    construction keeps the full policy above.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, fill_only: bool = False) -> None:
         self.dotenv_path: str = ""
         self.dotenv_loaded: bool = False
 
@@ -155,7 +173,7 @@ class EnvironmentManager:
         if root_env is not None and root_env.exists():
             self.dotenv_path = str(root_env)
             self._check_caller_divergence(root_env)
-            self.dotenv_loaded = load_env_file(root_env)
+            self.dotenv_loaded = load_env_file(root_env, fill_only=fill_only)
             if repo_root is not None:
                 self._check_secondary_divergence(repo_root)
 

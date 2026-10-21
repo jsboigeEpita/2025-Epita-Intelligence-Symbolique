@@ -175,7 +175,11 @@ if __name__ != "__main__":
     try:
         from argumentation_analysis.config.env_loader import EnvironmentManager
 
-        _em = EnvironmentManager()
+        # fill_only: this block is an auto-load fired by whichever unrelated
+        # import happens first. It fills the names the process lacks (#2130)
+        # and never replaces a value a caller imposed after startup — the
+        # #2352 seat was clobbered exactly here (#3116).
+        _em = EnvironmentManager(fill_only=True)
         if not _em.dotenv_loaded:
             print(
                 "[auto_env] WARNING: aucun .env chargé — les variables qu'il "

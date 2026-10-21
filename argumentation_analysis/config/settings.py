@@ -6,7 +6,10 @@ from pathlib import Path
 
 from argumentation_analysis.config.env_loader import EnvironmentManager
 
-EnvironmentManager()
+# Import-time auto-load: fill the names the process lacks, never replace a
+# value a caller imposed after startup (#3116 — a late first import of this
+# module used to rewrite os.environ over such a value).
+EnvironmentManager(fill_only=True)
 
 # Le défaut de modèle de chat, en UN seul endroit (#2377, DoD item 4).
 # « gpt-5.6-luna » était recopié sur 4 surfaces hors résolveur : les deux

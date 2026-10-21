@@ -47,7 +47,9 @@ if str(project_root) not in sys.path:
 # neutralisée (l'incident : 12 705 appels payés depuis un run keyless).
 from argumentation_analysis.config.env_loader import EnvironmentManager
 
-_environment = EnvironmentManager()
+# Import-time auto-load: fill what the process lacks, never replace a value a
+# caller imposed after startup (#3116 — collecting this module is enough).
+_environment = EnvironmentManager(fill_only=True)
 if _environment.dotenv_path:
     print(f"INFO: Fichier .env chargé depuis {_environment.dotenv_path}")
 else:
