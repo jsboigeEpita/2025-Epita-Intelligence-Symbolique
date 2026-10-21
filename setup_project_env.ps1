@@ -83,6 +83,33 @@ catch {
     exit 1
 }
 
+# 2.2 Provisionnement du corpus NLTK 'cmudict' (#3093)
+#     textstat charge CMUdict paresseusement pour le Flesch anglais et, sur
+#     corpus absent, le TÉLÉCHARGE au run (quiet=True) : une dépendance réseau
+#     non déclarée, levée depuis un constructeur (DebatePlugin). Le code ne
+#     télécharge plus (#3093 : la métrique anglaise dégrade à None avec sa
+#     cause) ; ce step provisionne le corpus une fois, avec l'environnement —
+#     idempotent : ne retélécharge pas un corpus déjà présent.
+Write-Host "[INFO] Provisionnement du corpus NLTK 'cmudict' (Flesch anglais)..." -ForegroundColor Green
+try {
+    conda run -n $EnvName python -c "import nltk; nltk.data.find('corpora/cmudict'); print('[INFO] cmudict deja present.')"
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "[SUCCÈS] Corpus 'cmudict' déjà provisionné (aucun téléchargement)." -ForegroundColor Green
+    }
+    else {
+        conda run -n $EnvName python -c "import nltk; nltk.download('cmudict')"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Le téléchargement du corpus NLTK 'cmudict' a échoué."
+        }
+        Write-Host "[SUCCÈS] Corpus NLTK 'cmudict' provisionné." -ForegroundColor Green
+    }
+}
+catch {
+    Write-Host "[ERREUR] Impossible de provisionner le corpus NLTK 'cmudict'." -ForegroundColor Red
+    Write-Host "Message: $($_.Exception.Message)"
+    exit 1
+}
+
 # 3. Provisioning des outils portables (JDK, etc.) AVANT la configuration de l'environnement
 #    pour permettre au script Python de créer/modifier le fichier .env avec JAVA_HOME.
 Write-Host "[INFO] Lancement du provisioning des outils portables (JDK...)." -ForegroundColor Green
