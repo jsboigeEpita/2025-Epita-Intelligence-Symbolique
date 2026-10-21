@@ -11,9 +11,12 @@ registry is the triage table, not an approval.
 
 Three site classes, read on the AST (never grep — the #1842 pattern):
 
-- ``window`` — a ``selected_text(...)`` call (the #1737 shared mechanism),
-  or a head slice of a text-bearing variable. The reading window decides
-  which part of the document reaches the phase at all.
+- ``window`` — a ``selected_text(...)`` / ``selected_text_and_selection(...)``
+  call (the #1737 shared mechanism; #3136 added the second spelling, which
+  returns the selection as well), or a head slice of a text-bearing
+  variable. The reading window decides which part of the document reaches
+  the phase at all. Both spellings are censused under ``selected_text``:
+  a bounded read must not escape the census by changing its name.
 - ``population_cap`` — a head slice over a collection of arguments, claims,
   fallacies/sophisms or counter-arguments: insertion order decides which
   units reach a specialist.
@@ -49,6 +52,7 @@ from tests.support.tree_walk import iter_tracked_files
 
 ROOT = Path(__file__).resolve().parents[3]
 
+_MECHANISM_MODULE = "argumentation_analysis/core/reading_window.py"
 _TEXT_TOKEN = re.compile(r"text", re.IGNORECASE)
 _UNIT_TOKEN = re.compile(
     r"arg|claim|fallac|sophism|counter|sentence|segment|chunk|premise", re.IGNORECASE
@@ -105,7 +109,10 @@ def _sites_in_tree(tree: ast.Module) -> "list[tuple[str, str, str, int, str]]":
                 if isinstance(func, ast.Attribute)
                 else (func.id if isinstance(func, ast.Name) else None)
             )
-            if name == "selected_text":
+            if name in ("selected_text", "selected_text_and_selection"):
+                # #3136 — the second spelling is the same #1737 mechanism
+                # with the selection returned (the caller amends its own
+                # entry). One base keeps every bounded read in the census.
                 cap = _upper_repr(node.args[1]) if len(node.args) > 1 else "?"
                 found.append(
                     ("selected_text", cap, str(node.lineno), node.lineno, "window")
@@ -135,6 +142,11 @@ def census() -> "dict[tuple[str, str, str, int], tuple[str, int, str]]":
     for path in iter_tracked_files(ROOT):
         rel = path.relative_to(ROOT).as_posix()
         if not rel.startswith("argumentation_analysis/"):
+            continue
+        if rel == _MECHANISM_MODULE:
+            # The shared mechanism's own delegation (#3136 made it two
+            # functions) is not a bounded read: the call sites it serves are
+            # censused at their own modules.
             continue
         tree = _parse_module(path, rel)
         for base, cap, _line_str, lineno, cls in _sites_in_tree(tree):

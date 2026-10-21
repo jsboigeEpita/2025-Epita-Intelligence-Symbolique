@@ -31,7 +31,7 @@ pure, no LLM, no I/O — same input, same selection.
 
 import re
 from dataclasses import dataclass
-from typing import List
+from typing import List, Tuple
 
 _STRIDE = 500
 _PUNCT_RE = re.compile(r"[,;:]")
@@ -166,6 +166,30 @@ def head_selection(text: str, window: int) -> WindowSelection:
     return WindowSelection(0, window, STATUS_SELECTED)
 
 
+def selected_text_and_selection(
+    text: str, window: int, site: str, state: object = None
+) -> Tuple[str, WindowSelection]:
+    """#1737 step 3 — the slice AND the selection that produced it.
+
+    One implementation of the record-or-fail-loud contract; ``selected_text``
+    keeps the slice-only signature every other site uses. A site that must
+    amend its own entry later — #3136: the PL wide-net pass adds the formulas
+    the head produced, after the first record — carries the selection it
+    recorded instead of recomputing one that could drift.
+    """
+    selection = select_reading_head(text, window)
+    if state is not None:
+        recorder = getattr(state, "record_reading_window", None)
+        if recorder is None:
+            raise TypeError(
+                f"reading site '{site}': state {type(state).__name__} has no "
+                "record_reading_window — pass the shared state or None, not "
+                "an unrelated object"
+            )
+        recorder(site, selection)
+    return text[selection.offset : selection.offset + window], selection
+
+
 def selected_text(text: str, window: int, site: str, state: object = None) -> str:
     """#1737 step 3 wiring point: the slice a reading site feeds onward.
 
@@ -178,17 +202,7 @@ def selected_text(text: str, window: int, site: str, state: object = None) -> st
     condition to shrug off: it fails loud (#1019) rather than silently
     dropping the status.
     """
-    selection = select_reading_head(text, window)
-    if state is not None:
-        recorder = getattr(state, "record_reading_window", None)
-        if recorder is None:
-            raise TypeError(
-                f"reading site '{site}': state {type(state).__name__} has no "
-                "record_reading_window — pass the shared state or None, not "
-                "an unrelated object"
-            )
-        recorder(site, selection)
-    return text[selection.offset : selection.offset + window]
+    return selected_text_and_selection(text, window, site, state=state)[0]
 
 
 def reading_state_from_context(context: object) -> object:
