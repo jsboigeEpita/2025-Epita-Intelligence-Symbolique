@@ -81,12 +81,17 @@ class TestExternalFolSolverVerdictReachesState:
         assert len(state.fol_analysis_results) == 1
         assert state.fol_analysis_results[0]["consistent"] is None
 
-    def test_repeated_writes_append_not_overwrite(self):
+    def test_distinct_formula_sets_append_one_entry_each(self):
         # The dead dict branch overwrote scalar keys; the canonical list form
-        # accumulates one entry per solver decision.
+        # accumulates one entry per THEORY. #3106: a re-check of the same
+        # formula list attaches to its entry instead of appending — so this
+        # appends case uses a different formula set (see
+        # test_one_fol_theory_per_formula_set_3106.py for the attaching case).
         state = UnifiedAnalysisState("texte")
         _write_external_fol_solver_to_state(_fol_handler_output(True), state, {})
-        _write_external_fol_solver_to_state(_fol_handler_output(False), state, {})
+        other_set = _fol_handler_output(False)
+        other_set["formulas"] = ["forall x (R(x) -> S(x))"]
+        _write_external_fol_solver_to_state(other_set, state, {})
         assert len(state.fol_analysis_results) == 2
 
     def test_appendix_reads_the_written_verdict(self):

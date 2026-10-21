@@ -2787,6 +2787,81 @@ def _external_provenance(output: dict[str, Any]) -> Optional[str]:
     return provenance
 
 
+def _normalized_formulas(formulas: Any) -> List[str]:
+    """Comparable form of a formula list (#3106) — whitespace only."""
+    if not isinstance(formulas, list):
+        return []
+    return [str(f).strip() for f in formulas]
+
+
+def _attach_external_fol_verdict(
+    state: Any,
+    formulas: Any,
+    consistent: Optional[bool],
+    solver: str,
+    provenance: str,
+) -> bool:
+    """Attach a re-check to the theory it re-ran (#3106); False when none holds it.
+
+    The FOL agent and the external solver step can run the SAME formula list:
+    the second one used to append a second theory, so every reader that counts
+    entries counted two analyses and the synthesis presented them as agreeing.
+    One formula set is one theory — the re-check rides the entry it re-ran, in
+    ``external_checks``, naming its solver and whether it agrees.
+
+    Tri-state (#1019): ``agrees`` is None when either side did not decide. The
+    external verdict wins in the two cases the dispatch names — it diverges from
+    the entry's own verdict, or the entry decided nothing — because a real
+    prover's answer is a decision that must not stay invisible to readers. The
+    verdict it displaced is kept in ``superseded_verdict`` (with its source), so
+    the disagreement is recorded rather than erased. When both sides agree, the
+    entry's verdict stands untouched. A degraded external answer (None) never
+    displaces anything.
+    """
+    entries = getattr(state, "fol_analysis_results", None)
+    if not isinstance(entries, list):
+        return False
+    wanted = _normalized_formulas(formulas)
+    if not wanted:
+        # A degenerate (empty) list identifies no theory: attaching there would
+        # merge unrelated degraded entries, so it appends like any other set.
+        return False
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        if _normalized_formulas(entry.get("formulas")) != wanted:
+            continue
+        previous = entry.get("consistent")
+        agrees = (
+            None
+            if previous is None or consistent is None
+            else bool(previous == consistent)
+        )
+        checks = entry.get("external_checks")
+        if not isinstance(checks, list):
+            checks = []
+        checks.append(
+            {
+                "solver": solver,
+                "consistent": consistent,
+                "agrees": agrees,
+                "message": provenance,
+            }
+        )
+        entry["external_checks"] = checks
+        # Divergence or an undecided entry: the prover's decision carries (#3106).
+        if consistent is not None and consistent != previous:
+            if previous is not None:
+                entry["superseded_verdict"] = {
+                    "consistent": previous,
+                    "source": entry.get("consistent_source") or "fol_agent",
+                }
+            entry["consistent"] = consistent
+            entry["consistent_source"] = f"external:{solver}"
+        return True
+    return False
+
+
 def _write_external_fol_solver_to_state(
     output: Any, state: Any, ctx: dict[str, Any]
 ) -> None:
@@ -2800,18 +2875,28 @@ def _write_external_fol_solver_to_state(
     ``isinstance(state.fol_analysis_results, dict)``, always False for the
     canonical ``List`` attribute. ``consistent`` stays tri-state (#1019): None
     (degraded) appends an honest entry, it does not vanish.
+
+    #3106: when the checked formula list is one an entry already holds, this is
+    a re-check of that theory, not a second theory — it attaches through
+    :func:`_attach_external_fol_verdict`. Only a different formula set appends.
     """
     if not output or not isinstance(output, dict):
         return
     formulas = output.get("formulas", [])
     if not isinstance(formulas, list):
         formulas = []
+    solver = str(output.get("solver") or "none")
+    provenance = _external_provenance(output) or f"external solver ({solver})"
+    if _attach_external_fol_verdict(
+        state, formulas, output.get("consistent"), solver, provenance
+    ):
+        return
     state.add_fol_analysis_result(
         formulas,
         output.get("consistent"),
         [],
         0.0,
-        message=_external_provenance(output),
+        message=provenance,
     )
 
 
