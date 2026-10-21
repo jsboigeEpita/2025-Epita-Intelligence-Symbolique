@@ -69,6 +69,8 @@ from .speaker_record import (  # #3082: shared speaker record with act1/act2
 )
 from .reading_record import (  # #2850 lot 6: recorded reading bounds
     READING_BASIS_RULE,
+    format_reader_bounds_passage,
+    restated_bound_sentences,
     ReadingRecord,
     build_reading_record,
     format_reading_block,
@@ -3391,6 +3393,20 @@ async def build_act3_conclusion(
         )
     narrative = outcome.narrative
 
+    # #3134 — a woven sentence that restates a numeric bound is removed
+    # before anything else touches the text: the reader's bounds are the
+    # record's passage grafted below, where each number sits under its own
+    # site label. The R1105b render fused three fallacy lines into one
+    # "initial detection" carrying the descent's 500; which model paraphrases
+    # the record cannot stay a bound the pipeline guarantees. Pipeline event:
+    # logged, never a reader note (#2032).
+    for _restated in restated_bound_sentences(narrative):
+        narrative = narrative.replace(_restated, "").strip()
+        logger.info(
+            "act3 woven bound restatement removed (record passage carries it): %s",
+            _restated[:90],
+        )
+
     # #1605 — the conclusion must carry what the run failed to evaluate. The
     # ledger is recorded unconditionally (it is a fact about the run), and the
     # scope paragraph is appended when the woven prose did not tie a limitation
@@ -3445,6 +3461,15 @@ async def build_act3_conclusion(
                     "reposaient sur des dimensions sans résultat dans l'état. "
                     "Le livrable ne porte que l'avis de retrait."
                 )
+
+    # #3134 — the record's own bounds close the act, after the prose: the
+    # numbers the reader receives come from the record, not from the model.
+    # Grafted BEFORE the §4 self-check so the gate reads the text the reader
+    # receives. Empty passage when nothing was recorded (the rule's absent
+    # case forbids inventing a bound; the passage stays absent too).
+    _bounds_passage = format_reader_bounds_passage(evidence.readings)
+    if _bounds_passage:
+        narrative = narrative.rstrip() + "\n\n" + _bounds_passage
 
     # §4 self-check (honest, never grades on a curve).
     gate = ReadabilityGate()
