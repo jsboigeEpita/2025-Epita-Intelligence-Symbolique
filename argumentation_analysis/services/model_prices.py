@@ -7,12 +7,15 @@ able to price its own tokens.
 
 Every row cites the page it was read from and the day it was read
 (``PRICES_READ_ON``). Tiered models get one row per tier, selected by the
-largest threshold the prompt reaches — Haiku 5.5's >100k long-prompt tier is
-its own row, never an average of the two.
+largest threshold the prompt STRICTLY exceeds — Haiku 5.5's >100k
+long-prompt tier is its own row, never an average of the two, and exactly
+100 000 prompt tokens still bills at the standard row (R1102 rework).
 
 Deliberately out of scope (#3095 item 4): cache and batch modifiers. No run
 path applies them today; a run that starts using one must model it here
-before its line can claim a price.
+before its line can claim a price. A row whose published price leaves a
+measured gap against a real bill says so in its ``source`` — the table is
+never tuned to fit one run (R1102 rework).
 """
 
 from __future__ import annotations
@@ -47,8 +50,12 @@ PRICE_TABLE: List[PriceRow] = [
         input_per_mtok=0.20,
         output_per_mtok=1.20,
         source=(
-            "catalog pricing #1930 — "
-            "docs/architecture/MULTI_MODEL_ROUTING_SPEC.md §4.1"
+            "OpenAI published rates — developers.openai.com/api/docs/models/"
+            "gpt-5.6-luna and openai.com/index/advancing-the-price-performance-"
+            "frontier-with-gpt-5-6/ (post 2026-07-30 cut). NOT verified against a "
+            "bill: R1101 billed 0.415 $ where this row prices 0.383 $ (−7.7 %); "
+            "cache writes (1.25× input) and the >272k long-context rates are "
+            "out of scope (#3095 item 4), so the gap is kept, not tuned away."
         ),
     ),
     PriceRow(
@@ -102,7 +109,15 @@ def resolve_price_row(model_id: str, prompt_tokens: int) -> Optional[PriceRow]:
     rows = [row for row in PRICE_TABLE if row.model_id == bare]
     if not rows:
         return None
-    reached = [r for r in rows if r.prompt_threshold_tokens <= max(0, prompt_tokens)]
+    prompt = max(0, prompt_tokens)
+    # The standard row (threshold 0) always applies; a tiered row applies only
+    # when the prompt STRICTLY exceeds its threshold — exactly 100 000 prompt
+    # tokens bills at the standard row, 100 001 at the long one (R1102 rework).
+    reached = [
+        r
+        for r in rows
+        if r.prompt_threshold_tokens == 0 or r.prompt_threshold_tokens < prompt
+    ]
     if not reached:  # defensive: a table with no standard tier prices nothing
         return None
     return max(reached, key=lambda r: r.prompt_threshold_tokens)

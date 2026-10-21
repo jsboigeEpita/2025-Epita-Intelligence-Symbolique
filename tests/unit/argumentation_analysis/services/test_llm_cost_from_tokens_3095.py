@@ -147,6 +147,38 @@ class TestTokensArePricedFromTheTable:
             "$0.1856" in line
         ), "the run's own usage line prints the price the bill confirms"
 
+    def test_the_gpt_row_is_published_but_unverified_against_a_bill(self):
+        """R1102 rework (a): the GPT row now cites the provider's published
+        pages instead of a design doc — and it does NOT close the R1101 gap.
+        The published 0.20/1.20 prices the R1101 pair (1 122 170 + 132 146) at
+        0.383 $ against a billed 0.415 $ (−7.7 %). The row keeps the published
+        figure and SAYS it is unverified; tuning it to one bill would make the
+        table a fit rather than a price."""
+        row = next(r for r in PRICE_TABLE if r.model_id == "gpt-5.6-luna")
+        assert "openai.com" in row.source, "cite the provider's published page"
+        assert "NOT verified against a bill" in row.source, (
+            "a published price that misses a measured bill must say so — "
+            "silence would read as verification"
+        )
+        assert (
+            "−7.7" in row.source or "-7.7" in row.source
+        ), "the measured gap belongs in the row, not only in a PR thread"
+        priced = price_tokens("gpt-5.6-luna", 1_122_170, 132_146)
+        assert priced == pytest.approx(0.38301, abs=0.0005)
+        gap = (priced - 0.415) / 0.415
+        assert gap == pytest.approx(
+            -0.077, abs=0.002
+        ), "the witness is the gap itself: computed 0.383 vs billed 0.415"
+
+    def test_the_tier_boundary_is_strict(self):
+        """R1102 rework (b): ≤ 100k prompt tokens bills at the standard row —
+        exactly 100 000 must price at 0.10, and 100 001 at the long row's 0.50.
+        Mutation: flipping ``<`` back to ``<=`` reddens the 100 000 case."""
+        assert price_tokens("claude-haiku-5-5", 100_000, 0) == pytest.approx(0.010)
+        assert price_tokens("claude-haiku-5-5", 100_001, 0) == pytest.approx(
+            0.0500005
+        ), "one token past the boundary bills the whole request at the long row"
+
 
 class TestProviderReportedCostIsKeptApart:
     def test_byok_zero_is_labelled_and_is_not_the_run_cost(self, usage_counter):
