@@ -55,6 +55,7 @@ from argumentation_analysis.evaluation.env_manifest import (
     render_environment_stamp,
 )
 from argumentation_analysis.evaluation.run_provenance import provenance_block
+from argumentation_analysis.services.model_prices import PRICES_READ_ON
 from argumentation_analysis.reporting.restitution.conclusion_salience import (
     projection_from_state,
 )
@@ -453,11 +454,15 @@ def render_batch_verdict(summary: Dict[str, Any]) -> str:
 
 
 def _usage_totals(usage: Dict[str, Any]) -> Dict[str, int]:
-    """Prompt/completion/calls summed across the per-phase buckets (#2849)."""
+    """Prompt/completion/calls summed across the per-phase buckets (#2849).
+
+    #3095 — only phase buckets carry ``calls``; the run-level fields the
+    accounting now adds (``unpriced_calls`` is a dict too) are not phases and
+    must not inflate the phase count."""
     prompt = completion = calls = without_usage = 0
     phases = 0
     for value in usage.values():
-        if not isinstance(value, dict):
+        if not isinstance(value, dict) or "calls" not in value:
             continue
         prompt += int(value.get("prompt_tokens", 0))
         completion += int(value.get("completion_tokens", 0))
@@ -474,21 +479,54 @@ def _usage_totals(usage: Dict[str, Any]) -> Dict[str, int]:
 
 
 def render_usage_line(usage: Optional[Dict[str, Any]]) -> str:
-    """#2849 — one token-usage line. A missing dollar figure is printed as
-    "not reported", never as 0 (a fabricated 0 is a measurement lie). #2853:
-    calls whose response carried no usage (streams) are named, so "unknown
-    tokens" never reads as "0 tokens"."""
+    """#2849 — one token-usage line. #3095: the run's cost is computed from
+    its own tokens through the dated price table; the provider-reported
+    figure is printed apart and labelled, because a BYOK route reports 0 on
+    every call and that zero is never the run's cost. An unknown model is
+    named ("not priced: <id>"), never shown as 0. A missing dollar figure —
+    legacy dicts, no priceable call — stays "not reported" (#2849 DoD 2)."""
     if not usage:
         return "LLM usage: not measured (no accounting window)"
     totals = _usage_totals(usage)
-    cost = usage.get("cost_usd")
-    cost_txt = f"${cost:.4f}" if isinstance(cost, (int, float)) else "not reported"
+    computed = usage.get("computed_cost_usd")
+    unpriced = usage.get("unpriced_calls") or {}
+    unverified = usage.get("unverified_price_calls") or {}
+    reported = usage.get("cost_usd")
     without_usage = totals["calls_without_usage"]
     tokens_txt = (
         f"{totals['prompt_tokens']} prompt + {totals['completion_tokens']} completion tokens"
         if not without_usage
         else f"not reported for {without_usage} of {totals['calls']} call(s)"
     )
+
+    if isinstance(computed, (int, float)):
+        priced_calls = totals["calls"] - sum(unpriced.values())
+        cost_txt = f"${computed:.4f} (price table read {PRICES_READ_ON}"
+        if unpriced:
+            cost_txt += f"; {priced_calls} of {totals['calls']} call(s) priced"
+        cost_txt += ")"
+    elif unpriced:
+        named = ", ".join(
+            f"{model} ({count} call(s))" for model, count in sorted(unpriced.items())
+        )
+        cost_txt = f"not priced: {named}"
+    elif isinstance(reported, (int, float)):
+        cost_txt = "not priced (no priceable call)"
+    else:
+        cost_txt = "not reported"
+
+    # #3102 — a price is not a bill: name the models whose row no provider
+    # bill ever confirmed, so the computed figure is not read as a billed one.
+    if unverified:
+        cost_txt += " — unverified against a bill: " + ", ".join(sorted(unverified))
+
+    if isinstance(reported, (int, float)):
+        cost_txt += f" — provider-reported: ${reported:.4f}"
+        if reported == 0 and totals["calls"]:
+            cost_txt += (
+                " (reported 0 on every call — a BYOK route bills the key "
+                "elsewhere, never this run's cost)"
+            )
     return (
         f"LLM usage: {tokens_txt} across "
         f"{totals['calls']} call(s) in {totals['phases']} phase(s) — "
@@ -501,6 +539,7 @@ def render_usage_total(signatures: List[Dict[str, Any]]) -> str:
     whose signature predates the accounting point instead of dropping them."""
     prompt = completion = calls = 0
     without_usage = 0
+    unverified: Dict[str, int] = {}
     for sig in signatures:
         usage = sig.get("llm_usage")
         if not isinstance(usage, dict) or not _usage_totals(usage)["calls"]:
@@ -510,11 +549,17 @@ def render_usage_total(signatures: List[Dict[str, Any]]) -> str:
         prompt += totals["prompt_tokens"]
         completion += totals["completion_tokens"]
         calls += totals["calls"]
+        # #3102 — the batch total also names the models it priced from a row
+        # no bill confirmed; a reader must not take the total for a billed one.
+        for model, count in (usage.get("unverified_price_calls") or {}).items():
+            unverified[model] = unverified.get(model, 0) + int(count)
     tail = (
         f" ({without_usage} signature(s) without usage — pre-#2849)"
         if without_usage
         else ""
     )
+    if unverified:
+        tail += " — unverified against a bill: " + ", ".join(sorted(unverified))
     return (
         f"Batch LLM usage: {prompt} prompt + {completion} completion tokens "
         f"across {calls} call(s){tail}"

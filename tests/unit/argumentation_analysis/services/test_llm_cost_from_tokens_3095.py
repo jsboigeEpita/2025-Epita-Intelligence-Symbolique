@@ -1,0 +1,295 @@
+"""#3095 — the run prices its own tokens, and never calls a provider 0 "free".
+
+Born-red on main at issue-filing time: the usage line summed only the
+provider-reported ``usage.cost``. On the BYOK route every call reports 0, so a
+0.415 $ pass printed ``cost: $0.0000``; on a provider that reports no cost at
+all, nothing was priced. The run's price must come from one dated table of
+per-MTok prices applied to the tokens the run measured, with the
+provider-reported figure kept apart and the BYOK zero labelled.
+
+Synthetic fakes only: no network, no key, zero spend. Opaque ids only.
+"""
+
+import importlib.util
+import types
+from pathlib import Path
+from unittest.mock import MagicMock
+
+import pytest
+
+from argumentation_analysis.services.model_prices import (
+    PRICE_TABLE,
+    PRICES_READ_ON,
+    price_tokens,
+)
+
+_SCRIPT = (
+    Path(__file__).resolve().parents[4] / "scripts" / "dataset" / "run_corpus_batch.py"
+)
+
+
+def _load_renderer():
+    spec = importlib.util.spec_from_file_location("run_corpus_batch_3095", _SCRIPT)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _fake_response(prompt_tokens, completion_tokens, cost=None):
+    """Duck-typed OpenAI ChatCompletion; ``cost`` only when the provider sends one."""
+    usage = types.SimpleNamespace(
+        prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
+    )
+    if cost is not None:
+        usage.cost = cost
+    choice = types.SimpleNamespace(message=types.SimpleNamespace(content="réponse"))
+    return types.SimpleNamespace(usage=usage, choices=[choice])
+
+
+def _sync_client(response):
+    client = types.SimpleNamespace()
+    client.chat = types.SimpleNamespace(
+        completions=types.SimpleNamespace(create=MagicMock(return_value=response))
+    )
+    return client
+
+
+@pytest.fixture()
+def usage_counter(monkeypatch):
+    monkeypatch.setenv("LLM_CACHE_MODE", "off")
+    from argumentation_analysis.services import llm_cache
+
+    llm_cache._raw_cache = None
+    llm_cache.reset_usage_stats()
+    yield llm_cache.get_usage_stats
+    llm_cache.reset_usage_stats()
+
+
+def _run_sync_calls(model, calls, cost=None):
+    """Drive N sync live calls through the raw accounting point."""
+    from argumentation_analysis.services.llm_cache import (
+        cached_raw_chat_completion_sync,
+    )
+
+    for prompt, completion in calls:
+        cached_raw_chat_completion_sync(
+            _sync_client(_fake_response(prompt, completion, cost=cost)),
+            model=model,
+            messages=[{"role": "user", "content": "q"}],
+        )
+
+
+class TestTokensArePricedFromTheTable:
+    def test_a_haiku_run_is_priced_from_the_table(self, usage_counter):
+        """The born-red shape: a synthetic N-call Haiku run with known tokens
+        must print the table's price — main printed $0.0000 or nothing."""
+        # 2 × (30k in, 1k out) = 60k in, 2k out → 60k×0.10 + 2k×0.50 = $0.0070.
+        _run_sync_calls("claude-haiku-5-5", [(30_000, 1_000), (30_000, 1_000)])
+        stats = usage_counter()
+        assert stats["computed_cost_usd"] == pytest.approx(0.0070)
+        line = _load_renderer().render_usage_line(stats)
+        assert "$0.0070" in line, (
+            "the run's cost must be computed from its own tokens — the R1101 "
+            "defect printed $0.0000 for a 0.415 $ pass"
+        )
+        assert "price table" in line, "the line must name the table it priced with"
+        assert "in 1 phase(s)" in line, (
+            "the run-level cost fields are not phases — the phase count must "
+            "not be inflated by the accounting's own metadata keys"
+        )
+
+    def test_the_long_prompt_tier_is_its_own_row(self, usage_counter):
+        """Haiku 5.5 bills a >100k prompt at the long-context tier — a separate
+        row, never an average: 150k in + 2k out = $0.0800 (the standard row
+        would give $0.0160)."""
+        _run_sync_calls("claude-haiku-5-5", [(150_000, 2_000)])
+        stats = usage_counter()
+        assert stats["computed_cost_usd"] == pytest.approx(0.0800)
+        haiku_rows = [r for r in PRICE_TABLE if r.model_id == "claude-haiku-5-5"]
+        assert (
+            len(haiku_rows) == 2
+        ), "the long-prompt tier is a separate row, not an average of the two"
+        assert {r.prompt_threshold_tokens for r in haiku_rows} == {0, 100_000}
+
+    def test_every_row_cites_a_source_and_a_date(self):
+        """One dated table: no row may be added without the page it was read
+        from and the day it was read."""
+        assert PRICE_TABLE, "the run path needs a price table"
+        for row in PRICE_TABLE:
+            assert row.source.strip(), f"{row.model_id}: row without a source page"
+            assert (
+                row.read_on == PRICES_READ_ON
+            ), f"{row.model_id}: row must carry the table's read date"
+        assert len(PRICES_READ_ON) == 10 and PRICES_READ_ON[4] == "-"
+
+    def test_an_unknown_model_suffix_does_not_borrow_a_price(self):
+        assert price_tokens("claude-haiku-5-5-20990101", 1_000, 1_000) is None
+
+    def test_the_haiku_row_agrees_with_a_real_bill(self, usage_counter):
+        """Ground truth (coordinator on #3095, 20/10): a real
+        ``claude-haiku-5-5`` pass recorded 564 534 prompt + 258 347
+        completion tokens; the provider's Console billed **$0.19** for it
+        (read by the user). The tier threshold is per REQUEST — the run's
+        564k prompt tokens summed over calls each under 100k — so the run
+        prices at the standard row: computed $0.19 = billed $0.19."""
+        calls = [(94_089, 43_057)] * 5 + [(94_089, 43_062)]
+        assert sum(p for p, _ in calls) == 564_534, "the real run's prompt total"
+        assert sum(c for _, c in calls) == 258_347, "the real run's completion total"
+        _run_sync_calls("claude-haiku-5-5", calls)
+        stats = usage_counter()
+        assert stats["computed_cost_usd"] == pytest.approx(0.1856, abs=0.0005)
+        assert round(stats["computed_cost_usd"], 2) == 0.19, (
+            "the dated table must agree with the provider's bill on the real "
+            "run — computed $0.19 = billed $0.19 (Console, read 20/10)"
+        )
+        line = _load_renderer().render_usage_line(stats)
+        assert (
+            "$0.1856" in line
+        ), "the run's own usage line prints the price the bill confirms"
+
+    def test_the_gpt_row_is_published_but_unverified_against_a_bill(self):
+        """R1102 rework (a): the GPT row now cites the provider's published
+        pages instead of a design doc — and it does NOT close the R1101 gap.
+        The published 0.20/1.20 prices the R1101 pair (1 122 170 + 132 146) at
+        0.383 $ against a billed 0.415 $ (−7.7 %). The row keeps the published
+        figure and SAYS it is unverified; tuning it to one bill would make the
+        table a fit rather than a price."""
+        row = next(r for r in PRICE_TABLE if r.model_id == "gpt-5.6-luna")
+        assert "openai.com" in row.source, "cite the provider's published page"
+        assert row.verified_against_bill is False, (
+            "the field, not only the prose, must say the row is unchecked — "
+            "the usage line reads the field (#3102)"
+        )
+        assert "NOT verified against a bill" in row.source, (
+            "a published price that misses a measured bill must say so — "
+            "silence would read as verification"
+        )
+        assert (
+            "−7.7" in row.source or "-7.7" in row.source
+        ), "the measured gap belongs in the row, not only in a PR thread"
+        priced = price_tokens("gpt-5.6-luna", 1_122_170, 132_146)
+        assert priced == pytest.approx(0.38301, abs=0.0005)
+        gap = (priced - 0.415) / 0.415
+        assert gap == pytest.approx(
+            -0.077, abs=0.002
+        ), "the witness is the gap itself: computed 0.383 vs billed 0.415"
+
+    def test_the_tier_boundary_is_strict(self):
+        """R1102 rework (b): ≤ 100k prompt tokens bills at the standard row —
+        exactly 100 000 must price at 0.10, and 100 001 at the long row's 0.50.
+        Mutation: flipping ``<`` back to ``<=`` reddens the 100 000 case."""
+        assert price_tokens("claude-haiku-5-5", 100_000, 0) == pytest.approx(0.010)
+        assert price_tokens("claude-haiku-5-5", 100_001, 0) == pytest.approx(
+            0.0500005
+        ), "one token past the boundary bills the whole request at the long row"
+
+
+class TestProviderReportedCostIsKeptApart:
+    def test_byok_zero_is_labelled_and_is_not_the_run_cost(self, usage_counter):
+        """The measured BYOK shape: every call reports cost 0. The line shows
+        the computed price AND labels the reported 0 — never $0.0000 alone."""
+        _run_sync_calls(
+            "claude-haiku-5-5",
+            [(30_000, 1_000), (30_000, 1_000)],
+            cost=0.0,
+        )
+        stats = usage_counter()
+        assert stats["cost_usd"] == 0.0, "the reported figure is kept as reported"
+        assert stats["computed_cost_usd"] == pytest.approx(0.0070)
+        line = _load_renderer().render_usage_line(stats)
+        assert "$0.0070" in line
+        assert "provider-reported: $0.0000" in line
+        assert "BYOK" in line, (
+            "a reported 0 must be named as the BYOK shape — showing it as the "
+            "run's cost is the #3095 defect"
+        )
+
+    def test_an_unknown_model_is_not_priced_never_zero(self, usage_counter):
+        """No table row → the line says 'not priced: <id>'; it never prints
+        $0.0000, which is the lie the issue is about."""
+        _run_sync_calls("mystery-model-9", [(10_000, 500)])
+        stats = usage_counter()
+        assert stats["computed_cost_usd"] is None
+        line = _load_renderer().render_usage_line(stats)
+        assert "not priced" in line
+        assert "mystery-model-9" in line
+        assert "$0.0000" not in line
+
+    def test_a_missing_provider_cost_stays_unreported(self, usage_counter):
+        """A provider that sends no cost field: the line says nothing was
+        reported — the computed price still stands on its own."""
+        _run_sync_calls("claude-haiku-5-5", [(30_000, 1_000)])
+        line = _load_renderer().render_usage_line(usage_counter())
+        assert "$0.0035" in line
+        assert "provider-reported" not in line or "not reported" in line
+
+
+class TestAPriceIsNotABill:
+    """#3102 — a computed total says which rows no provider bill confirmed.
+
+    The Haiku standard row was reconciled with a real Console bill (0.1856 $
+    computed vs 0.19 $ billed); the Sonnet/Opus/Fable rows and the long-prompt
+    tier are published rates nobody checked. A line that shows only dollars
+    lets a reader take every figure for a checked one.
+    """
+
+    def test_a_row_never_reconciled_names_its_model(self, usage_counter):
+        """Born red on the pre-#3102 shape: the usage dict had no field for
+        this, so the line could not say the Sonnet price was unchecked."""
+        _run_sync_calls("claude-sonnet-5-5", [(10_000, 1_000)])
+        stats = usage_counter()
+        assert stats["unverified_price_calls"] == {"claude-sonnet-5-5": 1}, (
+            "a priced call whose row no bill confirmed must be counted — the "
+            "price stands, its provenance is named"
+        )
+        line = _load_renderer().render_usage_line(stats)
+        assert "unverified against a bill: claude-sonnet-5-5" in line
+        assert "$0.0300" in line, "the price still counts, only labelled"
+
+    def test_the_bill_verified_row_is_not_named(self, usage_counter):
+        """The other direction: the Haiku standard row WAS reconciled with a
+        real bill, so naming it would cry wolf and teach readers to ignore
+        the label."""
+        _run_sync_calls("claude-haiku-5-5", [(30_000, 1_000)])
+        stats = usage_counter()
+        assert stats["unverified_price_calls"] == {}
+        line = _load_renderer().render_usage_line(stats)
+        assert "unverified against a bill" not in line
+
+    def test_the_batch_total_names_the_models(self):
+        """The batch total prices nothing itself, but carries each signature's
+        provenance into one line; a total that drops it hides which rows were
+        never checked."""
+        line = _load_renderer().render_usage_total(
+            [
+                {
+                    "llm_usage": {
+                        "phase_a": {
+                            "prompt_tokens": 10_000,
+                            "completion_tokens": 1_000,
+                            "calls": 2,
+                            "calls_without_usage": 0,
+                        },
+                        "computed_cost_usd": 0.06,
+                        "cost_usd": None,
+                        "unpriced_calls": {},
+                        "unverified_price_calls": {"claude-sonnet-5-5": 2},
+                    }
+                },
+                {
+                    "llm_usage": {
+                        "phase_a": {
+                            "prompt_tokens": 30_000,
+                            "completion_tokens": 1_000,
+                            "calls": 1,
+                            "calls_without_usage": 0,
+                        },
+                        "computed_cost_usd": 0.0035,
+                        "cost_usd": None,
+                        "unpriced_calls": {},
+                        "unverified_price_calls": {"claude-sonnet-5-5": 1},
+                    }
+                },
+            ]
+        )
+        assert "unverified against a bill: claude-sonnet-5-5" in line
