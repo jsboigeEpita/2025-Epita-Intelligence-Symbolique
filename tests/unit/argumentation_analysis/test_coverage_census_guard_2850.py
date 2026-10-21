@@ -912,6 +912,21 @@ REGISTRY = {
     ): ("display", "first 60 chars of an already-produced string", "display only"),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
+        "input_text",
+        "_LOCAL_LLM_WINDOW_CHARS",
+        1,
+    ): (
+        "window",
+        "the local-tier fallback head window: the document beyond the first "
+        "12000 chars, read only when NO extracted population exists (#3124) "
+        "— with a population the phase sends the #2850 selection of units "
+        "and nothing is windowed",
+        "recorded — input_mode='document_window' + input_truncated + "
+        "input_chars_total on the local_llm_results record; the local_llm "
+        "trace summary names the mode (#3124)",
+    ),
+    (
+        "argumentation_analysis/orchestration/invoke_callables.py",
         "per_arg_scores",
         "6",
         1,

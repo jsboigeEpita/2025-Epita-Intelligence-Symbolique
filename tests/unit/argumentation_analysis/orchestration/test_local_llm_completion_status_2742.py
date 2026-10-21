@@ -74,7 +74,11 @@ async def test_raised_completion_failure_is_traced():
     ):
         result = await _invoke_local_llm("synthetic input", {"_state_object": state})
 
-    assert result == {"status": "error", "error": "synthetic failure"}
+    # #3124: the error record carries the input facts and budget next to the
+    # message — the exact-dict assertion it used to carry would pin the shape
+    # against every additive fact.
+    assert result["status"] == "error"
+    assert result["error"] == "RuntimeError: synthetic failure"
     assert state.local_llm_results == [result]
     assert len(state.analysis_trace) == 1
     assert "synthetic failure" in state.analysis_trace[0]["summary"]

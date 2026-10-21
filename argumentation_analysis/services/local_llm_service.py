@@ -20,6 +20,31 @@ from typing import Any, Dict, List, Optional
 logger = logging.getLogger("LocalLLMService")
 
 
+def describe_exception(exc: BaseException, timeout: Optional[float] = None) -> str:
+    """One honest line for an exception whose ``str()`` may be empty (#3124).
+
+    ``httpx.ReadTimeout`` stringifies to ``""``: a record built from
+    ``str(exc)`` says "error" and nothing else. The type is always named; a
+    timeout carries the budget it exhausted; an empty message says so instead
+    of trailing a bare colon.
+    """
+    name = type(exc).__name__
+    detail = str(exc).strip()
+    try:
+        import httpx
+    except ImportError:  # pragma: no cover - httpx is a project dependency
+        httpx = None
+    if (
+        timeout is not None
+        and httpx is not None
+        and isinstance(exc, httpx.TimeoutException)
+    ):
+        return f"{name} after {timeout:g} s"
+    if detail:
+        return f"{name}: {detail}"
+    return f"{name} (no message)"
+
+
 class LocalLLMService:
     """
     Adapter for local LLM inference via OpenAI-compatible endpoints.
@@ -81,8 +106,10 @@ class LocalLLMService:
                 response.raise_for_status()
                 return response.json()
         except Exception as e:
-            logger.warning("Local LLM call failed: %s", e)
-            return {"error": str(e)}
+            logger.warning(
+                "Local LLM call failed: %s", describe_exception(e, self.timeout)
+            )
+            return {"error": describe_exception(e, self.timeout)}
 
     async def is_available(self) -> bool:
         """Check if the local LLM endpoint is reachable.
