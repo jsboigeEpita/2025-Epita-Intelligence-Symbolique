@@ -60,7 +60,7 @@ def ground_literal(formula: Any) -> Optional[Tuple[str, bool]]:
         return None
     text = formula.strip()
     polarity = True
-    while text[:1] in ("!", "¬", "~"):
+    while text and text[0] in ("!", "¬", "~"):
         polarity = not polarity
         text = text[1:].strip()
     if not text:
