@@ -69,8 +69,11 @@ DEFAULT_OUT = (
 # refuse to write to a path git would track).
 RESULTS_ROOT = REPO_ROOT / "argumentation_analysis" / "evaluation" / "results"
 
-# The campaign's model on the Anthropic route — read from a zero-shot
-# record's provenance at run time; this is only the pricing key fallback.
+# The pricing key default for direct calls. main() never uses it as a
+# fallback: the run's model is resolved from the zero-shot provenance
+# before the first fact is built, and a provenance that names no model is
+# a named exit — a silent fallback here priced a sonnet-tier campaign at
+# the haiku row, exactly 20x its accountant's total (#3138).
 PRICING_MODEL_ID = "claude-haiku-5-5"
 
 # The 8 tier-1 re-examination designations, in the report's order. The
@@ -192,21 +195,26 @@ def safe_name(text: str, max_len: int = 40) -> str:
     return slug or "sans-titre"
 
 
-def doc_cost_usd(usage: Dict[str, Any]) -> Optional[float]:
+def doc_cost_usd(
+    usage: Dict[str, Any], pricing_model: str = PRICING_MODEL_ID
+) -> Optional[float]:
     """Recompute a document's pipeline cost from measured per-phase tokens.
 
     Same instrument as the campaign's usage line (#3095 price table), at the
-    STANDARD row. The signature records per-PHASE aggregates, not per-call
-    sizes: pricing an aggregate through ``price_tokens`` would bill any phase
-    whose calls sum past 100k tokens at the long-prompt tier (measured on this
-    campaign: 21.94 $ instead of 8.17 $) while the campaign's own measurement
-    found no single call above the threshold (mean ~2.6k prompt/call). The
-    standard row on aggregates reproduces the accountant's total exactly.
-    None (never a fabricated 0) when the model is not priced.
+    STANDARD row of ``pricing_model`` — the run's model, resolved from its
+    zero-shot provenance by ``resolve_run_pricing``; the module constant is
+    only the direct-call default (#3138). The signature records per-PHASE
+    aggregates, not per-call sizes: pricing an aggregate through
+    ``price_tokens`` would bill any phase whose calls sum past 100k tokens at
+    the long-prompt tier (measured on this campaign: 21.94 $ instead of
+    8.17 $) while the campaign's own measurement found no single call above
+    the threshold (mean ~2.6k prompt/call). The standard row on aggregates
+    reproduces the accountant's total exactly. None (never a fabricated 0)
+    when the model is not priced.
     """
     from argumentation_analysis.services.model_prices import resolve_price_row
 
-    row = resolve_price_row(PRICING_MODEL_ID, 0)
+    row = resolve_price_row(pricing_model, 0)
     if row is None:
         return None
     total = 0.0
@@ -223,11 +231,24 @@ def doc_cost_usd(usage: Dict[str, Any]) -> Optional[float]:
 
 
 def zeroshot_cost_usd(record: Dict[str, Any]) -> Optional[float]:
+    """One zero-shot record's cost, priced at the model ITS provenance names.
+
+    A record that names no model exits by name: pricing it at the module
+    constant is the silent fallback that priced the sonnet tier at the haiku
+    row (#3138).
+    """
     from argumentation_analysis.services.model_prices import price_tokens
 
+    model = (record.get("provenance") or {}).get("model")
+    if not model:
+        raise SystemExit(
+            f"the zero-shot record of {record.get('opaque_id', '?')} carries"
+            " no provenance model — its cost cannot be priced at a guessed"
+            f" row; refusing to fall back to {PRICING_MODEL_ID} (#3138)"
+        )
     usage = record.get("usage") or {}
     cost = price_tokens(
-        record.get("provenance", {}).get("model", PRICING_MODEL_ID),
+        model,
         usage.get("prompt_tokens", 0),
         usage.get("completion_tokens", 0),
     )
@@ -248,7 +269,11 @@ def _count(value: Any) -> int:
     return 0
 
 
-def doc_facts(sig: Dict[str, Any], state: Dict[str, Any]) -> Dict[str, Any]:
+def doc_facts(
+    sig: Dict[str, Any],
+    state: Dict[str, Any],
+    pricing_model: str = PRICING_MODEL_ID,
+) -> Dict[str, Any]:
     """The measured facts of one document, read from its artifacts."""
     st = state.get("state") or state
     usage = sig.get("llm_usage") or {}
@@ -266,7 +291,7 @@ def doc_facts(sig: Dict[str, Any], state: Dict[str, Any]) -> Dict[str, Any]:
         "wall_s": sig.get("wall_clock_s"),
         "status": (sig.get("outcome") or {}).get("status", "?"),
         "workflow": sig.get("workflow", "?"),
-        "cost": doc_cost_usd(usage),
+        "cost": doc_cost_usd(usage, pricing_model),
         "calls": sum(
             v.get("calls", 0)
             for v in usage.values()
@@ -291,7 +316,7 @@ def provenance_block(run_head: str, model: str, command: str) -> str:
         f"producer: scripts/dataset/render_campaign_reading_folder.py (#2841 reading folder)\n"
         f"campaign_run_git_head: {run_head}\n"
         f"model: {model}\n"
-        f"pricing: recomputed from measured per-phase tokens, #3095 table (claude-haiku-5-5 standard tier, verified against a bill)\n"
+        f"pricing: recomputed from measured per-phase tokens, #3095 table (standard row of {model})\n"
         f"command: {command}\n"
         "---\n"
     )
@@ -383,6 +408,41 @@ def build_reading_order(all_ids: List[str]) -> List[str]:
     return designated + rest
 
 
+def resolve_run_pricing(
+    signatures: List[Path], zeroshots: Dict[str, Path]
+) -> Tuple[str, str]:
+    """The run's pricing model and git head, from the first signature-ordered
+    doc that has a zero-shot record.
+
+    The model exists in exactly one place — the zero-shot records'
+    provenance — and every pipeline figure below is priced with it. A
+    provenance that names no model, or no zero-shot record at all, is a
+    named exit: falling back silently to the module constant is the shape
+    that priced a sonnet-tier campaign at the haiku row, exactly 20x its
+    accountant's total (#3138).
+    """
+    for sig_path in signatures:
+        sig = load_json(sig_path)
+        doc_id = sig.get("opaque_id", sig_path.stem.replace("signature_", ""))
+        zs_path = zeroshots.get(doc_id)
+        if zs_path is None:
+            continue
+        provenance = load_json(zs_path).get("provenance") or {}
+        model = provenance.get("model")
+        if not model:
+            raise SystemExit(
+                f"the zero-shot record of {doc_id} carries no provenance"
+                " model — the pipeline pricing row cannot be guessed;"
+                f" refusing to fall back to {PRICING_MODEL_ID} (#3138)"
+            )
+        return model, provenance.get("git_head", "unavailable")
+    raise SystemExit(
+        "no zero-shot record found to carry the run's provenance — the"
+        " pipeline pricing row cannot be guessed; refusing to fall back to"
+        f" {PRICING_MODEL_ID} (#3138)"
+    )
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="#2841 reading folder")
     parser.add_argument("--states-dir", type=Path, default=STATES_DIR)
@@ -406,6 +466,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     }
     zeroshots = {p.stem: p for p in args.zeroshot_dir.glob("*.json")}
 
+    # Run-level provenance, resolved BEFORE the first fact is built: the
+    # model prices every pipeline figure below, and resolving it after the
+    # loop priced a sonnet-tier campaign at the haiku row (#3138).
+    model, run_head = resolve_run_pricing(signatures, zeroshots)
+    command = "PYTHONPATH=. python scripts/dataset/render_campaign_reading_folder.py"
+
     docs: List[Dict[str, Any]] = []
     missing_states: List[str] = []
     for sig_path in signatures:
@@ -423,7 +489,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 "sig_path": sig_path,
                 "state_path": state_path,
                 "zeroshot": zeroshot,
-                "facts": doc_facts(sig, state),
+                "facts": doc_facts(sig, state, pricing_model=model),
             }
         )
 
@@ -433,14 +499,6 @@ def main(argv: Optional[List[str]] = None) -> int:
             f" {', '.join(missing_states)} — the reading folder cannot render"
             " their acts; refusing to build a folder with holes"
         )
-
-    # Run-level provenance: the campaign's own stamp, read from a zero-shot
-    # record (model, git head of the run, max-chars) — never restated by hand.
-    first_zs = next((d["zeroshot"] for d in docs if d["zeroshot"]), None)
-    run_prov = (first_zs or {}).get("provenance", {})
-    run_head = run_prov.get("git_head", "unavailable")
-    model = run_prov.get("model", PRICING_MODEL_ID)
-    command = "PYTHONPATH=. python scripts/dataset/render_campaign_reading_folder.py"
 
     reading_order = build_reading_order([d["facts"]["opaque_id"] for d in docs])
     by_id = {d["facts"]["opaque_id"]: d for d in docs}
@@ -528,7 +586,22 @@ def main(argv: Optional[List[str]] = None) -> int:
     zs_long_calls = sum(
         1 for u in zeroshot_tokens if u.get("prompt_tokens", 0) > 100_000
     )
-    zs_standard = zs_prompt / 1e6 * 0.10 + zs_completion / 1e6 * 0.50
+    # The standard figure prices at the run's model row — the tier the
+    # campaign report itself used (a hard-coded haiku row here was the
+    # readme's own x20 on a sonnet run, #3138).
+    from argumentation_analysis.services.model_prices import resolve_price_row
+
+    std_row = resolve_price_row(model, 0)
+    if std_row is not None:
+        zs_standard = (
+            zs_prompt / 1e6 * std_row.input_per_mtok
+            + zs_completion / 1e6 * std_row.output_per_mtok
+        )
+        zs_standard_txt = f"**{zs_standard:.4f} $** au tarif standard (le chiffre du rapport de campagne)"
+    else:
+        zs_standard_txt = (
+            "non chiffrable (rang de prix standard inconnu pour ce modèle)"
+        )
     lines = [
         provenance_block(run_head, model, command),
         "# Campagne #2841 — lire d'abord ceci",
@@ -537,7 +610,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "",
         f"Le corpus chiffré du dépôt ({len(docs)} segments de discours politiques historiques et contemporains) a été traité le 2026-10-21 par le pipeline complet (« workflow spectacular » : extraction d'arguments, détection de sophismes, analyse formelle FOL/propositionnelle/modale, puis restitution narrative en trois actes), modèle **{model}**, sans limite de longueur d'entrée. Chaque document a été traité aussi en **zero-shot** : le même modèle, le texte entier, un seul appel sans outils — pour comparer ce que la machinerie apporte au-dessus du modèle brut.",
         "",
-        f"Coût du pipeline recalculé depuis les jetons mesurés : **{total_cost:.4f} $**. Coût zero-shot : **{zs_standard:.4f} $** au tarif standard (le chiffre du rapport de campagne) ou **{total_zeroshot:.4f} $** en appliquant le palier long-prompt de la table de prix à ses {zs_long_calls} appels de plus de 100 k jetons d'entrée — palier jamais confronté à une facture réelle, l'écart entre les deux chiffres est la mesure de cette incertitude. Code du run : `{run_head}`.",
+        f"Coût du pipeline recalculé depuis les jetons mesurés : **{total_cost:.4f} $**. Coût zero-shot : {zs_standard_txt} ou **{total_zeroshot:.4f} $** en appliquant le palier long-prompt de la table de prix à ses {zs_long_calls} appels de plus de 100 k jetons d'entrée — palier jamais confronté à une facture réelle, l'écart entre les deux chiffres est la mesure de cette incertitude. Code du run : `{run_head}`.",
         "",
         "## Ce que la campagne établit — et n'établit pas",
         "",
