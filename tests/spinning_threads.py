@@ -20,6 +20,12 @@ burner's share for isolated windows), the test fails, and the message says
 where each one runs. The threads share the GIL, so the use is summed over
 them.
 
+When the attempts run out before ``SAMPLES`` windows could even be measured —
+a seat so loaded that the calibration burner itself starved below
+``CAL_FLOOR`` — the run has no verdict (#3125 rework: an unmeasured window is
+not an unused one), and the plugin warns with the window trail instead of
+letting the check pass silently.
+
 Loaded as a plugin by ``tests/conftest.py``. ``psutil``, which times each
 thread, is imported only when a test leaves a thread alive.
 """
@@ -30,6 +36,7 @@ import sys
 import threading
 import time
 import traceback
+import warnings
 
 import pytest
 
@@ -57,7 +64,7 @@ MAX_ATTEMPTS = 3 * SAMPLES
 _BEFORE = pytest.StashKey[frozenset]()
 
 
-def left_alive(before):
+def left_alive(before: frozenset[threading.Thread]) -> list[threading.Thread]:
     """The threads alive now that were not in ``before``."""
     return [
         thread
@@ -66,7 +73,7 @@ def left_alive(before):
     ]
 
 
-def _cpu(threads):
+def _cpu(threads: list[threading.Thread]) -> dict[int, float]:
     """Seconds of CPU each of ``threads`` has used, by native id."""
     import psutil
 
@@ -98,10 +105,21 @@ def _credits(used: float, gettable: float) -> bool | None:
     return used >= max(FACTOR * gettable, USED_FLOOR)
 
 
-def spinning(threads, window=WINDOW, samples=SAMPLES):
+def spinning(
+    threads: list[threading.Thread],
+    window: float = WINDOW,
+    samples: int = SAMPLES,
+    trail: list[tuple[float, float, bool | None]] | None = None,
+) -> list[threading.Thread]:
     """``threads``, if together they kept using, in ``samples`` measurable
     windows (not necessarily consecutive), at least ``FACTOR`` of the CPU the
     calibration burner could get in the same windows; else ``[]``.
+
+    ``trail``, when a list is passed, receives one ``(used, gettable,
+    decision)`` tuple per attempted window, so a caller can tell a clear
+    verdict from an undetermined one (`verdict_of`) — the return value alone
+    cannot (#3125 rework: attempts exhausted without a verdict read as
+    ``[]`` was the silent false negative a loaded gate seat produced).
 
     The calibration burner is a thread of this process started for the
     measurement: whatever rationing the suspects live under — GIL
@@ -152,6 +170,8 @@ def spinning(threads, window=WINDOW, samples=SAMPLES):
             gettable = max(0.0, second.get(cal_id, 0.0) - first.get(cal_id, 0.0))
             first = second
             decision = _credits(used, gettable)
+            if trail is not None:
+                trail.append((used, gettable, decision))
             if decision is None:
                 # Unmeasurable window (the process was starved below
                 # accounting noise): retry it, bounded by MAX_ATTEMPTS.
@@ -172,7 +192,51 @@ def spinning(threads, window=WINDOW, samples=SAMPLES):
         cal.join(1)
 
 
-def describe(threads):
+def verdict_of(trail: list[tuple[float, float, bool | None]]) -> str:
+    """The verdict of a ``spinning`` window trail: ``"caught"``,
+    ``"clear"``, or ``"undetermined"``.
+
+    ``"clear"`` requires ``SAMPLES`` measured unused windows in a row —
+    a waiter, or a thread that stopped burning. Anything that ends short of
+    ``SAMPLES`` used windows without that streak left the question open:
+    an unmeasured window is not an unused one (#3125 rework)."""
+    trues = 0
+    streak = 0
+    for _, _, decision in trail:
+        if decision is None:
+            continue
+        if decision:
+            trues += 1
+            streak = 0
+        else:
+            streak += 1
+    if trues >= SAMPLES:
+        return "caught"
+    if streak >= SAMPLES:
+        return "clear"
+    return "undetermined"
+
+
+def undetermined_warning(
+    threads: list[threading.Thread], trail: list[tuple[float, float, bool | None]]
+) -> str:
+    """The warning for a run that could not measure enough windows to
+    conclude: the thread names and every attempted window, so a gate log
+    alone says what happened."""
+    names = ", ".join(thread.name for thread in threads)
+    windows = "; ".join(
+        f"used={used * 1000:.0f}ms gettable={gettable * 1000:.0f}ms -> {decision}"
+        for used, gettable, decision in trail
+    )
+    return (
+        f"#2538 could not measure whether these thread(s) spin: {names} "
+        f"({len(trail)} window(s) attempted, verdict undetermined — the "
+        f"calibration burner starved below its floor, so this is neither a "
+        f"pass nor a clear): {windows}"
+    )
+
+
+def describe(threads: list[threading.Thread]) -> str:
     """The message for ``threads``: the name of each, and where it runs."""
     frames = sys._current_frames()
     parts = []
@@ -200,7 +264,11 @@ def pytest_runtest_setup(item):
 def pytest_runtest_teardown(item, nextitem):
     result = yield
     if _BEFORE in item.stash:
-        spun = spinning(left_alive(item.stash[_BEFORE]))
+        suspects = left_alive(item.stash[_BEFORE])
+        trail: list[tuple[float, float, bool | None]] = []
+        spun = spinning(suspects, trail=trail)
         if spun:
             pytest.fail(describe(spun), pytrace=False)
+        elif suspects and verdict_of(trail) == "undetermined":
+            warnings.warn(undetermined_warning(suspects, trail))
     return result
