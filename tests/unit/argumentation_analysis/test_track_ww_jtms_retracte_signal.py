@@ -469,5 +469,10 @@ class TestDualSessionGap:
 
         result = compute_argument_convergence(state)
         assert "arg_1" in result
-        assert result["arg_1"]["score"] == 1
+        # #3145: the retraction is READ from state (this is the assertion
+        # that pins the state-not-session wiring) but is derived content —
+        # cited, never counted.
+        assert result["arg_1"]["score"] == 0
         assert result["arg_1"]["signals"][0][0] == "JTMS retracte"
+        assert result["arg_1"]["cited_signals"][0][0] == "JTMS retracte"
+        assert result["arg_1"]["independent_signals"] == []

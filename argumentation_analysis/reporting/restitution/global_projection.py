@@ -85,7 +85,12 @@ def project_global_findings(state: Any) -> List[GlobalFinding]:
         key=lambda kv: -int(kv[1].get("score", 0)),
     )
     for arg_id, data in ranked[:_MAX_CONVERGENCE_FINDINGS]:
-        signals = data.get("signals") or []
+        # #3145: only INDEPENDENT methods may be said to converge. Derived
+        # (JTMS echo of the fallacy) and gated (non-discriminating counter)
+        # signals stay in ``signals``/``cited_signals`` as content; counting
+        # them here is what printed "trois méthodes indépendantes" for one
+        # detection.
+        signals = data.get("independent_signals") or []
         methods = sorted({str(method) for method, _detail in signals})
         if not methods:
             continue

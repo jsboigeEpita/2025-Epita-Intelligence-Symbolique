@@ -34,16 +34,34 @@ def _flagged_state() -> SimpleNamespace:
     """Synthetic state (privacy HARD — opaque ids, no corpus tokens) where
     arg_7 is flagged by THREE independent methods (fallacy, low quality,
     counter-argument) while arg_1 is clean, and the deep synthesis left its
-    value gates in the workflow bag."""
+    value gates in the workflow bag.
+
+    #3145 shaping: the quality entries carry per-virtue ``scores`` (#1942 —
+    a bare ``overall`` has no fraction, the signal stays dead) with arg_1
+    spanning the weak bar to open the non-vacuity gate, and the counter
+    phase's recorded sample shows the axis discriminates (arg_1, sampled,
+    got no counter) so the counter counts as independent."""
     return SimpleNamespace(
         identified_arguments={"arg_1": "these clean", "arg_7": "these weak"},
         identified_fallacies={
             "f1": {"target_argument_id": "arg_7", "type": "ad_hominem"}
         },
-        argument_quality_scores={"arg_7": {"overall": 3.0}},
+        argument_quality_scores={
+            "arg_7": {"scores": {"clarte": 0.3, "coherence": 0.3}, "overall": 0.6},
+            "arg_1": {"scores": {"clarte": 0.7, "coherence": 0.7}, "overall": 1.4},
+        },
         counter_arguments=[{"target_arg_id": "arg_7", "counter_content": "c"}],
         jtms_beliefs={},
         dung_frameworks={},
+        analysis_coverage={
+            "counter": {
+                "k": 2,
+                "N": 2,
+                "bands_covered": 3,
+                "bands_total": 3,
+                "unit_ids": ["arg_7", "arg_1"],
+            }
+        },
         workflow_results={"deep_synthesis_value_gates": {"VG1": True, "VG2": False}},
     )
 

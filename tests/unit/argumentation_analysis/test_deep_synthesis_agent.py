@@ -673,6 +673,18 @@ def _convergent_state() -> UnifiedAnalysisState:
         0.9,
         target_arg_id="arg_2",
     )
+    # #3145: the counter counts as the third independent method only when the
+    # recorded sample shows the axis discriminates — arg_3, sampled, got no
+    # counter. Without this record the counter is cited and arg_2 scores 2.
+    state.analysis_coverage = {
+        "counter": {
+            "k": 2,
+            "N": 3,
+            "bands_covered": 3,
+            "bands_total": 3,
+            "unit_ids": ["arg_2", "arg_3"],
+        }
+    }
     return state
 
 

@@ -273,8 +273,9 @@ class TestDungSignalInConvergence:
         assert "qualite faible" in methods
         assert "rejet Dung" in methods
 
-    def test_dung_signal_contributes_to_depth_4(self):
-        """With fallacy + quality + JTMS + Dung, depth reaches 4."""
+    def test_dung_signal_contributes_to_depth(self):
+        """With fallacy + quality + JTMS + Dung, the Dung rejection is the
+        THIRD independent method (#3145) — the JTMS echo stays cited."""
         desc = "The market will self-regulate without government intervention"
         weak = {"overall": 2.1, "scores": {f"v{i}": 2.1 / 9 for i in range(9)}}
         span = {"overall": 5.4, "scores": {f"v{i}": 0.6 for i in range(9)}}
@@ -291,12 +292,16 @@ class TestDungSignalInConvergence:
         )
         result = compute_argument_convergence(state)
         assert "arg_1" in result
-        assert result["arg_1"]["score"] == 4
+        assert result["arg_1"]["score"] == 3
+        independent = {s[0] for s in result["arg_1"]["independent_signals"]}
+        assert independent == {"sophisme", "qualite faible", "rejet Dung"}
         methods = [s[0] for s in result["arg_1"]["signals"]]
         assert "sophisme" in methods
         assert "qualite faible" in methods
         assert "JTMS retracte" in methods
         assert "rejet Dung" in methods
+        cited = {s[0] for s in result["arg_1"]["cited_signals"]}
+        assert cited == {"JTMS retracte"}
 
     def test_previously_dead_signal_now_live(self):
         """Before fix: text-label Dung rejection was invisible. After fix: counted."""

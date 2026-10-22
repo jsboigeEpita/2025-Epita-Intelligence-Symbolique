@@ -175,10 +175,14 @@ class TestJTMSConvergenceSignal:
 
 
 class TestConvergenceDepthImprovement:
-    """After fix: fallacy + quality + JTMS = convergence ≥3 for same arg."""
+    """The LL prefix fix makes the JTMS retraction READABLE — #3145 then
+    classes it DERIVED (the fallacy retracted it), so it is cited content,
+    never a third concurring method."""
 
-    def test_three_signals_achievable_with_jtms(self):
-        """Combining fallacy + quality + JTMS produces score ≥3 for arg_1.
+    def test_three_signals_read_jtms_cited_not_counted(self):
+        """Fallacy + quality + JTMS on arg_1: the retraction (readable thanks
+        to the "arg_N:" naming the LL fix installed) is cited, the score
+        stays at the two independent methods.
 
         The #1942 non-vacuity gate requires at least one argument whose
         quality fraction spans the weak bar; otherwise the population is
@@ -187,7 +191,9 @@ class TestConvergenceDepthImprovement:
         """
         state = UnifiedAnalysisState("Test discourse.")
         state.add_argument("A rhetorically weak argument with low quality.")  # arg_1
-        state.add_argument("A balanced reference argument (opens non-vacuity gate).")  # arg_2
+        state.add_argument(
+            "A balanced reference argument (opens non-vacuity gate)."
+        )  # arg_2
 
         # Signal 1: fallacy targeting arg_1
         state.add_fallacy("ad_hominem", "Attacks the person, not the idea.", "arg_1")
@@ -206,15 +212,16 @@ class TestConvergenceDepthImprovement:
 
         result = compute_argument_convergence(state)
         assert "arg_1" in result
-        score = result["arg_1"]["score"]
-        assert score >= 3, f"Expected convergence ≥3, got {score}"
-        methods = [m for m, _ in result["arg_1"]["signals"]]
-        assert "sophisme" in methods
-        assert "qualite faible" in methods
-        assert "JTMS retracte" in methods
+        assert result["arg_1"]["score"] == 2
+        independent = [m for m, _ in result["arg_1"]["independent_signals"]]
+        assert independent == ["sophisme", "qualite faible"]
+        # The retraction is still read (LL fix) — as derived content.
+        cited = [m for m, _ in result["arg_1"]["cited_signals"]]
+        assert cited == ["JTMS retracte"]
 
-    def test_four_signals_achievable_with_jtms_and_dung(self):
-        """fallacy + quality + JTMS + Dung = convergence ≥4 on arg_1.
+    def test_fourth_independent_method_is_dung_not_jtms(self):
+        """fallacy + quality + Dung = 3 independent methods on arg_1; the
+        JTMS retraction on top stays cited (#3145).
 
         The #1942 non-vacuity gate requires a spanning argument to open the
         'qualite faible' signal; we add arg_2 to span so the gate opens.
@@ -240,7 +247,11 @@ class TestConvergenceDepthImprovement:
 
         result = compute_argument_convergence(state)
         assert "arg_1" in result
-        assert result["arg_1"]["score"] >= 4
+        assert result["arg_1"]["score"] == 3
+        independent = {m for m, _ in result["arg_1"]["independent_signals"]}
+        assert independent == {"sophisme", "qualite faible", "rejet Dung"}
+        cited = {m for m, _ in result["arg_1"]["cited_signals"]}
+        assert cited == {"JTMS retracte"}
 
 
 # ---------------------------------------------------------------------------

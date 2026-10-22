@@ -33,8 +33,24 @@ def _make_state(
     dung_frameworks=None,
     propositional_analysis_results=None,
     fol_analysis_results=None,
+    counter_sample=None,
 ):
-    """Build a fake state namespace for convergence/formula testing."""
+    """Build a fake state namespace for convergence/formula testing.
+
+    ``counter_sample`` — #3145: the counter phase's recorded sample. The
+    counter signal counts as an independent method only when the sample shows
+    the axis discriminates (some sampled unit got no counter); omitted, the
+    counter is cited but never counted.
+    """
+    coverage = {}
+    if counter_sample is not None:
+        coverage["counter"] = {
+            "k": len(counter_sample),
+            "N": len(counter_sample),
+            "bands_covered": 3,
+            "bands_total": 3,
+            "unit_ids": list(counter_sample),
+        }
     return SimpleNamespace(
         identified_arguments=identified_arguments or {},
         identified_fallacies=identified_fallacies or {},
@@ -44,6 +60,7 @@ def _make_state(
         dung_frameworks=dung_frameworks or {},
         propositional_analysis_results=propositional_analysis_results or [],
         fol_analysis_results=fol_analysis_results or [],
+        analysis_coverage=coverage,
     )
 
 
@@ -55,6 +72,10 @@ class TestSignalIntegrity:
             compute_argument_convergence,
         )
 
+        # #3145: all five signals still FIRE (present in ``signals``), but
+        # only the independent classes count — the counter needs a recorded
+        # sample that discriminates (arg_2, sampled, got no counter), and the
+        # JTMS retraction is derived from the fallacy, cited not counted.
         state = _make_state(
             identified_arguments={"arg_1": "desc1", "arg_2": "solid"},
             identified_fallacies={
@@ -73,10 +94,11 @@ class TestSignalIntegrity:
                     "semantics": "grounded",
                 },
             },
+            counter_sample=["arg_1", "arg_2"],
         )
         result = compute_argument_convergence(state)
         assert "arg_1" in result
-        assert result["arg_1"]["score"] == 5
+        assert result["arg_1"]["score"] == 4
         methods = {s[0] for s in result["arg_1"]["signals"]}
         assert methods == {
             "sophisme",
@@ -85,6 +107,15 @@ class TestSignalIntegrity:
             "JTMS retracte",
             "rejet Dung",
         }
+        independent = {s[0] for s in result["arg_1"]["independent_signals"]}
+        assert independent == {
+            "sophisme",
+            "qualite faible",
+            "contre-argument",
+            "rejet Dung",
+        }
+        cited = {s[0] for s in result["arg_1"]["cited_signals"]}
+        assert cited == {"JTMS retracte"}
 
     def test_signal_1_fallacy(self):
         from argumentation_analysis.plugins.narrative_synthesis_plugin import (
@@ -119,19 +150,41 @@ class TestSignalIntegrity:
             compute_argument_convergence,
         )
 
+        # #3145: the counter fires as an independent method when the recorded
+        # sample shows the axis discriminates (arg_2, sampled, got no
+        # counter); without that sample it is cited, not counted.
+        state = _make_state(
+            identified_arguments={"arg_1": "desc", "arg_2": "solid"},
+            counter_arguments=[{"target_arg_id": "arg_1", "content": "counter"}],
+            counter_sample=["arg_1", "arg_2"],
+        )
+        result = compute_argument_convergence(state)
+        assert result["arg_1"]["score"] == 1
+        assert result["arg_1"]["signals"][0][0] == "contre-argument"
+
+    def test_signal_3_counter_cited_when_sample_absent(self):
+        from argumentation_analysis.plugins.narrative_synthesis_plugin import (
+            compute_argument_convergence,
+        )
+
         state = _make_state(
             identified_arguments={"arg_1": "desc"},
             counter_arguments=[{"target_arg_id": "arg_1", "content": "counter"}],
         )
         result = compute_argument_convergence(state)
-        assert result["arg_1"]["score"] == 1
+        # No recorded sample → the axis is unmeasured, the counter is content.
+        assert result["arg_1"]["score"] == 0
         assert result["arg_1"]["signals"][0][0] == "contre-argument"
+        assert result["arg_1"]["cited_signals"][0][0] == "contre-argument"
 
     def test_signal_4_jtms_retracted(self):
         from argumentation_analysis.plugins.narrative_synthesis_plugin import (
             compute_argument_convergence,
         )
 
+        # #3145: the retraction still fires (visible content), but DERIVED
+        # signals never count — the entry exists with score 0, the signal in
+        # ``cited_signals``.
         state = _make_state(
             identified_arguments={"arg_1": "desc"},
             jtms_beliefs={
@@ -139,8 +192,9 @@ class TestSignalIntegrity:
             },
         )
         result = compute_argument_convergence(state)
-        assert result["arg_1"]["score"] == 1
+        assert result["arg_1"]["score"] == 0
         assert result["arg_1"]["signals"][0][0] == "JTMS retracte"
+        assert result["arg_1"]["cited_signals"][0][0] == "JTMS retracte"
 
     def test_signal_5_dung_rejected(self):
         from argumentation_analysis.plugins.narrative_synthesis_plugin import (
@@ -266,6 +320,8 @@ class TestConvergenceDepth:
             compute_argument_convergence,
         )
 
+        # #3145: depth 3 needs three INDEPENDENT classes — the counter counts
+        # because the recorded sample discriminates (arg_2 got no counter).
         state = _make_state(
             identified_arguments={"arg_1": "desc", "arg_2": "solid"},
             identified_fallacies={
@@ -273,15 +329,19 @@ class TestConvergenceDepth:
             },
             argument_quality_scores={"arg_1": _quality(2.0), "arg_2": _SPAN},
             counter_arguments=[{"target_arg_id": "arg_1", "content": "counter"}],
+            counter_sample=["arg_1", "arg_2"],
         )
         result = compute_argument_convergence(state)
         assert result["arg_1"]["score"] >= 3
 
-    def test_depth_4_with_jtms(self):
+    def test_depth_4_needs_four_independent_not_jtms(self):
         from argumentation_analysis.plugins.narrative_synthesis_plugin import (
             compute_argument_convergence,
         )
 
+        # #3145: depth 4 is reachable — by four INDEPENDENT classes (Dung
+        # joins sophisme/qualite/contre-argument), never by adding the JTMS
+        # echo of the fallacy on top of three: it stays cited content.
         state = _make_state(
             identified_arguments={"arg_1": "desc", "arg_2": "solid"},
             identified_fallacies={
@@ -289,16 +349,33 @@ class TestConvergenceDepth:
             },
             argument_quality_scores={"arg_1": _quality(2.0), "arg_2": _SPAN},
             counter_arguments=[{"target_arg_id": "arg_1", "content": "counter"}],
-            jtms_beliefs={"b1": {"name": "arg_1:text", "valid": False}},
+            counter_sample=["arg_1", "arg_2"],
+            dung_frameworks={
+                "fw1": {
+                    "name": "verification_grounded",
+                    "arguments": ["arg_1"],
+                    "extensions": [],
+                    "semantics": "grounded",
+                },
+            },
         )
         result = compute_argument_convergence(state)
-        assert result["arg_1"]["score"] >= 4
+        assert result["arg_1"]["score"] == 4
+
+        # Adding the derived JTMS echo on top changes nothing in the count.
+        state.jtms_beliefs = {"b1": {"name": "arg_1:text", "valid": False}}
+        result = compute_argument_convergence(state)
+        assert result["arg_1"]["score"] == 4
+        cited = {s[0] for s in result["arg_1"]["cited_signals"]}
+        assert cited == {"JTMS retracte"}
 
     def test_depth_5_all_signals(self):
         from argumentation_analysis.plugins.narrative_synthesis_plugin import (
             compute_argument_convergence,
         )
 
+        # #3145: five signals firing on one argument count 4 independent
+        # methods — the JTMS retraction is the fallacy's echo, cited.
         state = _make_state(
             identified_arguments={"arg_1": "desc", "arg_2": "solid"},
             identified_fallacies={
@@ -306,6 +383,7 @@ class TestConvergenceDepth:
             },
             argument_quality_scores={"arg_1": _quality(2.0), "arg_2": _SPAN},
             counter_arguments=[{"target_arg_id": "arg_1", "content": "counter"}],
+            counter_sample=["arg_1", "arg_2"],
             jtms_beliefs={"b1": {"name": "arg_1:text", "valid": False}},
             dung_frameworks={
                 "fw1": {
@@ -317,4 +395,5 @@ class TestConvergenceDepth:
             },
         )
         result = compute_argument_convergence(state)
-        assert result["arg_1"]["score"] == 5
+        assert result["arg_1"]["score"] == 4
+        assert len(result["arg_1"]["signals"]) == 5
