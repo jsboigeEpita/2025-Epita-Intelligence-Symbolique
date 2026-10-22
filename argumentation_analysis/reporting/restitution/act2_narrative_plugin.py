@@ -60,7 +60,7 @@ from .native_dung import (  # #1912: single shared decoder — see native_dung.p
     select_primary_native,
 )
 from .fr_accord import accord
-from .formal_derivation import extract_tested_content
+from .formal_derivation import tested_content_and_units
 from .speaker_record import (
     SPEAKER_NAMING_RULE,
     SpeakerRecord,
@@ -284,6 +284,11 @@ class FormalFinding:
     # counters) ; the weaving line then says so honestly instead of letting a
     # bare count read as a proof.
     tested: Optional[str] = None
+    # #3146 : the source units a recorded core names. When the conflict site
+    # is an unsplittable translation batch, the verdict binds to the batch's
+    # units (and through them to their movements) — never to one unit the
+    # state did not single out. Empty when no cause named units.
+    units: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -1074,6 +1079,11 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                 and isinstance(r.get("consistency_cause"), dict)
                 and r["consistency_cause"].get("cause")
             ]
+            # #3146 : one reader for content and units — the recorded core
+            # decides both (the offline fallback names no units).
+            pl_tested, pl_units = tested_content_and_units(
+                pl, _pl_verdict, refuted=bool(inconsistent)
+            )
             findings.append(
                 FormalFinding(
                     kind="pl",
@@ -1090,9 +1100,9 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                     # #1914 : the refuted records' formulas are the derivation
                     # (what failed) ; on an all-verified axis, a sample of what
                     # passed. Placeholder-only records → None → honest absence.
-                    tested=extract_tested_content(
-                        pl, _pl_verdict, refuted=bool(inconsistent)
-                    ),
+                    # #3146 : a recorded core also names its source units.
+                    tested=pl_tested,
+                    units=pl_units,
                 )
             )
 
@@ -1116,6 +1126,17 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                 and isinstance(r.get("consistency_cause"), dict)
                 and r["consistency_cause"].get("cause")
             ]
+            # #3146 : the FOL cause twin (#3107) carries the same core —
+            # same single reader for content and units.
+            fol_tested, fol_units = tested_content_and_units(
+                fol,
+                lambda r: (
+                    r.get("consistent")
+                    if isinstance(r.get("consistent"), bool)
+                    else None
+                ),
+                refuted=bool(inconsistent),
+            )
             findings.append(
                 FormalFinding(
                     kind="fol",
@@ -1129,15 +1150,8 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                         "solveur Tweety (logique du premier ordre)"
                         + (" — " + " ; ".join(fol_causes) if fol_causes else "")
                     ),
-                    tested=extract_tested_content(
-                        fol,
-                        lambda r: (
-                            r.get("consistent")
-                            if isinstance(r.get("consistent"), bool)
-                            else None
-                        ),
-                        refuted=bool(inconsistent),
-                    ),
+                    tested=fol_tested,
+                    units=fol_units,
                 )
             )
         else:
@@ -1194,6 +1208,15 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
         if decided:
             sat = sum(1 for r in decided if r.get("valid") is True)
             unsat = sum(1 for r in decided if r.get("valid") is False)
+            # #3146 : the modal leg has no cause writer — the shared reader
+            # finds no core there and names no units, by construction.
+            modal_tested, _modal_units = tested_content_and_units(
+                modal,
+                lambda r: (
+                    r.get("valid") if isinstance(r.get("valid"), bool) else None
+                ),
+                refuted=bool(unsat),
+            )
             findings.append(
                 FormalFinding(
                     kind="modal",
@@ -1204,13 +1227,7 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                         else f"{accord(sat, 'théorie modale consistante', 'théories modales consistantes')}"
                     ),
                     detail="solveur modal (SPASS/Tweety)",
-                    tested=extract_tested_content(
-                        modal,
-                        lambda r: (
-                            r.get("valid") if isinstance(r.get("valid"), bool) else None
-                        ),
-                        refuted=bool(unsat),
-                    ),
+                    tested=modal_tested,
                 )
             )
         else:
@@ -1562,9 +1579,18 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                     if f.tested
                     else "contenu testé non disponible dans l'état (compteur seul)"
                 )
+                # #3146 : the recorded core's source units — the verdict binds
+                # to the batch's units (their movements), never « attached to
+                # no move » for a conflict the state localises exactly.
+                binding = (
+                    f" — rattachement : unités {', '.join(f.units)} "
+                    "(le lot de traduction de ces unités, pas une seule)"
+                    if f.units
+                    else ""
+                )
                 formal_lines.append(
                     f"  - {_KIND_READABLE.get(f.kind, f.kind)} : {f.verdict} — "
-                    f"{derivation} — ancrage : {f.detail}"
+                    f"{derivation}{binding} — ancrage : {f.detail}"
                 )
             else:
                 formal_lines.append(

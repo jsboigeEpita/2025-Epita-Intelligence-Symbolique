@@ -171,8 +171,11 @@ def scan_tested_content(
 # A unit literal is an optional negation followed by ONE atom term: a PL/modal
 # identifier (``p``) or a FOL ground atom (``mortal(socrates)`` — flat terms
 # only, no nested parens: a nested term does not localize and stays honest).
+# #3146: whitespace is allowed between ``!`` and the atom — the translator
+# writes ``! p``, and rejecting the space made the localizer miss the exact
+# pair the run had recorded as the core.
 _UNIT_LITERAL = re.compile(
-    r"^\s*(!?)([A-Za-z_][A-Za-z0-9_]*(?:\([A-Za-z0-9_,\s]*\))?)\s*$"
+    r"^\s*(!?)\s*([A-Za-z_][A-Za-z0-9_]*(?:\([A-Za-z0-9_,\s]*\))?)\s*$"
 )
 
 
@@ -204,42 +207,128 @@ def _locate_conflict_pair(
     return None
 
 
+def _recorded_core_formulas(record: Dict[str, Any]) -> List[str]:
+    """The formulas the run itself recorded as the conflict core (#3122).
+
+    ``consistency_cause.core.indices`` with ``mus`` true is the minimal
+    unsatisfiable core the solver-side deletion sweep computed — the exact
+    conflict, already minimised. Re-deriving it offline (the unit-literal
+    localizer) is a weaker second producer of the same fact. The degraded
+    whole-theory shape (``mus`` false) is NOT a core: nothing was minimised,
+    and rendering every formula would pin the refutation on the batch —
+    #2960's defect in another font. Placeholder strings stay out (the
+    anti-fabrication contract holds on this path too).
+    """
+    cause = record.get("consistency_cause")
+    if not (isinstance(cause, dict) and cause.get("mus") is True):
+        return []
+    core = cause.get("core")
+    if not (isinstance(core, dict) and isinstance(core.get("indices"), list)):
+        return []
+    formulas = record.get("formulas")
+    if not isinstance(formulas, list):
+        return []
+    out: List[str] = []
+    for index in core["indices"]:
+        if isinstance(index, int) and 0 <= index < len(formulas):
+            formula = formulas[index]
+            if isinstance(formula, str) and _is_real_formula(formula):
+                out.append(formula)
+    return out
+
+
+def _cause_units(cause: Any) -> List[str]:
+    """The source units the cause names, when it names any (#3146).
+
+    A ``batch_attribution`` cause names the whole unsplittable batch's
+    units; the split causes name their sides. Either way the binding is to
+    that unit SET — never to one unit the state did not single out.
+    """
+    if not isinstance(cause, dict):
+        return []
+    units: "set[str]" = set()
+    for pair in cause.get("pairs") or []:
+        if not isinstance(pair, dict):
+            continue
+        for side in pair.get("sources") or []:
+            if isinstance(side, list):
+                units.update(u for u in side if isinstance(u, str))
+    return sorted(units)
+
+
+def _quoted_atoms(atoms: List[str], extra: int) -> str:
+    """The bounded hand-over rendering shared by the three selection paths."""
+    quoted = ", ".join(f"« {a} »" for a in atoms)
+    suffix = (
+        f" (+{accord(extra, 'autre formule', 'autres formules')})" if extra > 0 else ""
+    )
+    return quoted + suffix
+
+
 def extract_tested_content(
     records: Any,
     verdict_reader: Callable[[Dict[str, Any]], Optional[bool]],
     refuted: bool,
     max_atoms: int = _MAX_ATOMS,
 ) -> Optional[str]:
-    """Bounded rendering of what the axis actually tested.
+    """Bounded rendering of what the axis actually tested (see
+    :func:`tested_content_and_units` — the same reader, content only)."""
+    content, _units = tested_content_and_units(
+        records, verdict_reader, refuted, max_atoms
+    )
+    return content
 
-    Returns ``None`` when the selected records carry no real formula
-    (placeholder-only or empty) — the caller renders the honest absence,
-    never a fabricated derivation. ``refuted=True`` selects the REFUTED
-    records (the decisive derivation: what failed); ``refuted=False`` the
-    verified ones (a sample of what passed).
 
-    #2960: for a refuted record the content is the CONFLICT — the
-    complementary unit-literal pair when the conflict localizes offline —
-    never the record's first formulas in list order: a KB-level refutation
-    pinned on whatever comes first names an inference the solver never
-    singled out. When the conflict does not localize (compound formulas,
-    spread conflict), there is no localizable tested content: ``None``,
-    and the decisive role must not fire against a specific inference.
+def tested_content_and_units(
+    records: Any,
+    verdict_reader: Callable[[Dict[str, Any]], Optional[bool]],
+    refuted: bool,
+    max_atoms: int = _MAX_ATOMS,
+) -> Tuple[Optional[str], List[str]]:
+    """Bounded rendering of what the axis actually tested, with the source
+    units a recorded core names.
+
+    Returns ``(content, units)``: the rendering (``None`` when the selected
+    records carry no real formula — placeholder-only or empty — the caller
+    renders the honest absence, never a fabricated derivation) and the
+    opaque unit ids the retained cause names (empty when it names none).
+    ``refuted=True`` selects the REFUTED records (the decisive derivation:
+    what failed); ``refuted=False`` the verified ones (a sample of what
+    passed, never any unit claim).
+
+    #2960: for a refuted record the content is the CONFLICT — never the
+    record's first formulas in list order: a KB-level refutation pinned on
+    whatever comes first names an inference the solver never singled out.
+    #3146: the conflict the run itself minimised comes FIRST —
+    ``consistency_cause.core.indices`` (``mus`` true) IS the tested content,
+    and its source units ride along so the act binds the verdict to the
+    batch's moves instead of « attached to no move ». When no core is
+    recorded, the offline unit-literal localizer is the fallback; when the
+    conflict does not localize either (compound formulas, spread conflict),
+    there is no localizable tested content: ``None``, and the decisive role
+    must not fire against a specific inference.
     """
     selected = _records_with_verdict(records, verdict_reader, verdict=not refuted)
     real, placeholders = scan_tested_content(selected, verdict_reader)
     if refuted:
+        for record in selected:
+            core = _recorded_core_formulas(record)
+            if not core:
+                continue
+            atoms = [_readable_atom(f) for f in core[:max_atoms]]
+            return (
+                _quoted_atoms(atoms, len(core) - len(atoms)),
+                _cause_units(record.get("consistency_cause")),
+            )
         conflict = _locate_conflict_pair(real)
         if conflict is None:
-            return None
+            return None, []
         atoms = [_readable_atom(f) for f in conflict]
     else:
         atoms = [_readable_atom(f) for f in real[:max_atoms]]
     if not atoms:
-        return None
-    quoted = ", ".join(f"« {a} »" for a in atoms)
-    extra = len(real) + placeholders - len(atoms)
-    suffix = (
-        f" (+{accord(extra, 'autre formule', 'autres formules')})" if extra > 0 else ""
+        return None, []
+    return (
+        _quoted_atoms(atoms, len(real) + placeholders - len(atoms)),
+        [],
     )
-    return quoted + suffix
