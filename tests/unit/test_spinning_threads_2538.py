@@ -83,17 +83,49 @@ def test_a_thread_that_ended_is_not_left_alive():
     assert thread not in left_alive(before)
 
 
-# This spinner records nothing, and stops after 5 s, three windows of the
+def test_the_relative_rule_catches_what_the_absolute_bar_missed():
+    """#3125: the window decision, on the numbers the ai-01 flake measured.
+
+    A spinner rationed to ~a fifth of the window (~20 ms of 100) by the
+    other workers of a full ``-n auto`` run: main's absolute bar (half of
+    the nominal window, 50 ms) calls it NOT spinning — the false negative.
+    The relative rule compares it with what the calibration burner could
+    get in the same rationed window (~40 ms): the spinner tracks what was
+    gettable, and counts. (Witnessed on the arithmetic, not on a thread
+    race: a racing witness was measured on a live seat and its per-window
+    GIL shares skew with the scheduler — the deterministic disagreement
+    lives in these numbers, and the real-thread witnesses below carry the
+    integration.)"""
+    from tests.spinning_threads import _credits
+
+    # Spinner ~20 ms, calibration ~40 ms, in the same rationed window.
+    assert _credits(used=0.020, gettable=0.040) is True
+    # A spinner keeping pace with everything the window offered.
+    assert _credits(used=0.060, gettable=0.060) is True
+    # A waiter's blip is noise, never a spinner (healthy calibration).
+    assert _credits(used=0.002, gettable=0.040) is False
+    # A waiter's blip against a starved calibration: the window carries no
+    # signal at all — unmeasurable, the same None as below.
+    assert _credits(used=0.002, gettable=0.004) is None
+    # The calibration itself starved below accounting noise: the window
+    # carries no signal — not a pass, not a fail.
+    assert _credits(used=0.020, gettable=0.003) is None
+
+
+# This spinner records nothing, and stops after 10 s, many windows of the
 # guard and more: a spinner that never stops holds every thread that waits for
 # the GIL. On ai-01, the same two tests with no guard took 0.17 s with the
-# waiter alone, and 27.6 s with a spinner that never stopped.
+# waiter alone, and 27.6 s with a spinner that never stopped. (#3125: the
+# lifetime was 5 s — under an external load that inflates every snapshot,
+# three measured windows can outlive it and the witness flakes by the
+# spinner dying of old age mid-measurement, not by the detector missing.)
 _LEAVES_A_SPINNER = """
 import threading
 import time
 
 
 def _spins():
-    end = time.monotonic() + 5
+    end = time.monotonic() + 10
     while time.monotonic() < end:
         pass
 
