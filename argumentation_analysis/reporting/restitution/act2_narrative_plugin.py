@@ -1460,10 +1460,14 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                 # zero. Reporting "x/10" over a fixed denominator turned that
                 # instrument-reach artifact into a verdict on the speaker.
                 evaluated = sorted(a.virtues.keys())
-                vchar = ", ".join(evaluated) or "—"
                 tiennent = [k for k in evaluated if a.virtues[k] >= 0.75]
                 faiblissent = [k for k in evaluated if a.virtues[k] <= 0.25]
-                lines.append(f"      Profil de vertus (caractère) : {vchar}.")
+                # #3165: no « Profil de vertus (caractère) » line — since
+                # #1907 ``a.virtues`` holds the EVALUABLE dimensions, and that
+                # list under a "what the unit is" label was identical on 7 of
+                # 8 scored units (the instrument's reach, not the unit's
+                # character). The observation line below carries the evaluated
+                # set together with what holds and what fails.
                 if evaluated:
                     n_eval = len(evaluated)
                     observation = (
