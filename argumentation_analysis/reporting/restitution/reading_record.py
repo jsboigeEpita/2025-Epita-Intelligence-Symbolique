@@ -17,6 +17,7 @@ their payload-side basis (their reader is their result, not the acts).
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
@@ -315,6 +316,70 @@ def format_reading_block(record: ReadingRecord) -> str:
     return block
 
 
+# #3134 — the reader-facing bounds passage. The R1105b render (Sonnet) wove
+# the three fallacy lines into one "initial detection" carrying the descent's
+# 500; Haiku had them right; Opus quoted none. A bound that depends on which
+# model paraphrases the record is not a bound the pipeline guarantees — so the
+# numbers the reader receives are the record's own lines, grafted AFTER the
+# woven prose, and the prose restates none (``restated_bound_sentences``
+# below removes any that does, #1605 enforcement shape: the record's sentence
+# replaces the woven one, the event is logged, never a reader note).
+READER_BOUNDS_HEADING = "Bornes de lecture du run (enregistrement #1737)"
+
+
+def format_reader_bounds_passage(record: ReadingRecord) -> str:
+    """The bounds passage the acts graft after their prose — record only.
+
+    Empty when nothing was recorded: the rule's absent case (no line → no
+    bound) extends to the passage itself.
+    """
+    if not record.lines:
+        return ""
+    lines = "\n".join(
+        f"- {format_reading_line(ln, record.source_chars)}" for ln in record.lines
+    )
+    passage = f"**{READER_BOUNDS_HEADING}**\n{lines}"
+    if record.basis:
+        passage += f"\n- {record.basis}"
+    return passage
+
+
+#: A numeric reading-bound shape: "500 des 12000 caractères", "4000 caractères",
+#: "10 unités sur 91". French only — the acts and the record speak French.
+_BOUND_SHAPE = re.compile(
+    r"\d+\s+(?:des\s+\d+\s+)?(?:caractères?|unités?\s+sur\s+\d+)",
+    re.IGNORECASE,
+)
+
+#: A word naming a bounded READING (a site of the record). The shape alone
+#: would also catch a document length (« un discours de 12000 caractères ») —
+#: the measured object there is the document, not a reading.
+_READING_WORD = re.compile(
+    r"détection|lecture|extraction|traduction|logique|filet|descente|repli",
+    re.IGNORECASE,
+)
+
+_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
+
+
+def restated_bound_sentences(text: str) -> List[str]:
+    """The woven sentences that restate a numeric reading bound (#3134).
+
+    A sentence is restating a bound when it carries BOTH a bound shape
+    (a character or unit count in the record's grammar) and a reading word.
+    The caller removes them from the prose — the reader-facing bounds are
+    the record's passage, where each number sits under its own site label.
+    """
+    caught: List[str] = []
+    for sentence in _SENTENCE_SPLIT.split(text or ""):
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+        if _BOUND_SHAPE.search(sentence) and _READING_WORD.search(sentence):
+            caught.append(sentence)
+    return caught
+
+
 # The naming contract every grafting act carries, from this one constant.
 # Its absent case forbids invention: no recorded line → no bound to quote,
 # never a fabricated one. The reader receives woven bounds, never the table.
@@ -322,6 +387,9 @@ def format_reading_block(record: ReadingRecord) -> str:
 # old example (« sur le début du document… ») verbatim into its sentence.
 # The sentence now comes from the record's own lines, which name what each
 # bound fed, and from the basis line, which says what the rest rests on.
+# #3134 — and it comes from the pipeline, not from the model: no character
+# or unit count is restated by the prose, the passage grafted after the
+# text carries the record's lines as they are.
 READING_BASIS_RULE = (
     "- LES BORNES DE LECTURE SE DISENT PAR LES LIGNES LECTURES DU RUN ci-dessus :\n"
     "  une ligne « lecture de k des N caractères » dit que le spécialiste a lu\n"
@@ -330,5 +398,11 @@ READING_BASIS_RULE = (
     "  quoi repose le reste du run (unités du texte entier, ou seule\n"
     "  l'ouverture). Le récit ne présente JAMAIS une lecture bornée comme\n"
     "  celle du document entier. Aucune ligne → aucune borne à citer : n'en\n"
-    "  fabrique aucune."
+    "  fabrique aucune.\n"
+    "- NE REFORMULE AUCUN CHIFFRE DE BORNE DANS TA PROSE : aucun compte de\n"
+    "  caractères ou d'unités ne sort de toi. Le passage « Bornes de lecture\n"
+    "  du run », ajouté après ton texte, porte les lignes de l'enregistrement\n"
+    "  telles quelles — chaque borne sous l'étiquette de son site. Ta prose\n"
+    "  peut NOMMER ce que chaque lecture a alimenté ; les nombres viennent du\n"
+    "  passage, jamais de toi."
 )

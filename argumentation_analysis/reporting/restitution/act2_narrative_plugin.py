@@ -69,6 +69,8 @@ from .speaker_record import (
 )
 from .reading_record import (
     READING_BASIS_RULE,
+    format_reader_bounds_passage,
+    restated_bound_sentences,
     ReadingRecord,
     build_reading_record,
     format_reading_block,
@@ -2027,6 +2029,24 @@ async def build_act2_narrative(
             },
         )
     narrative = outcome.narrative
+
+    # #3134 — a woven sentence that restates a numeric bound is removed
+    # before anything else touches the text: the reader's bounds are the
+    # record's passage grafted below, where each number sits under its own
+    # site label. Same enforcement shape as Act III's (#1605): logged,
+    # never a reader note (#2032).
+    for _restated in restated_bound_sentences(narrative):
+        narrative = narrative.replace(_restated, "").strip()
+        logger.info(
+            "act2 woven bound restatement removed (record passage carries it): %s",
+            _restated[:90],
+        )
+
+    # #3134 — the record's own bounds close the act, after the prose, BEFORE
+    # the §4 self-check so the gate reads the text the reader receives.
+    _bounds_passage = format_reader_bounds_passage(evidence.readings)
+    if _bounds_passage:
+        narrative = narrative.rstrip() + "\n\n" + _bounds_passage
 
     # §4 self-check (honest, never grades on a curve).
     gate = ReadabilityGate()
