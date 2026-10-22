@@ -10,11 +10,13 @@ hour later.
 
 A thread a test leaves alive is harmless while it waits. So after each test,
 the threads started since its setup that are still alive are timed while this
-thread sleeps ``WINDOW`` s. If they kept using, ``SAMPLES`` measurable windows
-in a row, at least ``FACTOR`` of the CPU a calibration burner could get in the
-same windows (``#3125``: the bar is relative — the absolute half-core-per-
-window share was an idle-seat calibration, and under a full ``-n auto`` run a
-rationed spinner never reached it), the test fails, and the message says
+thread sleeps ``WINDOW`` s. If they kept using, in ``SAMPLES`` measurable
+windows within ``MAX_ATTEMPTS``, at least ``FACTOR`` of the CPU a calibration
+burner could get in the same windows (``#3125``: the bar is relative — the
+absolute half-core-per-window share was an idle-seat calibration, and under a
+full ``-n auto`` run a rationed spinner never reached it; the windows need
+not be consecutive — a loaded scheduler squeezes a real spinner below the
+burner's share for isolated windows), the test fails, and the message says
 where each one runs. The threads share the GIL, so the use is summed over
 them.
 
@@ -98,14 +100,22 @@ def _credits(used: float, gettable: float) -> bool | None:
 
 def spinning(threads, window=WINDOW, samples=SAMPLES):
     """``threads``, if together they kept using, in ``samples`` measurable
-    windows in a row, at least ``FACTOR`` of the CPU the calibration burner
-    could get in the same windows; else ``[]``.
+    windows (not necessarily consecutive), at least ``FACTOR`` of the CPU the
+    calibration burner could get in the same windows; else ``[]``.
 
     The calibration burner is a thread of this process started for the
     measurement: whatever rationing the suspects live under — GIL
     contention or an ``-n auto`` OS load — it lives under it too, so
     ``FACTOR * gettable`` is what "still burning" means here, not an
     absolute share of a core (#3125).
+
+    The Trues are counted within ``MAX_ATTEMPTS`` windows, not as a streak:
+    a loaded scheduler squeezes a real spinner below the burner's share for
+    isolated windows (measured under ``-n auto``: 31 ms used against 78 ms
+    gettable in one window of a spinner the streak rule missed), and only
+    ``samples`` consecutive unused windows end the measurement — a waiter
+    produces them from the start, a thread that stopped burning produces
+    them right after its last used one.
 
     One thread enumeration per window boundary, shared with the next window
     (measured: under a loaded seat each ``psutil`` call can take more than
@@ -115,7 +125,8 @@ def spinning(threads, window=WINDOW, samples=SAMPLES):
     zero, never negative)."""
     if not threads:
         return []
-    streak = 0
+    trues = 0
+    false_streak = 0
     attempts = 0
     cal_stop = threading.Event()
     cal = threading.Thread(
@@ -129,7 +140,7 @@ def spinning(threads, window=WINDOW, samples=SAMPLES):
         watched = list(threads) + [cal]
         cal_id = cal.native_id
         first = _cpu(watched)
-        while streak < samples and attempts < MAX_ATTEMPTS:
+        while trues < samples and attempts < MAX_ATTEMPTS:
             attempts += 1
             time.sleep(window)
             second = _cpu(watched)
@@ -146,12 +157,16 @@ def spinning(threads, window=WINDOW, samples=SAMPLES):
                 # accounting noise): retry it, bounded by MAX_ATTEMPTS.
                 continue
             if decision:
-                streak += 1
+                trues += 1
+                false_streak = 0
             else:
-                # A measured window without use ends the measurement, as it
-                # always did: a thread that stopped burning is not spinning.
-                break
-        return threads if streak >= samples else []
+                false_streak += 1
+                if false_streak >= samples:
+                    # samples measured windows in a row without use: a
+                    # waiter, or a thread that stopped burning. Not
+                    # spinning.
+                    break
+        return threads if trues >= samples else []
     finally:
         cal_stop.set()
         cal.join(1)
