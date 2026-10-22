@@ -23,13 +23,22 @@ causes, three distinct messages (anti-pendule: do not collapse them).
 Falsifiability — the degenerate substitution of DoD item 1 (force
 ``initialize_jvm`` to return ``False``) is pinned by
 ``test_initialize_jvm_false_sets_jvm_started_false``: on the pre-fix code the
-return was discarded → ``cache.set("jvm_started", True)`` regardless → the
-``assert_any_call("jvm_started", False)`` FAILS. Verified empirically (revert
+return was discarded → ``jvm_started`` forced True regardless → the
+``assert_any_call(key, False)`` FAILS. Verified empirically (revert
 the propagation, this test goes red; restore, green). The companion
 ``test_initialize_jvm_true_sets_jvm_started_true`` pins the no-regression path
 (passes both pre- and post-fix). A single decided-failure canary is honest here:
 unlike #1630 there is ONE defect (the discarded return), not two independent
 ones, so a single canary + empirical sub-verification matches the issue's DoD.
+
+#3161 re-pin: the transport moved from ``config.cache`` (on-disk, shared by
+every pytest process under the rootdir) to ``config.stash`` (in-process) —
+the assertions observe the same write through the sessionstart hook's OWN
+accessor pair (``set_jvm_started`` / the ``_JVM_STARTED`` stash key), so they
+keep pinning the propagation, not a transport. The early-return guards the
+mock must clear changed with it: ``is_e2e_session`` is no longer a cache
+lookup but the argv classifier, which answers False for a bare MagicMock
+(pinned in test_e2e_session_argv_decision_1820.py).
 """
 
 from __future__ import annotations
@@ -46,11 +55,11 @@ _JVM_SETUP = "argumentation_analysis.core.jvm_setup.initialize_jvm"
 
 @pytest.fixture(scope="module")
 def _sessionstart():
-    """Load the real tests/conftest.py and expose its pytest_sessionstart hook.
+    """Load the real tests/conftest.py; expose (sessionstart hook, stash key).
 
     Loaded under a distinct module name so the live conftest registered with
-    pytest is untouched; we only need the function object to call it with a mock
-    session.
+    pytest is untouched; we need the function object to call it with a mock
+    session, and the ``_JVM_STARTED`` key its writer uses.
     """
     spec = importlib.util.spec_from_file_location(
         "_conftest_under_test_1641", _CONFTEST_PATH
@@ -58,21 +67,31 @@ def _sessionstart():
     assert spec is not None and spec.loader is not None
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    return mod.pytest_sessionstart
+    return mod.pytest_sessionstart, mod._JVM_STARTED
 
 
 def _mock_session() -> MagicMock:
-    """A session past the three early-return guards (collectonly / --disable-jvm-
-    session / is_e2e_session all False) so execution reaches the initialize_jvm
-    call."""
+    """A session past the three early-return guards (collectonly /
+    --disable-jvm-session / argv-classified e2e all False) so execution
+    reaches the initialize_jvm call."""
     session = MagicMock()
-    # l.404 guard: collectonly must be False.
+    # Guard 1: collectonly must be False.
     session.config.option.collectonly = False
-    # l.411 guard: --disable-jvm-session must be False.
+    # Guard 2: --disable-jvm-session must be False.
     session.config.getoption.return_value = False
-    # l.417: is_e2e_session cache lookup must return False.
-    session.config.cache.get.return_value = False
+    # Guard 3: the argv classifier reads session.config.args — a bare
+    # MagicMock is not a list, so it answers False (pinned in
+    # test_e2e_session_argv_decision_1820.py::TestClassifierMockTolerance).
     return session
+
+
+def _recorded_sets(session: MagicMock) -> set:
+    """The (key, value) pairs the hook wrote into the session's stash."""
+    return {
+        tuple(call.args)
+        for call in session.config.stash.__setitem__.call_args_list
+        if call.args
+    }
 
 
 class TestJvmReturnPropagatedToStartedFlag:
@@ -82,31 +101,31 @@ class TestJvmReturnPropagatedToStartedFlag:
         """A DECIDED init failure (return False, no raise) must NOT be recorded
         as 'started'. Pre-fix this assertion fails: the return was discarded and
         jvm_started forced True."""
+        sessionstart, jvm_key = _sessionstart
         session = _mock_session()
         with patch(_JVM_SETUP, return_value=False):
-            _sessionstart(session)
+            sessionstart(session)
 
-        session.config.cache.set.assert_any_call("jvm_started", False)
+        assert (jvm_key, False) in _recorded_sets(session)
         # And it must NOT have been told the JVM started.
-        set_calls = {
-            tuple(c.args) for c in session.config.cache.set.call_args_list if c.args
-        }
-        assert ("jvm_started", True) not in set_calls
+        assert (jvm_key, True) not in _recorded_sets(session)
 
     def test_initialize_jvm_true_sets_jvm_started_true(self, _sessionstart):
         """No-regression: a genuine success still records started=True."""
+        sessionstart, jvm_key = _sessionstart
         session = _mock_session()
         with patch(_JVM_SETUP, return_value=True):
-            _sessionstart(session)
+            sessionstart(session)
 
-        session.config.cache.set.assert_any_call("jvm_started", True)
+        assert (jvm_key, True) in _recorded_sets(session)
 
     def test_initialize_jvm_raise_still_records_false(self, _sessionstart):
         """The except branch (genuine raise) is preserved by the fix — a raised
         failure still records False (anti-pendule: the fix only adds propagation
         of the return, it does not weaken exception handling)."""
+        sessionstart, jvm_key = _sessionstart
         session = _mock_session()
         with patch(_JVM_SETUP, side_effect=RuntimeError("native crash")):
-            _sessionstart(session)
+            sessionstart(session)
 
-        session.config.cache.set.assert_any_call("jvm_started", False)
+        assert (jvm_key, False) in _recorded_sets(session)

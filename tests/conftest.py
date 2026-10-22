@@ -311,39 +311,57 @@ def pytest_configure(config):
     config.pluginmanager.register(LLMEgressGuard(_llm_egress), name="llm_egress_guard")
 
 
-class _NullCache:
-    """#1820 : cache de secours quand ``-p no:cacheprovider`` est passé —
-    ``config.cache`` n'existe pas et chaque accès levait en INTERNALERROR avant
-    toute collecte. ``get``/``set`` round-trippent dans un dict de classe : le
-    transport intra-session (sessionstart écrit ``jvm_started``, la fixture
-    ``jvm_session`` le lit) reste fonctionnel — un set-noop aurait fait sauter
-    à tort les tests JVM d'une session où la JVM VIT. Portée = le process
-    pytest : chaque invocation repart vierge (sémantique cache froid), rien
-    ne persiste entre runs."""
+# #3161: the two session keys below live for ONE pytest process — nothing
+# reads them across runs — so they ride ``config.stash`` (in-process: one
+# process, one answer). They used to ride ``config.cache``, i.e.
+# ``<rootdir>/.pytest_cache/v/`` ON DISK, a file every pytest process under
+# the rootdir shares: a sibling ``--collect-only`` rewrote ``jvm_started``
+# under a child whose JVM was live, and its 14 tests skipped on the
+# sibling's False (19 047 passed / 1 failed, R1107 union); a sibling e2e
+# session's ``is_e2e_session = True`` could equally hand the #2021/#2862
+# exemption to a JVM session — the silent-green direction those guards
+# exist to close. This also retires ``_NullCache`` (#1820): with no
+# ``config.cache`` access left, ``-p no:cacheprovider`` needs no fallback —
+# the stash is the transport on every argv (witnessed in
+# tests/unit/test_conftest_session_keys_3161.py). One transport nuance
+# narrows with the fix, deliberately: the xdist controller collects
+# nothing, so it carries no collection answer of its own — it used to
+# inherit a worker's True through the shared file; now it falls to the
+# argv classifier and the storm verdict, which is the fail-loud direction.
+_JVM_STARTED = pytest.StashKey[bool]()
+_IS_E2E_SESSION = pytest.StashKey[bool]()
 
-    _store: dict = {}
 
-    def get(self, key, default=None):
-        return self._store.get(key, default)
-
-    def set(self, key, value):
-        self._store[key] = value
+def set_jvm_started(config: pytest.Config, value: bool) -> None:
+    """#3161 writer — the sessionstart JVM-boot answer, in-process."""
+    config.stash[_JVM_STARTED] = value
 
 
-def _cache(config):
-    """#1820 : accès unique au cache pytest pour les 9 sites de conftest."""
-    return getattr(config, "cache", None) or _NullCache()
+def get_jvm_started(config: pytest.Config) -> bool:
+    """#3161 reader — this process's own JVM-boot answer."""
+    return config.stash.get(_JVM_STARTED, False)
+
+
+def set_is_e2e_session(config: pytest.Config, value: bool) -> None:
+    """#3161 writer — the collection's e2e answer, in-process."""
+    config.stash[_IS_E2E_SESSION] = value
+
+
+def get_is_e2e_session(config: pytest.Config) -> bool:
+    """#3161 reader — this process's own collection answer."""
+    return config.stash.get(_IS_E2E_SESSION, False)
 
 
 def pytest_collection_finish(session):
     """
     Hook exécuté après la collecte des tests.
-    Détecte si des tests E2E sont présents et stocke le résultat dans le cache.
+    Détecte si des tests E2E sont présents et stocke le résultat dans la
+    stash de la session (#3161 : en process, jamais sur le disque partagé).
     """
     is_e2e_session = any(
         item.get_closest_marker("e2e") is not None for item in session.items
     )
-    _cache(session.config).set("is_e2e_session", is_e2e_session)
+    set_is_e2e_session(session.config, is_e2e_session)
     if is_e2e_session:
         logger.warning(
             "Session de test E2E détectée. L'initialisation globale de la JVM sera sautée."
@@ -469,12 +487,12 @@ def pytest_sessionstart(session):
         logger.info(
             "Mode collection uniquement : JVM non initialisée (évite conflit torch/DLL)"
         )
-        _cache(session.config).set("jvm_started", False)
+        set_jvm_started(session.config, False)
         return
 
     if session.config.getoption("--disable-jvm-session"):
         logger.warning("Initialisation de la JVM sautée via --disable-jvm-session.")
-        _cache(session.config).set("jvm_started", False)
+        set_jvm_started(session.config, False)
         return
 
     # #1820 : la décision vient de l'ARGV (chemins + -m), toujours connus ici.
@@ -492,7 +510,7 @@ def pytest_sessionstart(session):
         logger.warning(
             "Décision confirmée: L'initialisation globale de la JVM est sautée pour la session E2E."
         )
-        _cache(session.config).set("jvm_started", False)
+        set_jvm_started(session.config, False)
         return
 
     # #1641 (B): pytest captures logs per-test and only releases them on a test
@@ -525,7 +543,7 @@ def pytest_sessionstart(session):
         # a genuine raise; the l.522 double-check still covers a real post-start
         # crash — three distinct causes, three distinct messages, all kept.
         _jvm_ok = initialize_jvm(session_fixture_owns_jvm=True)
-        _cache(session.config).set("jvm_started", bool(_jvm_ok))
+        set_jvm_started(session.config, bool(_jvm_ok))
         if _jvm_ok:
             logger.info("JVM initialisée avec succès depuis pytest_sessionstart.")
         else:
@@ -539,7 +557,7 @@ def pytest_sessionstart(session):
         logger.error(
             f"ÉCHEC CRITIQUE de l'initialisation de la JVM dans pytest_sessionstart: {e}"
         )
-        _cache(session.config).set("jvm_started", False)
+        set_jvm_started(session.config, False)
         # On ne lance pas pytest.exit ici pour laisser les tests non-JVM s'exécuter
         # Mais on pourrait le faire si la JVM est absolument critique pour toute la suite.
     finally:
@@ -618,7 +636,7 @@ def _skip_storm_signal(session, exitstatus):
     if config.getoption("--disable-jvm-session"):
         return
     jvm_reasons = _skip_storm_counter.jvm_signature_reasons()
-    if _cache(config).get("is_e2e_session", False):
+    if get_is_e2e_session(config):
         # A REAL e2e session: the collection found e2e items, JVM-less is the
         # design there, and the run measured what it set out to measure.
         return
@@ -724,8 +742,8 @@ def jvm_session(request):
     L'initialisation réelle a été déplacée vers `pytest_sessionstart` pour une exécution
     plus précoce et plus sûre. Cette fixture vérifie si l'initialisation a réussi.
     """
-    jvm_started = _cache(request.config).get("jvm_started", False)
-    is_e2e_session = _cache(request.config).get("is_e2e_session", False)
+    jvm_started = get_jvm_started(request.config)
+    is_e2e_session = get_is_e2e_session(request.config)
 
     is_no_jvm_test = "no_jvm_session" in request.node.keywords
     is_jvm_disabled_globally = request.config.getoption("--disable-jvm-session")
@@ -747,8 +765,9 @@ def jvm_session(request):
             "Saut du test car l'initialisation de la JVM a échoué dans pytest_sessionstart."
         )
 
-    # Double-check: verify JVM is actually functional (cache may say True
-    # even when JVM crashed with a Windows access violation during startup)
+    # Double-check: verify JVM is actually functional (the session key may
+    # say True even when JVM crashed with a Windows access violation during
+    # startup)
     import jpype
 
     if not jpype.isJVMStarted():
