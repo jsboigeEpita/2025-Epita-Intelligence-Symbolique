@@ -90,6 +90,21 @@ class DungStructure:
     # from it was never computed, which is not the same as an empty one.
     computed_semantics: List[str] = field(default_factory=list)
     interpretation: str = ""
+    # #3123 — the retention accounting the curated entry carries
+    # (#1698/#1704). Without it a reader cannot tell "the text held no
+    # conflict" from "edges were submitted and dropped before the frame was
+    # evaluated", and breadth of an extension there measures the frame's
+    # sparsity, not the discourse's resistance. ``attack_density`` is derived,
+    # never stored: one definition for every reader.
+    attacks_submitted: Optional[int] = None
+    attacks_retained: Optional[int] = None
+
+    @property
+    def attack_density(self) -> Optional[float]:
+        """Attacks per argument in the evaluated graph, or None without args."""
+        if not self.arguments:
+            return None
+        return len(self.attacks) / len(self.arguments)
 
 
 @dataclass
