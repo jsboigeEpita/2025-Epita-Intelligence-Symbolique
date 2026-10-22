@@ -205,6 +205,38 @@ class TestWordingFollowsTheCount:
         assert "JTMS" in insight
         assert "maintenance de verite (JTMS)" not in insight.split("concourent")[0]
 
+    def test_substantive_insight_explains_the_methods_that_count(self):
+        # R1107 rework witness: the >=3 insight carries, after "perspective :",
+        # the REASON of each independent method — and none of the derived
+        # ones. On 729a192 the clause had lost every reason (only the cited
+        # tail explained anything) — this witness is red there.
+        state = _state(
+            {"arg_1": "texte un", "arg_2": "texte deux"},
+            fallacies=_fallacy("arg_1"),
+            quality={
+                "arg_1": _scored(0.3),
+                "arg_2": _scored(0.9),
+            },
+            counters=[{"counter_argument": "c1", "target_arg_id": "arg_1"}],
+            jtms_invalid=["arg_1"],
+            counter_sample=["arg_1", "arg_2"],
+        )
+        synthesis = build_convergent_synthesis(state)
+        assert synthesis["convergent_verdicts"]["arg_1"]["score"] == 3
+        insight = synthesis["emergent_insights"][0]
+        assert "3 methodes independantes" in insight
+        clause, _, tail = insight.partition("Par ailleurs")
+        assert "perspective :" in clause
+        # Each INDEPENDENT method's reason is explained in the clause.
+        assert "la detection rhetorique a identifie un probleme" in clause
+        assert "le scoring de qualite signale une faiblesse" in clause
+        assert "un contre-argument solide a ete oppose" in clause
+        # No derived reason may pose as a perspective in that clause.
+        assert "maintenance de verite" not in clause
+        assert "JTMS" not in clause
+        # The derived JTMS reason stays where it belongs — the cited tail.
+        assert "maintenance de verite" in tail
+
 
 class TestGlobalProjectionCountsIndependent:
     def test_projection_statement_counts_independent_methods(self):

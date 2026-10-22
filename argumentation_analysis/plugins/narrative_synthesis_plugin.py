@@ -633,6 +633,7 @@ def _build_substantive_insight(
     arg_id: str,
     score: int,
     independent_phrases: List[str],
+    independent_reasons: List[str],
     cited_reasons: List[str],
 ) -> str:
     """Build a substantive insight paragraph for high-convergence verdicts (>=3 methods).
@@ -640,21 +641,23 @@ def _build_substantive_insight(
     Produces a conclusion anchored in the actual signals: names the argument,
     lists the converging INDEPENDENT methods (#3145 — derived signals never
     concur), and states WHY the cross-method agreement makes the argument's
-    weakness over-determined rather than a single-method opinion. Cited
-    (derived or gated) signals ride along as content, labelled as what they
-    are.
+    weakness over-determined rather than a single-method opinion — one reason
+    per INDEPENDENT method after "perspective :", never a derived one (R1107
+    rework: the clause explains the methods that count; the cited signals
+    ride along as content after "Par ailleurs", labelled as what they are).
     """
     joined = ", ".join(independent_phrases)
-    reasons_text = " ; en outre, ".join(cited_reasons)
+    reasons_text = " ; ".join(independent_reasons)
+    cited_text = " ; en outre, ".join(cited_reasons)
 
     return (
         f"**Insight convergent sur {arg_id}** : {score} methodes independantes "
         f"concourent a signaler cet argument comme faible ({joined}). "
         f"Cette faiblesse est sur-determinee, et non le produit d'une seule "
-        f"perspective. "
+        f"perspective : {reasons_text}. "
         f"Un tel accord inter-methodes est inaccessible a une analyse "
         f"LLM monotone et constitue un insight emergent propre au systeme "
-        f"multi-agents." + (f" Par ailleurs : {reasons_text}." if cited_reasons else "")
+        f"multi-agents." + (f" Par ailleurs : {cited_text}." if cited_reasons else "")
     )
 
 
@@ -681,12 +684,15 @@ def build_convergent_synthesis(state: Any) -> Dict[str, Any]:
         independent_phrases = [
             _independent_phrase(m, d) for m, d in data["independent_signals"]
         ]
+        independent_reasons = [
+            _independent_reason(m, d) for m, d in data["independent_signals"]
+        ]
         cited_reasons = [_cited_reason(m, d) for m, d in data["cited_signals"]]
         joined = ", ".join(independent_phrases)
         score = data["score"]
         if score >= 3:
             insight = _build_substantive_insight(
-                arg_id, score, independent_phrases, cited_reasons
+                arg_id, score, independent_phrases, independent_reasons, cited_reasons
             )
             insights.append(insight)
         else:

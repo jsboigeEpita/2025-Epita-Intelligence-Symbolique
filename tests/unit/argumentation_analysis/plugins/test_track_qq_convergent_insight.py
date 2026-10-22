@@ -47,6 +47,11 @@ class TestBuildSubstantiveInsight:
                 "score de qualite (0.32)",
                 "argumentation abstraite (Dung/rejected)",
             ],
+            [
+                "la detection rhetorique a identifie un probleme (Post hoc)",
+                "le scoring de qualite signale une faiblesse (0.32)",
+                "l'analyse argumentative abstraite (Dung) rejette l'argument (rejected)",
+            ],
             [],
         )
         assert "**Insight convergent sur arg_1**" in result
@@ -71,6 +76,12 @@ class TestBuildSubstantiveInsight:
                 "argumentation abstraite (Dung/attacked)",
             ],
             [
+                "la detection rhetorique a identifie un probleme (Ad hominem)",
+                "le scoring de qualite signale une faiblesse (0.25)",
+                "un contre-argument solide a ete oppose",
+                "l'analyse argumentative abstraite (Dung) rejette l'argument (attacked)",
+            ],
+            [
                 "le systeme de maintenance de verite (JTMS) a retracte la "
                 "croyance associee — derive du sophisme, pas un temoin "
                 "independant"
@@ -91,6 +102,11 @@ class TestBuildSubstantiveInsight:
                 "contre-argumentation",
                 "argumentation abstraite (Dung/defeated)",
             ],
+            [
+                "la detection rhetorique a identifie un probleme (Non sequitur)",
+                "un contre-argument solide a ete oppose",
+                "l'analyse argumentative abstraite (Dung) rejette l'argument (defeated)",
+            ],
             [],
         )
         assert "contre-argument" in result
@@ -104,6 +120,11 @@ class TestBuildSubstantiveInsight:
                 "detection rhetorique (Post hoc)",
                 "score de qualite (0.32)",
                 "argumentation abstraite (Dung/rejected)",
+            ],
+            [
+                "la detection rhetorique a identifie un probleme (Post hoc)",
+                "le scoring de qualite signale une faiblesse (0.32)",
+                "l'analyse argumentative abstraite (Dung) rejette l'argument (rejected)",
             ],
             [],
         )
