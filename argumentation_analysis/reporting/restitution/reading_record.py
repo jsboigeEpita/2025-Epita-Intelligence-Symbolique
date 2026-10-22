@@ -17,6 +17,7 @@ their payload-side basis (their reader is their result, not the acts).
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
@@ -36,6 +37,10 @@ SITE_LABELS_FR = {
     "fallacy_one_shot": "détection de sophismes — repli en un appel",
     # #3105 — the per-argument pass reads UNITS, not the document head.
     "fallacy_per_argument": "détection de sophismes — lecture par argument",
+    # #3136 — the logic arms read a head for the vocabulary (pass 1) and
+    # stratified UNITS for the formulas (pass 2): two readings, two sites.
+    "fol_reasoning_units": "logique du premier ordre — lecture par unités",
+    "propositional_logic_units": "logique propositionnelle — lecture par unités",
 }
 
 # The French label a reader understands, per producer of the run's units —
@@ -159,6 +164,40 @@ def _fallacy_fed(site: str, state: Any) -> str:
     return base
 
 
+def _formula_source_counts(state: Any, attribute: str) -> "tuple[int, int]":
+    """#3136 — how many of a logic leg's formulas name the units they came from.
+
+    ``formula_sources`` is aligned with ``formulas`` (#3107/#3122): entry *i*
+    names the unit id(s) the formula was translated from, an empty list when
+    the formula came from the head's wide pass or from an upstream
+    translation. Returns ``(sourced, total)`` — the count the units line
+    credits, never the whole population.
+    """
+    sourced = 0
+    total = 0
+    for result in getattr(state, attribute, None) or []:
+        if not isinstance(result, dict):
+            continue
+        formulas = result.get("formulas") or []
+        sources = result.get("formula_sources") or []
+        total += len(formulas)
+        for index in range(len(formulas)):
+            if index < len(sources) and sources[index]:
+                sourced += 1
+    return sourced, total
+
+
+def _head_formula_extras(state: Any, site: str) -> int:
+    """#3136 — formulas the head's wide pass produced, when the arm recorded
+    them on the head site (the PL wide-net pass reads the same head)."""
+    table = getattr(state, "reading_window_status", None) or {}
+    entry = table.get(site) if isinstance(table, dict) else None
+    if not isinstance(entry, dict):
+        return 0
+    extras = entry.get("head_formulas")
+    return extras if isinstance(extras, int) and not isinstance(extras, bool) else 0
+
+
 def _site_fed(site: str, state: Any) -> str:
     """#3094 — what one bounded read fed, counts from the run's state.
 
@@ -175,12 +214,39 @@ def _site_fed(site: str, state: Any) -> str:
             )
             return f"l'extraction LLM ({llm} unités sur {len(prov)})"
         return "l'extraction LLM (population non enregistrée)"
+    # #3136 — the head reads fix the VOCABULARY; the formulas come from the
+    # units site below. Crediting the verdicts here is the #3105 defect on
+    # the logic axis: the formulas cite units spread across the text, which
+    # a 4000-char head cannot have produced.
     if site == "propositional_logic":
-        n = len(getattr(state, "propositional_analysis_results", None) or [])
-        return f"la traduction propositionnelle et ses {n} verdict(s) formel(s)"
+        base = (
+            "l'inventaire des atomes propositionnels — le vocabulaire des "
+            "formules, jamais leur contenu"
+        )
+        extras = _head_formula_extras(state, site)
+        if extras:
+            base += (
+                f" — plus {extras} formule(s) de structure globale lue(s) "
+                "sur cette fenêtre"
+            )
+        return base
     if site == "fol_reasoning":
-        n = len(getattr(state, "fol_analysis_results", None) or [])
-        return f"la traduction FOL et ses {n} verdict(s) formel(s)"
+        return (
+            "la signature FOL — sorts, prédicats et constantes — le "
+            "vocabulaire employé par les formules, jamais les formules"
+        )
+    if site in ("propositional_logic_units", "fol_reasoning_units"):
+        fol = site == "fol_reasoning_units"
+        attribute = "fol_analysis_results" if fol else "propositional_analysis_results"
+        name = "la traduction FOL" if fol else "la traduction propositionnelle"
+        n = len(getattr(state, attribute, None) or [])
+        sourced, total = _formula_source_counts(state, attribute)
+        if total:
+            return (
+                f"{name} ({sourced} formule(s) sur {total} issues des unités "
+                f"lues) et ses {n} verdict(s) formel(s)"
+            )
+        return f"{name} et ses {n} verdict(s) formel(s)"
     if site == "fallacy_widenet":
         return "les candidats de la détection de sophismes (phase large filet)"
     if site in ("fallacy_descent", "fallacy_one_shot", "fallacy_per_argument"):
@@ -315,6 +381,70 @@ def format_reading_block(record: ReadingRecord) -> str:
     return block
 
 
+# #3134 — the reader-facing bounds passage. The R1105b render (Sonnet) wove
+# the three fallacy lines into one "initial detection" carrying the descent's
+# 500; Haiku had them right; Opus quoted none. A bound that depends on which
+# model paraphrases the record is not a bound the pipeline guarantees — so the
+# numbers the reader receives are the record's own lines, grafted AFTER the
+# woven prose, and the prose restates none (``restated_bound_sentences``
+# below removes any that does, #1605 enforcement shape: the record's sentence
+# replaces the woven one, the event is logged, never a reader note).
+READER_BOUNDS_HEADING = "Bornes de lecture du run (enregistrement #1737)"
+
+
+def format_reader_bounds_passage(record: ReadingRecord) -> str:
+    """The bounds passage the acts graft after their prose — record only.
+
+    Empty when nothing was recorded: the rule's absent case (no line → no
+    bound) extends to the passage itself.
+    """
+    if not record.lines:
+        return ""
+    lines = "\n".join(
+        f"- {format_reading_line(ln, record.source_chars)}" for ln in record.lines
+    )
+    passage = f"**{READER_BOUNDS_HEADING}**\n{lines}"
+    if record.basis:
+        passage += f"\n- {record.basis}"
+    return passage
+
+
+#: A numeric reading-bound shape: "500 des 12000 caractères", "4000 caractères",
+#: "10 unités sur 91". French only — the acts and the record speak French.
+_BOUND_SHAPE = re.compile(
+    r"\d+\s+(?:des\s+\d+\s+)?(?:caractères?|unités?\s+sur\s+\d+)",
+    re.IGNORECASE,
+)
+
+#: A word naming a bounded READING (a site of the record). The shape alone
+#: would also catch a document length (« un discours de 12000 caractères ») —
+#: the measured object there is the document, not a reading.
+_READING_WORD = re.compile(
+    r"détection|lecture|extraction|traduction|logique|filet|descente|repli",
+    re.IGNORECASE,
+)
+
+_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
+
+
+def restated_bound_sentences(text: str) -> List[str]:
+    """The woven sentences that restate a numeric reading bound (#3134).
+
+    A sentence is restating a bound when it carries BOTH a bound shape
+    (a character or unit count in the record's grammar) and a reading word.
+    The caller removes them from the prose — the reader-facing bounds are
+    the record's passage, where each number sits under its own site label.
+    """
+    caught: List[str] = []
+    for sentence in _SENTENCE_SPLIT.split(text or ""):
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+        if _BOUND_SHAPE.search(sentence) and _READING_WORD.search(sentence):
+            caught.append(sentence)
+    return caught
+
+
 # The naming contract every grafting act carries, from this one constant.
 # Its absent case forbids invention: no recorded line → no bound to quote,
 # never a fabricated one. The reader receives woven bounds, never the table.
@@ -322,6 +452,9 @@ def format_reading_block(record: ReadingRecord) -> str:
 # old example (« sur le début du document… ») verbatim into its sentence.
 # The sentence now comes from the record's own lines, which name what each
 # bound fed, and from the basis line, which says what the rest rests on.
+# #3134 — and it comes from the pipeline, not from the model: no character
+# or unit count is restated by the prose, the passage grafted after the
+# text carries the record's lines as they are.
 READING_BASIS_RULE = (
     "- LES BORNES DE LECTURE SE DISENT PAR LES LIGNES LECTURES DU RUN ci-dessus :\n"
     "  une ligne « lecture de k des N caractères » dit que le spécialiste a lu\n"
@@ -330,5 +463,11 @@ READING_BASIS_RULE = (
     "  quoi repose le reste du run (unités du texte entier, ou seule\n"
     "  l'ouverture). Le récit ne présente JAMAIS une lecture bornée comme\n"
     "  celle du document entier. Aucune ligne → aucune borne à citer : n'en\n"
-    "  fabrique aucune."
+    "  fabrique aucune.\n"
+    "- NE REFORMULE AUCUN CHIFFRE DE BORNE DANS TA PROSE : aucun compte de\n"
+    "  caractères ou d'unités ne sort de toi. Le passage « Bornes de lecture\n"
+    "  du run », ajouté après ton texte, porte les lignes de l'enregistrement\n"
+    "  telles quelles — chaque borne sous l'étiquette de son site. Ta prose\n"
+    "  peut NOMMER ce que chaque lecture a alimenté ; les nombres viennent du\n"
+    "  passage, jamais de toi."
 )

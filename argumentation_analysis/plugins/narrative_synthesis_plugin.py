@@ -22,7 +22,7 @@ synthesis skeleton produced by Track BB (#634).
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from argumentation_analysis.reporting.restitution.native_dung import (
     decode_native_dung,  # #1912: single shared native-Dung decoder (re-exported
@@ -299,6 +299,45 @@ def quality_fraction(entry: Any) -> Optional[float]:
     return float(overall) / len(scores)
 
 
+def independent_quality_fraction(entry: Any) -> Optional[float]:
+    """The quality fraction with the #289 fallacy penalty undone (#3133).
+
+    ``quality_fraction`` reads ``overall`` — the stored, fallacy-adjusted
+    judgement (the #289 cross-KB feature, unchanged). But beside a
+    ``"sophisme"`` signal that fraction double-counts the fallacy: the
+    penalty is a function of the fallacy count, so "low quality" measured
+    on the penalised score is not an independent witness. This variant
+    divides the penalty's recorded ``original_score`` by the same
+    ``len(scores)`` denominator; without an applied penalty record it is
+    exactly ``quality_fraction``.
+    """
+    if not isinstance(entry, dict):
+        return None
+    penalty = entry.get("fallacy_penalty")
+    if not (isinstance(penalty, dict) and penalty.get("applied")):
+        return quality_fraction(entry)
+    original = penalty.get("original_score")
+    scores = entry.get("scores")
+    if (
+        not isinstance(original, (int, float))
+        or not isinstance(scores, dict)
+        or not scores
+    ):
+        return quality_fraction(entry)
+    return float(original) / len(scores)
+
+
+def _population_spans_weak(
+    quality: Any, fraction_of: Callable[[Any], Optional[float]]
+) -> bool:
+    if not isinstance(quality, dict):
+        return False
+    return any(
+        fraction is not None and fraction >= QUALITY_WEAK_FRACTION
+        for fraction in (fraction_of(qs) for qs in quality.values())
+    )
+
+
 def quality_population_spans_weak(quality: Any) -> bool:
     """True when at least one measured entry of the run clears the weak bar.
 
@@ -309,12 +348,18 @@ def quality_population_spans_weak(quality: Any) -> bool:
     renders non-discriminant instead. An empty or unmeasured population
     never spans.
     """
-    if not isinstance(quality, dict):
-        return False
-    return any(
-        fraction is not None and fraction >= QUALITY_WEAK_FRACTION
-        for fraction in (quality_fraction(qs) for qs in quality.values())
-    )
+    return _population_spans_weak(quality, quality_fraction)
+
+
+def independent_quality_population_spans_weak(quality: Any) -> bool:
+    """The #1942 gate measured on the quantity convergence reads (#3133).
+
+    The convergence signal reads the UNPENALISED fraction, so its
+    population gate must too — a gate on penalised fractions would
+    suppress genuine "qualite faible" signals whenever the penalties
+    alone push the last strong unit under the bar.
+    """
+    return _population_spans_weak(quality, independent_quality_fraction)
 
 
 def _resolve_dung_arg_id(text: str, identified_args: Dict[str, Any]) -> str:
@@ -395,7 +440,10 @@ def compute_argument_convergence(state: Any) -> Dict[str, Dict[str, Any]]:
     # #1942 non-vacuity gate: "weak" only means something when the run's
     # population spans the bar — else it fires on 100% of arguments and
     # manufactures sophisme+faible convergences out of a uniform population.
-    quality_spans = quality_population_spans_weak(quality)
+    # #3133: the gate measures the same quantity the signal reads — the
+    # UNPENALISED fraction (a penalised overall is a function of the fallacy
+    # count, not an independent witness).
+    quality_spans = independent_quality_population_spans_weak(quality)
 
     # Pre-index fallacies by target argument
     fallacy_by_arg: Dict[str, List[str]] = {}
@@ -428,11 +476,18 @@ def compute_argument_convergence(state: Any) -> Dict[str, Dict[str, Any]]:
 
         # 2. Low quality score (#1942: ``overall`` is a SUM over the evaluated
         # virtues — the verdict reads the normalized fraction of the applicable
-        # maximum, never a false "/10").
+        # maximum, never a false "/10"). #3133: the signal reads the
+        # UNPENALISED fraction — reading the penalised ``overall`` here would
+        # count the fallacy twice, once as "sophisme" and once as the quality
+        # it lowered; a unit weak only through the penalty gains no signal.
         qs = quality.get(arg_id) if isinstance(quality, dict) else None
-        fraction = quality_fraction(qs)
+        fraction = independent_quality_fraction(qs)
         if fraction is not None and fraction < QUALITY_WEAK_FRACTION and quality_spans:
-            signals.append(("qualite faible", f"{fraction:.0%} du maximum applicable"))
+            penalised = isinstance(qs, dict) and qs.get("fallacy_penalty")
+            detail = f"{fraction:.0%} du maximum applicable"
+            if penalised:
+                detail += " (hors penalite sophisme)"
+            signals.append(("qualite faible", detail))
 
         # 3. Counter-argument generated against it
         if arg_id in counter_by_arg:

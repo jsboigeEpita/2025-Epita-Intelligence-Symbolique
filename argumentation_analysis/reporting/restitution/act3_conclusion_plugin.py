@@ -69,6 +69,8 @@ from .speaker_record import (  # #3082: shared speaker record with act1/act2
 )
 from .reading_record import (  # #2850 lot 6: recorded reading bounds
     READING_BASIS_RULE,
+    format_reader_bounds_passage,
+    restated_bound_sentences,
     ReadingRecord,
     build_reading_record,
     format_reading_block,
@@ -414,10 +416,20 @@ class DebateExchange:
 
 @dataclass
 class QualityStrength:
-    """A virtue where the discourse scores well (a strength to acknowledge)."""
+    """A virtue where the discourse scores well (a strength to acknowledge).
+
+    #3137: a strength carries its population — ``args_at_top`` (k) arguments
+    at the top band, of ``args_evaluated`` (m) arguments whose scores carry
+    the virtue, of ``units_total`` (N) units in the discourse. Without these
+    counts the writer read ``meilleur score du discours : 1.0`` and turned
+    one top-band argument of 8 into a property of the whole discourse.
+    """
 
     virtue: str
     score: float
+    args_at_top: int
+    args_evaluated: int
+    units_total: int
 
 
 @dataclass
@@ -899,7 +911,9 @@ def _collect_weak_points(
     return points
 
 
-def _collect_quality_strengths(quality: Dict[str, Any]) -> List[QualityStrength]:
+def _collect_quality_strengths(
+    quality: Dict[str, Any], units_total: int
+) -> List[QualityStrength]:
     """Surface the virtues where the discourse genuinely holds (honest strengths).
 
     #1907 cross-act residue: with no threshold, the top-N of a weak set
@@ -912,14 +926,19 @@ def _collect_quality_strengths(quality: Dict[str, Any]) -> List[QualityStrength]
     0.5 is the instrument's own "partiel" wording: a partial is not "ce qui
     tient". Values >= 1.0 from non-canonical writers still qualify.
 
-    Aggregated as the max across arguments (the discourse's best tenue on
-    that virtue). When no virtue qualifies, the empty list flows into the
-    prompt's pre-existing honest-absence wording — the axis stays *measured*
-    (Act II may still weave virtues as character); what empties is praise,
-    not measurement.
+    #3137: the strength keeps the max score (best tenue on that virtue) AND
+    its population — k arguments at the top band, of m evaluated (whose
+    scores carry the virtue), of N units. One top-band argument of 8 is not
+    "the discourse's best score": the counts flow to the writer, who owns
+    the generalisation rule. When no virtue qualifies, the empty list flows
+    into the prompt's pre-existing honest-absence wording — the axis stays
+    *measured* (Act II may still weave virtues as character); what empties
+    is praise, not measurement.
     """
     _STRENGTH_MIN_SCORE = 1.0
     best: Dict[str, float] = {}
+    at_top: Dict[str, int] = {}
+    evaluated: Dict[str, int] = {}
     for _arg, qs in quality.items():
         if not isinstance(qs, dict):
             continue
@@ -932,10 +951,21 @@ def _collect_quality_strengths(quality: Dict[str, Any]) -> List[QualityStrength]
         if not isinstance(spv, dict):
             continue
         for vname, vval in spv.items():
-            if isinstance(vval, (int, float)) and float(vval) >= _STRENGTH_MIN_SCORE:
-                best[str(vname)] = max(best.get(str(vname), 0.0), float(vval))
+            vname_s = str(vname)
+            if not isinstance(vval, (int, float)):
+                continue
+            evaluated[vname_s] = evaluated.get(vname_s, 0) + 1
+            if float(vval) >= _STRENGTH_MIN_SCORE:
+                best[vname_s] = max(best.get(vname_s, 0.0), float(vval))
+                at_top[vname_s] = at_top.get(vname_s, 0) + 1
     return [
-        QualityStrength(virtue=k, score=v)
+        QualityStrength(
+            virtue=k,
+            score=v,
+            args_at_top=at_top[k],
+            args_evaluated=evaluated[k],
+            units_total=units_total,
+        )
         for k, v in sorted(best.items(), key=lambda kv: kv[1], reverse=True)
     ]
 
@@ -2281,7 +2311,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
             )
         )
 
-    quality_strengths = _collect_quality_strengths(quality)
+    quality_strengths = _collect_quality_strengths(quality, args_total)
 
     # #1620 — ``narrative_synthesis_available`` was read here and dropped. It is
     # gone by subtraction, not relocated: measured on three real artifacts, the
@@ -2566,8 +2596,21 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
     # --- Appréciations (forces + faiblesses) ---
     if evidence.quality_strengths:
         strengths_lines = "\n".join(
-            f"  - {s.virtue} (meilleur score du discours : {s.score:.1f})"
+            f"  - {s.virtue} ({s.score:.1f} sur {s.args_at_top} des "
+            f"{s.args_evaluated} arguments évalués — {s.units_total} unités)"
             for s in evidence.quality_strengths[:6]
+        )
+        # #3137: the counts come with the rule that reads them — whether a
+        # virtue may be said OF the discourse is the writer's call, made on
+        # k/m. Proposed threshold 3/4, measured on R1105c: it admits the one
+        # honest discourse-level virtue of that run (refutation 7/8) and
+        # excludes the 5/8, 3/8 and 3/8 its own Act II contradicts.
+        strengths_lines += (
+            "\n  RÈGLE DE GÉNÉRALISATION (#3137) : une vertu ne se dit DU "
+            "DISCOURS que si elle tient sur au moins 3/4 des arguments "
+            "évalués ; en dessous, attribue-la aux arguments qui la portent. "
+            "La base mesurée (arguments évalués, unités) accompagne toujours "
+            "l'énoncé."
         )
     else:
         strengths_lines = (
@@ -3391,6 +3434,20 @@ async def build_act3_conclusion(
         )
     narrative = outcome.narrative
 
+    # #3134 — a woven sentence that restates a numeric bound is removed
+    # before anything else touches the text: the reader's bounds are the
+    # record's passage grafted below, where each number sits under its own
+    # site label. The R1105b render fused three fallacy lines into one
+    # "initial detection" carrying the descent's 500; which model paraphrases
+    # the record cannot stay a bound the pipeline guarantees. Pipeline event:
+    # logged, never a reader note (#2032).
+    for _restated in restated_bound_sentences(narrative):
+        narrative = narrative.replace(_restated, "").strip()
+        logger.info(
+            "act3 woven bound restatement removed (record passage carries it): %s",
+            _restated[:90],
+        )
+
     # #1605 — the conclusion must carry what the run failed to evaluate. The
     # ledger is recorded unconditionally (it is a fact about the run), and the
     # scope paragraph is appended when the woven prose did not tie a limitation
@@ -3445,6 +3502,15 @@ async def build_act3_conclusion(
                     "reposaient sur des dimensions sans résultat dans l'état. "
                     "Le livrable ne porte que l'avis de retrait."
                 )
+
+    # #3134 — the record's own bounds close the act, after the prose: the
+    # numbers the reader receives come from the record, not from the model.
+    # Grafted BEFORE the §4 self-check so the gate reads the text the reader
+    # receives. Empty passage when nothing was recorded (the rule's absent
+    # case forbids inventing a bound; the passage stays absent too).
+    _bounds_passage = format_reader_bounds_passage(evidence.readings)
+    if _bounds_passage:
+        narrative = narrative.rstrip() + "\n\n" + _bounds_passage
 
     # §4 self-check (honest, never grades on a curve).
     gate = ReadabilityGate()

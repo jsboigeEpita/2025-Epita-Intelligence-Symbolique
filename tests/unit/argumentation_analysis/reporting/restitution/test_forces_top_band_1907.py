@@ -124,7 +124,9 @@ class TestCrossActContradictionClosed:
     def test_discriminating_axis_slot_lists_the_force(self):
         prompt = build_act3_prompt(build_act3_evidence(_state(_DISCRIMINATING_AXIS)))
         slot = _forces_slot(prompt)
-        assert "pertinence (meilleur score du discours : 1.0)" in slot
+        # #3137: the label carries the population (k/m evaluated, N units),
+        # never "meilleur score du discours".
+        assert "pertinence (1.0 sur 1 des 2 arguments évalués — 2 unités)" in slot
         assert "clarte" not in slot
 
     def test_weak_but_present_axis_still_counts_as_measured(self):

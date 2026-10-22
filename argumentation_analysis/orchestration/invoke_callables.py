@@ -38,6 +38,7 @@ from argumentation_analysis.core.reading_window import (
     WindowSelection,
     reading_state_from_context,
     selected_text,
+    selected_text_and_selection,
 )
 from argumentation_analysis.plugins.identification_models import confidence_outranks
 
@@ -1715,6 +1716,7 @@ async def _run_quality_sweep_from_state(state: Any) -> Dict[str, int]:
                     scored.get("scores_par_vertu", {}) or {},
                     float(scored.get("note_finale", 0.0) or 0.0),
                     llm_assessment=scored.get("llm_assessment"),
+                    fallacy_penalty=scored.get("fallacy_penalty"),  # #3133
                 )
                 result["added"] += 1
             except Exception as e:
@@ -8648,6 +8650,53 @@ def _record_per_argument_reading(
     )
 
 
+def _record_logic_units_reading(state_obj: Any, site: str, selection: Any) -> None:
+    """#3136 — the logic arms' formulas come from k stratified UNITS.
+
+    The head reading (pass 1) only fixed the vocabulary; the formulas cite
+    ``formula_sources`` over units spread across the whole text, which the
+    4000-char head cannot have produced. Mirrors ``_record_per_argument_reading``
+    (#3105): the site carries how many units were translated, out of how
+    many, and the span those units cover — computed from the offsets the
+    selector resolved, never from the head. Silent when the state cannot
+    record, the same rule as every reading site.
+    """
+    if state_obj is None:
+        return
+    if not hasattr(state_obj, "record_reading_window"):
+        return
+    offsets = [
+        u.offset
+        for u in selection.selected
+        if isinstance(u.offset, int) and not isinstance(u.offset, bool)
+    ]
+    span_hi = 0
+    for unit in selection.selected:
+        if isinstance(unit.offset, int) and not isinstance(unit.offset, bool):
+            span_hi = max(span_hi, unit.offset + len(unit.text or ""))
+    span_lo = min(offsets) if offsets else 0
+    extra: Dict[str, Any] = {
+        "units": selection.k,
+        "unit_total": selection.n_total,
+    }
+    # The offsets live in the STATE's text coordinates — the record renders
+    # them as fractions of ``state.raw_text``, so clamp to that same length
+    # (#1737: the phase payload may carry a prepended directive).
+    source_total = len(getattr(state_obj, "raw_text", "") or "")
+    if offsets:
+        extra["span_lo"] = span_lo
+        extra["span_hi"] = min(span_hi, source_total) if source_total else span_hi
+    state_obj.record_reading_window(
+        site,
+        WindowSelection(
+            offset=span_lo,
+            window=max(extra.get("span_hi", 0) - span_lo, 0),
+            status=STATUS_SELECTED,
+        ),
+        extra=extra,
+    )
+
+
 async def _invoke_hierarchical_fallacy_per_argument(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -9387,7 +9436,7 @@ async def _invoke_propositional_logic(
     """Invoke propositional logic analysis — translate arguments to propositions.
 
     Uses a 2-pass coordinated pipeline when possible (#547):
-      Pass 1: Extract shared atom inventory from full source text
+      Pass 1: Extract shared atom inventory from the run's reading window
       Pass 2: Generate per-argument formulas using ONLY shared atoms
     Falls back to on-the-fly NL translation, then template variables.
 
@@ -9514,8 +9563,11 @@ async def _invoke_propositional_logic(
                 if client is not None and input_text and len(input_text) > 100:
 
                     # #1737: the phase's reading window — one selection, two
-                    # feeds (pass 1 inventory + whole-text pass below).
-                    pl_reading = selected_text(
+                    # feeds (pass 1 inventory + the wide-net pass below).
+                    # #3136 — the selection is kept: the wide-net pass amends
+                    # the same head entry with the formulas it produced, so
+                    # the record credits the head with what it actually did.
+                    pl_reading, _pl_head_selection = selected_text_and_selection(
                         input_text,
                         LOGIC_READING_WINDOW,
                         "propositional_logic",
@@ -9526,7 +9578,7 @@ async def _invoke_propositional_logic(
                     # names it too (counts only, no source text — #2908).
                     pl_metrics["reading_window_chars"] = len(pl_reading)
                     pl_metrics["source_total"] = len(input_text)
-                    # ── Pass 1: Atom inventory from full source text ──
+                    # ── Pass 1: Atom inventory from the reading window ──
                     pass1_prompt = (
                         "You are an expert in propositional logic. Your task is to identify "
                         "atomic propositions (basic facts) in the given text.\n\n"
@@ -9556,7 +9608,8 @@ async def _invoke_propositional_logic(
                         shared_atoms = valid_atoms
                         pl_metrics["pass1_atoms"] = len(shared_atoms)
                         logger.info(
-                            f"PL 2-pass Pass 1: {len(shared_atoms)} atoms extracted from full text"
+                            f"PL 2-pass Pass 1: {len(shared_atoms)} atoms extracted "
+                            f"from the reading window"
                         )
 
                         # Store in state
@@ -9599,6 +9652,14 @@ async def _invoke_propositional_logic(
                                     _pl_selection.largest_uncovered_stretch
                                 ),
                                 unit_ids=[u.unit_id for u in _pl_selection.selected],
+                            )
+                            # #3136 — the formulas below come from these
+                            # units, not from the head: record the units
+                            # reading as its own site (the #3105 shape).
+                            _record_logic_units_reading(
+                                state_obj,
+                                "propositional_logic_units",
+                                _pl_selection,
                             )
 
                         # #2850 lot 4 — two capped reads touch this
@@ -9710,15 +9771,24 @@ async def _invoke_propositional_logic(
                                 f"with {len(shared_atoms)} shared atoms"
                             )
 
-                        # ── Whole-text formula pass (wide-net) ──
-                        # Generate formulas from full text to capture
-                        # structural/tonal patterns missed by per-arg analysis.
+                        # ── Wide-net formula pass over the reading window ──
+                        # Generate formulas from the run's bounded window to
+                        # capture structural/tonal patterns missed per-arg.
+                        # #3136 — this pass feeds on ``pl_reading``, the same
+                        # 4000-char head as pass 1, so its prompt says
+                        # EXCERPT: calling a bounded head "the FULL text" is a
+                        # mislabel aimed at the model (the reader-side twin
+                        # of the record defect).
                         per_arg_set = set(formulas)
                         try:
                             wt_prompt = (
                                 "You are an expert in propositional logic. "
-                                "Translate the FULL text below into logical formulas "
-                                "using ONLY the provided atomic propositions.\n\n"
+                                "Translate the EXCERPT below into logical "
+                                "formulas using ONLY the provided atomic "
+                                "propositions. The excerpt is this run's "
+                                "reading window and may be shorter than the "
+                                "document; do not assume it is the whole "
+                                "text.\n\n"
                                 "Focus on overarching logical structure: implications "
                                 "between major claims, contradictions, conditional chains.\n"
                                 "Rules:\n"
@@ -9748,13 +9818,25 @@ async def _invoke_propositional_logic(
                                     wide_net_extras += 1
                             if wide_net_extras:
                                 pl_metrics["wide_net_extras"] = wide_net_extras
+                                # #3136 — these formulas came from the HEAD:
+                                # the head site says so, so the units line
+                                # never absorbs them and the head line is not
+                                # silent about what it produced.
+                                if state_obj is not None and hasattr(
+                                    state_obj, "record_reading_window"
+                                ):
+                                    state_obj.record_reading_window(
+                                        "propositional_logic",
+                                        _pl_head_selection,
+                                        extra={"head_formulas": wide_net_extras},
+                                    )
                                 logger.info(
-                                    f"PL whole-text pass: {wide_net_extras} extra formulas"
+                                    f"PL wide-net pass: {wide_net_extras} extra formulas"
                                 )
                         except LLMCacheMiss:
                             raise  # #2320 — replay miss traverses
                         except Exception as wt_err:
-                            logger.debug(f"PL whole-text pass unavailable: {wt_err}")
+                            logger.debug(f"PL wide-net pass unavailable: {wt_err}")
             except LLMCacheMiss:
                 raise  # #2320 — replay miss traverses
             except Exception as e:
@@ -10249,7 +10331,8 @@ async def _invoke_fol_reasoning(
                 f"formulas (unioned after 2-pass) (#705)"
             )
         # ── FOL 2-pass coordinated pipeline (#544) — always runs (#705 LL).
-        # Pass 1: shared signature (sorts/predicates/constants) from full text.
+        # Pass 1: shared signature (sorts/predicates/constants) from the
+        # run's reading window — the vocabulary only, never the formulas.
         # Pass 2: per-argument formulas using ONLY the shared signature.
         if not formulas:
             try:
@@ -10270,7 +10353,7 @@ async def _invoke_fol_reasoning(
                     # directive-prepended `input_text`.
                     fol_metrics["reading_window_chars"] = len(fol_reading)
                     fol_metrics["source_total"] = len(_doc_text_fol)
-                    # ── Pass 1: Shared FOL signature from full text ──
+                    # ── Pass 1: Shared FOL signature from the reading window ──
                     pass1_prompt = (
                         "You are a formal logic expert. Analyze the text and extract a "
                         "first-order logic signature.\n\n"
@@ -10360,6 +10443,13 @@ async def _invoke_fol_reasoning(
                                     unit_ids=[
                                         u.unit_id for u in _fol_selection.selected
                                     ],
+                                )
+                                # #3136 — every FOL formula below comes from
+                                # these units; pass 1 only fixed the
+                                # signature. Record the units reading as its
+                                # own site (the #3105 shape).
+                                _record_logic_units_reading(
+                                    state_obj, "fol_reasoning_units", _fol_selection
                                 )
 
                             # #2850 lot 4 — same disclosure as the PL arm:
