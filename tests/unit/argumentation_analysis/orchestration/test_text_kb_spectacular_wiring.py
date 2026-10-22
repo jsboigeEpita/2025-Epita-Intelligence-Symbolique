@@ -160,7 +160,10 @@ class TestInvokeCallables:
         must not couple to that detail. The contracts that matter:
           - status == "ok" (input was consumed, not bypassed)
           - kb_source carries provenance for downstream readers
-          - either formulas > 0 OR batch_item_errors is documented
+          - formulas > 0, or each unproduced belief is documented — under an
+            error (batch_item_errors) or, since #3135, as not translated
+            (not_translated_count: the first-token FOL template is gone, so
+            fol beliefs without a translator are recorded, not fabricated)
           - Dung/ASPIC pipelines produced real frameworks (not error dicts)"""
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_kb_to_tweety,
@@ -190,10 +193,12 @@ class TestInvokeCallables:
         # Provenance is recorded so Epic #1644 readers can trace the source.
         assert result["kb_source"]["argument_count"] == 2
         assert result["kb_source"]["belief_count"] == 2
-        # Either we produced formulas OR we documented why each was rejected.
-        # Anti-#1019 — silent 0 with no reason is theater.
+        # Either we produced formulas OR we documented why each was rejected
+        # or not translated. Anti-#1019 — silent 0 with no reason is theater.
         assert (
-            result["formula_count"] >= 1 or "batch_item_errors" in result
+            result["formula_count"] >= 1
+            or "batch_item_errors" in result
+            or result.get("not_translated_count", 0) >= 1
         ), f"No formulas and no error documentation — silent failure: {result}"
         # defect 2 — every formula in the list is a real dict with a `formula`
         # field, never an error dict masquerading as a formula.

@@ -13696,6 +13696,11 @@ async def _invoke_kb_to_tweety(
         # only keep items that carry a real formula string.
         batch_item_errors: List[str] = []
         formulas: List[Dict[str, Any]] = []
+        # #3135: beliefs the plugin recorded not translated (no formula,
+        # never evaluated — the first-token template is gone). The phase
+        # reports the count instead of letting the untranslated beliefs
+        # vanish silently or surface as fabricated formulas.
+        not_translated_count = 0
         if isinstance(raw_translations, list):
             for item in raw_translations:
                 if not isinstance(item, dict):
@@ -13706,6 +13711,8 @@ async def _invoke_kb_to_tweety(
                     )
                     continue
                 if not item.get("formula"):
+                    if item.get("is_valid") is None:
+                        not_translated_count += 1
                     continue
                 formulas.append(item)
 
@@ -13745,6 +13752,9 @@ async def _invoke_kb_to_tweety(
         result: Dict[str, Any] = {
             "formulas": formulas,
             "formula_count": len(formulas) if isinstance(formulas, list) else 0,
+            # #3135: always present — an honest 0 is information, and the
+            # untranslated beliefs must not disappear from the phase record.
+            "not_translated_count": not_translated_count,
             "status": "ok",
             "kb_source": {
                 "argument_count": len(arguments) if isinstance(arguments, list) else 0,

@@ -83,32 +83,31 @@ def _build_pl_formula(belief_text: str) -> str:
     return var
 
 
-def _build_fol_formula(
-    belief_text: str,
-    signature: Optional[Dict[str, List[str]]] = None,
-) -> Tuple[str, Dict[str, List[str]]]:
-    """Convert a KB statement to FOL formula with signature."""
-    text = belief_text.strip().strip(".")
-    if not text:
-        return "", {}
+def _not_translated_result(
+    belief_text: str, logic_type: str
+) -> TweetyTranslationResult:
+    """#3135: a belief with no translator is recorded, never fabricated.
 
-    sig = signature or {"predicates": [], "constants": [], "sorts": []}
-
-    # Extract potential predicate from first significant word
-    words = [w for w in re.split(r"\s+", text) if len(w) > 2]
-    if not words:
-        return "", sig
-
-    pred = words[0].lower()
-    var = "X"
-
-    formula = f"{pred}({var})"
-    if pred not in sig["predicates"]:
-        sig["predicates"].append(pred)
-    if var.lower() not in sig["constants"]:
-        sig["constants"].append(var.lower())
-
-    return formula, sig
+    The first-token FOL template (``<premier mot>(X)``) was removed: a
+    formula named after a sentence's first word is not a translation of that
+    sentence, whether or not it parses — on the saved R1105b run, 76 of the
+    deep synthesis's 82 formal findings were these stubs (#3135, #2970
+    item 3). Tri-state #1634: ``is_valid=None`` means the belief was never
+    evaluated as a formula, and no formula is emitted.
+    """
+    return TweetyTranslationResult(
+        original_text=belief_text[:200],
+        formula="",
+        logic_type=logic_type,
+        is_valid=None,
+        attempts=1,
+        validation_message=(
+            "not translated — kb_to_tweety has no NL->FOL translator (#3135)"
+        ),
+        # explicit for mypy --strict parity with main (the model field has a
+        # Field(None) default mypy cannot see without the pydantic plugin)
+        signature=None,
+    )
 
 
 def _build_modal_formula(belief_text: str) -> str:
@@ -230,7 +229,6 @@ async def _translate_with_retry(
     belief_text: str,
     logic_type: str,
     max_retries: int = 3,
-    signature: Optional[Dict[str, List[str]]] = None,
 ) -> TweetyTranslationResult:
     """Translate a KB entry to a Tweety formula with validate-retry loop."""
     formula = ""
@@ -242,20 +240,10 @@ async def _translate_with_retry(
                 continue
             valid, msg = _validate_pl(formula)
         elif logic_type == "fol":
-            formula, sig = _build_fol_formula(belief_text, signature)
-            if not formula:
-                continue
-            valid, msg = _validate_fol(formula, signature=sig)
-            if valid and sig["predicates"]:
-                return TweetyTranslationResult(
-                    original_text=belief_text[:200],
-                    formula=formula,
-                    logic_type="fol",
-                    is_valid=True,
-                    attempts=attempt,
-                    validation_message=msg,
-                    signature=sig,
-                )
+            # #3135: no translator is wired for FOL — record not translated
+            # (tri-state #1634) instead of fabricating a first-token stub.
+            # No retry: the outcome cannot change between attempts.
+            return _not_translated_result(belief_text, "fol")
         elif logic_type == "modal":
             formula = _build_modal_formula(belief_text)
             if not formula:
@@ -343,14 +331,11 @@ class KBToTweetyPlugin:
 
         text = params.get("text", "")
         logic_type = params.get("logic_type", "pl").lower()
-        signature = params.get("signature")
 
         if not text:
             return json.dumps({"error": "Empty text"})
 
-        result = await _translate_with_retry(
-            text, logic_type, max_retries=3, signature=signature
-        )
+        result = await _translate_with_retry(text, logic_type, max_retries=3)
         return result.model_dump_json()
 
     @kernel_function(
@@ -373,17 +358,13 @@ class KBToTweetyPlugin:
 
         beliefs = params.get("beliefs", [])
         logic_type = params.get("logic_type", "pl").lower()
-        signature = params.get("signature")
 
         if not beliefs:
             return json.dumps({"error": "No beliefs provided", "translations": []})
 
         import asyncio
 
-        tasks = [
-            _translate_with_retry(b, logic_type, max_retries=3, signature=signature)
-            for b in beliefs
-        ]
+        tasks = [_translate_with_retry(b, logic_type, max_retries=3) for b in beliefs]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         translations = []
@@ -394,11 +375,23 @@ class KBToTweetyPlugin:
                 translations.append(r.model_dump())
 
         valid_count = sum(1 for t in translations if t.get("is_valid"))
+        # #3135: beliefs recorded not translated (no formula, never evaluated)
+        # are counted here — the summary must say what was NOT done, not only
+        # what succeeded (anti-#1019).
+        not_translated_count = sum(
+            1
+            for t in translations
+            if isinstance(t, dict)
+            and "error" not in t
+            and t.get("is_valid") is None
+            and not t.get("formula")
+        )
         return json.dumps(
             {
                 "translations": translations,
                 "total": len(translations),
                 "valid": valid_count,
+                "not_translated": not_translated_count,
                 "pass_rate": valid_count / len(translations) if translations else 0.0,
             }
         )
