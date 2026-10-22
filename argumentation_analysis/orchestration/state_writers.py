@@ -2762,6 +2762,11 @@ def _write_kb_to_tweety_to_state(output: Any, state: Any, ctx: dict[str, Any]) -
     the 06/10 doc_A run the writer stored all 87 formulas including the 7
     invalid ones — and those 7 were, once re-read downstream, the 42
     fol_handler ERROR lines of the run log.
+    #3135: since the first-token FOL template was removed, ``formulas`` only
+    ever carries what a translator produced — the writer's contract is
+    unchanged (nothing without a formula arrives), so no code changes here;
+    the belief candidates stay ``nl`` upstream and the phase reports its
+    ``not_translated_count``.
 
     History, for the record (#1643): this writer used to also persist an
     audit payload under ``state.tweety_formulas_from_kb`` carrying the

@@ -20,7 +20,6 @@ from argumentation_analysis.plugins.kb_to_tweety_plugin import (
     DungTranslationResult,
     KBToTweetyPlugin,
     TweetyTranslationResult,
-    _build_fol_formula,
     _build_modal_formula,
     _build_pl_formula,
     _translate_with_retry,
@@ -89,15 +88,50 @@ class TestFormulaBuilders:
     def test_build_pl_formula_empty(self):
         assert _build_pl_formula("") == ""
 
-    def test_build_fol_formula(self):
-        formula, sig = _build_fol_formula("Socrate est mortel")
-        assert "mortel" in formula or "est" in formula or formula  # non-empty
-        assert "predicates" in sig
+    def test_build_fol_formula_is_gone(self):
+        """#3135: the first-token template is removed from the module — a
+        formula named after a sentence's first word is not a translation of
+        that sentence, whether or not it parses (76 of the 82 formal findings
+        on the saved R1105b run were these stubs)."""
+        import argumentation_analysis.plugins.kb_to_tweety_plugin as kbp
 
-    def test_build_fol_formula_with_existing_sig(self):
-        sig = {"predicates": ["existing"], "constants": [], "sorts": []}
-        formula, sig = _build_fol_formula("Nouveau predicat", signature=sig)
-        assert "existing" in sig["predicates"]
+        assert not hasattr(
+            kbp, "_build_fol_formula"
+        ), "the first-token FOL template must not exist (#3135)"
+
+    def test_fol_records_not_translated_tri_state(self):
+        """#3135 / #1634: a belief with no translator is recorded not
+        translated (is_valid=None — never evaluated), with no formula and no
+        retry (the outcome cannot change between attempts). Main fabricated
+        `<premier mot>(X)` and marked it valid whenever Tweety parsed it."""
+        result = asyncio.get_event_loop().run_until_complete(
+            _translate_with_retry("Socrate est mortel", "fol")
+        )
+        assert result.is_valid is None
+        assert result.formula == ""
+        assert "not translated" in (result.validation_message or "")
+
+    def test_fol_never_builds_a_one_formula_kb(self):
+        """#3135 run-log witness: on main every belief triggered up to three
+        fol_handler one-formula KB builds inside _validate_fol (the 76 builds
+        and 21 parse failures of the saved run); after the fix the validator
+        is never called for fol beliefs."""
+        from unittest.mock import patch
+
+        import argumentation_analysis.plugins.kb_to_tweety_plugin as kbp
+
+        calls = []
+
+        def record(*args, **kwargs):
+            calls.append(1)
+            return False, "recorded"
+
+        with patch.object(kbp, "_validate_fol", side_effect=record):
+            result = asyncio.get_event_loop().run_until_complete(
+                _translate_with_retry("Une croyance sans traducteur", "fol")
+            )
+        assert calls == []
+        assert result.is_valid is None
 
     def test_build_modal_formula(self):
         formula = _build_modal_formula("Il est necessaire que P")
@@ -125,6 +159,8 @@ class TestTranslateToTweety:
         assert result["logic_type"] == "pl"
 
     def test_translate_fol(self):
+        """#3135: through the SK surface too, a fol belief comes back not
+        translated — tri-state None, empty formula, named reason."""
         plugin = KBToTweetyPlugin()
         result_json = asyncio.get_event_loop().run_until_complete(
             plugin.translate_to_tweety(
@@ -132,8 +168,10 @@ class TestTranslateToTweety:
             )
         )
         result = json.loads(result_json)
-        assert "formula" in result
         assert result["logic_type"] == "fol"
+        assert result["is_valid"] is None
+        assert result["formula"] == ""
+        assert "not translated" in (result.get("validation_message") or "")
 
     def test_translate_modal(self):
         plugin = KBToTweetyPlugin()
@@ -193,6 +231,33 @@ class TestBatchTranslation:
         )
         result = json.loads(result_json)
         assert "error" in result
+
+    def test_batch_fol_reports_not_translated(self):
+        """#3135: the batch summary counts what was not translated instead of
+        counting fabricated stubs as ``valid`` — on main these two beliefs
+        became `<premier mot>(X)` formulas (valid under the JVM, three failed
+        attempts without it), never a not-translated line."""
+        plugin = KBToTweetyPlugin()
+        result_json = asyncio.get_event_loop().run_until_complete(
+            plugin.translate_batch_to_tweety(
+                json.dumps(
+                    {
+                        "beliefs": [
+                            "Croyance synthetique un",
+                            "Croyance synthetique deux",
+                        ],
+                        "logic_type": "fol",
+                    }
+                )
+            )
+        )
+        result = json.loads(result_json)
+        assert result["total"] == 2
+        assert result["valid"] == 0
+        assert result["not_translated"] == 2
+        for t in result["translations"]:
+            assert t["is_valid"] is None
+            assert t["formula"] == ""
 
 
 # ---------------------------------------------------------------------------
