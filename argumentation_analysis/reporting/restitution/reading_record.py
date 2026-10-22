@@ -37,6 +37,10 @@ SITE_LABELS_FR = {
     "fallacy_one_shot": "détection de sophismes — repli en un appel",
     # #3105 — the per-argument pass reads UNITS, not the document head.
     "fallacy_per_argument": "détection de sophismes — lecture par argument",
+    # #3136 — the logic arms read a head for the vocabulary (pass 1) and
+    # stratified UNITS for the formulas (pass 2): two readings, two sites.
+    "fol_reasoning_units": "logique du premier ordre — lecture par unités",
+    "propositional_logic_units": "logique propositionnelle — lecture par unités",
 }
 
 # The French label a reader understands, per producer of the run's units —
@@ -160,6 +164,40 @@ def _fallacy_fed(site: str, state: Any) -> str:
     return base
 
 
+def _formula_source_counts(state: Any, attribute: str) -> "tuple[int, int]":
+    """#3136 — how many of a logic leg's formulas name the units they came from.
+
+    ``formula_sources`` is aligned with ``formulas`` (#3107/#3122): entry *i*
+    names the unit id(s) the formula was translated from, an empty list when
+    the formula came from the head's wide pass or from an upstream
+    translation. Returns ``(sourced, total)`` — the count the units line
+    credits, never the whole population.
+    """
+    sourced = 0
+    total = 0
+    for result in getattr(state, attribute, None) or []:
+        if not isinstance(result, dict):
+            continue
+        formulas = result.get("formulas") or []
+        sources = result.get("formula_sources") or []
+        total += len(formulas)
+        for index in range(len(formulas)):
+            if index < len(sources) and sources[index]:
+                sourced += 1
+    return sourced, total
+
+
+def _head_formula_extras(state: Any, site: str) -> int:
+    """#3136 — formulas the head's wide pass produced, when the arm recorded
+    them on the head site (the PL wide-net pass reads the same head)."""
+    table = getattr(state, "reading_window_status", None) or {}
+    entry = table.get(site) if isinstance(table, dict) else None
+    if not isinstance(entry, dict):
+        return 0
+    extras = entry.get("head_formulas")
+    return extras if isinstance(extras, int) and not isinstance(extras, bool) else 0
+
+
 def _site_fed(site: str, state: Any) -> str:
     """#3094 — what one bounded read fed, counts from the run's state.
 
@@ -176,12 +214,39 @@ def _site_fed(site: str, state: Any) -> str:
             )
             return f"l'extraction LLM ({llm} unités sur {len(prov)})"
         return "l'extraction LLM (population non enregistrée)"
+    # #3136 — the head reads fix the VOCABULARY; the formulas come from the
+    # units site below. Crediting the verdicts here is the #3105 defect on
+    # the logic axis: the formulas cite units spread across the text, which
+    # a 4000-char head cannot have produced.
     if site == "propositional_logic":
-        n = len(getattr(state, "propositional_analysis_results", None) or [])
-        return f"la traduction propositionnelle et ses {n} verdict(s) formel(s)"
+        base = (
+            "l'inventaire des atomes propositionnels — le vocabulaire des "
+            "formules, jamais leur contenu"
+        )
+        extras = _head_formula_extras(state, site)
+        if extras:
+            base += (
+                f" — plus {extras} formule(s) de structure globale lue(s) "
+                "sur cette fenêtre"
+            )
+        return base
     if site == "fol_reasoning":
-        n = len(getattr(state, "fol_analysis_results", None) or [])
-        return f"la traduction FOL et ses {n} verdict(s) formel(s)"
+        return (
+            "la signature FOL — sorts, prédicats et constantes — le "
+            "vocabulaire employé par les formules, jamais les formules"
+        )
+    if site in ("propositional_logic_units", "fol_reasoning_units"):
+        fol = site == "fol_reasoning_units"
+        attribute = "fol_analysis_results" if fol else "propositional_analysis_results"
+        name = "la traduction FOL" if fol else "la traduction propositionnelle"
+        n = len(getattr(state, attribute, None) or [])
+        sourced, total = _formula_source_counts(state, attribute)
+        if total:
+            return (
+                f"{name} ({sourced} formule(s) sur {total} issues des unités "
+                f"lues) et ses {n} verdict(s) formel(s)"
+            )
+        return f"{name} et ses {n} verdict(s) formel(s)"
     if site == "fallacy_widenet":
         return "les candidats de la détection de sophismes (phase large filet)"
     if site in ("fallacy_descent", "fallacy_one_shot", "fallacy_per_argument"):
