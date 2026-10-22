@@ -109,18 +109,26 @@ class TestStrengthsCarryTheirPopulation:
 
 
 class TestGeneralizationRule:
-    """Whether a virtue may be said OF the discourse is the writer's rule,
-    read from the counts — main gives the writer no counts and no rule."""
+    """Whether a virtue may be said OF the discourse: #3137 shipped it as a
+    rule for the writer, and the first post-#3143 render broke it (clarté at
+    4/8 said « generally clear », no base). #3159 replaces the breakable rule
+    with a verdict the producer computes — same bar, now enforced by the
+    prompt's own content instead of by an instruction the writer can ignore."""
 
-    def test_the_prompt_carries_the_three_quarter_rule_with_its_basis(self):
+    def test_the_prompt_carries_the_precomputed_verdict_with_its_basis(self):
         prompt = build_act3_prompt(
             build_act3_evidence(_state(_QUALITY_1_OF_8, _ARGS_15_UNITS))
         )
         slot = _forces_slot(prompt)
-        assert "3/4" in slot and "DU DISCOURS" in slot, (
-            "the conductor must be told when a virtue may be generalised to "
-            "the discourse — proposed threshold: 3/4 of the evaluated "
-            "arguments (#3137)"
+        assert "VERDICT PRÉ-CALCULÉ" in slot
+        assert "Le discours tient sur" in slot
+        assert "6/8 arguments évalués" in slot, (
+            "the measured base travels with the claim — a virtue said of the "
+            "discourse without its k/m is the #3137 defect"
+        )
+        assert "RÈGLE DE GÉNÉRALISATION" not in slot, (
+            "the writer rule is gone: a rule the writer can break is not a "
+            "guarantee (#3159)"
         )
 
     def test_no_rule_without_strengths(self):

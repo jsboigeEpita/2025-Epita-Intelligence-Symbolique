@@ -466,6 +466,36 @@ _FAIL_LOUD_INSTRUCTION = (
 )
 
 
+def coverage_range_sentence(coverage_map: Dict[str, Dict[str, int]]) -> str:
+    """The coverage range, computed here so the writer only has to copy it (#3159).
+
+    ``k`` is read over the phases that counted *examined* units; the anchor
+    census is a located-unit count and the stakes axis is counted apart (it is
+    not an analysis phase — R1107 doc_B: phases at 6..15, stakes at 30, and the
+    writer said « from 8 to 10 »). One single k across the phases yields one
+    figure, never a degenerate range.
+    """
+    figures = {
+        phase: fig
+        for phase, fig in coverage_map.items()
+        if isinstance(fig, dict)
+        and "k" in fig
+        and phase not in ("anchor_census", "stakes")
+    }
+    ks = [int(fig["k"]) for fig in figures.values() if isinstance(fig.get("k"), int)]
+    if not ks:
+        return ""
+    lo, hi = min(ks), max(ks)
+    if lo == hi:
+        sentence = f"Couverture : {accord(lo, 'unité', 'unités')} dans chaque module qui a rendu un compte."
+    else:
+        sentence = f"Couverture : de {lo} à {hi} unités selon les modules."
+    stakes = coverage_map.get("stakes")
+    if isinstance(stakes, dict) and isinstance(stakes.get("k"), int):
+        sentence += f" Les enjeux, comptés à part : {stakes['k']}."
+    return sentence + " (chiffres pré-calculés — reprends-les tels quels.)"
+
+
 def build_act1_prompt(evidence: Act1Evidence) -> str:
     """Build the §4-compliant LLM-conducted prompt for the Acte I framing.
 
@@ -626,6 +656,14 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
             gt_note += clause + "."
         if coverage_parts:
             gt_note += " Couverture de l'analyse (" + " ; ".join(coverage_parts) + ")."
+            # #3159 — the range used to be DERIVED BY THE WRITER from the
+            # per-phase list, and it contradicted the list it summarised:
+            # R1107 doc_B carried phases at 6..15 (stakes 30 apart) and the
+            # render said « from 8 to 10 units ». A summary the writer can
+            # recompute is a summary it can get wrong; the producer writes it.
+            range_sentence = coverage_range_sentence(coverage_map)
+            if range_sentence:
+                gt_note += " " + range_sentence
 
     opaque_block = f"{_OPAQUE_ID_DIRECTIVE}\n\n" if not evidence.deanonymized else ""
 

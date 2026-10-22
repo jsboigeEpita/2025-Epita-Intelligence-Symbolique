@@ -400,6 +400,11 @@ class Act2Evidence:
     movements: List[MovementEvidence] = field(default_factory=list)
     formal_findings: List[FormalFinding] = field(default_factory=list)
     quality_axis_available: bool = True
+    # #3159 — the measured quality ranking and its base, computed by the
+    # producer. R1107c's render promoted `arg_14` to « le mieux tenu de tout
+    # le discours » while `arg_69` ranked above it, on 8 scored units of 90;
+    # the writer derived a superlative the record contradicted.
+    quality_ranking: str = ""
     # SV (#1182): governance voting verdict + adversarial-debate exchanges,
     # surfaced so the narrative can cite them. Empty/None when the phases did
     # not produce non-trivial output (honest absence, not fabricated).
@@ -631,6 +636,34 @@ def _quality_axis_usable(quality: Any) -> bool:
     return False
 
 
+def quality_ranking_line(quality: Any, units_total: int) -> str:
+    """The measured quality ranking, computed here so the writer copies it (#3159).
+
+    R1107c's Act II called ``arg_14`` « le mieux tenu de tout le discours »
+    while ``arg_69`` ranked above it and only 8 of 90 units were scored. The
+    line carries the ranking AND its base, so a superlative over « the whole
+    discourse » has nothing to stand on.
+    """
+    if not isinstance(quality, dict):
+        return ""
+    scored: List[Tuple[str, float]] = []
+    for arg_id, entry in quality.items():
+        if not isinstance(entry, dict):
+            continue
+        overall = entry.get("overall")
+        if isinstance(overall, (int, float)):
+            scored.append((str(arg_id), float(overall)))
+    if not scored:
+        return ""
+    scored.sort(key=lambda pair: (-pair[1], pair[0]))
+    listed = ", ".join(f"{arg_id} ({score:.1f})" for arg_id, score in scored[:3])
+    return (
+        f"Classement qualité (base : {len(scored)} unités évaluées sur "
+        f"{units_total}) : {listed}. C'est le SEUL classement mesuré — aucun "
+        "superlatif portant sur « tout le discours » n'a de base ici."
+    )
+
+
 def _sampled_unit_ids(state: Any, phase: str) -> Optional[Set[str]]:
     """Les ids des unités qu'une phase a RÉELLEMENT soumises, ou ``None``.
 
@@ -676,6 +709,9 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
     counters = getattr(state, "counter_arguments", []) or []
 
     quality_axis_available = _quality_axis_usable(quality)
+    quality_ranking = quality_ranking_line(
+        quality, len(args) if isinstance(args, dict) else 0
+    )
     if not isinstance(args, dict):
         args = {}
     if not isinstance(fallacies, dict):
@@ -861,6 +897,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         movements=ordered,
         formal_findings=formal_findings,
         quality_axis_available=quality_axis_available,
+        quality_ranking=quality_ranking,
         args_total=len(args),
         fallacies_total=fallacies_total,
         fallacy_sample_recorded=fallacy_sample is not None,
@@ -1671,6 +1708,10 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         else "L'axe qualité est INDISPONIBLE sur ce run : note-le honnêtement, "
         "ne fabrique jamais de profil de vertus."
     )
+    if evidence.quality_ranking:
+        # #3159 — the ranking and its base travel with the note, so the writer
+        # never has to derive « le mieux tenu » from a vote verdict.
+        quality_note += "\n  " + evidence.quality_ranking
 
     opaque_block = f"{_OPAQUE_ID_DIRECTIVE}\n\n" if not evidence.deanonymized else ""
 
