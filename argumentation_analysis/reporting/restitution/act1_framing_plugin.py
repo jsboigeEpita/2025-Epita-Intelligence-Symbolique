@@ -110,10 +110,20 @@ class ExpectedFamily:
 
 @dataclass
 class StakeholderInfo:
-    """One stakeholder for the game-theoretic read."""
+    """One stakeholder for the game-theoretic read.
 
-    role: str
-    detail: str
+    #3154 — the reader carried ONE label (``role or name``) and one detail
+    (``interest or description or stake``, keys the producer never writes). Nine
+    named parties reached the writer as ``opponent`` ×5 / ``audience`` ×2, with
+    no name and no stance. The record now keeps the three fields the producer
+    actually writes — ``name``, ``role``, ``stance`` — side by side, plus the
+    optional ``detail`` an older record may still carry.
+    """
+
+    name: str = ""
+    role: str = ""
+    stance: str = ""
+    detail: str = ""
 
 
 @dataclass
@@ -249,6 +259,23 @@ def _truncate(text: Any, cap: int) -> str:
     return s if len(s) <= cap else s[:cap].rstrip() + " […]"
 
 
+def _format_stakeholder_line(sh: "StakeholderInfo") -> str:
+    """One game-theoretic bullet: ``- <name> (<role>, <stance>) : <detail>``.
+
+    #3154 — a named party carries name, role and stance; the qualifiers keep
+    only what the record has (no empty parentheses). A party with no name keeps
+    the older ``role : detail`` shape.
+    """
+    qualifiers = ", ".join(q for q in (sh.role, sh.stance) if q)
+    if sh.name and qualifiers:
+        label = f"{sh.name} ({qualifiers})"
+    else:
+        label = sh.name or qualifiers
+    if label and sh.detail:
+        return f"  - {label} : {sh.detail}"
+    return f"  - {label or sh.detail}"
+
+
 def _derive_genre(
     state: Any, arena_record: ArenaRecord | None = None
 ) -> Tuple[str, str]:
@@ -367,16 +394,24 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
                     stakes_list.append(_truncate(desc, _STAKE_CAP))
             elif isinstance(s, str) and s:
                 stakes_list.append(_truncate(s, _STAKE_CAP))
+        # #3154 — read the keys the producer writes. The stakes extractor's
+        # EXTRACTION_PROMPT asks for ``name`` / ``role`` / ``stance`` /
+        # ``evidence_indices`` and nothing else; ``interest`` stay supported as
+        # the optional detail of an older record, never as the party's label.
         for sh in stakes_obj.get("stakeholders", []) or []:
             if isinstance(sh, dict):
-                role = str(sh.get("role") or sh.get("name") or sh.get("id") or "")
+                name = str(sh.get("name") or "").strip()
+                role = str(sh.get("role") or "").strip()
+                stance = str(sh.get("stance") or "").strip()
                 interest = (
                     sh.get("interest") or sh.get("description") or sh.get("stake") or ""
                 )
-                if role or interest:
+                if name or role or stance or interest:
                     stakeholders.append(
                         StakeholderInfo(
-                            role=str(role),
+                            name=_truncate(name, _STAKEHOLDER_CAP),
+                            role=_truncate(role, _STAKEHOLDER_CAP),
+                            stance=_truncate(stance, _STAKEHOLDER_CAP),
                             detail=_truncate(interest, _STAKEHOLDER_CAP),
                         )
                     )
@@ -555,11 +590,15 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         )
 
     # --- Game-theoretic ---
+    # #3154 — the line says who the party is (name), what it is in this
+    # discourse (role) and where it stands (stance): ``- <name> (role, stance)``.
+    # The old line printed the role alone, so nine distinct parties read as
+    # five identical ``opponent`` entries. A record with no name keeps the
+    # ``role : detail`` shape it had (the detail, when present, stays after
+    # the colon).
     if evidence.stakeholders:
         gt_block = "\n".join(
-            f"  - {_truncate(sh.role, _STAKEHOLDER_CAP)}"
-            + (f" : {sh.detail}" if sh.detail else "")
-            for sh in evidence.stakeholders
+            _format_stakeholder_line(sh) for sh in evidence.stakeholders
         )
     else:
         gt_block = "  (parties engagées non extraites — cadrage stratégique limité)"
