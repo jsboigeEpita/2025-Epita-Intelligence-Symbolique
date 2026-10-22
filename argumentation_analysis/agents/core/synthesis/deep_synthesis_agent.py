@@ -859,7 +859,10 @@ class DeepSynthesisAgent(BaseAgent):
         )
         verdicts = []
         for (arg_id, data), statement in zip(ordered, insights):
-            methods = [m for m, _ in data["signals"]]
+            # #3145: the methods a verdict may call independent are the
+            # independent ones — derived (JTMS echo) and gated (vacuous
+            # counter) signals live in cited_signals, never here.
+            methods = [m for m, _ in data["independent_signals"]]
             verdicts.append(
                 ConvergentVerdict(
                     arg_id=arg_id,

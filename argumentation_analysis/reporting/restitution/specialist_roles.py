@@ -262,23 +262,29 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
     if isinstance(args, dict):
         # Lazy import: the quality scale has a single source of truth in the
         # synthesis plugin (#1942 — fraction of the applicable maximum).
+        # #3133: beside a fallacy signal the fraction read is the
+        # UNPENALISED one — the #289 penalty is a function of the fallacy
+        # count, so the penalised fraction would corroborate the fallacy
+        # with itself on the weak branch, and bury a real tension under a
+        # fallacy-adjusted number on the strong branch.
         from argumentation_analysis.plugins.narrative_synthesis_plugin import (
             QUALITY_STRONG_FRACTION,
             QUALITY_WEAK_FRACTION,
-            quality_fraction,
-            quality_population_spans_weak,
+            independent_quality_fraction,
+            independent_quality_population_spans_weak,
         )
 
         fallacy_by_arg = _fallacy_targets(getattr(state, "identified_fallacies", None))
         quality = getattr(state, "argument_quality_scores", None)
         # #1942 non-vacuity gate: weak corroborates nothing on a population
-        # where 100% of the measured arguments are under the bar.
-        quality_spans = quality_population_spans_weak(quality)
+        # where 100% of the measured arguments are under the bar. #3133: the
+        # gate measures the same quantity the branches read — unpenalised.
+        quality_spans = independent_quality_population_spans_weak(quality)
         for arg_id in sorted(args):
             if arg_id not in fallacy_by_arg:
                 continue  # a single method's result is an axis result, no role
             qs = quality.get(arg_id) if isinstance(quality, dict) else None
-            fraction = quality_fraction(qs)
+            fraction = independent_quality_fraction(qs)
             if fraction is None:
                 continue  # unmeasured on this argument — no cross verdict
             if fraction >= QUALITY_STRONG_FRACTION:
@@ -322,17 +328,20 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
         )
     # #1942: a quality axis whose ENTIRE measured population sits under the
     # weak bar has not discriminated anything — render that vacuity instead
-    # of corroborating every fallacious argument for free.
+    # of corroborating every fallacious argument for free. #3133: measured
+    # on the unpenalised fractions, the quantity the cross-axis branches
+    # read — penalties alone must not push the last spanning unit under the
+    # bar and silence the axis.
     from argumentation_analysis.plugins.narrative_synthesis_plugin import (
         QUALITY_WEAK_FRACTION,
-        quality_fraction,
+        independent_quality_fraction,
     )
 
     quality_entries = getattr(state, "argument_quality_scores", None)
     measured_fractions = [
         f
         for f in (
-            quality_fraction(qs)
+            independent_quality_fraction(qs)
             for qs in (
                 quality_entries.values() if isinstance(quality_entries, dict) else []
             )

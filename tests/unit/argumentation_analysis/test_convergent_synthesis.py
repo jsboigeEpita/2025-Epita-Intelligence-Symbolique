@@ -34,6 +34,25 @@ def _virtues(overall: float, n: int = 9) -> dict:
 _SPANNING_OVERALL = 5.4
 
 
+def _record_counter_sample(state, *unit_ids):
+    """#3145: record the counter phase's stratified sample on the state.
+
+    The counter signal counts as an independent method only when the axis
+    discriminates on the run — some sampled unit got NO counter. Passing a
+    sample that includes counter-less units certifies that; omitting the
+    record entirely leaves the axis unmeasured (counter cited, not counted).
+    """
+    state.analysis_coverage = {
+        "counter": {
+            "k": len(unit_ids),
+            "N": len(unit_ids),
+            "bands_covered": 3,
+            "bands_total": 3,
+            "unit_ids": list(unit_ids),
+        }
+    }
+
+
 class TestDungRejection:
     """_native_dung_rejections handles the three extension storage shapes
     (#1912: fixtures aligned to the canonical writer shape — production
@@ -116,6 +135,10 @@ class TestComputeConvergence:
         assert methods == {"sophisme", "qualite faible"}
 
     def test_three_methods_convergence(self):
+        # #3145: three INDEPENDENT methods — the counter axis counts only
+        # because the recorded sample shows it discriminates (arg_2, sampled,
+        # got no counter). Without that sample the counter is cited, and the
+        # score is 2.
         state = _state_with_args("doomed argument", "solid argument")
         state.add_fallacy("false_dilemma", "either/or", "arg_1")
         state.add_quality_score("arg_1", _virtues(1.8), 1.8)
@@ -127,8 +150,11 @@ class TestComputeConvergence:
             0.9,
             target_arg_id="arg_1",
         )
+        _record_counter_sample(state, "arg_1", "arg_2")
         conv = compute_argument_convergence(state)
         assert conv["arg_1"]["score"] == 3
+        methods = {m for m, _ in conv["arg_1"]["independent_signals"]}
+        assert methods == {"sophisme", "qualite faible", "contre-argument"}
 
     def test_dung_rejection_counts_as_signal(self):
         state = _state_with_args("a", "b")
@@ -146,7 +172,10 @@ class TestComputeConvergence:
         methods = {m for m, _ in conv["arg_2"]["signals"]}
         assert methods == {"sophisme", "rejet Dung"}
 
-    def test_jtms_invalid_belief_counts(self):
+    def test_jtms_retraction_cited_not_counted(self):
+        # #3145: the retraction stays visible (read from state, never lost)
+        # but is DERIVED — _invoke_jtms retracts the fallacy's target, so it
+        # may not be counted as an independent concurring method.
         state = _state_with_args("retracted argument", "solid argument")
         # belief name uses "arg_N:" prefix (NN wiring convention)
         state.add_jtms_belief(
@@ -155,9 +184,13 @@ class TestComputeConvergence:
         state.add_quality_score("arg_1", _virtues(1.8), 1.8)
         state.add_quality_score("arg_2", _virtues(_SPANNING_OVERALL), _SPANNING_OVERALL)
         conv = compute_argument_convergence(state)
-        assert conv["arg_1"]["score"] == 2
+        assert conv["arg_1"]["score"] == 1
         methods = {m for m, _ in conv["arg_1"]["signals"]}
         assert methods == {"JTMS retracte", "qualite faible"}
+        independent = {m for m, _ in conv["arg_1"]["independent_signals"]}
+        assert independent == {"qualite faible"}
+        cited = {m for m, _ in conv["arg_1"]["cited_signals"]}
+        assert cited == {"JTMS retracte"}
 
     def test_high_quality_not_flagged(self):
         state = _state_with_args("good argument")
@@ -210,12 +243,14 @@ class TestBuildConvergentSynthesis:
         # arg_1: 2 methods
         state.add_fallacy("straw_man", "distortion", "arg_1")
         state.add_quality_score("arg_1", _virtues(1.8), 1.8)
-        # arg_2: 3 methods
+        # arg_2: 3 methods (#3145: the counter counts because the recorded
+        # sample discriminates — arg_1 and arg_3, sampled, got no counter)
         state.add_fallacy("false_dilemma", "either/or", "arg_2")
         state.add_quality_score("arg_2", _virtues(1.35), 1.35)
         state.add_counter_argument(
             "three-method", "counter", "reductio", 0.8, target_arg_id="arg_2"
         )
+        _record_counter_sample(state, "arg_1", "arg_2", "arg_3")
         # arg_3: silent span (0.6) — opens the #1942 non-vacuity gate
         state.add_quality_score("arg_3", _virtues(_SPANNING_OVERALL), _SPANNING_OVERALL)
         result = build_convergent_synthesis(state)

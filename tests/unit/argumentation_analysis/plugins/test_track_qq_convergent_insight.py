@@ -39,14 +39,6 @@ class TestBuildSubstantiveInsight:
     """_build_substantive_insight produces structured paragraph."""
 
     def test_basic_3_method_insight(self):
-        data = {
-            "score": 3,
-            "signals": [
-                ("sophisme", "Post hoc"),
-                ("qualite faible", "0.32"),
-                ("rejet Dung", "rejected"),
-            ],
-        }
         result = _build_substantive_insight(
             "arg_1",
             3,
@@ -55,50 +47,53 @@ class TestBuildSubstantiveInsight:
                 "score de qualite (0.32)",
                 "argumentation abstraite (Dung/rejected)",
             ],
-            data,
+            [
+                "la detection rhetorique a identifie un probleme (Post hoc)",
+                "le scoring de qualite signale une faiblesse (0.32)",
+                "l'analyse argumentative abstraite (Dung) rejette l'argument (rejected)",
+            ],
+            [],
         )
         assert "**Insight convergent sur arg_1**" in result
         assert "3 methodes independantes" in result
         assert "sur-determinee" in result
         assert "detection rhetorique" in result
-        assert "scoring de qualite" in result
+        assert "score de qualite" in result
         assert "Dung" in result
         assert "insight emergent" in result
 
-    def test_4_method_includes_jtms(self):
-        data = {
-            "score": 4,
-            "signals": [
-                ("sophisme", "Ad hominem"),
-                ("qualite faible", "0.25"),
-                ("JTMS retracte", "retracted"),
-                ("rejet Dung", "attacked"),
-            ],
-        }
+    def test_4_method_insight_cites_jtms_never_counts_it(self):
+        # #3145: a 4-method insight lists four INDEPENDENT phrases; the JTMS
+        # retraction rides in the cited tail — visible, labelled derived,
+        # never among the concurring methods.
         result = _build_substantive_insight(
             "arg_3",
             4,
             [
                 "detection rhetorique (Ad hominem)",
                 "score de qualite (0.25)",
-                "maintenance de verite (JTMS)",
+                "contre-argumentation",
                 "argumentation abstraite (Dung/attacked)",
             ],
-            data,
+            [
+                "la detection rhetorique a identifie un probleme (Ad hominem)",
+                "le scoring de qualite signale une faiblesse (0.25)",
+                "un contre-argument solide a ete oppose",
+                "l'analyse argumentative abstraite (Dung) rejette l'argument (attacked)",
+            ],
+            [
+                "le systeme de maintenance de verite (JTMS) a retracte la "
+                "croyance associee — derive du sophisme, pas un temoin "
+                "independant"
+            ],
         )
         assert "4 methodes independantes" in result
-        assert "JTMS" in result
-        assert "retracte" in result
+        concur, _, tail = result.partition("Par ailleurs")
+        assert "JTMS" not in concur
+        assert "JTMS" in tail
+        assert "retracte" in tail
 
     def test_includes_counter_argument(self):
-        data = {
-            "score": 3,
-            "signals": [
-                ("sophisme", "Non sequitur"),
-                ("contre-argument", "counter"),
-                ("rejet Dung", "defeated"),
-            ],
-        }
         result = _build_substantive_insight(
             "arg_5",
             3,
@@ -107,20 +102,17 @@ class TestBuildSubstantiveInsight:
                 "contre-argumentation",
                 "argumentation abstraite (Dung/defeated)",
             ],
-            data,
+            [
+                "la detection rhetorique a identifie un probleme (Non sequitur)",
+                "un contre-argument solide a ete oppose",
+                "l'analyse argumentative abstraite (Dung) rejette l'argument (defeated)",
+            ],
+            [],
         )
         assert "contre-argument" in result
 
     def test_insight_not_generic(self):
         """Insight must reference actual signal details, not be a template."""
-        data = {
-            "score": 3,
-            "signals": [
-                ("sophisme", "Post hoc"),
-                ("qualite faible", "0.32"),
-                ("rejet Dung", "rejected"),
-            ],
-        }
         result = _build_substantive_insight(
             "arg_1",
             3,
@@ -129,7 +121,12 @@ class TestBuildSubstantiveInsight:
                 "score de qualite (0.32)",
                 "argumentation abstraite (Dung/rejected)",
             ],
-            data,
+            [
+                "la detection rhetorique a identifie un probleme (Post hoc)",
+                "le scoring de qualite signale une faiblesse (0.32)",
+                "l'analyse argumentative abstraite (Dung) rejette l'argument (rejected)",
+            ],
+            [],
         )
         # Must contain specific signal details
         assert "Post hoc" in result
@@ -150,6 +147,14 @@ class TestBuildConvergentSynthesisInsight:
                     ("qualite faible", "0.3"),
                     ("rejet Dung", "rejected"),
                 ],
+                # #3145 shape: the synthesis reads the independent/cited
+                # partition fail-loud — monkeypatched data carries it.
+                "independent_signals": [
+                    ("sophisme", "Post hoc"),
+                    ("qualite faible", "0.3"),
+                    ("rejet Dung", "rejected"),
+                ],
+                "cited_signals": [],
             },
         }
         monkeypatch.setattr(
@@ -171,6 +176,11 @@ class TestBuildConvergentSynthesisInsight:
                     ("sophisme", "Post hoc"),
                     ("qualite faible", "0.3"),
                 ],
+                "independent_signals": [
+                    ("sophisme", "Post hoc"),
+                    ("qualite faible", "0.3"),
+                ],
+                "cited_signals": [],
             },
         }
         monkeypatch.setattr(
@@ -194,6 +204,12 @@ class TestBuildConvergentSynthesisInsight:
                     ("qualite faible", "0.3"),
                     ("rejet Dung", "r"),
                 ],
+                "independent_signals": [
+                    ("sophisme", "X"),
+                    ("qualite faible", "0.3"),
+                    ("rejet Dung", "r"),
+                ],
+                "cited_signals": [],
             },
             "arg_2": {
                 "score": 2,
@@ -201,6 +217,11 @@ class TestBuildConvergentSynthesisInsight:
                     ("sophisme", "Y"),
                     ("qualite faible", "0.4"),
                 ],
+                "independent_signals": [
+                    ("sophisme", "Y"),
+                    ("qualite faible", "0.4"),
+                ],
+                "cited_signals": [],
             },
         }
         monkeypatch.setattr(

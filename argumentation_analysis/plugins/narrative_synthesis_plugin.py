@@ -22,7 +22,7 @@ synthesis skeleton produced by Track BB (#634).
 """
 
 import logging
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from argumentation_analysis.reporting.restitution.native_dung import (
     decode_native_dung,  # #1912: single shared native-Dung decoder (re-exported
@@ -418,15 +418,47 @@ def _native_dung_rejections(state: Any) -> Dict[str, str]:
     return rejected
 
 
-def compute_argument_convergence(state: Any) -> Dict[str, Dict[str, Any]]:
-    """Count independent methods flagging each SIGNALLED argument weak.
+def _counter_axis_discriminates(state: Any, counter_by_arg: Dict[str, int]) -> bool:
+    """#3145: does the counter axis separate anything on THIS run?
 
-    Only arguments flagged by at least one method appear in the result — an
+    The counter phase reads the same stratified selection as the
+    per-argument fallacy reading (``analysis_coverage['counter']['unit_ids']``
+    on the measured run equalled ``fallacy_per_argument``'s), and produced a
+    counter for 10 of 10 sampled units — a signal present on 100% of the
+    measured population discriminates nothing (#1942 shape on the counter
+    axis). The counter counts as an independent method only when some unit
+    of the recorded sample got NO counter. A run without a recorded sample
+    is unmeasured: the axis cannot be certified discriminating, so the
+    counter is cited but never counted.
+    """
+    coverage = getattr(state, "analysis_coverage", {}) or {}
+    entry = coverage.get("counter") if isinstance(coverage, dict) else None
+    sample = entry.get("unit_ids") if isinstance(entry, dict) else None
+    if not sample:
+        return False
+    return any(str(u) not in counter_by_arg for u in sample)
+
+
+def compute_argument_convergence(state: Any) -> Dict[str, Dict[str, Any]]:
+    """Count INDEPENDENT method classes flagging each SIGNALLED argument weak.
+
+    #3145: ``score`` counts independent classes only. ``sophisme``,
+    ``qualite faible`` (unpenalised, #3133) and ``rejet Dung`` are
+    independent — the Dung handlers drop every fallacy-minted attack source
+    (``fallacy_*`` nodes are never inventory members, #1698 measured), so a
+    rejection that fires was not caused by a fallacy edge. ``JTMS retracte``
+    is DERIVED (``_invoke_jtms`` step 4 retracts the fallacy's target
+    because the fallacy targets it) and ``contre-argument`` is gated on the
+    axis discriminating — both stay in ``signals`` and ``cited_signals`` as
+    content, never as witnesses.
+
+    Only arguments flagged by at least one signal appear in the result — an
     unflagged argument cannot clear any threshold, so it is structurally
     absent, not scored zero (R882 review measurement). Reads raw state
     fields (works on both UnifiedAnalysisState and a namespace built from a
     state dict). Returns a mapping
-    ``{arg_id: {"score": int, "signals": [(method, detail), ...]}}``.
+    ``{arg_id: {"score": int, "signals": [(method, detail), ...],
+                "independent_signals": [...], "cited_signals": [...]}}``.
     """
     args = getattr(state, "identified_arguments", {}) or {}
     if not isinstance(args, dict):
@@ -464,15 +496,26 @@ def compute_argument_convergence(state: Any) -> Dict[str, Dict[str, Any]]:
                 tid = ca.get("target_arg_id")
                 if tid:
                     counter_by_arg[tid] = counter_by_arg.get(tid, 0) + 1
+    counter_discriminates = _counter_axis_discriminates(state, counter_by_arg)
 
     result: Dict[str, Dict[str, Any]] = {}
     for arg_id in args:
-        signals: List[tuple] = []
+        signals: List[Tuple[str, str]] = []
+        independent: List[Tuple[str, str]] = []
+        cited: List[Tuple[str, str]] = []
+
+        def _witness(method: str, detail: str) -> None:
+            signals.append((method, detail))
+            independent.append((method, detail))
+
+        def _cite(method: str, detail: str) -> None:
+            signals.append((method, detail))
+            cited.append((method, detail))
 
         # 1. Rhetorical fallacy targeting this argument
         if arg_id in fallacy_by_arg:
             ftypes = sorted(set(fallacy_by_arg[arg_id]))
-            signals.append(("sophisme", ", ".join(ftypes)))
+            _witness("sophisme", ", ".join(ftypes))
 
         # 2. Low quality score (#1942: ``overall`` is a SUM over the evaluated
         # virtues — the verdict reads the normalized fraction of the applicable
@@ -487,16 +530,30 @@ def compute_argument_convergence(state: Any) -> Dict[str, Dict[str, Any]]:
             detail = f"{fraction:.0%} du maximum applicable"
             if penalised:
                 detail += " (hors penalite sophisme)"
-            signals.append(("qualite faible", detail))
+            _witness("qualite faible", detail)
 
-        # 3. Counter-argument generated against it
+        # 3. Counter-argument generated against it — #3145: an independent
+        # witness only when the counter axis discriminates on the run; on a
+        # run where every sampled unit got one it is sample membership, and
+        # is cited as content instead.
         if arg_id in counter_by_arg:
-            signals.append(("contre-argument", str(counter_by_arg[arg_id])))
+            if counter_discriminates:
+                _witness("contre-argument", str(counter_by_arg[arg_id]))
+            else:
+                _cite(
+                    "contre-argument",
+                    f"{counter_by_arg[arg_id]} — l'axe contre-argument a produit "
+                    "un contre-argument sur chaque unite echantillonnee de ce "
+                    "run : il ne discrimine rien, pas un temoin independant",
+                )
 
-        # 4. JTMS belief retracted / invalid
-        # Beliefs are named "arg_N:<text_excerpt>" (see _invoke_jtms).  Use
-        # startswith for a precise match — substring check would false-positive
-        # on defeat beliefs and other arg_id occurrences in text.
+        # 4. JTMS belief retracted / invalid — #3145: DERIVED from the
+        # fallacy (step 4 of _invoke_jtms retracts the target because the
+        # fallacy targets it). The retraction is real information, a
+        # corroboration it is not. Beliefs are named "arg_N:<text_excerpt>"
+        # (see _invoke_jtms). Use startswith for a precise match — substring
+        # check would false-positive on defeat beliefs and other arg_id
+        # occurrences in text.
         jtms_prefix = f"{arg_id}:"
         if isinstance(jtms, dict):
             invalid = 0
@@ -507,57 +564,91 @@ def compute_argument_convergence(state: Any) -> Dict[str, Dict[str, Any]]:
                 if name.startswith(jtms_prefix) and bdata.get("valid") is False:
                     invalid += 1
             if invalid:
-                signals.append(("JTMS retracte", str(invalid)))
+                _cite(
+                    "JTMS retracte",
+                    f"{invalid} — retracte par la chaine sophisme→JTMS "
+                    "(derive du sophisme, pas un temoin independant)",
+                )
 
-        # 5. Rejected by Dung abstract argumentation
+        # 5. Rejected by Dung abstract argumentation — independent: every
+        # fallacy-minted attack source is dropped before evaluation (#1698
+        # measured: ``fallacy_*``/``CA:*`` nodes are never inventory
+        # members), so a rejection that fires was caused by an edge the
+        # fallacy did not mint.
         if arg_id in rejected_by_dung:
-            signals.append(("rejet Dung", rejected_by_dung[arg_id]))
+            _witness("rejet Dung", rejected_by_dung[arg_id])
 
         if signals:
-            result[arg_id] = {"score": len(signals), "signals": signals}
+            result[arg_id] = {
+                "score": len(independent),
+                "signals": signals,
+                "independent_signals": independent,
+                "cited_signals": cited,
+            }
 
     return result
+
+
+def _independent_reason(method: str, detail: str) -> str:
+    """Why an INDEPENDENT method concurs (#3145: only these may concur)."""
+    if method == "sophisme":
+        return f"la detection rhetorique a identifie un probleme ({detail})"
+    if method == "qualite faible":
+        return f"le scoring de qualite signale une faiblesse ({detail})"
+    if method == "contre-argument":
+        return "un contre-argument solide a ete oppose"
+    if method == "rejet Dung":
+        return f"l'analyse argumentative abstraite (Dung) rejette l'argument ({detail})"
+    return f"{method} ({detail})"
+
+
+def _cited_reason(method: str, detail: str) -> str:
+    """A derived or gated signal rendered as WHAT IT IS, never as agreement."""
+    if method == "JTMS retracte":
+        return (
+            "le systeme de maintenance de verite (JTMS) a retracte la croyance "
+            "associee — derive du sophisme, pas un temoin independant"
+        )
+    if method == "contre-argument":
+        return (
+            "un contre-argument a ete produit ; l'axe contre-argument ne "
+            "discriminait pas ce run, il n'est pas compte comme temoin"
+        )
+    return f"{method} ({detail}) — cite, pas un temoin independant"
+
+
+def _independent_phrase(method: str, detail: str) -> str:
+    if method == "sophisme":
+        return f"detection rhetorique ({detail})"
+    if method == "qualite faible":
+        return f"score de qualite ({detail})"
+    if method == "contre-argument":
+        return "contre-argumentation"
+    if method == "rejet Dung":
+        return f"argumentation abstraite (Dung/{detail})"
+    return method
 
 
 def _build_substantive_insight(
     arg_id: str,
     score: int,
-    method_phrases: List[str],
-    data: Dict[str, Any],
+    independent_phrases: List[str],
+    independent_reasons: List[str],
+    cited_reasons: List[str],
 ) -> str:
     """Build a substantive insight paragraph for high-convergence verdicts (>=3 methods).
 
     Produces a conclusion anchored in the actual signals: names the argument,
-    lists the converging methods, and states WHY the cross-method agreement
-    makes the argument's weakness over-determined rather than a single-method
-    opinion.
+    lists the converging INDEPENDENT methods (#3145 — derived signals never
+    concur), and states WHY the cross-method agreement makes the argument's
+    weakness over-determined rather than a single-method opinion — one reason
+    per INDEPENDENT method after "perspective :", never a derived one (R1107
+    rework: the clause explains the methods that count; the cited signals
+    ride along as content after "Par ailleurs", labelled as what they are).
     """
-    joined = ", ".join(method_phrases)
-
-    signal_reasons = []
-    for method, detail in data["signals"]:
-        if method == "sophisme":
-            signal_reasons.append(
-                f"la detection rhetorique a identifie un probleme ({detail})"
-            )
-        elif method == "qualite faible":
-            signal_reasons.append(
-                f"le scoring de qualite signale une faiblesse ({detail})"
-            )
-        elif method == "contre-argument":
-            signal_reasons.append("un contre-argument solide a ete oppose")
-        elif method == "JTMS retracte":
-            signal_reasons.append(
-                "le systeme de maintenance de verite (JTMS) a retracte "
-                "la croyance associee"
-            )
-        elif method == "rejet Dung":
-            signal_reasons.append(
-                f"l'analyse argumentative abstraite (Dung) rejette l'argument "
-                f"({detail})"
-            )
-
-    reasons_text = " ; en outre, ".join(signal_reasons)
+    joined = ", ".join(independent_phrases)
+    reasons_text = " ; ".join(independent_reasons)
+    cited_text = " ; en outre, ".join(cited_reasons)
 
     return (
         f"**Insight convergent sur {arg_id}** : {score} methodes independantes "
@@ -566,7 +657,7 @@ def _build_substantive_insight(
         f"perspective : {reasons_text}. "
         f"Un tel accord inter-methodes est inaccessible a une analyse "
         f"LLM monotone et constitue un insight emergent propre au systeme "
-        f"multi-agents."
+        f"multi-agents." + (f" Par ailleurs : {cited_text}." if cited_reasons else "")
     )
 
 
@@ -575,7 +666,8 @@ def build_convergent_synthesis(state: Any) -> Dict[str, Any]:
 
     Returns a dict with:
       - ``narrative``: the base template narrative (backward-compatible)
-      - ``convergent_verdicts``: per-argument list flagged by >=2 methods
+      - ``convergent_verdicts``: per-argument list flagged by >=2 INDEPENDENT
+        methods (#3145: derived and gated signals do not make a convergence)
       - ``emergent_insights``: human-readable convergence statements
       - ``conclusion``: a one-line verdict suitable for ``final_conclusion``
     """
@@ -589,24 +681,19 @@ def build_convergent_synthesis(state: Any) -> Dict[str, Any]:
 
     insights: List[str] = []
     for arg_id, data in ordered:
-        method_phrases = []
-        for method, detail in data["signals"]:
-            if method == "sophisme":
-                method_phrases.append(f"detection rhetorique ({detail})")
-            elif method == "qualite faible":
-                method_phrases.append(f"score de qualite ({detail})")
-            elif method == "contre-argument":
-                method_phrases.append("contre-argumentation")
-            elif method == "JTMS retracte":
-                method_phrases.append("maintenance de verite (JTMS)")
-            elif method == "rejet Dung":
-                method_phrases.append(f"argumentation abstraite (Dung/{detail})")
-            else:
-                method_phrases.append(method)
-        joined = ", ".join(method_phrases)
+        independent_phrases = [
+            _independent_phrase(m, d) for m, d in data["independent_signals"]
+        ]
+        independent_reasons = [
+            _independent_reason(m, d) for m, d in data["independent_signals"]
+        ]
+        cited_reasons = [_cited_reason(m, d) for m, d in data["cited_signals"]]
+        joined = ", ".join(independent_phrases)
         score = data["score"]
         if score >= 3:
-            insight = _build_substantive_insight(arg_id, score, method_phrases, data)
+            insight = _build_substantive_insight(
+                arg_id, score, independent_phrases, independent_reasons, cited_reasons
+            )
             insights.append(insight)
         else:
             insights.append(
@@ -614,6 +701,11 @@ def build_convergent_synthesis(state: Any) -> Dict[str, Any]:
                 f"independantes concourent a le signaler ({joined}). "
                 f"Cette convergence inter-perspectives est inaccessible a une passe "
                 f"LLM unique."
+                + (
+                    f" Par ailleurs : {' ; '.join(cited_reasons)}."
+                    if cited_reasons
+                    else ""
+                )
             )
 
     # Build the conclusion line
