@@ -34,6 +34,20 @@ REJECTED_MEANS = (
     "un argument rejeté perd cette assise dans le graphe, rien de plus : "
     "ses soutiens n'y survivent pas aux attaques"
 )
+# #3153: « rejeté » covers only the arguments the graph settles AGAINST.
+# An argument the graph does not settle is a third verdict, and it needs its
+# own gloss — reading non-membership as rejection turned a mutual attack into
+# a defeat of both poles (doc_B).
+UNDECIDED_MEANS = (
+    "un argument en suspens n'est ni retenu ni écarté : le graphe ne tranche "
+    "pas le désaccord qui le concerne, ce qui est un constat sur le graphe et "
+    "non un verdict sur l'argument"
+)
+CREDULOUS_MEANS = (
+    "parmi les arguments en suspens, ceux qu'une extension acceptée contient "
+    "sont dits « acceptés par crédulité » : ils survivent dans au moins une "
+    "lecture cohérente du graphe, sans que le graphe impose ce choix"
+)
 
 
 def reader_consequence(
@@ -42,6 +56,8 @@ def reader_consequence(
     n_rejected: int,
     semantics_label: str,
     n_identified: int | None = None,
+    *,
+    n_undecided: int = 0,
 ) -> str:
     """The digested Dung consequence for the body — no extension list, no
     serialized edges, no raw counts dump.
@@ -57,6 +73,13 @@ def reader_consequence(
     (retained-for-the-graph, out of identified units) instead of reusing the
     inventory's syntagme with a second number. Never align the numbers —
     the bridge is the fix, not the convergence.
+
+    #3153: ``n_undecided`` counts the arguments the graph does NOT settle.
+    They are neither accepted nor rejected, so the two pre-#3153 sentences
+    were both false whenever it was non-zero: « sans fragiliser aucun
+    argument » and « en fragilisant N » both describe a graph that decided.
+    The stand-off gets its own wording, and it never hides the conflict —
+    dropping it is the pendulum the issue forbids.
     """
     if n_identified is not None and 0 < n_arguments < n_identified:
         frame = (
@@ -73,12 +96,21 @@ def reader_consequence(
             f"{semantics_label}) réorganise le matériau"
         )
         node_syntagme = "extraits"
-    if n_rejected == 0:
+    if n_rejected == 0 and n_undecided == 0:
         consequence = (
             f"{frame} sans fragiliser aucun argument : chaque position "
             "conserve son assise face aux attaques reçues"
         )
-    else:
+    elif n_rejected == 0:
+        # Nothing is settled against anyone, but the graph does not settle
+        # the dispute either — the stand-off is the finding.
+        consequence = (
+            f"{frame} sans écarter aucun argument, mais sans départager "
+            f"{n_undecided} des {n_arguments} arguments {node_syntagme} : la "
+            f"sémantique {semantics_label} les laisse en suspens, le désaccord "
+            "qui les concerne n'étant pas tranché par les attaques du graphe"
+        )
+    elif n_undecided == 0:
         # Morphology-free French: the « (s) » alternation is a solver-output
         # marker the readability gate now tracks (#1908) — the digested
         # consequence must read as prose, not as machine output. The node
@@ -88,6 +120,14 @@ def reader_consequence(
             f"{frame} en fragilisant {n_rejected} des {n_arguments} arguments "
             f"{node_syntagme}, qui perdent l'assise que l'extension "
             f"{semantics_label} garantit aux autres"
+        )
+    else:
+        consequence = (
+            f"{frame} en fragilisant {n_rejected} des {n_arguments} arguments "
+            f"{node_syntagme}, qui perdent l'assise que l'extension "
+            f"{semantics_label} garantit aux autres, et en laissant "
+            f"{n_undecided} en suspens : le désaccord qui les concerne n'est "
+            "pas tranché par les attaques du graphe"
         )
     return consequence
 

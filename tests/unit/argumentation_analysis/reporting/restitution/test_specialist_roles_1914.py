@@ -95,7 +95,13 @@ def _violation_state() -> SimpleNamespace:
         "d1": {
             "name": "verification_grounded",
             "arguments": ["arg_1", "arg_9"],
-            "attacks": [["arg_9", "arg_1"]],
+            # #3153: the graph must agree with the extension it produced.
+            # The edge used to run arg_9 → arg_1 while the accepted set held
+            # arg_1 — a frame no grounded solve can produce (arg_9 is
+            # unattacked, so it is IN and arg_1 would be OUT, the reverse of
+            # what the extension says). The intent is unchanged: arg_9 is
+            # EXCLUDED. arg_1, accepted and unattacked, now says why.
+            "attacks": [["arg_1", "arg_9"]],
             "extensions": {"all_members": ["arg_1"]},
         }
     }

@@ -115,8 +115,14 @@ def _rich_state() -> SimpleNamespace:
             "fw_1": {
                 # #1912: canonical writer shape — add_dung_framework always
                 # stores a name; native evidence = verification_*.
+                # #3153: the attack graph must AGREE with the extension —
+                # arg_2 is unattacked (in), arg_1 is attacked by it (out).
+                # The fixture used to omit ``attacks`` while excluding
+                # arg_1, which no grounded solve of the stored graph could
+                # produce; the decoder now needs the graph to say WHY.
                 "name": "verification_grounded",
                 "arguments": ["arg_1", "arg_2"],
+                "attacks": [["arg_2", "arg_1"]],
                 "extensions": {"all_members": ["arg_2"]},
                 "semantics": "grounded",
             }
@@ -418,13 +424,17 @@ class TestBuildEvidence:
             ],
             dung_frameworks={
                 "fw_1": {
-                    # #1912: canonical shape + decodable empty extension —
-                    # the solver genuinely accepted nothing, so arg_1 is
-                    # really rejected and the 4th axis exists (MATCH band
-                    # pin depends on it).
+                    # #1912: canonical shape + genuine rejection — the 4th
+                    # axis exists (MATCH band pin depends on it).
+                    # #3153: a rejection needs the graph to settle it —
+                    # arg_2 is unattacked (in), arg_1 is attacked by it
+                    # (out). A bare empty extension over an attack-free
+                    # graph would say the opposite (everything in), so the
+                    # fixture states the graph the exclusion comes from.
                     "name": "verification_grounded",
-                    "arguments": ["arg_1"],
-                    "extensions": {"all_members": []},
+                    "arguments": ["arg_1", "arg_2"],
+                    "attacks": [["arg_2", "arg_1"]],
+                    "extensions": {"all_members": ["arg_2"]},
                     "semantics": "grounded",
                 }
             },

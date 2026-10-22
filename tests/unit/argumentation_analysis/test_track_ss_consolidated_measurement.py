@@ -24,6 +24,28 @@ def _quality(overall: float, n: int = 9) -> dict:
 _SPAN = _quality(5.4)
 
 
+_DUNG_ATTACKER = "arg_0"  # synthetic survivor, outside identified_arguments
+
+
+def _dung_frame_rejecting(node: str, semantics: str = "grounded") -> dict:
+    """A native frame in which ``node`` is genuinely OUT (#3153).
+
+    Under grounded semantics an argument outside the extension is **out**
+    (attacked by an accepted one) or **undecided** (a stand-off) — never
+    automatically rejected. These fixtures used to list one node with an
+    empty extension and NO attack graph, a frame no grounded solve can
+    produce (a lone unattacked node is always accepted); the explicit
+    attacker keeps the reading honest.
+    """
+    return {
+        "name": f"verification_{semantics}",
+        "arguments": [_DUNG_ATTACKER, node],
+        "attacks": [[_DUNG_ATTACKER, node]],
+        "extensions": {"all_members": [_DUNG_ATTACKER]},
+        "semantics": semantics,
+    }
+
+
 def _make_state(
     identified_arguments=None,
     identified_fallacies=None,
@@ -86,14 +108,7 @@ class TestSignalIntegrity:
             jtms_beliefs={
                 "b1": {"name": "arg_1:some text", "valid": False},
             },
-            dung_frameworks={
-                "fw1": {
-                    "name": "verification_grounded",
-                    "arguments": ["arg_1"],
-                    "extensions": [],
-                    "semantics": "grounded",
-                },
-            },
+            dung_frameworks={"fw1": _dung_frame_rejecting("arg_1")},
             counter_sample=["arg_1", "arg_2"],
         )
         result = compute_argument_convergence(state)
@@ -203,14 +218,7 @@ class TestSignalIntegrity:
 
         state = _make_state(
             identified_arguments={"arg_1": "desc"},
-            dung_frameworks={
-                "fw1": {
-                    "name": "verification_grounded",
-                    "arguments": ["arg_1"],
-                    "extensions": [],
-                    "semantics": "grounded",
-                },
-            },
+            dung_frameworks={"fw1": _dung_frame_rejecting("arg_1")},
         )
         result = compute_argument_convergence(state)
         assert result["arg_1"]["score"] == 1
@@ -239,12 +247,7 @@ class TestSignalIntegrity:
         state = _make_state(
             identified_arguments={"arg_1": "The policy causes harm"},
             dung_frameworks={
-                "fw1": {
-                    "name": "verification_grounded",
-                    "arguments": ["The policy causes harm to many people"],
-                    "extensions": [],
-                    "semantics": "grounded",
-                },
+                "fw1": _dung_frame_rejecting("The policy causes harm to many people")
             },
         )
         result = compute_argument_convergence(state)
@@ -350,14 +353,10 @@ class TestConvergenceDepth:
             argument_quality_scores={"arg_1": _quality(2.0), "arg_2": _SPAN},
             counter_arguments=[{"target_arg_id": "arg_1", "content": "counter"}],
             counter_sample=["arg_1", "arg_2"],
-            dung_frameworks={
-                "fw1": {
-                    "name": "verification_grounded",
-                    "arguments": ["arg_1"],
-                    "extensions": [],
-                    "semantics": "grounded",
-                },
-            },
+            # #3153: an explicit attack graph — a frame with no recorded
+            # graph is non-concluable (no Dung signal), and this test needs
+            # Dung as the 4th INDEPENDENT class.
+            dung_frameworks={"fw1": _dung_frame_rejecting("arg_1")},
         )
         result = compute_argument_convergence(state)
         assert result["arg_1"]["score"] == 4
@@ -385,14 +384,7 @@ class TestConvergenceDepth:
             counter_arguments=[{"target_arg_id": "arg_1", "content": "counter"}],
             counter_sample=["arg_1", "arg_2"],
             jtms_beliefs={"b1": {"name": "arg_1:text", "valid": False}},
-            dung_frameworks={
-                "fw1": {
-                    "name": "verification_grounded",
-                    "arguments": ["arg_1"],
-                    "extensions": [],
-                    "semantics": "grounded",
-                },
-            },
+            dung_frameworks={"fw1": _dung_frame_rejecting("arg_1")},
         )
         result = compute_argument_convergence(state)
         assert result["arg_1"]["score"] == 4

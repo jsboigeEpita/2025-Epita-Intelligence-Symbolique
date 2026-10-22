@@ -321,7 +321,13 @@ async def _produce_and_write(
         "phase_extract_output": {"arguments": [{"text": _TRUNC_1}, {"text": _TRUNC_2}]},
     }
     _patch_solver(monkeypatch)
-    _patch_translator(monkeypatch, [[_UNIT_1, _UNIT_2]])
+    # #3153: the injected edge must AGREE with the stub solve, which accepts
+    # only arg_2. With arg_1 → arg_2 the stored frame said "arg_2 accepted
+    # while arg_1 attacks it", a pair no grounded solve can produce — the
+    # decoder now needs the graph to say WHY a node is out, and reads the
+    # reverse direction. Same contract under test (the rejection is keyed by
+    # the unit id, never by the quotation), coherent graph.
+    _patch_translator(monkeypatch, [[_UNIT_2, _UNIT_1]])
     result = await ic._invoke_dung_extensions(_UNIT_1, context)
     _write_dung_extensions_to_state(result, state, {})
     return state
