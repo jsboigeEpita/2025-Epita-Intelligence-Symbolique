@@ -1266,6 +1266,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         overall: float,
         llm_assessment: Optional[str] = None,
         resolved_arg_id: Optional[str] = None,
+        fallacy_penalty: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Add quality evaluation scores for an argument.
 
@@ -1274,9 +1275,16 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             scores: Per-virtue scores dict.
             overall: Sum of the per-virtue [0, 1] scores over the EVALUATED
                 virtues (#1942) — not a 0-1 average and not a note sur 10;
-                readers normalize by dividing by ``len(scores)``.
+                readers normalize by dividing by ``len(scores)``. When the
+                #289 penalty applied, this is the FALLACY-ADJUSTED sum.
             llm_assessment: Optional LLM-generated qualitative narrative (#290).
             resolved_arg_id: If provided, store under this canonical arg_id instead.
+            fallacy_penalty: The evaluator's #289 record (``applied``,
+                ``fallacies``, ``penalty_factor``, ``original_score``). Stored
+                next to ``overall`` only when applied (#3133): the state then
+                holds both judgements, and a convergence that counts
+                "qualite faible" beside "sophisme" can read the unpenalised
+                score instead of counting the same fallacy twice.
         """
         store_id = resolved_arg_id if resolved_arg_id else arg_id
         entry: Dict[str, Any] = {
@@ -1285,6 +1293,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         }
         if llm_assessment:
             entry["llm_assessment"] = llm_assessment
+        if isinstance(fallacy_penalty, dict) and fallacy_penalty.get("applied"):
+            entry["fallacy_penalty"] = fallacy_penalty
         self.argument_quality_scores[store_id] = entry
         state_logger.info(f"Quality score added for {store_id}: {overall:.2f}")
 

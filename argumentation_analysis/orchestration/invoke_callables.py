@@ -1716,6 +1716,7 @@ async def _run_quality_sweep_from_state(state: Any) -> Dict[str, int]:
                     scored.get("scores_par_vertu", {}) or {},
                     float(scored.get("note_finale", 0.0) or 0.0),
                     llm_assessment=scored.get("llm_assessment"),
+                    fallacy_penalty=scored.get("fallacy_penalty"),  # #3133
                 )
                 result["added"] += 1
             except Exception as e:

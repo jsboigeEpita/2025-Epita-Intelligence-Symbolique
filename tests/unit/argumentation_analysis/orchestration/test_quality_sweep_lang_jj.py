@@ -44,12 +44,19 @@ class _FakeState:
         self.identified_arguments = identified_arguments
         self.argument_quality_scores = dict(prefilled or {})
 
-    def add_quality_score(self, arg_id, scores, overall, llm_assessment=None):
-        self.argument_quality_scores[arg_id] = {
+    def add_quality_score(
+        self, arg_id, scores, overall, llm_assessment=None, fallacy_penalty=None
+    ):
+        # Mirrors UnifiedAnalysisState.add_quality_score: the #289 penalty
+        # record (#3133) is stored beside ``overall`` only when it applied.
+        entry = {
             "scores": scores,
             "overall": overall,
             "llm_assessment": llm_assessment,
         }
+        if isinstance(fallacy_penalty, dict) and fallacy_penalty.get("applied"):
+            entry["fallacy_penalty"] = fallacy_penalty
+        self.argument_quality_scores[arg_id] = entry
 
 
 def _canned_quality_output(arg_ids):
@@ -109,6 +116,28 @@ class TestQualitySweepFromState:
         assert out["added"] == 1
         # Pre-existing agent score untouched.
         assert state.argument_quality_scores["arg_1"]["overall"] == 0.9
+
+    async def test_penalty_record_travels_with_the_sweep(self):
+        # #3133: the sweep forwards the evaluator's #289 penalty record so the
+        # state holds both judgements beside ``overall``. A stand-in whose
+        # ``add_quality_score`` cannot receive it makes every add fail silently
+        # (added == 0) — this is the widened contract, not an optional extra.
+        canned = _canned_quality_output(["arg_1"])
+        canned["per_argument_scores"]["arg_1"]["fallacy_penalty"] = {
+            "applied": True,
+            "fallacies": ["ad_hominem"],
+            "penalty_factor": 0.5,
+            "original_score": 0.8,
+        }
+        state = _FakeState({"a1": "Argument one text."})
+        with patch.object(
+            mod, "_invoke_quality_evaluator", new=AsyncMock(return_value=canned)
+        ):
+            out = await mod._run_quality_sweep_from_state(state)
+        assert out["added"] == 1
+        stored = state.argument_quality_scores["arg_1"]["fallacy_penalty"]
+        assert stored["original_score"] == 0.8
+        assert stored["penalty_factor"] == 0.5
 
     async def test_no_arguments_is_noop(self):
         state = _FakeState({})
