@@ -27,7 +27,7 @@ from argumentation_analysis.plugins.kb_to_tweety_plugin import (
 pytestmark = pytest.mark.tweety
 
 
-class TestFolModalRoutingRendersComputedVerdict:
+class TestFolModalRoutingNamesItsOutcomes:
     """DoD item 2 + semantic decision: a well-formed FOL/modal formula parses.
 
     ``is_valid`` measures parseability into Tweety (uniform with ``_validate_pl``),
@@ -48,16 +48,23 @@ class TestFolModalRoutingRendersComputedVerdict:
         assert is_valid is True, f"well-formed modal rejected: {msg}"
         assert "Unknown logic type" not in msg
 
-    async def test_translate_fol_renders_computed_verdict(
+    async def test_translate_fol_names_what_it_did_not_translate(
         self, tweety_bridge_fixture
     ) -> None:
+        """#3135: NL with no FOL translator is named as not translated, not
+        stubbed — and a ``fol`` label still reaches the FOL branch (never
+        "Unknown logic type"), with no retry on an outcome that cannot
+        change."""
         plugin = KBToTweetyPlugin()
         result = json.loads(
             await plugin.translate_to_tweety(
                 json.dumps({"text": "Socrate est mortel", "logic_type": "fol"})
             )
         )
-        assert result["is_valid"] is True, result["validation_message"]
+        assert result["is_valid"] is None, result["validation_message"]
+        assert "not translated" in result["validation_message"], result[
+            "validation_message"
+        ]
         assert "Unknown logic type" not in result["validation_message"]
         assert result["attempts"] == 1
 
