@@ -970,6 +970,43 @@ def _collect_quality_strengths(
     ]
 
 
+# The bar at which a virtue may be said OF the discourse (3/4 of the evaluated
+# arguments). #3137 shipped it as a rule FOR THE WRITER; R1107's first
+# post-#3143 render broke it (clarté at 4/8 said « generally clear », no base).
+# A rule the writer can break is not a guarantee — the producer now states the
+# discourse-level sentence itself and the writer copies it (#3159).
+_DISCOURSE_BAR = 0.75
+
+
+def discourse_virtue_sentence(strengths: List[QualityStrength]) -> str:
+    """The discourse-level virtue statement, pre-composed (#3159).
+
+    Names every virtue that reaches the bar with its measured base (k/m
+    arguments evaluated, N units), and says plainly when none does — the
+    honest absence replaces the rule, it does not soften it.
+    """
+    passed = [
+        s
+        for s in strengths
+        if s.args_evaluated and (s.args_at_top / s.args_evaluated) >= _DISCOURSE_BAR
+    ]
+    if not passed:
+        return (
+            "VERDICT PRÉ-CALCULÉ : aucune vertu n'atteint 3/4 des arguments "
+            "évalués — aucune ne se dit DU DISCOURS. Attribue chaque vertu aux "
+            "arguments qui la portent, avec sa base."
+        )
+    named = " ; ".join(
+        f"{s.virtue} ({s.args_at_top}/{s.args_evaluated} arguments évalués, "
+        f"{s.units_total} unités)"
+        for s in passed
+    )
+    return (
+        "VERDICT PRÉ-CALCULÉ (reprends-le tel quel) : « Le discours tient sur "
+        f"{named}. » Aucune autre vertu ne se dit du discours."
+    )
+
+
 def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
     """Collect the governance voting verdict (SV #1182).
 
@@ -2600,17 +2637,13 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
             f"{s.args_evaluated} arguments évalués — {s.units_total} unités)"
             for s in evidence.quality_strengths[:6]
         )
-        # #3137: the counts come with the rule that reads them — whether a
-        # virtue may be said OF the discourse is the writer's call, made on
-        # k/m. Proposed threshold 3/4, measured on R1105c: it admits the one
-        # honest discourse-level virtue of that run (refutation 7/8) and
-        # excludes the 5/8, 3/8 and 3/8 its own Act II contradicts.
-        strengths_lines += (
-            "\n  RÈGLE DE GÉNÉRALISATION (#3137) : une vertu ne se dit DU "
-            "DISCOURS que si elle tient sur au moins 3/4 des arguments "
-            "évalués ; en dessous, attribue-la aux arguments qui la portent. "
-            "La base mesurée (arguments évalués, unités) accompagne toujours "
-            "l'énoncé."
+        # #3159 — the generalisation was a RULE aimed at the writer (#3137) and
+        # the first post-#3143 render broke it. The rule is gone: the producer
+        # now writes the discourse-level sentence, base included, and the
+        # writer copies it. Removing the breakable rule is the fix; no
+        # stronger-worded rule is added in its place.
+        strengths_lines += "\n  " + discourse_virtue_sentence(
+            evidence.quality_strengths
         )
     else:
         strengths_lines = (

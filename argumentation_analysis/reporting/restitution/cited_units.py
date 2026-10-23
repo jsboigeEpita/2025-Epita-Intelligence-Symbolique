@@ -361,6 +361,14 @@ def render_governance_lead(
             "l'identifiant technique brut ni le nom de méthode snake_case. "
         )
     if kind == "vote":
+        # #3159 — the lead said WHO the vote designated, never WHAT it ranked.
+        # R1107c's Act II turned « chosen by the vote » into « le mieux tenu de
+        # tout le discours » — a quality verdict the vote never issued.
+        lead += (
+            "Ce vote classe des OPTIONS en concurrence (les arguments comme "
+            "réponses possibles) — il ne mesure pas leur qualité : ne le "
+            "présente jamais comme un classement de tenue. "
+        )
         band = qualitative_support_band(
             support_by_option.get(str(winner).strip()) if support_by_option else None,
             n_methods_decided,
