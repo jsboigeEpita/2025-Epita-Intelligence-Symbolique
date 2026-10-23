@@ -269,6 +269,8 @@ class _RecordingState(SimpleNamespace):
         argument_ids_absent_reason: Optional[str] = None,
         population_total: Optional[int] = None,
         dropped_unresolved: Optional[int] = None,
+        degraded: Optional[bool] = None,
+        absent_reason: Optional[str] = None,
     ) -> str:
         entry = self._curated(
             {"method": method, "original": original, "revised": revised},
@@ -279,6 +281,11 @@ class _RecordingState(SimpleNamespace):
         )
         if minimal_retraction is not None:
             entry["minimal_retraction"] = minimal_retraction
+        # #3178 — the tri-state marker, stored only when stated.
+        if isinstance(degraded, bool):
+            entry["degraded"] = degraded
+        if absent_reason:
+            entry["absent_reason"] = absent_reason
         self.belief_revision_results.append(entry)
         return f"brevision_{len(self.belief_revision_results)}"
 

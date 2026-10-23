@@ -23,16 +23,21 @@ class TestBeliefRetractionAGMSource:
     """_build_belief_retractions must read belief_revision_results."""
 
     def test_agm_contraction_surfaces_in_retractions(self):
+        # #3178 — ``revised: []`` is the producer's NOT-COMPUTED marker (see
+        # ``_belief_revision_ran``), never "everything was contracted". This
+        # fixture used ``revised=[]`` to mean a full contraction; it now uses
+        # the shape a revision that RAN actually returns — ``original`` plus
+        # the incoming belief, minus what went.
         state = _make_state()
         state.add_belief_revision_result(
             method="fallacy_contraction",
             original=["b1", "b2", "b3", "b4"],
-            revised=[],
+            revised=["b1"],
         )
         retractions = DeepSynthesisAgent._build_belief_retractions(state)
-        assert len(retractions) == 4
+        assert len(retractions) == 3
         names = {r.belief_name for r in retractions}
-        assert names == {"b1", "b2", "b3", "b4"}
+        assert names == {"b2", "b3", "b4"}
 
     def test_agm_partial_contraction(self):
         state = _make_state()
@@ -61,16 +66,35 @@ class TestBeliefRetractionAGMSource:
         state.add_belief_revision_result(
             method="fallacy_contraction",
             original=["b1"],
-            revised=[],
+            revised=["n_not_fallacy_abc"],
         )
         retractions = DeepSynthesisAgent._build_belief_retractions(state)
         assert retractions[0].trigger == "fallacy_contraction_contraction"
 
+    def test_an_unrun_revision_yields_no_retraction(self):
+        # #3178 — the tri-state: ``revised: []`` with a non-empty ``original``
+        # means the revision did NOT run (handler bound refused it, or the JVM
+        # was absent). It contributes no contraction.
+        state = _make_state()
+        state.add_belief_revision_result(
+            method="dalal",
+            original=["b1", "b2"],
+            revised=[],
+            degraded=True,
+            absent_reason="handler_size_bound",
+        )
+        assert DeepSynthesisAgent._build_belief_retractions(state) == []
+
     def test_both_sources_merged(self):
         state = _make_state()
-        # JTMS source
+        # JTMS source — the shape ``JTMS.get_retraction_chain`` writes (#3178)
         state.jtms_retraction_chain.append(
-            {"belief_name": "jtms_b1", "was_valid": True, "trigger": "cascade"}
+            {
+                "trigger": "cascade",
+                "retracted": ["jtms_b1"],
+                "cascaded": ["jtms_b2"],
+                "reason": "directly set to False",
+            }
         )
         # AGM source
         state.add_belief_revision_result(
@@ -109,7 +133,7 @@ class TestBeliefRetractionAGMSource:
         state.add_belief_revision_result(
             method="test",
             original=["x"],
-            revised=[],
+            revised=["n_not_fallacy_abc"],
         )
         retractions = DeepSynthesisAgent._build_belief_retractions(state)
         r = retractions[0]

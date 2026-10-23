@@ -104,6 +104,8 @@ class _FakeState:
         argument_ids_absent_reason: Optional[str] = None,
         population_total: Optional[int] = None,
         dropped_unresolved: Optional[int] = None,
+        degraded: Optional[bool] = None,
+        absent_reason: Optional[str] = None,
     ) -> str:
         """A storing mirror of ``UnifiedAnalysisState.add_belief_revision_result``
         (same signature, same optional-only-when-set shape) — the finding reader
@@ -126,6 +128,11 @@ class _FakeState:
             entry["population_total"] = population_total
         if dropped_unresolved is not None:
             entry["dropped_unresolved"] = dropped_unresolved
+        # #3178 — the tri-state marker, stored only when stated.
+        if isinstance(degraded, bool):
+            entry["degraded"] = degraded
+        if absent_reason:
+            entry["absent_reason"] = absent_reason
         self.belief_revision_results.append(entry)
         return entry["id"]
 
