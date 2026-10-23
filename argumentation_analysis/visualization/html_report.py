@@ -225,12 +225,18 @@ tr:hover { background: rgba(88,166,255,0.05); }
   </table>
   {% if jtms_retractions %}
   <h3>Retraction Cascades</h3>
+  {# #3188 — the producer's keys (JTMS.get_retraction_chain writes
+     {trigger, retracted, cascaded, reason}); the former cascade_id /
+     downstream_effects reads were keys no producer writes. #}
   {% for cascade in jtms_retractions %}
     <div style="margin: 0.5rem 0; padding: 0.5rem 1rem; background: rgba(248,81,73,0.05); border-left: 3px solid var(--red); border-radius: 0 8px 8px 0;">
-      <strong>{{ cascade.cascade_id }}</strong> — triggered by <code>{{ cascade.trigger }}</code><br>
+      Triggered by <code>{{ cascade.trigger }}</code><br>
       <span style="color: var(--text-muted);">{{ cascade.reason }}</span>
-      {% for effect in cascade.downstream_effects %}
-        <br><span class="badge badge-red">{{ effect.get('belief', '') }}: {{ effect.get('old_status', effect.get('old_confidence', '')) }} → {{ effect.get('new_status', effect.get('new_confidence', '')) }}</span>
+      {% for belief in cascade.get('retracted', []) %}
+        <br><span class="badge badge-red">retracted: {{ belief }}</span>
+      {% endfor %}
+      {% for belief in cascade.get('cascaded', []) %}
+        <br><span class="badge badge-orange">cascaded: {{ belief }}</span>
       {% endfor %}
     </div>
   {% endfor %}

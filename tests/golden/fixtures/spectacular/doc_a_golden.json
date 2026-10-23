@@ -289,24 +289,16 @@
     },
     "jtms_retraction_chain": [
       {
-        "cascade_id": "cascade_1",
         "trigger": "b_counter_reductio",
         "retracted": ["b_arg_c1"],
-        "reason": "Reductio counter-argument exposed false dilemma: absolute freedom is not a prerequisite for democracy",
-        "timestamp": "2026-05-01T10:30:00Z",
-        "downstream_effects": [
-          {"belief": "b_arg_c1", "old_status": "IN", "new_status": "OUT"}
-        ]
+        "cascaded": ["b_arg_c2"],
+        "reason": "Reductio counter-argument exposed false dilemma: absolute freedom is not a prerequisite for democracy"
       },
       {
-        "cascade_id": "cascade_2",
         "trigger": "b_counter_example",
-        "retracted": [],
-        "reason": "Counter-example from German case weakened causal link but did not retract arg_p3 entirely",
-        "timestamp": "2026-05-01T10:31:00Z",
-        "downstream_effects": [
-          {"belief": "b_arg_p3", "old_confidence": 0.85, "new_confidence": 0.78}
-        ]
+        "retracted": ["b_arg_p3"],
+        "cascaded": [],
+        "reason": "Counter-example from German case retracted the causal-link belief behind the historical evidence"
       }
     ],
     "debate_transcripts": [

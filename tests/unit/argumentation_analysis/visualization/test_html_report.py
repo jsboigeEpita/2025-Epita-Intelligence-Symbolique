@@ -94,7 +94,9 @@ class TestHTMLReport:
         html = render_html_report(golden_state)
         assert "JTMS" in html
         assert "Retraction" in html
-        assert "cascade_1" in html
+        # #3188 — the cascade section shows the producer's content (the
+        # retracted beliefs), not the phantom cascade_id nobody writes.
+        assert "retracted: b_arg_c1" in html
         assert "IN" in html
         assert "OUT" in html
 
