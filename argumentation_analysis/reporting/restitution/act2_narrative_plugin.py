@@ -63,7 +63,10 @@ from .native_dung import (  # #1912: single shared decoder — see native_dung.p
     select_primary_native,
 )
 from .fr_accord import accord
-from .formal_derivation import tested_content_and_units
+from .formal_derivation import (
+    ABSENT_CONFLICT_NOT_LOCALISED,
+    read_tested_content,
+)
 from .speaker_record import (
     SPEAKER_NAMING_RULE,
     SpeakerRecord,
@@ -292,6 +295,14 @@ class FormalFinding:
     # units (and through them to their movements) — never to one unit the
     # state did not single out. Empty when no cause named units.
     units: List[str] = field(default_factory=list)
+    # #3179 : WHICH absence ``tested is None`` stands for — an outage of the
+    # record (placeholders / empty) or real formulas whose conflict does not
+    # localise. The two were one ``None`` and one sentence that claimed the
+    # content was absent while the state held it.
+    tested_absence: Optional[str] = None
+    # #3179 : how many real formulas the decided records carry — the count the
+    # not-localised wording states instead of calling the content absent.
+    tested_n_formulas: int = 0
 
 
 @dataclass
@@ -1143,9 +1154,9 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
             ]
             # #3146 : one reader for content and units — the recorded core
             # decides both (the offline fallback names no units).
-            pl_tested, pl_units = tested_content_and_units(
-                pl, _pl_verdict, refuted=bool(inconsistent)
-            )
+            # #3179 : the same reader says WHICH absence it hit, and how many
+            # real formulas the records carry.
+            pl_tested = read_tested_content(pl, _pl_verdict, refuted=bool(inconsistent))
             findings.append(
                 FormalFinding(
                     kind="pl",
@@ -1163,8 +1174,10 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                     # (what failed) ; on an all-verified axis, a sample of what
                     # passed. Placeholder-only records → None → honest absence.
                     # #3146 : a recorded core also names its source units.
-                    tested=pl_tested,
-                    units=pl_units,
+                    tested=pl_tested.text,
+                    units=pl_tested.units,
+                    tested_absence=pl_tested.absence,
+                    tested_n_formulas=pl_tested.n_formulas,
                 )
             )
 
@@ -1190,7 +1203,8 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
             ]
             # #3146 : the FOL cause twin (#3107) carries the same core —
             # same single reader for content and units.
-            fol_tested, fol_units = tested_content_and_units(
+            # #3179 : and the same reader names the absence it hit.
+            fol_tested = read_tested_content(
                 fol,
                 lambda r: (
                     r.get("consistent")
@@ -1212,8 +1226,10 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                         "solveur Tweety (logique du premier ordre)"
                         + (" — " + " ; ".join(fol_causes) if fol_causes else "")
                     ),
-                    tested=fol_tested,
-                    units=fol_units,
+                    tested=fol_tested.text,
+                    units=fol_tested.units,
+                    tested_absence=fol_tested.absence,
+                    tested_n_formulas=fol_tested.n_formulas,
                 )
             )
         else:
@@ -1272,7 +1288,7 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
             unsat = sum(1 for r in decided if r.get("valid") is False)
             # #3146 : the modal leg has no cause writer — the shared reader
             # finds no core there and names no units, by construction.
-            modal_tested, _modal_units = tested_content_and_units(
+            modal_tested = read_tested_content(
                 modal,
                 lambda r: (
                     r.get("valid") if isinstance(r.get("valid"), bool) else None
@@ -1289,7 +1305,10 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                         else f"{accord(sat, 'théorie modale consistante', 'théories modales consistantes')}"
                     ),
                     detail="solveur modal (SPASS/Tweety)",
-                    tested=modal_tested,
+                    tested=modal_tested.text,
+                    units=modal_tested.units,
+                    tested_absence=modal_tested.absence,
+                    tested_n_formulas=modal_tested.n_formulas,
                 )
             )
         else:
@@ -1661,11 +1680,25 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                 # the derivation (or its honest absence). Dung findings are
                 # NOT counters: their verdict sentence already IS a
                 # derivation (graph shape + consequence) — no marker there.
-                derivation = (
-                    f"testé : {f.tested}"
-                    if f.tested
-                    else "contenu testé non disponible dans l'état (compteur seul)"
-                )
+                if f.tested:
+                    derivation = f"testé : {f.tested}"
+                elif f.tested_absence == ABSENT_CONFLICT_NOT_LOCALISED:
+                    # #3179 — the content IS in the state; what is missing is a
+                    # localised conflict. Calling it "non disponible" told the
+                    # reader the opposite of what the state holds. #2960 is
+                    # untouched: no inference is singled out, so the decisive
+                    # role still cannot fire against one.
+                    derivation = (
+                        "contenu testé présent "
+                        f"({accord(f.tested_n_formulas, 'formule testée', 'formules testées')}) "
+                        "mais conflit non localisé : aucune paire de formules ne "
+                        "porte la contradiction — le verdict porte sur la théorie "
+                        "entière, jamais sur une inférence désignée"
+                    )
+                else:
+                    derivation = (
+                        "contenu testé non disponible dans l'état (compteur seul)"
+                    )
                 # #3146 : the recorded core's source units — the verdict binds
                 # to the batch's units (their movements), never « attached to
                 # no move » for a conflict the state localises exactly.
@@ -2047,7 +2080,11 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         "pour le jugement du mouvement concerné. "
         "Si l'ancrage porte « contenu testé non disponible », dis-le tel quel : "
         "un compteur sans contenu est une preuve procédurale, pas une "
-        "dérivation — INTERDIT de lui inventer une formule ou un contenu.\n"
+        "dérivation — INTERDIT de lui inventer une formule ou un contenu. "
+        "Si l'ancrage dit au contraire que le contenu est PRÉSENT mais que le "
+        "conflit n'est pas localisé, dis le nombre de formules testées et "
+        "l'absence de conflit localisé — et ne désigne AUCUNE inférence "
+        "précise : le verdict porte sur la théorie entière.\n"
         "  Pour Dung : le graphe est BÂTI à partir des arguments retenus "
         "pour le graphe (pas un oracle externe) — cadre-le comme une "
         "réorganisation du matériau extrait, pas comme une vérification "

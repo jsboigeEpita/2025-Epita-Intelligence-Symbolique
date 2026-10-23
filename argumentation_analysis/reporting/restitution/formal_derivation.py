@@ -29,7 +29,7 @@ Anti-fabrication contract (the #1941 discipline applied to Acte II):
 from __future__ import annotations
 
 import re
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, NamedTuple, Optional, Tuple
 
 from .fr_accord import accord
 
@@ -289,13 +289,50 @@ def tested_content_and_units(
     refuted: bool,
     max_atoms: int = _MAX_ATOMS,
 ) -> Tuple[Optional[str], List[str]]:
-    """Bounded rendering of what the axis actually tested, with the source
-    units a recorded core names.
+    """``(content, units)`` — the projection the acts read (#1914, #3146).
 
-    Returns ``(content, units)``: the rendering (``None`` when the selected
-    records carry no real formula — placeholder-only or empty — the caller
-    renders the honest absence, never a fabricated derivation) and the
-    opaque unit ids the retained cause names (empty when it names none).
+    The reader itself is :func:`read_tested_content`, which also tells the
+    caller WHICH absence it hit (#3179) and how many real formulas it saw.
+    This stays a projection so an existing two-value unpack keeps working
+    without a second implementation of the rule.
+    """
+    read = read_tested_content(records, verdict_reader, refuted, max_atoms)
+    return read.text, read.units
+
+
+# #3179 — the two absences ``None`` used to conflate. They say different
+# things about the run, so they get different names and the acts word them
+# differently: the first is an outage of the record, the second is a verdict
+# whose subject could not be pinned to a specific inference.
+ABSENT_NO_FORMULA = "no_formula"  # placeholder-only or empty record set
+ABSENT_CONFLICT_NOT_LOCALISED = "conflict_not_localised"  # real formulas, no pair
+
+
+class TestedContent(NamedTuple):
+    """What an axis tested, and — when there is no rendering — which absence.
+
+    ``text`` is the bounded rendering (``None`` when absent); ``absence`` is
+    one of the ``ABSENT_*`` constants when ``text`` is ``None``, else
+    ``None``; ``units`` are the opaque unit ids a recorded core names;
+    ``n_formulas`` is how many REAL formulas the decided records carry
+    (``0`` for a placeholder-only or empty set).
+    """
+
+    text: Optional[str]
+    units: List[str]
+    absence: Optional[str]
+    n_formulas: int
+
+
+def read_tested_content(
+    records: Any,
+    verdict_reader: Callable[[Dict[str, Any]], Optional[bool]],
+    refuted: bool,
+    max_atoms: int = _MAX_ATOMS,
+) -> TestedContent:
+    """Bounded rendering of what the axis actually tested, with the source
+    units a recorded core names, and the absence it hit when there is none.
+
     ``refuted=True`` selects the REFUTED records (the decisive derivation:
     what failed); ``refuted=False`` the verified ones (a sample of what
     passed, never any unit claim).
@@ -309,8 +346,15 @@ def tested_content_and_units(
     batch's moves instead of « attached to no move ». When no core is
     recorded, the offline unit-literal localizer is the fallback; when the
     conflict does not localize either (compound formulas, spread conflict),
-    there is no localizable tested content: ``None``, and the decisive role
-    must not fire against a specific inference.
+    there is no localizable tested content and the decisive role must not
+    fire against a specific inference.
+
+    #3179: the caller learns WHICH absence it got — ``ABSENT_NO_FORMULA``
+    (nothing real to show: placeholder-only or empty) or
+    ``ABSENT_CONFLICT_NOT_LOCALISED`` (real formulas, no localisable
+    conflict), together with how many real formulas the records carry. The
+    two used to be one ``None`` and one sentence claiming the content was
+    absent while the state held it.
     """
     selected = _records_with_verdict(records, verdict_reader, verdict=not refuted)
     real, placeholders = scan_tested_content(selected, verdict_reader)
@@ -320,19 +364,24 @@ def tested_content_and_units(
             if not core:
                 continue
             atoms = [_readable_atom(f) for f in core[:max_atoms]]
-            return (
+            return TestedContent(
                 _quoted_atoms(atoms, len(core) - len(atoms)),
                 _cause_units(record.get("consistency_cause")),
+                None,
+                len(real),
             )
         conflict = _locate_conflict_pair(real)
         if conflict is None:
-            return None, []
+            absence = ABSENT_CONFLICT_NOT_LOCALISED if real else ABSENT_NO_FORMULA
+            return TestedContent(None, [], absence, len(real))
         atoms = [_readable_atom(f) for f in conflict]
     else:
         atoms = [_readable_atom(f) for f in real[:max_atoms]]
     if not atoms:
-        return None, []
-    return (
+        return TestedContent(None, [], ABSENT_NO_FORMULA, len(real))
+    return TestedContent(
         _quoted_atoms(atoms, len(real) + placeholders - len(atoms)),
         [],
+        None,
+        len(real),
     )
