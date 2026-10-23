@@ -1,14 +1,14 @@
 {
   "key": "98293594f27f87bd0ebeac46b50fd64a6b30e49333d682fb025c59d6f45cd545",
   "value": {
-    "id": "chatcmpl-EaV2IHuVuPKL8Bqijkrsq1K7TD7v5",
+    "id": "chatcmpl-Ec9D4G1g6Z1ARqhzHWR75ouOv5for",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_chain\":true,\"premises\":\"Les personnes qui affirment que les vaccins sont dangereux ignorent des décennies de recherche clinique ; l’affirmation selon laquelle les entreprises pharmaceutiques cachent les effets secondaires est une théorie du complot sans fondement ; des taux de vaccination élevés protègent aussi les personnes qui ne peuvent pas être vaccinées grâce à l’immunité collective.\",\"conclusion\":\"Les vaccins ne sont pas dangereux et l’affirmation selon laquelle les entreprises pharmaceutiques dissimulent leurs effets secondaires doit être rejetée.\"}",
+          "content": "{\"has_chain\":true,\"premises\":\"Les personnes qui affirment que les vaccins sont dangereux ignorent des décennies de recherche clinique ; l’idée que les produits pharmaceutiques cachent les effets secondaires est une théorie du complot sans fondement ; des taux de vaccination élevés protègent aussi les personnes qui ne peuvent pas être vaccinées grâce à l’immunité collective.\",\"conclusion\":\"Les vaccins ne doivent pas être considérés comme dangereux et l’affirmation selon laquelle les entreprises pharmaceutiques dissimulent leurs effets secondaires doit être rejetée.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1792367818,
+    "created": 1792760574,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 293,
+      "completion_tokens": 224,
       "prompt_tokens": 276,
-      "total_tokens": 569,
+      "total_tokens": 500,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 169,
+        "reasoning_tokens": 99,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

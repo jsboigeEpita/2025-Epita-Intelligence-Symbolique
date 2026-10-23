@@ -1,0 +1,48 @@
+{
+  "key": "b2438e7a98917a3d5ac4f66e1151280d7e55cdc12441bbd1f8654a7049fa445e",
+  "value": {
+    "id": "chatcmpl-Ec9FgBoC3Rz2RGb5ywWUtB2ZyYaei",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Le point 1 établit l’impact des activités humaines sur le changement climatique, tandis que le point 2 met l’accent sur la vitesse sans précédent du changement actuel. Ces idées sont complémentaires et aucune redondance substantielle n’est démontrée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792760736,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 207,
+      "prompt_tokens": 294,
+      "total_tokens": 501,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 135,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

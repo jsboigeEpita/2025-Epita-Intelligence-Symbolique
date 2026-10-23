@@ -1,14 +1,14 @@
 {
   "key": "0a220ab2b8ef3c0b88f0a13a70f4e7c263318232cf3ecc9a71e92214707b62ce",
   "value": {
-    "id": "chatcmpl-EaUxWPKHtT2JlwNJweRRdTYzOrKch",
+    "id": "chatcmpl-Ec98Ce2yUAK2jZfS4i2EtJQYo1gUO",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":0.0,\"exhibit\":\"Position adverse identifiée : utiliser la subvention pour créer un espace numérique avec des ordinateurs en libre accès. Verdict d’engagement : pas de réfutation constructive démontrée.\"}",
+          "content": "{\"score\":0.0,\"exhibit\":\"Position adverse : utiliser la subvention pour créer un espace numérique avec des ordinateurs en libre accès. Verdict d’engagement : aucune réfutation constructive démontrée.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1792367522,
+    "created": 1792760272,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 89,
+      "completion_tokens": 87,
       "prompt_tokens": 261,
-      "total_tokens": 350,
+      "total_tokens": 348,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 33,
+        "reasoning_tokens": 34,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

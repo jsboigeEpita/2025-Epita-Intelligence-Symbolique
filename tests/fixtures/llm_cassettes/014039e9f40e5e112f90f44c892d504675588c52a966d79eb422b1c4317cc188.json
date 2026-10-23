@@ -1,0 +1,48 @@
+{
+  "key": "014039e9f40e5e112f90f44c892d504675588c52a966d79eb422b1c4317cc188",
+  "value": {
+    "id": "chatcmpl-Ec9Cf8gbLI7oI3LWOD65t91CSyEr1",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne mentionne que les études scientifiques montrent l’efficacité des vaccins contre la variole et la polio, puis conclut qu’ils ne doivent pas être considérés comme dangereux. Verdict : saut logique, car l’efficacité démontrée ne suffit pas à établir l’absence de danger.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792760549,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 113,
+      "prompt_tokens": 284,
+      "total_tokens": 397,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 35,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

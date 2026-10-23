@@ -1,0 +1,40 @@
+{
+  "key": "066fbf3c19dc1a66bc6193adc29231042dbf1986fba59a822a4b9c89c214a200",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_ltcaiaTLrW4vT5jrvXNNXZoP",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"72\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L'affirmation présente le succès de la politique comme incontestable uniquement parce qu'elle est soutenue par le président, une autorité en place, sans fournir de preuves indépendantes.\",\"move_author\":\"speaker\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Ec94XpI5XBptoaZsY1Iw801ZVCPii",
+        "created": 1792760045,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1736,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 638,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 83,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

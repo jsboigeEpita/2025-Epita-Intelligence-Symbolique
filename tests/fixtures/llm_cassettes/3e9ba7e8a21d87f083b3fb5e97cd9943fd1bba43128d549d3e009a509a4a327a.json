@@ -1,14 +1,14 @@
 {
   "key": "3e9ba7e8a21d87f083b3fb5e97cd9943fd1bba43128d549d3e009a509a4a327a",
   "value": {
-    "id": "chatcmpl-EaV3UNbwDLDDgxMia9IlHnEWy5CTu",
+    "id": "chatcmpl-Ec9EFdlouo6eK9AqA8C2Bo9ybL3lV",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"distinct_points\":\"1. La peine de mort est une sanction nécessaire dans certains cas extrêmes.\\n2. Elle dissuade les crimes les plus graves, notamment les meurtres de masse.\\n3. Les avancées en matière d’ADN réduisent considérablement le risque d’erreur judiciaire.\"}",
+          "content": "{\"distinct_points\":\"1. La peine de mort est une sanction nécessaire dans certains cas extrêmes.\\n2. Elle a une fonction dissuasive contre les crimes les plus graves, notamment les meurtres de masse.\\n3. Les avancées en matière d’ADN réduisent considérablement le risque d’erreur judiciaire soulevé par les opposants.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1792367892,
+    "created": 1792760647,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 148,
+      "completion_tokens": 136,
       "prompt_tokens": 246,
-      "total_tokens": 394,
+      "total_tokens": 382,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 74,
+        "reasoning_tokens": 50,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

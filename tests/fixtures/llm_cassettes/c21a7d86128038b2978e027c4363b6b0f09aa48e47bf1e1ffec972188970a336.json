@@ -1,0 +1,48 @@
+{
+  "key": "c21a7d86128038b2978e027c4363b6b0f09aa48e47bf1e1ffec972188970a336",
+  "value": {
+    "id": "chatcmpl-Ec9CxIjgPoMkWO4POYBw22Y08ORm9",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points 1 et 2 avancent deux critiques distinctes — absence de fondement de la théorie du complot et méconnaissance de la recherche clinique. Le point 3 est tronqué (« Des taux de vaccination élev… »), donc aucune redondance ne peut être localisée à partir de son contenu disponible.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792760567,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 184,
+      "prompt_tokens": 293,
+      "total_tokens": 477,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 97,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

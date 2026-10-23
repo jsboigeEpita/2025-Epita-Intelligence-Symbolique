@@ -1,0 +1,48 @@
+{
+  "key": "cae63c4011eb66bf740cff1c047bba9c4d827abbfbf403a9ad650bfc13f940a0",
+  "value": {
+    "id": "chatcmpl-Ec99l84gTWmRPKuSVfbnUOM11b99N",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"Investir intégralement les 2000 euros dans du matériel pédagogique, notamment des échiquiers neufs, des horloges et des supports de cours, parce que les échiquiers actuels sont usés.\",\"digressions\":\"La présentation de l’option A — organiser un tournoi inter-villes avec buffet et prix pour accroître la visibilité et recruter de nouveaux membres — et de l’option C — partager le budget entre un tournoi réduit et du matériel pédagogique — constitue des digressions par rapport à la défense de l’option B.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792760369,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 245,
+      "prompt_tokens": 337,
+      "total_tokens": 582,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 111,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

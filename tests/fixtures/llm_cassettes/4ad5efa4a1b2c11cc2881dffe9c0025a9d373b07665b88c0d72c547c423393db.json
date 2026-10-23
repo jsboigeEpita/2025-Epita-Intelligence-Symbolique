@@ -1,0 +1,48 @@
+{
+  "key": "4ad5efa4a1b2c11cc2881dffe9c0025a9d373b07665b88c0d72c547c423393db",
+  "value": {
+    "id": "chatcmpl-Ec9FbdaW9EjIl7n9YP1L38XizWwmL",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne relie l’idée que le climat a toujours changé, qu’une hausse globale de 1,1 °C est mesurée et que les modèles prédisent..., à la conclusion que le changement climatique actuel est d’une vitesse sans précédent et ne peut pas être expliqué simplement par... ; le verdict est un saut logique, car la conclusion ne découle pas suffisamment des prémisses fournies.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792760731,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 135,
+      "prompt_tokens": 299,
+      "total_tokens": 434,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 35,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

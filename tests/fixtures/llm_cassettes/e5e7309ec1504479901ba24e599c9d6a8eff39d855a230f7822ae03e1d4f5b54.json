@@ -1,0 +1,40 @@
+{
+  "key": "e5e7309ec1504479901ba24e599c9d6a8eff39d855a230f7822ae03e1d4f5b54",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_KsnFsi8ho1KNhVq0dz4ncGSX",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"183\",\"matches\":false,\"justification\":\"Le texte commet principalement un appel à l'autorité et une disqualification de l'avis des non-experts, mais il ne présuppose pas directement la conclusion qu'il cherche à établir. La pétition de principe n'est donc pas le meilleur diagnostic pour ce texte.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Ec95sQrU5l9s0d4ThVz1BmWbVCLze",
+        "created": 1792760128,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 938,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 94,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

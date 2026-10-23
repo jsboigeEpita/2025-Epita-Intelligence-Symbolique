@@ -1,0 +1,48 @@
+{
+  "key": "cd02f0bb0dcecca2761003cd7067ffdaa8a6c0cad1d25cb1e90c952b4e349db5",
+  "value": {
+    "id": "chatcmpl-Ec99qjUiq1OYfqqMQEpjafAjUowo3",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.2,\"exhibit\":\"La thèse défend l’investissement intégral des 2000 euros dans du matériel pédagogique, notamment des échiquiers, des horloges et des supports de cours. La présentation des options A (tournoi inter-villes avec buffet et prix) et C (partage du budget entre plusieurs usages) constitue des digressions localisées et notables, qui éloignent l’argument de cette thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792760374,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 280,
+      "prompt_tokens": 322,
+      "total_tokens": 602,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 176,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

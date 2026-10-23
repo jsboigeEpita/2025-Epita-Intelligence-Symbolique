@@ -1,0 +1,48 @@
+{
+  "key": "b25be4d4b2035e6bb86e6500d71d70e521b0262d28da1049f26c8d5b02261dd4",
+  "value": {
+    "id": "chatcmpl-Ec9CkV2dWCL6qaFEn9bb5Wsqkpufg",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\":true,\"redundancy_verdict\":\"redondance_sémantique\",\"located_redundancy\":\"Le point 1 est répété presque à l’identique dans la phrase « Les études scientifiques montrent que la vaccination a éradiqué la variole et réduit considérablement la polio ». Les points 2 et 3 se recouvrent également partiellement : l’indispensabilité des vaccins reformule et renforce leur utilité publique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792760554,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 418,
+      "prompt_tokens": 420,
+      "total_tokens": 838,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 307,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

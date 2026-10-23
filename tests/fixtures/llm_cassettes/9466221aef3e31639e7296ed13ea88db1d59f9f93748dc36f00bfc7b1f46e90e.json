@@ -1,14 +1,14 @@
 {
   "key": "9466221aef3e31639e7296ed13ea88db1d59f9f93748dc36f00bfc7b1f46e90e",
   "value": {
-    "id": "chatcmpl-EaV20y18kMldnxgPCgo678AThpmN0",
+    "id": "chatcmpl-Ec9CoUQrVpg6KnZmOBEeTzpvjO5TW",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":1.0,\"exhibit\":\"Les points 1 et 2 apportent deux idées distinctes : l’efficacité historique des vaccins et la solidité des données concernant leur sécurité. Le point 3 est interrompu et ne permet pas d’identifier une éventuelle redondance.\"}",
+          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points complets abordent des idées distinctes : le premier porte sur l’efficacité historique des vaccins, le second sur la méconnaissance des données de sécurité. Le troisième point étant tronqué, aucune redondance ne peut être identifiée à son sujet.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1792367800,
+    "created": 1792760558,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 164,
+      "completion_tokens": 153,
       "prompt_tokens": 294,
-      "total_tokens": 458,
+      "total_tokens": 447,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 93,
+        "reasoning_tokens": 77,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

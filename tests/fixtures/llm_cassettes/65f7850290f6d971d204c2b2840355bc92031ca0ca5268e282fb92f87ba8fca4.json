@@ -1,0 +1,40 @@
+{
+  "key": "65f7850290f6d971d204c2b2840355bc92031ca0ca5268e282fb92f87ba8fca4",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_Lu2YTZf1pbe7tRuueHGvtZO4",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"699\",\"confidence\":\"high\",\"matches\":false,\"justification\":\"Le texte invoque l'unanimité des experts et exclut les non-experts, mais ne présuppose pas sa conclusion comme prémisse; ce n'est pas un argument circulaire.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Ec95mTy26PiiKWyTGBdg0w8JI9FXt",
+        "created": 1792760122,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1603,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 505,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 78,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

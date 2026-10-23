@@ -1,14 +1,14 @@
 {
   "key": "ac0e2bfb920710f3099c08bb1bd4bbd077a17cb8e2d334e2b2955b0213de9358",
   "value": {
-    "id": "chatcmpl-EaV2QvOV8mW3LE4Ic6toRI1wcjpsx",
+    "id": "chatcmpl-Ec9DDMEITbdUmbX2NAKDKyFBL5kqY",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"distinct_points\":\"1. Les entreprises pharmaceutiques dissimulent les effets secondaires des vaccins.\\n2. Les personnes qui affirment que les vaccins sont dangereux ignorent des décennies de recherche clinique.\\n3. L’idée que les entreprises pharmaceutiques cachent les effets secondaires est une théorie du complot sans fondement.\\n4. Des taux de vaccination élevés protègent les personnes qui ne peuvent pas être vaccinées grâce à l’immunité collective.\"}",
+          "content": "{\"distinct_points\":\"1. Ceux qui affirment que les vaccins sont dangereux ignorent les décennies de recherche clinique.\\n2. L’affirmation selon laquelle les entreprises pharmaceutiques dissimulent les effets secondaires des vaccins est une théorie du complot sans fondement.\\n3. Des taux de vaccination élevés protègent les personnes qui ne peuvent pas être vaccinées grâce à l’immunité collective.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1792367826,
+    "created": 1792760583,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 202,
+      "completion_tokens": 198,
       "prompt_tokens": 236,
-      "total_tokens": 438,
+      "total_tokens": 434,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 94,
+        "reasoning_tokens": 102,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

@@ -1,10 +1,10 @@
 {
   "schema": 1,
-  "record_run_id": "39176990284",
-  "record_sha": "705eb19995fa84f0f5ed6f6f2c57ee267c7b5dfd",
+  "record_run_id": "39955449689",
+  "record_sha": "6a7485fb17ed853802b6c40043580c57e37ce783",
   "recorded_at": "",
-  "cassette_count": 669,
-  "keys_sha256": "c087e8b94fcd004dcbb3b233650d778a61c060944e4733d0a4f70209334a56dd",
+  "cassette_count": 717,
+  "keys_sha256": "42236df7b1fcd4515e9ad52571f332913126ea46361d75fbd37e85d9a4169cc0",
   "env_signature": {
     "spacy": "3.8.14",
     "thinc": "8.3.13",
@@ -12,35 +12,5 @@
     "fr-core-news-sm": "3.8.0",
     "openai": "3.3.0",
     "numpy": "1.25.0"
-  },
-  "sk_patches": [
-    {
-      "note": "SK refresh #1950 (new: 0ddd3db7d9aeed76cf7d92e975bdd3f31ea98f3498dd940c445b7ef48b13f6a9.json)",
-      "at": "2026-10-22T14:29:26Z",
-      "recorded_env": {
-        "spacy": "3.8.14",
-        "thinc": "8.3.13",
-        "srsly": "2.5.3",
-        "fr-core-news-sm": "3.8.0",
-        "openai": "1.91.0",
-        "numpy": "1.25.0"
-      },
-      "cassette_count": 670,
-      "keys_sha256": "79f5747c25ebd54040e63363e073658b2d05f5f5b752b9b272d95528289a07ae"
-    },
-    {
-      "note": "SK prune (manual)",
-      "at": "2026-10-22T14:33:28Z",
-      "recorded_env": {
-        "spacy": "3.8.14",
-        "thinc": "8.3.13",
-        "srsly": "2.5.3",
-        "fr-core-news-sm": "3.8.0",
-        "openai": "1.91.0",
-        "numpy": "1.25.0"
-      },
-      "cassette_count": 669,
-      "keys_sha256": "c087e8b94fcd004dcbb3b233650d778a61c060944e4733d0a4f70209334a56dd"
-    }
-  ]
+  }
 }

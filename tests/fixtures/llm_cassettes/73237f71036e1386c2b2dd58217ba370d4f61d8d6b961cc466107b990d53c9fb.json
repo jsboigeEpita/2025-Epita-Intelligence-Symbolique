@@ -1,0 +1,48 @@
+{
+  "key": "73237f71036e1386c2b2dd58217ba370d4f61d8d6b961cc466107b990d53c9fb",
+  "value": {
+    "id": "chatcmpl-Ec99xGTOA55fUsrt0J6S5lobzY9ug",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\": false, \"engagement_verdict\": \"pas_de_refutation\", \"reasoning\": \"Le passage présente l'option C comme une alternative équilibrée, mais ne réfute pas explicitement l'idée que l'option B doive financer uniquement du matériel neuf parce que les échiquiers sont usés.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792760381,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 158,
+      "prompt_tokens": 387,
+      "total_tokens": 545,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 79,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

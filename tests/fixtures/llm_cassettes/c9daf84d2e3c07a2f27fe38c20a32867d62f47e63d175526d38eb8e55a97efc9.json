@@ -1,0 +1,40 @@
+{
+  "key": "c9daf84d2e3c07a2f27fe38c20a32867d62f47e63d175526d38eb8e55a97efc9",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_GtUkcIaDLFpJ0YQqBwoi76Zr",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"165\",\"matches\":false,\"justification\":\"La phrase affirme simplement un succès politique; elle ne présente pas de raisonnement excessivement compliqué ni de sous-cas de manque de parcimonie.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Ec94P7uW93Lt1xKyoWXufPOFkB2Tv",
+        "created": 1792760037,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1817,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 719,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 65,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

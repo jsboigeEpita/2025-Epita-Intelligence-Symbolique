@@ -1,0 +1,48 @@
+{
+  "key": "4a745f8efbe160130cf3db089d8e7719f1d00f38d89b1697be1069dde7618e60",
+  "value": {
+    "id": "chatcmpl-Ec97s7QPzcICQfuj4u3NAoQAvHMHs",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.62,\"fairness_assessment\":\"Une procédure de choix social fondée sur des critères explicites et un classement des options permettrait de comparer équitablement visibilité, développement durable, qualité pédagogique et faisabilité, sans privilégier automatiquement le gagnant du débat.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"agent_1\",\"position\":\"Soutient l’option A, un tournoi inter-villes avec buffet et prix afin d’accroître la visibilité du club.\",\"influence\":0.33},{\"agent\":\"agent_2\",\"position\":\"Soutient l’option B, l’investissement complet dans du matériel pédagogique et de nouveaux échiquiers; cette position a remporté le débat, avec une qualité argumentative moyenne.\",\"influence\":0.4},{\"agent\":\"agent_3\",\"position\":\"Soutient l’option C, un compromis à parts égales entre tournoi réduit et achat de matériel.\",\"influence\":0.27}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"Les trois options répondent à des objectifs légitimes mais comportent des incertitudes et des risques de sous-financement. Il est recommandé d’utiliser un vote préférentiel ou un jugement par critères, après définition collective des objectifs et vérification des coûts, puis d’adopter l’option la mieux évaluée. Un compromis ajusté peut être retenu si aucune option ne dépasse clairement les autres, plutôt qu’une répartition égale imposée arbitrairement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792760252,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 416,
+      "prompt_tokens": 563,
+      "total_tokens": 979,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 92,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "key": "f66936a6e0eedcd4f12742bc98fb0e41dba50b53580a12c44a480ceb131d4ef4",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_lSxaIJaQzsEKVsaiY2XFnTiv",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"84\",\"confidence\":\"low\",\"matches\":false,\"justification\":\"Le texte rapporte seulement que le président affirme le succès de la politique économique. Il ne précise ni que le président prétend être expert hors de son domaine, ni que son statut est invoqué comme justification suffisante; l'ultracrépidarianisme n'est donc pas établi.\",\"move_author\":\"reported\",\"move_author_label\":\"le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Ec94Sk2zCNkegv30uJv31fBNywIt2",
+        "created": 1792760040,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1790,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 692,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 104,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

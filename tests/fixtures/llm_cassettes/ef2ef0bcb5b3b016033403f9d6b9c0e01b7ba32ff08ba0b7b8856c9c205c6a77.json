@@ -1,14 +1,14 @@
 {
   "key": "ef2ef0bcb5b3b016033403f9d6b9c0e01b7ba32ff08ba0b7b8856c9c205c6a77",
   "value": {
-    "id": "chatcmpl-EaUxjOtm8KlYi6gNGpByPRQau10gE",
+    "id": "chatcmpl-Ec98H55RgfODVvRNd15Yhknh5n3R3",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points sont distincts : le premier concerne la répartition équitable de la subvention entre deux volets, tandis que le second précise la création de l’espace numérique avec ordinateurs en libre accès. Aucune redondance substantielle.\"}",
+          "content": "{\"score\":1.0,\"exhibit\":\"Deux points distincts : la répartition égalitaire de la subvention et la création d’un espace numérique avec ordinateurs en libre accès. Aucune redondance substantielle.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1792367535,
+    "created": 1792760277,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 138,
+      "completion_tokens": 103,
       "prompt_tokens": 276,
-      "total_tokens": 414,
+      "total_tokens": 379,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 68,
+        "reasoning_tokens": 47,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

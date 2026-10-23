@@ -1,0 +1,40 @@
+{
+  "key": "49329b257671f810c5c475eb3d61fb842fd6e365ffcb22ce753f859ca4432e6a",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_zc1EfZRHGTq1kHhlMQnUmTkj",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1\",\"matches\":false,\"justification\":\"Les phrases énoncent simplement des faits météorologiques et ne constituent pas un argument insuffisant ou fallacieux.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Ec93g4mg5G3zKeLwCk9fWfcYvyIjt",
+        "created": 1792759992,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1902,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 804,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 63,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

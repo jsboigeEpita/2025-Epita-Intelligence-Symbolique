@@ -1,0 +1,40 @@
+{
+  "key": "de9a0cc8bd1eafb2a02a5ad15cf84a85944863a499d85d2118b1024230594b66",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_gy5e94hkKbB1Q0xDG1MF76FI",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"80\",\"matches\":false,\"justification\":\"Le texte invoque l'unanimité des experts et exclut l'avis des non-experts; il ne compare pas la faisabilité d'une tâche à l'envoi d'humains sur la Lune. Le nœud Appel à la Lune ne correspond donc pas.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Ec95N8HxYi2I6gPy90oaYxMxvDmSv",
+        "created": 1792760097,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 948,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 96,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "[\n  {\n    \"fallacy_name\": \"Assertion non étayée\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.82\n  },\n  {\n    \"fallacy_name\": \"Vaguité lexicale (« beau »)\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.95\n  },\n  {\n    \"fallacy_name\": \"Subjectivité présentée comme un fait objectif\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.72\n  },\n  {\n    \"fallacy_name\": \"Non sequitur implicite\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.48\n  },\n  {\n    \"fallacy_name\": \"Confusion entre corrélation et implication\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.35\n  },\n  {\n    \"fallacy_name\": \"Généralisation hâtive concernant les conditions météorologiques\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.28\n  },\n  {\n    \"fallacy_name\": \"Évidence anecdotique\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.25\n  }\n]",
+      "content": "[\n  {\n    \"fallacy_name\": \"Assertion gratuite\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.88\n  },\n  {\n    \"fallacy_name\": \"Absence de justification ou de preuve\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.86\n  },\n  {\n    \"fallacy_name\": \"Non sequitur\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.72\n  },\n  {\n    \"fallacy_name\": \"Confusion entre corrélation et causalité\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.43\n  },\n  {\n    \"fallacy_name\": \"Généralisation hâtive\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.49\n  },\n  {\n    \"fallacy_name\": \"Confusion entre une observation locale et une conclusion générale\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.57\n  },\n  {\n    \"fallacy_name\": \"Sophisme de composition\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.32\n  },\n  {\n    \"fallacy_name\": \"Sélection partiale des faits\",\n    \"root_category\": \"Tricherie\",\n    \"confidence\": 0.35\n  },\n  {\n    \"fallacy_name\": \"Équivoque sur le terme « beau »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.76\n  },\n  {\n    \"fallacy_name\": \"Ambiguïté contextuelle\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.6\n  },\n  {\n    \"fallacy_name\": \"Appel implicite à l’évidence\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.38\n  },\n  {\n    \"fallacy_name\": \"Appel implicite à une évaluation subjective\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.55\n  }\n]",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EaUtHV2Ro56wVqj3J2KK5ZeI59Jnr",
-        "created": 1792367259,
+        "id": "chatcmpl-Ec93Xo51LsJTLqQfU3V6YBZLBDAAf",
+        "created": 1792759983,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 203,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 569,
+          "completion_tokens": 887,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 281,
+            "reasoning_tokens": 416,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

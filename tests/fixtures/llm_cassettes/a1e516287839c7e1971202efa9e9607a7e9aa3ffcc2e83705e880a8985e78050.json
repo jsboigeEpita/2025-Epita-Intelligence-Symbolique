@@ -1,0 +1,40 @@
+{
+  "key": "a1e516287839c7e1971202efa9e9607a7e9aa3ffcc2e83705e880a8985e78050",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_7mCebPgGvIswECA6CKv1zqmv",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1352\",\"matches\":false,\"justification\":\"Le texte contient un appel à l'autorité et une disqualification des non-experts, mais il ne discrédite pas une partie adverse au moyen d'informations préjudiciables au sens spécifique de l'empoisonnement du puits.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Ec966ixIxBBDE6vaHzpcvA1dlj5mR",
+        "created": 1792760142,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1828,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 730,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 89,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}
