@@ -1281,6 +1281,17 @@ def _write_belief_revision_to_state(
         minimal_retraction,
         argument_labels=output.get("argument_labels") or None,
         argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
+        # #3178 — the tri-state marker travels with the entry: a refused
+        # revision (handler size bound) writes ``revised: []``, which the
+        # readers otherwise take for "nothing survived". The ledger above
+        # already reads these two fields; the ENTRY did not, so the synthesis
+        # could not tell the two apart.
+        degraded=(
+            output.get("degraded") if isinstance(output.get("degraded"), bool) else None
+        ),
+        absent_reason=(
+            str(output.get("absent_reason")) if output.get("absent_reason") else None
+        ),
         **_identity_counts(output),
     )
 

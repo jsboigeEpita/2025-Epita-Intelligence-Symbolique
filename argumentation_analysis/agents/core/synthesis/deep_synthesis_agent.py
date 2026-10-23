@@ -742,31 +742,71 @@ class DeepSynthesisAgent(BaseAgent):
         )
 
     @staticmethod
+    def _belief_revision_ran(br: Dict[str, Any]) -> bool:
+        """Whether a ``belief_revision_results`` entry records a revision.
+
+        #3178 — the entry is TRI-STATE, and both readers were collapsing it to
+        two. A revision that ran always yields at least the incoming belief
+        (``revised`` = ``original`` + the ``n_not_fallacy_*`` node — every
+        measured run carries it), so an EMPTY ``revised`` is the not-computed
+        marker and never a contraction of everything. The persisted
+        ``degraded: True`` names the reason on entries written since the marker
+        was added; older entries (the R1108 dumps among them) carry no marker at
+        all, and their empty ``revised`` still reads as not computed.
+        """
+        if br.get("degraded") is True:
+            return False
+        revised = br.get("revised")
+        return bool(revised)
+
+    @staticmethod
     def _build_belief_retractions(state: Any) -> List[BeliefRetraction]:
         retractions: List[BeliefRetraction] = []
 
-        # Source 1: JTMS retraction cascade chain (jtms_core → jtms_retraction_chain)
-        chain = getattr(state, "jtms_retraction_chain", [])
+        # Source 1: JTMS retraction cascade chain (jtms_core →
+        # jtms_retraction_chain). #3178 — the producer
+        # (``invoke_callables._invoke_jtms`` → ``JTMS.get_retraction_chain``)
+        # writes ``{trigger, retracted, cascaded, reason}``. The reader used to
+        # ask for ``belief_name`` / ``was_valid`` — keys NO producer writes — so
+        # every entry rendered as an unnamed belief. ``retracted`` is the list of
+        # names the trigger invalidated: one retraction per name. ``reason``
+        # reads « directly set to False » — these beliefs were turned off BY the
+        # detected fallacy, never found false by an independent check.
+        chain = getattr(state, "jtms_retraction_chain", []) or []
         for entry in chain:
-            retractions.append(
-                BeliefRetraction(
-                    belief_name=entry.get("belief_name", ""),
-                    was_valid=entry.get("was_valid"),
-                    trigger=entry.get("trigger", ""),
+            if not isinstance(entry, dict):
+                continue
+            trigger = str(entry.get("trigger", ""))
+            for name in entry.get("retracted") or []:
+                retractions.append(
+                    BeliefRetraction(
+                        belief_name=str(name),
+                        # The retraction is written only when the belief was
+                        # TRUE before the cascade (jtms_core.set_belief_validity).
+                        was_valid=True,
+                        trigger=trigger,
+                    )
                 )
-            )
 
         # Source 2: AGM belief revision results (conversational_orchestrator
         # _run_belief_revision_from_state → belief_revision_results).
-        # Each entry has {id, method, original: List[str], revised: List[str]}.
-        # Beliefs present in original but absent from revised were contracted.
-        br_results = getattr(state, "belief_revision_results", [])
+        # #3178 — only a revision that RAN has a contraction to read. Computing
+        # ``original - revised`` on an unrun one reads "it contracted every
+        # unit" (40 of 40 on the R1108 render) while the run's own measurement —
+        # ``minimal_retraction``, cardinality 5 of 45 — says the contradiction
+        # stayed confined. The unrun entry contributes no retraction; its
+        # measurement reaches the writer through the evidence line.
+        br_results = getattr(state, "belief_revision_results", []) or []
         for br in br_results:
+            if not isinstance(br, dict) or not DeepSynthesisAgent._belief_revision_ran(
+                br
+            ):
+                continue
             original = set(br.get("original", []))
             revised = set(br.get("revised", []))
             contracted = original - revised
             method = br.get("method", "unknown")
-            for belief in contracted:
+            for belief in sorted(contracted):
                 retractions.append(
                     BeliefRetraction(
                         belief_name=belief,
@@ -776,6 +816,67 @@ class DeepSynthesisAgent(BaseAgent):
                 )
 
         return retractions
+
+    @staticmethod
+    def _belief_revision_line(br: Dict[str, Any]) -> str:
+        """Render one ``belief_revision_results`` entry for the briefing.
+
+        #3178 — two readings share this entry, and only one of them is a
+        measurement:
+
+        * **the revision ran** (``degraded`` absent or ``False``) — what it
+          contracted is ``original - revised``, stated with its denominator;
+        * **it did not run** (``degraded: True``: the handler size bound
+          refused it, or the JVM was absent) — ``revised: []`` is the
+          NOT-COMPUTED marker, never "nothing survived". What the run still
+          measured is ``minimal_retraction``, computed JVM-free: the smallest
+          set of beliefs whose removal restores consistency (``cardinality``
+          of ``base_size``, ``touched_count`` units touched).
+        """
+        method = br.get("method", "?")
+        original = br.get("original") or []
+        revised = br.get("revised") or []
+        n_original = len(original) if isinstance(original, list) else 0
+
+        if not DeepSynthesisAgent._belief_revision_ran(br):
+            reason = str(br.get("absent_reason") or "")
+            status = (
+                f"NOT COMPUTED ({reason})"
+                if reason
+                else "NOT COMPUTED (no reason recorded in this entry)"
+            )
+            line = (
+                f"method={method} status={status} — "
+                "revised=[] is the not-computed marker, NOT a contraction"
+            )
+            insight = br.get("minimal_retraction")
+            if isinstance(insight, dict):
+                cardinality = insight.get("cardinality")
+                if (
+                    isinstance(cardinality, int)
+                    and not isinstance(cardinality, bool)
+                    and cardinality >= 0
+                ):
+                    line += (
+                        f"; minimal retraction: cardinality {cardinality} of "
+                        f"{insight.get('base_size', '?')}, "
+                        f"{insight.get('touched_count', '?')} units touched"
+                    )
+                    options_total = insight.get("options_total")
+                    if isinstance(options_total, int) and options_total > 1:
+                        line += f" ({options_total} equally-minimal options)"
+                else:
+                    refusal = str(insight.get("refusal") or "unavailable")
+                    line += f"; minimal retraction NOT computed ({refusal})"
+            else:
+                line += "; minimal retraction NOT computed (insight absent)"
+            return line
+
+        contracted = sorted(set(original) - set(revised))
+        return (
+            f"method={method} contracted={contracted} "
+            f"({len(contracted)} of {n_original})"
+        )
 
     @staticmethod
     def _build_counter_arguments(state: Any) -> List[CounterArgumentEntry]:
@@ -1617,23 +1718,33 @@ class DeepSynthesisAgent(BaseAgent):
         for i, entry in enumerate(
             (getattr(state, "jtms_retraction_chain", []) or [])[:max_items_per_field]
         ):
+            if not isinstance(entry, dict):
+                continue
+            # #3178 — the chain carries {trigger, retracted, cascaded, reason}.
+            # Reading ``belief_name`` here rendered ``belief=?`` on every entry:
+            # the field never existed. The DERIVED label is not decoration —
+            # these beliefs were retracted BY the fallacies in step 4 of
+            # _invoke_jtms, so counting this chain as a witness agreeing with
+            # the fallacy list is convergence by construction (#3145 family).
             _add(
                 "jtms_retraction_chain",
                 i,
-                f"belief={entry.get('belief_name', '?')} "
-                f"trigger={entry.get('trigger', '?')}",
+                "DERIVED from detected fallacies (not an independent witness) — "
+                f"trigger={entry.get('trigger', '?')} "
+                f"retracted={entry.get('retracted') or []} "
+                f"cascaded={entry.get('cascaded') or []} "
+                f"reason={entry.get('reason', '?')}",
             )
 
         for i, br in enumerate(
             (getattr(state, "belief_revision_results", []) or [])[:max_items_per_field]
         ):
-            contracted = sorted(
-                set(br.get("original", [])) - set(br.get("revised", []))
-            )
+            if not isinstance(br, dict):
+                continue
             _add(
                 "belief_revision_results",
                 i,
-                f"method={br.get('method', '?')} contracted={contracted}",
+                DeepSynthesisAgent._belief_revision_line(br),
             )
 
         if report is not None:
