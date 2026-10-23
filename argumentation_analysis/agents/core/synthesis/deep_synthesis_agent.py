@@ -44,6 +44,14 @@ from .deep_synthesis_models import (
 
 logger = logging.getLogger("DeepSynthesisAgent")
 
+# #3184 — the ONE belief-revision method whose producer always runs: the
+# conversational `_run_belief_revision_from_state` is pure Python (no JVM, no
+# size bound), so it has no not-computed state, and an empty `revised` from it
+# is a real total contraction. The pipeline handler (`dalal`, `levi`) always
+# returns at least the incoming belief, so ITS unmarked empty `revised` still
+# reads as not computed (the R1108 dumps).
+_ALWAYS_RUNS_REVISION_METHOD = "fallacy_contraction"
+
 
 class DeepSynthesisAgent(BaseAgent):
     """Aggregates spectacular-run state into a multi-page grounded markdown report."""
@@ -746,18 +754,33 @@ class DeepSynthesisAgent(BaseAgent):
         """Whether a ``belief_revision_results`` entry records a revision.
 
         #3178 — the entry is TRI-STATE, and both readers were collapsing it to
-        two. A revision that ran always yields at least the incoming belief
-        (``revised`` = ``original`` + the ``n_not_fallacy_*`` node — every
-        measured run carries it), so an EMPTY ``revised`` is the not-computed
-        marker and never a contraction of everything. The persisted
-        ``degraded: True`` names the reason on entries written since the marker
-        was added; older entries (the R1108 dumps among them) carry no marker at
-        all, and their empty ``revised`` still reads as not computed.
+        two. A revision the PIPELINE handler ran always yields at least the
+        incoming belief (``revised`` = ``original`` + the ``n_not_fallacy_*``
+        node — every measured run carries it), so there an EMPTY ``revised`` is
+        the not-computed marker and never a contraction of everything. The
+        persisted ``degraded: True`` names the reason on entries written since
+        the marker was added; older pipeline entries (the R1108 dumps among
+        them) carry no marker at all.
+
+        #3184 rework — the rule above holds for ONE of the two producers. The
+        conversational producer (``conversational_orchestrator.
+        _run_belief_revision_from_state``, ``method="fallacy_contraction"``) is
+        pure Python: it has no JVM, no size bound, no not-computed state, and it
+        starts from ``revised = list(original)`` removing every belief a fallacy
+        targets. When the fallacies cover every belief it writes ``revised: []``
+        as a REAL total contraction — which the empty-means-unrun rule turned
+        into « NOT COMPUTED » and whose retractions vanished from Section 6.
+        So a STATED marker always wins (a producer that knows says what it
+        knows), and the empty-means-unrun fallback applies only to an unmarked
+        entry whose method is not the always-runs one.
         """
-        if br.get("degraded") is True:
-            return False
-        revised = br.get("revised")
-        return bool(revised)
+        degraded = br.get("degraded")
+        if isinstance(degraded, bool):
+            # The producer stated its tri-state: trust it, empty revised or not.
+            return not degraded
+        if br.get("revised"):
+            return True
+        return str(br.get("method") or "") == _ALWAYS_RUNS_REVISION_METHOD
 
     @staticmethod
     def _build_belief_retractions(state: Any) -> List[BeliefRetraction]:

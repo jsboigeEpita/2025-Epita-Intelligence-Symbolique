@@ -23,21 +23,17 @@ class TestBeliefRetractionAGMSource:
     """_build_belief_retractions must read belief_revision_results."""
 
     def test_agm_contraction_surfaces_in_retractions(self):
-        # #3178 — ``revised: []`` is the producer's NOT-COMPUTED marker (see
-        # ``_belief_revision_ran``), never "everything was contracted". This
-        # fixture used ``revised=[]`` to mean a full contraction; it now uses
-        # the shape a revision that RAN actually returns — ``original`` plus
-        # the incoming belief, minus what went.
+        # The conversational producer can genuinely contract every belief.
         state = _make_state()
         state.add_belief_revision_result(
             method="fallacy_contraction",
             original=["b1", "b2", "b3", "b4"],
-            revised=["b1"],
+            revised=[],
         )
         retractions = DeepSynthesisAgent._build_belief_retractions(state)
-        assert len(retractions) == 3
+        assert len(retractions) == 4
         names = {r.belief_name for r in retractions}
-        assert names == {"b2", "b3", "b4"}
+        assert names == {"b1", "b2", "b3", "b4"}
 
     def test_agm_partial_contraction(self):
         state = _make_state()
@@ -66,7 +62,7 @@ class TestBeliefRetractionAGMSource:
         state.add_belief_revision_result(
             method="fallacy_contraction",
             original=["b1"],
-            revised=["n_not_fallacy_abc"],
+            revised=[],
         )
         retractions = DeepSynthesisAgent._build_belief_retractions(state)
         assert retractions[0].trigger == "fallacy_contraction_contraction"
@@ -133,7 +129,8 @@ class TestBeliefRetractionAGMSource:
         state.add_belief_revision_result(
             method="test",
             original=["x"],
-            revised=["n_not_fallacy_abc"],
+            revised=[],
+            degraded=False,
         )
         retractions = DeepSynthesisAgent._build_belief_retractions(state)
         r = retractions[0]

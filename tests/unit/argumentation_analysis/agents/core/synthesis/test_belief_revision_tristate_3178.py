@@ -51,7 +51,7 @@ def _measured_revision_entry():
         "minimal_retraction": {
             "cardinality": 5,
             "options": [],
-            "options_total": 16,
+            "options_total": 32,
             "base_size": 45,
             "touched_count": 10,
             "degraded": False,
@@ -79,10 +79,12 @@ class TestUnrunRevisionIsNotAContraction:
         state = SimpleNamespace(
             belief_revision_results=[_measured_revision_entry()],
         )
-        text = DeepSynthesisAgent.build_artifact_briefing(state)
-        assert "contracted" not in text
-        assert "of 40" not in text
-        assert "40 of 40" not in text
+        # #3184 review: scoped to the revision LINE — a whole-briefing guard
+        # reddens on any future unrelated line carrying the word.
+        line = _briefing_lines(state, "belief_revision_results")[0]
+        assert "contracted" not in line
+        assert "of 40" not in line
+        assert "40 of 40" not in line
 
     def test_the_marker_names_the_reason_when_it_was_persisted(self):
         entry = _measured_revision_entry()
@@ -146,6 +148,67 @@ class TestRevisionThatRan:
         )
         line = _briefing_lines(state, "belief_revision_results")[0]
         assert "contracted=[] (0 of 2)" in line
+
+
+class TestTheConversationalProducerCanContractEverything:
+    """#3184 rework — the second producer always runs, so its empty ``revised``
+    is a REAL total contraction.
+
+    ``conversational_orchestrator._run_belief_revision_from_state`` is pure
+    Python: no JVM, no handler size bound, no not-computed state. It removes
+    every belief a fallacy targets, so when the fallacies cover every belief it
+    writes ``revised: []`` — which the pipeline-shaped rule read as
+    « NOT COMPUTED » and whose retractions then vanished from Section 6. Before
+    #3178 the same entry read correctly; the rework restores that without
+    giving up the pipeline reading.
+    """
+
+    def _entry(self, **overrides):
+        entry = {
+            "method": "fallacy_contraction",
+            "original": ["u1", "u2", "u3"],
+            "revised": [],
+            "minimal_retraction": {
+                "cardinality": 1,
+                "options": ["u1"],
+                "options_total": 3,
+                "base_size": 6,
+                "touched_count": 3,
+                "degraded": False,
+            },
+        }
+        entry.update(overrides)
+        return entry
+
+    def test_an_unmarked_total_contraction_is_reported_as_such(self):
+        state = SimpleNamespace(belief_revision_results=[self._entry()])
+        line = _briefing_lines(state, "belief_revision_results")[0]
+        assert "NOT COMPUTED" not in line
+        assert "contracted=['u1', 'u2', 'u3'] (3 of 3)" in line
+
+    def test_its_retractions_reach_section_six(self):
+        state = SimpleNamespace(belief_revision_results=[self._entry()])
+        retractions = DeepSynthesisAgent._build_belief_retractions(state)
+        assert [r.belief_name for r in retractions] == ["u1", "u2", "u3"]
+
+    def test_a_stated_marker_wins_over_the_fallback(self):
+        # The producer that KNOWS says so: degraded=False is trusted even with
+        # an empty revised; degraded=True is trusted on this method too.
+        ran = self._entry(degraded=False)
+        did_not_run = self._entry(degraded=True, absent_reason="jvm_absent")
+        assert DeepSynthesisAgent._belief_revision_ran(ran)
+        assert not DeepSynthesisAgent._belief_revision_ran(did_not_run)
+
+    def test_the_pipeline_reading_is_untouched(self):
+        # Control — an unmarked pipeline entry with an empty revised still
+        # reads as not computed (the R1108 dumps).
+        assert not DeepSynthesisAgent._belief_revision_ran(
+            {
+                "method": "dalal",
+                "original": _forty_units(),
+                "revised": [],
+            }
+        )
 
 
 class TestRevisionsInTheReportTrace:
