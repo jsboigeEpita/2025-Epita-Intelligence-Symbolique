@@ -1913,12 +1913,31 @@ class DeepSynthesisAgent(BaseAgent):
 
         for ca in (getattr(state, "counter_arguments", []) or [])[:max_items_per_field]:
             ca_id = ca.get("id", "ca")
+            # #3201 — the join key. The record has carried target_arg_id (or
+            # target_unresolved_reason, #2968) but the line did not, so the
+            # writer bound counters to units by content resemblance: it
+            # attributed an unresolved counter (ca_1) to arg_18's reply while
+            # arg_18's true rebuttals (ca_4..ca_6) went uncited. The key is the
+            # producer's id, stated as-is; an unlinked counter keeps its
+            # evidence (a real rebuttal, merely unanchored) and says why it is
+            # unanchored, with the producer's own reason — never a fabricated
+            # one. ``score=`` below stays the record's stored score: a band
+            # the writer would derive is exactly what this line must not carry.
+            _target = ca.get("target_arg_id") or ""
+            _reason = ca.get("target_unresolved_reason") or ""
+            if _target:
+                _target_text = f"target={_target}"
+            elif _reason:
+                _target_text = f"target=unresolved ({_reason})"
+            else:
+                _target_text = "target=unresolved"
             _add(
                 "counter_arguments",
                 ca_id,
                 f"strategy={ca.get('strategy', '?')} "
                 f"score={ca.get('score', 0.0)} "
-                f"— {ca.get('counter_content', '')}",
+                f"{_target_text}"
+                f" — {ca.get('counter_content', '')}",
             )
 
         quality = getattr(state, "argument_quality_scores", {}) or {}
