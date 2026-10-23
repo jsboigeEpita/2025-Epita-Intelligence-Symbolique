@@ -101,6 +101,42 @@ _NEGATION = re.compile(r"\b(ne|n['’]|pas|jamais|sans|aucun\w*)\b", re.IGNORECA
 
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
 
+# --- #3157 — a membership claim must be true of the frame it cites ---------
+#
+# The R1107 render wrote « arg_13, arg_17 and arg_100 sit inside the grounded
+# extension [artifact:dung_frameworks.dung_4] ». That frame's nodes are
+# arg_1 … arg_40 — arg_100 is not one of them (it is the deliberation winner,
+# with its own quality score) — so the sentence merged a membership claim onto
+# a frame that never held the unit, against the very artifact it cited. No gate
+# read that kind of claim: VG-1 counts citations, VG-2 only asks that the cited
+# field is populated.
+
+#: The artifact key names the EXACT frame the sentence cites, so the check
+#: reads that frame — never "some frame in the state".
+_DUNG_CITATION_RE = re.compile(r"\[artifact:dung_frameworks\.([A-Za-z0-9_.\-]+)\]")
+
+#: A unit id. The digits are captured so ``arg_1`` cannot match inside
+#: ``arg_100``.
+_UNIT_ID_RE = re.compile(r"\barg_(\d+)\b")
+
+#: An INSIDE-membership assertion, as narrow phrases. None of them matches
+#: through a negation ("is not in", "n'est pas dans"): a sentence that puts a
+#: unit OUTSIDE an extension asserts no membership, and a non-node is
+#: trivially outside — there is nothing to verify and nothing to flag.
+_MEMBERSHIP_INSIDE = re.compile(
+    r"(?:"
+    r"\b(?:sit|sits|sitting|stand|stands|lie|lies)\s+(?:inside|within|in)\b|"
+    r"\b(?:is|are)\s+(?:inside|within)\b|"
+    r"\b(?:inside|within)\s+the\b|"
+    r"\bmembers?\s+of\b|"
+    r"\bappartien\w*|"
+    r"\b(?:font|fait)\s+partie\b|"
+    r"\bmembres?\b|"
+    r"\b(?:sont|est|figurent?|se trouvent?|siègent?)\s+(?:dans|au sein)\b"
+    r")",
+    re.IGNORECASE,
+)
+
 # --- #3151 — the weave must keep the evidence's own bindings -------------
 #
 # The R1106 Act II render moved a counter-argument (and its supporting
@@ -423,6 +459,57 @@ def _fol_decisions(state: Any) -> Dict[str, int]:
     return {"vacuous_consistent": vacuous, "decisive": decisive}
 
 
+def _dung_frames_with_nodes(state: Any) -> Dict[str, "set[str]"]:
+    """#3157 — the node set of every Dung frame the run actually built.
+
+    A frame with no ``arguments`` list (the formalism sidecars the state also
+    holds — ``delp_analysis`` and friends) validates no membership at all, so
+    it is left out rather than read as "this frame holds nothing".
+    """
+    frames: Dict[str, "set[str]"] = {}
+    entries = getattr(state, "dung_frameworks", {}) or {}
+    if not isinstance(entries, dict):
+        return frames
+    for frame_id, entry in entries.items():
+        if not isinstance(entry, dict):
+            continue
+        nodes = {str(node) for node in (entry.get("arguments") or []) if str(node)}
+        if nodes:
+            frames[str(frame_id)] = nodes
+    return frames
+
+
+def _extension_membership_flags(
+    sentence: str, frames: Dict[str, "set[str]"]
+) -> List[Dict[str, Any]]:
+    """#3157 — a unit said to sit INSIDE a cited frame must be a node of it."""
+    cited = _DUNG_CITATION_RE.findall(sentence)
+    if not cited or _MEMBERSHIP_INSIDE.search(sentence) is None:
+        return []
+    units = {f"arg_{digits}" for digits in _UNIT_ID_RE.findall(sentence)}
+    if not units:
+        return []
+    flags: List[Dict[str, Any]] = []
+    for frame_id in cited:
+        nodes = frames.get(frame_id)
+        if not nodes:
+            continue
+        off_frame = sorted(units - nodes)
+        if off_frame:
+            flags.append(
+                {
+                    "kind": "extension_membership_off_frame",
+                    "sentence": sentence.strip(),
+                    "measured": {
+                        "frame": frame_id,
+                        "off_frame_units": off_frame,
+                        "frame_nodes": len(nodes),
+                    },
+                }
+            )
+    return flags
+
+
 def check_reading_license(
     text: str,
     state: Any,
@@ -453,6 +540,9 @@ def check_reading_license(
     counters_indexed = _index_counters(state)
     units_indexed = _index_units(state)
     counter_scores = _counter_scores(state)
+    # #3157 — the cited frame's own node sets, so a membership claim is read
+    # against the frame the sentence names.
+    frames = _dung_frames_with_nodes(state)
     # The flags carry the sentence as produced — no slice: a cut could only
     # hide the qualifier the reader needs, and it never protected a verdict
     # (detection reads the whole sentence; #2850 asked what the cut was for,
@@ -462,6 +552,12 @@ def check_reading_license(
     for sentence in sentences:
         if len(flags) >= max_flags:
             break
+
+        # -- a membership claim on a frame that never held the unit (#3157) --
+        membership_flags = _extension_membership_flags(sentence, frames)
+        if membership_flags:
+            flags.extend(membership_flags)
+            continue
 
         # -- breadth sold as robustness -------------------------------------
         robustness = _ROBUSTNESS_MARKERS.search(sentence)
@@ -539,6 +635,7 @@ def check_reading_license(
             "fol_decisions": fol_decisions,
             "counters_with_target": len(counters_indexed),
             "units_indexed": len(units_indexed),
+            "dung_frames_with_nodes": len(frames),
         },
         "threshold": dense_threshold,
     }
