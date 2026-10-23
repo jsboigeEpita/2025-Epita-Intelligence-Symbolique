@@ -256,7 +256,13 @@ _CHANGE_RE = re.compile(
 
 # The honest-absence wording the Act II evidence itself carries for a
 # placeholder-only record — naming the missing derivation is compliant.
-_HONTEST_ABSENCE_RE = re.compile(r"non disponible|compteur seul", re.IGNORECASE)
+# #3189 rework (R1109): « conflit non localisé » is #3179's honest absence for
+# a record whose content IS tested — restating it without a change-verb is the
+# contract, exactly like « non disponible » before it; without the exemption
+# the new anchor was flagged where the old one passed.
+_HONTEST_ABSENCE_RE = re.compile(
+    r"non disponible|compteur seul|non localis", re.IGNORECASE
+)
 
 
 def _formal_findings(acts: List[Tuple[str, str, int]]) -> List[ContractFinding]:

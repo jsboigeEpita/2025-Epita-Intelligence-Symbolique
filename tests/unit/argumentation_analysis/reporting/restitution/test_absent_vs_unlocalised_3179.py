@@ -25,6 +25,11 @@ from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
     build_act2_evidence,
     build_act2_prompt,
 )
+from argumentation_analysis.reporting.restitution.act_reader_contract_check import (
+    check_act_reader_contract,
+)
+
+from .test_act_reader_contract_check_1914 import _GOOD_ACT3, _body
 
 _COMPOUND = [
     "forall x (humain(x) -> mortel(x))",
@@ -122,3 +127,35 @@ class TestAbsent:
         anchor = _fol_anchor(build_act2_prompt(build_act2_evidence(_state(records))))
         assert "non disponible" in anchor or "compteur seul" in anchor, anchor
         assert "18" not in anchor
+
+
+class TestReaderContract:
+    """#3189 rework (R1109): the reader-side criterion 2 exempts the #3179
+    anchor's own wording, exactly like « non disponible » before it — a
+    sentence restating « conflit non localisé » without a change-verb is the
+    honest absence the anchor teaches, not a badge."""
+
+    # Mirrors what a writer following the anchor's teaching produces: a formal
+    # citation, a named tested content, the #3179 absence wording — and NO
+    # change-verb (the verdict rightly does not localise on any inference).
+    _NOT_LOCALISED = (
+        "## Acte II — Récit dialectique\n\n"
+        "Le solveur Tweety a éprouvé les formules de l'axe FOL, mais le "
+        "conflit est non localisé : aucune paire de formules ne porte la "
+        "contradiction.\n"
+    )
+
+    def test_the_anchor_wording_without_a_change_verb_is_compliant(self):
+        findings = check_act_reader_contract(_body(self._NOT_LOCALISED, _GOOD_ACT3))
+        assert not [f for f in findings if f.criterion == 2], findings
+
+    def test_the_same_citation_without_the_absence_wording_is_flagged(self):
+        act2 = (
+            "## Acte II — Récit dialectique\n\n"
+            "Le solveur Tweety a éprouvé les formules de l'axe FOL pour ce "
+            "mouvement.\n"
+        )
+        findings = check_act_reader_contract(_body(act2, _GOOD_ACT3))
+        c2 = [f for f in findings if f.criterion == 2]
+        assert c2, "the same citation without an absence is still a badge"
+        assert c2[0].kind == "formal_citation_without_change", findings
