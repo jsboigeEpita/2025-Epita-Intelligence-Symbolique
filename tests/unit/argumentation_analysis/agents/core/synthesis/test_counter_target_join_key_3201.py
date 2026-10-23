@@ -175,3 +175,119 @@ class TestTheLineIsTheOldLinePlusTheTarget:
             if a.startswith("[artifact:counter_arguments."):
                 continue
             assert a == b
+
+
+# ============================================================================
+# Rework (coordinator review) — items 2/3 of the issue: the licence the key
+# grants, and the report-builder join that still matched by resemblance
+# ============================================================================
+
+
+class TestTheBriefingLicensesTheTarget:
+    """The line carries the key; nothing said what the key licenses.
+
+    The R1109 render banded two raw scores (« moderate to high ») and bound an
+    unresolved counter to a unit by resemblance — with no licence stated, the
+    writer supplied the inference. The licence rides next to the line, the
+    same place the cause classes state theirs (#3123).
+    """
+
+    def test_the_briefing_states_what_a_target_licenses(self):
+        briefing = _briefing(_state(counter_arguments=_counters()))
+        assert "READING RULES" in briefing
+        assert (
+            "a counter is the rebuttal of a unit only when its line says "
+            "target=<that unit>" in briefing
+        )
+        assert "never as any unit's rebuttal" in briefing
+
+    def test_the_briefing_states_that_a_score_is_raw(self):
+        briefing = _briefing(_state(counter_arguments=_counters()))
+        assert "score= is the producer's raw score" in briefing
+        assert "never as a strength band" in briefing
+        assert "« modérée »" in briefing
+
+    def test_the_rules_are_static_not_counter_dependent(self):
+        """The licence is stated even when the run produced no counter."""
+        assert "target=<that unit>" in _briefing(_state())
+
+
+class TestTheArgumentMapJoinsOnTheRecordKey:
+    """``_build_argument_map`` fed the « Attacked by » column by text match.
+
+    Measured on the stored states: 23 of 28 linked counters (doc_A) and 28 of
+    39 (doc_B) reached no argument, because a generated counter does not echo
+    its target's first 60 characters. The record's ``target_arg_id`` is the
+    join; the text match survives only for a legacy record carrying neither
+    target field.
+    """
+
+    ARGS = {
+        "arg_a": "claim alpha asserted early in the discourse",
+        "arg_b": "claim beta asserted later in the discourse",
+    }
+
+    def _map_entry(self, counter: dict):
+        state = _state(
+            identified_arguments=dict(self.ARGS), counter_arguments=[counter]
+        )
+        entries = DeepSynthesisAgent._build_argument_map(state)
+        return {e.arg_id: e for e in entries}
+
+    def test_a_keyed_counter_reaches_its_target_without_text_match(self):
+        # The witness the review asked for: target_arg_id=arg_a, and an
+        # original_argument that does NOT text-match any argument.
+        counter = {
+            "id": "ca_k",
+            "strategy": "direct_refutation",
+            "score": 0.5,
+            "counter_content": "invented filler delta",
+            "original_argument": "a wholly different phrasing the map never sees",
+            "target_arg_id": "arg_a",
+        }
+        entries = self._map_entry(counter)
+        assert "counter_ca_k" in entries["arg_a"].attacked_by
+        assert entries["arg_b"].attacked_by == []
+
+    def test_a_legacy_record_is_still_text_matched(self):
+        """Control: no target field at all → the historical text match runs."""
+        counter = {
+            "id": "ca_l",
+            "strategy": "direct_refutation",
+            "score": 0.5,
+            "counter_content": "invented filler epsilon",
+            "original_argument": "claim alpha asserted early",
+        }
+        entries = self._map_entry(counter)
+        assert "counter_ca_l" in entries["arg_a"].attacked_by
+        assert entries["arg_b"].attacked_by == []
+
+    def test_an_explicitly_unresolved_counter_is_not_reanchored(self):
+        # The record states it is unresolved: matching it by resemblance
+        # would anchor exactly what the producer said it could not.
+        counter = {
+            "id": "ca_u",
+            "strategy": "counter_example",
+            "score": 0.5,
+            "counter_content": "invented filler zeta",
+            "original_argument": "claim alpha asserted early",
+            "target_unresolved_reason": _UNRESOLVED_REASON,
+        }
+        entries = self._map_entry(counter)
+        assert entries["arg_a"].attacked_by == []
+        assert entries["arg_b"].attacked_by == []
+
+    def test_a_keyed_counter_pointing_outside_the_map_builds_no_edge(self):
+        # The key names an id the run never identified: no edge, and no
+        # fallback to resemblance — the record's key is authoritative.
+        counter = {
+            "id": "ca_o",
+            "strategy": "direct_refutation",
+            "score": 0.5,
+            "counter_content": "invented filler eta",
+            "original_argument": "claim alpha asserted early",
+            "target_arg_id": "arg_absent",
+        }
+        entries = self._map_entry(counter)
+        assert entries["arg_a"].attacked_by == []
+        assert entries["arg_b"].attacked_by == []

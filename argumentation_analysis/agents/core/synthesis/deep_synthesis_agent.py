@@ -459,10 +459,23 @@ class DeepSynthesisAgent(BaseAgent):
         for ca in counter_args:
             orig = ca.get("original_argument", "")
             ca_id = ca.get("id", "ca")
-            # Match counter to argument by partial text match
-            for arg_id, desc in args.items():
-                if orig and (orig[:60] in desc or desc[:60] in orig):
-                    attack_map.setdefault(f"counter_{ca_id}", []).append(arg_id)
+            # #3201 — the record's own key joins first. The partial-text match
+            # below was the only join and dropped most real counters (measured
+            # on the stored states: 23 of 28 on doc_A, 28 of 39 on doc_B),
+            # because a generated counter no longer echoes its target's first
+            # 60 characters. The text match stays only for a legacy record
+            # that carries NEITHER target field (#2968 shape): a record that
+            # states a target — or states it is unresolved — must not be
+            # re-anchored by resemblance, which is the very defect the key
+            # repairs.
+            target = ca.get("target_arg_id")
+            if target:
+                if target in args:
+                    attack_map.setdefault(f"counter_{ca_id}", []).append(target)
+            elif not ca.get("target_unresolved_reason"):
+                for arg_id, desc in args.items():
+                    if orig and (orig[:60] in desc or desc[:60] in orig):
+                        attack_map.setdefault(f"counter_{ca_id}", []).append(arg_id)
 
         entries = []
         for arg_id, desc in args.items():
@@ -2065,7 +2078,23 @@ class DeepSynthesisAgent(BaseAgent):
             "when no unit carries the union, and such a sentence cites rows "
             "that refute it."
         )
-
+        # #3201 items 2/3 — the counter line now carries its key, but the key
+        # alone licenses nothing until the rule says what it does. The R1109
+        # render bound an unresolved counter to a unit by resemblance and
+        # banded two raw scores (« moderate to high ») with no licence at all
+        # — the absence of a licence did not stop it, so the licence is stated
+        # here, next to the line it reads.
+        lines.append(
+            "- counter_arguments target=<unit>: a counter is the rebuttal of a "
+            "unit only when its line says target=<that unit>. A line "
+            "target=unresolved is a real but unanchored rebuttal — cite it for "
+            "its own content, never as any unit's rebuttal."
+        )
+        lines.append(
+            "- counter_arguments score= is the producer's raw score with no "
+            "scale attached: quote it as given or omit it, never as a strength "
+            'band (« faible », « modérée », « forte », "moderate to high").'
+        )
         return "\n".join(lines)
 
     async def grounded_transversal_synthesis(
