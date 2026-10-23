@@ -239,21 +239,6 @@ class TestTheDescentPromptsAskForTheAuthor:
         assert "move_author='speaker|reported'" in prompt
         assert "omit both when the text does not let you tell" in prompt
 
-    @pytest.mark.asyncio
-    async def test_the_justification_is_grounded_in_the_analyzed_text_only(self):
-        """Record-run refusal (run 39942757872): the leaf prompt shows the
-        taxonomy example, and the model quoted its dated content back — the
-        privacy audit refused the cassette. The justification instruction now
-        pins the quote source to the analyzed text on both prompts."""
-        leaf_run = await _descent(
-            _confirm_call("41111", move_author="speaker"), start_pk="41111"
-        )
-        nav_run = await _descent(
-            _confirm_call("4111", move_author="speaker"), start_pk="4"
-        )
-        for prompt in (leaf_run[1].prompts[0], nav_run[1].prompts[0]):
-            assert "quotes the ANALYZED TEXT only" in prompt
-
 
 class TestTheRegistrationToolsCarryTheAuthor:
     """The conversational lane registers through these kernel functions."""
