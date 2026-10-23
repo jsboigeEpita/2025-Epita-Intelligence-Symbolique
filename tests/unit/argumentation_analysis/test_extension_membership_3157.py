@@ -273,3 +273,139 @@ class TestTheNamedExtensionIsRead:
         assert (
             len(flags) == 1 and flags[0]["kind"] == "extension_membership_false_outside"
         )
+
+
+#: A frame whose semantics computed TWO extensions (dung_P, #3204 rework):
+#: E1 = {arg_1, arg_2}, E2 = {arg_1, arg_3}. Union = arg_1..arg_3,
+#: intersection = {arg_1}.
+_PREFERRED_FRAMES = {
+    "dung_P": {
+        "name": "verification_preferred",
+        "arguments": ["arg_1", "arg_2", "arg_3", "arg_4"],
+        "attacks": [["arg_2", "arg_3"], ["arg_3", "arg_2"]],
+        "extensions": {
+            "extensions": [["arg_1", "arg_2"], ["arg_1", "arg_3"]],
+            "count": 2,
+            "sizes": [2, 2],
+        },
+    }
+}
+
+
+class TestTheClaimIsBoundToItsOwnClause:
+    """#3204 rework — a compound sentence carries one claim PER CLAUSE.
+
+    « arg_1 sits inside the grounded extension, while arg_4 lies outside it »
+    is TRUE as a whole: arg_1 is a member, arg_4 is not. Reading the units
+    sentence-wide raised BOTH flags (the inside half tested arg_4, the
+    outside half tested arg_1) — every true compound sentence was flagged.
+    Each unit is now tested against the marker of its own clause; a unit no
+    clause binds to exactly one marker stays silent."""
+
+    def test_a_true_compound_sentence_is_not_flagged(self):
+        """Witness (born red): arg_1 is IN the grounded extension, arg_4 is
+        OUT — both clauses true, nothing to flag."""
+        text = (
+            "arg_1 sits inside the grounded extension, while arg_4 lies "
+            "outside it [artifact:dung_frameworks.dung_X]."
+        )
+        assert _extension_flags(text) == []
+
+    def test_a_compound_with_one_false_clause_flags_only_that_unit(self):
+        """The second clause alone is false (arg_4 is out of the grounded
+        extension): only arg_4 is flagged, arg_1's true clause stays silent."""
+        text = (
+            "arg_1 sits inside the grounded extension, while arg_4 sits "
+            "inside it [artifact:dung_frameworks.dung_X]."
+        )
+        flags = [f for f in _extension_flags(text) if "membership" in f["kind"]]
+        assert len(flags) == 1, flags
+        assert flags[0]["kind"] == "extension_membership_off_extension", flags
+        assert flags[0]["measured"]["units_not_in_extension"] == ["arg_4"]
+
+    def test_a_true_french_compound_sentence_is_not_flagged(self):
+        """Witness (born red): same compound in French — « alors que » is the
+        clause boundary."""
+        text = (
+            "arg_1 est dans l'extension fondée, alors que arg_4 est hors de "
+            "l'extension [artifact:dung_frameworks.dung_X]."
+        )
+        assert _extension_flags(text) == []
+
+    def test_a_unit_unbindable_to_one_marker_stays_silent(self):
+        """Both markers in ONE clause: the sentence names no single claim the
+        check can read — it stays silent rather than guessing."""
+        text = (
+            "arg_1 and arg_4 sit inside and outside the grounded extension "
+            "respectively [artifact:dung_frameworks.dung_X]."
+        )
+        assert _extension_flags(text) == []
+
+    def test_a_unit_of_the_outside_clause_is_not_read_as_an_inside_claim(self):
+        """The FRAME half binds too: arg_9 is no node of dung_X, but the
+        sentence puts it OUTSIDE — trivially true of a unit the frame never
+        held, so there is nothing to flag (born red: sentence-wide units made
+        the inside clause flag arg_9 as off-frame)."""
+        text = (
+            "arg_1 sits inside the grounded extension, while arg_9 lies "
+            "outside it [artifact:dung_frameworks.dung_X]."
+        )
+        assert _extension_flags(text) == []
+
+
+class TestOutsideReadsTheIntersection:
+    """#3204 rework — a semantics can compute SEVERAL extensions (dung_P:
+    two preferred). « arg_2 lies outside the preferred extension » is true of
+    E2 and false of E1: an outside claim is false only when the unit belongs
+    to EVERY extension — the intersection. The inside half keeps the union (a
+    unit some extension holds cannot be « not in the extension »)."""
+
+    def test_an_outside_claim_on_a_unit_of_one_extension_only_is_true(self):
+        """Witness (born red): arg_2 ∈ E1 but ∉ E2 — the claim is true of one
+        extension, false only if « the extension » meant all of them at
+        once. It does not: no flag."""
+        text = (
+            "arg_2 lies outside the preferred extension "
+            "[artifact:dung_frameworks.dung_P]."
+        )
+        assert _extension_flags(text, _PREFERRED_FRAMES) == []
+
+    def test_an_outside_claim_on_a_unit_of_every_extension_is_false(self):
+        """Control: arg_1 belongs to both E1 and E2 — whatever extension the
+        reader means, the unit is in it: flagged."""
+        text = (
+            "arg_1 lies outside the preferred extension "
+            "[artifact:dung_frameworks.dung_P]."
+        )
+        flags = [
+            f
+            for f in _extension_flags(text, _PREFERRED_FRAMES)
+            if "membership" in f["kind"]
+        ]
+        assert len(flags) == 1, flags
+        assert flags[0]["kind"] == "extension_membership_false_outside", flags
+        assert flags[0]["measured"]["units_in_extension"] == ["arg_1"]
+
+    def test_an_inside_claim_on_a_unit_of_one_extension_is_true(self):
+        """arg_2 ∈ E1: an inside claim reads the UNION — a unit some
+        extension holds is in « the extension ». No flag."""
+        text = (
+            "arg_2 sits inside the preferred extension "
+            "[artifact:dung_frameworks.dung_P]."
+        )
+        assert _extension_flags(text, _PREFERRED_FRAMES) == []
+
+    def test_an_inside_claim_on_a_unit_of_no_extension_is_flagged(self):
+        """Control: arg_4 is a node of dung_P but of neither extension — the
+        inside claim is false under the union too: flagged."""
+        text = (
+            "arg_4 sits inside the preferred extension "
+            "[artifact:dung_frameworks.dung_P]."
+        )
+        flags = [
+            f
+            for f in _extension_flags(text, _PREFERRED_FRAMES)
+            if "membership" in f["kind"]
+        ]
+        assert len(flags) == 1, flags
+        assert flags[0]["kind"] == "extension_membership_off_extension", flags

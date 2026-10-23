@@ -596,14 +596,59 @@ def _dung_frames_with_nodes(state: Any) -> Dict[str, "set[str]"]:
     return frames
 
 
+#: Contrast clause boundaries — a compound sentence flips the claim's
+#: direction mid-sentence (« inside ..., while ... outside it »). Each unit
+#: belongs to the marker of ITS OWN clause, never to the sentence's (#3204
+#: rework: reading the units sentence-wide made every true compound sentence
+#: raise both flags at once).
+_CLAUSE_BOUNDARY = re.compile(
+    r",\s*(?:while|whereas|but|mais|alors\s+que|tandis\s+que|yet)\b|;",
+    re.IGNORECASE,
+)
+
+
+def _clauses(sentence: str) -> "List[str]":
+    """The contrast clauses of a sentence — the whole sentence when it has
+    no boundary (a single claim, the common case)."""
+    parts = _CLAUSE_BOUNDARY.split(sentence)
+    return [part for part in (p.strip() for p in parts) if part]
+
+
+def _bound_units(sentence: str) -> "Tuple[set[str], set[str]]":
+    """Per marker kind, the units whose clause carries exactly that marker.
+
+    A clause naming both markers (``inside and outside ... respectively``)
+    names no single claim the check can read, and a clause naming neither
+    makes no membership assertion: the units of both stay unbound — silent,
+    the check does not guess which side of a contrast a unit sits on.
+    """
+    inside_units: "set[str]" = set()
+    outside_units: "set[str]" = set()
+    for clause in _clauses(sentence):
+        has_inside = _MEMBERSHIP_INSIDE.search(clause) is not None
+        has_outside = _MEMBERSHIP_OUTSIDE.search(clause) is not None
+        if has_inside == has_outside:  # both markers, or neither: unbindable
+            continue
+        units = {f"arg_{digits}" for digits in _UNIT_ID_RE.findall(clause)}
+        if has_inside:
+            inside_units |= units
+        else:
+            outside_units |= units
+    return inside_units, outside_units
+
+
 def _extension_membership_flags(
     sentence: str, frames: Dict[str, "set[str]"]
 ) -> List[Dict[str, Any]]:
-    """#3157 — a unit said to sit INSIDE a cited frame must be a node of it."""
+    """#3157 — a unit said to sit INSIDE a cited frame must be a node of it.
+
+    Only the units bound to an INSIDE clause are read: a unit whose clause
+    puts it outside is trivially outside when the frame never held it —
+    there is nothing to verify (#3204 rework)."""
     cited = _DUNG_CITATION_RE.findall(sentence)
-    if not cited or _MEMBERSHIP_INSIDE.search(sentence) is None:
+    if not cited:
         return []
-    units = {f"arg_{digits}" for digits in _UNIT_ID_RE.findall(sentence)}
+    units, _outside_units = _bound_units(sentence)
     if not units:
         return []
     flags: List[Dict[str, Any]] = []
@@ -674,6 +719,18 @@ def _extension_claim_flags(
     or a frame that did not compute the one it names, stays silent — the
     check does not guess. Membership alone decides, never the #3174
     rejection rule: an outside claim on an undecided unit is true.
+
+    Two bindings the rework (#3204) tightened:
+
+    - each unit is read against the marker of ITS OWN clause — a compound
+      « arg_1 sits inside ..., while arg_2 lies outside it » carries two
+      claims, and reading the units sentence-wide flagged both halves of
+      every TRUE compound sentence;
+    - a semantics can compute several extensions (two preferred): an inside
+      claim is false only when NO extension holds the unit (the union),
+      an outside claim only when EVERY extension does (the intersection) —
+      « outside the preferred extension » must be true of one extension to
+      be reportable, false only of them all.
     """
     cited = _DUNG_CITATION_RE.findall(sentence)
     if not cited:
@@ -681,12 +738,10 @@ def _extension_claim_flags(
     named = [sem for sem, pattern in _NAMED_SEMANTICS if pattern.search(sentence)]
     if not named:
         return []  # no semantics named: the frame half owns the claim
-    units = {f"arg_{digits}" for digits in _UNIT_ID_RE.findall(sentence)}
-    if not units:
-        return []
-    inside = _MEMBERSHIP_INSIDE.search(sentence) is not None
-    outside = _MEMBERSHIP_OUTSIDE.search(sentence) is not None
-    if not (inside or outside):
+    # The semantics stays sentence-wide: the second clause says « outside
+    # IT », and the it is the extension the first clause named.
+    inside_units, outside_units = _bound_units(sentence)
+    if not (inside_units or outside_units):
         return []
     flags: List[Dict[str, Any]] = []
     for frame_id in cited:
@@ -698,11 +753,18 @@ def _extension_claim_flags(
             extensions = lists.get(sem)
             if extensions is None:
                 continue  # the frame did not compute the semantics it names
-            members = set()
+            members_any: "set[str]" = set()
             for one in extensions:
-                members.update(one)
-            if inside:
-                wrong = sorted(u for u in units if u in nodes and u not in members)
+                members_any.update(one)
+            members_every: "set[str]" = (
+                set.intersection(*(set(one) for one in extensions))
+                if extensions
+                else set()
+            )
+            if inside_units:
+                wrong = sorted(
+                    u for u in inside_units if u in nodes and u not in members_any
+                )
                 if wrong:
                     flags.append(
                         {
@@ -712,12 +774,12 @@ def _extension_claim_flags(
                                 "frame": frame_id,
                                 "semantics": sem,
                                 "units_not_in_extension": wrong,
-                                "extension_members": sorted(members),
+                                "extension_members": sorted(members_any),
                             },
                         }
                     )
-            if outside:
-                wrong = sorted(u for u in units if u in members)
+            if outside_units:
+                wrong = sorted(u for u in outside_units if u in members_every)
                 if wrong:
                     flags.append(
                         {
@@ -727,7 +789,7 @@ def _extension_claim_flags(
                                 "frame": frame_id,
                                 "semantics": sem,
                                 "units_in_extension": wrong,
-                                "extension_members": sorted(members),
+                                "extension_members": sorted(members_every),
                             },
                         }
                     )
