@@ -211,25 +211,34 @@ class TestFolAnalysis:
 
 
 class TestJtmsRetractionChain:
-    """Verify JTMS retraction chain has ≥1 cascade."""
+    """Verify JTMS retraction chain has ≥1 cascade, in the PRODUCER's shape.
+
+    #3188: the fixture used to carry ``cascade_id`` / ``downstream_effects`` —
+    keys no producer writes (``JTMS.get_retraction_chain`` documents and
+    returns ``{trigger, retracted, cascaded, reason}``, and ``retracted`` is
+    never empty: an entry is appended only when a True belief is set to
+    non-True). The golden defended the declaration, not the producer; the
+    assertions below tie the fixture to the producer's keys so a fourth
+    reader cannot drift silently.
+    """
 
     def test_jtms_has_at_least_1_cascade(self, state):
         chain = state.get("jtms_retraction_chain", [])
         assert len(chain) >= 1, "Expected ≥1 JTMS retraction cascade"
 
-    def test_each_cascade_has_required_fields(self, state):
+    def test_each_cascade_has_the_producers_keys(self, state):
         for cascade in state["jtms_retraction_chain"]:
-            assert "cascade_id" in cascade
-            assert "trigger" in cascade
-            assert "reason" in cascade
-            assert "downstream_effects" in cascade
+            for key in ("trigger", "retracted", "cascaded", "reason"):
+                assert key in cascade, f"producer key {key} missing: {cascade}"
+            # keys no producer writes must not come back
+            assert "cascade_id" not in cascade
+            assert "downstream_effects" not in cascade
 
-    def test_cascade_has_belief_status_change(self, state):
-        cascade = state["jtms_retraction_chain"][0]
-        effects = cascade["downstream_effects"]
-        assert len(effects) >= 1, "Expected ≥1 downstream effect in first cascade"
-        first = effects[0]
-        assert "belief" in first
+    def test_each_cascade_retracts_a_belief(self, state):
+        for cascade in state["jtms_retraction_chain"]:
+            assert cascade["retracted"], (
+                "the producer never appends an empty retraction: " f"{cascade}"
+            )
 
 
 class TestNarrativeSynthesis:
