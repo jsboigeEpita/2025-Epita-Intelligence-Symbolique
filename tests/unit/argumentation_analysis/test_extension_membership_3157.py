@@ -171,3 +171,105 @@ class TestNoClaimNoFlag:
         assert [
             f["measured"]["off_frame_units"] for f in _membership(text, _state(frames))
         ] == [["arg_100"]]
+
+
+#: The extension-half fixture (R1109 remainder): a frame the shared decoder
+#: CAN read per semantics — grounded extension arg_1..arg_3, arg_4 attacked by
+#: arg_1 (out of the grounded extension, and a node of the frame).
+_GROUNDED_FRAMES = {
+    "dung_X": {
+        "name": "verification_grounded",
+        "arguments": ["arg_1", "arg_2", "arg_3", "arg_4"],
+        "attacks": [["arg_1", "arg_4"]],
+        "extensions": {
+            "extensions": [["arg_1", "arg_2", "arg_3"]],
+            "count": 1,
+            "sizes": [3],
+        },
+    }
+}
+
+
+def _extension_flags(text, frames=None):
+    return check_reading_license(text, _state(frames or _GROUNDED_FRAMES))["flags"]
+
+
+class TestTheNamedExtensionIsRead:
+    """R1109 remainder — a unit said to be inside (or outside) a NAMED
+    extension of the cited frame is checked against THAT extension.
+
+    The frame half flags units the frame never held; these witnesses flag
+    units the frame holds but the named extension does not (a false inside
+    claim), or the extension holds while the sentence puts it outside (a
+    false outside claim). Membership alone decides — after #3174 « outside
+    the grounded extension » covers ``out`` and ``undec`` alike, so an
+    outside claim on an undecided unit is TRUE and never flagged here."""
+
+    def test_an_inside_claim_on_a_unit_out_of_the_extension_is_flagged(self):
+        """Witness (DoD): arg_4 is a node of dung_X but out of its grounded
+        extension — « arg_4 sits inside the grounded extension » is flagged,
+        with a kind naming the extension, not the frame."""
+        text = (
+            "arg_4 sits inside the grounded extension "
+            "[artifact:dung_frameworks.dung_X]."
+        )
+        flags = [
+            f for f in _extension_flags(text) if "extension_membership" in f["kind"]
+        ]
+        assert len(flags) == 1, flags
+        assert flags[0]["kind"] == "extension_membership_off_extension", flags
+        measured = flags[0]["measured"]
+        assert measured["semantics"] == "grounded"
+        assert measured["units_not_in_extension"] == ["arg_4"]
+
+    def test_a_false_outside_claim_on_a_member_is_flagged(self):
+        """Witness (DoD): arg_1 IS in the grounded extension — « arg_1 lies
+        outside the grounded extension » is flagged."""
+        text = (
+            "arg_1 lies outside the grounded extension "
+            "[artifact:dung_frameworks.dung_X]."
+        )
+        flags = [
+            f for f in _extension_flags(text) if f["kind"].startswith("extension_")
+        ]
+        assert len(flags) == 1, flags
+        assert flags[0]["kind"] == "extension_membership_false_outside", flags
+        assert flags[0]["measured"]["units_in_extension"] == ["arg_1"]
+
+    def test_a_true_inside_claim_passes(self):
+        text = (
+            "arg_1 sits inside the grounded extension "
+            "[artifact:dung_frameworks.dung_X]."
+        )
+        assert _extension_flags(text) == []
+
+    def test_a_true_outside_claim_passes(self):
+        """arg_4 is out of the grounded extension (attacked by arg_1): saying
+        it lies outside is TRUE — under #3174 that covers out and undec
+        alike; only membership decides."""
+        text = (
+            "arg_4 lies outside the grounded extension "
+            "[artifact:dung_frameworks.dung_X]."
+        )
+        assert _extension_flags(text) == []
+
+    def test_a_sentence_naming_no_semantics_stays_silent(self):
+        text = "arg_1 sits inside [artifact:dung_frameworks.dung_X]."
+        assert _extension_flags(text) == []
+
+    def test_a_semantics_the_frame_did_not_compute_stays_silent(self):
+        text = (
+            "arg_4 sits inside the stable extension "
+            "[artifact:dung_frameworks.dung_X]."
+        )
+        assert _extension_flags(text) == []
+
+    def test_a_french_outside_claim_on_a_member_is_flagged(self):
+        text = (
+            "arg_1 n'est pas dans l'extension grounded "
+            "[artifact:dung_frameworks.dung_X]."
+        )
+        flags = [f for f in _extension_flags(text) if "membership" in f["kind"]]
+        assert (
+            len(flags) == 1 and flags[0]["kind"] == "extension_membership_false_outside"
+        )

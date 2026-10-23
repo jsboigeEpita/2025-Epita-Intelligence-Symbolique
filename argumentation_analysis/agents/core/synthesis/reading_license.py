@@ -153,6 +153,42 @@ _MEMBERSHIP_INSIDE = re.compile(
     re.IGNORECASE,
 )
 
+# #3157, extension half (R1109 remainder) — the frame half above reads the
+# NODES; the extension half reads a NAMED extension of the cited frame. A
+# unit said to be inside (or outside) « the grounded extension » is checked
+# against that extension: a node the extension does not hold makes the inside
+# claim false, a member the sentence puts outside makes the outside claim
+# false. Membership alone decides — after #3174 « outside the grounded
+# extension » covers ``out`` and ``undec`` alike, so an outside claim on an
+# undecided unit is true and never flagged.
+
+#: The semantics an inside/outside claim can name — the three the readers of
+#: #2672 display. A sentence naming none of them leaves the claim to the
+#: frame half; the check does not guess a semantics.
+_NAMED_SEMANTICS: "Tuple[Tuple[str, re.Pattern[str]], ...]" = (
+    ("grounded", re.compile(r"\bgrounded\b|\bancr[ée]e?s?\b|\bfond[ée]e?s?\b", re.I)),
+    (
+        "preferred",
+        re.compile(r"\bpr[ée]f[ée]r[ée]e?s?\b|\bpreferred\b", re.IGNORECASE),
+    ),
+    ("stable", re.compile(r"\bstables?\b", re.IGNORECASE)),
+)
+
+#: An OUTSIDE-membership assertion — the mirror of ``_MEMBERSHIP_INSIDE``.
+#: An outside claim is falsified only by membership: a unit the named
+#: extension holds.
+_MEMBERSHIP_OUTSIDE = re.compile(
+    r"(?:"
+    r"\b(?:lie|lies|lying|sit|sits|sitting|stand|stands)\s+outside\b|"
+    r"\b(?:is|are)\s+outside\b|"
+    r"\boutside\s+the\b|"
+    r"\bhors\s+de\s+l['’]extension\b|"
+    r"\bn['’](?:est|sont)\s+pas\s+dans\s+l['’]extension\b|"
+    r"\bn['’]appartien\w*\s+pas\s+à\s+l['’]extension\b"
+    r")",
+    re.IGNORECASE,
+)
+
 # --- #3151 — the weave must keep the evidence's own bindings -------------
 #
 # The R1106 Act II render moved a counter-argument (and its supporting
@@ -591,6 +627,113 @@ def _extension_membership_flags(
     return flags
 
 
+def _named_extensions_by_frame(
+    state: Any,
+) -> Dict[str, Dict[str, "List[List[str]]"]]:
+    """#3157 extension half — the per-semantics extensions of every frame the
+    run actually built, through the shared decoder.
+
+    ``extension_lists`` is the per-frame primitive ``dung_reading`` itself
+    calls; the merged view would read "some frame in the state", which the
+    cited-frame rule forbids. Frames whose extensions were never computed,
+    and the formalism sidecars, contribute nothing — a claim naming their
+    semantics stays silent rather than reading as "the extension is empty".
+    """
+    from argumentation_analysis.reporting.restitution.native_dung import (
+        extension_lists,
+    )
+
+    found: Dict[str, Dict[str, List[List[str]]]] = {}
+    entries = getattr(state, "dung_frameworks", {}) or {}
+    if not isinstance(entries, dict):
+        return found
+    for frame_id, entry in entries.items():
+        if not isinstance(entry, dict):
+            continue
+        if not (entry.get("arguments") or []):
+            continue
+        lists = extension_lists(entry)
+        if lists:
+            found[str(frame_id)] = lists
+    return found
+
+
+def _extension_claim_flags(
+    sentence: str,
+    frames: Dict[str, "set[str]"],
+    extensions_by_frame: Dict[str, Dict[str, "List[List[str]]"]],
+) -> List[Dict[str, Any]]:
+    """#3157 extension half — a unit said to sit inside (or outside) a NAMED
+    extension of the cited frame is checked against THAT extension.
+
+    The frame half flags units the cited frame never held; this half flags
+    units the frame holds but the named extension does not (a false inside
+    claim, ``extension_membership_off_extension``), or the named extension
+    holds while the sentence puts it outside (a false outside claim,
+    ``extension_membership_false_outside``). A sentence naming no semantics,
+    or a frame that did not compute the one it names, stays silent — the
+    check does not guess. Membership alone decides, never the #3174
+    rejection rule: an outside claim on an undecided unit is true.
+    """
+    cited = _DUNG_CITATION_RE.findall(sentence)
+    if not cited:
+        return []
+    named = [sem for sem, pattern in _NAMED_SEMANTICS if pattern.search(sentence)]
+    if not named:
+        return []  # no semantics named: the frame half owns the claim
+    units = {f"arg_{digits}" for digits in _UNIT_ID_RE.findall(sentence)}
+    if not units:
+        return []
+    inside = _MEMBERSHIP_INSIDE.search(sentence) is not None
+    outside = _MEMBERSHIP_OUTSIDE.search(sentence) is not None
+    if not (inside or outside):
+        return []
+    flags: List[Dict[str, Any]] = []
+    for frame_id in cited:
+        nodes = frames.get(frame_id)
+        if not nodes:
+            continue  # off-frame units are the frame half's finding
+        lists = extensions_by_frame.get(frame_id) or {}
+        for sem in named:
+            extensions = lists.get(sem)
+            if extensions is None:
+                continue  # the frame did not compute the semantics it names
+            members = set()
+            for one in extensions:
+                members.update(one)
+            if inside:
+                wrong = sorted(u for u in units if u in nodes and u not in members)
+                if wrong:
+                    flags.append(
+                        {
+                            "kind": "extension_membership_off_extension",
+                            "sentence": sentence.strip(),
+                            "measured": {
+                                "frame": frame_id,
+                                "semantics": sem,
+                                "units_not_in_extension": wrong,
+                                "extension_members": sorted(members),
+                            },
+                        }
+                    )
+            if outside:
+                wrong = sorted(u for u in units if u in members)
+                if wrong:
+                    flags.append(
+                        {
+                            "kind": "extension_membership_false_outside",
+                            "sentence": sentence.strip(),
+                            "measured": {
+                                "frame": frame_id,
+                                "semantics": sem,
+                                "units_in_extension": wrong,
+                                "extension_members": sorted(members),
+                            },
+                        }
+                    )
+    return flags
+
+
 def check_reading_license(
     text: str,
     state: Any,
@@ -622,8 +765,11 @@ def check_reading_license(
     units_indexed = _index_units(state)
     counter_scores = _counter_scores(state)
     # #3157 — the cited frame's own node sets, so a membership claim is read
-    # against the frame the sentence names.
+    # against the frame the sentence names; and the same frames' extensions
+    # per semantics (extension half, R1109), so an inside/outside claim is
+    # read against the extension the sentence names.
     frames = _dung_frames_with_nodes(state)
+    named_extensions = _named_extensions_by_frame(state)
     # #3150 — what the revision actually revised, and what the formal
     # contradiction actually names. Both are read once: the sentence loop only
     # compares them.
@@ -639,10 +785,13 @@ def check_reading_license(
         if len(flags) >= max_flags:
             break
 
-        # -- a membership claim on a frame that never held the unit (#3157) --
+        # -- a membership claim on a frame that never held the unit (#3157),
+        # -- or on a named extension that does not hold it (R1109 half) --
         membership_flags = _extension_membership_flags(sentence, frames)
-        if membership_flags:
+        claim_flags = _extension_claim_flags(sentence, frames, named_extensions)
+        if membership_flags or claim_flags:
             flags.extend(membership_flags)
+            flags.extend(claim_flags)
             continue
 
         # -- breadth sold as robustness -------------------------------------
@@ -753,6 +902,7 @@ def check_reading_license(
             "counters_with_target": len(counters_indexed),
             "units_indexed": len(units_indexed),
             "dung_frames_with_nodes": len(frames),
+            "named_extension_frames": len(named_extensions),
             "revision_base_units": len(base_units) if base_units is not None else 0,
             "contradiction_units": len(formal_units),
         },
