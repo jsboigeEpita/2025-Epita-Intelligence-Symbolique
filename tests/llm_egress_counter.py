@@ -43,12 +43,23 @@ invoked once per completed request with the final entry (class + transport +
 outcome known). Still observation: the instrument reports, the policy lives
 in the consumer (``tests/llm_egress_guard.py`` enforces hermeticity at run
 time; the CI gate enforces it after the run).
+
+#3194: a nested pytest session — a launcher, a probe, a test — is a separate
+process with its own counter, and its egress used to die with it: #1872 gave
+it a per-pid report so it could not clobber the gate's canonical one, but
+nobody read those files, so a child making a real LLM call left no trace in
+the tally that matters, and 803 of them piled up in the checkout root in nine
+days. Every session now publishes an inbox directory (``LLM_EGRESS_CHILD_DIR``)
+for the subprocesses it spawns, writes its report there when it is itself a
+child, and folds every child report it finds into its own snapshot under
+``child:<pid>::<nodeid>`` — see the "nested sessions" section below.
 """
 
 import contextvars
 
 import json
 import os
+import tempfile
 import threading
 
 import pytest
@@ -559,29 +570,210 @@ class _SnapshotView:
         return dict(self._snapshot)
 
 
-def write_report(counter: LLMEgressCounter, config: Any) -> Optional[Path]:
-    """Write the egress report next to the junitxml artifact (or CWD).
+# ── nested sessions (#3194) ───────────────────────────────────────────
+#
+# A launcher, a probe or a test can spawn a SECOND, unfiltered pytest
+# session: a nested child. #1872 made the child write a per-pid file so it
+# could not clobber the gate's canonical report, but nothing ever read those
+# files — a child's egress never reached the gate's tally, and 803 of them
+# accumulated in the checkout root in nine days (all gitignored, so `git
+# status` never showed them).
+#
+# The handshake, one level at a time and composing recursively:
+#
+# - every session creates an inbox and publishes its path in
+#   ``LLM_EGRESS_CHILD_DIR`` for the subprocesses it spawns;
+# - a session that finds that variable already set is a child: it marks that
+#   it started in the parent's inbox, and writes its report there at session
+#   end;
+# - the parent folds every report it finds (attributed
+#   ``child:<pid>::<nodeid>``) into its own snapshot before writing its
+#   canonical report, then deletes what it read;
+# - a child that marked but never reported is a NAMED absence, not silence.
 
-    A session with ``--junitxml`` is (by construction) the gate; it writes the
-    canonical ``llm_egress_report.json`` the CI artifact uploads. A session
-    WITHOUT one is nested — a worker spawned by a launcher (a second, unfiltered
-    pytest session). Before #1872 both wrote the same canonical name, so a child
-    overwrote the gate's tally exactly when the leak made that tally matter. The
-    nested session writes a per-process distinct path instead, leaving the
-    parent's canonical report intact.
+CHILD_REPORT_DIR_ENV = "LLM_EGRESS_CHILD_DIR"
+CHILD_REPORT_PREFIX = "llm_egress_report."
+CHILD_MARKER_PREFIX = "llm_egress_child."
+# Prefix of the ``test`` field of a folded record: it names the process the
+# request came from, so a child's leak cannot read as one of the parent's.
+CHILD_LABEL_PREFIX = "child:"
+
+
+def session_scratch_dir(config: Any) -> Path:
+    """This session's scratch directory — outside the checkout (#3194).
+
+    The session basetemp when pytest's tmpdir plugin provides one, the system
+    temp directory otherwise (a hand-built config in a unit test).
+    """
+    factory = getattr(config, "_tmp_path_factory", None)
+    getbasetemp = getattr(factory, "getbasetemp", None)
+    if callable(getbasetemp):
+        try:
+            return Path(getbasetemp())
+        except Exception:  # noqa: BLE001 — a broken factory must not break the run
+            pass
+    return Path(tempfile.gettempdir())
+
+
+def child_inbox_dir(config: Any) -> Path:
+    """Where the pytest children this session spawns write their reports."""
+    return session_scratch_dir(config) / f"llm_egress_children.{os.getpid()}"
+
+
+def inherited_child_report_dir() -> Optional[Path]:
+    """The inbox the parent session handed this one, or None at the top."""
+    raw = os.environ.get(CHILD_REPORT_DIR_ENV, "").strip()
+    return Path(raw) if raw else None
+
+
+def publish_child_report_dir(config: Any) -> Optional[Path]:
+    """Create this session's inbox and hand it to the subprocesses it spawns."""
+    directory = child_inbox_dir(config)
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return None
+    os.environ[CHILD_REPORT_DIR_ENV] = str(directory)
+    return directory
+
+
+def announce_child_start(directory: Optional[Path]) -> None:
+    """Mark in the parent's inbox that this child session started.
+
+    The report is written at session end; without this marker a child that
+    died before finishing would be indistinguishable from no child at all.
+    """
+    if directory is None:
+        return
+    try:
+        marker = Path(directory) / f"{CHILD_MARKER_PREFIX}{os.getpid()}.started"
+        marker.write_text(str(os.getpid()), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def _child_label(path: Path) -> str:
+    """``llm_egress_report.<label>.json`` → ``<label>`` (the child's pid)."""
+    name = path.name
+    if name.startswith(CHILD_REPORT_PREFIX) and name.endswith(".json"):
+        return name[len(CHILD_REPORT_PREFIX) : -len(".json")]
+    return path.stem
+
+
+def _tag_child_records(records: Any, label: str) -> List[Any]:
+    """Prefix each record's test with ``child:<label>::`` (#3194 attribution)."""
+    if not isinstance(records, list):
+        return []
+    tagged: List[Any] = []
+    for record in records:
+        if not isinstance(record, dict):
+            tagged.append(record)  # absorb_records drops non-dicts, as for any shape
+            continue
+        node = record.get("test") or SESSION_BUCKET
+        tagged.append({**record, "test": f"{CHILD_LABEL_PREFIX}{label}::{node}"})
+    return tagged
+
+
+def _discard(path: Path) -> None:
+    """Remove exactly one file this session read; never a wildcard."""
+    try:
+        path.unlink()
+    except OSError:
+        pass
+
+
+def fold_child_reports(
+    counter: LLMEgressCounter, directory: Optional[Path]
+) -> Dict[str, int]:
+    """Absorb every nested child's report found in ``directory`` (#3194).
+
+    Returns ``{"started": n, "read": n, "unreadable": n}``. The records keep
+    their class and transport as the child measured them — reclassifying them
+    with the parent's watched hosts would rewrite a measurement — and gain a
+    ``child:<pid>::`` prefix on ``test``, so a child's network LLM call lands
+    in ``per_test_llm_network`` under a name that says where it came from.
+
+    Each file read is deleted afterwards: a report is consumed exactly once,
+    by the session it was written for.
+    """
+    summary = {"started": 0, "read": 0, "unreadable": 0}
+    if directory is None:
+        return summary
+    directory = Path(directory)
+    try:
+        markers = list(directory.glob(f"{CHILD_MARKER_PREFIX}*.started"))
+        reports = sorted(directory.glob(f"{CHILD_REPORT_PREFIX}*.json"))
+    except OSError:
+        return summary
+    summary["started"] = len(markers)
+    for report in reports:
+        label = _child_label(report)
+        try:
+            payload = json.loads(report.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            # A child killed mid-write leaves a truncated file: it is not a
+            # measurement, and its marker stays to say that it started.
+            summary["unreadable"] += 1
+            continue
+        records = payload.get("requests") if isinstance(payload, dict) else None
+        counter.absorb_records(_tag_child_records(records, label))
+        summary["read"] += 1
+        _discard(report)
+        _discard(directory / f"{CHILD_MARKER_PREFIX}{label}.started")
+    try:
+        directory.rmdir()  # only succeeds when nothing is left in it
+    except OSError:
+        pass
+    return summary
+
+
+def report_paths(config: Any, parent_dir: Optional[Path] = None) -> List[Path]:
+    """Every path this session's egress report must reach (#1872, #3194).
+
+    A session with ``--junitxml`` is a measurement of its own: it writes the
+    canonical ``llm_egress_report.json`` next to its artifact, unchanged.
+    When a parent session handed it a directory it ALSO drops a per-pid copy
+    there, so an ancestor's aggregate is complete.
+
+    Without ``--junitxml`` the report goes to that handed directory, or — when
+    nobody is listening — to the session's own scratch basetemp. Never the
+    current directory: that is how 803 files ended up in a checkout root.
+    """
+    xmlpath = getattr(getattr(config, "option", None), "xmlpath", None)
+    per_process = f"{CHILD_REPORT_PREFIX}{os.getpid()}.json"
+    if xmlpath:
+        canonical = Path(xmlpath).parent / "llm_egress_report.json"
+        if parent_dir is None:
+            return [canonical]
+        return [canonical, Path(parent_dir) / per_process]
+    if parent_dir is not None:
+        return [Path(parent_dir) / per_process]
+    return [session_scratch_dir(config) / per_process]
+
+
+def write_report(
+    counter: LLMEgressCounter, config: Any, parent_dir: Optional[Path] = None
+) -> Optional[Path]:
+    """Write the egress report where #1872 and #3194 say it belongs.
+
+    Returns the first path written — the canonical report for a session with
+    ``--junitxml`` — or None when nothing could be written. ``counter`` only
+    needs a ``snapshot()`` method (see ``_SnapshotView``).
     """
     data = counter.snapshot()
     data["generated"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    xmlpath = getattr(getattr(config, "option", None), "xmlpath", None)
-    if xmlpath:
-        out = Path(xmlpath).parent / "llm_egress_report.json"
-    else:
-        out = Path(f"llm_egress_report.{os.getpid()}.json")
-    try:
-        out.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
-        return out
-    except OSError:
-        return None
+    written: Optional[Path] = None
+    for out in report_paths(config, parent_dir):
+        try:
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(
+                json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+            )
+        except OSError:
+            continue
+        if written is None:
+            written = out
+    return written
 
 
 class LLMEgressPlugin:
@@ -592,6 +784,36 @@ class LLMEgressPlugin:
         # #3120: under xdist the controller runs no test, so this plugin's
         # own counter sees nothing; workers ship their records here instead.
         self._worker_payloads: List[Dict[str, Any]] = []
+        # #3194: nested-session handshake — set at ``pytest_sessionstart``
+        # (never in __init__, so a unit test can drive this plugin without a
+        # pytest run). ``parent_dir`` is where THIS session's report goes when
+        # it is a child; ``inbox`` is where the children IT spawns report.
+        self.parent_dir: Optional[Path] = None
+        self.inbox: Optional[Path] = None
+        self._folded = {"started": 0, "read": 0, "unreadable": 0}
+
+    def pytest_sessionstart(self, session: Any) -> None:
+        # #3194: read the directory our parent handed us BEFORE publishing our
+        # own — a child writes where its launcher said, the launcher folds it.
+        # ``pytest_sessionstart`` runs after every ``pytest_configure``, so
+        # the tmpdir plugin's basetemp factory is in place by now.
+        config = session.config
+        # An xdist worker inherits the controller's environment at spawn, but
+        # it is NOT a nested child: its records already reach the controller
+        # through ``workeroutput`` (#3120). Reporting into the controller's
+        # inbox too would count every worker request twice.
+        if not hasattr(config, "workerinput"):
+            self.parent_dir = inherited_child_report_dir()
+        self.inbox = publish_child_report_dir(config)
+        if self.parent_dir is not None:
+            announce_child_start(self.parent_dir)
+
+    def _fold_children(self) -> Dict[str, int]:
+        """Absorb what the nested children wrote, then delete what was read."""
+        summary = fold_child_reports(self.counter, self.inbox)
+        for key, value in summary.items():
+            self._folded[key] = self._folded.get(key, 0) + value
+        return summary
 
     @pytest.hookimpl(optionalhook=True)
     def pytest_testnodedown(self, node: Any, error: Any) -> None:
@@ -614,6 +836,12 @@ class LLMEgressPlugin:
 
     def pytest_terminal_summary(self, terminalreporter: Any, exitstatus: Any) -> None:
         config = terminalreporter.config
+        # #3194: children report into our inbox; fold them BEFORE taking the
+        # snapshot, so the line and the report both count them. A worker has
+        # already folded at ``pytest_sessionfinish``; the totals below are
+        # cumulative, so the second pass reports what the first one read.
+        self._fold_children()
+        folded = dict(self._folded)
         snap = self.counter.snapshot()
         if _xdist_distributed(config):
             # #3120: the controller runs no test — its own counter is empty.
@@ -629,6 +857,23 @@ class LLMEgressPlugin:
                 )
                 return
             snap = merged_snapshot(self._worker_payloads, snap)
+        if folded["read"] or folded["started"]:
+            unreported = max(
+                folded["started"] - folded["read"] - folded["unreadable"], 0
+            )
+            line = (
+                f"Nested egress (#3194): {folded['read']} child report(s) "
+                f"folded into this tally ({folded['started']} child session(s) "
+                "started)"
+            )
+            if folded["unreadable"]:
+                line += f"; {folded['unreadable']} unreadable"
+            if unreported:
+                line += (
+                    f"; {unreported} started and NEVER reported — their egress "
+                    "is NOT in this tally"
+                )
+            terminalreporter.write_line(line)
         t = snap["totals_by_class"]
         by_transport = snap["llm_by_transport"]
         line = (
@@ -692,7 +937,13 @@ class LLMEgressPlugin:
                     unknown_hosts[r["host"]] = unknown_hosts.get(r["host"], 0) + 1
             for host, n in sorted(unknown_hosts.items(), key=lambda kv: -kv[1]):
                 terminalreporter.write_line(f"  {n:5d}  {host}")
-        report_path = write_report(_SnapshotView(snap), terminalreporter.config)
+        # #3194: how many child sessions were folded in (and how many never
+        # reported) rides in the report, so a reader of the artifact — not
+        # only of the terminal — can tell an empty tally from a blind one.
+        snap["nested_children"] = dict(folded)
+        report_path = write_report(
+            _SnapshotView(snap), terminalreporter.config, self.parent_dir
+        )
         if report_path:
             terminalreporter.write_line(f"Egress report: {report_path}")
 
@@ -702,6 +953,9 @@ class LLMEgressPlugin:
         # ``pytest_testnodedown`` reads on the other side. Guarded: the
         # instrument must never break the measured run.
         config = session.config
+        # #3194: fold BEFORE anything leaves this process — a worker's
+        # payload is the controller's only view of this process's children.
+        self._fold_children()
         if hasattr(config, "workerinput"):
             try:
                 config.workeroutput[XDIST_WORKER_KEY] = {
