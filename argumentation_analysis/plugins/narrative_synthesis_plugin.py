@@ -183,22 +183,45 @@ def build_narrative(state: Any) -> str:
             )
 
     # ── Formal logic ───────────────────────────────────────────────
+    # #3149 — the counting population is the DECIDED records. A verdict field
+    # that is not a bool (``satisfiable`` / ``consistent`` / ``valid``) is the
+    # #2970 « not evaluated » placeholder: it carries no verdict, so it is not
+    # a « resultat ». The undecided records are named apart, never folded into
+    # the count — the same per-axis verdict rule reading_record (#3190) holds.
     fol = getattr(state, "fol_analysis_results", [])
     pl = getattr(state, "propositional_analysis_results", [])
     modal = getattr(state, "modal_analysis_results", [])
-    formal_count = len(fol) + len(pl) + len(modal)
-    if formal_count:
-        formal_parts = []
-        if fol:
-            formal_parts.append(f"{len(fol)} en logique du premier ordre")
-        if pl:
-            formal_parts.append(f"{len(pl)} en logique propositionnelle")
-        if modal:
-            formal_parts.append(f"{len(modal)} en logique modale")
-        formal_str = ", ".join(formal_parts)
-        parts.append(
-            f"L'analyse formelle a produit {formal_count} resultat(s) ({formal_str})."
+    formal_legs = (
+        (fol, "consistent", "logique du premier ordre"),
+        (pl, "satisfiable", "logique propositionnelle"),
+        (modal, "valid", "logique modale"),
+    )
+    formal_parts = []
+    formal_count = 0
+    undecided = 0
+    for records, verdict_key, label in formal_legs:
+        decided = sum(
+            1
+            for r in records
+            if isinstance(r, dict) and isinstance(r.get(verdict_key), bool)
         )
+        undecided += len(records) - decided
+        formal_count += decided
+        if decided:
+            formal_parts.append(f"{decided} en {label}")
+    if formal_count or undecided:
+        formal_str = (
+            f"L'analyse formelle a produit {formal_count} resultat(s) "
+            f"({', '.join(formal_parts)})."
+            if formal_count
+            else "L'analyse formelle n'a produit aucun resultat."
+        )
+        if undecided:
+            formal_str += (
+                f" {undecided} analyse(s) formelle(s) non evaluee(s)"
+                " (aucun verdict enregistre, #2970)."
+            )
+        parts.append(formal_str)
 
     # ── Reading-window status (#1737) ───────────────────────────────
     # The reader side of the status contract: a status nobody reads is the
