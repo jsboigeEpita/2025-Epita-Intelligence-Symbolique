@@ -1528,6 +1528,30 @@ def _aba_finding(state: Any) -> Optional[StructuredArgFinding]:
     )
 
 
+def _setaf_coalitions_by_target(
+    set_attacks: List[Any],
+) -> Dict[str, List["frozenset[str]"]]:
+    """#3162 — every attack ONE frame records, indexed by its target.
+
+    Irreducibility is a property of a frame, not of a coalition in isolation:
+    the same members may attack an atom here without attacking it there. The
+    index is read per frame, exactly as ``_iter_formalism_specific`` yields it.
+    """
+    index: Dict[str, List["frozenset[str]"]] = {}
+    for atk in set_attacks:
+        if not isinstance(atk, dict):
+            continue
+        attackers = atk.get("attackers")
+        target = atk.get("target")
+        if not isinstance(attackers, list) or not isinstance(target, str):
+            continue
+        target_atom = target.strip()
+        coalition = frozenset(str(a).strip() for a in attackers if str(a).strip())
+        if target_atom and coalition:
+            index.setdefault(target_atom, []).append(coalition)
+    return index
+
+
 def _setaf_finding(state: Any) -> Optional[StructuredArgFinding]:
     """Project the COLLECTIVE attack — what SETAF alone says (#1667).
 
@@ -1549,6 +1573,13 @@ def _setaf_finding(state: Any) -> Optional[StructuredArgFinding]:
     for set_attacks in _iter_formalism_specific(state, "set_attacks"):
         if not isinstance(set_attacks, list):
             continue
+        # #3162 — the frame's own attacks, so irreducibility is READ. The
+        # docstring always stated the condition ("a target no member defeats
+        # alone"); the code never tested it, so a coalition that is a superset
+        # of an existing attack was still called irreducible and the prompt
+        # carried a formal claim the frame refutes. Same frame only: the same
+        # members attacking an atom elsewhere say nothing about this one.
+        frame_index = _setaf_coalitions_by_target(set_attacks)
         for atk in set_attacks:
             if not isinstance(atk, dict):
                 continue
@@ -1566,6 +1597,15 @@ def _setaf_finding(state: Any) -> Optional[StructuredArgFinding]:
             ]
             named = [n for n in named if n]
             if len(named) < 2 or not t:
+                continue
+            # #3162 — reducible when a PROPER subset of the coalition already
+            # attacks the same target in this frame (unary or smaller
+            # coalition). The empty set is never stored, so ``<`` is enough.
+            members = frozenset(str(a).strip() for a in attackers if str(a).strip())
+            proper_subset = any(
+                other < members for other in frame_index.get(str(target).strip(), [])
+            )
+            if proper_subset:
                 continue
             listed = ", ".join(f"« {n} »" for n in named)
             joint.append(
