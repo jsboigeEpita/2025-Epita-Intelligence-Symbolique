@@ -311,19 +311,33 @@ def _index_counters(state: Any) -> List[Tuple[str, str, "set[str]"]]:
 # that claim with no attribution is flagged.
 #
 # What counts as « asserts a fact » is read deterministically, never guessed:
-# a number, a claim delegated to an authority (études, données, experts…), or
-# a general statement of fact. A counter that only reframes the question
-# (« autrement dit, la question est de savoir… ») asserts nothing about the
-# world — it carries no tag and earns no flag (the issue's control).
+# a number, a claim delegated to an authority, a general statement of fact, or
+# a dated trend (a year, a direction over time). A counter that only reframes
+# the question (« autrement dit, la question est de savoir… ») asserts nothing
+# about the world — it carries no tag and earns no flag (the issue's control).
+#
+# BOTH languages: the counter generator writes French or English depending on
+# the run, and a French-only vocabulary left the very instance the issue was
+# filed for untagged — ca_31, an English dated trend, on the doc_B state.
 _FACT_ASSERTION_MARKERS = re.compile(
     r"\d+\s*%"
-    r"|\d+\s*(?:fois|millions?|milliards?|points?|pour ?cent)"
+    r"|\d+\s*(?:fois|millions?|milliards?|points?|pour ?cent|times|percent)"
     r"|\b(?:études?|recherches?|données|statistiques|sondages?|travaux"
     r"|experts?|scientifiques?|économistes?|historiens?|chercheurs?"
-    r"|mesures?|observations?)\b"
+    r"|mesures?|observations?"
+    r"|studies|study|research|data|statistics|surveys?|evidence|findings"
+    r"|scientists?|economists?|historians?|researchers?"
+    r"|measurements?)\b"
     r"|\bil est (?:établi|prouvé|avéré|reconnu|démontré|mesuré|documenté)\b"
     r"|\bon (?:sait|observe|constate|mesure|trouve)\b"
-    r"|\b(?:en réalité|de fait|empiriquement|dans les faits|historiquement)\b",
+    r"|\b(?:en réalité|de fait|empiriquement|dans les faits|historiquement)\b"
+    r"|\b(?:it is|it's) (?:established|proven|documented|well known)\b"
+    r"|\b(?:in fact|empirically|historically|research shows|data shows)\b"
+    r"|\b(?:19|20)\d{2}\b"
+    r"|\b(?:trends?|tendances?|declin\w*|increas\w*|decreas\w*"
+    r"|rising|falling|grew|growing|doubled|tripled"
+    r"|baisse|hausse|croissance|recul)\b"
+    r"|\bover the (?:past|last) \w+\b",
     re.IGNORECASE,
 )
 
@@ -445,13 +459,19 @@ _FALLACY_NAME_RE = re.compile(
 
 
 def _units_with_fallacy_record(state: Any) -> "set[str]":
-    """The units a detector actually recorded a fallacy on."""
+    """The units a detector actually recorded a fallacy on.
+
+    The key is ``target_argument_id``: ``SharedState.add_fallacy`` writes it
+    (``shared_state.py``), and the paid states carry it on 30/31, 28/29 and
+    29/30 records. ``target_arg_id`` is the COUNTER key — reading it here made
+    ``recorded`` always empty and flagged every name on a recorded unit.
+    """
     out: "set[str]" = set()
     records = getattr(state, "identified_fallacies", None)
     entries = records.values() if isinstance(records, dict) else records or []
     for data in entries:
-        if isinstance(data, dict) and data.get("target_arg_id"):
-            out.add(str(data["target_arg_id"]))
+        if isinstance(data, dict) and data.get("target_argument_id"):
+            out.add(str(data["target_argument_id"]))
     return out
 
 
@@ -505,13 +525,20 @@ def _unbacked_fallacy_name_flags(
 
 
 def _index_units(state: Any) -> Dict[str, "set[str]"]:
-    """Per-unit distinctive description tokens — what places a paragraph."""
+    """Per-unit distinctive description tokens — what places a paragraph.
+
+    The value IS the description: ``UnifiedAnalysisState.add_argument``
+    (``shared_state.py``) writes ``identified_arguments[arg_id] = description``
+    — the only writer — so every real state carries a ``str`` (measured on
+    all 12 paid states of R1101–R1109). Reading a ``["description"]`` key
+    made this index empty on every real run, and every check gated on
+    ``units_indexed`` inert (#3202).
+    """
     args = getattr(state, "identified_arguments", None)
     if not isinstance(args, dict):
         return {}
     entries: List[Tuple[str, "set[str]"]] = []
-    for arg_id, data in args.items():
-        description = data.get("description") if isinstance(data, dict) else None
+    for arg_id, description in args.items():
         if isinstance(description, str) and description.strip():
             entries.append((str(arg_id), _weave_tokens(description)))
     out: Dict[str, "set[str]"] = {}

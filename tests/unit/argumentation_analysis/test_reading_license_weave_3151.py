@@ -33,19 +33,14 @@ from argumentation_analysis.agents.core.synthesis.reading_license import (
 
 
 def _units():
+    # The REAL producer shape (#3202): `UnifiedAnalysisState.add_argument`
+    # writes `identified_arguments[arg_id] = description`, a str. The dict
+    # fixture this used to carry was a double richer than the object, and it
+    # certified a path no producer writes.
     return {
-        "arg_alpha": {
-            "id": "arg_alpha",
-            "description": "Le phare octogonal d'alpha domine la baie.",
-        },
-        "arg_bravo": {
-            "id": "arg_bravo",
-            "description": "Le fournil de bravo pétille dès l'aube.",
-        },
-        "arg_charlie": {
-            "id": "arg_charlie",
-            "description": "La conduite du convoi ferroviaire impressionne.",
-        },
+        "arg_alpha": "Le phare octogonal d'alpha domine la baie.",
+        "arg_bravo": "Le fournil de bravo pétille dès l'aube.",
+        "arg_charlie": "La conduite du convoi ferroviaire impressionne.",
     }
 
 

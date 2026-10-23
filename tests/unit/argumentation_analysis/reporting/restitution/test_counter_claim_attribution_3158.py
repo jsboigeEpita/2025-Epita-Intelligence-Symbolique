@@ -53,19 +53,40 @@ _REFRAMING = (
     "la cloche du port, ou seulement l'heure qu'elle annonce."
 )
 
+#: The doc_B instance the issue was filed for: an ENGLISH counter whose claim
+#: is a dated trend. The predicate returned False on it — the vocabulary was
+#: French-only and carried no year or trend marker.
+_ENGLISH_DATED_TREND = (
+    "The 2019 staffing deal shows that labour costs have been falling since "
+    "the harbour opened, well beyond the toll change."
+)
+
+#: The same trend with no year in the sentence: the direction over time is
+#: the fact, and a vocabulary that only read years would miss it.
+_ENGLISH_TREND_NO_YEAR = (
+    "Labour costs have been falling since the harbour opened, well beyond "
+    "the toll change."
+)
+
+#: The reframing control, in English — the generator writes both languages.
+_ENGLISH_REFRAMING = (
+    "In other words, the question is whether the speaker meant the harbour "
+    "bell, or only the hour it announces."
+)
+
 TAG = "affirmation factuelle NON SOURCÉE"
 
 
 def _state(counter_content: str = _CLAIM):
+    # Real producer shapes (measured on the paid states): `add_argument` writes
+    # the description STRING itself, and `add_fallacy` writes the target under
+    # `target_argument_id`. Counters are the ones keyed by `target_arg_id`.
     return SimpleNamespace(
         propositional_analysis_results=None,
         fol_analysis_results=None,
         modal_analysis_results=None,
         identified_arguments={
-            "arg_1": {
-                "id": "arg_1",
-                "description": "La cloche du port annonce la poussée des marées.",
-            }
+            "arg_1": "La cloche du port annonce la poussée des marées."
         },
         identified_fallacies={
             "fallacy_15": {
@@ -76,7 +97,7 @@ def _state(counter_content: str = _CLAIM):
                     "Rien n'exclut que d'autres facteurs expliquent la "
                     "coïncidence observée."
                 ),
-                "target_arg_id": "arg_1",
+                "target_argument_id": "arg_1",
             }
         },
         counter_arguments=[
@@ -116,6 +137,22 @@ class TestThePromptCarriesTheProvenance:
         """Control — a counter that asserts nothing about the world needs no
         provenance: there is no fact for the report to adopt."""
         assert TAG not in _counter_line(_prompt(_REFRAMING))
+
+    def test_an_english_dated_trend_is_tagged_too(self):
+        """Witness (born red, rework): ca_31 on the doc_B state is an English
+        dated trend — French-only vocabulary left the very instance the issue
+        was filed for untagged."""
+        assert TAG in _counter_line(_prompt(_ENGLISH_DATED_TREND))
+
+    def test_an_english_trend_without_a_year_is_tagged(self):
+        """The direction over time is the fact: a vocabulary that only read
+        years would tag the dated form and miss this one."""
+        assert TAG in _counter_line(_prompt(_ENGLISH_TREND_NO_YEAR))
+
+    def test_an_english_reframing_carries_no_tag(self):
+        """Control, other language — the generator writes English or French
+        depending on the run; a reframing asserts nothing in either."""
+        assert TAG not in _counter_line(_prompt(_ENGLISH_REFRAMING))
 
 
 class TestTheCheckFlagsTheChangeOfVoice:
@@ -193,9 +230,7 @@ _DILEMMA_WEAVE = "Le dilemme des résolutions se retourne : c'est un faux dilemm
 
 def _act3_state(*, with_record: bool):
     state = _state()
-    state.identified_arguments = {
-        "arg_69": {"id": "arg_69", "description": _DILEMMA_UNIT}
-    }
+    state.identified_arguments = {"arg_69": _DILEMMA_UNIT}
     state.identified_fallacies = (
         {
             "fallacy_1": {
@@ -203,7 +238,7 @@ def _act3_state(*, with_record: bool):
                 "type": "post hoc",
                 "family": "causalité",
                 "justification": "Aucune autre cause n'est écartée.",
-                "target_arg_id": "arg_69",
+                "target_argument_id": "arg_69",
             }
         }
         if with_record
