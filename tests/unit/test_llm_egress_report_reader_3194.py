@@ -154,6 +154,14 @@ def _run_pytest(
             [
                 sys.executable,
                 "-I",
+                # ``-I`` isolates the child, but it does not decide its stdout
+                # encoding: on a runner whose ANSI code page is not UTF-8, the
+                # child encodes in cp1252 while this parent decodes in UTF-8,
+                # and the reader thread dies on the first accented character
+                # (#3210 CI run 39962753215: byte 0xe9, position 36). ``-X``
+                # options survive ``-I``, so the child is pinned to UTF-8.
+                "-X",
+                "utf8",
                 "-m",
                 "pytest",
                 str(probe / target),
@@ -166,7 +174,12 @@ def _run_pytest(
             cwd=str(cwd),
             env=_child_env(env),
             capture_output=True,
-            text=True,
+            # Strict decoding turns one stray byte into a dead reader thread
+            # and a silent ``stdout is None`` — a green-looking witness that
+            # measured nothing (#3210). ``tests/nested_pytest.run_bounded``
+            # decodes the same way.
+            encoding="utf-8",
+            errors="replace",
             timeout=300,
         )
 
@@ -266,4 +279,74 @@ def test_the_witness_uses_the_handshake_env_var_name() -> None:
         "the witness overrides a directory for its own children; if the "
         "handshake is renamed, the fabricated network row would reach the "
         "enclosing session's tally"
+    )
+
+
+# #3210 — a child that emits a byte the parent cannot decode.
+#
+# CI run 39962753215 reddened both witnesses above with ``proc.stdout is
+# None``: the runner's ANSI code page is not UTF-8, the child encoded
+# ``[auto_env] WARNING: aucun .env chargé`` in cp1252, and the parent's
+# strict UTF-8 reader thread died on the ``é`` at position 36. The thread's
+# exception is swallowed, so ``stdout`` is simply ``None`` — a witness that
+# reports nothing instead of reporting a decoding problem.
+#
+# ``os.write`` to fd 1 with ``-s`` bypasses the child's text layer entirely,
+# so this probe emits a byte no child encoding choice can rescue: the defect
+# is only ever about the PARENT's decoder, and the witness measures it on
+# every seat, including seats whose code page already is UTF-8.
+LATIN1_SOURCE = r"""
+import os
+
+
+def test_emits_one_byte_that_is_not_valid_utf8():
+    os.write(1, b"trail-before:\xe9:trail-after:\n")
+"""
+
+
+def test_a_byte_the_parent_cannot_decode_does_not_blank_its_stdout(
+    tmp_path: Path,
+) -> None:
+    """#3210: strict decoding cost the caller the WHOLE child's output."""
+    cwd = tmp_path / "cwd"
+    cwd.mkdir()
+    proc = _run_pytest(cwd, {"probe_latin1.py": LATIN1_SOURCE}, "-s")
+    assert (
+        proc.returncode == 0
+    ), f"the child session exited {proc.returncode}\n--- stderr\n{proc.stderr[-2000:]}"
+    assert proc.stdout is not None, (
+        "the child's stdout did not reach the parent at all: one undecodable "
+        "byte killed the reader thread, which is exactly how #3210's CI red "
+        "looked (``proc.stdout is None``, no exception raised)"
+    )
+    assert "trail-before:" in proc.stdout and "trail-after:" in proc.stdout, (
+        "everything the child wrote around the stray byte must survive; reads "
+        f"{proc.stdout[:400]!r}"
+    )
+    # 0xe9 alone is not valid UTF-8, so a decoder that survives must say so
+    # rather than dropping the byte: a silent drop would hide a truncated
+    # trail just as well as a dead thread does.
+    assert "�" in proc.stdout, (
+        "the undecodable byte must be replaced, not silently dropped; reads "
+        f"{proc.stdout[:400]!r}"
+    )
+
+
+def test_the_child_is_pinned_to_utf8_despite_isolation() -> None:
+    """#3210: ``-I`` does not pick the child's stdout encoding, ``-X utf8`` does.
+
+    Blind on a seat whose code page is already UTF-8 (measured: ACP 65001 on
+    this lane), so it pins the ARGV rather than a decoding outcome — the CI
+    runner is where the outcome is visible.
+    """
+    import inspect
+
+    source = inspect.getsource(_run_pytest)
+    assert '"-X",\n                "utf8"' in source or '"-X", "utf8"' in source, (
+        "the child must be launched with -X utf8: -I isolates it but leaves "
+        "its stdout encoding to the seat's ANSI code page (#3210)"
+    )
+    assert "text=True" not in source, (
+        "text=True decodes strictly; one stray byte then blanks the whole "
+        "child's output instead of being reported (#3210)"
     )
