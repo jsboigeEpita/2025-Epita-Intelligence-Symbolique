@@ -43,9 +43,19 @@ def _state(window_status=None, fol_results=(), pl_results=()):
     return state
 
 
-def _result(formulas, sources):
-    """One solver entry: formulas aligned with the units they came from."""
+def _result(formulas, sources, verdict=False):
+    """One solver entry: formulas aligned with the units they came from, plus
+    the verdict every producer writes.
+
+    #3149 — the units line counts DECIDED records only, so a record without a
+    boolean verdict would read as a #2970 « not evaluated » one and its
+    formulas would drop out of the count. Every producer writes the field
+    (``None`` when it did not decide), and both axes write their own name; the
+    fixture feeds both, so it carries both.
+    """
     return {
+        "satisfiable": verdict,
+        "consistent": verdict,
         "formulas": list(formulas),
         "formula_sources": [list(s) for s in sources],
     }
