@@ -93,7 +93,12 @@ from .cited_units import (  # #2965 (Acte III slice) — same budget as Act II
     truncate_at_boundary,
 )
 from .fr_accord import accord
-from .global_projection import GlobalFinding, project_global_findings
+from .global_projection import (
+    GlobalFinding,
+    _MAX_CONVERGENCE_FINDINGS,
+    _MAX_GATE_FINDINGS,
+    project_global_findings,
+)
 from .llm_weaving import LlmCallable, WeaveOutcome, weave
 from .readability_gate import GateVerdict, ReadabilityGate
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
@@ -124,6 +129,11 @@ _META_CAP = 160
 # the old 240-char cut kept 31 % of the governance winner (#2965); only the
 # count of excerpts stays a local constant.
 _MAX_CLAIM_EXCERPTS = 5
+# #3193 (rework) — the anchor-excerpt count cap. It equals the projection's
+# own bound (``_MAX_CONVERGENCE_FINDINGS + _MAX_GATE_FINDINGS``, imported
+# above): in practice it never drops an anchor, but the renderer ENFORCES the
+# bound the #2908 census row states instead of trusting the projection's.
+_MAX_ANCHOR_EXCERPTS = _MAX_CONVERGENCE_FINDINGS + _MAX_GATE_FINDINGS
 # #1605 — the honest-absence ledger entering the prompt. The reason strings are
 # code-authored (no corpus content), but they are capped like everything else so
 # a future longer wording cannot silently eat the prompt budget.
@@ -547,6 +557,11 @@ class Act3Evidence:
     # could describe (arg_30 — neither convergent, and with no quality score).
     # The same lesson as #2965: the referent travels on the line that asks.
     anchor_excerpts: Dict[str, str] = field(default_factory=dict)
+    # #3193 (rework) — distinct unit cites left without an anchor because the
+    # count cap fired. Stated on the rendered block, never silent (a drop the
+    # reader cannot see is a silent drop, #1019). Zero in practice: the cap
+    # equals the projection's own bound.
+    anchors_dropped: int = 0
     # #2965 (Acte III slice) — the governance winner's own text, capped.
     # The writer does not join an id to its unit across a long prompt
     # (measured on the saved state: wrong unit 4 of 5 samples, R1071), so
@@ -2611,11 +2626,22 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
     # passages, bound them to the one nearby unit whose text it had (arg_30,
     # which carries no quality score and is not one of the converging units).
     # « Joinable » is not « joined »: the referent travels ON the line.
+    # #3193 (rework) — the COUNT of anchors is bounded here too, not only the
+    # per-text cap: ``global_findings`` is itself capped by the projection
+    # (``_MAX_CONVERGENCE_FINDINGS + _MAX_GATE_FINDINGS``), so this loop can
+    # never exceed that in practice — but the #2908 census row must state a
+    # bound the CODE enforces, not one the projection happens to guarantee
+    # today. The cap mirrors the claims block: a drop is counted and stated,
+    # never silent.
     anchor_excerpts: Dict[str, str] = {}
+    anchors_dropped = 0
     for finding in global_findings:
         for cite in finding.cites:
             cite_id = str(cite).strip()
             if not cite_id or cite_id in anchor_excerpts:
+                continue
+            if len(anchor_excerpts) >= _MAX_ANCHOR_EXCERPTS:
+                anchors_dropped += 1
                 continue
             text = args.get(cite_id)
             if isinstance(text, str) and text.strip():
@@ -2640,6 +2666,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         claim_excerpts=claim_excerpts,
         claim_excerpts_total=len(citable_args),
         anchor_excerpts=anchor_excerpts,
+        anchors_dropped=anchors_dropped,
         governance_winner_text=governance_winner_text,
         governance_divergent_texts=governance_divergent_texts,
         absent_dimensions=_collect_absent_dimensions(state),
@@ -3062,6 +3089,14 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
             f"  - [{f.kind}] {f.statement} (ancres : {_anchored(f)})"
             for f in evidence.global_findings
         )
+        # #3193 (rework) — a dropped anchor is a bare id again; the reader must
+        # be told the line lost referents, not guess it (zero in practice: the
+        # cap equals the projection's own bound).
+        if evidence.anchors_dropped:
+            global_block += (
+                f"\n  - ({evidence.anchors_dropped} ancre(s) omise(s) au plafond "
+                "— les cites concernés restent des identifiants nus)"
+            )
     else:
         global_block = (
             "  (aucune convergence inter-axes ni gate de synthèse ne se dégage "

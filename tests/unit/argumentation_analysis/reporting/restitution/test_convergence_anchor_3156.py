@@ -16,6 +16,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
+    _MAX_ANCHOR_EXCERPTS,
     build_act3_evidence,
     build_act3_prompt,
 )
@@ -130,3 +131,22 @@ class TestTheEvidenceCarriesTheAnchors:
         joined = "\n".join(_convergence_lines(build_act3_prompt(evidence)))
         for unit_id in _CONVERGENT:
             assert f"{unit_id} — «" not in joined
+
+
+class TestAnchorCountCap:
+    """#3193 rework — the anchor COUNT is bounded in code, not only by the
+    projection's own caps, and a drop is stated on the rendered block
+    (never silent — a drop the reader cannot see is #1019's silent drop)."""
+
+    def test_the_evidence_never_exceeds_the_anchor_cap(self):
+        evidence = build_act3_evidence(_state())
+        assert len(evidence.anchor_excerpts) <= _MAX_ANCHOR_EXCERPTS
+
+    def test_a_dropped_anchor_is_stated_on_the_block(self):
+        evidence = build_act3_evidence(_state())
+        evidence.anchors_dropped = 2
+        assert "2 ancre(s) omise(s)" in build_act3_prompt(evidence)
+
+    def test_no_drop_note_when_nothing_dropped(self):
+        prompt = build_act3_prompt(build_act3_evidence(_state()))
+        assert "ancre(s) omise(s)" not in prompt
