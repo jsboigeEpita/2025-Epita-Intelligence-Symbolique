@@ -99,6 +99,22 @@ _FORMAL_CONSISTENCY_MARKERS = re.compile(
 
 _NEGATION = re.compile(r"\b(ne|n['’]|pas|jamais|sans|aucun\w*)\b", re.IGNORECASE)
 
+#: #3150 — a containment word. « la contradiction reste confinée » is a claim
+#: about a contradiction's EXTENT, and it is only licensed for a contradiction
+#: the state actually reasoned over.
+_CONTAINMENT_MARKERS = re.compile(
+    r"(confin\w*|circonscri\w*|cantonné\w*|cantonn\w*|"
+    r"reste localis\w*|restent localis\w*)",
+    re.IGNORECASE,
+)
+
+#: The words that name WHERE a contradiction comes from and over what base it
+#: was computed. A sentence carrying one of these states its own binding, so it
+#: is not making the unlicensed leap this check looks for.
+_REVISION_BASE_MARKERS = re.compile(
+    r"(sophisme\w*|négation\w*|negation\w*|socle)", re.IGNORECASE
+)
+
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
 
 # --- #3157 — a membership claim must be true of the frame it cites ---------
@@ -438,6 +454,71 @@ def _formal_causes(state: Any) -> List[str]:
     return causes
 
 
+def _revision_base_units(state: Any) -> Optional["set[str]"]:
+    """The units the belief revision actually revised (#3150).
+
+    ``belief_revision_results[*]["original"]`` is the base the minimal
+    retraction was computed over — the extraction window's units, which on a
+    real run is a PREFIX of the population. ``None`` means no revision ran (or
+    none recorded its base), so there is nothing to bind a containment claim
+    to and the check stays silent rather than guessing.
+    """
+    entries = getattr(state, "belief_revision_results", None)
+    if not isinstance(entries, list) or not entries:
+        return None
+    base: "set[str]" = set()
+    recorded = False
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        original = entry.get("original")
+        if isinstance(original, list) and original:
+            recorded = True
+            base.update(str(unit) for unit in original if isinstance(unit, str))
+    return base if recorded else None
+
+
+def _formal_contradiction_units(state: Any) -> "set[str]":
+    """The source units a DECIDED formal contradiction names (#3150).
+
+    A ``satisfiable`` of ``False`` (PL) or a ``consistent`` of ``False`` (FOL)
+    is a decided contradiction; the units behind it come from the recorded
+    cause's pairs when it names any, else from the ``formula_sources`` aligned
+    with the recorded core's indices. An undecided record contributes nothing.
+    """
+    units: "set[str]" = set()
+    for attribute, verdict_key in (
+        ("propositional_analysis_results", "satisfiable"),
+        ("fol_analysis_results", "consistent"),
+    ):
+        for result in getattr(state, attribute, None) or []:
+            if not isinstance(result, dict) or result.get(verdict_key) is not False:
+                continue
+            cause = result.get("consistency_cause")
+            if isinstance(cause, dict):
+                for pair in cause.get("pairs") or []:
+                    if not isinstance(pair, dict):
+                        continue
+                    for side in pair.get("sources") or []:
+                        if isinstance(side, list):
+                            units.update(unit for unit in side if isinstance(unit, str))
+            core = cause.get("core") if isinstance(cause, dict) else None
+            formulas = result.get("formulas")
+            sources = result.get("formula_sources")
+            if (
+                isinstance(core, dict)
+                and isinstance(core.get("indices"), list)
+                and isinstance(formulas, list)
+                and isinstance(sources, list)
+            ):
+                for index in core["indices"]:
+                    if isinstance(index, int) and 0 <= index < len(sources):
+                        side = sources[index]
+                        if isinstance(side, list):
+                            units.update(unit for unit in side if isinstance(unit, str))
+    return units
+
+
 def _fol_decisions(state: Any) -> Dict[str, int]:
     """What the FOL leg actually decided (#3123, R1105b instance).
 
@@ -543,6 +624,11 @@ def check_reading_license(
     # #3157 — the cited frame's own node sets, so a membership claim is read
     # against the frame the sentence names.
     frames = _dung_frames_with_nodes(state)
+    # #3150 — what the revision actually revised, and what the formal
+    # contradiction actually names. Both are read once: the sentence loop only
+    # compares them.
+    base_units = _revision_base_units(state)
+    formal_units = _formal_contradiction_units(state)
     # The flags carry the sentence as produced — no slice: a cut could only
     # hide the qualifier the reader needs, and it never protected a verdict
     # (detection reads the whole sentence; #2850 asked what the cut was for,
@@ -596,6 +682,37 @@ def check_reading_license(
             )
             continue
 
+        # -- « la contradiction reste confinée », with no base in sight -----
+        # #3150: the revision base is a PREFIX of the population, and its
+        # conflicts are the fallacy negations. A containment sentence is only
+        # about that base; when the formal contradiction's own units lie
+        # entirely OUTSIDE it, the revision cannot have measured their extent —
+        # yet the render credits it with the containment. The sentence escapes
+        # the flag only by naming its base (socle / négations / sophismes),
+        # which is what makes the claim licensed rather than borrowed.
+        containment = _CONTAINMENT_MARKERS.search(sentence)
+        if (
+            containment is not None
+            and base_units is not None
+            and formal_units
+            and not (formal_units & base_units)
+            and _INCOHERENCE_MARKERS.search(sentence) is not None
+            and _REVISION_BASE_MARKERS.search(sentence) is None
+            and not _is_negated(sentence, containment.start())
+        ):
+            flags.append(
+                {
+                    "kind": "containment_outside_revision_base",
+                    "sentence": sentence,
+                    "measured": {
+                        "revision_base_units": len(base_units),
+                        "contradiction_units": sorted(formal_units),
+                        "overlap": sorted(formal_units & base_units),
+                    },
+                }
+            )
+            continue
+
         # -- a cause misread as the discourse's ------------------------------
         if (
             _DISCOURSE_SUBJECTS.search(sentence) is not None
@@ -636,6 +753,8 @@ def check_reading_license(
             "counters_with_target": len(counters_indexed),
             "units_indexed": len(units_indexed),
             "dung_frames_with_nodes": len(frames),
+            "revision_base_units": len(base_units) if base_units is not None else 0,
+            "contradiction_units": len(formal_units),
         },
         "threshold": dense_threshold,
     }
