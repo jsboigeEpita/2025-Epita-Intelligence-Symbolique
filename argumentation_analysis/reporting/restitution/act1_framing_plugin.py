@@ -163,6 +163,13 @@ class Act1Evidence:
     # inventory line): {phase: {"k": …, "N": …, "bands_covered": …,
     # "bands_total": …}}. Empty map → no sentence, never a fabricated one.
     analysis_coverage: Dict[str, Dict[str, int]] = field(default_factory=dict)
+    # #3159 (R1108) — how many stakes the RECORD holds. The coverage map's
+    # ``stakes.k`` counts the units the stakes extractor read (30 on doc_B);
+    # the record's stakes list held 6. The old sentence gave the 30 bare and
+    # the render said « L'extracteur dégage trente enjeux » — a figure the
+    # record contradicts by five. Zero = the record names none, and the
+    # sentence says nothing about a count.
+    stakes_count: int = 0
     # DERIVED virtuous flag (spec §5.1) — when the state characterises the text
     # as virtuous, the spectrum framing shifts from "what to watch for" to
     # "what could derail but doesn't" (anticipation that did not materialise).
@@ -445,6 +452,12 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
 
     virtuous_mode = detect_virtuous_mode(state)
 
+    # #3159 (R1108) — the stakes the RECORD holds, read off its own list (the
+    # described entries above drop records whose text is unusable, so counting
+    # that list would undercount the record).
+    _stakes_records = stakes_obj.get("stakes") if isinstance(stakes_obj, dict) else None
+    stakes_count = len(_stakes_records) if isinstance(_stakes_records, list) else 0
+
     return Act1Evidence(
         metadata=metadata_view,
         genre=genre,
@@ -462,6 +475,7 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
         arg_count_llm=arg_count_llm,
         arg_count_heuristic=arg_count_heuristic,
         analysis_coverage=dict(getattr(state, "analysis_coverage", {}) or {}),
+        stakes_count=stakes_count,
         virtuous_mode=virtuous_mode,
         deanonymized=bool(getattr(state, "deanonymized", True)),
     )
@@ -501,7 +515,9 @@ _FAIL_LOUD_INSTRUCTION = (
 )
 
 
-def coverage_range_sentence(coverage_map: Dict[str, Dict[str, int]]) -> str:
+def coverage_range_sentence(
+    coverage_map: Dict[str, Dict[str, int]], stakes_count: int = 0
+) -> str:
     """The coverage range, computed here so the writer only has to copy it (#3159).
 
     ``k`` is read over the phases that counted *examined* units; the anchor
@@ -509,6 +525,14 @@ def coverage_range_sentence(coverage_map: Dict[str, Dict[str, int]]) -> str:
     not an analysis phase — R1107 doc_B: phases at 6..15, stakes at 30, and the
     writer said « from 8 to 10 »). One single k across the phases yields one
     figure, never a degenerate range.
+
+    #3159 R1108 — the stakes clause carries BOTH figures with their units:
+    ``stakes.k`` is how many units the stakes extractor READ (30 on doc_B),
+    while the record's stakes list held 6. The old clause (« Les enjeux,
+    comptés à part : 30 ») gave a bare number; the writer read it as thirty
+    stakes and the render said « L'extracteur dégage trente enjeux », a figure
+    the record contradicts by five. ``stakes_count`` is the record's list
+    length — zero means the record names none and no count is said.
     """
     figures = {
         phase: fig
@@ -527,8 +551,85 @@ def coverage_range_sentence(coverage_map: Dict[str, Dict[str, int]]) -> str:
         sentence = f"Couverture : de {lo} à {hi} unités selon les modules."
     stakes = coverage_map.get("stakes")
     if isinstance(stakes, dict) and isinstance(stakes.get("k"), int):
-        sentence += f" Les enjeux, comptés à part : {stakes['k']}."
-    return sentence + " (chiffres pré-calculés — reprends-les tels quels.)"
+        sentence += (
+            " Les enjeux sont comptés à part : l'extracteur d'enjeux a lu "
+            f"{accord(stakes['k'], 'unité', 'unités')}"
+        )
+        if stakes_count > 0:
+            sentence += (
+                f", et le registre en nomme "
+                f"{accord(stakes_count, 'enjeu', 'enjeux')}"
+            )
+        sentence += "."
+    return sentence
+
+
+#: A woven range over unit counts — « de 6 à 10 unités », « entre 6 et 15
+#: unités », « 6 à 15 unités ». A range is the one coverage figure the writer
+#: can only DERIVE (the state holds per-phase k's, never a range), and it is
+#: the figure the R1108 render got wrong. French only — the acts speak French.
+_COVERAGE_RANGE_RE = re.compile(
+    r"\b\d+\s*(?:à|et|–|-)\s*\d+\s+unités?\b", re.IGNORECASE
+)
+
+#: Sentence AND line boundaries: a markdown heading carries no terminal
+#: punctuation, so a sentence-only split would glue « ### La couverture » onto
+#: the paragraph under it and the removal would take the heading with it.
+_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+|\n+")
+
+
+def restated_coverage_range_sentences(text: str) -> List[str]:
+    """The woven sentences that restate the coverage range (#3159, R1108).
+
+    The range is said by the pipeline's sentence only. #3175 wrote that
+    sentence into the prompt and told the writer to copy it verbatim; the very
+    next render said « de 6 à 10 unités » over a record at 6..15. An
+    instruction the writer can ignore is not a guarantee — so the caller
+    removes these sentences (same enforcement shape as #3134/#1605: the
+    pipeline's line replaces the woven one, the event is logged, never a
+    reader note).
+    """
+    caught: List[str] = []
+    for sentence in _SENTENCE_SPLIT_RE.split(text or ""):
+        sentence = sentence.strip()
+        if sentence and _COVERAGE_RANGE_RE.search(sentence):
+            caught.append(sentence)
+    return caught
+
+
+#: Reader-facing heading of the grafted coverage line, #3159. Same shape as
+#: ``reading_record.READER_BOUNDS_HEADING``: the provenance is part of the
+#: heading, so the reader knows the figures are the pipeline's, not the prose's.
+COVERAGE_HEADING = "Couverture de l'analyse (chiffres du pipeline, #3159)"
+
+
+def format_coverage_passage(sentence: str) -> str:
+    """The coverage passage the act grafts after its prose — record only.
+
+    Empty when the state carries no coverage map: no figure → no sentence,
+    never a fabricated range (the rule's absent case, as in #3134).
+    """
+    if not (sentence or "").strip():
+        return ""
+    return f"**{COVERAGE_HEADING}**\n{sentence.strip()}"
+
+
+def insert_coverage_passage(narrative: str, passage: str) -> str:
+    """Graft the passage after the prose, BEFORE the closing question (#3159).
+
+    Act I closes on its ``QUESTION INTERPRÉTATIVE`` line — the prompt asks for
+    it as the LAST line and Act III binds its response beat to it — so the
+    passage goes just above it. No marker: the passage closes the act.
+    """
+    if not passage:
+        return narrative
+    matches = list(_QUESTION_LINE_RE.finditer(narrative or ""))
+    if not matches:
+        return (narrative or "").rstrip() + "\n\n" + passage
+    start = matches[-1].start()
+    head = (narrative or "")[:start].rstrip()
+    tail = (narrative or "")[start:].strip()
+    return f"{head}\n\n{passage}\n\n{tail}"
 
 
 def build_act1_prompt(evidence: Act1Evidence) -> str:
@@ -700,9 +801,20 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
             # R1107 doc_B carried phases at 6..15 (stakes 30 apart) and the
             # render said « from 8 to 10 units ». A summary the writer can
             # recompute is a summary it can get wrong; the producer writes it.
-            range_sentence = coverage_range_sentence(coverage_map)
+            # #3159 R1108 — writing it was not enough: told to copy it verbatim,
+            # the next render said « de 6 à 10 unités ». The passage below is
+            # now GRAFTED after the prose by the producer, and the woven range
+            # is removed, so the writer is asked to restate none of it.
+            range_sentence = coverage_range_sentence(
+                coverage_map, evidence.stakes_count
+            )
             if range_sentence:
-                gt_note += " " + range_sentence
+                gt_note += (
+                    " "
+                    + range_sentence
+                    + f" (chiffres du pipeline — rendus sous « {COVERAGE_HEADING} » "
+                    "après ta prose : ne les reformule pas.)"
+                )
 
     opaque_block = f"{_OPAQUE_ID_DIRECTIVE}\n\n" if not evidence.deanonymized else ""
 
@@ -834,6 +946,26 @@ async def build_act1_framing(
             },
         )
     narrative = outcome.narrative
+
+    # #3159 (R1108) — the coverage range is the pipeline's sentence, not the
+    # writer's. #3175 had the producer write it and told the writer to copy it;
+    # the very next render (Sonnet) said « de 6 à 10 unités » over a record at
+    # 6..15. Enforcement is the #3134/#1605 shape: a woven range restatement is
+    # removed, the pipeline's sentence is grafted after the prose, the removal
+    # is logged — never a reader note.
+    coverage_sentence = coverage_range_sentence(
+        evidence.analysis_coverage, evidence.stakes_count
+    )
+    for _restated in restated_coverage_range_sentences(narrative):
+        narrative = narrative.replace(_restated, "").strip()
+        logger.info(
+            "act1 woven coverage-range restatement removed (the pipeline's "
+            "sentence carries the figures): %s",
+            _restated[:90],
+        )
+    narrative = insert_coverage_passage(
+        narrative, format_coverage_passage(coverage_sentence)
+    )
 
     gate = ReadabilityGate()
     verdict = gate.check_body(narrative)

@@ -80,7 +80,11 @@ class TestAct1CoverageRange:
             build_act1_evidence(_state(analysis_coverage=_doc_b_coverage()))
         )
         assert "de 6 à 15 unités" in prompt
-        assert "Les enjeux, comptés à part : 30" in prompt
+        # #3159 R1108 — the stakes figure carries its unit. The old shape
+        # (« Les enjeux, comptés à part : 30 ») left the unit out and the render
+        # read the 30 units the extractor read as thirty stakes.
+        assert "l'extracteur d'enjeux a lu 30 unités" in prompt
+        assert "comptés à part : 30" not in prompt
 
     def test_a_uniform_coverage_yields_a_single_figure(self):
         uniform = {p: {"k": 10, "N": 90} for p in ("debate", "quality", "pl")}
