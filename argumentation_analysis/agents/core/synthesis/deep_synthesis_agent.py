@@ -2029,6 +2029,12 @@ class DeepSynthesisAgent(BaseAgent):
             "speaker's commitments."
         )
         lines.append(
+            "- cause=unattributed_side: one side of the conflict carries no "
+            "source unit (#3199) — it belongs to no batch and no speaker, so "
+            "the conflict cannot be attributed at all. State the known side, "
+            "never a speaker attribution."
+        )
+        lines.append(
             "- cause=undetermined: no conflict site is established — state the "
             "verdict, never a cause."
         )

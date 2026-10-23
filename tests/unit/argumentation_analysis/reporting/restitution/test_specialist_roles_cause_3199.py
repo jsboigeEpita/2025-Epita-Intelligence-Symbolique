@@ -1,0 +1,169 @@
+"""#3199 — the decisive role reads the cause the refutation stated.
+
+The #1914/#2307 decisive block promoted any PL record with
+``satisfiable is False`` and tested content to ROLE_DECISIF with « La mise
+à l'épreuve formelle établit que ce contenu testé ne tient pas » — without
+reading ``consistency_cause``. Every other reader in reporting/ (act2
+findings, act3 weak points, appendix causes, reading license) qualifies a
+formal verdict by its stated cause; the role classifier was the one surface
+that charged the speaker unconditionally.
+
+The chosen repair (see the module comment in specialist_roles): the
+REFUTATION stays decisive — the solver established it, and #1019 forbids
+suppressing a real verdict — but the speaker-charging sentence is replaced
+by one that names the stated cause class when that cause does not pin the
+conflict inside one voice. ``self_contradiction`` is the only class that
+does; a record that stated no cause is the pre-#3122/#3107 artifact shape
+and keeps the unqualified statement (the acts' own rule: append a cause
+only when one was stated).
+
+Witnessed here:
+
+* an UNSAT whose stated cause is not speaker-attributable emits NO
+  « établit que ce contenu testé ne tient pas » statement, keeps its
+  decisive role, and names the cause class (anti-pendulum: the role is
+  never dropped);
+* ``self_contradiction`` keeps the speaker-charging decisive statement
+  (the control);
+* a record that stated no cause keeps the unqualified statement (scope:
+  qualify only what was stated);
+* the FOL twin block qualifies the same way.
+
+Opaque atoms, opaque ids — no corpus token. Zero LLM, zero JVM.
+"""
+
+from types import SimpleNamespace
+
+import pytest
+
+from argumentation_analysis.reporting.restitution.specialist_roles import (
+    ROLE_DECISIF,
+    classify_specialist_roles,
+)
+
+#: The sentence that charges the speaker's content unconditionally — the
+#: exact string the issue quotes. No assignment may carry it when the
+#: stated cause refuses the speaker pin.
+_SPEAKER_CHARGING = "établit que ce contenu testé ne tient pas"
+
+
+def _state(pl_records=(), fol_records=()):
+    return SimpleNamespace(
+        identified_arguments={"arg_1": "these A"},
+        identified_fallacies={},
+        argument_quality_scores={},
+        counter_arguments=[],
+        jtms_beliefs={},
+        dung_frameworks={},
+        propositional_analysis_results=list(pl_records),
+        fol_analysis_results=list(fol_records),
+        modal_analysis_results=[],
+        workflow_results={},
+    )
+
+
+def _pl_unsat(cause_kind):
+    record = {
+        "satisfiable": False,
+        "formulas": ["p", "! p"],
+        "message": "Inconsistent (UNSAT). Solver: cadical195",
+    }
+    if cause_kind is not None:
+        record["consistency_cause"] = {"cause": cause_kind}
+    return record
+
+
+def _fol_unsat(cause_kind):
+    record = {
+        "consistent": False,
+        "formulas": ["P(a)", "!P(a)"],
+        "message": "incoherent",
+    }
+    if cause_kind is not None:
+        record["consistency_cause"] = {"cause": cause_kind}
+    return record
+
+
+class TestNonSpeakerCauseQualifiesTheDecisiveStatement:
+    @pytest.mark.parametrize(
+        "cause_kind",
+        [
+            "unattributed_side",  # the #3199 class
+            "batch_attribution",
+            "undetermined",
+            "between_sources",
+            "between_voices",
+        ],
+    )
+    def test_witness_no_speaker_charging_sentence(self, cause_kind):
+        # Born-red on main: the block read no cause at all and emitted the
+        # speaker-charging sentence for every content-backed UNSAT.
+        assignments = classify_specialist_roles(_state([_pl_unsat(cause_kind)]))
+        assert not any(
+            _SPEAKER_CHARGING in a.statement for a in assignments
+        ), f"cause {cause_kind} does not pin the conflict inside one voice"
+
+    def test_the_role_stays_decisive_and_names_the_cause(self):
+        # Anti-pendulum: the UNSAT the solver established is still a result
+        # — the role survives, the sentence says what it is decisive about.
+        assignments = classify_specialist_roles(
+            _state([_pl_unsat("unattributed_side")])
+        )
+        decisif = [a for a in assignments if a.role == ROLE_DECISIF]
+        assert decisif, "an established refutation keeps a role"
+        assert "unattributed_side" in decisif[0].statement
+        assert "réfuté" in decisif[0].statement or "refuté" in decisif[0].statement
+        assert "locuteur" in decisif[0].statement
+
+    def test_two_stated_causes_are_both_named(self):
+        record_a = _pl_unsat("batch_attribution")
+        record_b = {
+            "satisfiable": False,
+            "formulas": ["q", "! q"],
+            "consistency_cause": {"cause": "undetermined"},
+        }
+        assignments = classify_specialist_roles(_state([record_a, record_b]))
+        decisif = [a for a in assignments if a.role == ROLE_DECISIF]
+        assert decisif
+        assert "batch_attribution" in decisif[0].statement
+        assert "undetermined" in decisif[0].statement
+
+
+class TestSelfContradictionKeepsTheDecisiveStatement:
+    def test_control_self_contradiction_keeps_the_sentence(self):
+        # The DoD control: the one cause that pins the conflict inside one
+        # voice licenses exactly the original decisive statement.
+        assignments = classify_specialist_roles(
+            _state([_pl_unsat("self_contradiction")])
+        )
+        decisif = [a for a in assignments if a.role == ROLE_DECISIF]
+        assert decisif
+        assert any(_SPEAKER_CHARGING in a.statement for a in decisif)
+
+    def test_control_absent_cause_keeps_the_unqualified_statement(self):
+        # Pre-#3122 artifact shape: nothing was stated, so nothing can be
+        # qualified — the same rule the acts follow (append a cause only
+        # when one was stated). Pinned so the repair does not pendulum into
+        # inventing a cause the run never recorded.
+        assignments = classify_specialist_roles(_state([_pl_unsat(None)]))
+        decisif = [a for a in assignments if a.role == ROLE_DECISIF]
+        assert decisif
+        assert any(_SPEAKER_CHARGING in a.statement for a in decisif)
+
+
+class TestFolTwinQualifiesTheSameWay:
+    def test_a_non_speaker_fol_cause_loses_the_speaker_charging_sentence(self):
+        assignments = classify_specialist_roles(
+            _state(fol_records=[_fol_unsat("batch_attribution")])
+        )
+        assert not any(_SPEAKER_CHARGING in a.statement for a in assignments)
+        decisif = [a for a in assignments if a.role == ROLE_DECISIF]
+        assert decisif, "the FOL refutation keeps its role"
+        assert "batch_attribution" in decisif[0].statement
+
+    def test_a_self_contradicting_fol_theory_keeps_the_sentence(self):
+        assignments = classify_specialist_roles(
+            _state(fol_records=[_fol_unsat("self_contradiction")])
+        )
+        decisif = [a for a in assignments if a.role == ROLE_DECISIF]
+        assert any(_SPEAKER_CHARGING in a.statement for a in decisif)

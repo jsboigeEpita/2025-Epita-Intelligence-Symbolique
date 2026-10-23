@@ -35,6 +35,12 @@ What is claimed, and what is not:
 * ``batch_attribution`` — conflicting formulas that share one translation
   batch (up to 3 texts in one prompt), so the source unit of each formula is
   not knowable: the attribution is named as coarse, never upgraded.
+* ``unattributed_side`` — a conflict where one side carries source units and
+  the OTHER carries none (#3199). The sourceless formula belongs to no batch
+  and no unit, so no attribution may cover the whole conflict — a fortiori
+  never ``batch_attribution``. The known side is recorded in ``pairs``, the
+  class says the boundary; a rung that names a speaker or a batch over a
+  sourceless side would be exactly the over-attribution this class refuses.
 * ``undetermined`` — an inconsistency whose conflict site could not be
   established (no ground pair for FOL; no known source unit for PL). It says
   so; it does not name a cause it cannot see (and the acts must not, either).
@@ -192,14 +198,25 @@ def classify_inconsistency(
         neg_speakers = _speakers_of(neg_sources, speaker_by_unit)
         all_speakers = pos_speakers | neg_speakers
 
-        if len(all_speakers) >= 2 and (pos_speakers != neg_speakers):
+        if not (pos_sources and neg_sources):
+            # #3199 — at least one side of the pair carries no source unit:
+            # it belongs to no batch and no unit, so no attribution rung
+            # (voices, one unit, batch) may cover the conflict. The empty
+            # set used to fall through to ``batch_attribution``, claiming a
+            # shared batch a sourceless formula cannot share — and a batch
+            # of several speakers even read as ``between_voices``. The known
+            # flank stays in ``sources``; both sides empty keeps the
+            # historical coarse reading.
+            if pos_sources or neg_sources:
+                cause = "unattributed_side"
+            else:
+                cause = "batch_attribution"
+        elif len(all_speakers) >= 2 and (pos_speakers != neg_speakers):
             cause = "between_voices"
         elif len(all_speakers) == 1 and len(pos_sources) == 1 and len(neg_sources) == 1:
             cause = "self_contradiction"
-        elif pos_sources and neg_sources and not (pos_sources & neg_sources):
+        elif not (pos_sources & neg_sources):
             cause = "between_sources"
-        elif pos_sources and neg_sources:
-            cause = "batch_attribution"
         else:
             cause = "batch_attribution"
         causes_seen.append(cause)
@@ -216,6 +233,7 @@ def classify_inconsistency(
         "between_voices",
         "self_contradiction",
         "between_sources",
+        "unattributed_side",
         "batch_attribution",
     ):
         if candidate in causes_seen:
@@ -282,11 +300,14 @@ def classify_pl_inconsistency(
     ``mus`` is ``False`` — coarse, never invented.
 
     The decision ladder generalises the FOL pair ladder to N sides (one per
-    core formula): two different known speaker-sets beat everything
-    (``between_voices``); exactly one known speaker, or every core formula
-    inside one unit, is ``self_contradiction``; source-unit groups that no
-    formula straddles are ``between_sources``; entangled groups stay
-    ``batch_attribution``; no known unit at all is ``undetermined``.
+    core formula): a side with no source unit voids every attribution rung
+    (#3199 ``unattributed_side`` — the sourceless formula belongs to no
+    batch, speaker or unit); otherwise two different known speaker-sets beat
+    everything (``between_voices``); exactly one known speaker, or every
+    core formula inside one unit, is ``self_contradiction``; source-unit
+    groups that no formula straddles are ``between_sources``; entangled
+    groups stay ``batch_attribution``; no known unit at all is
+    ``undetermined``.
     """
     formula_sources = list(formula_sources or [])
     speaker_by_unit = dict(speaker_by_unit or {})
@@ -323,6 +344,17 @@ def classify_pl_inconsistency(
     pseudo_speakers: List[List[str]] = [[], []]
     if not known_sides:
         cause = "undetermined"
+    elif len(sides) != len(known_sides):
+        # #3199 — a core side carries no source unit: the sourceless formula
+        # belongs to no batch, speaker or unit, so no attribution rung may
+        # cover the conflict. ``known_sides`` filtering used to drop the
+        # empty side from the ladder entirely, leaving one known component
+        # that read as ``batch_attribution`` (or absorbed the conflict into
+        # one speaker's ``self_contradiction``) — an over-attribution. The
+        # known flank is recorded on the first side of ``pairs``.
+        cause = "unattributed_side"
+        pseudo_sources = [sorted(all_units), []]
+        pseudo_speakers = [sorted(all_speakers), []] if all_speakers else [[], []]
     elif len(distinct_speaker_sets) >= 2:
         # Two sides attribute to different speaker sets: they disagree —
         # the FOL ``pos_speakers != neg_speakers`` condition, generalised.
@@ -437,6 +469,18 @@ def cause_phrase(cause: Dict[str, Any]) -> str:
         phrase = (
             "contradiction interne à un lot de traduction — l'unité source de "
             "chaque formule n'est pas séparable"
+        )
+    elif kind == "unattributed_side":
+        # Known flank named speaker-first, unit as fallback — the same
+        # convention as ``self_contradiction``'s ``who``.
+        who = [s for side in speakers for s in side] or [
+            u for side in sources for u in side
+        ]
+        known = f" (côté connu : {', '.join(sorted(set(who)))})" if who else ""
+        phrase = (
+            "contradiction dont un côté est sans unité source"
+            f"{known} — ce côté du conflit n'appartient à aucun lot ni "
+            "locuteur documenté par ce run"
         )
     else:
         phrase = (

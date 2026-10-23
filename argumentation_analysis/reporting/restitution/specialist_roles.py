@@ -19,7 +19,10 @@ Role semantics (what the report may claim):
 * **decisif** — the result materially changes the judgment: a formal
   violation was established (PL/FOL/modal settled false) or the Dung graph
   built from the extracted arguments excludes an argument from its accepted
-  extension.
+  extension. #3199: a refuted PL/FOL theory whose stated ``consistency_cause``
+  does not sit inside one voice keeps the decisive role — the solver
+  established it — but its statement names the cause instead of charging the
+  speaker's content.
 * **corroborant** — independent methods agree: a localized fallacy AND a
   weak measured quality on the same argument (the same agreement the
   synthesis convergence machinery counts; stated here at the evidence
@@ -149,6 +152,37 @@ def _fallacy_targets(fallacies: Any) -> Dict[str, List[str]]:
     return by_arg
 
 
+def _refuted_non_speaker_causes(
+    records: Any,
+    verdict_reader: Callable[[Dict[str, Any]], Optional[bool]],
+) -> List[str]:
+    """#3199 — the cause classes stated by the REFUTED records that do not
+    pin the conflict inside one voice, in first-seen order.
+
+    ``self_contradiction`` is the one class of the fol_cause vocabulary that
+    attributes a conflict to a single known voice; every other stated class
+    (``between_voices`` — two voices disagree, neither one's own reasoning
+    is invalidated; ``between_sources``; ``batch_attribution``;
+    ``unattributed_side``; ``undetermined``) refuses that pin. A refuted
+    record that stated no cause is the pre-#3107/#3122 artifact shape: this
+    reader cannot qualify what was never stated, and the caller renders the
+    unqualified statement — the acts' own rule (they append a cause phrase
+    only when one was stated).
+    """
+    classes: List[str] = []
+    if isinstance(records, list):
+        for r in records:
+            if not isinstance(r, dict) or verdict_reader(r) is not False:
+                continue
+            cause = r.get("consistency_cause")
+            if not (isinstance(cause, dict) and cause.get("cause")):
+                continue
+            kind = str(cause["cause"])
+            if kind != "self_contradiction" and kind not in classes:
+                classes.append(kind)
+    return classes
+
+
 def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
     """Derive the bounded role classification from lower-level state.
 
@@ -180,13 +214,39 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
     # apologized for its missing content — an outage flattered the #1644
     # surplus gate.
     def _decisif_statement(
-        axis: str, noun_sg: str, noun_pl: str, n_false: int, tested: str
+        axis: str,
+        noun_sg: str,
+        noun_pl: str,
+        n_false: int,
+        tested: str,
+        non_speaker_causes: Optional[List[str]] = None,
     ) -> str:
-        return (
+        # #3199 — the refutation keeps the decisive role (the solver
+        # established it; #1019 forbids suppressing the verdict), but when
+        # its stated cause does not pin the conflict inside one voice, the
+        # speaker-charging sentence (« établit que ce contenu testé ne tient
+        # pas ») is replaced by one that names the cause class: the reader
+        # of the acts must not charge the speaker for a conflict the cause
+        # locates elsewhere. The readable cause phrase rides in the acts'
+        # findings lines (appended by the #3107/#3122 readers); this bounded
+        # statement names the class, never a second phrasing of it.
+        statement = (
             f"L'axe {axis} a réfuté {accord(n_false, noun_sg, noun_pl)} — à "
-            f"l'épreuve : {tested}. La mise à l'épreuve formelle établit que "
-            f"ce contenu testé ne tient pas."
+            f"l'épreuve : {tested}."
         )
+        if non_speaker_causes:
+            causes = " ; ".join(non_speaker_causes)
+            statement += (
+                f" La mise à l'épreuve formelle a établi cette réfutation, "
+                f"mais sa cause ({causes}) ne permet pas de l'imputer au "
+                f"locuteur."
+            )
+        else:
+            statement += (
+                " La mise à l'épreuve formelle établit que ce contenu testé "
+                "ne tient pas."
+            )
+        return statement
 
     def _refuted_tested_content(
         records: Any, verdict_reader: Callable[[Dict[str, Any]], Optional[bool]]
@@ -209,6 +269,7 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
                 "inférences",
                 pl_counts["false"],
                 pl_tested,
+                _refuted_non_speaker_causes(pl_records, _pl_verdict),
             ),
             ("PL", "solveur Tweety"),
         )
@@ -228,6 +289,7 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
                 "théories",
                 fol_counts["false"],
                 fol_tested,
+                _refuted_non_speaker_causes(fol_records, _fol_verdict),
             ),
             ("FOL", "solveur Tweety"),
         )
