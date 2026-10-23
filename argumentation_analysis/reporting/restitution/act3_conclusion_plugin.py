@@ -124,6 +124,16 @@ _COUNTER_LIST_CAP = 8
 # SV (#1182): caps for governance/debate evidence (privacy + prompt budget).
 _DEBATE_CAP = 200
 _DEBATE_MAX_EXCHANGES = 4
+#: #3158 (second instance) — a debate reply is an objection an agent produced;
+#: nothing verified it, and its VERDICT is the reply's, never the report's.
+#: The tag rides on the line that delivers the reply, where the rule it serves
+#: applies: Act III restated a reply's « c'est un faux dilemme » as its own
+#: finding, on a unit no detector had recorded anything for.
+_DEBATE_PROVENANCE_TAG = (
+    "[réplique produite par un agent de débat, jamais vérifiée : si tu en "
+    "reprends le verdict, attribue-le au débat (« dans le débat, la réplique "
+    "objecte que… »), et ne le présente jamais comme une détection]"
+)
 # #2845 — the source metadata entering the prompt. Same cap as Acte I's
 # `_META_CAP`: both acts quote the same recorded fields, so they must truncate
 # them alike (a divergence here would be a silent second contract).
@@ -3066,7 +3076,8 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
                 scheme_anchor += "]"
             deliberation_lines.append(
                 f"  - DÉBAT (échange {i}) : position « {ex.point} » / "
-                f"réplique « {ex.rebuttal} »{scheme_anchor}."
+                f"réplique « {ex.rebuttal} »{scheme_anchor}. "
+                f"{_DEBATE_PROVENANCE_TAG}"
             )
     deliberation_block = (
         "\n".join(deliberation_lines)
@@ -3325,6 +3336,16 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         "  sous-section isolée.\n"
         "- Respecte STRICTEMENT le plafond de claim de la bande : ne formule rien\n"
         "  au-delà de ce qu'elle autorise.\n"
+        # #3158 (second instance) — le canal débat rendait un VERDICT de
+        # réplique comme une détection du rapport, sur une unité où aucun
+        # détecteur n'avait rien enregistré.
+        "- Une réplique de débat (ligne DÉBAT, marquée « jamais vérifiée ») reste\n"
+        "  attribuée : si tu en reprends le verdict, écris « dans le débat, la\n"
+        "  réplique objecte que… ». Tu ne le présentes JAMAIS comme une détection.\n"
+        "- Un NOM DE SOPHISME dans ta prose est une détection : tu ne le nommes que\n"
+        "  sur une unité où un sophisme est réellement enregistré (bloc des\n"
+        "  procédés relevés). Si aucune détection ne couvre l'unité, tu ne lui en\n"
+        "  prêtes aucun — même quand une réplique de débat l'affirme.\n"
         "- JARGON INTERNE INTERDIT dans la prose : ne recopie JAMAIS un\n"
         "  identifiant technique brut — token snake_case (agent_1, social_choice,\n"
         "  modal_kb…), nom d'agent numéroté, ou nom de méthode/modèle interne.\n"
