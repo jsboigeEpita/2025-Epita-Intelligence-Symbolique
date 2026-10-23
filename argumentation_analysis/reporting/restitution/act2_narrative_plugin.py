@@ -129,6 +129,16 @@ def _first_stated_cause_kind(
     come from the recorded core, and the clause that names them must speak
     of the same conflict. Empty string when the run stated no cause — the
     clause then asserts nothing about the batch.
+
+    KNOWN BOUND (#3199 review, named rather than silently carried): the units
+    come from EVERY refuted record while this reads ONE class, so two refuted
+    records of different classes would qualify the union with the first
+    record's class. Not repaired here because the alternative — qualify only
+    when all stated classes agree — would drop the qualifier exactly when the
+    conflict is most mixed, and the unqualified clause charges the speaker
+    again (the defect this issue repairs). Name the class, keep the honesty:
+    the acts' own cause phrase (the #3107/#3122 readers) still names each
+    record's class one by one.
     """
     if isinstance(records, list):
         for r in records:

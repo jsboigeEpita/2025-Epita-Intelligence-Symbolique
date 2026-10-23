@@ -32,10 +32,14 @@ Witnessed here:
 Opaque atoms, opaque ids — no corpus token. Zero LLM, zero JVM.
 """
 
+import re
 from types import SimpleNamespace
 
 import pytest
 
+from argumentation_analysis.reporting.restitution.formal_derivation import (
+    _readable_atom,
+)
 from argumentation_analysis.reporting.restitution.specialist_roles import (
     ROLE_DECISIF,
     _STATEMENT_CAP,
@@ -202,23 +206,110 @@ class TestTheBoundedStatementKeepsTheQualifier:
         decisif = [a for a in assignments if a.role == ROLE_DECISIF]
         assert decisif
         statement = decisif[0].statement
-        assert "ne permet pas de l'imputer au locuteur" in statement
+        assert "non imputable au locuteur" in statement
         assert "un côté est sans unité source" in statement
         assert len(statement) <= _STATEMENT_CAP
 
-    def test_the_quote_is_elided_never_a_half_sentence(self):
+    def test_the_quote_is_never_sliced(self):
         assignments = classify_specialist_roles(_state([self._long_tested_record()]))
         statement = [a for a in assignments if a.role == ROLE_DECISIF][0].statement
-        # The quote gives way with an explicit elision, and the sentence that
-        # follows it is complete.
-        assert "…" in statement
-        assert statement.index("…") < statement.index("La mise à l'épreuve")
+        # #3199 review: the first rework sliced the rendered string, which cut
+        # inside the quote and left it open. Whole quotes or nothing now.
+        # A ``…`` the PRODUCER put inside a balanced quote (its own bounded
+        # atom rendering) is legitimate; an elision that stands where a quote
+        # should close is not — so the check is structural, not lexical.
+        assert statement.count("«") == statement.count("»"), statement
+        for marker in re.finditer("…", statement):
+            tail = statement[marker.end() : marker.end() + 2]
+            assert tail.startswith(" »"), (
+                "an elision marker stands outside a closed quote — the "
+                f"statement was sliced, not the atom: {statement}"
+            )
 
     def test_control_a_short_quote_is_kept_whole(self):
-        # Control: within the budget, nothing is elided — the only change to
-        # the pre-rework sentence is the readable cause label.
+        # Control: within the budget, nothing is dropped — both atoms render.
         assignments = classify_specialist_roles(_state([_pl_unsat("between_voices")]))
         statement = [a for a in assignments if a.role == ROLE_DECISIF][0].statement
-        assert "…" not in statement
-        assert "p" in statement and "! p" in statement
-        assert "ne permet pas de l'imputer au locuteur" in statement
+        assert "« p »" in statement and "« ! p »" in statement
+        assert "non imputable au locuteur" in statement
+
+
+class TestTheRealShapeNeverSlicesAQuote:
+    """#3199 review — the coordinator's real-state shape.
+
+    On the doc_A record the budget left for the tested content was 32
+    characters: ``tested[: budget - 1]`` cut mid-word after 27 characters and
+    the sentence ended in « …. », while the second quote — the negated side of
+    the conflict — vanished without a trace. The real shape is TWO atoms of
+    about 52 characters with cause ``unattributed_side``.
+    """
+
+    # A unit literal, not a sentence: the conflict localiser only pins a
+    # verdict on a literal and its negation, which is the shape the run
+    # records. These are ~52 characters each — the doc_A width.
+    ATOM_A = "proposition_sans_unite_source_du_lot_de_traduction_aa"
+
+    def _record(self):
+        return {
+            "satisfiable": False,
+            "formulas": [self.ATOM_A, f"! {self.ATOM_A}"],
+            "consistency_cause": {"cause": "unattributed_side"},
+        }
+
+    @property
+    def _atoms(self):
+        # The producer's own readable rendering (it turns underscores into
+        # spaces for the reader): comparing against it keeps this witness
+        # from re-implementing that transform.
+        return {
+            _readable_atom(self.ATOM_A),
+            _readable_atom(f"! {self.ATOM_A}"),
+        }
+
+    def test_the_two_quotes_are_the_real_width(self):
+        # Guard on the fixture itself: a short atom would fit and prove
+        # nothing about the cap.
+        assert 45 <= len(self.ATOM_A) <= 56, len(self.ATOM_A)
+
+    def _statement(self) -> str:
+        assignments = classify_specialist_roles(_state([self._record()]))
+        return [a for a in assignments if a.role == ROLE_DECISIF][0].statement
+
+    def test_the_qualifier_is_present(self):
+        statement = self._statement()
+        assert "non imputable au locuteur" in statement
+        assert "un côté est sans unité source" in statement
+
+    def test_the_quotes_stay_balanced(self):
+        statement = self._statement()
+        assert statement.count("«") == statement.count("»"), statement
+
+    def test_no_quote_stands_open_before_the_period(self):
+        # The measured defect shape: the sentence ended in « …. » — a quote
+        # never closed, then the sentence's period. Nothing structural may
+        # stand between an opening « and its closing » here.
+        statement = self._statement()
+        assert "…." not in statement, statement
+        assert not re.search(r"«[^»]*\.", statement), statement
+
+    def test_every_rendered_quote_is_a_whole_input_atom(self):
+        statement = self._statement()
+        rendered = re.findall(r"«\s*([^«»]*?)\s*»", statement)
+        assert rendered, f"no quote reached the render: {statement}"
+        for quote in rendered:
+            assert quote in self._atoms, (
+                "a rendered quote is not one of the tested atoms — it is a "
+                f"slice of one: {quote!r} in {statement}"
+            )
+
+    def test_the_dropped_quotes_are_counted_not_silently_lost(self):
+        # Honest absence: whatever does not fit is COUNTED, so a reader sees
+        # that the render is partial instead of reading one quote as the whole.
+        statement = self._statement()
+        kept = len(re.findall(r"«", statement))
+        if kept < 2:
+            assert "(+" in statement, (
+                "a dropped quote must be counted with the shared (+N …) "
+                f"marker; reads {statement}"
+            )
+        assert len(statement) <= _STATEMENT_CAP

@@ -44,6 +44,7 @@ role at all; its honest absence stays in the existing channels
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
@@ -185,6 +186,49 @@ def _refuted_non_speaker_causes(
     return classes
 
 
+_QUOTE_RE = re.compile(r"«\s*([^«»]*?)\s*»")
+_EXTRA_QUOTES_RE = re.compile(r"\(\+(\d+)\s+[^)]*\)\s*$")
+
+
+def _render_quotes(atoms: List[str], extra: int) -> str:
+    """The rendering ``formal_derivation`` produces, rebuilt here so the
+    budget is spent on whole atoms rather than on a character count."""
+    rendered = ", ".join(f"« {a} »" for a in atoms)
+    if extra > 0:
+        rendered += f" (+{accord(extra, 'autre formule', 'autres formules')})"
+    return rendered
+
+
+def _fit_quotes(rendered: str, budget: int) -> str:
+    """The whole quotes of ``rendered`` that fit ``budget``, or nothing.
+
+    #3199 review — the first version sliced the rendered string, and on the
+    real record that slice landed INSIDE a word after 27 characters and left
+    the quote open (« … », then « …. »). #1914's rule for this cap already
+    says why: a half-anchor invites the conductor to echo broken prose.
+    ``cited_units.truncate_at_boundary`` cuts at a word boundary; here the
+    unit of the boundary is the **quote**, because an atom is the anchor.
+
+    Quotes that do not fit are dropped, and their number joins the honest
+    ``(+N autres formules)`` count — the reader is told what is missing
+    rather than shown a fragment that pretends to be the whole.
+    """
+    quotes = _QUOTE_RE.findall(rendered)
+    if not quotes:
+        return ""
+    extra_match = _EXTRA_QUOTES_RE.search(rendered)
+    extra = int(extra_match.group(1)) if extra_match else 0
+    kept: List[str] = []
+    for quote in quotes:
+        trial = kept + [quote]
+        if len(_render_quotes(trial, extra + (len(quotes) - len(trial)))) > budget:
+            break
+        kept.append(quote)
+    if not kept:
+        return ""
+    return _render_quotes(kept, extra + (len(quotes) - len(kept)))
+
+
 def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
     """Derive the bounded role classification from lower-level state.
 
@@ -235,12 +279,12 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
         # the raw enum token — a reader cannot charge anyone from
         # « (unattributed_side) ».
         if non_speaker_causes:
+            # #3199 review — the first wording ran to 161 characters and ate
+            # the budget the quotes need (240 − 46 lead − 161 − 1 = 32), so
+            # the render kept a 27-character slice of one atom. The sentence
+            # says the same thing in a third of the room.
             causes = " ; ".join(cause_short_label(kind) for kind in non_speaker_causes)
-            qualifier = (
-                f" La mise à l'épreuve formelle a établi cette réfutation, "
-                f"mais sa cause ({causes}) ne permet pas de l'imputer au "
-                f"locuteur."
-            )
+            qualifier = f" Cause : {causes} — non imputable au locuteur."
         else:
             qualifier = (
                 " La mise à l'épreuve formelle établit que ce contenu testé "
@@ -260,12 +304,9 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
         )
         budget = _STATEMENT_CAP - len(lead) - 1 - len(qualifier)
         if len(tested) > budget:
-            # Elided quote, never a half-word; below ~12 chars the quote says
-            # nothing, so the sentence drops it rather than render « … ».
-            if budget >= 12:
-                tested = tested[: budget - 1].rstrip() + "…"
-            else:
-                tested = ""
+            # Whole quotes or nothing — never a slice inside one (#3199
+            # review: the raw slice cut mid-word and left the quote open).
+            tested = _fit_quotes(tested, budget)
         if tested:
             return f"{lead}{tested}.{qualifier}"
         return (
