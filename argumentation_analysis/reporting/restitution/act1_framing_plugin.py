@@ -452,11 +452,9 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
 
     virtuous_mode = detect_virtuous_mode(state)
 
-    # #3159 (R1108) — the stakes the RECORD holds, read off its own list (the
-    # described entries above drop records whose text is unusable, so counting
-    # that list would undercount the record).
-    _stakes_records = stakes_obj.get("stakes") if isinstance(stakes_obj, dict) else None
-    stakes_count = len(_stakes_records) if isinstance(_stakes_records, list) else 0
+    # #3159 (R1108) — the stakes the RECORD holds, read off its own list. One
+    # reader, two callers (#3200 re-renders the passage at assembly).
+    stakes_count = record_stakes_count(state)
 
     return Act1Evidence(
         metadata=metadata_view,
@@ -630,6 +628,65 @@ def insert_coverage_passage(narrative: str, passage: str) -> str:
     head = (narrative or "")[:start].rstrip()
     tail = (narrative or "")[start:].strip()
     return f"{head}\n\n{passage}\n\n{tail}"
+
+
+def _state_field(state: Any, key: str) -> Any:
+    """Read one field off a state object or a plain dict (both shapes reach us)."""
+    if isinstance(state, dict):
+        return state.get(key)
+    return getattr(state, key, None)
+
+
+def record_stakes_count(state: Any) -> int:
+    """How many stakes the record holds (#3159), read off its own list.
+
+    Single reader for the two callers that need the figure: Act I's evidence
+    (the prompt's stakes clause) and the assembly-time re-render (#3200). The
+    described entries drop records whose text is unusable, so counting the
+    description list would undercount the record.
+    """
+    stakes_obj = _state_field(state, "stakes_and_stakeholders")
+    records = stakes_obj.get("stakes") if isinstance(stakes_obj, dict) else None
+    return len(records) if isinstance(records, list) else 0
+
+
+def refresh_coverage_passage(narrative: str, state: Any) -> str:
+    """Re-graft the coverage passage from the FINAL coverage map (#3200).
+
+    Act I grafts this passage when it runs, and it runs at DAG level 5
+    (``workflows.build_spectacular_workflow``) while most phases that record
+    coverage — ``fol``/``pl``/``quality`` at level 3, ``counter`` at 4,
+    ``debate`` at 6, ``deep_synthesis`` and ``governance`` at 7 — run later.
+    The sentence claims « selon les modules » about the WHOLE analysis, so its
+    figures are only true of the finished run: R1109 rendered « de 6 à 10 »
+    while the final map held ``synthesis_args`` / ``synthesis_fallacies`` at
+    15 (6..15).
+
+    The repair is a placement, not a rule: the passage is recomputed HERE, at
+    the single assembly point, from the state the report is rendered from —
+    the same map the report's reading record shows. The passage is replaced,
+    never dropped; an act that carries none gets one, and a state with no
+    coverage map leaves the act untouched (no figure → no sentence, the #3159
+    absent case). When the map is unchanged since Act I the two sentences are
+    identical, so the output is byte-equal to the original.
+    """
+    if not (narrative or "").strip():
+        return narrative
+    coverage_map = _state_field(state, "analysis_coverage")
+    if not isinstance(coverage_map, dict):
+        return narrative
+    sentence = coverage_range_sentence(coverage_map, record_stakes_count(state))
+    if not sentence:
+        return narrative
+    lines = narrative.split("\n")
+    for index, line in enumerate(lines):
+        if COVERAGE_HEADING in line:
+            end = index + 1
+            while end < len(lines) and lines[end].strip():
+                end += 1
+            lines[index:end] = [f"**{COVERAGE_HEADING}**", sentence.strip()]
+            return "\n".join(lines)
+    return insert_coverage_passage(narrative, format_coverage_passage(sentence))
 
 
 def build_act1_prompt(evidence: Act1Evidence) -> str:

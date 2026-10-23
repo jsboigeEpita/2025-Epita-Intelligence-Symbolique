@@ -16,7 +16,9 @@ Design (anti-pendule, file-disjoint lane per dispatch R433):
   - ``build_restitution_acts(state, source_id)`` — the 1-liner mapping
     state→``RestitutionActs`` (the contract the renderer consumes). Reads the 3
     act strings off the state via ``getattr``; never imports the state class
-    (stays decoupled, same idiom as ``state_adapter``).
+    (stays decoupled, same idiom as ``state_adapter``). #3200: Act I's coverage
+    passage is re-derived here from the FINAL ``analysis_coverage`` — this is
+    the assembly point, after every phase has written its figures.
   - ``render_spectacular_restitution(state, source_id, output_path=None)`` —
     assemble ``RestitutionActs`` + the folded appendix (``state_to_appendix_mapping``)
     + render via ``render_restitution_report``. Optionally write the Markdown to
@@ -50,6 +52,13 @@ from typing import Any, Dict, Optional
 from .acts import RestitutionActs
 from .renderer import RenderedReport, render_restitution_report
 from .state_adapter import state_to_appendix_mapping
+
+# #3200 — the act-1 plugin owns the coverage passage (its heading, its
+# sentence, its graft point). Assembly calls it back to re-derive the figures
+# from the FINAL state, so the two halves of one report cannot disagree about
+# the same map. Import direction stays one-way: the plugin never imports this
+# module (no cycle).
+from .act1_framing_plugin import refresh_coverage_passage
 
 logger = logging.getLogger(__name__)
 
@@ -211,8 +220,20 @@ def build_restitution_acts(
                 RestitutionActs.act_key(act_number), foundational_failure
             )
 
+    act1 = _read("act1_framing")
+    # #3200 — ``act1_framing`` runs at DAG level 5 of the spectacular workflow
+    # and most coverage-recording phases run later (``debate`` at 6,
+    # ``deep_synthesis``/``governance`` at 7), so the passage Act I grafted
+    # describes the map as it stood then while the sentence says « selon les
+    # modules » about the whole analysis. This is the single point where the
+    # finished state and the act string are both in hand, so the passage is
+    # re-derived here from the same map the reading record shows. Not a writer
+    # rule, not a new dependency: the plugin's own sentence, its own heading.
+    if act1:
+        act1 = refresh_coverage_passage(act1, state)
+
     return RestitutionActs(
-        act1_framing=_read("act1_framing"),
+        act1_framing=act1,
         act2_narrative=_read("act2_narrative"),
         act3_conclusion=_read("act3_conclusion"),
         source_id=_derive_source_id(state, source_id),
