@@ -2634,20 +2634,26 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
     # today. The cap mirrors the claims block: a drop is counted and stated,
     # never silent.
     anchor_excerpts: Dict[str, str] = {}
-    anchors_dropped = 0
+    dropped_anchor_ids: Set[str] = set()
     for finding in global_findings:
         for cite in finding.cites:
             cite_id = str(cite).strip()
-            if not cite_id or cite_id in anchor_excerpts:
+            if not cite_id:
                 continue
-            if len(anchor_excerpts) >= _MAX_ANCHOR_EXCERPTS:
-                anchors_dropped += 1
-                continue
+            # Only a cite the units table holds as text is an anchor: method
+            # names (« contre-argument »…) and gate ids are never anchored,
+            # so they consume no cap slot and count no drop (#3193 rework,
+            # coordinator comment 6362949622 — the former counter announced
+            # 7 omissions where one unit cite was left bare).
             text = args.get(cite_id)
-            if isinstance(text, str) and text.strip():
-                anchor_excerpts[cite_id] = truncate_at_boundary(
-                    text, CITED_UNIT_TEXT_CAP
-                )
+            if not (isinstance(text, str) and text.strip()):
+                continue
+            if cite_id in anchor_excerpts or cite_id in dropped_anchor_ids:
+                continue  # a unit repeated across findings drops once, not per finding
+            if len(anchor_excerpts) >= _MAX_ANCHOR_EXCERPTS:
+                dropped_anchor_ids.add(cite_id)
+                continue
+            anchor_excerpts[cite_id] = truncate_at_boundary(text, CITED_UNIT_TEXT_CAP)
 
     return Act3Evidence(
         args_total=args_total,
@@ -2666,7 +2672,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         claim_excerpts=claim_excerpts,
         claim_excerpts_total=len(citable_args),
         anchor_excerpts=anchor_excerpts,
-        anchors_dropped=anchors_dropped,
+        anchors_dropped=len(dropped_anchor_ids),
         governance_winner_text=governance_winner_text,
         governance_divergent_texts=governance_divergent_texts,
         absent_dimensions=_collect_absent_dimensions(state),

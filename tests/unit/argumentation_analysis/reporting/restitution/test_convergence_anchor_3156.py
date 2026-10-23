@@ -16,7 +16,6 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
-    _MAX_ANCHOR_EXCERPTS,
     build_act3_evidence,
     build_act3_prompt,
 )
@@ -138,9 +137,29 @@ class TestAnchorCountCap:
     projection's own caps, and a drop is stated on the rendered block
     (never silent — a drop the reader cannot see is #1019's silent drop)."""
 
-    def test_the_evidence_never_exceeds_the_anchor_cap(self):
+    def test_the_cap_counts_only_unit_cites_once_each(self, monkeypatch):
+        """Coordinator re-review (R1109, comment 6362949622): with the cap at 1
+        on this state the former counter announced 7 omissions where exactly
+        ONE unit cite was left bare — it counted method names, and a unit
+        again for every finding repeating it. The counter must read unit
+        cites (the ones ``args`` holds as text), once each."""
+        import argumentation_analysis.reporting.restitution.act3_conclusion_plugin as plugin
+
+        monkeypatch.setattr(plugin, "_MAX_ANCHOR_EXCERPTS", 1)
         evidence = build_act3_evidence(_state())
-        assert len(evidence.anchor_excerpts) <= _MAX_ANCHOR_EXCERPTS
+        assert len(evidence.anchor_excerpts) == 1, evidence.anchor_excerpts
+        assert evidence.anchors_dropped == 1, evidence.anchors_dropped
+        assert "1 ancre(s) omise(s)" in build_act3_prompt(evidence)
+
+    def test_the_kept_anchor_is_a_unit_and_the_bare_one_is_named(self, monkeypatch):
+        """At cap 1 the anchor kept is a cited unit, and the cite left bare is
+        the OTHER unit — never a method name."""
+        import argumentation_analysis.reporting.restitution.act3_conclusion_plugin as plugin
+
+        monkeypatch.setattr(plugin, "_MAX_ANCHOR_EXCERPTS", 1)
+        evidence = build_act3_evidence(_state())
+        assert set(evidence.anchor_excerpts) <= set(_CONVERGENT)
+        assert set(_CONVERGENT) - set(evidence.anchor_excerpts)
 
     def test_a_dropped_anchor_is_stated_on_the_block(self):
         evidence = build_act3_evidence(_state())
