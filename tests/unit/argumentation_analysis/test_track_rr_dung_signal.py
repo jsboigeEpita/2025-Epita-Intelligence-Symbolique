@@ -42,14 +42,33 @@ def _state(
     return ns
 
 
+_ATTACKER = "arg_0"  # synthetic survivor, deliberately outside identified_arguments
+
+
 def _framework(arguments, rejected_args, semantics="grounded"):
-    """Build a minimal Dung framework dict where rejected_args are absent from
-    extension. #1912: carries the canonical ``verification_*`` name the
-    production writer always stores (native-only decoding boundary)."""
+    """A native frame whose ``rejected_args`` are genuinely OUT (settled).
+
+    #1912: carries the canonical ``verification_*`` name the production
+    writer always stores (native-only decoding boundary).
+
+    #3153: absence from the extension is NOT rejection — under grounded
+    semantics an argument outside the extension is out (attacked by an
+    accepted one) or undecided (a stand-off). The helper used to exclude
+    arguments with NO attack graph at all, which no grounded solve can
+    produce: a lone unattacked node is always accepted. The graph now says
+    why — a surviving argument attacks each rejected one, and when nothing
+    survives the frame mints the one unattacked node that can.
+    """
+    arguments = list(arguments)
     accepted = [a for a in arguments if a not in rejected_args]
+    if rejected_args and not accepted:
+        arguments = [_ATTACKER] + arguments
+        accepted = [_ATTACKER]
+    attacks = [[accepted[0], r] for r in rejected_args] if accepted else []
     return {
         "name": f"verification_{semantics}",
         "arguments": arguments,
+        "attacks": attacks,
         "semantics": semantics,
         "extensions": {"all_members": accepted},
     }
@@ -186,21 +205,19 @@ class TestDungRejectedArgs:
 
     def test_prior_rejection_not_overwritten(self):
         """First framework's semantics is preserved when multiple frameworks reject same arg."""
+        # #3153: both frames must genuinely settle arg_1 AGAINST it — an empty
+        # extension over an attack-free graph is impossible under grounded
+        # semantics (the lone node is unattacked, hence accepted), and the
+        # decoder now reads absence-from-extension without an attack as a
+        # stand-off. Contract under test (setdefault keeps the FIRST label) is
+        # unchanged.
         state = _state(
             identified_arguments={"arg_1": "some argument"},
             dung_frameworks={
-                "fw1": {
-                    "name": "verification_grounded",
-                    "arguments": ["arg_1"],
-                    "semantics": "grounded",
-                    "extensions": {"all_members": []},
-                },
-                "fw2": {
-                    "name": "verification_preferred",
-                    "arguments": ["arg_1"],
-                    "semantics": "preferred",
-                    "extensions": {"all_members": []},
-                },
+                "fw1": _framework(["arg_1"], rejected_args=["arg_1"]),
+                "fw2": _framework(
+                    ["arg_1"], rejected_args=["arg_1"], semantics="preferred"
+                ),
             },
         )
         rejected = _native_dung_rejections(state)

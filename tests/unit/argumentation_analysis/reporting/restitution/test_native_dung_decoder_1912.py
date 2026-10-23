@@ -63,6 +63,25 @@ def _state(**fields: Any) -> SimpleNamespace:
     return SimpleNamespace(**base)
 
 
+def _undecided_of(state: Any) -> dict:
+    """The decoder's undecided record, asserted to EXIST (#3153).
+
+    Imported lazily, like every other decoder access in this file: the file
+    reads the acts' public builders, and the field this helper reads must
+    fail as an assertion, never as a vacuous default or a stray ImportError.
+    """
+    from argumentation_analysis.reporting.restitution.native_dung import (
+        decode_native_dung,
+    )
+
+    decoding = decode_native_dung(state)
+    assert hasattr(decoding, "undecided_by_arg"), (
+        "#3153: the decoder must expose the arguments the graph does NOT "
+        "settle — dropping the record turns a stand-off into silence"
+    )
+    return decoding.undecided_by_arg
+
+
 def _witness_state() -> SimpleNamespace:
     """The issue's born-red witness.
 
@@ -315,9 +334,15 @@ class TestUnknownNativeShapeNonConcluable:
         assert trace.rejected_args == {}
         assert trace.non_concluable is True
 
-    def test_decodable_empty_extension_still_rejects_genuinely(self):
+    def test_decodable_empty_extension_is_concluable_and_says_what_it_settles(self):
         # all_members=[] IS decodable: the solver accepted nothing — that is
-        # a real verdict, not an unknown shape. It must keep rejecting.
+        # a real verdict, not an unknown shape. It must stay CONCLUABLE.
+        #
+        # #3153 sharpened the verdict's content: this frame's only node
+        # attacks ITSELF, so the ground settles nothing against it (no `in`
+        # argument attacks it) — it is undecided, not rejected. The #1912
+        # anti-pendulum leg is the `non_concluable is False` below: the
+        # decoder still speaks, it does not retreat behind "unknown".
         state = _state(
             identified_arguments={"arg_1": "Thèse unique."},
             dung_frameworks={
@@ -330,11 +355,20 @@ class TestUnknownNativeShapeNonConcluable:
             },
         )
         trace = _collect_dung_trace(state)
-        assert trace.non_concluable is False
-        assert trace.rejected_args == {"arg_1": "grounded"}, (
+        assert trace.non_concluable is False, (
             "#1912: a decodable empty extension is a genuine empty "
             "acceptance — collapsing it to non-concluable would hide real "
-            "rejections behind honesty theater"
+            "verdicts behind honesty theater"
+        )
+        assert trace.rejected_args == {}, (
+            "#3153: a self-attacking node is undecided in the grounded "
+            "labelling — nothing `in` attacks it, so the graph does not "
+            "settle against it. Calling it rejected is the very amalgam "
+            "#3153 repairs."
+        )
+        assert _undecided_of(state) == {"arg_1": "grounded"}, (
+            "#3153: the stand-off must be RECORDED, not silently dropped — "
+            "an empty verdict is not the same finding as no finding."
         )
 
 

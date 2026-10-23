@@ -66,6 +66,11 @@ class TestDungRejection:
                 "name": "verification_grounded",
                 "semantics": "grounded",
                 "arguments": ["arg_1", "arg_2", "arg_3"],
+                # #3153: the exclusion must be SETTLED by the graph — arg_1
+                # and arg_2 are unattacked (in), arg_1 attacks arg_3 (out).
+                # An attack-free graph excluding arg_3 is impossible: the
+                # decoder would read it as a stand-off, not a rejection.
+                "attacks": [["arg_1", "arg_3"]],
                 "extensions": {"all_members": ["arg_1", "arg_2"]},
             }
         }
@@ -91,6 +96,8 @@ class TestDungRejection:
                 "name": "verification_preferred",
                 "semantics": "preferred",
                 "arguments": ["arg_1", "arg_2", "arg_3"],
+                # #3153: as above — the graph settles arg_3 against it.
+                "attacks": [["arg_1", "arg_3"]],
                 "extensions": [["arg_1"], ["arg_2"]],
             }
         }
@@ -164,6 +171,9 @@ class TestComputeConvergence:
                 "name": "verification_grounded",
                 "semantics": "grounded",
                 "arguments": ["arg_1", "arg_2"],
+                # #3153: arg_1 (unattacked) attacks arg_2 — the graph says
+                # WHY arg_2 is rejected; absence alone is a stand-off.
+                "attacks": [["arg_1", "arg_2"]],
                 "extensions": {"all_members": ["arg_1"]},  # arg_2 rejected
             }
         }

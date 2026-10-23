@@ -40,13 +40,24 @@ class NativeDungDecoding(NamedTuple):
     """Result of decoding a state's native Dung frameworks.
 
     ``rejected_by_arg`` maps opaque arg_id → semantics label for arguments
-    present in a native framework but absent from its accepted extension.
+    **out** of the grounded labelling — attacked by an argument **in** it
+    (#3153: absence from the accepted extension is not rejection).
     ``non_concluable`` lists the semantics labels of native frameworks whose
-    extension shape could not be decoded (honest unknown — no verdict).
+    extension or attack graph could not be decoded (honest unknown — no
+    verdict).
+    ``undecided_by_arg`` maps opaque arg_id → semantics label for arguments
+    the graph does **not** settle (mutual attack, or attacked only by an
+    undecided argument): a finding, never a rejection.
+    ``credulously_accepted`` maps opaque arg_id → semantics label for the
+    UNDECIDED arguments some native extension contains (read as "credulously
+    accepted", #3153 request 2); only undecided members appear here, so the
+    reader can qualify the stand-off without re-deriving it.
     """
 
     rejected_by_arg: Dict[str, str]
     non_concluable: List[str]
+    undecided_by_arg: Dict[str, str]
+    credulously_accepted: Dict[str, str]
 
 
 def is_native_dung_framework(fw: Any) -> bool:
@@ -134,19 +145,91 @@ def decode_accepted_members(ext: Any) -> Optional[Set[str]]:
     return None
 
 
+def grounded_labelling(fw: Any) -> Optional[Dict[str, str]]:
+    """Grounded labelling (``in`` / ``out`` / ``undec``) of a native graph.
+
+    #3153: rejection is NOT the complement of acceptance. Under grounded
+    semantics an argument outside the grounded extension is either **out**
+    (attacked by an ``in`` argument — the graph does settle against it) or
+    **undec** (a conflict the graph does not settle: a mutual attack, or an
+    argument attacked only by undecided ones). Reading the complement as
+    "rejected" turned a measured stand-off (doc_B: ``arg_1`` ↔ ``arg_6``)
+    into four formal rejections and promoted its targets to Act III's P1.
+
+    The node set is ``arguments`` plus the attack endpoints; the returned
+    dict covers ``arguments`` only. ``None`` means the shape is undecodable
+    (honest unknown — the caller reports non-concluable instead of guessing).
+    """
+    args = fw.get("arguments") if isinstance(fw, dict) else None
+    attacks = fw.get("attacks") if isinstance(fw, dict) else None
+    if args is None:
+        args = []
+    if not isinstance(args, list) or not all(isinstance(a, str) for a in args):
+        return None
+    # A frame with NO attack graph recorded cannot be labelled: the labelling
+    # is a property of the graph, and « no attacks were recorded » is not
+    # « nothing attacks anything ». Saying ``None`` keeps the honest unknown;
+    # assuming an empty graph would report zero rejections with no reason
+    # (#3153 — never silently drop a verdict).
+    if not isinstance(attacks, list):
+        return None
+    edges: Set[Tuple[str, str]] = set()
+    for atk in attacks:
+        if (
+            not isinstance(atk, (list, tuple))
+            or len(atk) != 2
+            or not all(isinstance(x, str) for x in atk)
+        ):
+            return None
+        edges.add((atk[0], atk[1]))
+    nodes: Set[str] = set(args)
+    for attacker, target in edges:
+        nodes.add(attacker)
+        nodes.add(target)
+    in_set: Set[str] = set()
+    out_set: Set[str] = set()
+    changed = True
+    while changed:
+        changed = False
+        for node in nodes:
+            if node in in_set or node in out_set:
+                continue
+            attackers = {a for a, t in edges if t == node}
+            if attackers <= out_set:  # every attacker is already out
+                in_set.add(node)
+                changed = True
+        for node in nodes:
+            if node in in_set or node in out_set:
+                continue
+            attackers = {a for a, t in edges if t == node}
+            if attackers & in_set:
+                out_set.add(node)
+                changed = True
+    return {
+        arg: ("in" if arg in in_set else "out" if arg in out_set else "undec")
+        for arg in args
+    }
+
+
 def rejected_from_framework(
     fw: Dict[str, Any], accepted: Optional[Set[str]] = None
 ) -> Optional[Dict[str, str]]:
-    """Rejections of ONE native framework: its own arguments absent from its
-    own accepted extension, labeled with ITS semantics.
+    """Rejections of ONE native framework: the arguments the ground settles
+    AGAINST (#3153), labeled with ITS semantics.
 
     Single home of the rejection rule: ``decode_native_dung`` aggregates it
     per ``verification_*`` entry, and the Act II primary trace applies it to
     the primary framework alone — a trace announcing one semantics must never
     carry another framework's rejections (R868 rework: the aggregate measured
     ``semantics=preferred, accepted=[arg_1, arg_2], rejected={arg_2:
-    grounded}`` with zero sidecars). Returns ``None`` only when ``accepted``
-    is not provided and the extension shape is undecodable (non-concluable).
+    grounded}`` with zero sidecars).
+
+    Only an **out** argument is rejected (attacked by an ``in`` one). An
+    argument absent from the accepted extension but *undecided* in the
+    labelling is a stand-off, not a verdict — it is recorded by
+    ``decode_native_dung`` under ``undecided_by_arg`` instead. Returns
+    ``None`` when the extension shape (unless ``accepted`` is provided) or
+    the attack graph is undecodable (non-concluable).
     """
     if not is_native_dung_framework(fw):
         return {}
@@ -154,13 +237,11 @@ def rejected_from_framework(
         accepted = decode_accepted_members(fw.get("extensions"))
         if accepted is None:
             return None
-    fw_args = fw.get("arguments", []) or []
-    if not isinstance(fw_args, list):
-        return {}
+    labelling = grounded_labelling(fw)
+    if labelling is None:
+        return None
     label = native_semantics_label(fw)
-    return {
-        arg: label for arg in fw_args if isinstance(arg, str) and arg not in accepted
-    }
+    return {arg: label for arg, position in labelling.items() if position == "out"}
 
 
 def decode_native_dung(state: Any) -> NativeDungDecoding:
@@ -170,22 +251,43 @@ def decode_native_dung(state: Any) -> NativeDungDecoding:
     whatever their shape: reading their extension as native acceptance is
     the fabrication #1912 repairs. They stay in the state, untouched, for
     their formalism-specific readers.
+
+    #3153: per frame, the grounded labelling separates the arguments the
+    graph settles AGAINST (``out`` — rejected) from the ones it does not
+    settle (``undec`` — recorded as undecided, never as a rejection). An
+    undecided argument some accepted extension contains is additionally
+    recorded as credulously accepted.
     """
     rejected: Dict[str, str] = {}
     non_concluable: List[str] = []
+    undecided: Dict[str, str] = {}
+    credulous: Dict[str, str] = {}
     frameworks = getattr(state, "dung_frameworks", {}) or {}
     if not isinstance(frameworks, dict):
-        return NativeDungDecoding(rejected, non_concluable)
+        return NativeDungDecoding(rejected, non_concluable, undecided, credulous)
     for _fid, fw in frameworks.items():
         if not is_native_dung_framework(fw):
             continue
+        label = native_semantics_label(fw)
         accepted = decode_accepted_members(fw.get("extensions"))
-        if accepted is None:
-            non_concluable.append(native_semantics_label(fw))
+        labelling = grounded_labelling(fw)
+        if accepted is None or labelling is None:
+            non_concluable.append(label)
             continue
-        for arg, label in (rejected_from_framework(fw, accepted) or {}).items():
-            rejected.setdefault(arg, label)
-    return NativeDungDecoding(rejected, non_concluable)
+        # ONE home for the rejection rule (#3153): the aggregate reads
+        # ``rejected_from_framework`` like the Act II trace does, so the two
+        # surfaces cannot drift apart on what « rejeté » means.
+        for arg, rej_label in (rejected_from_framework(fw, accepted) or {}).items():
+            rejected.setdefault(arg, rej_label)
+        for arg, position in labelling.items():
+            if position == "undec":
+                undecided.setdefault(arg, label)
+                if arg in accepted:
+                    credulous.setdefault(arg, label)
+    for arg in rejected:
+        undecided.pop(arg, None)
+        credulous.pop(arg, None)
+    return NativeDungDecoding(rejected, non_concluable, undecided, credulous)
 
 
 def select_primary_native(frameworks: Any) -> Optional[Dict[str, Any]]:

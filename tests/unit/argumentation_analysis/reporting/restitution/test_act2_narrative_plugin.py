@@ -385,9 +385,14 @@ class TestReaderWriterContracts:
                 "fw_1": {
                     "name": "verification_grounded",
                     "semantics": "stable",
-                    "arguments": ["arg_1"],
-                    "attacks": [],
-                    "extensions": {"all_members": []},
+                    # #3153: arg_1 must be genuinely OUT of the labelling —
+                    # an attack-free graph with an empty extension says the
+                    # opposite (nothing attacks it, so it is in). The
+                    # contract under test is the semantics LABEL; the graph
+                    # only has to make the exclusion real.
+                    "arguments": ["arg_1", "arg_2"],
+                    "attacks": [["arg_2", "arg_1"]],
+                    "extensions": {"all_members": ["arg_2"]},
                 }
             },
         )

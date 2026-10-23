@@ -45,8 +45,10 @@ from .cited_units import (  # #2967: shared cited-unit budget + boundary cut
 )
 from .dung_reader import (  # #1908: one shared meaning for act2 and act3
     ACCEPTED_MEANS,
+    CREDULOUS_MEANS,
     EPISTEMIC_CAVEAT,
     REJECTED_MEANS,
+    UNDECIDED_MEANS,
     UNAVAILABLE_STATUS,
     appendix_ref,
     appendix_refs_in,
@@ -55,6 +57,7 @@ from .dung_reader import (  # #1908: one shared meaning for act2 and act3
 from .native_dung import (  # #1912: single shared decoder — see native_dung.py
     decode_accepted_members,
     decode_native_dung,
+    grounded_labelling,
     native_semantics_label,
     rejected_from_framework,
     select_primary_native,
@@ -323,6 +326,16 @@ class DungSolverTrace:
     # shape could not be decoded — no accepted/rejected verdict can be drawn.
     # Surfaced so the reader sees "non concluable", never "all rejected".
     non_concluable: bool = False
+    # #3153: the arguments the primary frame's graph does NOT settle — a
+    # mutual attack, or an argument attacked only by undecided ones. Neither
+    # accepted nor rejected; the prose says the conflict is not settled.
+    undecided_args: Dict[str, str] = field(
+        default_factory=dict
+    )  # arg_id -> semantics label
+    # #3153: of those, the ones an accepted extension contains — « acceptés
+    # par crédulité »: they survive in one coherent reading, without the
+    # graph imposing that choice.
+    credulously_accepted: Dict[str, str] = field(default_factory=dict)
     # #3014 body item 2: the population size the frame was built from BEFORE
     # its 40-node budget cap, as the entry records it — the reader names the
     # reduction ("40 retenus sur 94 identifiées") instead of re-deriving the
@@ -586,6 +599,16 @@ def _collect_dung_trace(state: Any) -> DungSolverTrace:
     # aggregate output (Act III weak points, per-argument beats).
     rejected = rejected_from_framework(primary, decoded) or {}
 
+    # #3153: the graph's OWN stand-off, from the same primary frame. The
+    # labelling is a property of the attack graph, so it is well defined
+    # whichever semantics the entry names; "out" is what ``rejected`` holds.
+    _labelling = grounded_labelling(primary) or {}
+    _sem = primary_sem or "grounded"
+    undecided = {
+        arg: _sem for arg, position in _labelling.items() if position == "undec"
+    }
+    credulous = {arg: lab for arg, lab in undecided.items() if arg in decoded}
+
     sample_attacks: List[List[str]] = []
     for pair in fw_attacks:
         if (
@@ -605,6 +628,8 @@ def _collect_dung_trace(state: Any) -> DungSolverTrace:
         n_attacks=len(fw_attacks),
         accepted_members=accepted,
         rejected_args=rejected,
+        undecided_args=undecided,
+        credulously_accepted=credulous,
         sample_attacks=sample_attacks,
         population_total=fw_total,
     )
@@ -1356,22 +1381,37 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
             and dung_trace.population_total > 0
             else (len(_inv) if isinstance(_inv, dict) else 0)
         )
+        # #3153: the stand-off rides the SAME finding — a graph that settles
+        # nothing against arg_4 but leaves three poles in conflict must say
+        # both, never only the rejection (hiding the conflict is the pendulum
+        # the issue forbids).
+        _undec_id = len(dung_trace.undecided_args)
         verdict = (
-            f"{reader_consequence(dung_trace.n_arguments, dung_trace.n_attacks, n_rej, dung_trace.semantics_label, n_identified=n_identified)}. "
+            f"{reader_consequence(dung_trace.n_arguments, dung_trace.n_attacks, n_rej, dung_trace.semantics_label, n_identified=n_identified, n_undecided=_undec_id)}. "
             f"{EPISTEMIC_CAVEAT}."
         )
+        _gloss = REJECTED_MEANS
+        if _undec_id:
+            _gloss = f"{_gloss}. {UNDECIDED_MEANS}"
+            if dung_trace.credulously_accepted:
+                _gloss = f"{_gloss}. {CREDULOUS_MEANS}"
         detail = (
             f"{appendix_ref(dung_trace.semantics_label)} — composition exacte de "
-            f"l'extension, identifiants et arêtes d'attaque ; {REJECTED_MEANS}. "
+            f"l'extension, identifiants et arêtes d'attaque ; {_gloss}. "
             "Cite la conséquence ci-dessus, PAS la composition."
         )
         findings.append(FormalFinding(kind="dung", verdict=verdict, detail=detail))
-    elif dung_trace.available and dung_trace.accepted_members:
+    elif dung_trace.available and (
+        dung_trace.accepted_members or dung_trace.undecided_args
+    ):
         # #1908: a decodable graph with zero rejections still deserves its
         # digested sentence — « every support survives » is a finding, not a
         # silence (the pre-fix code only spoke when something was rejected).
         # #2037: same inventory bridge as the rejection branch — entry total
         # first (#3014), state inventory as the pre-repair fallback.
+        # #3153: an ALL-undecided frame (empty extension, self-attack) has no
+        # accepted member and no rejection — it used to fall through with no
+        # finding at all, silently erasing the stand-off.
         _inv = getattr(state, "identified_arguments", {}) or {}
         n_identified = (
             dung_trace.population_total
@@ -1379,13 +1419,19 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
             and dung_trace.population_total > 0
             else (len(_inv) if isinstance(_inv, dict) else 0)
         )
+        _undec_id = len(dung_trace.undecided_args)
         verdict = (
-            f"{reader_consequence(dung_trace.n_arguments, dung_trace.n_attacks, 0, dung_trace.semantics_label, n_identified=n_identified)}. "
+            f"{reader_consequence(dung_trace.n_arguments, dung_trace.n_attacks, 0, dung_trace.semantics_label, n_identified=n_identified, n_undecided=_undec_id)}. "
             f"{EPISTEMIC_CAVEAT}."
         )
+        _gloss = ACCEPTED_MEANS if dung_trace.accepted_members else UNDECIDED_MEANS
+        if _undec_id:
+            _gloss = f"{_gloss}. {UNDECIDED_MEANS}"
+            if dung_trace.credulously_accepted:
+                _gloss = f"{_gloss}. {CREDULOUS_MEANS}"
         detail = (
             f"{appendix_ref(dung_trace.semantics_label)} — composition exacte de "
-            f"l'extension, identifiants et arêtes d'attaque ; {ACCEPTED_MEANS}. "
+            f"l'extension, identifiants et arêtes d'attaque ; {_gloss}. "
             "Cite la conséquence ci-dessus, PAS la composition."
         )
         findings.append(FormalFinding(kind="dung", verdict=verdict, detail=detail))
