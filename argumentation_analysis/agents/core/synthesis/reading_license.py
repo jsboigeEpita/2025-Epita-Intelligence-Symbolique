@@ -77,11 +77,12 @@ _INCOHERENCE_MARKERS = re.compile(
     re.IGNORECASE,
 )
 
-#: The qualifiers the writer's own phrase carries (#3107/#3122). A sentence
-#: that already names the conflict site is stating the cause, not misreading it.
+#: The qualifiers the writer's own phrase carries (#3107/#3122, #3199). A
+#: sentence that already names the conflict site is stating the cause, not
+#: misreading it.
 _QUALIFIERS = re.compile(
     r"(entre unités sources|entre voix|auto[- ]contradiction|"
-    r"lot de traduction|cause non établie|"
+    r"lot de traduction|cause non établie|sans unité source|"
     r"between (?:source )?units|between voices|translation batch|"
     r"cause not established)",
     re.IGNORECASE,

@@ -223,6 +223,7 @@ class TestBriefingCarriesTheNumbers:
             "between_voices",
             "between_sources",
             "batch_attribution",
+            "unattributed_side",
             "undetermined",
         ):
             assert marker in briefing, marker

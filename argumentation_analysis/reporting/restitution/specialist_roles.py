@@ -19,7 +19,10 @@ Role semantics (what the report may claim):
 * **decisif** — the result materially changes the judgment: a formal
   violation was established (PL/FOL/modal settled false) or the Dung graph
   built from the extracted arguments excludes an argument from its accepted
-  extension.
+  extension. #3199: a refuted PL/FOL theory whose stated ``consistency_cause``
+  does not sit inside one voice keeps the decisive role — the solver
+  established it — but its statement names the cause instead of charging the
+  speaker's content.
 * **corroborant** — independent methods agree: a localized fallacy AND a
   weak measured quality on the same argument (the same agreement the
   synthesis convergence machinery counts; stated here at the evidence
@@ -41,8 +44,11 @@ role at all; its honest absence stays in the existing channels
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
+
+from argumentation_analysis.orchestration.fol_cause import cause_short_label
 
 from .fr_accord import accord
 from argumentation_analysis.core.fallacy_attribution import is_speaker_move  # #3180
@@ -149,6 +155,80 @@ def _fallacy_targets(fallacies: Any) -> Dict[str, List[str]]:
     return by_arg
 
 
+def _refuted_non_speaker_causes(
+    records: Any,
+    verdict_reader: Callable[[Dict[str, Any]], Optional[bool]],
+) -> List[str]:
+    """#3199 — the cause classes stated by the REFUTED records that do not
+    pin the conflict inside one voice, in first-seen order.
+
+    ``self_contradiction`` is the one class of the fol_cause vocabulary that
+    attributes a conflict to a single known voice; every other stated class
+    (``between_voices`` — two voices disagree, neither one's own reasoning
+    is invalidated; ``between_sources``; ``batch_attribution``;
+    ``unattributed_side``; ``undetermined``) refuses that pin. A refuted
+    record that stated no cause is the pre-#3107/#3122 artifact shape: this
+    reader cannot qualify what was never stated, and the caller renders the
+    unqualified statement — the acts' own rule (they append a cause phrase
+    only when one was stated).
+    """
+    classes: List[str] = []
+    if isinstance(records, list):
+        for r in records:
+            if not isinstance(r, dict) or verdict_reader(r) is not False:
+                continue
+            cause = r.get("consistency_cause")
+            if not (isinstance(cause, dict) and cause.get("cause")):
+                continue
+            kind = str(cause["cause"])
+            if kind != "self_contradiction" and kind not in classes:
+                classes.append(kind)
+    return classes
+
+
+_QUOTE_RE = re.compile(r"«\s*([^«»]*?)\s*»")
+_EXTRA_QUOTES_RE = re.compile(r"\(\+(\d+)\s+[^)]*\)\s*$")
+
+
+def _render_quotes(atoms: List[str], extra: int) -> str:
+    """The rendering ``formal_derivation`` produces, rebuilt here so the
+    budget is spent on whole atoms rather than on a character count."""
+    rendered = ", ".join(f"« {a} »" for a in atoms)
+    if extra > 0:
+        rendered += f" (+{accord(extra, 'autre formule', 'autres formules')})"
+    return rendered
+
+
+def _fit_quotes(rendered: str, budget: int) -> str:
+    """The whole quotes of ``rendered`` that fit ``budget``, or nothing.
+
+    #3199 review — the first version sliced the rendered string, and on the
+    real record that slice landed INSIDE a word after 27 characters and left
+    the quote open (« … », then « …. »). #1914's rule for this cap already
+    says why: a half-anchor invites the conductor to echo broken prose.
+    ``cited_units.truncate_at_boundary`` cuts at a word boundary; here the
+    unit of the boundary is the **quote**, because an atom is the anchor.
+
+    Quotes that do not fit are dropped, and their number joins the honest
+    ``(+N autres formules)`` count — the reader is told what is missing
+    rather than shown a fragment that pretends to be the whole.
+    """
+    quotes = _QUOTE_RE.findall(rendered)
+    if not quotes:
+        return ""
+    extra_match = _EXTRA_QUOTES_RE.search(rendered)
+    extra = int(extra_match.group(1)) if extra_match else 0
+    kept: List[str] = []
+    for quote in quotes:
+        trial = kept + [quote]
+        if len(_render_quotes(trial, extra + (len(quotes) - len(trial)))) > budget:
+            break
+        kept.append(quote)
+    if not kept:
+        return ""
+    return _render_quotes(kept, extra + (len(quotes) - len(kept)))
+
+
 def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
     """Derive the bounded role classification from lower-level state.
 
@@ -180,12 +260,57 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
     # apologized for its missing content — an outage flattered the #1644
     # surplus gate.
     def _decisif_statement(
-        axis: str, noun_sg: str, noun_pl: str, n_false: int, tested: str
+        axis: str,
+        noun_sg: str,
+        noun_pl: str,
+        n_false: int,
+        tested: str,
+        non_speaker_causes: Optional[List[str]] = None,
     ) -> str:
-        return (
+        # #3199 — the refutation keeps the decisive role (the solver
+        # established it; #1019 forbids suppressing the verdict), but when
+        # its stated cause does not pin the conflict inside one voice, the
+        # speaker-charging sentence (« établit que ce contenu testé ne tient
+        # pas ») is replaced by one that names the cause class: the reader
+        # of the acts must not charge the speaker for a conflict the cause
+        # locates elsewhere. The readable cause phrase rides in the acts'
+        # findings lines (appended by the #3107/#3122 readers); this bounded
+        # statement names the class in prose (``cause_short_label``), never
+        # the raw enum token — a reader cannot charge anyone from
+        # « (unattributed_side) ».
+        if non_speaker_causes:
+            # #3199 review — the first wording ran to 161 characters and ate
+            # the budget the quotes need (240 − 46 lead − 161 − 1 = 32), so
+            # the render kept a 27-character slice of one atom. The sentence
+            # says the same thing in a third of the room.
+            causes = " ; ".join(cause_short_label(kind) for kind in non_speaker_causes)
+            qualifier = f" Cause : {causes} — non imputable au locuteur."
+        else:
+            qualifier = (
+                " La mise à l'épreuve formelle établit que ce contenu testé "
+                "ne tient pas."
+            )
+        # #3199 rework — the qualifier is the MEASUREMENT, the tested content
+        # is the quotation: when _STATEMENT_CAP cannot hold both, the quote
+        # gives way. Measured on the doc_A state: 155 chars of tested content
+        # + a 130-char qualifier came to 285 > 240, and the cap's
+        # last-sentence-boundary cut dropped the qualifier whole — the
+        # Décisif line then charged the speaker again, the exact defect this
+        # issue repairs. Shrinking the quote keeps every reader's claim
+        # bounded and the attribution honest.
+        lead = (
             f"L'axe {axis} a réfuté {accord(n_false, noun_sg, noun_pl)} — à "
-            f"l'épreuve : {tested}. La mise à l'épreuve formelle établit que "
-            f"ce contenu testé ne tient pas."
+            f"l'épreuve : "
+        )
+        budget = _STATEMENT_CAP - len(lead) - 1 - len(qualifier)
+        if len(tested) > budget:
+            # Whole quotes or nothing — never a slice inside one (#3199
+            # review: the raw slice cut mid-word and left the quote open).
+            tested = _fit_quotes(tested, budget)
+        if tested:
+            return f"{lead}{tested}.{qualifier}"
+        return (
+            f"L'axe {axis} a réfuté " f"{accord(n_false, noun_sg, noun_pl)}.{qualifier}"
         )
 
     def _refuted_tested_content(
@@ -209,6 +334,7 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
                 "inférences",
                 pl_counts["false"],
                 pl_tested,
+                _refuted_non_speaker_causes(pl_records, _pl_verdict),
             ),
             ("PL", "solveur Tweety"),
         )
@@ -228,6 +354,7 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
                 "théories",
                 fol_counts["false"],
                 fol_tested,
+                _refuted_non_speaker_causes(fol_records, _fol_verdict),
             ),
             ("FOL", "solveur Tweety"),
         )
