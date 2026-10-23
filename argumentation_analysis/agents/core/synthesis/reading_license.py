@@ -34,7 +34,7 @@ value gates it already persists.
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 #: A robustness word. Read together with :data:`_BREADTH_MARKERS`: alone it is
 #: an ordinary adjective, and only the *combination* makes the claim.
@@ -100,6 +100,250 @@ _FORMAL_CONSISTENCY_MARKERS = re.compile(
 _NEGATION = re.compile(r"\b(ne|n['’]|pas|jamais|sans|aucun\w*)\b", re.IGNORECASE)
 
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
+
+# --- #3151 — the weave must keep the evidence's own bindings -------------
+#
+# The R1106 Act II render moved a counter-argument (and its supporting
+# material) from the unit it targets onto the deliberation winner — both sit
+# in the same "soutiens" movement, and the reader got a counter against the
+# passage the report itself calls the strongest. The binding was correct in
+# the evidence (counters are indexed by ``target_arg_id`` and listed under
+# their own bullet); it was lost in the WEAVE. The detectors below read the
+# same bundle the writer received — distinctive tokens of each counter's
+# content and of each unit's description, both measured AGAINST THE OTHERS
+# (a token names something only when no other counter/unit carries it) — and
+# flag the loss. They never rewrite; the sentence is where the reader sees it.
+
+#: Function words a distinctive-token pass must ignore: a stopword names
+#: nothing, and counting it would make two unrelated texts "cite" each other.
+_WEAVE_STOPWORDS = frozenset("""
+    le la les un une des du de d l et ou mais donc or ni car que qui quoi
+    dont à au aux ce cet cette ces son sa ses leur leurs il elle ils elles
+    on nous vous je tu me te se lui y en est sont était étaient être avoir
+    ai as ont a eu plus moins très trop peu tout tous toute toutes même
+    aussi alors ainsi lors par pour avec sans sous sur entre vers chez dans
+    ne pas jamais aucun aucune celui celle ceux
+    the a an and or but of to in on for with without at by from as is are
+    was were be been being this that these those it its his her their our
+    your not no nor
+    """.split())
+
+#: A content word: ≥ 4 letters — shorter words are too common to be
+#: distinctive.
+_WEAVE_TOKEN_RE = re.compile(r"[A-Za-zÀ-ÿ]{4,}")
+
+#: The holding threshold — the same ≥ 0.75 rule the Act II evidence line
+#: uses, so the check and the evidence never disagree.
+_HOLD_THRESHOLD = 0.75
+
+#: « Seuls / only » — an exhaustive claim over a list.
+_ONLY_MARKER = re.compile(r"\b(?:seul(?:e)?|seuls|only)\b", re.IGNORECASE)
+
+#: A superlative over a counter (« le contre-argument le plus fort » /
+#: « the highest-scoring counter »).
+_SUPERLATIVE_MARKERS = re.compile(
+    r"\b(meilleur\w*|plus (?:fort|élevé|haut|noté)|mieux noté\w*|"
+    r"highest(?:[- ]scoring)?|top)\b",
+    re.IGNORECASE,
+)
+_COUNTER_WORD = re.compile(r"contre[- ]arguments?|counter[- ]arguments?", re.IGNORECASE)
+
+#: The natural French/English spellings of the nine quality virtues, so a
+#: « seuls » sentence can be read against the unit's measured scores. Narrow
+#: phrases, one pattern per virtue — never a bag of tokens.
+_VIRTUE_PATTERNS: Tuple[Tuple[str, "re.Pattern[str]"], ...] = (
+    ("clarte", re.compile(r"clart[ée]", re.IGNORECASE)),
+    ("pertinence", re.compile(r"pertinen\w*", re.IGNORECASE)),
+    (
+        "presence_sources",
+        re.compile(r"pr[ée]sences? de sources?|sources? pr[ée]sent\w*", re.IGNORECASE),
+    ),
+    (
+        "refutation_constructive",
+        re.compile(r"r[ée]futations? constructives?", re.IGNORECASE),
+    ),
+    ("structure_logique", re.compile(r"structures? logiques?", re.IGNORECASE)),
+    ("analogie_pertinente", re.compile(r"analogies? pertinente?s?", re.IGNORECASE)),
+    ("fiabilite_sources", re.compile(r"fiabilit[ée](?: des sources?)?", re.IGNORECASE)),
+    ("exhaustivite", re.compile(r"exhaustivit[ée]", re.IGNORECASE)),
+    (
+        "redondance_faible",
+        re.compile(
+            r"redondances? faibl\w*|faible redondance|refus de la redite",
+            re.IGNORECASE,
+        ),
+    ),
+)
+
+_PARAGRAPH_SPLIT = re.compile(r"\n\s*\n+")
+
+
+def _weave_tokens(text: str) -> "set[str]":
+    """The content tokens of a text, lowercased, stopwords dropped."""
+    return {t.lower() for t in _WEAVE_TOKEN_RE.findall(text or "")} - _WEAVE_STOPWORDS
+
+
+def _index_counters(state: Any) -> List[Tuple[str, str, "set[str]"]]:
+    """Counters with a target binding, each with the tokens no OTHER counter
+    carries — the tokens that make a citation attributable (#3151)."""
+    entries = [
+        e
+        for e in (getattr(state, "counter_arguments", []) or [])
+        if isinstance(e, dict)
+        and e.get("target_arg_id")
+        and isinstance(e.get("counter_content"), str)
+        and e["counter_content"].strip()
+    ]
+    token_sets = [_weave_tokens(e["counter_content"]) for e in entries]
+    out: List[Tuple[str, str, "set[str]"]] = []
+    for index, entry in enumerate(entries):
+        others: "set[str]" = set()
+        for j, tokens in enumerate(token_sets):
+            if j != index:
+                others |= tokens
+        distinctive = token_sets[index] - others
+        if len(distinctive) >= 2:
+            out.append(
+                (str(entry.get("id", "?")), str(entry["target_arg_id"]), distinctive)
+            )
+    return out
+
+
+def _index_units(state: Any) -> Dict[str, "set[str]"]:
+    """Per-unit distinctive description tokens — what places a paragraph."""
+    args = getattr(state, "identified_arguments", None)
+    if not isinstance(args, dict):
+        return {}
+    entries: List[Tuple[str, "set[str]"]] = []
+    for arg_id, data in args.items():
+        description = data.get("description") if isinstance(data, dict) else None
+        if isinstance(description, str) and description.strip():
+            entries.append((str(arg_id), _weave_tokens(description)))
+    out: Dict[str, "set[str]"] = {}
+    for index, (arg_id, tokens) in enumerate(entries):
+        others: "set[str]" = set()
+        for j, (_, other) in enumerate(entries):
+            if j != index:
+                others |= other
+        distinctive = tokens - others
+        if distinctive:
+            out[arg_id] = distinctive
+    return out
+
+
+def _holding_virtues(state: Any, arg_id: str) -> "set[str]":
+    """The virtues the unit's measured scores hold (≥ the evidence's 0.75)."""
+    quality = getattr(state, "argument_quality_scores", None)
+    if not isinstance(quality, dict):
+        return set()
+    entry = quality.get(arg_id)
+    if not isinstance(entry, dict):
+        return set()
+    scores = entry.get("scores")
+    if not isinstance(scores, dict):
+        return set()
+    return {
+        str(virtue)
+        for virtue, score in scores.items()
+        if isinstance(score, (int, float)) and score >= _HOLD_THRESHOLD
+    }
+
+
+def _counter_scores(state: Any) -> List[Tuple[str, float]]:
+    """The (id, score) pairs the run recorded on its counters."""
+    out: List[Tuple[str, float]] = []
+    for entry in getattr(state, "counter_arguments", []) or []:
+        if not isinstance(entry, dict):
+            continue
+        score = entry.get("score")
+        if isinstance(score, (int, float)):
+            out.append((str(entry.get("id", "?")), float(score)))
+    return out
+
+
+def _weave_flags(
+    paragraphs: List[str],
+    state: Any,
+    counters_indexed: List[Tuple[str, str, "set[str]"]],
+    units_indexed: Dict[str, "set[str]"],
+    counter_scores: List[Tuple[str, float]],
+    max_flags: int,
+) -> List[Dict[str, Any]]:
+    """The #3151 binding flags: counter on the wrong unit's paragraph, «
+    seuls » dropping a holding virtue, superlative over a tied maximum."""
+    flags: List[Dict[str, Any]] = []
+    top = max((score for _, score in counter_scores), default=None)
+    tied = (
+        sorted(cid for cid, score in counter_scores if score == top)
+        if top is not None and sum(1 for _, s in counter_scores if s == top) >= 2
+        else []
+    )
+    for paragraph in paragraphs:
+        if len(flags) >= max_flags:
+            break
+        tokens = _weave_tokens(paragraph)
+        present_units = sorted(u for u, dist in units_indexed.items() if dist & tokens)
+        # -- a counter cited in a paragraph its target does not appear in --
+        if present_units:
+            for counter_id, target, distinctive in counters_indexed:
+                if len(distinctive & tokens) >= 2 and target not in present_units:
+                    flags.append(
+                        {
+                            "kind": "counter_on_wrong_unit",
+                            "sentence": paragraph.strip(),
+                            "measured": {
+                                "counter": counter_id,
+                                "target_arg_id": target,
+                                "paragraph_units": present_units,
+                            },
+                        }
+                    )
+                    if len(flags) >= max_flags:
+                        return flags
+        for sentence in _sentences(paragraph):
+            if len(flags) >= max_flags:
+                return flags
+            # -- « seuls X et Y » while a holding virtue is dropped ---------
+            if (
+                present_units
+                and len(present_units) == 1
+                and _ONLY_MARKER.search(sentence)
+            ):
+                named = {
+                    virtue
+                    for virtue, pattern in _VIRTUE_PATTERNS
+                    if pattern.search(sentence)
+                }
+                if named:
+                    holding = _holding_virtues(state, present_units[0])
+                    dropped = holding - named
+                    if dropped:
+                        flags.append(
+                            {
+                                "kind": "only_virtues_drops_a_holding_one",
+                                "sentence": sentence,
+                                "measured": {
+                                    "unit": present_units[0],
+                                    "holding": sorted(holding),
+                                    "dropped": sorted(dropped),
+                                },
+                            }
+                        )
+                        continue
+            # -- a superlative that reads a tie as a unique maximum ---------
+            if (
+                tied
+                and _SUPERLATIVE_MARKERS.search(sentence)
+                and _COUNTER_WORD.search(sentence)
+            ):
+                flags.append(
+                    {
+                        "kind": "superlative_over_tied_counters",
+                        "sentence": sentence,
+                        "measured": {"max": top, "tied": tied},
+                    }
+                )
+    return flags
 
 
 def _sentences(text: str) -> List[str]:
@@ -204,6 +448,11 @@ def check_reading_license(
     sparse_everywhere = bool(measurements) and all(
         m["density"] < dense_threshold for m in measurements
     )
+    # #3151 — the weave-binding index: what the writer received, and where
+    # each piece was bound when the evidence handed it over.
+    counters_indexed = _index_counters(state)
+    units_indexed = _index_units(state)
+    counter_scores = _counter_scores(state)
     # The flags carry the sentence as produced — no slice: a cut could only
     # hide the qualifier the reader needs, and it never protected a verdict
     # (detection reads the whole sentence; #2850 asked what the cut was for,
@@ -266,6 +515,20 @@ def check_reading_license(
                 }
             )
 
+    # #3151 — the binding flags ride after the sentence flags, within the
+    # same max_flags budget: they read paragraphs, not sentences.
+    paragraphs = [p.strip() for p in _PARAGRAPH_SPLIT.split(text or "") if p.strip()]
+    flags.extend(
+        _weave_flags(
+            paragraphs,
+            state,
+            counters_indexed,
+            units_indexed,
+            counter_scores,
+            max_flags - len(flags),
+        )
+    )
+
     return {
         "flags": flags,
         "checked": {
@@ -274,6 +537,8 @@ def check_reading_license(
             "recorded_causes": causes,
             "self_contradiction_recorded": self_contradiction,
             "fol_decisions": fol_decisions,
+            "counters_with_target": len(counters_indexed),
+            "units_indexed": len(units_indexed),
         },
         "threshold": dense_threshold,
     }
