@@ -34,6 +34,9 @@ from argumentation_analysis.core.reading_window import (
     WIDE_NET_WINDOW,
     selected_text,
 )
+from argumentation_analysis.core.fallacy_attribution import (  # #3180
+    is_speaker_move,
+)
 from argumentation_analysis.orchestration.invoke_callables import (
     LLMBudgetExceeded,
     _bump_sk_budget,
@@ -3084,6 +3087,10 @@ async def _run_parent_harness_fallback(
                         confidence=confidence,
                         problematic_quote=problematic_quote,
                         confidence_note=confidence_note,
+                        # #3180 — same pass-through as the pipeline writer:
+                        # whose move the fallacy is, when the detection said it.
+                        move_author=f.get("move_author"),
+                        move_author_label=f.get("move_author_label"),
                     )
                     added += 1
                 elif hasattr(state, "add_identified_fallacy"):
@@ -3645,6 +3652,11 @@ def _run_belief_revision_from_state(state: Any) -> Optional[Dict[str, Any]]:
 
     for f in fallacies:
         if not isinstance(f, dict):
+            continue
+        # #3180 — only the speaker's own move contracts a belief. A reported
+        # detection is another party's move that the text denounces; the
+        # reporting unit's belief is not undermined by it.
+        if not is_speaker_move(f):
             continue
         target_arg = f.get("target_argument_id", "")
         fallacy_type = f.get("type", f.get("fallacy_type", "unknown"))

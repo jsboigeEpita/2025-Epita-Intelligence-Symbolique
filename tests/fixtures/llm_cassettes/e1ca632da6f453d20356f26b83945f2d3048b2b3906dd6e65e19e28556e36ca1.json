@@ -1,0 +1,48 @@
+{
+  "key": "e1ca632da6f453d20356f26b83945f2d3048b2b3906dd6e65e19e28556e36ca1",
+  "value": {
+    "id": "chatcmpl-Ec98j1hdNp4Pu9whUco2CrGk3tm97",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.62,\"fairness_assessment\":\"La méthode permet de comparer équitablement les trois options selon les besoins des usagers, les coûts, la faisabilité et l’impact attendu, plutôt que de privilégier automatiquement le débat gagnant.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"Agent A\",\"position\":\"Privilégie l’élargissement du fonds de livres jeunesse afin de renforcer l’offre destinée aux enfants.\",\"influence\":0.33},{\"agent\":\"Agent B\",\"position\":\"Privilégie la création d’un espace numérique avec ordinateurs en libre accès pour répondre aux besoins d’accès à Internet et aux outils numériques.\",\"influence\":0.34},{\"agent\":\"Agent C\",\"position\":\"Privilégie une répartition égale de la subvention entre les livres jeunesse et l’espace numérique.\",\"influence\":0.33}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"Les trois options répondent à des besoins légitimes, mais les contre-arguments montrent que ni le tout-livre, ni le tout-numérique, ni le partage égal ne devrait être adopté sans analyse des besoins, des coûts et de la maintenance. Un vote social_choice avec critères explicites et possibilité d’un financement mixte proportionnel aux priorités établies offrirait un compromis plus légitime qu’une décision fondée uniquement sur le débat gagnant.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792760305,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 363,
+      "prompt_tokens": 524,
+      "total_tokens": 887,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 60,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "key": "f21f0dc93c0f1fb98722d3208a5a95217053fb32bf1c11256881877e4b787ccc",
+  "value": {
+    "id": "chatcmpl-Ec9ArbSCarW9ApzIbxK7vdGFJkQwz",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.68,\"fairness_assessment\":\"Une agrégation des préférences est préférable car les trois options poursuivent des objectifs légitimes et les bénéfices du tournoi sont incertains. Une décision fondée sur des préférences classées et des critères transparents limiterait l'effet de la victoire argumentative de B tout en permettant d'évaluer équitablement les besoins matériels et la visibilité.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"Agent A\",\"position\":\"Consacrer les 2000 euros à un tournoi inter-villes avec buffet et prix pour accroître la visibilité et recruter de nouveaux membres.\",\"influence\":0.32},{\"agent\":\"Agent B\",\"position\":\"Investir l'intégralité du budget dans du matériel pédagogique durable, notamment des échiquiers, horloges et supports de cours neufs.\",\"influence\":0.4},{\"agent\":\"Agent C\",\"position\":\"Partager le budget entre un tournoi réduit et du matériel pédagogique afin de poursuivre simultanément les objectifs de visibilité et d'apprentissage.\",\"influence\":0.28}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"Le vote social_choice, idéalement avec classement des options et critères explicites de bénéfice durable, permet de départager les priorités sans donner un poids excessif au seul gagnant du débat. Une résolution de compromis, éventuellement avec achat prioritaire du matériel le plus urgent puis un tournoi de taille maîtrisée, répond aux préoccupations de B tout en préservant les objectifs de A et C.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792760437,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 504,
+      "prompt_tokens": 852,
+      "total_tokens": 1356,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 170,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

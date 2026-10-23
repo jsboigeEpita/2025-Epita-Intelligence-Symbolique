@@ -1,0 +1,40 @@
+{
+  "key": "14b27facd390ca17bada99fce358ce5ee3b07df9339d6f9cc1bd385fe1f92c55",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_REBxCh4lw1MxoOAEDsJeqmCK",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1378\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L'argument 2 écarte l'avis d'une personne uniquement parce qu'elle n'appartient pas à la communauté des experts, au lieu d'examiner la pertinence de son avis. Il s'agit bien d'un appel à l'identité. L'argument 1 peut relever d'un appel légitime à l'autorité si l'unanimité concerne des experts compétents, mais cela ne neutralise pas le sophisme de l'argument 2.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Ec964hTNUepf7GhMnUfUMig7mZ7pd",
+        "created": 1792760140,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 961,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 136,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

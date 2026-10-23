@@ -1,0 +1,48 @@
+{
+  "key": "6ce436621317d8baf322f39c011b560a240a286d82fc0a07ee436adb346dd9ee",
+  "value": {
+    "id": "chatcmpl-Ec9FgdS7FUip6W6Y4blhF0RrYGKKJ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\":true,\"redundancy_verdict\":\"redondance_sémantique\",\"located_redundancy\":\"Le point 1 est répété dans l’argument (« le climat a toujours connu des changements »).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792760736,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 369,
+      "prompt_tokens": 405,
+      "total_tokens": 774,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 307,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

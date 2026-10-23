@@ -1,14 +1,14 @@
 {
   "key": "4133285dbf1beaae5553e0b5ab89f0c11e6c6540bafaa03582e06e44e5b6610a",
   "value": {
-    "id": "chatcmpl-EaV1xOpct135odCVXwTTTrgFKPged",
+    "id": "chatcmpl-Ec9CjXONV0iUp1no76Y97GHOU2kUq",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Jargon technique non défini : « immunité collective », dont le sens n’est pas expliqué. Aucun autre obstacle notable : les anaphores sont résolvables et les phrases ne sont pas excessivement emboîtées.\"}",
+          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Jargon technique non défini : « immunité collective » est utilisé sans explication accessible.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1792367797,
+    "created": 1792760553,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 246,
+      "completion_tokens": 150,
       "prompt_tokens": 282,
-      "total_tokens": 528,
+      "total_tokens": 432,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 178,
+        "reasoning_tokens": 109,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

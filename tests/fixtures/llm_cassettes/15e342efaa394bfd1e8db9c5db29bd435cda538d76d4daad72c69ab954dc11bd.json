@@ -1,0 +1,48 @@
+{
+  "key": "15e342efaa394bfd1e8db9c5db29bd435cda538d76d4daad72c69ab954dc11bd",
+  "value": {
+    "id": "chatcmpl-Ec924oe8niLYl63RuMBpfiiwQQ2UA",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La position adverse est explicitement identifiée : le débat porterait sur la suppression des retraites, ou les chiffres du déficit et l’appel à l’émotion suffiraient à justifier la réforme. L’engagement est jugé réel, ce qui caractérise une réfutation constructive pleinement démontrée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792759892,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 116,
+      "prompt_tokens": 278,
+      "total_tokens": 394,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 34,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,14 +1,14 @@
 {
   "key": "65c415e590eb936fac0b3a426c7efa3bfc054fae1985086c651c35aa1f24bd41",
   "value": {
-    "id": "chatcmpl-EaV1kirXFHfTJowyac2e8C9a7XeIs",
+    "id": "chatcmpl-Ec9CVZGrFbandF2gjJgXxrI7NX8RS",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Les vaccins sont dangereux.\",\"main_thesis\":\"Les vaccins sont efficaces et ne doivent pas être considérés comme dangereux, car les études scientifiques montrent leurs bénéfices et les accusations de dissimulation des effets secondaires sont infondées.\"}",
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Les vaccins sont dangereux.\",\"main_thesis\":\"Les vaccins sont sûrs et efficaces, comme le montrent les études scientifiques et les décennies de recherche clinique.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1792367784,
+    "created": 1792760539,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 124,
+      "completion_tokens": 97,
       "prompt_tokens": 275,
-      "total_tokens": 399,
+      "total_tokens": 372,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 55,
+        "reasoning_tokens": 43,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

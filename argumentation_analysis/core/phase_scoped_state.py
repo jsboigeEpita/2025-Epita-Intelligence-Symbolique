@@ -123,7 +123,13 @@ class ExtractionPhaseState(_SharedStateBase):
             return f"FUNC_ERROR: {e}"
 
     @kernel_function(
-        description="Ajoute un sophisme identifié à l'état.",
+        description=(
+            "Ajoute un sophisme identifié à l'état. move_author: 'speaker' si "
+            "le locuteur du texte analysé commet le sophisme, 'reported' si le "
+            "texte rapporte ou dénonce le geste d'un tiers (move_author_label "
+            "nomme alors ce tiers) ; omettre les deux si le texte ne permet pas "
+            "de le dire."
+        ),
         name="add_identified_fallacy",
     )
     def add_identified_fallacy(
@@ -131,9 +137,25 @@ class ExtractionPhaseState(_SharedStateBase):
         fallacy_type: str,
         justification: str,
         target_argument_id: Optional[str] = None,
+        move_author: Optional[str] = None,
+        move_author_label: Optional[str] = None,
     ) -> str:
         try:
-            fallacy_id = self._state.add_fallacy(fallacy_type, justification, target_argument_id)
+            # #3180 — même contrat que StateManagerPlugin : seules les deux
+            # valeurs connues voyagent, l'absence reste l'absence.
+            author = (move_author or "").strip()
+            if author in ("speaker", "reported"):
+                fallacy_id = self._state.add_fallacy(
+                    fallacy_type,
+                    justification,
+                    target_argument_id,
+                    move_author=author,
+                    move_author_label=(move_author_label or "").strip(),
+                )
+            else:
+                fallacy_id = self._state.add_fallacy(
+                    fallacy_type, justification, target_argument_id
+                )
             return fallacy_id
         except Exception as e:
             return f"FUNC_ERROR: {e}"

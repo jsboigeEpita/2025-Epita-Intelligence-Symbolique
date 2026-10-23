@@ -1,0 +1,40 @@
+{
+  "key": "b0b22f2b99fb97f2200143275962cfb5a176e7620213a1ab81ecc09bc03e2d3e",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_BWggmfxeF3ASnmtTxU2nMQwr",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"751\",\"matches\":false,\"justification\":\"Les arguments invoquent un appel à l'autorité et un appel à l'ignorance/exclusion de l'avis des non-experts, pas une confusion entre ce qui est su et ce qui est cru.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Ec95Y2FMXldnidTMpbqilFy0aB3tS",
+        "created": 1792760108,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1604,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 506,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 81,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

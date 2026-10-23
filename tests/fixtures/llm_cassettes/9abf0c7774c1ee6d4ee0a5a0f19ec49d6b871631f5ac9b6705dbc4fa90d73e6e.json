@@ -1,14 +1,14 @@
 {
   "key": "9abf0c7774c1ee6d4ee0a5a0f19ec49d6b871631f5ac9b6705dbc4fa90d73e6e",
   "value": {
-    "id": "chatcmpl-EaUrdZQF0fP4L5ZWsw3ammAWcpOHA",
+    "id": "chatcmpl-Ec91L9mL6LirS8dpycNs7Y2orNZau",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":1.0,\"exhibit\":\"La thèse affirme que la réforme des retraites est nécessaire en invoquant son adoption par tous les pays européens, sans digression identifiée.\"}",
+          "content": "{\"score\":1.0,\"exhibit\":\"La thèse affirme la nécessité de la réforme des retraites en s’appuyant sur l’adoption de réformes similaires par tous les pays européens ; aucune digression n’est identifiée.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1792367157,
+    "created": 1792759847,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 105,
+      "completion_tokens": 93,
       "prompt_tokens": 264,
-      "total_tokens": 369,
+      "total_tokens": 357,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 56,
+        "reasoning_tokens": 35,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

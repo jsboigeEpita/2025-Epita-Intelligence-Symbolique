@@ -6,8 +6,8 @@
       "content": "{\"query_ideas\":[\"rue_mouillee\",\"pluie\"]}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EaV1MADlRa5nXEL9bMYN1AOnkyuf3",
-        "created": 1792367760,
+        "id": "chatcmpl-Ec9C750tjUm4Al9OqXewB8ErVazkH",
+        "created": 1792760515,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 469,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 41,
+          "completion_tokens": 42,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 17,
+            "reasoning_tokens": 18,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

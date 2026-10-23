@@ -24,6 +24,12 @@ from pydantic import PrivateAttr
 from ..abc.agent_bases import BaseAgent
 from ..semantic_setup import prompt_settings
 from argumentation_analysis.core.logic_types import canonical_logic_type  # #2970
+from argumentation_analysis.core.fallacy_attribution import (  # #3180
+    is_reported_move,
+    is_speaker_move,
+    move_author_label_of,
+    move_author_of,
+)
 from argumentation_analysis.reporting.restitution.cited_units import (  # #2967
     CITED_UNIT_TEXT_CAP,
     cited_unit_ids,
@@ -441,6 +447,10 @@ class DeepSynthesisAgent(BaseAgent):
         fallacies = getattr(state, "identified_fallacies", {})
         attack_map: Dict[str, List[str]] = {}
         for fid, fdata in fallacies.items():
+            # #3180 — a reported move is not the speaker's attack on the unit
+            # that merely reports it: it builds no attack edge.
+            if not isinstance(fdata, dict) or not is_speaker_move(fdata):
+                continue
             target = fdata.get("target_argument_id")
             if target and target in args:
                 attack_map.setdefault(f"fallacy_{fid}", []).append(target)
@@ -493,6 +503,11 @@ class DeepSynthesisAgent(BaseAgent):
                         if fdata.get("target_argument_id")
                         else []
                     ),
+                    # #3180 — the diagnosis carries whose move it is, so the
+                    # Section 3/4 rows can surface a reported one apart without
+                    # reading the raw record again.
+                    move_author=move_author_of(fdata),
+                    move_author_label=move_author_label_of(fdata),
                 )
             )
         # #1626 item 1 — neural_detect's whole-text detections join the
@@ -1047,6 +1062,15 @@ class DeepSynthesisAgent(BaseAgent):
                 sections.append(
                     f"### {f.fallacy_id}: {f.family} — `{f.taxonomy_path}`\n"
                 )
+                # #3180 — a reported detection is surfaced with its third-party
+                # author, never presented as one of the speaker's moves.
+                if is_reported_move(f):
+                    party = f.move_author_label.strip() or "un tiers non nommé"
+                    sections.append(
+                        "> **Auteur du geste** : un tiers rapporté "
+                        f"(« {party} ») — le texte le dénonce ou le cite, "
+                        "le locuteur ne le commet pas.\n"
+                    )
                 sections.append(f'> **Textual span**: "{f.textual_span}"\n')
                 sections.append(f"{f.commentary}\n")
                 if f.impacted_args:
@@ -1444,6 +1468,10 @@ class DeepSynthesisAgent(BaseAgent):
         }
         family_entries: Dict[str, List[FallacyDiagnosis]] = {}
         for fd in fallacy_diagnoses:
+            # #3180 — a reported family is another party's move, not a family
+            # of this discourse: it is not adjudicated as claimed/grounded.
+            if not is_speaker_move(fd):
+                continue
             family_entries.setdefault(fd.family, []).append(fd)
 
         rows: List[Dict[str, str]] = []
@@ -1752,11 +1780,21 @@ class DeepSynthesisAgent(BaseAgent):
                     ftype
                 )
                 target = fdata.get("target_argument_id", "")
+                # #3180 — whose move it is, when the detector said. Absent from
+                # the line when the record is silent: the briefing must not
+                # invent an author any more than the report may.
+                _move = fdata.get("move_author")
+                _move_note = ""
+                if _move in ("speaker", "reported"):
+                    _move_note = f" move_author={_move}"
+                    _label = str(fdata.get("move_author_label") or "")
+                    if _label:
+                        _move_note += f" move_author_label={_label}"
                 _add(
                     "identified_fallacies",
                     u.unit_id,
-                    f"type={ftype} family={family} target={target or 'n/a'} "
-                    f"— {fdata.get('justification', '')}",
+                    f"type={ftype} family={family} target={target or 'n/a'}"
+                    f"{_move_note} — {fdata.get('justification', '')}",
                 )
             if hasattr(state, "record_analysis_coverage"):
                 state.record_analysis_coverage(
@@ -2272,11 +2310,17 @@ class DeepSynthesisAgent(BaseAgent):
             # so the count splits instead of fusing. With an empty neural
             # channel (every real run today) the lines are byte-identical
             # to the previous single-channel rendering.
-            _anchored = [f for f in report.fallacy_diagnoses if not f.unanchored_claim]
-            _claims = [f for f in report.fallacy_diagnoses if f.unanchored_claim]
+            # #3180 — a reported detection is a move by another party that the
+            # text denounces or cites. It is surfaced (its own line, below),
+            # but never counted as one of the speaker's fallacies nor as an
+            # exemplar of the speaker's rhetoric.
+            _speaker_dx = [f for f in report.fallacy_diagnoses if is_speaker_move(f)]
+            _reported_dx = [f for f in report.fallacy_diagnoses if is_reported_move(f)]
+            _anchored = [f for f in _speaker_dx if not f.unanchored_claim]
+            _claims = [f for f in _speaker_dx if f.unanchored_claim]
             if _claims:
                 _fallacies_line = (
-                    f"Fallacies: {len(report.fallacy_diagnoses)} "
+                    f"Fallacies: {len(_speaker_dx)} "
                     f"({len(_anchored)} anchored + "
                     f"{len(_claims)} unanchored neural claims). "
                 )
@@ -2289,10 +2333,22 @@ class DeepSynthesisAgent(BaseAgent):
                     f"{_claim_fams} (unanchored claims). "
                 )
             else:
-                _fallacies_line = f"Fallacies: {len(report.fallacy_diagnoses)}. "
+                _fallacies_line = f"Fallacies: {len(_speaker_dx)}. "
                 _families_line = (
                     f"Key fallacy families: "
-                    f"{', '.join(set(f.family for f in report.fallacy_diagnoses)) or 'none'}. "
+                    f"{', '.join(sorted({f.family for f in _speaker_dx})) or 'none'}. "
+                )
+            _reported_line = ""
+            if _reported_dx:
+                _parties = sorted(
+                    {f.move_author_label.strip() for f in _reported_dx} - {""}
+                )
+                _party_line = ", ".join(_parties) or "un tiers non nommé"
+                _reported_line = (
+                    f"  Reported moves (another party's — the text denounces or "
+                    f"cites them, the speaker does not commit them): "
+                    f"{len(_reported_dx)}; party: {_party_line}. Families: "
+                    f"{', '.join(sorted({f.family for f in _reported_dx}))}.\n"
                 )
             rhetoric_section += (
                 f"  Arguments: {len(report.argument_map)}. "
@@ -2302,6 +2358,7 @@ class DeepSynthesisAgent(BaseAgent):
                 f"  {_families_line}"
                 f"Dung grounded extension: {grounded_line}.\n"
             )
+            rhetoric_section += _reported_line
             # #3123 — breadth is not robustness: the density and the retention
             # accounting ride WITH the extension, and a sparse frame says so
             # before the writer can turn breadth into a resilience claim.
@@ -2325,9 +2382,9 @@ class DeepSynthesisAgent(BaseAgent):
                         "sparsity, NOT the discourse's robustness."
                     )
                 rhetoric_section += _measure + "\n"
-            if report.fallacy_diagnoses:
+            if _speaker_dx:
                 top_3 = sorted(
-                    report.fallacy_diagnoses,
+                    _speaker_dx,
                     key=lambda f: len(f.commentary),
                     reverse=True,
                 )[:3]
@@ -2337,6 +2394,16 @@ class DeepSynthesisAgent(BaseAgent):
                         f"  Fallacy: {f.family} ({f.taxonomy_path}){_claim_tag}: "
                         f"{f.commentary[:150]}\n"
                     )
+            # #3180 — the reported exemplar keeps its author so no reader takes
+            # it for the speaker's move.
+            for f in sorted(
+                _reported_dx, key=lambda f: len(f.commentary), reverse=True
+            )[:3]:
+                _party = f.move_author_label.strip() or "un tiers non nommé"
+                rhetoric_section += (
+                    f"  Reported fallacy [{_party}]: {f.family} "
+                    f"({f.taxonomy_path}): {f.commentary[:150]}\n"
+                )
             if report.counter_arguments:
                 best = max(report.counter_arguments, key=lambda c: c.score)
                 rhetoric_section += (

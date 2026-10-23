@@ -43,6 +43,11 @@ from .cited_units import (  # #2967: shared cited-unit budget + boundary cut
     render_divergence_clause,
     truncate_at_boundary,
 )
+from argumentation_analysis.core.fallacy_attribution import (  # #3180
+    is_reported_move,
+    move_author_label_of,
+    move_author_of,
+)
 from .dung_reader import (  # #1908: one shared meaning for act2 and act3
     ACCEPTED_MEANS,
     CREDULOUS_MEANS,
@@ -224,6 +229,14 @@ class FallacyEvidence:
     type: str
     justification: str
     target_arg_id: str
+    # #3180 — WHOSE move the fallacy is. ``speaker`` (the value an older
+    # record implies, and the default) or ``reported``: the text reports or
+    # denounces a move made by another party, named in
+    # ``move_author_label``. A reported one is not one of the speaker's
+    # dérapages — it belongs in the report's own line, never in a movement
+    # built from the speaker's moves.
+    move_author: str = "speaker"
+    move_author_label: str = ""
 
 
 @dataclass
@@ -449,6 +462,9 @@ class Act2Evidence:
     governance_divergent_texts: List[Tuple[str, str]] = field(default_factory=list)
     debate_exchanges: List[DebateExchange] = field(default_factory=list)
     args_total: int = 0
+    # #3180 — the SPEAKER's localised fallacies only. A detection whose
+    # ``move_author`` is ``reported`` is carried in ``reported_fallacies`` and
+    # never added here: the count is read as "what this discourse commits".
     fallacies_total: int = 0
     # #2966 — la couverture de la détection par argument, telle que le run l'a
     # enregistrée. ``fallacy_sample_recorded`` vient de l'état : ``False`` = la
@@ -461,8 +477,14 @@ class Act2Evidence:
     # resolved to an identified argument. These cannot join a movement beat,
     # but they ARE counted (here) rather than silently dropped (#1019) — the
     # LLM/rapport surfaces them honestly as "non rattaché(s) à un argument
-    # identifié". ``fallacies_total`` counts only the attributed ones.
+    # identifié". ``fallacies_total`` counts only the speaker's attributed ones.
     unattributed_fallacies: int = 0
+    # #3180 — the fallacies the text REPORTS or denounces (a move by another
+    # party), rather than commits. They form no movement and count in no
+    # speaker tally; the prompt surfaces them with the party's label, and the
+    # narrative says the speaker reports them. Empty when the run said nothing
+    # about authorship — the attribution stays the speaker's, never invented.
+    reported_fallacies: List[FallacyEvidence] = field(default_factory=list)
     # DERIVED virtuous flag (spec §5.1) — when the state characterises the text
     # as virtuous, the narrative leads with WHY THE ARGUMENTATION HOLDS (the
     # soutiens movement becomes the centrepiece; formal tenue is the proof).
@@ -764,6 +786,10 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
     fallacy_by_arg: Dict[str, List[FallacyEvidence]] = {}
     fallacies_total = 0
     unattributed_fallacies = 0  # Note (a) (#1153): traced, not dropped (#1019)
+    # #3180 — a fallacy the text REPORTS (a move by another party) is not one
+    # of the speaker's dérapages. It is indexed apart so it builds no movement
+    # and enters no speaker tally; the prompt names it in its own block.
+    reported_fallacies: List[FallacyEvidence] = []
     for _fid, fdata in fallacies.items():
         if not isinstance(fdata, dict):
             continue
@@ -773,18 +799,24 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
             # surface it honestly instead of silently losing the detection.
             unattributed_fallacies += 1
             continue
-        fallacies_total += 1
-        fallacy_by_arg.setdefault(tid, []).append(
-            FallacyEvidence(
-                fallacy_id=str(_fid),
-                family=_reconcile_family(fdata),
-                type=str(fdata.get("type", "inconnu")),
-                justification=_truncate(
-                    fdata.get("justification", ""), _JUSTIFICATION_CAP
-                ),
-                target_arg_id=str(tid),
-            )
+        move_author = move_author_of(fdata)
+        # Named "_ev" — a bare ``entry`` would collide (for mypy) with the
+        # formal-findings loop below, whose variable carries another type.
+        _ev = FallacyEvidence(
+            fallacy_id=str(_fid),
+            family=_reconcile_family(fdata),
+            type=str(fdata.get("type", "inconnu")),
+            justification=_truncate(fdata.get("justification", ""), _JUSTIFICATION_CAP),
+            target_arg_id=str(tid),
+            move_author=move_author,
+            move_author_label=move_author_label_of(fdata),
         )
+        if is_reported_move(_ev):
+            reported_fallacies.append(_ev)
+        else:
+            # #3180 — only the speaker's own detections enter the tally.
+            fallacies_total += 1
+            fallacy_by_arg.setdefault(tid, []).append(_ev)
 
     # Index counters by target arg.
     counter_by_arg: Dict[str, List[CounterEvidence]] = {}
@@ -945,6 +977,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         fallacy_sample_size=len(fallacy_sample) if fallacy_sample is not None else 0,
         quality_sample_size=len(quality_sample) if quality_sample is not None else 0,
         unattributed_fallacies=unattributed_fallacies,
+        reported_fallacies=reported_fallacies,
         virtuous_mode=virtuous_mode,
         governance_verdict=governance_verdict,
         governance_winner_text=governance_winner_text,
@@ -1666,6 +1699,43 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
             f"ne leur invente NI cible NI mouvement d'accueil.\n\n"
         )
 
+    # --- #3180: the moves the text REPORTS, not the ones the speaker commits ---
+    # A text that denounces a sophism commits no sophism by denouncing it. The
+    # detection is real and worth surfacing, but attributing it to the speaker
+    # turns a denunciation into a self-incrimination. These entries never reach
+    # ``fallacy_by_arg`` (they build no movement) and never enter
+    # ``fallacies_total``; they are named here with the party the text names.
+    # Entries whose record carried no ``move_author`` keep the speaker
+    # attribution and never land here — no party is invented.
+    reported_block = ""
+    if evidence.reported_fallacies:
+        n_rep = len(evidence.reported_fallacies)
+        rep_lines: List[str] = []
+        # Named "rep" — a bare ``f`` would collide (for mypy) with the
+        # formal-findings loop below, whose variable carries another type.
+        for rep in evidence.reported_fallacies:
+            party = rep.move_author_label.strip()
+            chez = (
+                f"chez « {party} »"
+                if party
+                else "chez un tiers que le texte ne nomme pas"
+            )
+            rep_lines.append(
+                f"  • {rep.type} (famille {rep.family}) {chez} — "
+                f"l'unité {rep.target_arg_id} en fait état"
+            )
+        reported_block = (
+            "SOPHISMES RAPPORTÉS, NON COMMIS PAR LE LOCUTEUR : "
+            f"{accord(n_rep, 'sophisme rapporté', 'sophismes rapportés')} "
+            "(le texte les dénonce ou les cite, il ne les commet pas). "
+            "Ils ne forment AUCUN mouvement ci-dessus et ne comptent PAS "
+            "parmi les dérapages du locuteur : si tu les évoques, dis que le "
+            "locuteur les RAPPORTE, et attribue-les au tiers nommé ci-dessous "
+            "— ne les présente jamais comme les siens.\n"
+            + "\n".join(rep_lines)
+            + "\n\n"
+        )
+
     # --- formal anchors (verified-in-state) ---
     # #1914 (constat 1) : an anchor without its tested content reads as a
     # badge — the reader cannot tell WHAT was tested. Each line now carries
@@ -2026,6 +2096,7 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         f"{reading_block}"
         f"{coverage_note}"
         f"{unattributed_block}"
+        f"{reported_block}"
         f"TENUE FORMELLE (ancres vérifiées, à tisser comme PREUVE d'un battement) :\n"
         f"{formal_block}\n\n"
         f"{annex_ref_rule}"

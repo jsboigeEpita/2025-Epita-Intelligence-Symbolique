@@ -1,0 +1,48 @@
+{
+  "key": "665b41383c77a725872d04a9e4c72f9dcef51776f198485dc0329ab2c342559d",
+  "value": {
+    "id": "chatcmpl-Ec9FJMWbXMvJZW00CKWsZXaYC41Em",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"La crise climatique serait moins grave qu’annoncé et la transition énergétique ne serait pas nécessaire ou économiquement avantageuse.\",\"main_thesis\":\"La transition énergétique est nécessaire et économiquement avantageuse à long terme.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792760713,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 174,
+      "prompt_tokens": 263,
+      "total_tokens": 437,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 110,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

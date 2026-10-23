@@ -54,6 +54,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
 from .fr_accord import accord
+from argumentation_analysis.core.fallacy_attribution import is_speaker_move  # #3180
 from .cited_units import governance_origin
 from .specialist_roles import (
     ROLE_CONTRADICTOIRE,
@@ -173,12 +174,21 @@ def _truncate(text: Any, cap: int) -> str:
 
 
 def _fallacy_target_ids(state: Any) -> set:
-    """Opaque ids of every argument a localized fallacy sits on."""
+    """Opaque ids of every argument the SPEAKER's localized fallacy sits on.
+
+    #3180 — a reported detection (another party's move that the text merely
+    denounces or cites) does not contest the unit that reports it, so it never
+    makes an otherwise strong argument look contested.
+    """
     fallacies = getattr(state, "identified_fallacies", None)
     out: set = set()
     if isinstance(fallacies, dict):
         for _fid, fdata in fallacies.items():
-            if isinstance(fdata, dict) and fdata.get("target_argument_id"):
+            if (
+                isinstance(fdata, dict)
+                and fdata.get("target_argument_id")
+                and is_speaker_move(fdata)
+            ):
                 out.add(str(fdata["target_argument_id"]))
     return out
 

@@ -41,6 +41,10 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from .fr_accord import accord
+from argumentation_analysis.core.fallacy_attribution import (  # #3180
+    is_reported_move,
+    is_speaker_move,
+)
 
 # --- schema ---------------------------------------------------------------
 
@@ -428,6 +432,10 @@ class VirtuousModeAssessment:
     quality_virtues_present: bool
     formal_holds: bool
     reasoning: str
+    # #3180 — reported detections (a move by another party) are not the
+    # speaker's and never count against virtue; they are carried so no reader
+    # has to wonder where the detection went.
+    reported_fallacy_count: int = 0
 
 
 def _quality_virtue_names(state: Any) -> List[str]:
@@ -468,6 +476,13 @@ def _localized_fallacy_count(state: Any) -> int:
     Unresolved fallacies (no target) are NOT counted — they do not characterize
     the discourse as fallacy-laden (they may be a resolution gap). Mirrors the
     ``fallacies_total`` definition used by the act plugins.
+
+    #3180 — a fallacy the detector placed in REPORTED speech (``move_author:
+    reported``: a move by another party that the text reports or denounces) is
+    not this discourse's fallacy either. Denouncing a tu quoque is not
+    committing one, and counting it here disqualified virtue-titling for the
+    most virtuous move a text can make. Records with no ``move_author`` keep
+    the speaker attribution: the absent field is not a third state.
     """
     fallacies = getattr(state, "identified_fallacies", {}) or {}
     if not isinstance(fallacies, dict):
@@ -475,7 +490,29 @@ def _localized_fallacy_count(state: Any) -> int:
     return sum(
         1
         for _f, d in fallacies.items()
-        if isinstance(d, dict) and (d.get("target_argument_id") or "")
+        if isinstance(d, dict)
+        and (d.get("target_argument_id") or "")
+        and is_speaker_move(d)
+    )
+
+
+def _reported_fallacy_count(state: Any) -> int:
+    """#3180 — the fallacies the text REPORTS, not the ones it commits.
+
+    Excluded from ``_localized_fallacy_count`` so they cannot disqualify
+    virtue-titling; this count exists so the reasoning can still SAY they were
+    found (a detection the report drops silently is the #1019 defect this whole
+    family is about).
+    """
+    fallacies = getattr(state, "identified_fallacies", {}) or {}
+    if not isinstance(fallacies, dict):
+        return 0
+    return sum(
+        1
+        for _f, d in fallacies.items()
+        if isinstance(d, dict)
+        and (d.get("target_argument_id") or "")
+        and is_reported_move(d)
     )
 
 
@@ -548,6 +585,7 @@ def detect_virtuous_mode(state: Any) -> VirtuousModeAssessment:
     population; the reasoning names the coverage it stands on.
     """
     fallacy_count = _localized_fallacy_count(state)
+    reported_count = _reported_fallacy_count(state)
     virtues = _quality_virtue_names(state)
     quality_present = bool(virtues)
     formal_holds = _formal_holds(state)
@@ -596,10 +634,20 @@ def detect_virtuous_mode(state: Any) -> VirtuousModeAssessment:
             )
         reasoning = "Mode non-vertueux : " + " ; ".join(reasons) + "."
 
+    # #3180 — the reported detections are named in every branch: absent from the
+    # speaker's count, never absent from the reasoning.
+    if reported_count:
+        reasoning += (
+            f" Par ailleurs {accord(reported_count, 'sophisme RAPPORTÉ', 'sophismes RAPPORTÉS')} "
+            "(geste d'un tiers que le texte dénonce) : non compté(s) ici, "
+            "ce n'est pas le locuteur qui les commet."
+        )
+
     return VirtuousModeAssessment(
         is_virtuous=is_virtuous,
         fallacy_count=fallacy_count,
         quality_virtues_present=quality_present,
         formal_holds=formal_holds,
         reasoning=reasoning,
+        reported_fallacy_count=reported_count,
     )

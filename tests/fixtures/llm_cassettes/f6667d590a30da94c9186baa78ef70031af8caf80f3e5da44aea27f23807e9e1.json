@@ -1,0 +1,48 @@
+{
+  "key": "f6667d590a30da94c9186baa78ef70031af8caf80f3e5da44aea27f23807e9e1",
+  "value": {
+    "id": "chatcmpl-Ec9ChAIBR2M26VuJXiMOWoxhbdlBJ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Ceux qui affirment que les vaccins sont dangereux ignorent des décennies de recherche clinique. Les taux de vaccination élevés protègent aussi ceux qui ne peuvent pas être vaccinés grâce à l’immunité collective.\",\"conclusion\":\"L’idée que les entreprises pharmaceutiques cachent les effets secondaires est une théorie du complot sans fondement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792760551,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 490,
+      "prompt_tokens": 285,
+      "total_tokens": 775,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 400,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

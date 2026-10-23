@@ -160,6 +160,17 @@ class ExplorationPlugin:
             "branch is then abandoned, not confirmed",
         ] = True,
         justification: Annotated[str, "Why this verdict holds for the text"] = "",
+        move_author: Annotated[
+            str,
+            "#3180 — 'speaker' when the analyzed text's own speaker commits "
+            "the move; 'reported' when the text reports or denounces another "
+            "party's move. Empty or unknown ⇒ not stated",
+        ] = "",
+        move_author_label: Annotated[
+            str,
+            "The reported party's label, as the text names it, when "
+            "move_author is 'reported'",
+        ] = "",
     ) -> Annotated[str, "Verdict result"]:
         """Record the verdict on a node, with the justification that supports it.
 
@@ -226,6 +237,16 @@ class ExplorationPlugin:
             "confidence": confidence_score,
             "justification": justification,
         }
+        # #3180 — the author pair is echoed as a field, validated like every
+        # reader of it: only the two known values travel, silence stays
+        # silence (the descent stores what the verdict says, and no transport
+        # has to carry it beside the tool call).
+        _author = str(move_author or "").strip()
+        if _author in ("speaker", "reported"):
+            result["move_author"] = _author
+            _label = str(move_author_label or "").strip()
+            if _label:
+                result["move_author_label"] = _label
         if confidence_note:
             result["confidence_note"] = confidence_note
         return json.dumps(result, ensure_ascii=False)

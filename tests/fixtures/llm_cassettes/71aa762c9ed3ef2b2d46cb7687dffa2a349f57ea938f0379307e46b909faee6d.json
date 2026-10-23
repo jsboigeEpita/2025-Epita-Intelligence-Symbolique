@@ -1,0 +1,40 @@
+{
+  "key": "71aa762c9ed3ef2b2d46cb7687dffa2a349f57ea938f0379307e46b909faee6d",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_h2dLyPkYWaImE61pKDw3j3Fe",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"76\",\"matches\":true,\"confidence\":\"0.99\",\"justification\":\"Le texte traite l’unanimité des experts comme suffisante pour établir la vérité (« c’est donc vrai »), et rend l’avis des non-experts irrecevable par principe. Il s’agit d’une autorité présentée comme indiscutable, sans examen de la qualité des preuves ni des limites de l’expertise.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Ec95BTTv4KB6IeFz6MOiD99ejcNIE",
+        "created": 1792760085,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 907,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 109,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

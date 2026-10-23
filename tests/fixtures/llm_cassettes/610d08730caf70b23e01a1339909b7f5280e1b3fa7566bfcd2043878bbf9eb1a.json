@@ -1,14 +1,14 @@
 {
   "key": "610d08730caf70b23e01a1339909b7f5280e1b3fa7566bfcd2043878bbf9eb1a",
   "value": {
-    "id": "chatcmpl-EaUzi9TDXouWEY7HC6GvZ3K1aRwAZ",
+    "id": "chatcmpl-Ec9AD2FombFcEMSMGcj51llIu1vYn",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":1.0,\"exhibit\":\"Les quatre points sont distincts : proposition d’organiser le tournoi, bénéfice en visibilité, bénéfice en recrutement, et alternative d’investissement dans du matériel pédagogique. Les points 2 et 3 sont liés mais désignent deux effets différents, sans redondance substantielle.\"}",
+          "content": "{\"score\":1.0,\"exhibit\":\"Les quatre points apportent des idées distinctes : organisation et budget du tournoi, visibilité accrue, recrutement de membres, et investissement alternatif dans du matériel pédagogique. Les points 2 et 3 sont liés comme bénéfices du tournoi, mais ne se répètent pas.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1792367658,
+    "created": 1792760397,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 147,
+      "completion_tokens": 133,
       "prompt_tokens": 300,
-      "total_tokens": 447,
+      "total_tokens": 433,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 71,
+        "reasoning_tokens": 60,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

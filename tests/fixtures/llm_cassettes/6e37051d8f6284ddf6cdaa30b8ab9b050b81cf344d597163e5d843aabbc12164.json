@@ -1,0 +1,40 @@
+{
+  "key": "6e37051d8f6284ddf6cdaa30b8ab9b050b81cf344d597163e5d843aabbc12164",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_6CfDt7EC7hGJZvnOvZWERiyc",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"737\",\"matches\":false,\"justification\":\"Le texte ne généralise pas à partir d’un exemple ou de quelques cas particuliers. Il invoque plutôt l’unanimité des experts comme preuve et exclut l’avis des non-experts, ce qui relève d’un appel à l’autorité ou d’un rejet de l’opinion adverse, pas de la preuve par l’exemple.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Ec95UjhtMPsIT4gHBQ5R3TfpGnIFi",
+        "created": 1792760104,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 938,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 108,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "key": "758dcd12054bc27dc278b2c555b4a3c300abdf0fc066fff5818a7155c877d4f9",
+  "value": {
+    "id": "chatcmpl-Ec9EDXHcbm9Bpvicq64XpcFRE98LI",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"La peine de mort dissuade les crimes les plus graves, comme les meurtres de masse ; les avancées de l’ADN réduisent considérablement le risque d’erreur judiciaire ; certains criminels sont irrécupérables et représentent un danger permanent pour la société.\",\"conclusion\":\"La peine de mort est justifiée et devrait être maintenue, malgré le risque d’erreurs judiciaires.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792760645,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 337,
+      "prompt_tokens": 283,
+      "total_tokens": 620,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 235,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

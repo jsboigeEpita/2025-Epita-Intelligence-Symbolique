@@ -126,6 +126,28 @@ class IdentifiedFallacy(BaseModel):
             "(one-shot regime, where no descent happened)"
         ),
     )
+    # #3180 — WHOSE move the fallacy is. The record had no such field, so
+    # attribution was implicit through the target argument: a tu quoque the
+    # detector located in REPORTED speech (the opponent's move, which the
+    # speaker denounces) was attributed to the speaker on every surface. The
+    # detector can tell the difference — it wrote it in its justification —
+    # but free text has no readers. Empty = not stated: readers keep the
+    # speaker attribution then, and never invent a reported party.
+    move_author: str = Field(
+        default="",
+        description=(
+            "'speaker' when the analyzed text's own speaker commits the move; "
+            "'reported' when the text reports or denounces a move made by "
+            "another party; empty when the reply did not say"
+        ),
+    )
+    move_author_label: str = Field(
+        default="",
+        description=(
+            "The reported party's opaque label when move_author is 'reported' "
+            "(e.g. 'opponent', 'Speaker_B'); empty otherwise"
+        ),
+    )
 
 
 class FallacyAnalysisResult(BaseModel):

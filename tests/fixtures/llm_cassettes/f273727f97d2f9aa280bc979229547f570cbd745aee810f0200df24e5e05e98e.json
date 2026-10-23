@@ -1,0 +1,48 @@
+{
+  "key": "f273727f97d2f9aa280bc979229547f570cbd745aee810f0200df24e5e05e98e",
+  "value": {
+    "id": "chatcmpl-Ec9E8aXsWQgQKKZKvWvzHoWqwSsha",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La position adverse est clairement identifiée : le système judiciaire peut commettre des erreurs et la peine de mort est irréversible, donc une erreur peut être fatale. L'engagement est réel, car cette thèse adverse est effectivement prise en compte et réfutée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792760640,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 105,
+      "prompt_tokens": 270,
+      "total_tokens": 375,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 30,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -62,6 +62,12 @@ class FallacyDiagnosis:
     # the channels blind — the only key they share (_fallacy_family) is
     # family-granular and heuristic, not a type-level match.
     unanchored_claim: bool = False
+    # #3180 — whose move the diagnosis is. ``speaker`` (default, the legacy
+    # attribution) or ``reported``: the text reports/denounces a move made by
+    # another party named in ``move_author_label``. A reported diagnosis is
+    # surfaced, but never counted as one of the speaker's moves.
+    move_author: str = "speaker"
+    move_author_label: str = ""
 
 
 @dataclass

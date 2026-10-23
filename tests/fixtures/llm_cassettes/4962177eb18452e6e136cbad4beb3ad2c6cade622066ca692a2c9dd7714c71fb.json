@@ -1,0 +1,40 @@
+{
+  "key": "4962177eb18452e6e136cbad4beb3ad2c6cade622066ca692a2c9dd7714c71fb",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_0lKMkvMleNnNnwa0ma49jj3C",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"798\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L'affirmation présente comme « succès incontestable » une évaluation vague et absolue, sans fournir de critères ni de preuves; elle s'appuie ainsi sur une formulation linguistique destinée à convaincre.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Ec94N1dHeCiBKeGTbd8GP37r0JLGw",
+        "created": 1792760035,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1874,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 776,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 87,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

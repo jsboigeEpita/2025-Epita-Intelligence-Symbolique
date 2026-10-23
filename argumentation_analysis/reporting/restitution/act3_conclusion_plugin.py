@@ -92,6 +92,11 @@ from .cited_units import (  # #2965 (Acte III slice) — same budget as Act II
     render_divergence_clause,
     truncate_at_boundary,
 )
+from argumentation_analysis.core.fallacy_attribution import (  # #3180
+    is_reported_move,
+    is_speaker_move,
+    move_author_label_of,
+)
 from .fr_accord import accord
 from .global_projection import (
     GlobalFinding,
@@ -516,6 +521,10 @@ class Act3Evidence:
 
     args_total: int = 0
     fallacies_total: int = 0
+    # #3180 — the fallacies the text REPORTS (a move by another party), kept
+    # apart from the speaker's count so the conclusion can still say they were
+    # found without filing them as this discourse's weaknesses.
+    reported_fallacies_total: int = 0
     counters_total: int = 0
     quality_axis_available: bool = False
     quality_strengths: List[QualityStrength] = field(default_factory=list)
@@ -866,6 +875,10 @@ def _collect_weak_points(
     points: List[StructuringWeakPoint] = []
     for _fid, fdata in fallacies.items():
         if not isinstance(fdata, dict):
+            continue
+        # #3180 — a reported move is another party's, not this discourse's
+        # weak point: it cannot be targeted as the speaker's failure.
+        if not is_speaker_move(fdata):
             continue
         tid = fdata.get("target_argument_id") or ""
         if not tid:
@@ -2427,10 +2440,22 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         counters = []
 
     args_total = len(args)
+    # #3180 — only the speaker's own localized detections count. A reported
+    # move is surfaced apart (``reported_fallacies_total``), never as this
+    # discourse's weakness.
     fallacies_total = sum(
         1
         for _f, d in fallacies.items()
-        if isinstance(d, dict) and (d.get("target_argument_id") or "")
+        if isinstance(d, dict)
+        and (d.get("target_argument_id") or "")
+        and is_speaker_move(d)
+    )
+    reported_fallacies_total = sum(
+        1
+        for _f, d in fallacies.items()
+        if isinstance(d, dict)
+        and (d.get("target_argument_id") or "")
+        and is_reported_move(d)
     )
     quality_axis_available = bool(quality)
     counters_total = sum(
@@ -2658,6 +2683,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
     return Act3Evidence(
         args_total=args_total,
         fallacies_total=fallacies_total,
+        reported_fallacies_total=reported_fallacies_total,
         counters_total=counters_total,
         quality_axis_available=quality_axis_available,
         quality_strengths=quality_strengths,
@@ -2872,6 +2898,18 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         weaknesses_lines = (
             "  (aucun point faible localisé — texte vertueux : titre sur la "
             "robustesse formelle et la tenue des schemes)"
+        )
+    # #3180 — reported detections are not weaknesses, but they were found: say
+    # so with their third-party author rather than silently dropping them.
+    reported_block = ""
+    if evidence.reported_fallacies_total:
+        _n_rep = evidence.reported_fallacies_total
+        reported_block = (
+            "[SOPHISMES RAPPORTÉS — geste d'un tiers, non commis par le "
+            "locuteur]\n"
+            f"  {accord(_n_rep, 'sophisme rapporté', 'sophismes rapportés')} : "
+            "le texte les dénonce ou les cite. Ils ne sont PAS des faiblesses "
+            "du locuteur et n'entrent dans aucun compte de cette conclusion.\n\n"
         )
 
     # #1914 résidu b — same citation contract as Act II, on the weak-point
@@ -3240,6 +3278,7 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         f"[VERDICT GATED — plafond de claim honnête]\n{synthesis_block}\n\n"
         f"[CE QUI TIENT — forces (qualité)]\n{strengths_lines}\n\n"
         f"[CE QUI NE TIENT PAS — faiblesses localisées]\n{weaknesses_lines}\n\n"
+        f"{reported_block}"
         f"{annex_ref_rule}"
         f"[CONTRE-POINTS — ce qui affaiblit les revendications]\n{counters_lines}\n\n"
         f"[POINTS DE PRUDENCE — ancrages structurels]\n{target_lines}\n\n"

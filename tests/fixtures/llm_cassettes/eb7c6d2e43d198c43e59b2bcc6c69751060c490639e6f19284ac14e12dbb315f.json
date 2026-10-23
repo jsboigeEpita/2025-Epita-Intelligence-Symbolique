@@ -1,0 +1,48 @@
+{
+  "key": "eb7c6d2e43d198c43e59b2bcc6c69751060c490639e6f19284ac14e12dbb315f",
+  "value": {
+    "id": "chatcmpl-Ec91MkpSbrhgz3UEEkoG4Yxnmb0sO",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Obstacles localisés : jargon technique non défini (« PIB », « sophisme naturaliste », « homme de paille ») et absence d’anaphore. Verdict : ces obstacles sont résolvables par le contexte ; le sens global reste accessible.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792759848,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 105,
+      "prompt_tokens": 271,
+      "total_tokens": 376,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 35,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

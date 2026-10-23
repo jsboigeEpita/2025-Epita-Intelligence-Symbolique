@@ -1,14 +1,14 @@
 {
   "key": "d3d8103dd9d5607c25cf419d66623eb1c309c1ae46b4b7ae6c2966f46e683bcc",
   "value": {
-    "id": "chatcmpl-EaV2B3MBU2Qn42LUAzEvv64a49z6e",
+    "id": "chatcmpl-Ec9CxtTqWfAW4Ua6hSi898qe4VNal",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Les entreprises pharmaceutiques dissimulent les effets secondaires des vaccins.\",\"main_thesis\":\"Les affirmations selon lesquelles les vaccins sont dangereux et que les entreprises pharmaceutiques cachent leurs effets secondaires sont infondées, tandis que des taux de vaccination élevés protègent aussi les personnes qui ne peuvent pas être vaccinées grâce à l’immunité collective.\"}",
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Les entreprises pharmaceutiques dissimulent les effets secondaires des vaccins et les vaccins sont dangereux.\",\"main_thesis\":\"L'affirmation selon laquelle les entreprises pharmaceutiques cachent les effets secondaires des vaccins est une théorie du complot infondée, et les vaccins sont soutenus par des décennies de recherche clinique et contribuent à la protection collective.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1792367811,
+    "created": 1792760567,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 139,
+      "completion_tokens": 169,
       "prompt_tokens": 284,
-      "total_tokens": 423,
+      "total_tokens": 453,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 43,
+        "reasoning_tokens": 72,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

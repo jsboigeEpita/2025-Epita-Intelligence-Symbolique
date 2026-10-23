@@ -1,0 +1,48 @@
+{
+  "key": "c4ce4ccb2b380e99f98e454af28fd8fff9a77e6310b1e837691c48a8463c0ea2",
+  "value": {
+    "id": "chatcmpl-Ec97JOCinzgylQ7a670VciCjJK9s9",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La prémisse affirme que l'organisation du tournoi permettrait d'utiliser tout le budget et d'accroître la visibilité du club, tandis que la conclusion prescrit de retenir l'option A. Verdict : saut logique, car la prémisse ne suffit pas à établir qu'il faut choisir cette option.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1792760217,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 152,
+      "prompt_tokens": 296,
+      "total_tokens": 448,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 72,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
