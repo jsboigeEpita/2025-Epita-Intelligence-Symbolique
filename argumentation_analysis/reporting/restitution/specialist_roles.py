@@ -47,6 +47,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
+from argumentation_analysis.orchestration.fol_cause import cause_short_label
+
 from .fr_accord import accord
 from argumentation_analysis.core.fallacy_attribution import is_speaker_move  # #3180
 from .formal_derivation import extract_tested_content
@@ -229,24 +231,46 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
         # of the acts must not charge the speaker for a conflict the cause
         # locates elsewhere. The readable cause phrase rides in the acts'
         # findings lines (appended by the #3107/#3122 readers); this bounded
-        # statement names the class, never a second phrasing of it.
-        statement = (
-            f"L'axe {axis} a réfuté {accord(n_false, noun_sg, noun_pl)} — à "
-            f"l'épreuve : {tested}."
-        )
+        # statement names the class in prose (``cause_short_label``), never
+        # the raw enum token — a reader cannot charge anyone from
+        # « (unattributed_side) ».
         if non_speaker_causes:
-            causes = " ; ".join(non_speaker_causes)
-            statement += (
+            causes = " ; ".join(cause_short_label(kind) for kind in non_speaker_causes)
+            qualifier = (
                 f" La mise à l'épreuve formelle a établi cette réfutation, "
                 f"mais sa cause ({causes}) ne permet pas de l'imputer au "
                 f"locuteur."
             )
         else:
-            statement += (
+            qualifier = (
                 " La mise à l'épreuve formelle établit que ce contenu testé "
                 "ne tient pas."
             )
-        return statement
+        # #3199 rework — the qualifier is the MEASUREMENT, the tested content
+        # is the quotation: when _STATEMENT_CAP cannot hold both, the quote
+        # gives way. Measured on the doc_A state: 155 chars of tested content
+        # + a 130-char qualifier came to 285 > 240, and the cap's
+        # last-sentence-boundary cut dropped the qualifier whole — the
+        # Décisif line then charged the speaker again, the exact defect this
+        # issue repairs. Shrinking the quote keeps every reader's claim
+        # bounded and the attribution honest.
+        lead = (
+            f"L'axe {axis} a réfuté {accord(n_false, noun_sg, noun_pl)} — à "
+            f"l'épreuve : "
+        )
+        budget = _STATEMENT_CAP - len(lead) - 1 - len(qualifier)
+        if len(tested) > budget:
+            # Elided quote, never a half-word; below ~12 chars the quote says
+            # nothing, so the sentence drops it rather than render « … ».
+            if budget >= 12:
+                tested = tested[: budget - 1].rstrip() + "…"
+            else:
+                tested = ""
+        if tested:
+            return f"{lead}{tested}.{qualifier}"
+        return (
+            f"L'axe {axis} a réfuté " f"{accord(n_false, noun_sg, noun_pl)}.{qualifier}"
+        )
 
     def _refuted_tested_content(
         records: Any, verdict_reader: Callable[[Dict[str, Any]], Optional[bool]]

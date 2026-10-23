@@ -33,7 +33,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from .cited_units import (  # #2967: shared cited-unit budget + boundary cut
     CITED_UNIT_TEXT_CAP,
@@ -118,6 +118,27 @@ _KIND_READABLE = {
     "convergence": "convergence inter-axes",
     "gate": "gate de synthèse",
 }
+
+
+def _first_stated_cause_kind(
+    records: Any, verdict_reader: Callable[[Dict[str, Any]], Optional[bool]]
+) -> str:
+    """#3199 rework — the class of the first REFUTED record that stated one.
+
+    One reader for the binding clause, in record order: the finding's units
+    come from the recorded core, and the clause that names them must speak
+    of the same conflict. Empty string when the run stated no cause — the
+    clause then asserts nothing about the batch.
+    """
+    if isinstance(records, list):
+        for r in records:
+            if not isinstance(r, dict) or verdict_reader(r) is not False:
+                continue
+            cause = r.get("consistency_cause")
+            if isinstance(cause, dict) and cause.get("cause"):
+                return str(cause["cause"])
+    return ""
+
 
 # Truncation caps for corpus-derived fields entering the prompt (privacy +
 # prompt-budget discipline). The LLM is told to paraphrase, not echo.
@@ -316,6 +337,12 @@ class FormalFinding:
     # #3179 : how many real formulas the decided records carry — the count the
     # not-localised wording states instead of calling the content absent.
     tested_n_formulas: int = 0
+    # #3199 rework — the stated class of the conflict, when the record named
+    # one. The binding clause used to assert « le lot de traduction de ces
+    # unités, pas une seule » whatever the cause: on an ``unattributed_side``
+    # record only ONE flank carries units, so that sentence claimed a batch
+    # that does not exist. The clause now reads this field.
+    cause_kind: str = ""
 
 
 @dataclass
@@ -1190,6 +1217,9 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
             # #3179 : the same reader says WHICH absence it hit, and how many
             # real formulas the records carry.
             pl_tested = read_tested_content(pl, _pl_verdict, refuted=bool(inconsistent))
+            # #3199 rework — the binding clause speaks of the conflict the
+            # record named, not of a translation batch by default.
+            pl_cause_kind = _first_stated_cause_kind(pl, _pl_verdict)
             findings.append(
                 FormalFinding(
                     kind="pl",
@@ -1211,6 +1241,7 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                     units=pl_tested.units,
                     tested_absence=pl_tested.absence,
                     tested_n_formulas=pl_tested.n_formulas,
+                    cause_kind=pl_cause_kind,
                 )
             )
 
@@ -1234,16 +1265,19 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                 and isinstance(r.get("consistency_cause"), dict)
                 and r["consistency_cause"].get("cause")
             ]
+
             # #3146 : the FOL cause twin (#3107) carries the same core —
             # same single reader for content and units.
             # #3179 : and the same reader names the absence it hit.
+            # #3199 rework — the tri-state reader is named once, so the
+            # content reader and the cause reader cannot drift apart.
+            def _fol_verdict(r: Any) -> Optional[bool]:
+                v = r.get("consistent") if isinstance(r, dict) else None
+                return v if isinstance(v, bool) else None
+
             fol_tested = read_tested_content(
                 fol,
-                lambda r: (
-                    r.get("consistent")
-                    if isinstance(r.get("consistent"), bool)
-                    else None
-                ),
+                _fol_verdict,
                 refuted=bool(inconsistent),
             )
             findings.append(
@@ -1263,6 +1297,7 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                     units=fol_tested.units,
                     tested_absence=fol_tested.absence,
                     tested_n_formulas=fol_tested.n_formulas,
+                    cause_kind=_first_stated_cause_kind(fol, _fol_verdict),
                 )
             )
         else:
@@ -1772,9 +1807,22 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                 # #3146 : the recorded core's source units — the verdict binds
                 # to the batch's units (their movements), never « attached to
                 # no move » for a conflict the state localises exactly.
+                # #3199 rework: the qualifier follows the STATED cause. The
+                # batch sentence is true only of ``batch_attribution``; on an
+                # ``unattributed_side`` record only one flank carries units,
+                # and any other class (or no stated cause) has no business
+                # asserting a translation batch at all.
+                binding_note = {
+                    "batch_attribution": (
+                        " (le lot de traduction de ces unités, pas une seule)"
+                    ),
+                    "unattributed_side": (
+                        " (côté connu seulement — l'autre côté du conflit ne "
+                        "porte aucune unité source)"
+                    ),
+                }.get(f.cause_kind, "")
                 binding = (
-                    f" — rattachement : unités {', '.join(f.units)} "
-                    "(le lot de traduction de ces unités, pas une seule)"
+                    f" — rattachement : unités {', '.join(f.units)}" f"{binding_note}"
                     if f.units
                     else ""
                 )

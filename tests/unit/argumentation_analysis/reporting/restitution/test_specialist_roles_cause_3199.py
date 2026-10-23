@@ -38,6 +38,7 @@ import pytest
 
 from argumentation_analysis.reporting.restitution.specialist_roles import (
     ROLE_DECISIF,
+    _STATEMENT_CAP,
     classify_specialist_roles,
 )
 
@@ -111,7 +112,11 @@ class TestNonSpeakerCauseQualifiesTheDecisiveStatement:
         )
         decisif = [a for a in assignments if a.role == ROLE_DECISIF]
         assert decisif, "an established refutation keeps a role"
-        assert "unattributed_side" in decisif[0].statement
+        # Rework (coordinator measurement): the class was rendered as the raw
+        # enum token « (unattributed_side) ». A reader cannot charge anyone
+        # from a token — the statement now carries the readable label.
+        assert "un côté est sans unité source" in decisif[0].statement
+        assert "unattributed_side" not in decisif[0].statement
         assert "réfuté" in decisif[0].statement or "refuté" in decisif[0].statement
         assert "locuteur" in decisif[0].statement
 
@@ -125,8 +130,8 @@ class TestNonSpeakerCauseQualifiesTheDecisiveStatement:
         assignments = classify_specialist_roles(_state([record_a, record_b]))
         decisif = [a for a in assignments if a.role == ROLE_DECISIF]
         assert decisif
-        assert "batch_attribution" in decisif[0].statement
-        assert "undetermined" in decisif[0].statement
+        assert "contradiction interne à un lot de traduction" in decisif[0].statement
+        assert "inconsistance sans cause établie" in decisif[0].statement
 
 
 class TestSelfContradictionKeepsTheDecisiveStatement:
@@ -159,7 +164,7 @@ class TestFolTwinQualifiesTheSameWay:
         assert not any(_SPEAKER_CHARGING in a.statement for a in assignments)
         decisif = [a for a in assignments if a.role == ROLE_DECISIF]
         assert decisif, "the FOL refutation keeps its role"
-        assert "batch_attribution" in decisif[0].statement
+        assert "contradiction interne à un lot de traduction" in decisif[0].statement
 
     def test_a_self_contradicting_fol_theory_keeps_the_sentence(self):
         assignments = classify_specialist_roles(
@@ -167,3 +172,53 @@ class TestFolTwinQualifiesTheSameWay:
         )
         decisif = [a for a in assignments if a.role == ROLE_DECISIF]
         assert any(_SPEAKER_CHARGING in a.statement for a in decisif)
+
+
+def _long_atom(fill: str, width: int) -> str:
+    return fill * width
+
+
+class TestTheBoundedStatementKeepsTheQualifier:
+    """Rework — the coordinator's real-state measurement.
+
+    On the doc_A state the tested content is 155 characters and the cause
+    qualifier 130: 285 > ``_STATEMENT_CAP`` (240). The cap cut at the last
+    sentence boundary, which fell AFTER « ne tient pas » and BEFORE the
+    qualifier — so the Décisif line rendered with no qualifier at all and
+    charged the speaker again, the very defect this issue repairs. The quote
+    now gives way instead: the qualifier is the measurement.
+    """
+
+    def _long_tested_record(self):
+        atom = _long_atom("a", 70)
+        return {
+            "satisfiable": False,
+            "formulas": [atom, f"! {atom}"],
+            "consistency_cause": {"cause": "unattributed_side"},
+        }
+
+    def test_the_qualifier_survives_the_cap(self):
+        assignments = classify_specialist_roles(_state([self._long_tested_record()]))
+        decisif = [a for a in assignments if a.role == ROLE_DECISIF]
+        assert decisif
+        statement = decisif[0].statement
+        assert "ne permet pas de l'imputer au locuteur" in statement
+        assert "un côté est sans unité source" in statement
+        assert len(statement) <= _STATEMENT_CAP
+
+    def test_the_quote_is_elided_never_a_half_sentence(self):
+        assignments = classify_specialist_roles(_state([self._long_tested_record()]))
+        statement = [a for a in assignments if a.role == ROLE_DECISIF][0].statement
+        # The quote gives way with an explicit elision, and the sentence that
+        # follows it is complete.
+        assert "…" in statement
+        assert statement.index("…") < statement.index("La mise à l'épreuve")
+
+    def test_control_a_short_quote_is_kept_whole(self):
+        # Control: within the budget, nothing is elided — the only change to
+        # the pre-rework sentence is the readable cause label.
+        assignments = classify_specialist_roles(_state([_pl_unsat("between_voices")]))
+        statement = [a for a in assignments if a.role == ROLE_DECISIF][0].statement
+        assert "…" not in statement
+        assert "p" in statement and "! p" in statement
+        assert "ne permet pas de l'imputer au locuteur" in statement

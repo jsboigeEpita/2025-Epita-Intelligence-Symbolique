@@ -434,6 +434,39 @@ def classify_pl_inconsistency(
     }
 
 
+# Short labels, one per class of the vocabulary. #3199 : the roles statement
+# names the cause inside a bounded statement (``_STATEMENT_CAP``), where the
+# full ``cause_phrase`` does not fit — and it must be readable prose, never
+# the enum token (a reader cannot charge anyone from « (unattributed_side) »).
+# Same module as ``cause_phrase`` so the vocabulary keeps ONE home; a class
+# this table does not know renders its token, which stays honest.
+_CAUSE_SHORT_LABELS = {
+    "between_voices": "contradiction entre voix",
+    "self_contradiction": "auto-contradiction d'une même voix",
+    "between_sources": "contradiction entre unités sources",
+    "batch_attribution": "contradiction interne à un lot de traduction",
+    "unattributed_side": "contradiction dont un côté est sans unité source",
+    "undetermined": "inconsistance sans cause établie",
+}
+
+
+def cause_short_label(cause: Any) -> str:
+    """Readable short label of a stated cause, for a bounded statement.
+
+    ``cause`` is the record's ``consistency_cause`` mapping (or the bare
+    class string). Empty string when no cause was stated — the caller renders
+    the unqualified form rather than a label for something never measured.
+    """
+    if isinstance(cause, dict):
+        kind = cause.get("cause")
+    else:
+        kind = cause
+    if not kind:
+        return ""
+    kind = str(kind)
+    return _CAUSE_SHORT_LABELS.get(kind, kind)
+
+
 def cause_phrase(cause: Dict[str, Any]) -> str:
     """The French sentence fragment renderers print, derived from the cause.
 
