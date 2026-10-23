@@ -1,11 +1,23 @@
 # S6-B — Encrypted-extracts port: design + fables-tier scaffold
 
 **Track**: S6-B (issue #1506) · **Epic**: CoursIA strate-6 ICT.
-**Status**: **DESIGN PHASE**. Port réel **DIFFÉRÉ** — en attente d'acceptation
-de S6-A1 ([PR #1516](https://github.com/jsboigeEpita/2025-Epita-Intelligence-Symbolique/pull/1516)).
-**Scaffold**: [`scripts/coursia_s6b/validate_fables_tier.py`](../../scripts/coursia_s6b/validate_fables_tier.py).
+**Status 2026-10-23 — PORTED partner-side.** This design no longer describes a
+pending scaffold: the real port is merged on the partner's `main` as
+`ict/extracts_tiers.py`, and it names S6-A1 ([PR #1516](https://github.com/jsboigeEpita/2025-Epita-Intelligence-Symbolique/pull/1516))
+as its acceptance condition. The partner event this page waited for has
+happened. Nothing was pushed from here — the port was theirs to make, on the
+design below, and the proposal-only discipline held (see the R1105 note on
+issue #1506).
+**Scaffold** (still the local validator for the design's tier rules):
+[`scripts/coursia_s6b/validate_fables_tier.py`](../../scripts/coursia_s6b/validate_fables_tier.py).
 **CoursIA gate**: preparation for [seed `#7289`](https://github.com/jsboige/CoursIA/issues/7289)
 morphogenèse corpus (jambe `#7742`).
+
+> **What remains open, and it is not this page:** S6-A1 (candidate #2) is not
+> proposed to the partner — the belief-state matrix degrades to a chain over
+> phase status words on this checkout, so it discriminates nothing. See the
+> status block on [`strate6_phaseA_source_verdict.md`](strate6_phaseA_source_verdict.md).
+> The extracts port does not depend on it.
 
 ## Why a design phase
 

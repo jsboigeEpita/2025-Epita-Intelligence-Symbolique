@@ -10,6 +10,34 @@ independent falsifiability substrates required by contract
 **Sub-traitant TPM-1/2**: [`scripts/extract_belief_trajectories.py`](../../scripts/extract_belief_trajectories.py)
 (Track TPM-1 #1489, TPM-2 #1491).
 
+> ## Status 2026-10-23 — candidate #2 is NOT proposed, and this page says why
+>
+> The re-run the R1105 audit asked for was executed on `main` under the
+> zero-spend `LLM_CACHE_MODE=replay`, and it settles the question negatively.
+> **The state space carries no belief information**: the inner extractor's
+> `extract` phase fails on every proposition with a replay cache miss (no
+> fixtures are committed for these corpora), everything downstream is skipped,
+> and all four label coordinates — arguments, fallacies, counter-arguments,
+> beliefs — stay at **0**. The only varying coordinate is the **phase status
+> word**, so the matrix counts `completed` / `failed` / `skipped` transitions.
+>
+> Measured consequence, corpora A / B / C: **3 states, λ = [1, 0, 0],
+> g = 1.0** — the same matrix three times. Nothing separates them, so the
+> R1107 criterion ("the instrument must separate two contrasted inputs, else do
+> not propose the artifact") is not met, and **no artifact is proposed to the
+> partner**.
+>
+> What would unblock it is a **paid** run (`LLM_CACHE_MODE=record` over the
+> corpora, or committed fixtures). Until then this leg is **blocked on budget**,
+> not on code: the driver refuses the delivery claim by itself
+> (`belief_state_coverage`, and the « NON MESURÉ » status it renders).
+>
+> Also corrected here: `g = 1 − |λ₂|` was read as « mixing rapide » even on a
+> chain the same page called « réductible ». **g is a mixing rate only for an
+> irreducible chain** — on a reducible one λ₂ = 0 says an absorbing class is
+> reached in one step, and there is no unique stationary distribution to
+> converge to.
+
 ## The thesis
 
 A corpus, observed through the democratech pipeline, yields a sequence of
