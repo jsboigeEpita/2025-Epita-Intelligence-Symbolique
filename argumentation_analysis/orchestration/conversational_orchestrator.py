@@ -3084,6 +3084,10 @@ async def _run_parent_harness_fallback(
                         confidence=confidence,
                         problematic_quote=problematic_quote,
                         confidence_note=confidence_note,
+                        # #3180 — same pass-through as the pipeline writer:
+                        # whose move the fallacy is, when the detection said it.
+                        move_author=f.get("move_author"),
+                        move_author_label=f.get("move_author_label"),
                     )
                     added += 1
                 elif hasattr(state, "add_identified_fallacy"):

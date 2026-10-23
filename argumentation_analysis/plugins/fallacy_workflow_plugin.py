@@ -1842,8 +1842,21 @@ class FallacyWorkflowPlugin:
             "generic labels like 'Ad hominem' or 'Appel à l'autorité' are too shallow. "
             "Prefer leaf nodes or deep sub-types (e.g., 'Empoisonnement du puits' instead of 'Culpabilité par association'). "
             "IMPORTANT: Use the exact fallacy name as it appears in the taxonomy (in French). "
+            # #3180 — whose move it is. Without this field the reader attributes
+            # every detection to the text's speaker, even when the fallacy sits
+            # in SPEECH THE TEXT REPORTS (a tu quoque the speaker denounces in
+            # the opponent's mouth). The detector already reached that verdict
+            # in its explanation; this asks it as a field, because free text has
+            # no readers.
+            'Also say WHOSE move it is: "move_author" is "speaker" when the '
+            'text\'s own speaker commits the fallacy, or "reported" when the '
+            "text reports/denounces a move made by another party — then "
+            '"move_author_label" names that party as the text names it '
+            '(e.g. "opponent"). Omit both when the text does not let you tell.\n'
             "Respond with ONLY a JSON object: "
-            '{"fallacy_name": "...", "taxonomy_pk": "...", "explanation": "...", "confidence": 0.0-1.0}\n\n'
+            '{"fallacy_name": "...", "taxonomy_pk": "...", "explanation": "...", '
+            '"confidence": 0.0-1.0, "move_author": "speaker|reported", '
+            '"move_author_label": "..."}\n\n'
             f"--- TAXONOMY ---\n{compact_taxonomy}\n--- END ---"
         )
 
@@ -1884,12 +1897,25 @@ class FallacyWorkflowPlugin:
                         # honest. Same rule as every other lane
                         # (``fallacy_measured_fields``).
                         confidence, _quote = fallacy_measured_fields(parsed)
+                        # #3180 — the move's author, when the reply stated it.
+                        # Anything other than the two known values stays empty:
+                        # an unknown value is not a measurement, and a reader
+                        # must not read it as "the speaker".
+                        _move_author = str(parsed.get("move_author") or "").strip()
                         fallacy = IdentifiedFallacy(
                             fallacy_type=fallacy_name,
                             taxonomy_pk=parsed.get("taxonomy_pk", ""),
                             explanation=parsed.get("explanation", ""),
                             confidence=confidence,
                             navigation_trace=[],
+                            move_author=(
+                                _move_author
+                                if _move_author in ("speaker", "reported")
+                                else ""
+                            ),
+                            move_author_label=str(
+                                parsed.get("move_author_label") or ""
+                            ).strip(),
                         )
                         result = FallacyAnalysisResult(
                             fallacies=[fallacy],

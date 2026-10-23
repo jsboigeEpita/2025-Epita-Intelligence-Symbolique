@@ -82,6 +82,23 @@ class IdentifiedFallacy(BaseModel):
         ...,
         description="Citation exacte du texte et explication détaillée de pourquoi c'est un sophisme.",
     )
+    # #3180 — dont le sophisme est le fait. Champ vide = non dit : les lecteurs
+    # gardent alors l'attribution au locuteur et n'inventent aucun tiers.
+    move_author: str = Field(
+        default="",
+        description=(
+            "« speaker » si le locuteur du texte analysé commet le sophisme ; "
+            "« reported » si le texte rapporte ou dénonce un sophisme commis "
+            "par un tiers ; vide si la réponse ne le dit pas."
+        ),
+    )
+    move_author_label: str = Field(
+        default="",
+        description=(
+            "L'étiquette opaque du tiers quand move_author vaut « reported » "
+            "(par exemple « opponent », « Speaker_B ») ; vide sinon."
+        ),
+    )
 
 
 class FallacyAnalysisResult(BaseModel):

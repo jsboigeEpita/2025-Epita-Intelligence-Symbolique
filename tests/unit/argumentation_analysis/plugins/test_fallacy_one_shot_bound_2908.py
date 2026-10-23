@@ -132,8 +132,19 @@ def test_texts_at_or_under_the_bound_produce_a_byte_identical_prompt():
             "generic labels like 'Ad hominem' or 'Appel à l'autorité' are too shallow. "
             "Prefer leaf nodes or deep sub-types (e.g., 'Empoisonnement du puits' instead of 'Culpabilité par association'). "
             "IMPORTANT: Use the exact fallacy name as it appears in the taxonomy (in French). "
+            # #3180 — the template also asks WHOSE move it is (speaker or a
+            # reported party); the JSON contract gained the two fields. The
+            # re-pin keeps the property this test exists for: the template is
+            # a single constant, byte-identical between runs.
+            "Also say WHOSE move it is: \"move_author\" is \"speaker\" when the "
+            "text's own speaker commits the fallacy, or \"reported\" when the "
+            "text reports/denounces a move made by another party — then "
+            "\"move_author_label\" names that party as the text names it "
+            "(e.g. \"opponent\"). Omit both when the text does not let you tell.\n"
             "Respond with ONLY a JSON object: "
-            '{"fallacy_name": "...", "taxonomy_pk": "...", "explanation": "...", "confidence": 0.0-1.0}\n\n'
+            '{"fallacy_name": "...", "taxonomy_pk": "...", "explanation": "...", '
+            '"confidence": 0.0-1.0, "move_author": "speaker|reported", '
+            '"move_author_label": "..."}\n\n'
             f"--- TAXONOMY ---\n{plugin._build_compact_taxonomy(max_depth=6)}\n--- END ---"
         )
         assert prompt == legacy, (

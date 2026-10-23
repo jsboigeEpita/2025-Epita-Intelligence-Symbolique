@@ -56,6 +56,9 @@ class _FakeState:
         problematic_quote=None,
         confidence_note: str = "",
         detection_paths=None,
+        # #3180 — the author of the fallacious move, when the detection said.
+        move_author=None,
+        move_author_label=None,
     ) -> str:
         self._counter += 1
         fid = f"fallacy_{self._counter}"
@@ -72,6 +75,10 @@ class _FakeState:
             entry["confidence_note"] = str(confidence_note)
         if detection_paths:
             entry["detection_paths"] = [str(p) for p in detection_paths]
+        if move_author in ("speaker", "reported"):
+            entry["move_author"] = str(move_author)
+            if move_author_label:
+                entry["move_author_label"] = str(move_author_label)
         if target_arg_id:
             entry["target_argument_id"] = target_arg_id
         self.identified_fallacies[fid] = entry

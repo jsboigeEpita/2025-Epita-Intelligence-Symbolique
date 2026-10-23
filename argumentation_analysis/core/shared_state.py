@@ -372,6 +372,8 @@ class RhetoricalAnalysisState:
         problematic_quote: Optional[str] = None,
         confidence_note: str = "",
         detection_paths: Optional[List[str]] = None,
+        move_author: Optional[str] = None,
+        move_author_label: Optional[str] = None,
     ) -> str:
         """Ajoute un sophisme identifié et retourne son ID.
 
@@ -389,6 +391,15 @@ class RhetoricalAnalysisState:
         pour laquelle elle est absente (note #3034) atteint l'état, pas
         seulement le JSON de descente. Stockée seulement si non vide — une
         lecture fidèle n'a pas de note, et une clé vide serait du bruit.
+
+        #3180 — ``move_author`` dit À QUI est le geste : ``speaker`` (le
+        locuteur du texte analysé) ou ``reported`` (le texte rapporte ou
+        dénonce un geste d'un tiers, nommé par ``move_author_label``). Sans ce
+        champ, l'attribution passait implicitement par ``target_argument_id``
+        et tout lecteur créditait le locuteur d'un sophisme que le détecteur
+        avait localisé dans une parole RAPPORTÉE. Vide = non dit : le champ
+        n'est alors pas stocké, et les lecteurs gardent l'attribution au
+        locuteur sans inventer de tiers (famille #1019).
         """
         fallacy_id = self._generate_id("fallacy", self.identified_fallacies)
         entry: Dict[str, Any] = {"type": fallacy_type, "justification": justification}
@@ -407,6 +418,13 @@ class RhetoricalAnalysisState:
         # produit, jamais le total de la population.
         if detection_paths:
             entry["detection_paths"] = [str(p) for p in detection_paths]
+        # #3180 — dont le geste est le sophisme, quand le détecteur l'a dit.
+        # Seules les deux valeurs connues sont stockées : une valeur inconnue
+        # n'est pas une mesure, et un lecteur ne doit pas la lire « locuteur ».
+        if move_author in ("speaker", "reported"):
+            entry["move_author"] = str(move_author)
+            if move_author_label:
+                entry["move_author_label"] = str(move_author_label)
         log_target_info = ""
         if target_arg_id:
             if target_arg_id not in self.identified_arguments:

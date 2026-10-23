@@ -1752,11 +1752,21 @@ class DeepSynthesisAgent(BaseAgent):
                     ftype
                 )
                 target = fdata.get("target_argument_id", "")
+                # #3180 — whose move it is, when the detector said. Absent from
+                # the line when the record is silent: the briefing must not
+                # invent an author any more than the report may.
+                _move = fdata.get("move_author")
+                _move_note = ""
+                if _move in ("speaker", "reported"):
+                    _move_note = f" move_author={_move}"
+                    _label = str(fdata.get("move_author_label") or "")
+                    if _label:
+                        _move_note += f" move_author_label={_label}"
                 _add(
                     "identified_fallacies",
                     u.unit_id,
-                    f"type={ftype} family={family} target={target or 'n/a'} "
-                    f"— {fdata.get('justification', '')}",
+                    f"type={ftype} family={family} target={target or 'n/a'}"
+                    f"{_move_note} — {fdata.get('justification', '')}",
                 )
             if hasattr(state, "record_analysis_coverage"):
                 state.record_analysis_coverage(

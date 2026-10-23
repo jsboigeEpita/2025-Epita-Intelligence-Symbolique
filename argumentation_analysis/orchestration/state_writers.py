@@ -1054,6 +1054,11 @@ def _write_hierarchical_fallacy_to_state(
             problematic_quote=problematic_quote,
             confidence_note=confidence_note,
             detection_paths=detection_paths,
+            # #3180 — whose move the fallacy is, when the detection said so.
+            # Absent stays absent: the readers then keep today's speaker
+            # attribution and invent no reported party.
+            move_author=f.get("move_author"),
+            move_author_label=f.get("move_author_label"),
         )
 
     # FB-35 (#1121): state-level fail-loud marker when the agentic descent was
