@@ -21,6 +21,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
+from .formal_derivation import is_real_formula
+
 # The French label a reader understands, per recorded site. A site the table
 # carries but this map does not (a new wiring point) renders under its raw
 # name rather than being dropped — an unnamed reading still speaks.
@@ -164,6 +166,14 @@ def _fallacy_fed(site: str, state: Any) -> str:
     return base
 
 
+# #3149 — the field that carries a logic record's verdict, per axis. A value
+# that is not a bool is the #2970 « not evaluated » shape: no verdict.
+_VERDICT_KEY = {
+    "propositional_analysis_results": "satisfiable",
+    "fol_analysis_results": "consistent",
+}
+
+
 def _formula_source_counts(state: Any, attribute: str) -> "tuple[int, int]":
     """#3136 — how many of a logic leg's formulas name the units they came from.
 
@@ -172,19 +182,42 @@ def _formula_source_counts(state: Any, attribute: str) -> "tuple[int, int]":
     the formula came from the head's wide pass or from an upstream
     translation. Returns ``(sourced, total)`` — the count the units line
     credits, never the whole population.
+
+    #3149 — the counting population is the DECIDED records over their REAL
+    formulas. A ``satisfiable``/``consistent`` of ``None`` is an « not
+    evaluated » record (#2970) carrying no verdict, and its one string is a
+    writer placeholder, not a tested formula; counting both inflated the line
+    to « 30 sur 32 ... 3 verdicts » where the state held 30 formulas and one
+    verdict. The placeholder predicate is the shared one
+    (:func:`formal_derivation.is_real_formula`), never a second copy.
     """
+    verdict_key = _VERDICT_KEY[attribute]
     sourced = 0
     total = 0
     for result in getattr(state, attribute, None) or []:
         if not isinstance(result, dict):
             continue
+        if not isinstance(result.get(verdict_key), bool):
+            continue  # not evaluated: no verdict, no tested formula
         formulas = result.get("formulas") or []
         sources = result.get("formula_sources") or []
-        total += len(formulas)
-        for index in range(len(formulas)):
+        for index, formula in enumerate(formulas):
+            if not isinstance(formula, str) or not is_real_formula(formula):
+                continue
+            total += 1
             if index < len(sources) and sources[index]:
                 sourced += 1
     return sourced, total
+
+
+def _decided_verdicts(state: Any, attribute: str) -> int:
+    """#3149 — records that carry a VERDICT (a bool), not a #2970 placeholder."""
+    verdict_key = _VERDICT_KEY[attribute]
+    return sum(
+        1
+        for result in getattr(state, attribute, None) or []
+        if isinstance(result, dict) and isinstance(result.get(verdict_key), bool)
+    )
 
 
 def _head_formula_extras(state: Any, site: str) -> int:
@@ -239,7 +272,7 @@ def _site_fed(site: str, state: Any) -> str:
         fol = site == "fol_reasoning_units"
         attribute = "fol_analysis_results" if fol else "propositional_analysis_results"
         name = "la traduction FOL" if fol else "la traduction propositionnelle"
-        n = len(getattr(state, attribute, None) or [])
+        n = _decided_verdicts(state, attribute)
         sourced, total = _formula_source_counts(state, attribute)
         if total:
             return (

@@ -98,9 +98,13 @@ def formal_axis_ref(family: str) -> str:
     return f"Annexe {family}[dérivations]"
 
 
-def _is_real_formula(text: str) -> bool:
+def is_real_formula(text: str) -> bool:
     """A formula string qualifies as tested content unless it is a
-    writer placeholder (status message, pasted title, URL)."""
+    writer placeholder (status message, pasted title, URL).
+
+    Public since #3149: the reading-bounds line counts tested formulas, and a
+    second definition of « real formula » there would drift from this one.
+    """
     stripped = text.strip()
     if not stripped:
         return False
@@ -142,7 +146,7 @@ def scan_tested_content(
 
     Returns ``(real, placeholders)``: the strings that qualify as tested
     content (in record order, duplicates kept — the caller caps and de-dupes),
-    and how many were rejected by :func:`_is_real_formula`. One reader of the
+    and how many were rejected by :func:`is_real_formula`. One reader of the
     ``formulas`` shape, shared by the readable rendering below and by the
     folded appendix (#1914 criterion 6) — a second loop over the same shape
     would be a second way to misread it. Undecided records (``None``) are
@@ -161,7 +165,7 @@ def scan_tested_content(
         for formula in formulas:
             if not isinstance(formula, str):
                 continue
-            if _is_real_formula(formula):
+            if is_real_formula(formula):
                 real.append(formula)
             else:
                 placeholders += 1
@@ -232,7 +236,7 @@ def _recorded_core_formulas(record: Dict[str, Any]) -> List[str]:
     for index in core["indices"]:
         if isinstance(index, int) and 0 <= index < len(formulas):
             formula = formulas[index]
-            if isinstance(formula, str) and _is_real_formula(formula):
+            if isinstance(formula, str) and is_real_formula(formula):
                 out.append(formula)
     return out
 
