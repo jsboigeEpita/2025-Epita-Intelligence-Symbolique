@@ -9,16 +9,20 @@ line ``Contre-argument (…) : …`` with no rule saying whose claim it is, so t
 writer adopted an unverified external fact as the refutation. The reader
 cannot tell it from a checked fact.
 
-The fix is producer-side, because only that is deterministic: the line that
-carries a factual claim carries its provenance, and the writer is bound to
-keep the attribution. A **render check** backs it — a paragraph that restates
-that claim with no attribution is flagged.
+The fix is producer-side, because only that is deterministic: **every**
+counter line carries its provenance (option (b), R1109 — a lexical predicate
+could not separate « asserts a fact » from « demands evidence » on the paid
+states), and the writer is bound to attribute it. A **render check** backs it —
+a paragraph that restates such a claim with no attribution is flagged; the
+predicate now serves that check only, so a reframing restated bare still earns
+no flag.
 
-* witness — the rebuilt prompt carries the claim with its tag; the check
-  flags an unattributed restatement.
-* control — a counter-argument that only reframes the question asserts
-  nothing about the world: no tag, and restating it earns no flag.
-* mutation — removing the tag makes the witness red.
+* witness — the rebuilt prompt carries every claim with its tag, including
+  one whose wording matched no marker; the check flags an unattributed
+  restatement.
+* control — a reframing counter carries the tag like any other, and restating
+  it still earns no flag.
+* mutation — removing the tag makes the witnesses red.
 
 Synthetic vocabulary only (phares, bonde océane, cloche du port — no corpus
 content, privacy HARD): the *shape* is doc_B's, the words are not.
@@ -133,10 +137,52 @@ class TestThePromptCarriesTheProvenance:
         # prompt where the writer could miss the binding
         assert "poussée des marées" in line
 
-    def test_a_reframing_counter_carries_no_tag(self):
-        """Control — a counter that asserts nothing about the world needs no
-        provenance: there is no fact for the report to adopt."""
-        assert TAG not in _counter_line(_prompt(_REFRAMING))
+    def test_a_reframing_counter_carries_the_tag_too(self):
+        """Option (b) control, re-pinned — the tag is unconditional: EVERY
+        counter line is a generator's objection, whatever its wording. The
+        probe that used to drop the tag here could not tell a reframing from
+        a claim, so it no longer decides what the writer is told. What stays
+        true is the other half: restating a reframing earns no flag."""
+        assert TAG in _counter_line(_prompt(_REFRAMING))
+
+    def test_a_claim_with_no_marker_carries_the_tag(self):
+        """Witness — born red under option (a): a plain empirical claim whose
+        wording matched no marker at all. The coordinator measured five of
+        these on doc_B (ca_15, ca_21, ca_22, ca_26, ca_36) — the class a
+        lexical vocabulary cannot see."""
+        generic = (
+            "Les projets de ce type finissent toujours par échouer, faute "
+            "d'un financement qui ne vient jamais."
+        )
+        assert TAG in _counter_line(_prompt(generic))
+
+    def test_a_methodological_demand_carries_the_tag(self):
+        """Option (b) control, re-pinned — the rows option (a) tagged as
+        factual claims were mostly « X n'apporte aucune preuve ». They carry
+        the tag now, and they earn no flag: the check still decides on the
+        content, so a demand restated in the report's own voice is not an
+        adopted fact."""
+        demand = "Le locuteur n'apporte aucune preuve de ce qu'il avance."
+        assert TAG in _counter_line(_prompt(demand))
+        result = check_reading_license(
+            "Le locuteur n'apporte aucune preuve de ce qu'il avance.", _state(demand)
+        )
+        kinds = [f["kind"] for f in result["flags"]]
+        assert "counter_claim_in_own_voice" not in kinds
+
+    def test_an_english_reframing_carries_the_tag_too(self):
+        """Control, other language — the generator writes English or French
+        depending on the run; the tag does not depend on either."""
+        assert TAG in _counter_line(_prompt(_ENGLISH_REFRAMING))
+
+    def test_the_consigne_says_every_line_carries_it(self):
+        """Witness — born red under option (a): the consigne spoke of « an
+        affirmation carried by a counter-argument », which let the writer
+        believe an untagged line was safe to restate as its own."""
+        prompt = _prompt()
+        assert "Toute ligne de contre-argument porte" in prompt
+        # and the exemption option (a) granted to reframings is gone
+        assert "n'a pas besoin d'être attribué" not in prompt
 
     def test_an_english_dated_trend_is_tagged_too(self):
         """Witness (born red, rework): ca_31 on the doc_B state is an English
@@ -148,11 +194,6 @@ class TestThePromptCarriesTheProvenance:
         """The direction over time is the fact: a vocabulary that only read
         years would tag the dated form and miss this one."""
         assert TAG in _counter_line(_prompt(_ENGLISH_TREND_NO_YEAR))
-
-    def test_an_english_reframing_carries_no_tag(self):
-        """Control, other language — the generator writes English or French
-        depending on the run; a reframing asserts nothing in either."""
-        assert TAG not in _counter_line(_prompt(_ENGLISH_REFRAMING))
 
 
 class TestTheCheckFlagsTheChangeOfVoice:

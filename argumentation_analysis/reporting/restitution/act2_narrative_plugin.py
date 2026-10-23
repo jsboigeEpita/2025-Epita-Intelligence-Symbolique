@@ -281,12 +281,6 @@ class CounterEvidence:
     # can cite counter-argument *validity*. None when the evaluator did not run.
     is_valid_attack: Optional[bool] = None
     counter_succeeds: Optional[bool] = None
-    # #3158 — does the objection assert something about the world? A counter
-    # is a generator's objection and the state records no source for it, so a
-    # factual claim it carries is ITS claim, never the report's. Computed
-    # deterministically from the content (:func:`counter_asserts_a_fact`), so
-    # the line the writer receives can carry the provenance.
-    asserts_fact: bool = False
 
 
 # Total number of argumentative virtues the evaluator knows about. Used only
@@ -818,13 +812,6 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
     No LLM, no JVM — pure state extraction. Privacy: corpus-derived fields are
     truncated; IDs stay opaque.
     """
-    # #3158 — the SAME predicate the render check uses, imported from where the
-    # check lives (reporting -> synthesis is the existing direction; the lazy
-    # import keeps this module's import cost where it was).
-    from argumentation_analysis.agents.core.synthesis.reading_license import (
-        counter_asserts_a_fact,
-    )
-
     args = getattr(state, "identified_arguments", {}) or {}
     fallacies = getattr(state, "identified_fallacies", {}) or {}
     quality = getattr(state, "argument_quality_scores", {}) or {}
@@ -902,15 +889,6 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
                 snippet=_truncate(ca.get("counter_content", ""), _COUNTER_CAP),
                 is_valid_attack=is_valid_attack,
                 counter_succeeds=counter_succeeds,
-                # #3158 — read on the WHOLE content: the snippet is truncated,
-                # and the marker that makes it a factual claim may sit past the
-                # cut. The tag would then disappear for the very objections it
-                # exists for.
-                asserts_fact=counter_asserts_a_fact(
-                    ca.get("counter_content")
-                    if isinstance(ca.get("counter_content"), str)
-                    else ""
-                ),
             )
         )
 
@@ -1734,15 +1712,18 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                 # present — an empty strategy renders as an absence, not ().
                 _strat = (ca.strategy or "").strip()
                 _slot = f" ({_strat})" if _strat else ""
-                # #3158 — a counter-argument's factual claim is the counter's.
-                # It is an objection a generator produced: nothing verified it
-                # and the state records no source for it. Without the tag the
-                # writer cannot know that from the snippet alone, and Act II
-                # restated such a trend as a checked fact (ca_31, doc_B). The
-                # tag rides ON the claim's line, where the rule it serves
-                # applies; a reframing asserts nothing about the world and
-                # carries none (control).
-                _provenance = f" {_UNSOURCED_CLAIM_TAG}" if ca.asserts_fact else ""
+                # #3158 — EVERY counter line carries its provenance, not only
+                # the ones a vocabulary calls "factual". A counter is an
+                # objection a generator produced: nothing verified it, the
+                # state records no source for it, whatever its wording. The
+                # predicate (``asserts_fact``) was measured on doc_B and could
+                # not separate « asserts a fact » from « demands evidence » —
+                # 14 of 19 tags on methodological demands, 5 plain empirical
+                # claims left untagged — so it no longer decides what the
+                # writer is told. It lives on for the render check only
+                # (:func:`check_reading_license`, flag ``counter_claim_in_own_voice``),
+                # where a restatement of a reframing still earns no flag.
+                _provenance = f" {_UNSOURCED_CLAIM_TAG}"
                 lines.append(
                     f"      Contre-argument{_slot}{_provenance} : {ca.snippet}"
                 )
@@ -2273,15 +2254,14 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         "faiblesse — il a tourné sans rien distinguer.\n"
         "- Si un mouvement n'a ni sophisme ni verdict formel (les soutiens), "
         "dis ce qui le tient (le caractère, la cohérence).\n"
-        # #3158 — le contre-argument est le canal de l'objection ; lui seul
-        # porte des affirmations que RIEN n'a vérifiées.
-        "- Une affirmation factuelle portée par un contre-argument (la ligne "
-        f"porte « {_UNSOURCED_CLAIM_TAG} ») reste ATTRIBUÉE à la partie qui "
-        "l'avance : écris « un contre-argument objecte que… », jamais la "
-        "tendance reprise comme un fait du rapport. Tu ne peux pas la "
-        "vérifier — tu ne la signes donc pas. Un contre-argument qui ne fait "
-        "que reformuler la question n'affirme rien sur le monde et n'a pas "
-        "besoin d'être attribué.\n"
+        # #3158 — le contre-argument est le canal de l'objection ; CHAQUE
+        # ligne en porte la provenance (option (b), R1109).
+        "- Toute ligne de contre-argument porte "
+        f"« {_UNSOURCED_CLAIM_TAG} » : c'est une objection produite par un "
+        "générateur, que rien n'a vérifiée. Rien de ce qu'elle avance n'est "
+        "un fait du rapport : écris « un contre-argument objecte que… », "
+        "jamais la thèse reprise comme un constat. Tu ne peux pas la "
+        "vérifier — tu ne la signes donc pas.\n"
         "- JARGON INTERNE INTERDIT dans la prose : ne recopie JAMAIS un "
         "identifiant technique brut — token snake_case (agent_1, social_choice, "
         "modal_kb…), nom d'agent numéroté, ou nom de méthode/modèle interne. "
