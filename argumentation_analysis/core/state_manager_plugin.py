@@ -168,7 +168,13 @@ class StateManagerPlugin:
             return f"FUNC_ERROR: Erreur marquage tâche {task_id}: {e}"
 
     @kernel_function(
-        description="Ajoute un sophisme identifié à l'état.",
+        description=(
+            "Ajoute un sophisme identifié à l'état. move_author: 'speaker' si "
+            "le locuteur du texte analysé commet le sophisme, 'reported' si le "
+            "texte rapporte ou dénonce le geste d'un tiers (move_author_label "
+            "nomme alors ce tiers) ; omettre les deux si le texte ne permet pas "
+            "de le dire."
+        ),
         name="add_identified_fallacy",
     )
     def add_identified_fallacy(
@@ -177,15 +183,31 @@ class StateManagerPlugin:
         justification: str,
         target_argument_id: Optional[str] = None,
         family: str = "",
+        move_author: Optional[str] = None,
+        move_author_label: Optional[str] = None,
     ) -> str:
         """Interface Kernel Function pour ajouter un sophisme via l'état."""
         self._logger.info(
             f"Appel add_identified_fallacy (state id: {id(self._state)}): Type='{fallacy_type}', Target='{target_argument_id or 'None'}'..."
         )
         try:
-            fallacy_id = self._state.add_fallacy(
-                fallacy_type, justification, target_argument_id, family=family
-            )
+            # #3180 — seules les deux valeurs connues voyagent : une valeur
+            # inconnue ou absente n'est pas une mesure, et l'état ne doit pas
+            # lire un tiers inventé. Le writer applique la même règle.
+            author = (move_author or "").strip()
+            if author in ("speaker", "reported"):
+                fallacy_id = self._state.add_fallacy(
+                    fallacy_type,
+                    justification,
+                    target_argument_id,
+                    family=family,
+                    move_author=author,
+                    move_author_label=(move_author_label or "").strip(),
+                )
+            else:
+                fallacy_id = self._state.add_fallacy(
+                    fallacy_type, justification, target_argument_id, family=family
+                )
             self._logger.info(
                 f" -> Sophisme '{fallacy_id}' ajouté avec succès via l'état."
             )

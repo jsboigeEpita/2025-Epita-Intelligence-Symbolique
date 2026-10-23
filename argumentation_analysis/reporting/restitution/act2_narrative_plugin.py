@@ -43,6 +43,11 @@ from .cited_units import (  # #2967: shared cited-unit budget + boundary cut
     render_divergence_clause,
     truncate_at_boundary,
 )
+from argumentation_analysis.core.fallacy_attribution import (  # #3180
+    is_reported_move,
+    move_author_label_of,
+    move_author_of,
+)
 from .dung_reader import (  # #1908: one shared meaning for act2 and act3
     ACCEPTED_MEANS,
     CREDULOUS_MEANS,
@@ -794,7 +799,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
             # surface it honestly instead of silently losing the detection.
             unattributed_fallacies += 1
             continue
-        move_author = str(fdata.get("move_author") or "speaker")
+        move_author = move_author_of(fdata)
         # Named "_ev" — a bare ``entry`` would collide (for mypy) with the
         # formal-findings loop below, whose variable carries another type.
         _ev = FallacyEvidence(
@@ -803,12 +808,10 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
             type=str(fdata.get("type", "inconnu")),
             justification=_truncate(fdata.get("justification", ""), _JUSTIFICATION_CAP),
             target_arg_id=str(tid),
-            move_author=(
-                move_author if move_author in ("speaker", "reported") else "speaker"
-            ),
-            move_author_label=str(fdata.get("move_author_label") or ""),
+            move_author=move_author,
+            move_author_label=move_author_label_of(fdata),
         )
-        if _ev.move_author == "reported":
+        if is_reported_move(_ev):
             reported_fallacies.append(_ev)
         else:
             # #3180 — only the speaker's own detections enter the tally.

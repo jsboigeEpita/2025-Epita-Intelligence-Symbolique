@@ -524,6 +524,11 @@ class RhetoricalAnalysisState:
         """Ajoute une liste de sophismes identifiés."""
         state_logger.info(f"Ajout de {len(fallacies)} sophismes identifiés...")
         for fallacy_data in fallacies:
+            # #3180 — le batch ne perd pas l'auteur du geste : la paire
+            # voyage sous ses propres clés anglaises (mêmes noms que
+            # ``add_fallacy``), et le writer y applique la même règle —
+            # seules les deux valeurs connues sont stockées, l'absence
+            # reste l'absence.
             self.add_fallacy(
                 fallacy_type=fallacy_data.get("nom", "Type Inconnu"),
                 justification=fallacy_data.get(
@@ -531,6 +536,8 @@ class RhetoricalAnalysisState:
                 ),
                 family=fallacy_data.get("famille", ""),
                 taxonomy_path=fallacy_data.get("taxonomy_path", ""),
+                move_author=fallacy_data.get("move_author"),
+                move_author_label=fallacy_data.get("move_author_label"),
             )
 
     def mark_task_as_answered(

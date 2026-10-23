@@ -58,6 +58,22 @@ from argumentation_analysis.plugins.identification_models import (
 
 logger = logging.getLogger(__name__)
 
+
+def _move_author_pair(payload: Dict[str, object]) -> Tuple[str, str]:
+    """#3180 — whose move the fallacy is, read one way at every detection site.
+
+    ``speaker`` (the analyzed text's own speaker commits the move) and
+    ``reported`` (the text reports or denounces another party's move) are the
+    only measurements. Silence and any other value stay absent — ``("", "")``,
+    never a party invented on the fly, and never a label without an author
+    (#1019). The state writer applies the same rule again.
+    """
+    author = str(payload.get("move_author") or "").strip()
+    if author not in ("speaker", "reported"):
+        return "", ""
+    return author, str(payload.get("move_author_label") or "").strip()
+
+
 # The wide-net window is WIDE_NET_WINDOW, imported from the shared #1737
 # module — #2915 moved it there: five off-pipeline readers (#2914) meant
 # the same bound, and a copy of a constant drifts (#2913's lesson,
@@ -967,8 +983,14 @@ class FallacyWorkflowPlugin:
                     "Legitimate uses of authority, emotion, or tradition are NOT fallacies.\n\n"
                     "Choose ONE action:\n"
                     f"- confirm_fallacy(node_pk='{current_pk}', matches=true, "
-                    "justification='...', confidence=0.0-1.0) if this leaf "
-                    "GENUINELY names the fallacy the text exhibits\n"
+                    "justification='...', confidence=0.0-1.0, "
+                    "move_author='speaker|reported', move_author_label='...') "
+                    "if this leaf GENUINELY names the fallacy the text exhibits. "
+                    "move_author is 'speaker' when the text's own speaker "
+                    "commits the move, 'reported' when the text reports or "
+                    "denounces another party's move (move_author_label then names "
+                    "that party as the text names it); omit both when the text "
+                    "does not let you tell.\n"
                     "- conclude_no_fallacy(reason='...') if no match. If the "
                     "text is not genuinely fallacious here, this is the honest "
                     "exit — do not confirm to avoid an empty result."
@@ -1050,6 +1072,9 @@ class FallacyWorkflowPlugin:
                                 leaf_depth,
                                 lr.get("confidence"),
                             )
+                        # #3180 — the leaf verdict says whose move it is when
+                        # the model can tell; silence stays silence.
+                        move_author, move_author_label = _move_author_pair(lr)
                         return IdentifiedFallacy(
                             fallacy_type=lr.get("name", lr.get("name_fr", leaf_name)),
                             taxonomy_pk=current_pk,
@@ -1061,6 +1086,8 @@ class FallacyWorkflowPlugin:
                             # readable downstream instead of dying in the tool
                             # result (it had no reader before this field).
                             confidence_note=lr.get("confidence_note") or "",
+                            move_author=move_author,
+                            move_author_label=move_author_label,
                             navigation_trace=navigation_trace,
                             family=current_node.get("Famille", ""),
                             depth=leaf_depth,
@@ -1131,8 +1158,13 @@ class FallacyWorkflowPlugin:
                 "- Call explore_branch(node_pk='<any_listed_pk>') to explore a node — "
                 "you may jump several levels deep by picking a grandchild/great-grandchild PK directly\n"
                 f"- Call confirm_fallacy(node_pk='{current_pk}', matches=true, "
-                "justification='...') when this level GENUINELY names the "
-                "fallacy the text exhibits, and you want to stop here\n"
+                "justification='...', move_author='speaker|reported', "
+                "move_author_label='...') when this level GENUINELY names the "
+                "fallacy the text exhibits, and you want to stop here. "
+                "move_author is 'speaker' when the text's own speaker commits "
+                "the move, 'reported' when the text reports or denounces "
+                "another party's move (move_author_label then names that "
+                "party); omit both when the text does not let you tell.\n"
                 "- Call conclude_no_fallacy(reason='...') if no match in this branch\n"
                 "You MUST call exactly one function."
             )
@@ -1303,6 +1335,9 @@ class FallacyWorkflowPlugin:
                         confirm_result.get("confidence"),
                     )
 
+                # #3180 — same rule as the leaf site: the confirm verdict
+                # carries the author pair when the model stated it.
+                move_author, move_author_label = _move_author_pair(confirm_result)
                 return IdentifiedFallacy(
                     fallacy_type=confirm_result.get(
                         "name",
@@ -1314,6 +1349,8 @@ class FallacyWorkflowPlugin:
                     confidence=confirm_result.get("confidence"),
                     # #3029 (R1089) — same as the leaf site: the note travels.
                     confidence_note=confirm_result.get("confidence_note") or "",
+                    move_author=move_author,
+                    move_author_label=move_author_label,
                     navigation_trace=navigation_trace,
                     family=current_node.get("Famille", ""),
                     depth=confirmed_depth,
@@ -1898,24 +1935,15 @@ class FallacyWorkflowPlugin:
                         # (``fallacy_measured_fields``).
                         confidence, _quote = fallacy_measured_fields(parsed)
                         # #3180 — the move's author, when the reply stated it.
-                        # Anything other than the two known values stays empty:
-                        # an unknown value is not a measurement, and a reader
-                        # must not read it as "the speaker".
-                        _move_author = str(parsed.get("move_author") or "").strip()
+                        move_author, move_author_label = _move_author_pair(parsed)
                         fallacy = IdentifiedFallacy(
                             fallacy_type=fallacy_name,
                             taxonomy_pk=parsed.get("taxonomy_pk", ""),
                             explanation=parsed.get("explanation", ""),
                             confidence=confidence,
                             navigation_trace=[],
-                            move_author=(
-                                _move_author
-                                if _move_author in ("speaker", "reported")
-                                else ""
-                            ),
-                            move_author_label=str(
-                                parsed.get("move_author_label") or ""
-                            ).strip(),
+                            move_author=move_author,
+                            move_author_label=move_author_label,
                         )
                         result = FallacyAnalysisResult(
                             fallacies=[fallacy],

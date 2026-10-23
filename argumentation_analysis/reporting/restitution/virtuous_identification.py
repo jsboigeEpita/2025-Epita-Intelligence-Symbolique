@@ -41,6 +41,10 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 from .fr_accord import accord
+from argumentation_analysis.core.fallacy_attribution import (  # #3180
+    is_reported_move,
+    is_speaker_move,
+)
 
 # --- schema ---------------------------------------------------------------
 
@@ -488,7 +492,7 @@ def _localized_fallacy_count(state: Any) -> int:
         for _f, d in fallacies.items()
         if isinstance(d, dict)
         and (d.get("target_argument_id") or "")
-        and str(d.get("move_author") or "") != "reported"
+        and is_speaker_move(d)
     )
 
 
@@ -508,7 +512,7 @@ def _reported_fallacy_count(state: Any) -> int:
         for _f, d in fallacies.items()
         if isinstance(d, dict)
         and (d.get("target_argument_id") or "")
-        and str(d.get("move_author") or "") == "reported"
+        and is_reported_move(d)
     )
 
 

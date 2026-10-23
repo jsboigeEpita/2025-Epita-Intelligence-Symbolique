@@ -45,6 +45,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
 from .fr_accord import accord
+from argumentation_analysis.core.fallacy_attribution import is_speaker_move  # #3180
 from .formal_derivation import extract_tested_content
 
 ROLE_DECISIF = "decisif"
@@ -128,11 +129,17 @@ def _settled_counts(results: Any, verdict_reader) -> Dict[str, int]:
 
 
 def _fallacy_targets(fallacies: Any) -> Dict[str, List[str]]:
-    """Index fallacy types by target argument id (opaque)."""
+    """Index the SPEAKER's fallacy types by target argument id (opaque).
+
+    #3180 — a reported detection is another party's move that the text merely
+    reports; it gives the reporting unit no fallacy role.
+    """
     by_arg: Dict[str, List[str]] = {}
     if isinstance(fallacies, dict):
         for _fid, fdata in fallacies.items():
             if not isinstance(fdata, dict):
+                continue
+            if not is_speaker_move(fdata):
                 continue
             tid = fdata.get("target_argument_id")
             if tid:
