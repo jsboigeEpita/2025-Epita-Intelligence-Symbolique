@@ -14,6 +14,7 @@ the request crosses a real socket without leaving the machine.
 import http.server
 import json
 import threading
+from pathlib import Path
 from types import SimpleNamespace
 
 import httpx
@@ -156,10 +157,27 @@ async def test_the_gate_total_still_counts_doubles():
     assert counter.total() == before + 1
 
 
+class _Factory:
+    """Stand-in for pytest's ``_tmp_path_factory`` (#3194).
+
+    The report goes to the session scratch directory, never to the current
+    directory; a hand-built config has to say where that directory is.
+    """
+
+    def __init__(self, basetemp: Path) -> None:
+        self._basetemp = basetemp
+
+    def getbasetemp(self) -> Path:
+        return self._basetemp
+
+
 class _Reporter:
-    def __init__(self):
+    def __init__(self, basetemp):
         self.lines = []
-        self.config = SimpleNamespace(option=SimpleNamespace(xmlpath=None))
+        self.config = SimpleNamespace(
+            option=SimpleNamespace(xmlpath=None),
+            _tmp_path_factory=_Factory(basetemp),
+        )
 
     def write_sep(self, sep, line):
         self.lines.append(line)
@@ -181,8 +199,7 @@ def _record(counter, url, network):
     counter.observe_outcome(entry, response=SimpleNamespace(status_code=200))
 
 
-def test_terminal_summary_names_only_network_hosts_as_hit(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
+def test_terminal_summary_names_only_network_hosts_as_hit(tmp_path):
     counter = LLMEgressCounter(frozenset({"api.openai.com", "openrouter.ai"}))
     counter.current_test = "t::double"
     for _ in range(6):
@@ -190,7 +207,7 @@ def test_terminal_summary_names_only_network_hosts_as_hit(tmp_path, monkeypatch)
     counter.current_test = "t::live"
     _record(counter, "https://openrouter.ai/api/v1/chat/completions", network=True)
 
-    reporter = _Reporter()
+    reporter = _Reporter(tmp_path)
     LLMEgressPlugin(counter).pytest_terminal_summary(reporter, 0)
 
     assert "7 watched-LLM request(s)" in reporter.lines[0]
@@ -207,15 +224,14 @@ def test_terminal_summary_names_only_network_hosts_as_hit(tmp_path, monkeypatch)
     assert report["per_test_llm_network"] == {"t::live": 1}
 
 
-def test_terminal_summary_with_doubles_only_names_no_host_as_hit(tmp_path, monkeypatch):
+def test_terminal_summary_with_doubles_only_names_no_host_as_hit(tmp_path):
     """#2422 DoD 1: six doubled requests no longer read as a host hit."""
-    monkeypatch.chdir(tmp_path)
     counter = LLMEgressCounter(frozenset({"api.openai.com"}))
     counter.current_test = "t::double"
     for _ in range(6):
         _record(counter, LLM_URL, network=False)
 
-    reporter = _Reporter()
+    reporter = _Reporter(tmp_path)
     LLMEgressPlugin(counter).pytest_terminal_summary(reporter, 0)
 
     assert not [line for line in reporter.lines if line.startswith("LLM hosts hit")]
