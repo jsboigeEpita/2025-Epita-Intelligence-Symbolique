@@ -288,14 +288,12 @@ class CounterEvidence:
 # denominator of a grade (#1907).
 _TOTAL_VIRTUES = 9
 
-#: #3158 — the provenance tag a counter-argument's factual claim carries. One
-#: constant: the line that bears it and the consigne that names it cannot
-#: drift apart.
-_UNSOURCED_CLAIM_TAG = (
-    "[affirmation factuelle NON SOURCÉE — objection produite par un "
-    "générateur de contre-arguments, jamais vérifiée : si tu la reprends, "
-    "attribue-la à la partie qui l'avance]"
-)
+#: #3158 — the provenance tag every counter line carries (option (b), R1109).
+#: It names the PROVENANCE, not a class: under (b) it rides on demands and
+#: reframings too, and a label that said « affirmation factuelle » would tell
+#: the writer something false about most of the lines it marks. The
+#: attribution instruction lives once, in the consigne.
+_UNSOURCED_CLAIM_TAG = "[objection d'un générateur — non vérifiée, non sourcée]"
 
 
 @dataclass

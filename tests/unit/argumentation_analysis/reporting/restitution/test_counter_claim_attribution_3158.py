@@ -78,7 +78,7 @@ _ENGLISH_REFRAMING = (
     "bell, or only the hour it announces."
 )
 
-TAG = "affirmation factuelle NON SOURCÉE"
+TAG = "objection d'un générateur"
 
 
 def _state(counter_content: str = _CLAIM):
@@ -163,7 +163,11 @@ class TestThePromptCarriesTheProvenance:
         content, so a demand restated in the report's own voice is not an
         adopted fact."""
         demand = "Le locuteur n'apporte aucune preuve de ce qu'il avance."
-        assert TAG in _counter_line(_prompt(demand))
+        line = _counter_line(_prompt(demand))
+        assert TAG in line
+        # the tag names the provenance, never a class: a demand is not a
+        # factual claim, and the label must not say it is (R1109 label fix)
+        assert "affirmation factuelle" not in line
         result = check_reading_license(
             "Le locuteur n'apporte aucune preuve de ce qu'il avance.", _state(demand)
         )
