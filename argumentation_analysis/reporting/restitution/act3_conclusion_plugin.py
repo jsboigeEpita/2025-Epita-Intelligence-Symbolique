@@ -2540,17 +2540,33 @@ def _band_claim_ceiling(band: str) -> str:
     strongly the discourse may be characterised* — narrative, not a scorecard.
     """
     if band == _BAND_EXCEEDED:
+        # #3163 — the band counts AXES THAT PRODUCED NON-TRIVIAL CONTENT, which
+        # is breadth, never extent. The old text turned that count into an
+        # extent claim (« elle couvrait largement les dimensions »), and the
+        # same prompt carried reading bounds where no axis read more than 15 of
+        # 90 units (R1107c, doc_A): the writer put « broad coverage » next to
+        # the bounds in one closing paragraph. The ceiling now says what the
+        # band measures. The count is derived from the thresholds, never
+        # hard-coded: the band is EXCEEDED from _EXCEEDED_MIN_AXES axes, and
+        # five of the six five-axis shapes of _ALL_AXES are EXCEEDED (R1108
+        # review), so a fixed « six » would tell the writer that six axes
+        # spoke when five did — a figure the record contradicts (#3159 class).
         return (
-            "Tu peux caractériser l'analyse comme APPROFONDIE et multi-axes : "
-            "elle couvre largement les dimensions (dont la profondeur formelle "
-            "vérifiée et le profil de qualité), et produit des verdicts "
-            "vérifiables qui vont au-delà d'une lecture de surface. Cite les "
-            "axes non-triviaux qui le justifient."
+            f"Tu peux caractériser l'analyse comme APPROFONDIE et multi-axes : "
+            f"au moins {_EXCEEDED_MIN_AXES} des {len(_ALL_AXES)} axes ont "
+            f"produit un résultat non-trivial (dont la profondeur formelle "
+            f"vérifiée et le profil de qualité), et ces verdicts vont au-delà "
+            f"d'une lecture de surface. La bande compte des AXES qui ont "
+            f"parlé, pas l'étendue lue : chaque axe n'a examiné qu'une partie "
+            f"des unités — les bornes de lecture du présent prompt disent "
+            f"laquelle. Cite les axes non-triviaux qui justifient la bande, "
+            f"sans étendre le propos au-delà de ces bornes."
         )
     if band == _BAND_MATCH:
         return (
-            "Tu peux caractériser l'analyse comme COMPLÈTE : elle couvre les "
-            "axes principaux du discours. Nomme les axes touchés et ceux qui "
+            "Tu peux caractériser l'analyse comme COMPLÈTE : les axes "
+            "principaux du discours ont rendu un verdict (la bande compte des "
+            "axes, pas l'étendue lue). Nomme les axes touchés et ceux qui "
             "restent non-concluables, honnêtement."
         )
     if band == _BAND_PARTIAL:
