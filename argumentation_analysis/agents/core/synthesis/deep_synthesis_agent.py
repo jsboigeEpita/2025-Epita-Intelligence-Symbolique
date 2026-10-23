@@ -1357,6 +1357,121 @@ class DeepSynthesisAgent(BaseAgent):
     # ------------------------------------------------------------------
 
     @staticmethod
+    def _max_over_population(pairs: List[Any], label: str) -> str:
+        """The true maximum over ALL items, with the ids that hold it (#3155).
+
+        A maximum read off the capped lines is the maximum of a PREFIX: the
+        R1107 render called 0.565 « the highest-scoring counter-argument »
+        while ca_22 and ca_38 hold 0.59 among the 40 items, six of them at
+        0.565. ``label`` names the ranked quantity (« score », « overall »).
+        """
+        scored: List[Any] = []
+        for pair in pairs:
+            try:
+                unit_id, value = pair
+                scored.append((float(value), str(unit_id)))
+            except (TypeError, ValueError):
+                continue
+        if not scored:
+            return ""
+        best = max(score for score, _ in scored)
+        holders = sorted(unit_id for score, unit_id in scored if score == best)
+        return f"max {label} over all = {best} ({', '.join(holders[:4])})"
+
+    @staticmethod
+    def _population_notes(
+        state: Any,
+        report: Optional[DeepSynthesisReport],
+        max_items_per_field: int,
+    ) -> List[str]:
+        """One line per TRUNCATED field: how many of how many (#3155).
+
+        The briefing caps several fields without a denominator, so the writer
+        reads the shown prefix as the whole population. A field whose
+        population fits the cap is untouched (the issue's control: a state
+        with 10 counter-arguments leaves the briefing unchanged). The two
+        budget-selected fields (``identified_arguments``,
+        ``identified_fallacies``) already state theirs through
+        ``analysis_coverage`` (``synthesis_args`` / ``synthesis_fallacies``),
+        so they carry no line here.
+        """
+        notes: List[str] = []
+
+        def _note(field: str, population: int, detail: str = "") -> None:
+            if population <= max_items_per_field:
+                return
+            line = (
+                f"- {field}: {max_items_per_field} of {population} shown "
+                f"(cap {max_items_per_field} per field)"
+            )
+            if detail:
+                line += f"; {detail}"
+            notes.append(line)
+
+        for field in (
+            "propositional_analysis_results",
+            "fol_analysis_results",
+            "modal_analysis_results",
+            "jtms_retraction_chain",
+            "belief_revision_results",
+        ):
+            entries = getattr(state, field, []) or []
+            if isinstance(entries, list):
+                _note(field, len(entries))
+
+        dung = getattr(state, "dung_frameworks", {}) or {}
+        if isinstance(dung, dict):
+            _note("dung_frameworks", len(dung))
+
+        counters = getattr(state, "counter_arguments", []) or []
+        if isinstance(counters, list):
+            _note(
+                "counter_arguments",
+                len(counters),
+                DeepSynthesisAgent._max_over_population(
+                    [
+                        (ca.get("id", "ca"), ca.get("score"))
+                        for ca in counters
+                        if isinstance(ca, dict)
+                    ],
+                    "score",
+                ),
+            )
+
+        quality = getattr(state, "argument_quality_scores", {}) or {}
+        if isinstance(quality, dict):
+            _note(
+                "argument_quality_scores",
+                len(quality),
+                DeepSynthesisAgent._max_over_population(
+                    [
+                        (
+                            arg_id,
+                            (
+                                scores.get("overall")
+                                if isinstance(scores, dict)
+                                else scores
+                            ),
+                        )
+                        for arg_id, scores in quality.items()
+                    ],
+                    "overall",
+                ),
+            )
+
+        if report is not None:
+            verdicts = getattr(report, "convergent_verdicts", []) or []
+            _note(
+                "convergent_verdicts",
+                len(verdicts),
+                DeepSynthesisAgent._max_over_population(
+                    [(v.arg_id, v.score) for v in verdicts], "score"
+                ),
+            )
+
+        return notes
+
+    @staticmethod
     def build_artifact_briefing(
         state: Any,
         report: Optional[DeepSynthesisReport] = None,
@@ -1643,6 +1758,23 @@ class DeepSynthesisAgent(BaseAgent):
                     v.arg_id,
                     f"score={v.score} methods={', '.join(v.methods)}",
                 )
+
+        # #3155 — the caps above hide the tail of every field. Without the
+        # denominator the writer read a prefix as the whole population: the
+        # R1107 render's « highest-scoring counter-argument, at 0.565 » was the
+        # maximum of ca_1..ca_15, and ca_22/ca_38 hold 0.59 among the 40 items.
+        # A field whose population fits the cap adds nothing (control).
+        _populations = DeepSynthesisAgent._population_notes(
+            state, report, max_items_per_field
+        )
+        if _populations:
+            lines.append("")
+            lines.append(
+                "POPULATIONS (the caps above hide the tail — a « highest » read "
+                "off the shown lines is the maximum of a PREFIX, not of the "
+                "field):"
+            )
+            lines.extend(_populations)
 
         # #3123 — what the numbers above license. The briefing used to hand
         # breadth and a bare cause without saying what either licenses, and
