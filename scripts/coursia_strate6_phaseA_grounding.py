@@ -37,6 +37,7 @@ Usage::
     python scripts/coursia_strate6_phaseA_grounding.py --corpus A \\
         --output-dir evaluation/results/strate6_phaseA/manual_A
 """
+
 from __future__ import annotations
 
 import argparse
@@ -72,7 +73,7 @@ CANDIDATES_FOR_SEED = [
         "id": "candidate_1_labelling_trajectory",
         "delivered_in": "PR #1509 (MERGED)",
         "scope": "Dung labelling trajectory under sequential argument arrival "
-                 "(refutation + reinstatement dynamics over symbolic states).",
+        "(refutation + reinstatement dynamics over symbolic states).",
         "engine": "argumentation_analysis.orchestration.dung_labelling_trajectory",
         "data_substrate": "synthetic opaque discourse exemplar (privacy HARD)",
         "this_driver_delivers": False,
@@ -81,12 +82,12 @@ CANDIDATES_FOR_SEED = [
         "id": "candidate_2_belief_state_tpm",
         "delivered_in": "this driver (S6-A1, PR pending)",
         "scope": "Stochastic transition matrix over *belief states* extracted "
-                 "from real corpus propositions via the democratech pipeline. "
-                 "Verdict: ergodic / reducible / aperiodic + spectral gap "
-                 "refinement (R664).",
+        "from real corpus propositions via the democratech pipeline. "
+        "Verdict: ergodic / reducible / aperiodic + spectral gap "
+        "refinement (R664).",
         "engine": "scripts.extract_belief_trajectories + this driver",
         "data_substrate": "real corpus (corpusA / corpusB / corpusC) "
-                         "decrypted in-memory via _tpm_corpus_loader",
+        "decrypted in-memory via _tpm_corpus_loader",
         "this_driver_delivers": True,
     },
 ]
@@ -213,6 +214,55 @@ def spectral_gap(stochastic_matrix: List[List[float]]) -> SpectralResult:
 
 
 # ---------------------------------------------------------------------------
+# What the state space actually carries (#1506 R1107)
+# ---------------------------------------------------------------------------
+
+#: The snapshot fields the inner extractor folds into its state label —
+#: ``<phase status>:args<bucket>:fall<bucket>:ctr<bucket>:bel<bucket>:vote<…>``.
+_BELIEF_STATE_COORDINATES = ("n_arguments", "n_fallacies", "n_counters", "n_beliefs")
+
+
+def belief_state_coverage(tpm_payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Whether the state space carries BELIEF information at all.
+
+    A state label has five coordinates: the phase status word, the four
+    bucketed counts (arguments, fallacies, counter-arguments, beliefs), and the
+    vote. When every observation shows **0** in all four counts, the only
+    varying coordinate is the phase status word — the transition matrix then
+    counts ``completed`` / ``failed`` / ``skipped`` transitions, and the
+    candidate's thesis (a chain over *belief states*) is not measured at all.
+
+    This is not hypothetical. Measured on ``main`` (2026-10-23) under the
+    zero-spend ``LLM_CACHE_MODE=replay``: the ``extract`` phase fails on every
+    proposition with a replay cache miss, everything downstream is skipped, all
+    four counts stay 0, and corpora A / B / C produce the **same** matrix
+    (3 states, λ = [1, 0, 0]). A driver that still printed « CANDIDAT #2 LIVRÉ »
+    on that state would be selling a status-word chain as a belief-state chain
+    (anti-theatre #1019).
+    """
+    maxima = {key: 0 for key in _BELIEF_STATE_COORDINATES}
+    observations = 0
+    for trajectory in tpm_payload.get("trajectories") or []:
+        if not isinstance(trajectory, dict):
+            continue
+        for observation in trajectory.get("observations") or []:
+            if not isinstance(observation, dict):
+                continue
+            snapshot = observation.get("snapshot")
+            if not isinstance(snapshot, dict):
+                continue
+            observations += 1
+            for key in _BELIEF_STATE_COORDINATES:
+                value = snapshot.get(key)
+                if isinstance(value, int) and value > maxima[key]:
+                    maxima[key] = value
+    block: Dict[str, Any] = dict(maxima)
+    block["observations"] = observations
+    block["carries_belief_state"] = any(value > 0 for value in maxima.values())
+    return block
+
+
+# ---------------------------------------------------------------------------
 # Inner TPM extraction (subprocess wrapper)
 # ---------------------------------------------------------------------------
 
@@ -254,10 +304,9 @@ def _run_inner_extractor(
     # which lives at repo root and `src/`. pytest injects `pythonpath = . src`
     # via pytest.ini — outside pytest we must do it ourselves.
     existing = inner_env.get("PYTHONPATH", "")
-    inner_env["PYTHONPATH"] = (
-        os.pathsep.join([str(REPO_ROOT), str(REPO_ROOT / "src"), existing])
-        .strip(os.pathsep)
-    )
+    inner_env["PYTHONPATH"] = os.pathsep.join(
+        [str(REPO_ROOT), str(REPO_ROOT / "src"), existing]
+    ).strip(os.pathsep)
     proc = subprocess.run(
         cmd,
         cwd=str(REPO_ROOT),
@@ -285,9 +334,7 @@ def _read_tpm_payload(tpm_json_path: Path) -> Dict[str, Any]:
     """Read the inner extractor output (full payload incl. trajectories)."""
     raw = json.loads(tpm_json_path.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
-        raise ValueError(
-            f"tpm.json root must be a dict, got {type(raw).__name__}"
-        )
+        raise ValueError(f"tpm.json root must be a dict, got {type(raw).__name__}")
     return raw
 
 
@@ -313,6 +360,7 @@ class Verdict:
     impossibility_reason: str
     ergodicity: Dict[str, Any]
     spectral: Dict[str, Any]
+    state_space: Dict[str, Any]
     coursia_seed_issue: str
     candidate_id: str
     privacy: Dict[str, str] = field(default_factory=dict)
@@ -339,6 +387,10 @@ def _build_verdict(
         impossible=bool(tpm_payload.get("impossible", False)),
         impossibility_reason=str(tpm_payload.get("impossibility_reason", "") or ""),
         ergodicity=ergo_block,
+        # #1506 R1107 — what the matrix is actually made of. A chain over
+        # phase status words is not a chain over belief states, and the verdict
+        # must say which one it holds.
+        state_space=belief_state_coverage(tpm_payload),
         spectral={
             "n": spectral_result.n,
             "eigenvalues_abs": spectral_result.eigenvalues_abs,
@@ -443,14 +495,52 @@ def _render_verdict_markdown(
     lines.append(f"| Transitions observées | **{verdict.n_transitions}** |")
     lines.append(f"| Taille espace d'états | **{verdict.n_states}** |")
     if verdict.impossible:
-        lines.append(f"| **Verdict TPM** | **IMPOSSIBLE** — {verdict.impossibility_reason} |")
+        lines.append(
+            f"| **Verdict TPM** | **IMPOSSIBLE** — {verdict.impossibility_reason} |"
+        )
     else:
         lines.append("| **Verdict TPM** | matrice stochastique définie |")
+    lines.append("")
+    lines.append("## Espace d'états — ce que la matrice compte réellement")
+    lines.append("")
+    space = verdict.state_space or {}
+    if space and not space.get("carries_belief_state", True):
+        lines.append(
+            "- **La matrice ne mesure PAS des états de croyance.** Les quatre "
+            "coordonnées du label d'état (arguments, sophismes, contre-"
+            "arguments, croyances) valent **0** sur les "
+            f"{space.get('observations', 0)} observation(s) : seul le **mot de "
+            "statut de phase** varie. La TPM décrit donc des transitions "
+            "`completed` / `failed` / `skipped`, pas des états de croyance — "
+            "le candidat #2 n'est pas mesuré par cette exécution."
+        )
+        lines.append(
+            "- **Cause mesurée** : la phase `extract` échoue sur chaque "
+            "proposition (sous `LLM_CACHE_MODE=replay`, un cache miss faute de "
+            "fixtures) ; tout l'aval est sauté, d'où des compteurs à 0."
+        )
+        lines.append(
+            "- **Conséquence** : aucun artefact n'est proposé au partenaire. "
+            "Le critère R1107 exige que l'instrument sépare deux entrées "
+            "contrastées ; un espace d'états réduit aux mots de statut ne "
+            "sépare rien, et trois corpus distincts donnent la même matrice."
+        )
+    elif space:
+        maxima = ", ".join(
+            f"{key}={space.get(key, 0)}" for key in _BELIEF_STATE_COORDINATES
+        )
+        lines.append(f"- Coordonnées maximales observées : {maxima}.")
+        lines.append(
+            "- Au moins une coordonnée non nulle : la matrice porte bien de "
+            "l'information d'état, au-delà du mot de statut."
+        )
     lines.append("")
     lines.append("## Ergodicité (TPM-2 #1491, hérité du sous-traitant)")
     lines.append("")
     if not verdict.ergodicity:
-        lines.append("_Section absente du rapport sous-traitant (TPM impossible ou rapport introuvable)._")
+        lines.append(
+            "_Section absente du rapport sous-traitant (TPM impossible ou rapport introuvable)._"
+        )
     else:
         if "ergodic_line" in verdict.ergodicity:
             lines.append(f"- {verdict.ergodicity['ergodic_line']}")
@@ -474,7 +564,22 @@ def _render_verdict_markdown(
         lines.append(f"- n = **{verdict.spectral['n']}** états")
         lines.append(f"- λ₂ (|deuxième valeur propre|) = **{lam2:.4f}**")
         lines.append(f"- **Spectral gap** (1 − |λ₂|) = **{gap:.4f}**")
-        if gap is not None and gap >= 0.3:
+        # #1506 R1107 — the gap is a MIXING RATE only for an irreducible chain.
+        # On a reducible chain λ₂ = 0 gives g = 1, which the old branch read as
+        # « mixing rapide » while the very same page said « Ergodique : NON —
+        # réductible ». A chain that falls into one absorbing class in one step
+        # does not mix toward anything: there is no unique stationary
+        # distribution to converge to.
+        irreducible = verdict.ergodicity.get("irreducible")
+        if irreducible is False:
+            lines.append(
+                "- **g n'est pas un taux de mélange ici** : la chaîne est "
+                "réductible (≥ 2 SCC), donc il n'existe aucune distribution "
+                "stationnaire unique vers laquelle converger. λ₂ = 0 avec "
+                "g = 1 dit qu'une classe absorbante est atteinte en une étape, "
+                "pas que la chaîne mélange."
+            )
+        elif gap is not None and gap >= 0.3:
             lines.append(
                 "- **Mixing rapide** : convergence en O(log 1/ε) steps. "
                 "Distribution stationnaire accessible (si irréductible + "
@@ -512,6 +617,19 @@ def _render_verdict_markdown(
             "l'autre sous-ensemble (corpus A / B / C) pour une TPM non-"
             "dégénérée. Anti-théâtre #1019 : le verdict est premier, le "
             "ré-échelonnage est un suivi."
+        )
+    elif space and not space.get("carries_belief_state", True):
+        # #1506 R1107 — the honest status. The matrix exists and is
+        # reproducible, but it counts phase status words: calling that
+        # « CANDIDAT #2 LIVRÉ » is the theatre #1019 forbids.
+        lines.append(
+            "**Statut** : **NON MESURÉ**. La matrice est reproductible, mais "
+            "elle ne porte aucune coordonnée d'état de croyance (les quatre "
+            "compteurs restent à 0) : elle compte des transitions entre mots "
+            "de statut de phase. Le candidat #2 n'est donc pas démontré par "
+            "cette exécution, et aucun artefact n'est proposé au partenaire "
+            "(critère R1107 : un instrument qui ne sépare pas deux entrées "
+            "contrastées n'est pas proposé)."
         )
     else:
         lines.append(
@@ -606,9 +724,7 @@ def run_for_corpus(
 
     verdict_json_path = verdict_dir / "verdict.json"
     verdict_md_path = verdict_dir / "verdict.md"
-    inner_rel = (
-        f"../../_inner_tpm/corpus{corpus_letter}/report.md"
-    )
+    inner_rel = f"../../_inner_tpm/corpus{corpus_letter}/report.md"
     verdict_json_path.write_text(
         json.dumps(asdict(verdict), indent=2, ensure_ascii=False),
         encoding="utf-8",
@@ -666,7 +782,9 @@ def _print_dry_run() -> int:
     print("Candidate mapping (CoursIA seed #7289 — ≥2 substrates required):")
     print()
     for cand in CANDIDATES_FOR_SEED:
-        marker = "← THIS DRIVER DELIVERS" if cand["this_driver_delivers"] else "(sibling)"
+        marker = (
+            "← THIS DRIVER DELIVERS" if cand["this_driver_delivers"] else "(sibling)"
+        )
         print(f"  [{marker}]")
         print(f"    id          : {cand['id']}")
         print(f"    delivered_in: {cand['delivered_in']}")
@@ -753,10 +871,30 @@ def main() -> int:
 
     print()
     print(f"→ S6-A1 verdicts ({len(produced)} corpus):")
+    measured = 0
     for p in produced:
         print(f"   - {p / 'verdict.md'}")
+        try:
+            payload = json.loads((p / "verdict.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if (payload.get("state_space") or {}).get("carries_belief_state"):
+            measured += 1
     print()
-    print(f"Candidate #2 ({COURSIA_SEED_ISSUE}) : LIVRÉ (preuve exécutable).")
+    if measured:
+        print(
+            f"Candidate #2 ({COURSIA_SEED_ISSUE}) : MESURÉ sur "
+            f"{measured}/{len(produced)} corpus (preuve exécutable)."
+        )
+    else:
+        # #1506 R1107 — no state coordinate ever fired: the matrix counts
+        # phase status words. Saying « LIVRÉ » here is the theatre #1019 bans,
+        # and the R1107 criterion forbids proposing such an artifact.
+        print(
+            f"Candidate #2 ({COURSIA_SEED_ISSUE}) : NON MESURÉ — la matrice ne "
+            "porte aucune coordonnée d'état de croyance (compteurs à 0, seul "
+            "le statut de phase varie). Aucun artefact proposé."
+        )
     return 0
 
 
