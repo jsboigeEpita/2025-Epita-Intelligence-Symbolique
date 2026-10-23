@@ -76,11 +76,15 @@ def _plant(relpath: str, content: str):
     target.write_text(content, encoding="utf-8")
 
     def _cleanup():
+        # The probe dir is SHARED by several parametrizations of this witness
+        # (``f2834_authentic``, ``f2834_swap``, ``f2834_kernel``,
+        # ``test_f2834_seeder``). Under ``-n auto`` those land on different
+        # workers, and removing the dir here lands between another worker's
+        # ``mkdir(parents=True)`` and its ``write_text`` — that write raises
+        # FileNotFoundError (#3147). The dir is gitignored at any depth and
+        # skipped by collection (``norecursedirs`` holds ``.*``), so leaving
+        # it behind costs nothing; only our own plant is removed.
         target.unlink(missing_ok=True)
-        try:
-            target.parent.rmdir()  # the probe dir, when we created it
-        except OSError:
-            pass  # seat-local content already lived there
 
     return _cleanup
 
@@ -269,3 +273,40 @@ def test_the_plants_are_actually_plantable():
         "tests/unit/.playwright-mcp/f2834_kernel.py",
     ):
         _assert_gitignored(ROOT / relpath)
+
+
+def test_cleanup_never_removes_the_shared_probe_dir(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#3147: ``_plant``'s cleanup must not remove the probe dir.
+
+    The race itself is interleaving-dependent (a worker's ``rmdir`` has to land
+    between another worker's ``mkdir`` and its ``write_text``), so a witness
+    that waits for the symptom would red only some of the time — a permanent
+    red is not available and a green would prove nothing. This pins the CAUSE
+    deterministically: with ``Path.rmdir`` forbidden, a cleanup that removes a
+    directory raises instead of silently tidying. The behavioural half stays:
+    the dir must still be there after the cleanup ran.
+    """
+    probe_dir = ROOT / "tests/unit/.playwright-mcp"
+
+    def _forbidden_rmdir(self: Path, *args: object, **kwargs: object) -> None:
+        raise AssertionError(
+            "the plant cleanup removed a directory that several parametrizations "
+            "of this witness share; under -n auto that lands between another "
+            "worker's mkdir and its write_text and the write raises "
+            "FileNotFoundError (#3147)"
+        )
+
+    monkeypatch.setattr(Path, "rmdir", _forbidden_rmdir)
+    planted = "tests/unit/.playwright-mcp/f2834_cleanup_probe.py"
+    cleanup = _plant(planted, "PROBE_2834 = 1\n")
+    try:
+        assert (ROOT / planted).exists(), "the plant was never written"
+    finally:
+        cleanup()
+    assert not (ROOT / planted).exists(), "the cleanup left its own plant behind"
+    assert probe_dir.is_dir(), (
+        "the plant cleanup removed tests/unit/.playwright-mcp, the dir every "
+        "parametrization of this witness plants into (#3147)"
+    )
