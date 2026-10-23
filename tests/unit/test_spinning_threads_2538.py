@@ -4,6 +4,11 @@
 The spinning thread here has the shape of the one ``BackendManager`` left: it
 reads a ``MagicMock`` stream until ``readline`` returns ``""``, which a mock
 never does. Each test stops its own threads.
+
+#3171: the nested witnesses' spinner outlives the measurement by construction
+(spun until the session releases it, not for a wall-clock margin), and a
+suspect that ends mid-measurement is reported — never cleared by the windows
+that followed its death.
 """
 
 import sys
@@ -112,25 +117,26 @@ def test_the_relative_rule_catches_what_the_absolute_bar_missed():
     assert _credits(used=0.020, gettable=0.003) is None
 
 
-# This spinner records nothing, and stops after 30 s, many windows of the
-# guard and more: a spinner that never stops holds every thread that waits for
-# the GIL. On ai-01, the same two tests with no guard took 0.17 s with the
-# waiter alone, and 27.6 s with a spinner that never stopped. (#3125: the
-# lifetime was 5 s, then 10 s — under a full ``-n auto`` load that stretches
-# every window, the measurement itself can outlive it and the witness flakes
-# by the spinner dying of old age mid-measurement, not by the detector
-# missing; the nested session ran 72 s loaded where it takes 7 s idle, so the
-# cap must clear the stretched measurement with margin. The thread is a
-# daemon: the nested process exits right after the second test, and the cap
-# only bounds a runaway.)
+# This spinner records nothing and spins until the session releases it: the
+# test after it sets _STOP, and by then the teardown hook of the spinner's
+# test — the measurement — has necessarily returned (pytest finishes one
+# item's teardown before the next item's setup). It outlives the measurement
+# by construction, not by a wall-clock margin: every lifetime tried before
+# (5 s, 10 s, 30 s) was overtaken by a slower box — CI run 39847560034 took
+# 29.10 s against the spinner's 30 s, the spinner died mid-measurement, and
+# the verdict was a silent clear (#3171). The 30 s bound stays only against
+# a runaway: the thread is a daemon, the nested process exits right after
+# the second test, and the bound only limits a hang.
 _LEAVES_A_SPINNER = """
 import threading
 import time
 
+_STOP = threading.Event()
+
 
 def _spins():
     end = time.monotonic() + 30
-    while time.monotonic() < end:
+    while not _STOP.is_set() and time.monotonic() < end:
         pass
 
 
@@ -139,6 +145,7 @@ def test_leaves_a_spinner():
 
 
 def test_leaves_a_waiter():
+    _STOP.set()
     threading.Thread(
         target=threading.Event().wait, name="the-waiter", daemon=True
     ).start()
@@ -182,6 +189,54 @@ def test_the_undetermined_warning_names_the_thread_and_the_windows():
     assert "9 window(s)" in warning, warning
 
 
+def _burns_then_ends(seconds):
+    end = time.monotonic() + seconds
+    while time.monotonic() < end:
+        pass
+
+
+def test_a_thread_that_dies_mid_measurement_gives_no_measurement():
+    """#3171 at the function level: the suspect ends during the windows —
+    `spinning` returns no verdict (`[]`), records the name, and never lets
+    the unused windows after the death accumulate into a clear."""
+    thread = _started(_burns_then_ends, 0.15)
+    try:
+        trail = []
+        ended = []
+        assert spinning([thread], trail=trail, ended=ended) == []
+        assert ended == [thread.name]
+    finally:
+        thread.join(5)
+
+
+def test_the_ended_warning_names_the_thread_and_the_windows():
+    from tests.spinning_threads import ended_warning
+
+    thread = threading.Thread(target=lambda: None, name="the-spinner")
+    warning = ended_warning(
+        [thread], ["the-spinner"], [(0.100, 0.100, True), (0.050, 0.100, True)]
+    )
+    assert "the-spinner" in warning, warning
+    assert "ended during measurement" in warning, warning
+    assert "used=100ms" in warning, warning
+    assert "gettable=100ms" in warning, warning
+    assert "-> True" in warning, warning
+
+
+def test_the_red_message_carries_the_window_trail():
+    """#3171: a red fires where it fires — its message carries the evidence
+    for the verdict, the attempted windows themselves."""
+    from tests.spinning_threads import describe
+
+    thread = threading.Thread(target=lambda: None, name="the-spinner")
+    message = describe([thread], [(0.100, 0.100, True)] * 3)
+    assert "window trail" in message, message
+    assert "used=100ms" in message and "gettable=100ms" in message, message
+    assert "3 attempted" in message, message
+    # Without a trail the message stands as before.
+    assert "window trail" not in describe([thread])
+
+
 def _run_leaves(tmp_path, bound=180, source=_LEAVES_A_SPINNER):
     """Run the nested plugin session whose tests leave a spinner and a
     waiter; ``-W always`` so an undetermined-verdict warning always reaches
@@ -212,15 +267,76 @@ def _run_leaves(tmp_path, bound=180, source=_LEAVES_A_SPINNER):
 
 def test_the_plugin_fails_the_test_that_left_it(tmp_path):
     """Through the hooks: the test that left the spinner errors at teardown,
-    by the thread's name; the one that left a waiting thread passes."""
+    by the thread's name; the one that left a waiting thread passes. The
+    spinner spins until the session releases it (#3171), so it is alive for
+    every window of the measurement on any seat — the control: a spinner
+    alive throughout is caught, and the red carries its window trail."""
     done = _run_leaves(tmp_path)
     out = done.stdout
     assert done.returncode == 1, both(out, done.stderr)
     assert "ERROR at teardown of test_leaves_a_spinner" in out, both(out, done.stderr)
     assert "--- the-spinner" in out, both(out, done.stderr)
+    assert "window trail" in out, both(out, done.stderr)
     assert "the-waiter" not in out, both(out, done.stderr)
     # The spinner's test passes, then errors at teardown: two passed, one error.
     assert "2 passed, 1 error" in out, both(out, done.stderr)
+
+
+# #3171's CI red in miniature: a spinner whose wall clock expires
+# mid-measurement — anchored to the measurement itself. The thread waits for
+# the detector's calibration burner (it starts when the teardown measurement
+# does), then spins a clock too short for three windows. 0.15 s is under
+# SAMPLES * WINDOW (0.3 s) of wall time, and a window never shortens (the
+# sleep never returns early), so after the burner appears the thread ends
+# before three windows can elapse on any seat: it cannot be caught (three
+# used windows) and cannot be cleared (a used window comes first, then three
+# unused would be needed). The only honest verdict is that it ended during
+# the measurement. The anchor matters: under a full ``-n auto`` run the gap
+# between the test body and the teardown measurement can consume a clock
+# started at thread start (measured here: 2 of 4 full runs, the thread died
+# before left_alive saw it and the run was a plain pass) — anchored, the gap
+# only delays the wait, and the death always lands inside the measurement.
+# The burner's name is the detector's own; a rename of it reddens this
+# witness (the wait never ends, the thread reads as a waiter), loudly.
+_LEAVES_A_DYING_SPINNER = """
+import threading
+import time
+
+
+def _spins_its_last():
+    while not any(
+        t.name == "spinning-detector-calibration"
+        for t in threading.enumerate()
+    ):
+        time.sleep(0.005)
+    end = time.monotonic() + 0.15
+    while time.monotonic() < end:
+        pass
+
+
+def test_leaves_a_dying_spinner():
+    threading.Thread(
+        target=_spins_its_last, name="the-dying-spinner", daemon=True
+    ).start()
+"""
+
+
+def test_a_thread_that_ends_mid_measurement_is_reported(tmp_path):
+    """#3171: a suspect that dies during the measurement gives no
+    measurement — the nested session reports it (a warning naming the thread
+    and the window trail), never a silent clear. On main this run printed
+    `1 passed` and nothing else: the spinner died, the windows after it read
+    as unused, and the clear was silent."""
+    done = _run_leaves(tmp_path, source=_LEAVES_A_DYING_SPINNER)
+    out = done.stdout
+    assert "ended during measurement" in out, both(out, done.stderr)
+    assert "the-dying-spinner" in out, both(out, done.stderr)
+    assert "used=" in out and "gettable=" in out, both(out, done.stderr)
+    # A report, not a failure: a thread ending is not proof it was spinning
+    # — only proof that it cannot be measured.
+    assert done.returncode == 0, both(out, done.stderr)
+    assert "1 passed" in out, both(out, done.stderr)
+    assert "ERROR at teardown" not in out, both(out, done.stderr)
 
 
 # The rationed regime of the #3125 rework: hogs started at import hold
@@ -260,7 +376,7 @@ for _i in range(2):
 
 def _spins():
     end = time.monotonic() + 30
-    while time.monotonic() < end:
+    while not _STOP.is_set() and time.monotonic() < end:
         pass
 
 
@@ -269,6 +385,7 @@ def test_leaves_a_spinner():
 
 
 def test_leaves_a_waiter():
+    _STOP.set()
     threading.Thread(
         target=threading.Event().wait, name="the-waiter", daemon=True
     ).start()

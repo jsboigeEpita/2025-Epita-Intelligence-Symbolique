@@ -26,6 +26,13 @@ a seat so loaded that the calibration burner itself starved below
 not an unused one), and the plugin warns with the window trail instead of
 letting the check pass silently.
 
+A suspect that stops being alive during those windows gives no measurement
+either (#3171: the CI nested session took 29.10 s against the spinner's 30 s
+wall clock, the spinner died mid-measurement, and the idle windows after it
+read as a silent ``clear``). Its name is recorded in ``ended`` and the plugin
+warns with the trail — a thread that ended cannot be cleared by the windows
+that followed its death.
+
 Loaded as a plugin by ``tests/conftest.py``. ``psutil``, which times each
 thread, is imported only when a test leaves a thread alive.
 """
@@ -110,6 +117,7 @@ def spinning(
     window: float = WINDOW,
     samples: int = SAMPLES,
     trail: list[tuple[float, float, bool | None]] | None = None,
+    ended: list[str] | None = None,
 ) -> list[threading.Thread]:
     """``threads``, if together they kept using, in ``samples`` measurable
     windows (not necessarily consecutive), at least ``FACTOR`` of the CPU the
@@ -120,6 +128,12 @@ def spinning(
     verdict from an undetermined one (`verdict_of`) — the return value alone
     cannot (#3125 rework: attempts exhausted without a verdict read as
     ``[]`` was the silent false negative a loaded gate seat produced).
+
+    ``ended``, when a list is passed, receives the name of every thread of
+    ``threads`` that stopped being alive during the measurement (#3171: a
+    suspect that dies mid-measurement gives no measurement — the windows
+    after it ended read as unused, so reading them as a clear was the
+    silent false negative the CI flake printed).
 
     The calibration burner is a thread of this process started for the
     measurement: whatever rationing the suspects live under — GIL
@@ -172,6 +186,15 @@ def spinning(
             decision = _credits(used, gettable)
             if trail is not None:
                 trail.append((used, gettable, decision))
+            dead = [thread for thread in threads if not thread.is_alive()]
+            if dead:
+                # #3171: a suspect that ended during the measurement gives
+                # no measurement — the windows after it ended read as
+                # unused, and a clear built on them is a silent one. The
+                # caller warns with the trail; no verdict from here.
+                if ended is not None:
+                    ended.extend(thread.name for thread in dead)
+                break
             if decision is None:
                 # Unmeasurable window (the process was starved below
                 # accounting noise): retry it, bounded by MAX_ATTEMPTS.
@@ -236,8 +259,38 @@ def undetermined_warning(
     )
 
 
-def describe(threads: list[threading.Thread]) -> str:
-    """The message for ``threads``: the name of each, and where it runs."""
+def ended_warning(
+    threads: list[threading.Thread],
+    ended: list[str],
+    trail: list[tuple[float, float, bool | None]],
+) -> str:
+    """The warning for a run whose suspect stopped being alive mid-measure
+    (#3171): which threads were suspects, which of them ended during the
+    measurement, and every attempted window — a thread that dies while being
+    measured gives no measurement, and the windows after it ended would read
+    as unused."""
+    names = ", ".join(thread.name for thread in threads)
+    ended_names = ", ".join(ended)
+    windows = "; ".join(
+        f"used={used * 1000:.0f}ms gettable={gettable * 1000:.0f}ms -> {decision}"
+        for used, gettable, decision in trail
+    )
+    return (
+        f"#3171 could not measure whether these thread(s) spin: {names} — "
+        f"ended during measurement: {ended_names} (a thread that dies while "
+        f"being measured gives no measurement, and the windows after it "
+        f"ended would read as unused — this is neither a pass nor a clear): "
+        f"{windows}"
+    )
+
+
+def describe(
+    threads: list[threading.Thread],
+    trail: list[tuple[float, float, bool | None]] | None = None,
+) -> str:
+    """The message for ``threads``: the name of each, where it runs, and —
+    when the caller passes the window trail — the evidence for the verdict,
+    so a red fires with its measurement where it fires (#3171)."""
     frames = sys._current_frames()
     parts = []
     for thread in threads:
@@ -248,10 +301,18 @@ def describe(threads: list[threading.Thread]) -> str:
             else "  (it ended meanwhile)\n"
         )
         parts.append(f"--- {thread.name}\n{where}")
-    return (
+    message = (
         f"this test left {len(threads)} thread(s) running that use CPU while "
         f"nothing waits on them (#2538):\n" + "".join(parts)
     )
+    if trail:
+        windows = "; ".join(
+            f"used={used * 1000:.0f}ms gettable={gettable * 1000:.0f}ms"
+            f" -> {decision}"
+            for used, gettable, decision in trail
+        )
+        message += f"window trail ({len(trail)} attempted): {windows}\n"
+    return message
 
 
 @pytest.hookimpl(wrapper=True)
@@ -266,9 +327,12 @@ def pytest_runtest_teardown(item, nextitem):
     if _BEFORE in item.stash:
         suspects = left_alive(item.stash[_BEFORE])
         trail: list[tuple[float, float, bool | None]] = []
-        spun = spinning(suspects, trail=trail)
+        ended: list[str] = []
+        spun = spinning(suspects, trail=trail, ended=ended)
         if spun:
-            pytest.fail(describe(spun), pytrace=False)
+            pytest.fail(describe(spun, trail), pytrace=False)
+        elif suspects and ended:
+            warnings.warn(ended_warning(suspects, ended, trail))
         elif suspects and verdict_of(trail) == "undetermined":
             warnings.warn(undetermined_warning(suspects, trail))
     return result
