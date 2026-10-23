@@ -1979,6 +1979,47 @@ def _resolve_unit_label(labels: Dict[str, str], key: str) -> str:
     return key
 
 
+def _retraction_pair_belief(label: Any) -> str:
+    """The belief a retraction label retracts — ``¬x`` and ``x`` are one pair."""
+    text = str(label).strip()
+    return text[1:] if text.startswith("¬") else text
+
+
+def _product_of_disjoint_pairs(options: List[Any], card: int) -> int:
+    """How many independent belief / ¬belief pairs the options select across.
+
+    Returns the pair count when **every** stored option picks exactly one side
+    of each of ``card`` disjoint pairs — the option set is then a sub-cube of
+    ``2 ** card`` built by the fallacy negations, and its multiplicity is
+    arithmetic, not structure. Returns 0 when the options overlap (a belief
+    shared by several conflicts makes the union larger than the cardinality)
+    or when the shape cannot be read.
+
+    #3150 — the R1106 render sold « 32 retraits de cardinal 5 … plusieurs
+    mondes consistants incompatibles, également minimaux » as a structural
+    finding. The 5 pairs are the five fallacy targets; the 32 is 2⁵. Nothing
+    about the discourse is learned from that number.
+
+    A single pair is **not** collapsed: with one clash the two retractions ARE
+    the clash (insight B-2 of #1646 — drop the belief or drop its negation),
+    and there is no combinatorial product to mistake for structure. The
+    defect this guards is the product of SEVERAL independent conflicts.
+    """
+    if not isinstance(options, list) or len(options) < 2 or card < 2:
+        return 0
+    pairs: set[str] = set()
+    for option in options:
+        if not isinstance(option, list) or not option:
+            return 0
+        beliefs = [_retraction_pair_belief(label) for label in option]
+        if any(not belief for belief in beliefs):
+            return 0
+        if len(set(beliefs)) != len(beliefs) or len(beliefs) != card:
+            return 0
+        pairs.update(beliefs)
+    return len(pairs) if len(pairs) == card else 0
+
+
 def _belief_revision_finding(state: Any) -> Optional[StructuredArgFinding]:
     """Project what belief revision alone establishes: the minimal retraction.
 
@@ -2008,6 +2049,7 @@ def _belief_revision_finding(state: Any) -> Optional[StructuredArgFinding]:
     # any entry reaches it, stop — no deeper search needed.
     best_mr: Optional[Dict[str, Any]] = None
     best_labels: Dict[str, str] = {}
+    best_original: Any = None
     for entry in entries:
         if not isinstance(entry, dict):
             continue
@@ -2019,6 +2061,7 @@ def _belief_revision_finding(state: Any) -> Optional[StructuredArgFinding]:
             continue
         if best_mr is None or card < best_mr.get("cardinality", card + 1):
             best_mr = mr
+            best_original = entry.get("original")
             entry_labels = entry.get("argument_labels")
             best_labels = entry_labels if isinstance(entry_labels, dict) else {}
             if card == 1:
@@ -2075,7 +2118,22 @@ def _belief_revision_finding(state: Any) -> Optional[StructuredArgFinding]:
     # the figure no LLM produces (a single revised world is all a revision
     # operator, or a prose paraphrase, can express), so it is named first when
     # the computation surfaced more than one option.
-    if n_options >= 2:
+    #
+    # #3150 — UNLESS the options are the cross-product of independent
+    # belief / ¬belief pairs. Then the multiplicity is 2 ** (number of fallacy
+    # negations): arithmetic wearing the costume of a structural figure. Naming
+    # it as « plusieurs mondes » invites the reader to read a property of the
+    # discourse where the state only multiplied its own negations.
+    pairs = _product_of_disjoint_pairs(options, card)
+    if n_options >= 2 and pairs:
+        lead = (
+            f"pas de rétractation minimale unique — {n_options} retraits de "
+            f"cardinal {card} restaurent également la cohérence, mais ce "
+            f"nombre est un produit : chaque retrait prend un côté de chacune "
+            f"des {pairs} paires croyance / négation indépendantes que les "
+            "sophismes ont créées, il n'ajoute aucune structure au propos"
+        )
+    elif n_options >= 2:
         lead = (
             f"pas de rétractation minimale unique — {n_options} retraits de "
             f"cardinal {card} restaurent également la cohérence : plusieurs "
@@ -2090,13 +2148,45 @@ def _belief_revision_finding(state: Any) -> Optional[StructuredArgFinding]:
             f"reste tienne"
         )
     parts: List[str] = [lead]
+    # #3150 — the base, always. The R1106 render never said over WHAT the
+    # revision reasoned, so its « cette contradiction » was free to latch onto
+    # the nearest formal verdict it had just discussed. The revision ran on the
+    # extraction window's units plus one negation per targeted fallacy: that is
+    # a PROPAGATION of the fallacy signal, and the reader must not receive it
+    # as a second, independent corroboration.
+    n_units = len(best_original) if isinstance(best_original, list) else None
+    n_population = len(getattr(state, "identified_arguments", None) or {}) or None
+    n_negations = (
+        base_size - n_units
+        if isinstance(base_size, int) and n_units is not None and base_size >= n_units
+        else None
+    )
+    if n_units is not None:
+        socle = f"le socle examiné est de {n_units} engagement(s)" + (
+            f" sur {n_population} unités lues" if n_population else ""
+        )
+        if n_negations:
+            socle += (
+                f", augmenté des {accord(n_negations, 'négation', 'négations')} "
+                "que les détections de sophismes ajoutent à leurs cibles — le "
+                "conflit rejoué prolonge le signal de sophisme, il ne le "
+                "corrobore pas"
+            )
+        parts.append(socle)
     if named:
         parts.append("le point de rupture porte sur : " + " | ".join(named))
     # B-3: the contradiction is confined — some beliefs survive every retraction.
+    # #3150: it names WHICH contradiction (the one these negations build), so
+    # the sentence can never be read as a statement about the PL/FOL verdict.
     if untouched > 0:
         survit = "survit intact" if untouched == 1 else "survivent intacts"
+        subject = (
+            "la contradiction née de ces négations"
+            if n_negations
+            else "la contradiction ainsi construite"
+        )
         parts.append(
-            f"la contradiction est confinée — "
+            f"{subject} est confinée — "
             f"{accord(untouched, 'engagement', 'engagements')} {survit} : "
             "une contradiction réelle mais inerte, qui n'entraîne pas "
             "la thèse"
