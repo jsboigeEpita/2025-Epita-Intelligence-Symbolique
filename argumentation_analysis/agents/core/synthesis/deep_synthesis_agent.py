@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 import re
 from datetime import datetime
-from typing import Any, ClassVar, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List, Optional, Tuple
 
 from semantic_kernel import Kernel
 from pydantic import PrivateAttr
@@ -1596,6 +1596,41 @@ class DeepSynthesisAgent(BaseAgent):
         return notes
 
     @staticmethod
+    def _convergence_combination_note(
+        shown: List[ConvergentVerdict],
+    ) -> List[str]:
+        """#3164 — what the per-unit convergence rows actually share.
+
+        Every row is correct on its own unit. The defect was the writer reading
+        several rows as one coincidence and citing them all under a sentence
+        none of them supports. The union of the per-unit method sets is carried
+        by no unit here, and the writer can only generalise over it if nothing
+        says so.
+        """
+        if len(shown) < 2:
+            return []
+        union = sorted({method for v in shown for method in v.methods})
+        carriers = [v.arg_id for v in shown if set(union) <= set(v.methods)]
+        combos: Dict[Tuple[str, ...], int] = {}
+        for v in shown:
+            key = tuple(sorted(v.methods))
+            combos[key] = combos.get(key, 0) + 1
+        out: List[str] = []
+        if not carriers:
+            out.append(
+                f"  - NO unit carries the {len(union)} methods cited above "
+                f"({', '.join(union)}). Each row is the PARTIAL set of ITS OWN "
+                "unit: listing these methods as one bundle over these units "
+                "reads a UNION as an INTERSECTION."
+            )
+        observed = " ; ".join(
+            "{" + ", ".join(key) + "}" + f" x {count}"
+            for key, count in sorted(combos.items(), key=lambda kv: (-kv[1], kv[0]))
+        )
+        out.append(f"  - combinations actually observed: {observed}.")
+        return out
+
+    @staticmethod
     def build_artifact_briefing(
         state: Any,
         report: Optional[DeepSynthesisReport] = None,
@@ -1892,6 +1927,20 @@ class DeepSynthesisAgent(BaseAgent):
                     v.arg_id,
                     f"score={v.score} methods={', '.join(v.methods)}",
                 )
+            # #3164 — the rows are right; the writer read four of them as one
+            # four-method coincidence and cited all four under the sentence. No
+            # unit carried the union, and nothing said so. The census below is
+            # deterministic and reads the rows the writer was SHOWN (the cap
+            # above can hide the tail), so the line and the census agree.
+            _convergence_note = DeepSynthesisAgent._convergence_combination_note(
+                report.convergent_verdicts[:max_items_per_field]
+            )
+            if _convergence_note:
+                lines.append("")
+                lines.append(
+                    "CONVERGENCE READING — what the rows above share, unit by unit:"
+                )
+                lines.extend(_convergence_note)
 
         # #3155 — the caps above hide the tail of every field. Without the
         # denominator the writer read a prefix as the whole population: the
@@ -1944,6 +1993,14 @@ class DeepSynthesisAgent(BaseAgent):
         lines.append(
             "- cause=undetermined: no conflict site is established — state the "
             "verdict, never a cause."
+        )
+        # #3164 — the convergence rows are per unit; their union is no unit's.
+        lines.append(
+            "- convergent_verdicts rows are PER UNIT: a row's methods are what "
+            "THAT unit carries. Never list the methods of several cited rows as "
+            "one coincidence on those units — the convergence block above says "
+            "when no unit carries the union, and such a sentence cites rows "
+            "that refute it."
         )
 
         return "\n".join(lines)
