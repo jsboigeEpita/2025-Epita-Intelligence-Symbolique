@@ -23,6 +23,7 @@ class TestBeliefRetractionAGMSource:
     """_build_belief_retractions must read belief_revision_results."""
 
     def test_agm_contraction_surfaces_in_retractions(self):
+        # The conversational producer can genuinely contract every belief.
         state = _make_state()
         state.add_belief_revision_result(
             method="fallacy_contraction",
@@ -66,11 +67,30 @@ class TestBeliefRetractionAGMSource:
         retractions = DeepSynthesisAgent._build_belief_retractions(state)
         assert retractions[0].trigger == "fallacy_contraction_contraction"
 
+    def test_an_unrun_revision_yields_no_retraction(self):
+        # #3178 — the tri-state: ``revised: []`` with a non-empty ``original``
+        # means the revision did NOT run (handler bound refused it, or the JVM
+        # was absent). It contributes no contraction.
+        state = _make_state()
+        state.add_belief_revision_result(
+            method="dalal",
+            original=["b1", "b2"],
+            revised=[],
+            degraded=True,
+            absent_reason="handler_size_bound",
+        )
+        assert DeepSynthesisAgent._build_belief_retractions(state) == []
+
     def test_both_sources_merged(self):
         state = _make_state()
-        # JTMS source
+        # JTMS source — the shape ``JTMS.get_retraction_chain`` writes (#3178)
         state.jtms_retraction_chain.append(
-            {"belief_name": "jtms_b1", "was_valid": True, "trigger": "cascade"}
+            {
+                "trigger": "cascade",
+                "retracted": ["jtms_b1"],
+                "cascaded": ["jtms_b2"],
+                "reason": "directly set to False",
+            }
         )
         # AGM source
         state.add_belief_revision_result(
@@ -110,6 +130,7 @@ class TestBeliefRetractionAGMSource:
             method="test",
             original=["x"],
             revised=[],
+            degraded=False,
         )
         retractions = DeepSynthesisAgent._build_belief_retractions(state)
         r = retractions[0]

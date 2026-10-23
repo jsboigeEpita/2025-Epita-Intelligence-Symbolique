@@ -3700,6 +3700,9 @@ def _run_belief_revision_from_state(state: Any) -> Optional[Dict[str, Any]]:
             original=original_beliefs,
             revised=revised,
             minimal_retraction=minimal_retraction,
+            # The contraction ran even when nothing survives. The optional
+            # minimal-retraction insight can degrade independently (#3184).
+            degraded=False,
         )
     except Exception as e:
         logger.warning(f"Belief revision persistence failed: {e}")

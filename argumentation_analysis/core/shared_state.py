@@ -1630,6 +1630,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         argument_ids_absent_reason: Optional[str] = None,
         population_total: Optional[int] = None,
         dropped_unresolved: Optional[int] = None,
+        degraded: Optional[bool] = None,
+        absent_reason: Optional[str] = None,
     ) -> str:
         """Add a belief revision result.
 
@@ -1647,6 +1649,13 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         ``argument_labels`` (``{node: label}``) — same contract as
         ``add_dung_framework`` (#3009). Optional fields are stored only when
         set (honest absence).
+
+        #3178 — ``degraded`` / ``absent_reason`` keep the tri-state. A
+        revision the handler size bound refused writes ``revised: []``, and
+        without the marker that entry is indistinguishable from a revision
+        that contracted everything: the R1108 synthesis read 40 of 40 units as
+        contracted while Act III said the contradiction stayed confined. Only
+        a real bool is stored — an absent marker stays absent, never ``False``.
         """
         br_id = self._generate_id("brevision", self.belief_revision_results)
         entry: Dict[str, Any] = {
@@ -1665,6 +1674,11 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             entry["population_total"] = population_total
         if dropped_unresolved is not None:
             entry["dropped_unresolved"] = dropped_unresolved
+        # #3178 — the tri-state marker, stored only when it was stated.
+        if isinstance(degraded, bool):
+            entry["degraded"] = degraded
+        if absent_reason:
+            entry["absent_reason"] = str(absent_reason)
         self.belief_revision_results.append(entry)
         state_logger.info(f"Belief revision result added: {br_id} (method: {method})")
         return br_id

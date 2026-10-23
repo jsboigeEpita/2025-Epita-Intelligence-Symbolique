@@ -93,13 +93,16 @@ def _make_fixture_state() -> UnifiedAnalysisState:
         },
     )
 
-    # JTMS beliefs + retractions (Section 6)
+    # JTMS beliefs + retractions (Section 6). #3178 — the chain carries
+    # {trigger, retracted, cascaded, reason}; ``belief_name`` was a key the
+    # producer never wrote.
     state.add_jtms_belief("sovereignty_threatened", True, ["arg_1 supports"])
     state.jtms_retraction_chain.append(
         {
-            "belief_name": "sovereignty_threatened",
-            "was_valid": True,
             "trigger": "Contradicted by cooperation evidence (arg_3)",
+            "retracted": ["sovereignty_threatened"],
+            "cascaded": [],
+            "reason": "directly set to False",
         }
     )
 
