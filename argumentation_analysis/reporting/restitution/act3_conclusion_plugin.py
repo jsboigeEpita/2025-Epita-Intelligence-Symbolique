@@ -93,7 +93,12 @@ from .cited_units import (  # #2965 (Acte III slice) — same budget as Act II
     truncate_at_boundary,
 )
 from .fr_accord import accord
-from .global_projection import GlobalFinding, project_global_findings
+from .global_projection import (
+    GlobalFinding,
+    _MAX_CONVERGENCE_FINDINGS,
+    _MAX_GATE_FINDINGS,
+    project_global_findings,
+)
 from .llm_weaving import LlmCallable, WeaveOutcome, weave
 from .readability_gate import GateVerdict, ReadabilityGate
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
@@ -124,6 +129,11 @@ _META_CAP = 160
 # the old 240-char cut kept 31 % of the governance winner (#2965); only the
 # count of excerpts stays a local constant.
 _MAX_CLAIM_EXCERPTS = 5
+# #3193 (rework) — the anchor-excerpt count cap. It equals the projection's
+# own bound (``_MAX_CONVERGENCE_FINDINGS + _MAX_GATE_FINDINGS``, imported
+# above): in practice it never drops an anchor, but the renderer ENFORCES the
+# bound the #2908 census row states instead of trusting the projection's.
+_MAX_ANCHOR_EXCERPTS = _MAX_CONVERGENCE_FINDINGS + _MAX_GATE_FINDINGS
 # #1605 — the honest-absence ledger entering the prompt. The reason strings are
 # code-authored (no corpus content), but they are capped like everything else so
 # a future longer wording cannot silently eat the prompt budget.
@@ -540,6 +550,18 @@ class Act3Evidence:
     # from the cap alone — the ``counters_total`` precedent (#1622), so a run
     # below the cap stays silent (no false alarm).
     claim_excerpts_total: int = 0
+    # #3156 — the anchor text of every unit a global finding cites, keyed by
+    # opaque id and capped like every other cited text. The `[convergence]`
+    # line printed `arg_66` / `arg_79` as bare ids while asking the writer to
+    # name the passages, so the writer bound them to the one nearby unit it
+    # could describe (arg_30 — neither convergent, and with no quality score).
+    # The same lesson as #2965: the referent travels on the line that asks.
+    anchor_excerpts: Dict[str, str] = field(default_factory=dict)
+    # #3193 (rework) — distinct unit cites left without an anchor because the
+    # count cap fired. Stated on the rendered block, never silent (a drop the
+    # reader cannot see is a silent drop, #1019). Zero in practice: the cap
+    # equals the projection's own bound.
+    anchors_dropped: int = 0
     # #2965 (Acte III slice) — the governance winner's own text, capped.
     # The writer does not join an id to its unit across a long prompt
     # (measured on the saved state: wrong unit 4 of 5 samples, R1071), so
@@ -2554,6 +2576,14 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         for item in salience.ranked:
             for anchor in item.cites:
                 _cite(anchor)
+    # #3156 — the units a global convergence names are cited units. The R1107
+    # render put arg_66 / arg_79 on a `[convergence]` line as bare ids while
+    # the writer had to name « two passages »: it bound them to arg_30, the one
+    # nearby unit whose text it had. Citing them first puts their text in
+    # ``anchor_excerpts`` below and, when the budget allows, in the claims list.
+    for finding in global_findings:
+        for cite in finding.cites:
+            _cite(cite)
     for unit_id in sorted(cited_unit_ids(state)):
         _cite(unit_id)
     # #2850 lot 4 — one population, one cap. The dict used to be a SECOND,
@@ -2591,6 +2621,40 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         else []
     )
 
+    # #3156 — the anchor of every unit a global finding cites, keyed by opaque
+    # id. The convergence line carried ids only; the writer, asked to name the
+    # passages, bound them to the one nearby unit whose text it had (arg_30,
+    # which carries no quality score and is not one of the converging units).
+    # « Joinable » is not « joined »: the referent travels ON the line.
+    # #3193 (rework) — the COUNT of anchors is bounded here too, not only the
+    # per-text cap: ``global_findings`` is itself capped by the projection
+    # (``_MAX_CONVERGENCE_FINDINGS + _MAX_GATE_FINDINGS``), so this loop can
+    # never exceed that in practice — but the #2908 census row must state a
+    # bound the CODE enforces, not one the projection happens to guarantee
+    # today. The cap mirrors the claims block: a drop is counted and stated,
+    # never silent.
+    anchor_excerpts: Dict[str, str] = {}
+    dropped_anchor_ids: Set[str] = set()
+    for finding in global_findings:
+        for cite in finding.cites:
+            cite_id = str(cite).strip()
+            if not cite_id:
+                continue
+            # Only a cite the units table holds as text is an anchor: method
+            # names (« contre-argument »…) and gate ids are never anchored,
+            # so they consume no cap slot and count no drop (#3193 rework,
+            # coordinator comment 6362949622 — the former counter announced
+            # 7 omissions where one unit cite was left bare).
+            text = args.get(cite_id)
+            if not (isinstance(text, str) and text.strip()):
+                continue
+            if cite_id in anchor_excerpts or cite_id in dropped_anchor_ids:
+                continue  # a unit repeated across findings drops once, not per finding
+            if len(anchor_excerpts) >= _MAX_ANCHOR_EXCERPTS:
+                dropped_anchor_ids.add(cite_id)
+                continue
+            anchor_excerpts[cite_id] = truncate_at_boundary(text, CITED_UNIT_TEXT_CAP)
+
     return Act3Evidence(
         args_total=args_total,
         fallacies_total=fallacies_total,
@@ -2607,6 +2671,8 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         deanonymized=bool(getattr(state, "deanonymized", True)),
         claim_excerpts=claim_excerpts,
         claim_excerpts_total=len(citable_args),
+        anchor_excerpts=anchor_excerpts,
+        anchors_dropped=len(dropped_anchor_ids),
         governance_winner_text=governance_winner_text,
         governance_divergent_texts=governance_divergent_texts,
         absent_dimensions=_collect_absent_dimensions(state),
@@ -3004,10 +3070,39 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
     # missing section read the same to the LLM, so this renders in both states
     # like the presence/absence blocks above.
     if evidence.global_findings:
+        # #3156 — each anchor carries its unit's text, and says when the same
+        # text is ALSO listed among the claims. Bare ids are what let the
+        # writer rebind a convergence to whichever passage it could describe.
+        excerpted_ids = {unit_id for unit_id, _ in evidence.claim_excerpts}
+
+        def _anchored(finding: Any) -> str:
+            rendered: List[str] = []
+            for cite in finding.cites:
+                cite_id = str(cite)
+                text = evidence.anchor_excerpts.get(cite_id)
+                if not text:
+                    rendered.append(cite_id)
+                    continue
+                marker = (
+                    " (déjà listé parmi les revendications)"
+                    if cite_id in excerpted_ids
+                    else ""
+                )
+                rendered.append(f"{cite_id} — « {text} »{marker}")
+            return ", ".join(rendered)
+
         global_block = "\n".join(
-            f"  - [{f.kind}] {f.statement} (ancres : {', '.join(f.cites)})"
+            f"  - [{f.kind}] {f.statement} (ancres : {_anchored(f)})"
             for f in evidence.global_findings
         )
+        # #3193 (rework) — a dropped anchor is a bare id again; the reader must
+        # be told the line lost referents, not guess it (zero in practice: the
+        # cap equals the projection's own bound).
+        if evidence.anchors_dropped:
+            global_block += (
+                f"\n  - ({evidence.anchors_dropped} ancre(s) omise(s) au plafond "
+                "— les cites concernés restent des identifiants nus)"
+            )
     else:
         global_block = (
             "  (aucune convergence inter-axes ni gate de synthèse ne se dégage "

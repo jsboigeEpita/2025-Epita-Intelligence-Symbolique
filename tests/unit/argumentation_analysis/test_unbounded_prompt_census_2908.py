@@ -33,6 +33,10 @@ import ast
 import re
 from pathlib import Path
 
+from argumentation_analysis.reporting.restitution.global_projection import (
+    _MAX_CONVERGENCE_FINDINGS,
+    _MAX_GATE_FINDINGS,
+)
 from tests.support.tree_walk import iter_tracked_files
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -380,6 +384,20 @@ ALLOWED = {
         "bounded upstream: each text was capped at CITED_UNIT_TEXT_CAP where "
         "claim_excerpts is built (line 2144) and the loop stops at "
         "_MAX_CLAIM_EXCERPTS (5) lines"
+    ),
+    (
+        "argumentation_analysis/reporting/restitution/act3_conclusion_plugin.py",
+        "fstring",
+        "text",
+        2,
+    ): (
+        "line ~2939 — anchor excerpts on the Acte III global-findings lines "
+        "(#3156/#3193); bounded upstream, BOTH bounds enforced in code: each "
+        "text is capped at CITED_UNIT_TEXT_CAP where anchor_excerpts is built, "
+        "and the COUNT stops at _MAX_ANCHOR_EXCERPTS "
+        f"({_MAX_CONVERGENCE_FINDINGS + _MAX_GATE_FINDINGS} = the projection's "
+        "own _MAX_CONVERGENCE_FINDINGS + _MAX_GATE_FINDINGS), with dropped "
+        "anchors stated on the rendered block (anchors_dropped), never silent"
     ),
     # --- not a prompt: logs, cache keys, renders, UI ---
     (
