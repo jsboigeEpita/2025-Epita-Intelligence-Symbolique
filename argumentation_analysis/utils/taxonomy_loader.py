@@ -15,13 +15,16 @@ lecture du vrai fichier échouait. Un test qui veut une autre taxonomie remplace
 """
 
 import codecs
+import csv
 import hashlib
 import json
 import os
 import logging
+import re
+from functools import lru_cache
 from pathlib import Path
 from urllib.parse import quote
-from typing import Optional
+from typing import Dict, List, Optional
 from argumentation_analysis.paths import DATA_DIR
 
 logger = logging.getLogger(__name__)
@@ -164,6 +167,123 @@ def get_taxonomy_source_for_regime(regime: Optional[str] = None) -> Optional[str
     if regime != "funnel":
         return None
     return str(get_taxonomy_path())
+
+
+# --- #3224 — a fallacy label that names the taxonomy branch -----------------
+#
+# The Act III prompt rebuilt from the R1110 state carried the detection as
+# « Effet cigogne (famille Erreur de raisonnement) » — the leaf and the root,
+# but not the branch « Causalité douteuse » (4.1) that names the category the
+# Act I question asked about, so the reader could answer the causal half "no"
+# while the evidence held a causal detection. One father for the three label
+# sites (act3_conclusion_plugin, act2_narrative_plugin ×2) and for the reading
+# check that catches the contradiction: resolve the stored dotted path against
+# the vendored taxonomy and render the node NAMES — the dotted address itself
+# still never enters the evidence (#2031).
+
+
+@lru_cache(maxsize=4)
+def _taxonomy_node_names(csv_path: str) -> Dict[str, str]:
+    """``path`` -> the node's French name (``text_fr``), read once per file.
+
+    Keyed by the resolved file path, so a test swapping ``get_taxonomy_path``
+    to another file reads that file, not a stale cache. The returned dict is
+    shared through the cache — callers must not mutate it.
+    """
+    index: Dict[str, str] = {}
+    try:
+        with open(csv_path, "r", encoding="utf-8-sig", newline="") as f:
+            for row in csv.DictReader(f):
+                path = (row.get("path") or "").strip()
+                name = (row.get("text_fr") or "").strip()
+                if path and name:
+                    index[path] = name
+    except OSError as exc:
+        logger.debug("taxonomy node names unreadable at %s: %s", csv_path, exc)
+    return index
+
+
+#: A stored taxonomy path is dotted and numeric; the synthesizer also builds
+#: ``fallacy/<family>/<type>`` strings (deep_synthesis_agent) which are not
+#: addresses in this file.
+_DOTTED_PATH_RE = re.compile(r"\d+(?:\.\d+)*")
+
+
+def taxonomy_chain(taxonomy_path: str) -> Optional[List[str]]:
+    """The node NAMES a detection sits under: root, branch, leaf.
+
+    The chain is capped at three levels — root (first segment), branch
+    (second), leaf (the full path); a deeper path drops its middles, which
+    still names the category the reader needs. A path that resolves to no
+    row, or that is not a dotted numeric address, yields ``None``: the caller
+    keeps its own label rather than a guess.
+    """
+    raw = (taxonomy_path or "").strip()
+    if not raw or not _DOTTED_PATH_RE.fullmatch(raw):
+        return None
+    try:
+        index = _taxonomy_node_names(str(get_taxonomy_path()))
+    except Exception:
+        # A label or a reading check must never crash a render on taxonomy
+        # I/O (a missing file triggers the loader's download path). The
+        # caller keeps its own label — the same no-guess fallback as an
+        # unknown path.
+        logger.warning("taxonomy unavailable; keeping the two-level label")
+        return None
+    if not index:
+        return None
+    segments = raw.split(".")
+    wanted = [segments[0]]
+    if len(segments) >= 2:
+        wanted.append(".".join(segments[:2]))
+    wanted.append(raw)
+    names: List[str] = []
+    for node_path in wanted:
+        name = index.get(node_path)
+        if not name:
+            return None
+        # A depth-2 path's branch IS its leaf — the chain says it once.
+        if not names or names[-1] != name:
+            names.append(name)
+    return names
+
+
+def fallacy_taxonomy_label(
+    fallacy_type: str,
+    family: str,
+    taxonomy_path: Optional[str],
+    *,
+    quoted: bool = False,
+) -> str:
+    """The label the three evidence sites print for one detection.
+
+    A resolvable path renders the type under its taxonomy ancestors —
+    « Effet cigogne (Erreur de raisonnement > Causalité douteuse) » — so the
+    branch names the category. A detection without a usable path keeps
+    today's label, with no guess.
+
+    The record's own ``family`` is never silenced: when it says something the
+    taxonomy's root does not (a reconciled or free-text family), both travel —
+    « (famille X — Erreur de raisonnement > …) ». When it merely repeats the
+    root, it is not printed twice. ``quoted`` is typography only (the Act II
+    movement line quotes the name); it never changes what is named.
+    """
+    head = f"« {fallacy_type} »" if quoted else fallacy_type
+    chain = taxonomy_chain(taxonomy_path or "")
+    if not chain:
+        return f"{head} (famille {family})"
+    ancestors = chain[:-1]
+    if not ancestors:
+        return f"{head} (famille {chain[0]})"
+    chain_text = " > ".join(ancestors)
+    recorded = str(family or "").strip()
+    if (
+        not recorded
+        or recorded.lower() in ("inconnu", "unknown")
+        or recorded.lower() == chain[0].strip().lower()
+    ):
+        return f"{head} ({chain_text})"
+    return f"{head} (famille {recorded} — {chain_text})"
 
 
 def validate_taxonomy_file():

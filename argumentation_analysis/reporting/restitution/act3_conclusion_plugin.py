@@ -98,6 +98,9 @@ from argumentation_analysis.core.fallacy_attribution import (  # #3180
     is_speaker_move,
     move_author_label_of,
 )
+from argumentation_analysis.utils.taxonomy_loader import (  # #3224
+    fallacy_taxonomy_label,
+)
 from .fr_accord import accord
 from .global_projection import (
     GlobalFinding,
@@ -920,7 +923,10 @@ def _collect_weak_points(
         points.append(
             StructuringWeakPoint(
                 source="fallacy",
-                label=f"{ftype} (famille {family})",
+                # #3224 — the label names the taxonomy branch, not only the
+                # leaf and the root: the reader can then read an absence
+                # claim against the category the evidence detected under.
+                label=fallacy_taxonomy_label(ftype, family, fdata.get("taxonomy_path")),
                 target_arg_id=str(tid),
                 detail=_truncate(fdata.get("justification", ""), _JUSTIFICATION_CAP),
             )

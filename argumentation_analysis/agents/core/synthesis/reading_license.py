@@ -36,6 +36,8 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
+from argumentation_analysis.utils.taxonomy_loader import taxonomy_chain
+
 #: A robustness word. Read together with :data:`_BREADTH_MARKERS`: alone it is
 #: an ordinary adjective, and only the *combination* makes the claim.
 _ROBUSTNESS_MARKERS = re.compile(
@@ -155,6 +157,108 @@ def _text_absence_flags(sentence: str) -> List[Dict[str, Any]]:
             "kind": "text_absence_claim",
             "sentence": sentence,
             "measured": {"span": match.group(0)},
+        }
+    ]
+
+
+# --- #3224 — an absence the act's own evidence contradicts -----------------
+#
+# The R1110 render answered the question's causal half in the negative
+# (« Les unités analysées n'y montrent pas de glissement de causalité »)
+# while ``identified_fallacies`` held a speaker-attributed detection under the
+# taxonomy branch « Causalité douteuse » (4.1). #3213 moved that kind of claim
+# from the text to the analysis — the right SCOPE, still a false claim. What
+# falsifies it is not the text but the act's own record: a sentence that
+# denies a category, in words that name a node a speaker detection sits
+# under. The match is French against French — the node's content tokens
+# against the sentence's — so the question's own vocabulary (« causalité »)
+# reaches the branch name without quoting it. Root names stay out: the six
+# roots are too coarse (« Erreur de raisonnement ») for one shared word to
+# name the category.
+#
+# Measured on the seven stored local renders before settling the rule: a
+# loose marker (« aucun », « ne … pas » anywhere, English negation) raised 14
+# flags, all false — « aucun » inside a quoted corpus fragment, « never » in
+# an English counter, a reasoning-path dump quoting the node's own name. The
+# claim the check targets has a shape those do not: the ANALYSIS as subject,
+# its presence verb NEGATED, or an explicit « aucun … relevé / détecté ».
+# One content word then carries the category; an ordinary word that happens
+# to sit in a node's name no longer fires, because the sentence it fires from
+# is not making the claim.
+_ANALYSIS_ABSENCE_RE = re.compile(
+    # the analysis as subject, its presence verb negated
+    r"\b(?:unit[ée]s?|analys\w+|analyse|rapport|corpus|d[ée]tections?)\b"
+    r"[^.]{0,60}?\b(?:ne|n'y|n'en)\s*(?:y\s+)?"
+    r"(?:montre|montrent|rel[èe]ve|rel[èe]vent|pr[ée]sente|pr[ée]sentent|"
+    r"identifie|identifient|d[ée]tecte|d[ée]tectent|rep[èe]re|rep[èe]rent|"
+    r"comporte|comportent|contient|contiennent|appara[îi]t|apparaissent)\w*"
+    r"\s+pas\b"
+    # or an explicit absence of detection
+    r"|\baucun\w*\b[^.]{0,40}?\b(?:relev[ée]|d[ée]tect[ée]|identifi[ée]|"
+    r"rep[ée]r[ée]|observ[ée]|document[ée])\w*\b"
+    r"|\bpas\s+de\b[^.]{0,40}?\b(?:relev[ée]|d[ée]tect[ée]|identifi[ée]|"
+    r"rep[ée]r[ée]|observ[ée])\w*\b",
+    re.IGNORECASE,
+)
+
+
+def _speaker_detection_nodes(state: Any) -> List[Tuple[str, str, str, "set[str]"]]:
+    """(#fallacy_id, taxonomy_path, node_name, its content tokens) for the
+    branch and leaf nodes of each SPEAKER-attributed detection.
+
+    #3180: a detection whose ``move_author`` is ``reported`` is another
+    party's move — the speaker commits nothing, so it cannot contradict an
+    absence claim about the discourse. An entry without ``move_author`` keeps
+    the speaker attribution the record implies. A detection with no resolvable
+    taxonomy path names no node.
+    """
+    fallacies = getattr(state, "identified_fallacies", None)
+    if not isinstance(fallacies, dict):
+        return []
+    out: List[Tuple[str, str, str, "set[str]"]] = []
+    for fid, fdata in fallacies.items():
+        if not isinstance(fdata, dict):
+            continue
+        if str(fdata.get("move_author", "")).strip().lower() == "reported":
+            continue
+        raw = str(fdata.get("taxonomy_path", ""))
+        chain = taxonomy_chain(raw)
+        if not chain:
+            continue
+        for node in chain[1:]:
+            tokens = _weave_tokens(node)
+            if tokens:
+                out.append((str(fid), raw, node, tokens))
+    return out
+
+
+def _contradicted_absence_flags(
+    sentence: str,
+    nodes: List[Tuple[str, str, str, "set[str]"]],
+) -> List[Dict[str, Any]]:
+    """#3224 — an absence claim naming a node a speaker detection sits under."""
+    if _ANALYSIS_ABSENCE_RE.search(sentence or "") is None:
+        return []
+    sentence_tokens = _weave_tokens(sentence)
+    hits: List[Dict[str, Any]] = []
+    for fid, path, node, tokens in nodes:
+        shared = tokens & sentence_tokens
+        if shared:
+            hits.append(
+                {
+                    "fallacy_id": fid,
+                    "node": node,
+                    "taxonomy_path": path,
+                    "shared_tokens": sorted(shared),
+                }
+            )
+    if not hits:
+        return []
+    return [
+        {
+            "kind": "absence_contradicted_by_detection",
+            "sentence": sentence,
+            "measured": {"nodes": hits},
         }
     ]
 
@@ -1185,6 +1289,9 @@ def check_reading_license(
     # compares them.
     base_units = _revision_base_units(state)
     formal_units = _formal_contradiction_units(state)
+    # #3224 — the taxonomy nodes the act's own speaker detections sit under,
+    # so an absence claim is read against the record's categories.
+    detection_nodes = _speaker_detection_nodes(state)
     # The flags carry the sentence as produced — no slice: a cut could only
     # hide the qualifier the reader needs, and it never protected a verdict
     # (detection reads the whole sentence; #2850 asked what the cut was for,
@@ -1211,6 +1318,12 @@ def check_reading_license(
         text_absence_flags = _text_absence_flags(sentence)
         if text_absence_flags:
             flags.extend(text_absence_flags)
+            continue
+
+        # -- an absence the act's own detections contradict (#3224) --------
+        contradicted = _contradicted_absence_flags(sentence, detection_nodes)
+        if contradicted:
+            flags.extend(contradicted)
             continue
 
         # -- breadth sold as robustness -------------------------------------
@@ -1353,6 +1466,7 @@ def check_reading_license(
             "named_extension_frames": len(named_extensions),
             "revision_base_units": len(base_units) if base_units is not None else 0,
             "contradiction_units": len(formal_units),
+            "speaker_detection_nodes": len(detection_nodes),
         },
         "threshold": dense_threshold,
     }

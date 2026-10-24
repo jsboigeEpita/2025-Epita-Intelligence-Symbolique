@@ -48,6 +48,9 @@ from argumentation_analysis.core.fallacy_attribution import (  # #3180
     move_author_label_of,
     move_author_of,
 )
+from argumentation_analysis.utils.taxonomy_loader import (  # #3224
+    fallacy_taxonomy_label,
+)
 from .dung_reader import (  # #1908: one shared meaning for act2 and act3
     ACCEPTED_MEANS,
     CREDULOUS_MEANS,
@@ -268,6 +271,10 @@ class FallacyEvidence:
     # built from the speaker's moves.
     move_author: str = "speaker"
     move_author_label: str = ""
+    # #3224 — the detection's dotted address in the taxonomy, when the record
+    # carries one: the printed label resolves it into the branch that names
+    # the category. None keeps the two-level label, with no guess.
+    taxonomy_path: Optional[str] = None
 
 
 @dataclass
@@ -854,6 +861,12 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
             target_arg_id=str(tid),
             move_author=move_author,
             move_author_label=move_author_label_of(fdata),
+            taxonomy_path=(
+                str(fdata["taxonomy_path"])
+                if isinstance(fdata.get("taxonomy_path"), str)
+                and fdata["taxonomy_path"].strip()
+                else None
+            ),
         )
         if is_reported_move(_ev):
             reported_fallacies.append(_ev)
@@ -1694,15 +1707,16 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                 lines.append(f"      Axe qualité : {_quality_scope_note(a, evidence)}")
             for fl in a.fallacies:
                 # #2031: the dotted taxonomy address never enters the evidence
-                # — the reader gets the NAME (type + family); an internal
-                # address fed to the conducted LLM leaks into prose.
+                # — the reader gets the NAMES (type, root, branch since #3224);
+                # an internal address fed to the conducted LLM leaks into prose.
                 # #1914 (constat 4): the lead does not pre-judge — a joke, a
                 # slogan and a dehumanizing metaphor all exited this mold
                 # under the same attack word. The justification carries the
                 # device's discursive function; the consigne asks the
                 # conductor to name that function BEFORE judging fault.
                 lines.append(
-                    f"      Procédé : « {fl.type} » (famille {fl.family}). "
+                    f"      Procédé : "
+                    f"{fallacy_taxonomy_label(fl.type, fl.family, fl.taxonomy_path, quoted=True)}. "
                     f"Justification : {fl.justification}"
                 )
             for ca in a.counter_args:
@@ -1787,8 +1801,8 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                 else "chez un tiers que le texte ne nomme pas"
             )
             rep_lines.append(
-                f"  • {rep.type} (famille {rep.family}) {chez} — "
-                f"l'unité {rep.target_arg_id} en fait état"
+                f"  • {fallacy_taxonomy_label(rep.type, rep.family, rep.taxonomy_path)} "
+                f"{chez} — l'unité {rep.target_arg_id} en fait état"
             )
         reported_block = (
             "SOPHISMES RAPPORTÉS, NON COMMIS PAR LE LOCUTEUR : "

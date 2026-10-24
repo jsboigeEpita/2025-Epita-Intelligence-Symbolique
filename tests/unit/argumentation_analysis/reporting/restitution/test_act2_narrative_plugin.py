@@ -1124,18 +1124,31 @@ class Test2031TaxonomyAddressNeverEntersPrompt:
         assert "Tirer une mauvaise conclusion" in prompt
         assert "famille confusion de causalité" in prompt
 
-    def test_evidence_dataclass_has_no_taxonomy_path_field(self):
-        # The field is gone, not merely ignored — a dead carrier invites
-        # the next renderer to interpolate it again.
+    def test_evidence_dataclass_carries_the_path_only_through_the_resolver(self):
+        # #3224 deliberately reverses the "no field at all" form of this guard:
+        # the carrier is back, because the branch that names the category can
+        # only be resolved FROM it. What #2031 protects is unchanged and is
+        # still witnessed above — the raw address never enters the prompt —
+        # so the carrier's contract is now that resolution is its only reader:
+        # the field is optional (a record without one is the norm) and the
+        # printed label never contains it.
         import dataclasses
 
         from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
             FallacyEvidence,
         )
+        from argumentation_analysis.utils.taxonomy_loader import (
+            fallacy_taxonomy_label,
+        )
 
-        assert "taxonomy_path" not in {
-            f.name for f in dataclasses.fields(FallacyEvidence)
-        }
+        fields = {f.name: f for f in dataclasses.fields(FallacyEvidence)}
+        assert "taxonomy_path" in fields
+        assert fields["taxonomy_path"].default is None
+        label = fallacy_taxonomy_label(
+            "Tirer une mauvaise conclusion", "inconnu", "4.3.1.1.3"
+        )
+        assert not self._CODE_RE.search(label)
+        assert "Déduction invalide" in label
 
 
 class TestDungDetailPrivacy:
