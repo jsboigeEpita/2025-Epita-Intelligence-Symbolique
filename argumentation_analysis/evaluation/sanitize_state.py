@@ -90,7 +90,16 @@ _TEXT_STRIP_DICTS = {"identified_arguments", "arguments"}
 # that cites/paraphrases the real argument text (verify-the-verification,
 # po-2023 finding) — pure narrative, 0 quantitative value, dropped.
 _TEXT_STRIP_DICT_OF_DICTS = {
-    "identified_fallacies": {"justification"},
+    # #3235: ``problematic_quote`` is a verbatim span of the argument text
+    # (measured on the stored states: 557/557 NL strings equal to or
+    # contained in an ``identified_arguments`` value on this seat, median
+    # length 200 — a capped quote). No export reader reads it: the
+    # fallacy→argument join is ``target_argument_id``, resolved at write
+    # time (``resolve_fallacy_target_arg_id``) and already on the entry;
+    # the text-match fallback joins the LIVE payload before the writer
+    # runs. #3217's ``source_quote`` verdict on the fallacy axis: drop the
+    # leaf, keep the record.
+    "identified_fallacies": {"justification", "problematic_quote"},
     "belief_sets": {"content"},
     "argument_quality_scores": {"llm_assessment"},
     # #3217: ``add_argument`` stores the FULL verbatim quote in the provenance
@@ -116,6 +125,17 @@ _OPAQUE_LIST_SUBKEYS = {
     "dung_frameworks": {"arguments", "attacks"},
     # PL atoms are named after the text they formalise (#2643).
     "belief_sets": {"propositions"},
+    # #3235: ``jtms_beliefs`` — the belief name is ``{unit_id}:{text[:66]}``
+    # (invoke_callables.py), nominative text with a structural prefix no
+    # pass can split; the ATMS writer adds ``ATMS:{node}`` beliefs whose
+    # bare-string justifications (``assumption_env:[…]``) embed the same
+    # atoms. The name IS a join: the justification ``in_list`` entries
+    # repeat it verbatim (measured on the stored states: 122 exact
+    # overlaps), so it is opacified, not dropped — the same deterministic
+    # ``opaque_id`` keeps the linkage. A scalar value and a bare-string
+    # list both ride ``_opacify_list_values``; the dict-shaped
+    # justifications' ``in_list``/``out_list`` leaves ride pass 5d.
+    "jtms_beliefs": {"name", "justifications"},
 }
 
 # Dict-of-dicts whose entries carry a NESTED dict sub-key holding nominative
@@ -215,6 +235,14 @@ _TEXT_STRIP_LISTS = {
     # Decision: drop phase_results from the export; the entry keeps its
     # structural aggregates (overall_validity...), summary stays pass-5-dropped.
     "formal_synthesis_reports": {"summary", "phase_results"},
+    # #3235: the two ATMS belief lists no export reader names — the one
+    # export reader (``pattern_mining.AtmsBranchingDetector``) reads
+    # ``len(assumptions)`` and ``coherent`` only. The producer already
+    # writes the quantitative signal as ints (``derivation_count`` /
+    # ``contradiction_count``), which survive; the lists' only unique
+    # content is the atom identities (measured: 207/21 NL strings, 4/0
+    # matching argument text on this seat).
+    "atms_contexts": {"derivable_beliefs", "contradicting_beliefs"},
 }
 
 # LIST-of-dicts fields whose sub-keys carry the same nominative claim text that
@@ -249,6 +277,15 @@ _OPAQUE_LIST_OF_DICTS_SUBKEYS = {
     "aspic_results": {"extensions"},
     "belief_revision_results": {"original", "revised"},
     "dialogue_results": {"topic"},
+    # #3235: ``atms_contexts[*].assumptions`` — the arg atoms (measured:
+    # 790/790 NL strings equal to argument text on this seat). The export
+    # reader counts them per context (``max_assumption_count`` /
+    # ``avg_assumptions``), so the list must survive with its arity — the
+    # ``dung_frameworks.arguments`` gesture. ``label`` is deliberately NOT
+    # here: a closed vocabulary at the producer (six literals in
+    # ``_generate_hypotheses``; 4 distinct values, 0 argument-text matches,
+    # measured) — the ``dung_frameworks.name`` verdict, it stays untouched.
+    "atms_contexts": {"assumptions"},
 }
 
 # #3228: the display-label maps on the seven AF containers — sub-key
@@ -313,6 +350,15 @@ _OPAQUE_NESTED_ITEM_SUBKEYS = {
     # translator _validate_aspic_*) → preserved, exactly as dung_frameworks.name
     # is. Uses the same opacify_list_values path as dialogue_results.trace.
     "aspic_results": {"attacks": {"target", "attacker_premises"}},
+    # #3235: ``jtms_beliefs`` is dict-keyed (``{jtms_N: {…}}``), so this
+    # pass's list-only gate could never reach it — the same shape-blindness
+    # 5b had before #1664. The justification items are dicts carrying the
+    # belief names in ``in_list``/``out_list`` (truncated to 40 chars at
+    # the producer); opacifying the leaves keeps the justification
+    # topology (how many justifications, how many premises each) while the
+    # names themselves ride pass 4b. Bare-string justifications (the ATMS
+    # writer's ``assumption_env:[…]``) are already opacified by 4b.
+    "jtms_beliefs": {"justifications": {"in_list", "out_list"}},
 }
 
 # List-of-dicts fields carrying a symbol-mapping sub-key: a ``Dict[str, str]``
@@ -626,22 +672,28 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
 
     # 5d. Opacify nominative leaves one level deeper: a list-of-dicts field
     #     whose sub-key is itself a list of dicts (dialogue traces, debate
-    #     exchanges). Entry count and turn structure survive.
+    #     exchanges). Entry count and turn structure survive. #3235: the
+    #     gate reaches dict-keyed containers too (``jtms_beliefs`` is
+    #     ``{jtms_N: {…}}``), mirroring 5g's both-shape gate — the existing
+    #     entries are all list-shaped, so their behaviour is unchanged.
     for field, nested_spec in _OPAQUE_NESTED_ITEM_SUBKEYS.items():
-        if field in data and isinstance(data[field], list):
-            for item in data[field]:
-                if not isinstance(item, dict):
+        container = data.get(field)
+        if not isinstance(container, (dict, list)):
+            continue
+        entries = container.values() if isinstance(container, dict) else container
+        for item in entries:
+            if not isinstance(item, dict):
+                continue
+            for subtree_key, leaf_subkeys in nested_spec.items():
+                subtree = item.get(subtree_key)
+                if not isinstance(subtree, list):
                     continue
-                for subtree_key, leaf_subkeys in nested_spec.items():
-                    subtree = item.get(subtree_key)
-                    if not isinstance(subtree, list):
+                for leaf_item in subtree:
+                    if not isinstance(leaf_item, dict):
                         continue
-                    for leaf_item in subtree:
-                        if not isinstance(leaf_item, dict):
-                            continue
-                        for leaf in leaf_subkeys:
-                            if leaf in leaf_item:
-                                leaf_item[leaf] = _opacify_list_values(leaf_item[leaf])
+                    for leaf in leaf_subkeys:
+                        if leaf in leaf_item:
+                            leaf_item[leaf] = _opacify_list_values(leaf_item[leaf])
 
     # 5e. Opacify nominative leaves nested inside a DICT sub-key of a
     #     list-of-dicts field (#1646): the sub-key is a single dict (not a list

@@ -61,6 +61,7 @@ import pytest
 from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 from argumentation_analysis.evaluation import sanitize_state as _sanitize_mod
 from argumentation_analysis.evaluation.sanitize_state import sanitize_state
+from argumentation_analysis.orchestration.state_writers import _write_atms_to_state
 
 
 @pytest.fixture(autouse=True)
@@ -116,6 +117,18 @@ def _canaried_state() -> UnifiedAnalysisState:
     # would fabricate a shape no producer emits — the #1664 anti-pattern this
     # module exists to catch, not to reproduce.
     s.identified_arguments["arg_1"] = NL  # pass 3 (_TEXT_STRIP_DICTS)
+    # #3235 — planted through the real ``add_fallacy`` writer. The previous
+    # hand-built dict was the #3227 pattern: an oracle that does not plant
+    # what the producer writes. ``problematic_quote`` stayed invisible to
+    # this guard until the coordinator's probe measured 1 267 verbatim
+    # argument spans surviving under it (74 states); pass 4 now drops it.
+    s.add_fallacy(
+        fallacy_type="ad_hominem",
+        justification=NL,
+        target_arg_id="arg_1",
+        family="relevance",
+        problematic_quote=NL2,
+    )
     # ``add_argument`` (shared_state.py:311) is the sole producer of
     # ``argument_provenance`` — the entry carries closed-vocab ``producer`` /
     # ``offset_basis``, int ``offset``, and the VERBATIM ``source_quote``
@@ -124,11 +137,6 @@ def _canaried_state() -> UnifiedAnalysisState:
     # beside it was stripped. Planted through the real ``add_*`` call the
     # writer makes (state_writers.py:1623), not a hand-built dict.
     s.add_argument(NL, producer="llm_extract", source_quote=NL2)
-    s.identified_fallacies["fal_1"] = {  # pass 4 (.justification)
-        "type": "ad_hominem",
-        "justification": NL,
-        "family": "relevance",
-    }
     s.add_belief_set("Propositional Logic", NL)  # pass 4 (.content)
     s.argument_quality_scores["arg_1"] = {  # pass 4 (.llm_assessment)
         "overall": 0.5,
@@ -287,33 +295,49 @@ def _canaried_state() -> UnifiedAnalysisState:
     s.add_modal_analysis_result(["□p"], True, ["belief"], message=NL)
 
     # --- jtms_beliefs: belief name can be argument text; justifications free-form
-    s.add_jtms_belief(NL, True, [NL2])
+    # #3235 — the real ``_write_jtms_to_state`` shape: the JTMS phase
+    # serialises justifications as dicts (``{"in_list": [name[:40]...],
+    # "out_list": [...]}``, invoke_callables.py); the bare-string shape
+    # survives only in the ATMS writer's beliefs (planted below). The old
+    # bare-string-only plant exercised a shape the JTMS producer no longer
+    # emits — the #1664 anti-pattern — so the dict leaves stayed invisible.
+    s.add_jtms_belief(NL, True, justifications=[{"in_list": [NL2], "out_list": [NL]}])
 
-    # atms_contexts: stored verbatim by ``_write_atms_to_state`` (which does
-    # ``state.atms_contexts = output.get("atms_contexts", [])``). The producer
-    # (``_invoke_atms``, invoke_callables.py:2660) builds each context as
-    # ``{hypothesis_id, label, assumptions, coherent, derivable_beliefs,
-    #    contradicting_beliefs, derivation_count, contradiction_count}`` — there
-    # is NO ``hypotheses`` key. ``assumptions``/``derivable_beliefs``/
-    # ``contradicting_beliefs`` are arg atoms (source-derived via
-    # ``_generate_hypotheses(arg_names, ...)``); ``label`` is the hypothesis
-    # label. Plant the canary in those four nominative leaves, mirroring the real
-    # producer shape exactly (a synthetic ``{"hypotheses": [...]}`` shape would
-    # be the #1664 anti-pattern this module exists to catch — and was, until this
-    # fix, what the phantom ``atms_contexts[*].hypotheses[*]`` baseline path
-    # frozen below measured).
-    s.atms_contexts = [
+    # atms_contexts + the ATMS-written jtms beliefs, planted through the real
+    # ``_write_atms_to_state`` (which does ``state.atms_contexts =
+    # output.get("atms_contexts", [])``). The producer (``_invoke_atms``)
+    # builds each context as ``{hypothesis_id, label, assumptions, coherent,
+    # derivable_beliefs, contradicting_beliefs, derivation_count,
+    # contradiction_count}`` — there is NO ``hypotheses`` key. The three
+    # atom lists are source-derived (via ``_generate_hypotheses``) and carry
+    # the canary; ``label`` is a CLOSED vocabulary at that producer (six
+    # literals; 4 distinct values measured on the stored states, 0
+    # argument-text matches), so the plant carries a real literal — the
+    # ``dung_frameworks.name`` verdict, planting NL there would freeze a
+    # "gap" no producer can write. The ``environments`` entry below makes
+    # the same writer plant the bare-string justification shape
+    # (``assumption_env:['CANARY…']``) into jtms_beliefs.
+    _write_atms_to_state(
         {
-            "hypothesis_id": "ctx_1",
-            "label": NL,
-            "assumptions": [NL, NL2],
-            "coherent": True,
-            "derivable_beliefs": [NL],
-            "contradicting_beliefs": [NL2],
-            "derivation_count": 1,
-            "contradiction_count": 1,
-        }
-    ]
+            "environments": {
+                "node_a": {"is_assumption": True, "environments": [[NL]]},
+            },
+            "atms_contexts": [
+                {
+                    "hypothesis_id": "ctx_1",
+                    "label": "Skeptical: single argument only",
+                    "assumptions": [NL, NL2],
+                    "coherent": True,
+                    "derivable_beliefs": [NL],
+                    "contradicting_beliefs": [NL2],
+                    "derivation_count": 1,
+                    "contradiction_count": 1,
+                }
+            ],
+        },
+        s,
+        {},
+    )
 
     # governance_decisions: structural (method/winner/scores). Exercised so the
     # field is in the written-set, but no NL canary — producer values are short
@@ -469,33 +493,27 @@ EXPECTED_UNCOVERED: dict[str, frozenset[str]] = {
     # in pass 5 re-leaks here immediately).
     #
     # Formal-logic status messages can carry NL (``"unavailable: <reason>"``).
-    # Not in any scrubber table.
+    # Not in any scrubber table. #3235 settled the sibling gaps; these stay
+    # frozen under their own OPEN owner: #3239 (0/0/2 argument-text matches
+    # measured — a producer census must decide drop vs closed-vocabulary).
     "fol_analysis_results": frozenset({"fol_analysis_results[*].message"}),
     "propositional_analysis_results": frozenset(
         {"propositional_analysis_results[*].message"}
     ),
     "modal_analysis_results": frozenset({"modal_analysis_results[*].message"}),
-    # JTMS belief names can be argument text; justifications are free-form.
-    "jtms_beliefs": frozenset(
-        {"jtms_beliefs[*].name", "jtms_beliefs[*].justifications[*]"}
-    ),
-    # Stored verbatim by ``_write_atms_to_state``
-    # (``state.atms_contexts = output.get("atms_contexts", [])``); not in any
-    # scrubber table. The surviving NL leaves are the ATMS producer's arg-atom
-    # fields: ``label`` (the hypothesis label) and ``assumptions``/
-    # ``derivable_beliefs``/``contradicting_beliefs`` (sorted atom lists sourced
-    # from ``arg_names`` via ``_generate_hypotheses``). ``coherent``/``*_count``
-    # are bool/int and ``hypothesis_id`` is an opaque id, so none surface here.
-    # The narrative reader consumes only ``len()`` + ``coherent``, so these
-    # atoms never reach prose — but they survive export verbatim.
-    "atms_contexts": frozenset(
-        {
-            "atms_contexts[*].label",
-            "atms_contexts[*].assumptions[*]",
-            "atms_contexts[*].derivable_beliefs[*]",
-            "atms_contexts[*].contradicting_beliefs[*]",
-        }
-    ),
+    # ``jtms_beliefs`` and ``atms_contexts`` no longer appear here: #3235
+    # settled both frozen gaps. jtms — the belief name (``{unit_id}:{text}``)
+    # and both justification shapes (dict ``in_list``/``out_list`` leaves and
+    # the ATMS ``assumption_env:[…]`` strings) are opacified (passes 4b/5d):
+    # the name↔in_list linkage is a measured join (122 exact overlaps), so
+    # opacify, not drop. atms — ``assumptions`` is opacified (the one export
+    # reader counts it, pattern_mining.AtmsBranchingDetector),
+    # ``derivable_beliefs``/``contradicting_beliefs`` are dropped (no reader;
+    # ``derivation_count``/``contradiction_count`` ints carry the signal) and
+    # ``label`` is a closed vocabulary at the producer (six literals) that
+    # survives untouched — the ``dung_frameworks.name`` verdict, so the canary
+    # plants a real literal. The plants above stay exactly as they were: a
+    # regression in any of those passes re-leaks here immediately.
 }
 
 
@@ -720,6 +738,44 @@ class TestSubstitutionControl:
                 "aspic_results",
                 "aspic_results",
                 ".attacks",
+            ),
+            # Pass 4 (#3235): identified_fallacies.problematic_quote — the
+            # verbatim argument span the real add_fallacy writer stores.
+            # Removing the entry re-leaks it (and .justification) under the
+            # fallacy container.
+            (
+                "_TEXT_STRIP_DICT_OF_DICTS",
+                "identified_fallacies",
+                "identified_fallacies",
+                ".problematic_quote",
+            ),
+            # Pass 4b (#3235): jtms_beliefs name + bare-string justifications.
+            (
+                "_OPAQUE_LIST_SUBKEYS",
+                "jtms_beliefs",
+                "jtms_beliefs",
+                ".name",
+            ),
+            # Pass 5 (#3235): the two ATMS belief lists no export reader names.
+            (
+                "_TEXT_STRIP_LISTS",
+                "atms_contexts",
+                "atms_contexts",
+                ".derivable_beliefs",
+            ),
+            # Pass 5b (#3235): atms assumptions — the reader counts them.
+            (
+                "_OPAQUE_LIST_OF_DICTS_SUBKEYS",
+                "atms_contexts",
+                "atms_contexts",
+                ".assumptions",
+            ),
+            # Pass 5d (#3235): jtms dict justifications' in_list/out_list.
+            (
+                "_OPAQUE_NESTED_ITEM_SUBKEYS",
+                "jtms_beliefs",
+                "jtms_beliefs",
+                ".justifications",
             ),
             # Pass 4d (#1702): formalism_specific leaves. Removing a leaf from
             # the spec re-leaks its canary under the dung_frameworks top-level
