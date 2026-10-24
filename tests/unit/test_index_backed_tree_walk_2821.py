@@ -75,7 +75,6 @@ class TestConfigCensusIgnoresGitignoredSeatFiles:
         self._census = census
         self.probe_yaml = self.PROBE_DIR / "2821_probe.yml"
         self.probe_py = self.PROBE_DIR / "ghost_2821.py"
-        self._existed = self.PROBE_DIR.exists()
         self.PROBE_DIR.mkdir(exist_ok=True)
         ignored = subprocess.run(
             ["git", "-C", str(ROOT), "check-ignore", "-q", str(self.probe_yaml)]
@@ -90,15 +89,16 @@ class TestConfigCensusIgnoresGitignoredSeatFiles:
         )
 
     def teardown_method(self):
+        # #3211 — only the files this witness planted are removed. The probe
+        # dir is shared by the class's two tests: under -n auto they land on
+        # different workers, and one worker's rmdir lands between another's
+        # mkdir and its write_text (#3147's interleaving). The old
+        # ``_existed`` guard meant the removal fired exactly on CI and fresh
+        # checkouts — the seats the gate runs. The dir is gitignored at any
+        # depth (``.playwright-mcp/``, .gitignore:36) and collection-skipped
+        # (``norecursedirs`` holds ``.*``), so leaving it costs nothing.
         self.probe_yaml.unlink(missing_ok=True)
         self.probe_py.unlink(missing_ok=True)
-        if not self._existed:
-            # The directory the issue measured was absent here; leave the
-            # checkout as found.
-            try:
-                self.PROBE_DIR.rmdir()
-            except OSError:
-                pass
 
     def test_gitignored_yaml_stays_out_of_the_config_population(self):
         population = self._census._yaml_configs()
@@ -114,6 +114,68 @@ class TestConfigCensusIgnoresGitignoredSeatFiles:
             "a class defined only in a gitignored seat-local file counts as "
             "existing: a config naming it passes here and fails on CI"
         )
+
+
+class TestTheTeardownKeepsTheProbeDir:
+    """#3211 — the teardown removed the shared probe dir on exactly the
+    seats that matter.
+
+    ``_existed`` meant the ``rmdir`` fired only where ``ROOT/.playwright-mcp``
+    was absent beforehand — CI and fresh checkouts — and those are the seats
+    the gate runs. Under ``-n auto`` the class's two tests land on different
+    workers, so one worker's ``rmdir`` can land between another's ``mkdir``
+    and its ``write_text`` (#3147's interleaving), and the write raises.
+
+    The witness drives the REAL setup/teardown pair on the subdirectory form
+    the issue proposes: ``.playwright-mcp/2821_teardown`` is gitignored at any
+    depth (measured: ``git check-ignore`` accepts it) and absent on every seat
+    — nothing creates it but this witness, so ``_existed`` would always be
+    False and the removal branch always runs. ``Path.rmdir`` is forbidden
+    (#3147's technique): the un-repaired teardown raises, the repaired one —
+    which never calls ``rmdir`` — passes.
+    """
+
+    PROBE_DIR = ROOT / ".playwright-mcp" / "2821_teardown"
+
+    def test_the_teardown_never_removes_the_probe_dir(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _forbidden_rmdir(self_path: Path, *args: object, **kwargs: object) -> None:
+            raise AssertionError(
+                "the #2821 teardown removed a directory the class shares "
+                "between its two tests; under -n auto one worker's rmdir "
+                "lands between another's mkdir and its write_text and the "
+                "write raises FileNotFoundError (#3211, #3147's family)"
+            )
+
+        # The real setup's mkdir is exist_ok, not parents=True: the parent
+        # chain must exist, minus the leaf.
+        self.PROBE_DIR.parent.mkdir(exist_ok=True)
+        # A leftover leaf from an earlier run would flip ``_existed`` to True
+        # and silence the removal branch — clear our own before arming.
+        if self.PROBE_DIR.exists():
+            for stale in self.PROBE_DIR.iterdir():
+                stale.unlink()
+            self.PROBE_DIR.rmdir()
+
+        witness = TestConfigCensusIgnoresGitignoredSeatFiles()
+        monkeypatch.setattr(witness, "PROBE_DIR", self.PROBE_DIR, raising=False)
+        monkeypatch.setattr(Path, "rmdir", _forbidden_rmdir)
+        witness.setup_method()
+        try:
+            assert (
+                self.PROBE_DIR / "2821_probe.yml"
+            ).exists(), "the real setup planted nothing"
+        finally:
+            witness.teardown_method()
+        assert self.PROBE_DIR.is_dir(), (
+            "the teardown removed the probe directory: it is gitignored at "
+            "any depth and collection-skipped, so leaving it costs nothing — "
+            "removing it is the race (#3211)"
+        )
+        assert not any(
+            self.PROBE_DIR.iterdir()
+        ), "the teardown left its own planted files behind"
 
 
 class TestCensusVerdictOnATemporaryCheckout:
