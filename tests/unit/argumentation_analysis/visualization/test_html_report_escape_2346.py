@@ -80,9 +80,13 @@ def _hostile_state():
         },
         counter_arguments=[
             {
+                # #3205 — the producer's shape (`add_counter_argument`),
+                # never target_arg/strength.
+                "id": "ca_1",
+                "original_argument": "arg_1",
+                "target_arg_id": "arg_1",
                 "strategy": "reductio",
-                "target_arg": "arg_1",
-                "strength": 0.8,
+                "score": 0.8,
                 "counter_content": "rebuttal " + PAYLOAD,
             }
         ],
