@@ -26,6 +26,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple
 
+from .native_dung import is_native_dung_framework  # #3214 — light decoder, no cycle
+
 # Budget for a CITED unit's text — see the module docstring for the
 # calibration and what remains pending.
 CITED_UNIT_TEXT_CAP = 2000
@@ -381,6 +383,108 @@ def render_governance_lead(
                 "sous forme de compteur ni de badge."
             )
     return warning, lead + tail
+
+
+def act2_joined_unit_ids(
+    state: Any, cited_order: Sequence[str]
+) -> List[Tuple[str, str]]:
+    """Units Act II weighs that an argument-map edge joins to a citation (#3214).
+
+    Act III selects its units from populations the conclusion asks about
+    (winner, salience, findings, ``cited_unit_ids``); Act II weighs EVERY
+    unit. A reply the speaker makes — an attack edge in the graph built from
+    the extracted arguments — reached Act III only when some citation
+    population happened to include it, and on the measured state it did not:
+    Act III then denied, in good faith, the reply Act II had weighed.
+
+    The join is deliberately NARROW: only a unit ``identified_arguments``
+    holds AND a map edge joins to a unit already in ``cited_order`` (either
+    direction — a reply attacks the charge; a charge attacks what it
+    answers). Sidecar frameworks are skipped (#1912: their extensions are
+    not native evidence, and neither are their edges), and an edge whose
+    other end the units table does not hold joins nothing. Support
+    relations are read too (#3214 rework — #1645's relation, which the
+    review measured wired in after all): ``bipolar_results[*].supports``
+    carries unit-to-unit pairs on the measured states, joined under the
+    same filters with its own wording. Older states write text-shaped
+    support pairs; those ends match no key of the units table and join
+    nothing, exactly like an attack edge to a lost id.
+
+    Returns ``(unit_id, relation)`` pairs ordered by the cited neighbor's
+    position in ``cited_order`` (a unit joined to an early citation first),
+    ties by id — deterministic, and the joined population stays AFTER the
+    citations it extends (#3214: the order of what Act III cites first does
+    not change). The relation names that neighbor: ``attaque {cite}``,
+    ``attaqué par {cite}``, ``soutient {cite}`` or ``soutenu par {cite}``.
+    A unit both attacked and supported keeps its best edge under that same
+    order (attack first on a tie).
+    """
+    args = getattr(state, "identified_arguments", None)
+    if not isinstance(args, dict) or not args:
+        return []
+    cited = [str(u).strip() for u in cited_order if str(u or "").strip()]
+    cited_set = set(cited)
+    position = {u: i for i, u in enumerate(cited)}
+    frameworks = getattr(state, "dung_frameworks", None)
+    if not isinstance(frameworks, dict):
+        return []
+    # best edge per candidate: (neighbor position, unit id) then its relation
+    best: Dict[str, Tuple[int, str, str]] = {}
+
+    def _offer(cand: str, cite: str, rel: str) -> None:
+        # only an edge between two WEIGHED units is a join — a method
+        # name or a lost id on either end is not a relation between units
+        if cand in cited_set or cite not in cited_set:
+            return
+        if cand not in args or cand == cite:
+            return
+        key = (position[cite], cand)
+        current = best.get(cand)
+        if current is None or key < (current[0], cand):
+            best[cand] = (position[cite], cite, rel)
+
+    for fw in frameworks.values():
+        if not (isinstance(fw, dict) and is_native_dung_framework(fw)):
+            continue
+        attacks = fw.get("attacks")
+        if not isinstance(attacks, list):
+            continue
+        for atk in attacks:
+            if not (
+                isinstance(atk, (list, tuple))
+                and len(atk) == 2
+                and all(isinstance(x, str) for x in atk)
+            ):
+                continue
+            a, b = atk[0].strip(), atk[1].strip()
+            _offer(a, b, f"attaque {b}")
+            _offer(b, a, f"attaqué par {a}")
+    # #3214 rework — the support edges (#1645): same shape (string pairs),
+    # same filters, their own relation wording.
+    bipolar = getattr(state, "bipolar_results", None)
+    if isinstance(bipolar, list):
+        for entry in bipolar:
+            if not isinstance(entry, dict):
+                continue
+            supports = entry.get("supports")
+            if not isinstance(supports, list):
+                continue
+            for sup in supports:
+                if not (
+                    isinstance(sup, (list, tuple))
+                    and len(sup) == 2
+                    and all(isinstance(x, str) for x in sup)
+                ):
+                    continue
+                a, b = sup[0].strip(), sup[1].strip()
+                _offer(a, b, f"soutient {b}")
+                _offer(b, a, f"soutenu par {a}")
+    return [
+        (cand, rel)
+        for cand, (_pos, _cite, rel) in sorted(
+            best.items(), key=lambda item: (item[1][0], item[0])
+        )
+    ]
 
 
 def cited_unit_ids(state: Any) -> Set[str]:

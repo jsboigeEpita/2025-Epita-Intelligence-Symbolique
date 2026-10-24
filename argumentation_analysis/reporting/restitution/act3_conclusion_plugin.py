@@ -86,6 +86,7 @@ from .native_dung import (  # #1912: single shared decoder — see native_dung.p
 from .conclusion_salience import ConclusionSalience, assess_conclusion_salience
 from .cited_units import (  # #2965 (Acte III slice) — same budget as Act II
     CITED_UNIT_TEXT_CAP,
+    act2_joined_unit_ids,
     cited_unit_ids,
     divergent_winner_texts,
     render_governance_lead,
@@ -149,6 +150,14 @@ _MAX_CLAIM_EXCERPTS = 5
 # above): in practice it never drops an anchor, but the renderer ENFORCES the
 # bound the #2908 census row states instead of trusting the projection's.
 _MAX_ANCHOR_EXCERPTS = _MAX_CONVERGENCE_FINDINGS + _MAX_GATE_FINDINGS
+# #3214 — the joined-excerpt count cap (units Act II weighs that a map edge
+# joins to a citation). The anchor cap above it mirrors the projection's own
+# bound; this one has no upstream bound to mirror — the join's population is
+# graph adjacency, which grows with the map — so the cap is stated here and
+# the renderer counts its drops (``joined_excerpts_total`` → notice), never
+# silently. Per-text budget stays CITED_UNIT_TEXT_CAP like every other
+# cited-unit surface.
+_MAX_JOINED_EXCERPTS = 8
 # #1605 — the honest-absence ledger entering the prompt. The reason strings are
 # code-authored (no corpus content), but they are capped like everything else so
 # a future longer wording cannot silently eat the prompt budget.
@@ -581,6 +590,19 @@ class Act3Evidence:
     # reader cannot see is a silent drop, #1019). Zero in practice: the cap
     # equals the projection's own bound.
     anchors_dropped: int = 0
+    # #3214 — the units Act II WEIGHS that an argument-map attack edge joins
+    # to a unit Act III already cites, as ``(unit_id, relation, capped text)``
+    # triples. Act III's own populations (winner, salience, findings,
+    # ``cited_unit_ids``) never carried them, so the conclusion could deny in
+    # good faith a reply Act II had weighed a page earlier. The relation names
+    # the cited neighbor (``attaque arg_1`` / ``attaqué par arg_1``) — an
+    # excerpt with no join is orphan text the writer cannot place (#2965's
+    # lesson: the referent travels on the line that asks).
+    joined_excerpts: List[Tuple[str, str, str]] = field(default_factory=list)
+    # #3214 — the whole joined population the cap cut ``joined_excerpts``
+    # from. The prompt notice fires from the gap between what is listed and
+    # what the join found, never from the cap alone (#1622/#2850 idiom).
+    joined_excerpts_total: int = 0
     # #2965 (Acte III slice) — the governance winner's own text, capped.
     # The writer does not join an id to its unit across a long prompt
     # (measured on the saved state: wrong unit 4 of 5 samples, R1071), so
@@ -2621,6 +2643,28 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
             _cite(cite)
     for unit_id in sorted(cited_unit_ids(state)):
         _cite(unit_id)
+    # #3214 — the units Act II weighs, joined to a citation above by an
+    # argument-map edge (attack, or support since the rework — #1645's
+    # relation, measured wired into ``bipolar_results``). Act III's
+    # populations are the ones the
+    # conclusion asks ABOUT; Act II weighs every unit, and the reply it
+    # weighed (an attack edge in the graph) reached Act III only if some
+    # citation population happened to include it — on the measured state it
+    # did not, and Act III denied the reply in good faith. The join is a
+    # citation population of its OWN (not a reordering of the claims list,
+    # which keeps its selection above untouched): narrow by construction —
+    # only a weighed unit an edge joins to an ALREADY-CITED unit, either
+    # direction, native frameworks only (#1912 sidecars stay unread).
+    joined_units = act2_joined_unit_ids(state, cited_args)
+    joined_excerpts: List[Tuple[str, str, str]] = [
+        (
+            unit_id,
+            relation,
+            truncate_at_boundary(args[unit_id], CITED_UNIT_TEXT_CAP),
+        )
+        for unit_id, relation in joined_units[:_MAX_JOINED_EXCERPTS]
+        if str(args[unit_id] or "").strip()
+    ]
     # #2850 lot 4 — one population, one cap. The dict used to be a SECOND,
     # silent cap (``list(args)[:_MAX_CLAIM_EXCERPTS]``): the fill draws after
     # the citations and can only consume ``_MAX_CLAIM_EXCERPTS - len(cited)``
@@ -2709,6 +2753,8 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         claim_excerpts_total=len(citable_args),
         anchor_excerpts=anchor_excerpts,
         anchors_dropped=len(dropped_anchor_ids),
+        joined_excerpts=joined_excerpts,
+        joined_excerpts_total=len(joined_units),
         governance_winner_text=governance_winner_text,
         governance_divergent_texts=governance_divergent_texts,
         absent_dimensions=_collect_absent_dimensions(state),
@@ -3016,6 +3062,30 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
             f"pas entendre, que cette liste est exhaustive.)"
         )
 
+    # #3214 — the units Act II weighs, joined to the citations above by a
+    # map edge. Same idioms as the claims block: texts arrive already capped
+    # at ``CITED_UNIT_TEXT_CAP``, the count cap's drops are stated (never
+    # silent), and an empty join is RENDERED — an empty section and a missing
+    # section read the same to the writer (#1667).
+    if evidence.joined_excerpts:
+        joined_block = "\n".join(
+            f"  - {unit_id} ({relation}) : {text}"
+            for unit_id, relation, text in evidence.joined_excerpts
+        )
+    else:
+        joined_block = (
+            "  (aucune unité pesée par l'Acte II ne rejoint les citations "
+            "par une arête du graphe)"
+        )
+    _omitted_joined = evidence.joined_excerpts_total - len(evidence.joined_excerpts)
+    if _omitted_joined > 0:
+        joined_block += (
+            f"\n  (liste tronquée : {len(evidence.joined_excerpts)} unités "
+            f"jointes listées sur {evidence.joined_excerpts_total} jointes au "
+            f"total, {_omitted_joined} non énumérées ici. N'écris pas, et ne "
+            f"laisse pas entendre, que cette liste est exhaustive.)"
+        )
+
     what_next_block = (
         "  Comment se faire son avis : aide le lecteur à relier le verdict à ce "
         "qu'il a entendu ou lu du discours. Le « que faire » n'est PAS une "
@@ -3286,6 +3356,16 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         f"[ARÈNE DISCURSIVE — provenance de la valeur]\n"
         f"  {format_arena_line(evidence.arena)}\n\n"
         f"[CE QUI A ÉTÉ DIT — revendications extraites]\n{claims_block}\n\n"
+        # #3214 — the join follows the citations: units the Act II analysis
+        # weighed and the map links to them, so the conclusion cannot deny in
+        # good faith what Act II weighed a page earlier. Context, not a new
+        # inventory (the cap and its notice say so).
+        "[REVENDICATIONS PESÉES PAR L'ACTE II — jointes aux citations par le "
+        f"graphe d'arguments]\n"
+        "  Unités que l'Acte II a pesées et qu'une arête du graphe (attaque\n"
+        "  ou soutien) relie à une citation ci-dessus : contexte de la\n"
+        "  conclusion, pas un inventaire supplémentaire à énumérer.\n"
+        f"{joined_block}\n\n"
         f"[VERDICT GATED — plafond de claim honnête]\n{synthesis_block}\n\n"
         f"[CE QUI TIENT — forces (qualité)]\n{strengths_lines}\n\n"
         f"[CE QUI NE TIENT PAS — faiblesses localisées]\n{weaknesses_lines}\n\n"
