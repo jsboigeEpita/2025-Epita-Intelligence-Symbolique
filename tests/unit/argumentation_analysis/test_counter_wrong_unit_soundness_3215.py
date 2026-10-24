@@ -35,6 +35,13 @@ that is the half no lexical join can see.
 * controls — the #3151 positive case still flags; the same counter in its
   own unit's paragraph passes; a two-of-eight match is not a citation.
 * mutation — restoring the two-token bar reddens the generic-words witness.
+* rework witnesses — only the five-letter bar decides two cases a stopword
+  can never reach: a citation carried by 4-letter NON-stopword words, and a
+  unit whose whole distinctive set is 4-letter (the trace then counts it).
+  `_DISTINCTIVE_MIN_LEN = 4` reddens exactly those two — the stopword list
+  does not decide in their place. The bar is not local to this check:
+  `_index_units` also feeds `_unbacked_fallacy_name_flags`, which looks a
+  unit up through the same index.
 
 Synthetic vocabularies only (no corpus content, privacy HARD).
 """
@@ -155,6 +162,50 @@ class TestTheGenericWordsAreNoCitation:
         result = check_reading_license(prose, _state(units, counters))
         kinds = [f["kind"] for f in result["flags"]]
         assert "counter_on_wrong_unit" not in kinds
+
+
+class TestTheFiveLetterBarDecides:
+    """Rework witnesses (coordinator review): the stopword list does not
+    decide everywhere — the five-letter bar is the general one. Both tests
+    hold at `_DISTINCTIVE_MIN_LEN = 5` and flip at `4`, with « rade » and
+    « môle » (4 letters, in NO stopword list) as the only movers."""
+
+    def test_a_counter_cited_only_through_four_letter_words_places_no_flag(self):
+        """Under 5, ca_1's distinctive set is {suffisent, pilote} — the
+        paragraph carries neither, so no citation and no flag. Under 4 it
+        also holds « rade » and « môle », both carried by the paragraph
+        (2 matched, half the set): the citation flips on, arg_registre
+        stays unbound while arg_vigie is bound, and the flag fires — the
+        false positive class the bar exists to block."""
+        units = {
+            "arg_registre": "Le registre du port consigne chaque marée.",
+            "arg_vigie": "La vigie surveille la jetée depuis la dune.",
+        }
+        counters = [
+            {
+                "id": "ca_1",
+                "target_arg_id": "arg_registre",
+                "counter_content": "La rade et le môle suffisent au pilote.",
+                "score": 0.5,
+            }
+        ]
+        prose = "La vigie surveille la jetée ; la rade et le môle restent calmes."
+        result = check_reading_license(prose, _state(units, counters))
+        kinds = [f["kind"] for f in result["flags"]]
+        assert "counter_on_wrong_unit" not in kinds
+
+    def test_a_unit_whose_distinctive_set_is_all_four_letter_is_not_bound(self):
+        """Under 5, arg_digue never enters the index (every one of its own
+        tokens is 4 letters); under 4 it binds the paragraph on « rade » and
+        « môle » and the trace counts it. The same index feeds
+        `_unbacked_fallacy_name_flags`, so the bar guards that reader too."""
+        units = {
+            "arg_digue": "La rade, le môle et la dune font le site.",
+            "arg_phare": "Le phare octogonal d'alpha domine la baie.",
+        }
+        prose = "La rade et le môle restent calmes aujourd'hui."
+        result = check_reading_license(prose, _state(units, []))
+        assert result["checked"]["units_bound_two_tokens"] == 0
 
 
 class TestTheSoundJoinStillFlags:
