@@ -33,6 +33,8 @@ have turned the contract around.
 ## Token classes
 
 * ``#\d{3,4}`` issue numbers — unambiguous, FAIL at first hit;
+* standalone ``P1``/``P2``/``P3`` verdict-hierarchy labels — the prompt's
+  own instruction vocabulary copied into prose, FAIL at first hit (#3225);
 * ``spec §`` / ``§\d`` internal spec pointers — unambiguous, FAIL;
 * serialized dict literals ``{"key": …}`` — unambiguous in French prose,
   FAIL;
@@ -61,6 +63,13 @@ from .readability_gate import GateVerdict
 # heading fence (``###`` followed by a space) out; 3-4 digits matches this
 # repo's issue range without matching colours (#FFF) or short refs (#12).
 _ISSUE_NUMBER_RE = re.compile(r"(?<![0-9A-Za-z_])#\d{3,4}\b")
+
+# #3225 — the verdict-hierarchy labels the Act III prompt instructs by
+# (« les P1 d'abord »): the writer copies prompt tokens, and the reader
+# cannot resolve the label (which P1? defined where?). Standalone tokens
+# only — ``P10`` and ``arg_P1`` belong to other vocabularies and stay out,
+# and the appendix's premise numbering is out of scope with the fold.
+_HIERARCHY_LABEL_RE = re.compile(r"(?<![0-9A-Za-z_])P[123](?![0-9A-Za-z_])")
 
 # Internal spec pointers, both spellings the fixed surfaces carried.
 _SPEC_REF_RE = re.compile(r"\bspec\s*§|§\s*\d")
@@ -128,6 +137,17 @@ def check_reader_vocabulary(body: str) -> GateVerdict:
             f"'issue sur la surface lecteur (ex : "
             f"{issue_hits[0].group(0)}). Les références "
             f"d'issue n'appartiennent pas au récit."
+        )
+
+    hierarchy_hits = list(_HIERARCHY_LABEL_RE.finditer(body))
+    if hierarchy_hits:
+        worst = "FAIL"
+        reasons.append(
+            f"Vocabulaire interne (#3225) — "
+            f"{accord(len(hierarchy_hits), 'étiquette de hiérarchie P', 'étiquettes de hiérarchie P')} "
+            f"sur la surface lecteur (ex : {hierarchy_hits[0].group(0)}). "
+            f"P1/P2/P3 sont le vocabulaire du prompt : le récit traduit la "
+            f"hiérarchie, il ne la recopie pas."
         )
 
     spec_hits = list(_SPEC_REF_RE.finditer(body))

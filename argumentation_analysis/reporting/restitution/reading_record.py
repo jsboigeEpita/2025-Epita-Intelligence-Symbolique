@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
 from .formal_derivation import is_real_formula
+from .fr_accord import accord
 
 # The French label a reader understands, per recorded site. A site the table
 # carries but this map does not (a new wiring point) renders under its raw
@@ -258,10 +259,14 @@ def _site_fed(site: str, state: Any) -> str:
         )
         extras = _head_formula_extras(state, site)
         if extras:
-            base += (
-                f" — plus {extras} formule(s) de structure globale lue(s) "
-                "sur cette fenêtre"
+            # #3225 — computed agreement (#2046): the « (s) » morphology was
+            # every machinery hit the per-act readability gate failed on.
+            phrase = accord(
+                extras,
+                "formule de structure globale lue",
+                "formules de structure globales lues",
             )
+            base += f" — plus {phrase} sur cette fenêtre"
         return base
     if site == "fol_reasoning":
         return (
@@ -274,22 +279,26 @@ def _site_fed(site: str, state: Any) -> str:
         name = "la traduction FOL" if fol else "la traduction propositionnelle"
         n = _decided_verdicts(state, attribute)
         sourced, total = _formula_source_counts(state, attribute)
+        # #3225 — computed agreement (#2046) on every counted noun: no
+        # « (s) » template survives on the reader surface.
+        verdicts = accord(n, "verdict formel", "verdicts formels")
         if total:
             return (
-                f"{name} ({sourced} formule(s) sur {total} issues des unités "
-                f"lues) et ses {n} verdict(s) formel(s)"
+                f"{name} ({accord(sourced, 'formule')} sur "
+                f"{accord(total, 'issue des unités lues', 'issues des unités lues')}) "
+                f"et ses {verdicts}"
             )
-        return f"{name} et ses {n} verdict(s) formel(s)"
+        return f"{name} et ses {verdicts}"
     if site == "fallacy_widenet":
         return "les candidats de la détection de sophismes (phase large filet)"
     if site in ("fallacy_descent", "fallacy_one_shot", "fallacy_per_argument"):
         return _fallacy_fed(site, state)
     if site == "counter_argument":
         n = len(getattr(state, "counter_arguments", None) or [])
-        return f"la contre-argumentation ({n} contre-argument(s))"
+        return f"la contre-argumentation ({accord(n, 'contre-argument')})"
     if site == "governance":
         n = len(getattr(state, "governance_decisions", None) or [])
-        return f"la délibération de gouvernance ({n} décision(s))"
+        return f"la délibération de gouvernance ({accord(n, 'décision')})"
     if site == "collaborative_debate":
         return "le débat collaboratif"
     return ""
@@ -408,7 +417,9 @@ def format_reading_block(record: ReadingRecord) -> str:
     lines = "\n".join(
         f"  {format_reading_line(ln, record.source_chars)}" for ln in record.lines
     )
-    block = f"[LECTURES DU RUN — bornes réelles, enregistrement #1737]\n{lines}"
+    # #3225 — no issue number on the prompt side either: the writer copies
+    # prompt tokens, so the block carries none.
+    block = f"[LECTURES DU RUN — bornes réelles]\n{lines}"
     if record.basis:
         block += f"\n  {record.basis}"
     return block
@@ -422,7 +433,9 @@ def format_reading_block(record: ReadingRecord) -> str:
 # woven prose, and the prose restates none (``restated_bound_sentences``
 # below removes any that does, #1605 enforcement shape: the record's sentence
 # replaces the woven one, the event is logged, never a reader note).
-READER_BOUNDS_HEADING = "Bornes de lecture du run (enregistrement #1737)"
+# #3225 — the heading carries no issue number: the vocabulary check FAILs
+# them, and a heading the code itself violates is a check nobody heeds.
+READER_BOUNDS_HEADING = "Bornes de lecture du run"
 
 
 def format_reader_bounds_passage(record: ReadingRecord) -> str:

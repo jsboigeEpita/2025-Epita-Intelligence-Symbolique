@@ -598,7 +598,9 @@ def restated_coverage_range_sentences(text: str) -> List[str]:
 #: Reader-facing heading of the grafted coverage line, #3159. Same shape as
 #: ``reading_record.READER_BOUNDS_HEADING``: the provenance is part of the
 #: heading, so the reader knows the figures are the pipeline's, not the prose's.
-COVERAGE_HEADING = "Couverture de l'analyse (chiffres du pipeline, #3159)"
+#: #3225 — the issue number left the heading: the reader surface carries no
+#: issue number, and the writer copies prompt tokens.
+COVERAGE_HEADING = "Couverture de l'analyse (chiffres du pipeline)"
 
 
 def format_coverage_passage(sentence: str) -> str:
