@@ -248,8 +248,16 @@ tr:hover { background: rgba(88,166,255,0.05); }
 <div class="section">
 {% for ca in counter_arguments %}
   <div style="margin: 0.5rem 0; padding: 0.8rem 1rem; background: rgba(188,140,255,0.05); border-left: 3px solid var(--purple); border-radius: 0 8px 8px 0;">
-    <strong>{{ ca.strategy }}</strong> → <code>{{ ca.target_arg }}</code>
-    <span class="badge badge-purple" style="margin-left: 0.5rem;">Strength: {{ "%.0f"|format(ca.strength * 100) }}%</span>
+    {# #3205 — the producer's keys: `add_counter_argument` writes
+       {id, original_argument, counter_content, strategy, score} plus
+       target_arg_id when the echoed target matched a known argument. The
+       former `ca.target_arg` / `ca.strength` reads were keys no producer
+       writes, and `ca.strength * 100` made the whole report unrenderable
+       from any real state. #}
+    <strong>{{ ca.strategy }}</strong>
+    {% if ca.target_arg_id is defined %} → <code>{{ ca.target_arg_id }}</code>
+    {%- elif ca.original_argument is defined %} → {{ ca.original_argument }}{% endif %}
+    {% if ca.score is number %}<span class="badge badge-purple" style="margin-left: 0.5rem;">Strength: {{ "%.0f"|format(ca.score * 100) }}%</span>{% endif %}
     <p style="margin-top: 0.3rem;">{{ ca.counter_content }}</p>
   </div>
 {% endfor %}

@@ -134,28 +134,36 @@
     "final_conclusion": "The argumentative structure of doc_A contains 8 arguments organized in 3 reasoning chains. 4 fallacies were detected across 3 families (relevance, causal, distortion). Formal analysis confirms partial logical validity but identifies unsupported causal leaps. Counter-arguments expose the false dilemma and slippery slope patterns. The JTMS belief revision shows 2 retraction cascades triggered by ATMS assumptions. Narrative synthesis integrates all 16 analysis phases into a coherent assessment.",
     "counter_arguments": [
       {
-        "strategy": "reductio",
-        "target_arg": "arg_c1",
+        "id": "ca_1",
+        "original_argument": "Therefore restricting public discourse undermines democracy",
         "counter_content": "If restriction always undermines democracy, then libel laws and perjury statutes are anti-democratic, which is absurd.",
-        "strength": 0.88
+        "strategy": "reductio",
+        "score": 0.88,
+        "target_arg_id": "arg_c1"
       },
       {
-        "strategy": "counter_example",
-        "target_arg": "arg_p3",
+        "id": "ca_2",
+        "original_argument": "Historical precedents show censorship leads to authoritarianism",
         "counter_content": "Germany has hate speech restrictions yet remains a robust democracy, refuting the censorship-authoritarianism link.",
-        "strength": 0.91
+        "strategy": "counter_example",
+        "score": 0.91,
+        "target_arg_id": "arg_p3"
       },
       {
-        "strategy": "distinction",
-        "target_arg": "arg_c2",
+        "id": "ca_3",
+        "original_argument": "Open discourse produces better policy outcomes",
         "counter_content": "Better policy outcomes require distinguishing between free expression and unregulated disinformation.",
-        "strength": 0.84
+        "strategy": "distinction",
+        "score": 0.84,
+        "target_arg_id": "arg_c2"
       },
       {
-        "strategy": "concession",
-        "target_arg": "arg_p4",
+        "id": "ca_4",
+        "original_argument": "Public debate strengthens collective reasoning",
         "counter_content": "While public debate is valuable, structured moderation improves deliberation quality, contradicting the implied absolutism.",
-        "strength": 0.79
+        "strategy": "concession",
+        "score": 0.79,
+        "target_arg_id": "arg_p4"
       }
     ],
     "argument_quality_scores": {

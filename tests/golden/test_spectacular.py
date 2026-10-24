@@ -288,7 +288,13 @@ class TestCrossFieldConsistency:
     def test_counter_arguments_target_existing_args(self, state):
         identified = set(state.get("identified_arguments", {}).keys())
         for counter in state.get("counter_arguments", []):
-            target = counter.get("target_arg", "")
+            # #3205 — the producer's key: `add_counter_argument` writes
+            # target_arg_id only when the echoed target matched a known
+            # argument; an unlinked counter is a measured fact (#2968), not a
+            # broken reference.
+            target = counter.get("target_arg_id", "")
+            if not target:
+                continue
             assert target in identified, f"Counter targets unknown arg: {target}"
 
     def test_jtms_beliefs_reference_args(self, state):
