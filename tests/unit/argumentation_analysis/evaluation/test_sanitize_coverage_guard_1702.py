@@ -443,19 +443,11 @@ EXPECTED_UNCOVERED: dict[str, frozenset[str]] = {
     # regression in 4d re-leaks here immediately), and ``test_scrubber_is_alive``
     # keeps watching the sibling 4b ``.arguments`` path.
     #
-    # The dominant survivor on real corpora (coord R785: 1024–2304 occurrences).
-    # ``add_formal_synthesis_report`` stores ``phase_results`` verbatim, and it
-    # republishes the formal phases' output — including the Dung extensions,
-    # which are the same claim texts 4c opacifies under ``dung_frameworks``.
-    "formal_synthesis_reports": frozenset(
-        {
-            "formal_synthesis_reports[*].phase_results.dung_extensions."
-            "all_extensions.conflict_free.extensions[*][*]",
-            "formal_synthesis_reports[*].phase_results.dung_extensions."
-            "all_extensions.admissible.extensions[*][*]",
-            "formal_synthesis_reports[*].phase_results.fol.message",
-        }
-    ),
+    # ``formal_synthesis_reports`` no longer appears here: #3229 settled the
+    # deferred triage — no script reads ``phase_results`` from a sanitized
+    # export, so pass 5 drops it. The canary plant above stays (a regression
+    # in pass 5 re-leaks here immediately).
+    #
     # Formal-logic status messages can carry NL (``"unavailable: <reason>"``).
     # Not in any scrubber table.
     "fol_analysis_results": frozenset({"fol_analysis_results[*].message"}),
@@ -543,20 +535,22 @@ class TestScrubberCoverageGuard:
     def test_formal_synthesis_reports_gap_is_attested(self) -> None:
         """DoD item 2 — formal_synthesis_reports reaches the coverage oracle.
 
-        The first-level field the coordinator's own recension missed. Its
-        ``.summary`` is covered (pass 5); its ``.phase_results`` is not, and
-        that gap is frozen in EXPECTED_UNCOVERED. This pins both halves: the
-        field is exercised by the canary, and its gap is named, not silent.
+        The first-level field the coordinator's own recension missed. #3229
+        settled the deferred triage (no export reader of ``phase_results``):
+        pass 5 drops it. This test pinned the gap while it was open; it now
+        pins its closure — the canary plant above stays, so a pass-5
+        regression re-leaks here immediately.
         """
         out = sanitize_state(_canaried_state().get_state_snapshot())
         # Covered half: pass 5 strips the ``summary`` KEY entirely
         # (``_strip_text_from_dict`` drops it), so it is absent — not merely
         # opacified. Asserting on its value would KeyError.
         assert "summary" not in out["formal_synthesis_reports"][0]
-        # Gap half: .phase_results still carries the canary, and the frozen set
-        # names those paths.
-        assert CANARY in repr(out["formal_synthesis_reports"])
-        assert "formal_synthesis_reports" in EXPECTED_UNCOVERED
+        # Closed half (#3229): .phase_results is dropped with it — no canary
+        # survives under the field, and the frozen set no longer names it.
+        assert CANARY not in repr(out["formal_synthesis_reports"])
+        assert "phase_results" not in out["formal_synthesis_reports"][0]
+        assert "formal_synthesis_reports" not in EXPECTED_UNCOVERED
 
     def test_every_written_top_level_field_is_exercised(self) -> None:
         """Anti-blindness — the canary reaches every producer-written field.

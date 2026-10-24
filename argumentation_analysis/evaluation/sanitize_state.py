@@ -203,7 +203,18 @@ _TEXT_STRIP_LISTS = {
     "analysis_trace": {"summary"},
     "nl_to_logic_translations": {"original_text"},
     "semantic_index_refs": {"query", "snippet"},
-    "formal_synthesis_reports": {"summary"},
+    # #3229: ``add_formal_synthesis_report`` stores ``phase_results`` verbatim,
+    # republishing every formal phase's output — the Dung extensions (the same
+    # claim texts 4c opacifies under ``dung_frameworks``), argument text, and
+    # source quotes under quote-named keys. Measured on a real state: 634 NL
+    # paths / 1 695 strings survived sanitize under this one container. The
+    # #1702 triage (deferred "who reads this?") is settled: NO script reads
+    # phase_results from a sanitized export — the .analysis_kb consumers read
+    # counts, the acts and structured_arg_status; the live readers (restitution,
+    # synthesis) read the in-memory field, which this pass never touches.
+    # Decision: drop phase_results from the export; the entry keeps its
+    # structural aggregates (overall_validity...), summary stays pass-5-dropped.
+    "formal_synthesis_reports": {"summary", "phase_results"},
 }
 
 # LIST-of-dicts fields whose sub-keys carry the same nominative claim text that
