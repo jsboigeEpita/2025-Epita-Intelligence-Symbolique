@@ -11,11 +11,17 @@ attribution and invents no third party (#1019).
 accepts the stored dict record and the synthesised ``FallacyDiagnosis`` object
 alike, so no reader can drift into its own reading (a reported detection must
 never be counted as the speaker's, nor contest the unit that reports it).
+
+``confidence_of`` reads the detector's own confidence off the same record with
+#3029's guard (a measurement is a number; anything else — absent, a string, a
+bool — is UNMEASURED, never a default value), and
+``detector_confidence_note`` renders the standing the evidence lines print
+(#3231).
 """
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
 MOVE_AUTHOR_SPEAKER = "speaker"
 MOVE_AUTHOR_REPORTED = "reported"
@@ -60,3 +66,38 @@ def move_author_label_of(entry: Any) -> str:
     if isinstance(value, str):
         return value.strip()
     return ""
+
+
+# --- #3231 — how firmly the detector itself holds the detection --------------
+
+
+def confidence_of(entry: Any) -> Optional[float]:
+    """The detector's own confidence, or ``None`` when unmeasured (#3029).
+
+    A measurement is a number the producer wrote; a bool is a flag, not a
+    measure, and a string ("high") carries no number to print. Anything but
+    a real number reads as UNMEASURED — never as a default value the
+    producer never stated.
+    """
+    value = _field(entry, "confidence")
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value)
+
+
+def _confidence_fr(value: float) -> str:
+    """A measured confidence in French prose: comma, no padding zero."""
+    text = f"{value:.2f}".rstrip("0").rstrip(".")
+    return (text or "0").replace(".", ",")
+
+
+def detector_confidence_note(confidence: Optional[float]) -> str:
+    """The standing every fallacy line prints next to its verdict (#3231).
+
+    « confiance du détecteur : 0,4 » — or « non mesurée » when the producer
+    stated no number. Unmeasured is PRINTED as unmeasured, never filled in
+    with a default (#3029's contract, on the surfaces the acts read).
+    """
+    if confidence is None:
+        return "confiance du détecteur : non mesurée"
+    return f"confiance du détecteur : {_confidence_fr(confidence)}"

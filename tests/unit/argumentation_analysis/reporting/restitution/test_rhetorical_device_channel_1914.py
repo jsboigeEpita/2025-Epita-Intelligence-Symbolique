@@ -63,8 +63,14 @@ class TestProcureLineShape:
     """The evidence line states the device, not the verdict."""
 
     def test_device_line_names_type_and_family_without_attack_word(self):
+        # #3231 — the line carries the detector's standing between the label
+        # and the justification; these records state no confidence, so the
+        # standing prints as unmeasured (#3029's contract on the acts).
         prompt = _prompt()
-        assert "Procédé : « Appel au slogan » (famille Influence)." in prompt
+        assert (
+            "Procédé : « Appel au slogan » (famille Influence) "
+            "— confiance du détecteur : non mesurée." in prompt
+        )
 
     def test_attack_word_gone_from_the_whole_prompt(self):
         assert "Dérapage :" not in _prompt()
@@ -72,7 +78,10 @@ class TestProcureLineShape:
     def test_fault_device_keeps_its_full_identity(self):
         prompt = _prompt()
         assert "Procédé : « Confusion entre corrélation et causalité »" in prompt
-        assert "(famille Erreur de raisonnement)." in prompt
+        assert (
+            "(famille Erreur de raisonnement) "
+            "— confiance du détecteur : non mesurée." in prompt
+        )
 
     def test_justification_carried_verbatim_for_both_natures(self):
         prompt = _prompt()
