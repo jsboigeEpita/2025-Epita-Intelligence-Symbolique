@@ -92,8 +92,11 @@ from .cited_units import (  # #2965 (Acte III slice) — same budget as Act II
     render_governance_lead,
     render_divergence_clause,
     truncate_at_boundary,
+    truncate_head_and_tail,  # #3231 — the producer's final sentence survives the cap
 )
 from argumentation_analysis.core.fallacy_attribution import (  # #3180
+    confidence_of,  # #3231
+    detector_confidence_note,  # #3231
     is_reported_move,
     is_speaker_move,
     move_author_label_of,
@@ -117,6 +120,9 @@ logger = logging.getLogger(__name__)
 # Truncation caps for corpus-derived fields entering the prompt (privacy +
 # prompt-budget discipline). The LLM is told to paraphrase, not echo.
 _JUSTIFICATION_CAP = 200
+# #3231 — bounds the FINAL sentence the cut re-appends (same contract as Act
+# II's tail cap: a detector states its hedge at the end of its justification).
+_JUSTIFICATION_TAIL_CAP = 200
 _COUNTER_CAP = 200
 # #1622 — how many counter-strategies the prompt ENUMERATES. Distinct from
 # ``_COUNTER_CAP`` above (that one truncates each snippet's *text*). Named so the
@@ -389,6 +395,10 @@ class StructuringWeakPoint:
     label: str  # human-readable: fallacy family/type, or a formal verdict line
     target_arg_id: str
     detail: str = ""
+    # #3231 — for a fallacy-sourced point: the detector's own confidence in
+    # the detection, None when it measured none (#3029: unmeasured is None,
+    # never a default). Printed on the line, weighed by the consigne.
+    confidence: Optional[float] = None
 
 
 @dataclass
@@ -928,7 +938,14 @@ def _collect_weak_points(
                 # claim against the category the evidence detected under.
                 label=fallacy_taxonomy_label(ftype, family, fdata.get("taxonomy_path")),
                 target_arg_id=str(tid),
-                detail=_truncate(fdata.get("justification", ""), _JUSTIFICATION_CAP),
+                detail=truncate_head_and_tail(
+                    fdata.get("justification", ""),
+                    _JUSTIFICATION_CAP,
+                    _JUSTIFICATION_TAIL_CAP,
+                ),
+                # #3231 — the detector's own standing travels with the point:
+                # the conclusion's consigne weighs it as Act II does.
+                confidence=confidence_of(fdata),
             )
         )
     for arg_id, semantics in dung_rejected.items():
@@ -2954,6 +2971,15 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         weaknesses_lines = "\n".join(
             f"  - [{wp.source}] {wp.label} sur {wp.target_arg_id}"
             + (f" : {wp.detail}" if wp.detail else "")
+            # #3231 — only a fallacy point carries a detector's confidence
+            # (a Dung/PL/FOL verdict is a computation, not a measurement —
+            # it has no confidence to print); among them, unmeasured is
+            # printed as unmeasured, never filled in (#3029).
+            + (
+                f" — {detector_confidence_note(wp.confidence)}"
+                if wp.source == "fallacy"
+                else ""
+            )
             for wp in evidence.weak_points[:8]
         )
     else:
@@ -3431,7 +3457,14 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         "- Un NOM DE SOPHISME dans ta prose est une détection : tu ne le nommes que\n"
         "  sur une unité où un sophisme est réellement enregistré (bloc des\n"
         "  procédés relevés). Si aucune détection ne couvre l'unité, tu ne lui en\n"
-        "  prêtes aucun — même quand une réplique de débat l'affirme.\n"
+        "  prêtes aucun — même quand une réplique de débat l'affirme. Et le\n"
+        # #3231 — même contrat de standing qu'Acte II : la force d'une détection
+        # est celle que son détecteur lui a donnée (confiance imprimée sur la
+        # ligne, réserve écrite en fin de justification) — aucun seuil numérique
+        # ne la remplace.
+        "  standing du nommé suit son détecteur : une détection à confiance\n"
+        "  basse, ou que sa justification tient pour provisoire, se cite comme\n"
+        "  une lecture provisoire — jamais comme une faute établie.\n"
         "- JARGON INTERNE INTERDIT dans la prose : ne recopie JAMAIS un\n"
         "  identifiant technique brut — token snake_case (agent_1, social_choice,\n"
         "  modal_kb…), nom d'agent numéroté, ou nom de méthode/modèle interne.\n"

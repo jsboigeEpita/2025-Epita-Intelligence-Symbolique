@@ -42,8 +42,11 @@ from .cited_units import (  # #2967: shared cited-unit budget + boundary cut
     render_governance_lead,
     render_divergence_clause,
     truncate_at_boundary,
+    truncate_head_and_tail,  # #3231 — the producer's final sentence survives the cap
 )
 from argumentation_analysis.core.fallacy_attribution import (  # #3180
+    confidence_of,  # #3231
+    detector_confidence_note,  # #3231
     is_reported_move,
     move_author_label_of,
     move_author_of,
@@ -157,6 +160,10 @@ def _first_stated_cause_kind(
 # prompt-budget discipline). The LLM is told to paraphrase, not echo.
 _DESC_CAP = 220
 _JUSTIFICATION_CAP = 200
+# #3231 — the head keeps the reasoning, this cap bounds the FINAL sentence the
+# cut re-appends: a detector states its hedge at the end of its justification,
+# and the qualifier must survive the cap (same order of magnitude as the head).
+_JUSTIFICATION_TAIL_CAP = 200
 _COUNTER_CAP = 200
 # SV (#1182): truncation + count caps for governance/debate evidence (privacy
 # + prompt-budget discipline; the LLM paraphrases, never echoes).
@@ -275,6 +282,12 @@ class FallacyEvidence:
     # carries one: the printed label resolves it into the branch that names
     # the category. None keeps the two-level label, with no guess.
     taxonomy_path: Optional[str] = None
+    # #3231 — the detector's own confidence in this detection, None when it
+    # measured none (#3029: unmeasured is None, never a default value). The
+    # Procédé line prints it and the consigne weighs it — a detection its
+    # producer rates low, or calls tentative in its justification, is told as
+    # a tentative reading, never as an established fault.
+    confidence: Optional[float] = None
 
 
 @dataclass
@@ -857,7 +870,11 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
             fallacy_id=str(_fid),
             family=_reconcile_family(fdata),
             type=str(fdata.get("type", "inconnu")),
-            justification=_truncate(fdata.get("justification", ""), _JUSTIFICATION_CAP),
+            justification=truncate_head_and_tail(
+                fdata.get("justification", ""),
+                _JUSTIFICATION_CAP,
+                _JUSTIFICATION_TAIL_CAP,
+            ),
             target_arg_id=str(tid),
             move_author=move_author,
             move_author_label=move_author_label_of(fdata),
@@ -867,6 +884,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
                 and fdata["taxonomy_path"].strip()
                 else None
             ),
+            confidence=confidence_of(fdata),
         )
         if is_reported_move(_ev):
             reported_fallacies.append(_ev)
@@ -1716,7 +1734,8 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                 # conductor to name that function BEFORE judging fault.
                 lines.append(
                     f"      Procédé : "
-                    f"{fallacy_taxonomy_label(fl.type, fl.family, fl.taxonomy_path, quoted=True)}. "
+                    f"{fallacy_taxonomy_label(fl.type, fl.family, fl.taxonomy_path, quoted=True)} "
+                    f"— {detector_confidence_note(fl.confidence)}. "
                     f"Justification : {fl.justification}"
                 )
             for ca in a.counter_args:
@@ -2217,6 +2236,11 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         # locuteur » sans jamais lire la donnée qui dit qui il est.
         f"{SPEAKER_NAMING_RULE}\n"
         f"{READING_BASIS_RULE}\n"
+        # #3231 — le standing du verdict pèse ce que le détecteur a pesé : sa
+        # confiance est imprimée sur chaque ligne Procédé et sa justification
+        # va jusqu'à sa dernière phrase (c'est là qu'un détecteur écrit sa
+        # réserve). Aucun seuil numérique : le standing suit les deux canaux
+        # que le détecteur a lui-même écrits, le rédacteur les lit.
         "- Un procédé relevé n'est pas un défaut par nature. Pour chacun, dis "
         "d'abord CE QU'IL ACCOMPLIT dans le discours — ce que le locuteur "
         "cherche à obtenir par lui ; la justification le porte le plus souvent "
@@ -2225,7 +2249,14 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         "raisonnement : un procédé dont la justification établit une faute "
         "GARDE son verdict de sophisme, nommé comme tel — l'objectif n'est pas "
         "d'adoucir, c'est de ne pas confondre une figure (ce qui fait avancer "
-        "le discours) avec une faute (ce qui le casse). N'invente JAMAIS une "
+        "le discours) avec une faute (ce qui le casse). Le standing du verdict "
+        "est celui de son détecteur : chaque ligne Procédé porte sa confiance "
+        "(« confiance du détecteur »), et sa justification va jusqu'à sa "
+        "dernière phrase — c'est là qu'un détecteur écrit sa réserve. Une "
+        "détection que le détecteur lui-même tient pour provisoire — confiance "
+        "basse, ou réserve écrite dans sa justification — se raconte comme une "
+        "lecture PROVISOIRE du procédé, jamais comme une faute établie. "
+        "N'invente JAMAIS une "
         "fonction que la justification ne porte pas : si elle ne dit que la "
         "faute, dis la faute.\n"
         "- Le verdict formel (Tweety/Dung) appuie le battement. Le MOT du "

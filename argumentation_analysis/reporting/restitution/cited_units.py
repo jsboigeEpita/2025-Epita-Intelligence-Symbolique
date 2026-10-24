@@ -69,6 +69,52 @@ def truncate_at_boundary(text: Any, cap: int, marker: str = CUT_MARKER) -> str:
     return head.rstrip() + marker
 
 
+def _final_sentence_start(s: str) -> int:
+    """Where the final sentence starts: right after the last sentence end
+    that is followed by more prose (a delimiter at the very end closes the
+    final sentence itself; a decimal point is followed by a digit, not a
+    space, so it never splits a number)."""
+    for i in range(len(s) - 1, -1, -1):
+        if s[i] in _SENTENCE_ENDS:
+            rest = s[i + 1 :]
+            if rest[:1] in (" ", "\t", "\n") and any(ch.isalnum() for ch in rest):
+                return i + 1
+    return 0
+
+
+def truncate_head_and_tail(
+    text: Any, head_cap: int, tail_cap: int, marker: str = CUT_MARKER
+) -> str:
+    """#3231 — head cap, plus the final sentence: a producer states its hedge
+    at the END of its reasoning.
+
+    A detector justifies, then qualifies (« this match is tentative ») — the
+    qualifier lives in the last sentence, past any head cap: on the stored
+    R1110 states every speaker justification runs longer than 200 characters,
+    and the renders cut at 200 presented a detection its producer called
+    tentative as an established fault. The head keeps the reasoning's setup
+    (``truncate_at_boundary``, visible marker), the tail keeps the producer's
+    own standing, and both stay bounded: the final sentence is itself capped
+    on a boundary with the same visible marker. Text within the head cap is
+    returned untouched, as ever.
+    """
+    if not text:
+        return ""
+    s = str(text).strip()
+    if len(s) <= head_cap:
+        return truncate_at_boundary(s, head_cap, marker)
+    head = truncate_at_boundary(s, head_cap, marker)
+    start = _final_sentence_start(s)
+    if start > 0:
+        tail_source = s[start:]
+    else:
+        # One sentence, no boundary: the qualifier lives at the text's END —
+        # the tail is the end, not a repetition of the head's first words.
+        tail_source = s[-tail_cap:]
+    tail = truncate_at_boundary(tail_source, tail_cap, marker)
+    return f"{head} {tail}" if tail else head
+
+
 def governance_winner_id(state: Any) -> Optional[str]:
     """The last non-trivial governance decision's winner.
 
