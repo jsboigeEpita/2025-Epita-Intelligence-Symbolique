@@ -64,11 +64,11 @@ def _state() -> SimpleNamespace:
 class TestPropositional:
     def test_verdict_count_ignores_the_not_evaluated_records(self):
         line = _site_fed("propositional_logic_units", _state())
-        assert " 1 verdict(s) formel(s)" in line, line
+        assert " 1 verdict formel" in line, line
 
     def test_formula_count_excludes_the_placeholder_strings(self):
         line = _site_fed("propositional_logic_units", _state())
-        assert "30 formule(s) sur 30" in line, line
+        assert "30 formules sur 30" in line, line
         assert "32" not in line, line
 
 
@@ -91,16 +91,16 @@ class TestPlaceholderInsideADecidedRecord:
             fol_analysis_results=[],
         )
         line = _site_fed("propositional_logic_units", state)
-        assert "2 formule(s) sur 2" in line, line
+        assert "2 formules sur 2" in line, line
         assert "sur 3" not in line, line
 
 
 class TestFol:
     def test_verdict_count_ignores_the_not_evaluated_record(self):
         line = _site_fed("fol_reasoning_units", _state())
-        assert " 1 verdict(s) formel(s)" in line, line
+        assert " 1 verdict formel" in line, line
 
     def test_formula_count_excludes_the_placeholder_string(self):
         line = _site_fed("fol_reasoning_units", _state())
-        assert "11 formule(s) sur 11" in line, line
+        assert "11 formules sur 11" in line, line
         assert "sur 12" not in line, line

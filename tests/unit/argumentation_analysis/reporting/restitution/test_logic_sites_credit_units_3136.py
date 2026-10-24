@@ -108,7 +108,7 @@ class TestTheHeadStopsCreditingTheVerdicts:
         read (anti-pendulum — a site credits its own share)."""
         state = _state({"propositional_logic": _head_entry(head_formulas=2)})
         fed = _site_fed("propositional_logic", state)
-        assert "2 formule(s) de structure globale" in fed
+        assert "2 formules de structure globales" in fed
 
 
 class TestTheUnitsLineCreditsWhatItFed:
@@ -118,11 +118,11 @@ class TestTheUnitsLineCreditsWhatItFed:
             fol_results=[_result(["A", "B", "C"], [["arg_14"], [], ["arg_86"]])],
         )
         fed = _site_fed("fol_reasoning_units", state)
-        assert "2 formule(s) sur 3" in fed, (
+        assert "2 formules sur 3" in fed, (
             "only the formulas whose formula_sources name the units are the "
             "units line's share — the wide-pass/upstream ones are not"
         )
-        assert "1 verdict(s)" in fed
+        assert "1 verdict formel" in fed
 
     def test_the_pl_units_line_counts_sourced_formulas_and_verdicts(self):
         state = _state(
@@ -130,8 +130,8 @@ class TestTheUnitsLineCreditsWhatItFed:
             pl_results=[_result(["p", "q"], [["arg_40"], ["arg_41"]])],
         )
         fed = _site_fed("propositional_logic_units", state)
-        assert "2 formule(s) sur 2" in fed
-        assert "1 verdict(s)" in fed
+        assert "2 formules sur 2" in fed
+        assert "1 verdict formel" in fed
 
 
 class TestTheRecordSpeaksBothReads:
