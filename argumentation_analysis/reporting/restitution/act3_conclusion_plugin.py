@@ -101,6 +101,9 @@ from argumentation_analysis.core.fallacy_attribution import (  # #3180
     is_speaker_move,
     move_author_label_of,
 )
+from argumentation_analysis.orchestration.fol_cause import (  # #3237
+    FORMAL_CAUSE_NAMING_RULE,
+)
 from argumentation_analysis.utils.taxonomy_loader import (  # #3224
     fallacy_taxonomy_label,
 )
@@ -3433,15 +3436,11 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         # écrire, tel quel.
         f"{SPEAKER_NAMING_RULE}\n"
         f"{READING_BASIS_RULE}\n"
-        "- Le verdict formel (Tweety/Dung) est un APPUI, jamais un titre. Quand une\n"
-        "  théorie du premier ordre est inconsistante, ou que l'encodage\n"
-        "  propositionnel est insatisfiable, DIS LA CAUSE que le constat porte\n"
-        "  (elle est écrite dans CE QUE LES CADRES STRUCTURÉS ÉTABLISSENT :\n"
-        "  « contradiction entre voix », « auto-contradiction de … », « contradiction\n"
-        "  entre unités sources », « cause non établie ») ; n'attribue jamais cette\n"
-        "  inconsistance au raisonnement d'un locuteur en particulier, et jamais à\n"
-        "  la portée des quantificateurs quand la cause porte une paire de\n"
-        "  littéraux ground. « l'analyse formelle confirme la cohérence de ce\n"
+        # #3237 — the cause rule is now the shared constant from fol_cause
+        # (the vocabulary's one home): Act II misstated a recorded cause
+        # because only this act carried the rule. Same words, one father.
+        "- Le verdict formel (Tweety/Dung) est un APPUI, jamais un titre. "
+        f"{FORMAL_CAUSE_NAMING_RULE} « l'analyse formelle confirme la cohérence de ce\n"
         "  raisonnement » (théorie consistante — un résultat aussi) et « le cadre\n"
         "  d'argumentation isole cette revendication comme rejetée » restent\n"
         "  disponibles — toujours au service du jugement du lecteur, jamais en\n"
