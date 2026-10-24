@@ -136,9 +136,22 @@ def _canaried_state() -> UnifiedAnalysisState:
     }
 
     # --- UnifiedAnalysisState NL fields ---------------------------------------
+    # #3228 — the display-label maps (``{arg_N: label}``) ride on the four AF
+    # containers; the label IS the argument text (measured: every stored label
+    # equals an ``identified_arguments`` value). Planted through the real
+    # ``argument_labels`` kwarg the writers pass, on every container that has
+    # one — the canary must reach this key or a leak here stays invisible
+    # (which is exactly how #3228 happened: the three ``add_*`` calls below
+    # omitted the kwarg).
+    labels: dict[str, str] = {"arg_1": NL, "arg_2": NL2}
     s.add_counter_argument(NL, NL2, "distinction", 0.6)  # pass 5
-    s.add_ranking_result("burden", [NL], [{"rank": 1}])  # pass 5b
-    s.add_aspic_result(  # passes 5b (.extensions) + 5d (.attacks target/premises)
+    s.add_ranking_result(  # pass 5b (.arguments) + 5g (.argument_labels)
+        "burden",
+        [NL],
+        [{"rank": 1}],
+        argument_labels=labels,
+    )
+    s.add_aspic_result(  # passes 5b (.extensions) + 5d (.attacks) + 5g
         "simple",
         [[NL], [NL, NL2]],
         {"n": 2},
@@ -150,8 +163,9 @@ def _canaried_state() -> UnifiedAnalysisState:
                 "attacker_rule": "def_con_1",
             }
         ],
+        argument_labels=labels,
     )
-    s.add_belief_revision_result(  # pass 5b + 5e (.minimal_retraction.options)
+    s.add_belief_revision_result(  # passes 5b + 5e (.options) + 5g
         "dalal",
         [NL],
         [NL2],
@@ -161,6 +175,7 @@ def _canaried_state() -> UnifiedAnalysisState:
             "base_size": 2,
             "touched_count": 1,
         },
+        argument_labels=labels,
     )
     s.add_dialogue_result(  # pass 5b (.topic) + 5d (.trace argument/target)
         NL,
@@ -232,6 +247,7 @@ def _canaried_state() -> UnifiedAnalysisState:
         [NL],  # pass 4b (.arguments)
         [[NL, NL2]],  # pass 4b (.attacks)
         extensions=dung_extensions,
+        argument_labels=labels,  # pass 5g (#3228)
     )
     # #1648 Wave-2 sidecar — attached by direct assignment exactly as the
     # ``_write_setaf/weighted/eaf/delp`` writers do. NOT in any scrubber table.
@@ -624,6 +640,34 @@ class TestSubstitutionControl:
                 "argument_provenance",
                 "argument_provenance",
                 ".source_quote",
+            ),
+            # Pass 5g (#3228): the display-label maps on the four AF
+            # containers — {arg_N: label}, the label being the argument text
+            # itself. Removing one container's entry re-leaks its canary
+            # under .argument_labels; the other three stay covered.
+            (
+                "_OPAQUE_LABEL_MAP_SUBKEYS",
+                "dung_frameworks",
+                "dung_frameworks",
+                ".argument_labels",
+            ),
+            (
+                "_OPAQUE_LABEL_MAP_SUBKEYS",
+                "ranking_results",
+                "ranking_results",
+                ".argument_labels",
+            ),
+            (
+                "_OPAQUE_LABEL_MAP_SUBKEYS",
+                "aspic_results",
+                "aspic_results",
+                ".argument_labels",
+            ),
+            (
+                "_OPAQUE_LABEL_MAP_SUBKEYS",
+                "belief_revision_results",
+                "belief_revision_results",
+                ".argument_labels",
             ),
             # Pass 4b: dung_frameworks.arguments/attacks.
             (
