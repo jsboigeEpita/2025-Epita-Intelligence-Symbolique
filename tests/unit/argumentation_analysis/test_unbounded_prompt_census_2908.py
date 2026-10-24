@@ -33,6 +33,9 @@ import ast
 import re
 from pathlib import Path
 
+from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
+    _MAX_JOINED_EXCERPTS,
+)
 from argumentation_analysis.reporting.restitution.global_projection import (
     _MAX_CONVERGENCE_FINDINGS,
     _MAX_GATE_FINDINGS,
@@ -398,6 +401,19 @@ ALLOWED = {
         f"({_MAX_CONVERGENCE_FINDINGS + _MAX_GATE_FINDINGS} = the projection's "
         "own _MAX_CONVERGENCE_FINDINGS + _MAX_GATE_FINDINGS), with dropped "
         "anchors stated on the rendered block (anchors_dropped), never silent"
+    ),
+    (
+        "argumentation_analysis/reporting/restitution/act3_conclusion_plugin.py",
+        "fstring",
+        "text",
+        3,
+    ): (
+        "line ~3208 — joined excerpts on the Acte III Act-II-weighed block "
+        "(#3214); bounded upstream, BOTH bounds enforced in code: each text "
+        "is capped at CITED_UNIT_TEXT_CAP where joined_excerpts is built, "
+        f"and the COUNT stops at _MAX_JOINED_EXCERPTS ({_MAX_JOINED_EXCERPTS}), "
+        "with the dropped units counted on the rendered block "
+        "(joined_excerpts_total → notice), never silent"
     ),
     # --- not a prompt: logs, cache keys, renders, UI ---
     (
