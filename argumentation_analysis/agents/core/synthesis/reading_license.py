@@ -246,6 +246,11 @@ _MEMBERSHIP_OUTSIDE = re.compile(
 
 #: Function words a distinctive-token pass must ignore: a stopword names
 #: nothing, and counting it would make two unrelated texts "cite" each other.
+#: The last two blocks (#3215) are not function words but the REPORT's own
+#: generic vocabulary — « revendication », « conclusion », « argument »,
+#: « also », « only » — which names nothing either, because every text of a
+#: report about arguments carries it. Measured on the six stored renders: they
+#: carried every `counter_on_wrong_unit` flag the token pass raised.
 _WEAVE_STOPWORDS = frozenset("""
     le la les un une des du de d l et ou mais donc or ni car que qui quoi
     dont à au aux ce cet cette ces son sa ses leur leurs il elle ils elles
@@ -256,11 +261,58 @@ _WEAVE_STOPWORDS = frozenset("""
     the a an and or but of to in on for with without at by from as is are
     was were be been being this that these those it its his her their our
     your not no nor
+    deux trois quand apres après avant faire fait mieux puis contre argument
+    arguments revendication revendications conclusion conclusions analyse
+    discours paragraphe passage passages texte rapport section corpus graphe
+    cadre rejet rejets assertion thèse
+    also more than just only even some such when what which would could
+    should there then they them very much many make made does done like well
     """.split())
 
 #: A content word: ≥ 4 letters — shorter words are too common to be
 #: distinctive.
 _WEAVE_TOKEN_RE = re.compile(r"[A-Za-zÀ-ÿ]{4,}")
+
+#: #3215 — a DISTINCTIVE token is ≥ 5 letters. Measured on the six stored
+#: renders: at 4 letters the "distinctive" sets carried « deux » and « puis »,
+#: and 22 of 22 `counter_on_wrong_unit` flags rested on such words (0 of them
+#: on the counter's own subject). The bar applies where distinctiveness is
+#: BUILT (the unit and counter indexes), so the tokenizer's other readers are
+#: untouched.
+_DISTINCTIVE_MIN_LEN = 5
+
+#: #3215 — a counter is CITED in a paragraph on at least this many of its
+#: distinctive tokens...
+_CITE_MIN_TOKENS = 2
+
+#: #3215 — ... and on at least this SHARE of them. Two matches out of eleven
+#: is a coincidence of common words, not a citation: the R1109 render's flags
+#: were built on exactly that shape.
+_CITE_MIN_SHARE = 1.0 / 3.0
+
+#: #3215 — a unit is BOUND in a paragraph on at least this many distinctive
+#: tokens. A single shared word places nothing, and one word was enough for
+#: the paragraph to count as "about" a unit before this bar.
+_BOUND_MIN_TOKENS = 2
+
+
+def _distinctive(tokens: "set[str]") -> "set[str]":
+    """The tokens long enough to be distinctive (#3215)."""
+    return {t for t in tokens if len(t) >= _DISTINCTIVE_MIN_LEN}
+
+
+def _cited_in(distinctive: "set[str]", tokens: "set[str]") -> bool:
+    """Does this paragraph carry a real citation of the counter (#3215)?
+
+    Two distinctive tokens AND at least a third of the counter's distinctive
+    set: the render must carry something only that counter carries, at a
+    share no generic vocabulary reaches by accident.
+    """
+    matched = distinctive & tokens
+    return len(matched) >= _CITE_MIN_TOKENS and len(matched) >= _CITE_MIN_SHARE * len(
+        distinctive
+    )
+
 
 #: The holding threshold — the same ≥ 0.75 rule the Act II evidence line
 #: uses, so the check and the evidence never disagree.
@@ -331,7 +383,9 @@ def _index_counters(state: Any) -> List[Tuple[str, str, "set[str]"]]:
         for j, tokens in enumerate(token_sets):
             if j != index:
                 others |= tokens
-        distinctive = token_sets[index] - others
+        # #3215 — distinctiveness starts at five letters: « deux » and « puis »
+        # are shared by unrelated texts and made « cited » true by accident.
+        distinctive = _distinctive(token_sets[index] - others)
         if len(distinctive) >= 2:
             out.append(
                 (str(entry.get("id", "?")), str(entry["target_arg_id"]), distinctive)
@@ -588,7 +642,9 @@ def _index_units(state: Any) -> Dict[str, "set[str]"]:
         for j, (_, other) in enumerate(entries):
             if j != index:
                 others |= other
-        distinctive = tokens - others
+        # #3215 — the same five-letter bar as the counter index: a 4-letter
+        # word placed nothing reliably on the measured renders.
+        distinctive = _distinctive(tokens - others)
         if distinctive:
             out[arg_id] = distinctive
     return out
@@ -646,23 +702,39 @@ def _weave_flags(
             break
         tokens = _weave_tokens(paragraph)
         present_units = sorted(u for u, dist in units_indexed.items() if dist & tokens)
-        # -- a counter cited in a paragraph its target does not appear in --
-        if present_units:
+        # -- a counter cited in a paragraph that BINDS another unit (#3215) --
+        # The pre-fix rule flagged whenever the target was not "present", and
+        # presence was one shared token: on the R1109 render the units are in
+        # the source language while the prose is French, so the target was
+        # never present and every cited counter flagged (32/32 false; 22/22 on
+        # the six stored renders measured here). Binding now needs two
+        # distinctive tokens, the citation needs a real share, and the flag no
+        # longer asks where the TARGET is — that half is what no lexical join
+        # can see across languages.
+        bound_units = [
+            u
+            for u, dist in units_indexed.items()
+            if len(dist & tokens) >= _BOUND_MIN_TOKENS
+        ]
+        if bound_units:
             for counter_id, target, distinctive in counters_indexed:
-                if len(distinctive & tokens) >= 2 and target not in present_units:
-                    flags.append(
-                        {
-                            "kind": "counter_on_wrong_unit",
-                            "sentence": paragraph.strip(),
-                            "measured": {
-                                "counter": counter_id,
-                                "target_arg_id": target,
-                                "paragraph_units": present_units,
-                            },
-                        }
-                    )
-                    if len(flags) >= max_flags:
-                        return flags
+                if not _cited_in(distinctive, tokens):
+                    continue
+                if target in bound_units:
+                    continue  # its own unit's paragraph: where it belongs
+                flags.append(
+                    {
+                        "kind": "counter_on_wrong_unit",
+                        "sentence": paragraph.strip(),
+                        "measured": {
+                            "counter": counter_id,
+                            "target_arg_id": target,
+                            "paragraph_units": sorted(bound_units),
+                        },
+                    }
+                )
+                if len(flags) >= max_flags:
+                    return flags
         for sentence in _sentences(paragraph):
             if len(flags) >= max_flags:
                 return flags
@@ -1250,6 +1322,16 @@ def check_reading_license(
         )
     )
 
+    # #3215 — how many units the render binds on the sound bar, over the same
+    # paragraphs the weave checks read. Counted here, once, so the trace and
+    # the flag cannot disagree on what "bound" means.
+    _paragraph_tokens = [_weave_tokens(p) for p in paragraphs]
+    bound_unit_count = sum(
+        1
+        for dist in units_indexed.values()
+        if any(len(dist & toks) >= _BOUND_MIN_TOKENS for toks in _paragraph_tokens)
+    )
+
     return {
         "flags": flags,
         "checked": {
@@ -1261,6 +1343,12 @@ def check_reading_license(
             "counters_with_target": len(counters_indexed),
             "counters_asserting_a_fact": len(fact_counters),
             "units_indexed": len(units_indexed),
+            # #3215 — a check that stays silent must not read as a clean one.
+            # This is how many units the render BINDS on the sound bar (two
+            # distinctive tokens): 0 means the join could not hold on this
+            # text (typically a prose in another language than the units),
+            # not that every counter sits on its own unit.
+            "units_bound_two_tokens": bound_unit_count,
             "dung_frames_with_nodes": len(frames),
             "named_extension_frames": len(named_extensions),
             "revision_base_units": len(base_units) if base_units is not None else 0,
