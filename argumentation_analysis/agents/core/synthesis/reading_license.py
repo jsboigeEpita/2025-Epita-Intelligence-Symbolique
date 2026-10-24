@@ -118,6 +118,47 @@ _REVISION_BASE_MARKERS = re.compile(
 
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+|\n+")
 
+# --- #3198 — an absence in the analysis is not an absence in the text ------
+#
+# The R1109 doc_A render wrote « le texte ne montre pas de réponse à [terme] »
+# while Act II weighed that very reply on two units. The writer had read only
+# the units the pipeline carried; the absence it observed was in THEM. Nothing
+# in the report licensed the step from « these units do not carry it » to « the
+# text does not say it », and the no-derivation rule is easier to check on the
+# output than to guarantee on the input: whatever the evidence carries, a
+# lexical match across a question and its units cannot be exact.
+#
+# Read as presence verbs on the TEXT as subject. « le texte n'établit pas de
+# lien causal » denies a PROPERTY of the text and is not this claim; so does
+# the evidence-scoped hedge (« les revendications citées ici n'en portent pas
+# la trace »), which names what was analysed rather than the text.
+_TEXT_ABSENCE_RE = re.compile(
+    r"\ble\s+texte\s+ne\s+"
+    r"(?:montre|contient|présente|apporte|offre|donne|fournit|dit|répond)\s+pas"
+    r"|\ble\s+texte\s+ne\s+"
+    r"(?:donne|apporte|offre|contient|présente)\s+aucun\w*"
+    r"|\baucun\w*\s+(?:réponse|trace|mention)\b[^.]{0,60}?\bdans\s+le\s+texte"
+    r"|\bthe\s+text\s+(?:does\s+not|doesn['’]t|never)\s+"
+    r"(?:show|contain|present|provide|give|answer|say)"
+    r"|\bno\s+(?:answer|mention|trace)\b[^.]{0,60}?\bin\s+the\s+text\b",
+    re.IGNORECASE,
+)
+
+
+def _text_absence_flags(sentence: str) -> List[Dict[str, Any]]:
+    """#3198 — a sentence that places the absence in the TEXT, not the analysis."""
+    match = _TEXT_ABSENCE_RE.search(sentence or "")
+    if match is None:
+        return []
+    return [
+        {
+            "kind": "text_absence_claim",
+            "sentence": sentence,
+            "measured": {"span": match.group(0)},
+        }
+    ]
+
+
 # --- #3157 — a membership claim must be true of the frame it cites ---------
 #
 # The R1107 render wrote « arg_13, arg_17 and arg_100 sit inside the grounded
@@ -1089,6 +1130,15 @@ def check_reading_license(
         if membership_flags or claim_flags:
             flags.extend(membership_flags)
             flags.extend(claim_flags)
+            continue
+
+        # -- an absence in the analysis sold as an absence in the text (#3198) --
+        # Like every branch of this loop, the ``continue`` means one flag per
+        # sentence: a sentence that puts an absence in the text is not ALSO
+        # tested by the later branches, and vice versa.
+        text_absence_flags = _text_absence_flags(sentence)
+        if text_absence_flags:
+            flags.extend(text_absence_flags)
             continue
 
         # -- breadth sold as robustness -------------------------------------
