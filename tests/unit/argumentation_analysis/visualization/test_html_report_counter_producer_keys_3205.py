@@ -11,9 +11,13 @@ state whose entries carry exactly the producer's six keys).
 
 These witnesses build the state through the real producer, render, and read
 the section: the target comes from the id when it exists and from the stored
-target text otherwise, the strength from ``score``. The old shape (only
-``target_arg``/``strength``) must render too, WITHOUT a strength badge —
-which is what proves the template no longer reads those keys.
+target text otherwise, and an unlinked target carries the producer's own
+``target_unresolved_reason`` beside it (#2968, the synthesis line's idiom
+since #3208). The badge prints the producer's RAW ``score`` — two decimals,
+never a percent, never a strength band: ``score=`` has no scale (#3201's
+licence, extended to this reader). The old shape (only
+``target_arg``/``strength``) must render too, WITHOUT a badge — which is
+what proves the template no longer reads those keys.
 
 Synthetic vocabulary only (no corpus content, privacy HARD).
 """
@@ -60,27 +64,36 @@ def _producer_state(**kwargs) -> UnifiedAnalysisState:
 
 
 class TestTheProducerShapeRenders:
-    def test_a_linked_counter_shows_its_target_and_its_score(self):
+    def test_a_linked_counter_shows_its_target_and_its_raw_score(self):
         """Red before the fix: `ca.strength * 100` raised UndefinedError, so
-        the page could not be produced at all."""
+        the page could not be produced at all. Rework pin: the badge carries
+        the RAW score — `score 0.90` — never a percent, never a strength
+        band (#3201's licence: `score=` has no scale)."""
         state = _producer_state(target_arg_id="arg_alpha")
         section = _render_snapshot(state.get_state_snapshot())
         assert "<code>arg_alpha</code>" in section
-        assert "Strength: 90%" in section
+        assert "score 0.90" in section
+        assert "Strength" not in section
+        assert "%" not in section
         assert _COUNTER_TEXT in _text(section)
 
-    def test_an_unlinked_counter_shows_the_target_text_it_was_measured_against(self):
+    def test_an_unlinked_counter_shows_the_target_text_and_its_reason(self):
         """#2968 — a counter with no `target_arg_id` is a measured fact; the
-        producer still stores the target text, and the reader sees it."""
-        state = _producer_state()
+        producer still stores the target text and, when it says why the
+        target stayed unresolved, the reason rides beside the text — the
+        synthesis line's idiom since #3208."""
+        state = _producer_state(
+            target_unresolved_reason="cible absente de l'inventaire pesé"
+        )
         section = _render_snapshot(state.get_state_snapshot())
         assert _TARGET_TEXT in _text(section)
-        assert "Strength: 90%" in section
+        assert "score 0.90" in section
+        assert "cible absente de l'inventaire pesé" in _text(section)
 
 
 class TestTheAbsenceStaysVisible:
-    def test_a_counter_without_a_score_shows_no_strength_badge(self):
-        """No measured score means no badge — never a fabricated 0 %."""
+    def test_a_counter_without_a_score_shows_no_badge(self):
+        """No measured score means no badge — never a fabricated number."""
         section = _render_snapshot(
             {
                 "counter_arguments": [
@@ -95,6 +108,8 @@ class TestTheAbsenceStaysVisible:
             }
         )
         assert "Strength" not in section
+        assert "%" not in section
+        assert "score 0" not in section
         assert "<code>arg_alpha</code>" in section
 
     def test_the_old_phantom_shape_renders_without_inventing_a_target_or_a_score(self):
@@ -115,4 +130,5 @@ class TestTheAbsenceStaysVisible:
         )
         assert "arg_ghost" not in section
         assert "Strength" not in section
+        assert "score 0" not in section
         assert _COUNTER_TEXT in _text(section)
