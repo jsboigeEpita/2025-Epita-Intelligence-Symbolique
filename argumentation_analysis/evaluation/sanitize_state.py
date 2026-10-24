@@ -251,6 +251,32 @@ _OPAQUE_LIST_OF_DICTS_SUBKEYS = {
     "dialogue_results": {"topic"},
 }
 
+# #3228: the display-label maps on the seven AF containers — sub-key
+# ``argument_labels`` = ``{node: label}``, where the label IS the argument
+# text (measured on the stored states: every label equals an
+# ``identified_arguments`` value, 24 984/24 984 locally; the #3009/#3014 id
+# move put the identity in the node ids and carried the text here). The
+# KEYS are the raw ``arg_N`` join (``native_dung.rejected_by_arg`` reads
+# them) and survive; the VALUES are opacified like ``source_metadata``'s
+# (structural key, nominative value), preserving same-text linkage across
+# containers. No production reader reads this map in a sanitized export
+# (the census names the Act III render, which reads the live state).
+# Seven writers in ``shared_state`` take the kwarg — the issue named four;
+# the coordinator's replay of the stored states surfaced the three it
+# under-counted (``add_dialogue_result``, ``add_probabilistic_result``,
+# ``add_bipolar_result``), each keeping 2 143 verbatim labels on that seat.
+# Covers both container shapes: ``dung_frameworks`` is dict-keyed, the
+# other six are list-appended.
+_OPAQUE_LABEL_MAP_SUBKEYS = {
+    "dung_frameworks": {"argument_labels"},
+    "ranking_results": {"argument_labels"},
+    "aspic_results": {"argument_labels"},
+    "belief_revision_results": {"argument_labels"},
+    "dialogue_results": {"argument_labels"},
+    "probabilistic_results": {"argument_labels"},
+    "bipolar_results": {"argument_labels"},
+}
+
 # List-of-dicts fields with a dict sub-key whose *KEYS* are claim texts
 # (#1664): top-level field -> {sub_key}. ``_invoke_probabilistic`` builds
 # ``probs = {a: 0.5 for a in args}`` (invoke_callables.py:3896), so the
@@ -652,6 +678,27 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
                     item["formalism_specific"] = _scrub_formalism_specific(
                         item["formalism_specific"]
                     )
+
+    # 5g. Opacify the display-label maps (``argument_labels``) on the four AF
+    #     containers (#3228) — ``{node: label}`` where the label is the
+    #     argument text itself, the exact text pass 3 strips in
+    #     ``identified_arguments`` one field away. Keys (the raw ``arg_N``
+    #     join) survive; values are opacified (``_opacify_mapping``, the
+    #     ``source_metadata`` gesture). Handles both container shapes:
+    #     dict-keyed (``dung_frameworks``) and list-appended (the other
+    #     three).
+    for field, subkeys in _OPAQUE_LABEL_MAP_SUBKEYS.items():
+        container = data.get(field)
+        if not isinstance(container, (dict, list)):
+            continue
+        entries = container.values() if isinstance(container, dict) else container
+        for item in entries:
+            if not isinstance(item, dict):
+                continue
+            for sk in subkeys:
+                mapping = item.get(sk)
+                if isinstance(mapping, dict):
+                    item[sk] = _opacify_mapping(mapping)
 
     # 6. Opacify symbol-mapping sub-keys inside list-of-dicts fields
     #    (nl_to_logic_translations[*].variables).

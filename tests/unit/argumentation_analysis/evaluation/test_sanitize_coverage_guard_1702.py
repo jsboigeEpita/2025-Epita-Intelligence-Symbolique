@@ -136,9 +136,23 @@ def _canaried_state() -> UnifiedAnalysisState:
     }
 
     # --- UnifiedAnalysisState NL fields ---------------------------------------
+    # #3228 — the display-label maps (``{arg_N: label}``) ride on the seven AF
+    # containers; the label IS the argument text (measured: every stored label
+    # equals an ``identified_arguments`` value). Planted through the real
+    # ``argument_labels`` kwarg the writers pass, on every container that has
+    # one — the canary must reach this key or a leak here stays invisible
+    # (which is exactly how #3228 happened: the first PR covered four writers
+    # while ``shared_state`` has seven; the coordinator's replay of the stored
+    # states surfaced the three the issue under-counted).
+    labels: dict[str, str] = {"arg_1": NL, "arg_2": NL2}
     s.add_counter_argument(NL, NL2, "distinction", 0.6)  # pass 5
-    s.add_ranking_result("burden", [NL], [{"rank": 1}])  # pass 5b
-    s.add_aspic_result(  # passes 5b (.extensions) + 5d (.attacks target/premises)
+    s.add_ranking_result(  # pass 5b (.arguments) + 5g (.argument_labels)
+        "burden",
+        [NL],
+        [{"rank": 1}],
+        argument_labels=labels,
+    )
+    s.add_aspic_result(  # passes 5b (.extensions) + 5d (.attacks) + 5g
         "simple",
         [[NL], [NL, NL2]],
         {"n": 2},
@@ -150,8 +164,9 @@ def _canaried_state() -> UnifiedAnalysisState:
                 "attacker_rule": "def_con_1",
             }
         ],
+        argument_labels=labels,
     )
-    s.add_belief_revision_result(  # pass 5b + 5e (.minimal_retraction.options)
+    s.add_belief_revision_result(  # passes 5b + 5e (.options) + 5g
         "dalal",
         [NL],
         [NL2],
@@ -161,8 +176,9 @@ def _canaried_state() -> UnifiedAnalysisState:
             "base_size": 2,
             "touched_count": 1,
         },
+        argument_labels=labels,
     )
-    s.add_dialogue_result(  # pass 5b (.topic) + 5d (.trace argument/target)
+    s.add_dialogue_result(  # pass 5b (.topic) + 5d (.trace) + 5g (.labels)
         NL,
         "accepted",
         [
@@ -174,9 +190,12 @@ def _canaried_state() -> UnifiedAnalysisState:
                 "target": NL,
             }
         ],
+        argument_labels=labels,  # pass 5g (#3228 rework: 5th of 7 writers)
     )
-    s.add_probabilistic_result([NL], {NL: 0.75})  # pass 5b + 5c (keys)
-    s.add_bipolar_result("necessity", [NL], [[NL, NL2]])  # pass 5b
+    # pass 5b + 5c (keys) + 5g (.labels) — #3228 rework: 6th of 7 writers.
+    s.add_probabilistic_result([NL], {NL: 0.75}, argument_labels=labels)
+    # pass 5b + 5g (.labels) — #3228 rework: 7th of 7 writers.
+    s.add_bipolar_result("necessity", [NL], [[NL, NL2]], argument_labels=labels)
     s.add_debate_transcript(  # pass 5 (.topic) + 5d (.exchanges point/rebuttal)
         # #2135: the producer oracle plants what the REAL writer stores —
         # point/rebuttal (+ closed-vocab scheme fields). The old
@@ -232,6 +251,7 @@ def _canaried_state() -> UnifiedAnalysisState:
         [NL],  # pass 4b (.arguments)
         [[NL, NL2]],  # pass 4b (.attacks)
         extensions=dung_extensions,
+        argument_labels=labels,  # pass 5g (#3228)
     )
     # #1648 Wave-2 sidecar — attached by direct assignment exactly as the
     # ``_write_setaf/weighted/eaf/delp`` writers do. NOT in any scrubber table.
@@ -624,6 +644,54 @@ class TestSubstitutionControl:
                 "argument_provenance",
                 "argument_provenance",
                 ".source_quote",
+            ),
+            # Pass 5g (#3228): the display-label maps on the seven AF
+            # containers — {arg_N: label}, the label being the argument text
+            # itself. Removing one container's entry re-leaks its canary
+            # under .argument_labels; the other six stay covered.
+            (
+                "_OPAQUE_LABEL_MAP_SUBKEYS",
+                "dung_frameworks",
+                "dung_frameworks",
+                ".argument_labels",
+            ),
+            (
+                "_OPAQUE_LABEL_MAP_SUBKEYS",
+                "ranking_results",
+                "ranking_results",
+                ".argument_labels",
+            ),
+            (
+                "_OPAQUE_LABEL_MAP_SUBKEYS",
+                "aspic_results",
+                "aspic_results",
+                ".argument_labels",
+            ),
+            (
+                "_OPAQUE_LABEL_MAP_SUBKEYS",
+                "belief_revision_results",
+                "belief_revision_results",
+                ".argument_labels",
+            ),
+            # #3228 rework (coordinator review of b92f8b193): the three
+            # list-appended writers the issue under-counted.
+            (
+                "_OPAQUE_LABEL_MAP_SUBKEYS",
+                "dialogue_results",
+                "dialogue_results",
+                ".argument_labels",
+            ),
+            (
+                "_OPAQUE_LABEL_MAP_SUBKEYS",
+                "probabilistic_results",
+                "probabilistic_results",
+                ".argument_labels",
+            ),
+            (
+                "_OPAQUE_LABEL_MAP_SUBKEYS",
+                "bipolar_results",
+                "bipolar_results",
+                ".argument_labels",
             ),
             # Pass 4b: dung_frameworks.arguments/attacks.
             (
