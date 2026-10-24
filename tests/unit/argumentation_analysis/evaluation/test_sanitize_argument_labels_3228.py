@@ -1,22 +1,26 @@
-"""#3228 — the four AF containers carry the argument text in a display key.
+"""#3228 — the seven AF containers carry the argument text in a display key.
 
 ``argument_labels`` (``{node: label}``) is where the argument TEXT travels
-since #3009/#3014 moved the node identity to ``arg_N`` ids: the four
-producers (``add_dung_framework``, ``add_ranking_result``, ``add_aspic_result``,
-``add_belief_revision_result``) store the label map beside the id list, and
-the live render resolves it into prose. The key sat in no sanitize_state
-table, so it traversed intact: measured on the stored states, **720/720
-labels survive byte-identical and every one equals an
-``identified_arguments`` value** — the exact text the scrubber strips one
-field away (0 survives there).
+since #3009/#3014 moved the node identity to ``arg_N`` ids: **seven**
+producers in ``shared_state`` store the label map beside the id list
+(``add_dung_framework``, ``add_ranking_result``, ``add_aspic_result``,
+``add_belief_revision_result`` — the four the issue named — plus
+``add_dialogue_result``, ``add_probabilistic_result`` and
+``add_bipolar_result``, the three the coordinator's replay of the stored
+states surfaced: the issue under-counted the class), and the live render
+resolves it into prose. The key sat in no sanitize_state table, so it
+traversed intact: measured on the stored states, every label survives
+byte-identical and every one equals an ``identified_arguments`` value — the
+exact text the scrubber strips one field away (0 survives there).
 
 Reader census (the issue's decision rule): NO production reader reads
 ``argument_labels`` from a sanitized export — the five ``.analysis_kb``
 consumers never touch it; the only reader (``act3_conclusion_plugin.py``)
-resolves labels on the LIVE state during the run. The gesture therefore
-follows ``_OPAQUE_DICT_VALUES`` (``source_metadata``): keys are the raw
-``arg_N`` join and stay (``native_dung.rejected_by_arg`` reads them — do not
-opacify the keys), values are opacified so same-text linkage across the four
+resolves labels on the LIVE state during the run. The census holds for the
+three late-named containers unchanged. The gesture therefore follows
+``_OPAQUE_DICT_VALUES`` (``source_metadata``): keys are the raw ``arg_N``
+join and stay (``native_dung.rejected_by_arg`` reads them — do not opacify
+the keys), values are opacified so same-text linkage across the seven
 containers survives and no verbatim label remains.
 
 This witness is born red on the unrepaired module: the canary label survives,
@@ -43,8 +47,19 @@ def _synthetic_opaque_salt(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("OPAQUE_ID_SALT", "synthetic-test-salt-3228")
 
 
-def _state_with_all_four_containers() -> UnifiedAnalysisState:
-    """Plant the label map through each of the four real producer paths.
+_LABEL_FIELDS = (
+    "dung_frameworks",
+    "ranking_results",
+    "aspic_results",
+    "belief_revision_results",
+    "dialogue_results",
+    "probabilistic_results",
+    "bipolar_results",
+)
+
+
+def _state_with_all_seven_containers() -> UnifiedAnalysisState:
+    """Plant the label map through each of the seven real producer paths.
 
     Mirrors the writer sites (``state_writers.py``), never a hand-built
     container dict (the #1664 anti-pattern).
@@ -75,18 +90,32 @@ def _state_with_all_four_containers() -> UnifiedAnalysisState:
         revised=[_NODES[1]],
         argument_labels=labels,
     )
+    # The three the coordinator's replay surfaced (review of b92f8b193): the
+    # same {node: label} map, the same leak, list-appended containers.
+    state.add_dialogue_result(
+        "synthetic topic",
+        outcome="grounded",
+        trace=[{"argument": _NODES[0], "target": _NODES[1]}],
+        argument_labels=labels,
+    )
+    state.add_probabilistic_result(
+        arguments=list(_NODES),
+        acceptance_probs={_NODES[0]: 0.5, _NODES[1]: 0.25},
+        argument_labels=labels,
+    )
+    state.add_bipolar_result(
+        "synthetic bipolar",
+        arguments=list(_NODES),
+        supports=[[_NODES[0], _NODES[1]]],
+        argument_labels=labels,
+    )
     return state
 
 
 def _label_maps(out: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
     """Every ``argument_labels`` map in the sanitized output, with its container."""
     found: list[tuple[str, dict[str, Any]]] = []
-    for field in (
-        "dung_frameworks",
-        "ranking_results",
-        "aspic_results",
-        "belief_revision_results",
-    ):
+    for field in _LABEL_FIELDS:
         container = out.get(field) or {}
         entries = container.values() if isinstance(container, dict) else container
         for entry in entries:
@@ -100,7 +129,7 @@ def _label_maps(out: dict[str, Any]) -> list[tuple[str, dict[str, Any]]]:
 class TestArgumentLabelsAreOpacified:
     def test_no_verbatim_label_survives(self) -> None:
         maps = _label_maps(
-            sanitize_state(_state_with_all_four_containers().get_state_snapshot())
+            sanitize_state(_state_with_all_seven_containers().get_state_snapshot())
         )
         assert maps, (
             "no argument_labels map reached the sanitized output — the witness "
@@ -118,9 +147,9 @@ class TestArgumentLabelsAreOpacified:
         """The control: the fix cannot be « drop the map » — ``arg_N`` keys are
         the join #3009 introduced (``native_dung.rejected_by_arg`` reads them)."""
         maps = _label_maps(
-            sanitize_state(_state_with_all_four_containers().get_state_snapshot())
+            sanitize_state(_state_with_all_seven_containers().get_state_snapshot())
         )
-        assert len(maps) >= 4, "a container lost its argument_labels map entirely"
+        assert len(maps) >= 7, "a container lost its argument_labels map entirely"
         for _field, mapping in maps:
             assert set(mapping) == set(_NODES), (
                 "the node keys moved — only the values may change (#3228 "

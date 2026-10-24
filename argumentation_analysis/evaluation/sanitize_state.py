@@ -251,7 +251,7 @@ _OPAQUE_LIST_OF_DICTS_SUBKEYS = {
     "dialogue_results": {"topic"},
 }
 
-# #3228: the display-label maps on the four AF containers — sub-key
+# #3228: the display-label maps on the seven AF containers — sub-key
 # ``argument_labels`` = ``{node: label}``, where the label IS the argument
 # text (measured on the stored states: every label equals an
 # ``identified_arguments`` value, 24 984/24 984 locally; the #3009/#3014 id
@@ -261,13 +261,20 @@ _OPAQUE_LIST_OF_DICTS_SUBKEYS = {
 # (structural key, nominative value), preserving same-text linkage across
 # containers. No production reader reads this map in a sanitized export
 # (the census names the Act III render, which reads the live state).
+# Seven writers in ``shared_state`` take the kwarg — the issue named four;
+# the coordinator's replay of the stored states surfaced the three it
+# under-counted (``add_dialogue_result``, ``add_probabilistic_result``,
+# ``add_bipolar_result``), each keeping 2 143 verbatim labels on that seat.
 # Covers both container shapes: ``dung_frameworks`` is dict-keyed, the
-# other three are list-appended.
+# other six are list-appended.
 _OPAQUE_LABEL_MAP_SUBKEYS = {
     "dung_frameworks": {"argument_labels"},
     "ranking_results": {"argument_labels"},
     "aspic_results": {"argument_labels"},
     "belief_revision_results": {"argument_labels"},
+    "dialogue_results": {"argument_labels"},
+    "probabilistic_results": {"argument_labels"},
+    "bipolar_results": {"argument_labels"},
 }
 
 # List-of-dicts fields with a dict sub-key whose *KEYS* are claim texts
