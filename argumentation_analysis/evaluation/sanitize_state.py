@@ -93,6 +93,13 @@ _TEXT_STRIP_DICT_OF_DICTS = {
     "identified_fallacies": {"justification"},
     "belief_sets": {"content"},
     "argument_quality_scores": {"llm_assessment"},
+    # #3217: ``add_argument`` stores the FULL verbatim quote in the provenance
+    # entry (core/shared_state.py:355) — the writer truncates only the copy
+    # embedded in the argument text (state_writers.py:1618). Measured: 360/360
+    # non-empty quotes survived sanitize byte-identical while the argument
+    # text beside them was stripped. ``producer``/``offset``/``offset_basis``
+    # are closed-vocabulary/int and survive: drop the leaf, keep the record.
+    "argument_provenance": {"source_quote"},
 }
 
 # Dict-of-dicts fields whose *list sub-keys* carry nominative text entries
