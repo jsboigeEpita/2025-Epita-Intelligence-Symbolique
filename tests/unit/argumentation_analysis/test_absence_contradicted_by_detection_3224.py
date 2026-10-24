@@ -109,3 +109,48 @@ class TestTheRuleStaysOnItsShape:
         sentence = "Le texte ne montre pas de glissement de causalité."
         kinds = [f["kind"] for f in _flags(sentence, _state())]
         assert kinds == ["text_absence_claim"]
+
+
+_R1110B_SENTENCE = (
+    "Un sophisme détecté n'a aucun argument cible identifié, "
+    "et je ne lui en prête aucun."
+)
+
+
+class TestAGenericClassWordIsNotACategory:
+    """The coordinator's replay on the four stored doc_A states raised one
+    more false flag, of a second class: the R1110b sentence matched the node
+    « Sophisme psychogénétique » on « sophisme » — the CLASS word itself
+    (df 76 over the 1 408 node names), not a category name. The marker was
+    right and the token was wrong: a node token now carries a category only
+    when its document frequency over the taxonomy's own node names stays at
+    or below ``DISTINCTIVE_NODE_DF_MAX`` (measured: 1 535 of 1 573 tokens
+    sit at df ≤ 5; the spikes appel 125, effet 86, sophisme 76, biais 58,
+    argument 44, erreur 21, question 13 are the file's structural
+    vocabulary)."""
+
+    def test_the_r1110b_sentence_stays_silent(self):
+        """The sentence says one detection has no target; it denies no
+        category. « sophisme » names the class, not a node's category."""
+        assert _flags(_R1110B_SENTENCE, _state(taxonomy_path="1.3.2.3.3")) == []
+
+    def test_the_silence_is_the_bar_not_the_marker(self, monkeypatch):
+        """Mutation witness: with the bar set to the maximum, the SAME
+        sentence flags on « sophisme » — so the silence above is the
+        taxonomy-derived distinctiveness bar doing the work, never the
+        marker or the attribution filter."""
+        import argumentation_analysis.agents.core.synthesis.reading_license as rl
+
+        monkeypatch.setattr(rl, "DISTINCTIVE_NODE_DF_MAX", 10**9)
+        flags = _flags(_R1110B_SENTENCE, _state(taxonomy_path="1.3.2.3.3"))
+        assert [f["kind"] for f in flags] == ["absence_contradicted_by_detection"]
+        hit = flags[0]["measured"]["nodes"][0]
+        assert hit["node"] == "Sophisme psychogénétique"
+        assert hit["shared_tokens"] == ["sophisme"]
+
+    def test_the_r1110_sentence_still_fires_through_the_bar(self):
+        """« causalité » (df 5) sits AT the bar: the true positive survives
+        the rule that kills the false one."""
+        flags = _flags(_R1110_SENTENCE, _state())
+        assert [f["kind"] for f in flags] == ["absence_contradicted_by_detection"]
+        assert flags[0]["measured"]["nodes"][0]["shared_tokens"] == ["causalité"]

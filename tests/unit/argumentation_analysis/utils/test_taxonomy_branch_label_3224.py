@@ -18,8 +18,10 @@ The taxonomy is the repository's tracked CSV — deterministic, no network.
 from __future__ import annotations
 
 from argumentation_analysis.utils.taxonomy_loader import (
+    DISTINCTIVE_NODE_DF_MAX,
     fallacy_taxonomy_label,
     taxonomy_chain,
+    taxonomy_token_df,
 )
 
 
@@ -128,3 +130,35 @@ class TestTheLabelCarriesTheBranch:
             "Effet cigogne", "Erreur de raisonnement", "4.1.3", quoted=True
         )
         assert label.startswith("« Effet cigogne » (")
+
+
+class TestTheDistinctivenessBarIsTheTaxonomysOwn:
+    """#3224 rework — a node token names a category only when it is rare
+    among the taxonomy's own node names. The bar is a document frequency
+    over the file, not an enumerated stoplist: measured over the 1 408
+    ``text_fr`` names, 1 535 of 1 573 tokens sit at df ≤ 5 and seven spikes
+    stand alone above (appel 125, effet 86, sophisme 76, biais 58,
+    argument 44, erreur 21, question 13) — structural vocabulary, not
+    category names."""
+
+    def test_the_true_positives_carrier_stays_at_or_below_the_bar(self):
+        for token, df in (("causalité", 5), ("généralisation", 5), ("dilemme", 1)):
+            assert taxonomy_token_df(token) == df
+            assert df <= DISTINCTIVE_NODE_DF_MAX
+
+    def test_the_class_word_is_above_the_bar(self):
+        assert taxonomy_token_df("sophisme") == 76
+        assert taxonomy_token_df("sophisme") > DISTINCTIVE_NODE_DF_MAX
+        for token in ("appel", "effet", "biais", "argument", "erreur", "question"):
+            assert taxonomy_token_df(token) > DISTINCTIVE_NODE_DF_MAX
+
+    def test_an_unreadable_taxonomy_measures_nothing(self, monkeypatch):
+        """``None`` — the caller treats the token as NOT distinctive: a check
+        that cannot measure says nothing."""
+        import argumentation_analysis.utils.taxonomy_loader as loader
+
+        def _boom():
+            raise RuntimeError("taxonomy unavailable")
+
+        monkeypatch.setattr(loader, "get_taxonomy_path", _boom)
+        assert taxonomy_token_df("causalité") is None

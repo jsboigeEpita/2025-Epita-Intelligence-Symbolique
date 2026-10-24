@@ -36,6 +36,11 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
+from argumentation_analysis.core.fallacy_attribution import is_reported_move  # #3180
+from argumentation_analysis.utils.taxonomy_loader import (  # #3224
+    DISTINCTIVE_NODE_DF_MAX,
+    taxonomy_token_df,
+)
 from argumentation_analysis.utils.taxonomy_loader import taxonomy_chain
 
 #: A robustness word. Read together with :data:`_BREADTH_MARKERS`: alone it is
@@ -182,9 +187,15 @@ def _text_absence_flags(sentence: str) -> List[Dict[str, Any]]:
 # an English counter, a reasoning-path dump quoting the node's own name. The
 # claim the check targets has a shape those do not: the ANALYSIS as subject,
 # its presence verb NEGATED, or an explicit « aucun … relevé / détecté ».
-# One content word then carries the category; an ordinary word that happens
-# to sit in a node's name no longer fires, because the sentence it fires from
-# is not making the claim.
+# The coordinator's replay on the four stored doc_A states then raised one
+# more false flag, of a second class: the R1110b sentence « Un sophisme
+# détecté n'a aucun argument cible identifié » matched the node
+# « Sophisme psychogénétique » on « sophisme » — the CLASS word itself, not a
+# category name. The marker was right and the token was wrong: a node token
+# now carries a category only when it is distinctive WITHIN the taxonomy
+# (document frequency over the 1 408 node names — see
+# ``DISTINCTIVE_NODE_DF_MAX``), the same lesson as #3215: a generic word is
+# not a join.
 _ANALYSIS_ABSENCE_RE = re.compile(
     # the analysis as subject, its presence verb negated
     r"\b(?:unit[ée]s?|analys\w+|analyse|rapport|corpus|d[ée]tections?)\b"
@@ -203,14 +214,22 @@ _ANALYSIS_ABSENCE_RE = re.compile(
 
 
 def _speaker_detection_nodes(state: Any) -> List[Tuple[str, str, str, "set[str]"]]:
-    """(#fallacy_id, taxonomy_path, node_name, its content tokens) for the
+    """(#fallacy_id, taxonomy_path, node_name, its distinctive tokens) for the
     branch and leaf nodes of each SPEAKER-attributed detection.
 
     #3180: a detection whose ``move_author`` is ``reported`` is another
     party's move — the speaker commits nothing, so it cannot contradict an
-    absence claim about the discourse. An entry without ``move_author`` keeps
-    the speaker attribution the record implies. A detection with no resolvable
+    absence claim about the discourse. The one father ``is_reported_move``
+    decides, exactly as the evidence sites do. A detection with no resolvable
     taxonomy path names no node.
+
+    #3224 — a node token must be DISTINCTIVE within the taxonomy to carry a
+    category: its document frequency over the vendored node names stays at
+    or below ``DISTINCTIVE_NODE_DF_MAX``. The R1110b render flagged
+    « aucun … identifié » on the node « Sophisme psychogénétique » through
+    « sophisme » alone (df 76) — a class word one ordinary sentence away,
+    not a category name; « causalité » (df 5) carried the true positive.
+    A node whose every token fails the bar names nothing here.
     """
     fallacies = getattr(state, "identified_fallacies", None)
     if not isinstance(fallacies, dict):
@@ -219,14 +238,19 @@ def _speaker_detection_nodes(state: Any) -> List[Tuple[str, str, str, "set[str]"
     for fid, fdata in fallacies.items():
         if not isinstance(fdata, dict):
             continue
-        if str(fdata.get("move_author", "")).strip().lower() == "reported":
+        if is_reported_move(fdata):
             continue
         raw = str(fdata.get("taxonomy_path", ""))
         chain = taxonomy_chain(raw)
         if not chain:
             continue
         for node in chain[1:]:
-            tokens = _weave_tokens(node)
+            tokens = {
+                t
+                for t in _distinctive(_weave_tokens(node))
+                if (df := taxonomy_token_df(t)) is not None
+                and df <= DISTINCTIVE_NODE_DF_MAX
+            }
             if tokens:
                 out.append((str(fid), raw, node, tokens))
     return out

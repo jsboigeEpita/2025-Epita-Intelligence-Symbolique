@@ -248,6 +248,57 @@ def taxonomy_chain(taxonomy_path: str) -> Optional[List[str]]:
     return names
 
 
+#: #3224 — a node token NAMES a category only when it is distinctive within
+#: the taxonomy: at most this many of the vendored node names carry it.
+#: Measured over the 1 408 ``text_fr`` names (word extraction ``[A-Za-zÀ-ÿ]{4,}``
+#: lowercased): 1 535 of 1 573 tokens (97,6 %) sit at df ≤ 5 — the taxonomy's
+#: own vocabulary is a long tail — then 29 tokens live between 6 and 11 and
+#: seven spikes stand alone above (question 13, erreur 21, argument 44,
+#: sophisme 76, effet 86, appel 125, preuve 18). The bar keeps the carriers
+#: the true positive rode (causalité 5, généralisation 5, dilemme 1,
+#: cigogne 1, douteuse 2) and drops every word one ordinary sentence away
+#: from a false flag: the R1110b render flagged « aucun … identifié » on the
+#: node « Sophisme psychogénétique » through « sophisme » alone — a class
+#: word, not a category name. The bar is DERIVED from the file (document
+#: frequency over its own names), not from an enumerated stoplist.
+DISTINCTIVE_NODE_DF_MAX = 5
+
+_NODE_WORD_RE = re.compile(r"[A-Za-zÀ-ÿ]{4,}")
+
+
+@lru_cache(maxsize=4)
+def _taxonomy_node_token_df(csv_path: str) -> Dict[str, int]:
+    """Token -> how many node names carry it, read once per file.
+
+    A stopword is left in on purpose: its df is high, so the bar drops it
+    without this module re-encoding the reader's stoplist — the join filters
+    node tokens through the READER's tokenizer first, this map only measures
+    the file.
+    """
+    df: Dict[str, int] = {}
+    index = _taxonomy_node_names(csv_path)
+    for name in index.values():
+        for token in {t.lower() for t in _NODE_WORD_RE.findall(name)}:
+            df[token] = df.get(token, 0) + 1
+    return df
+
+
+def taxonomy_token_df(token: str) -> Optional[int]:
+    """How many of the taxonomy's node names carry ``token`` (#3224).
+
+    ``None`` when the taxonomy is unreadable — the caller then treats the
+    token as NOT distinctive (a check that cannot measure says nothing),
+    which is unreachable in practice: nodes only exist once the index read.
+    """
+    try:
+        df = _taxonomy_node_token_df(str(get_taxonomy_path()))
+    except Exception:
+        return None
+    if not df:
+        return None
+    return df.get((token or "").lower(), 0)
+
+
 def fallacy_taxonomy_label(
     fallacy_type: str,
     family: str,
