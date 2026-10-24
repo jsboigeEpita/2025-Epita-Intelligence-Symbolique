@@ -298,14 +298,247 @@ def _index_counters(state: Any) -> List[Tuple[str, str, "set[str]"]]:
     return out
 
 
+# --- #3158: a counter-argument's factual claim is the counter-argument's ---
+#
+# Act II restated a *prior trend* in the report's own voice and used it as the
+# refutation of a post hoc — a trend no source in the state asserts. It is
+# asserted by a counter-argument: an LLM-generated objection that cites
+# nothing. The report adopted an unverified external fact and the reader
+# cannot tell it from a checked fact (#3158).
+#
+# The producer tags the claim; a writer can ignore a tag. This is the check
+# that sees the change of voice in the produced text: a paragraph restating
+# that claim with no attribution is flagged.
+#
+# What counts as « asserts a fact » is read deterministically, never guessed:
+# a number, a claim delegated to an authority, a general statement of fact, or
+# a dated trend (a year, a direction over time). A counter that only reframes
+# the question (« autrement dit, la question est de savoir… ») asserts nothing
+# about the world — it carries no tag and earns no flag (the issue's control).
+#
+# BOTH languages: the counter generator writes French or English depending on
+# the run, and a French-only vocabulary left the very instance the issue was
+# filed for untagged — ca_31, an English dated trend, on the doc_B state.
+_FACT_ASSERTION_MARKERS = re.compile(
+    r"\d+\s*%"
+    r"|\d+\s*(?:fois|millions?|milliards?|points?|pour ?cent|times|percent)"
+    r"|\b(?:études?|recherches?|données|statistiques|sondages?|travaux"
+    r"|experts?|scientifiques?|économistes?|historiens?|chercheurs?"
+    r"|mesures?|observations?"
+    r"|studies|study|research|data|statistics|surveys?|evidence|findings"
+    r"|scientists?|economists?|historians?|researchers?"
+    r"|measurements?)\b"
+    r"|\bil est (?:établi|prouvé|avéré|reconnu|démontré|mesuré|documenté)\b"
+    r"|\bon (?:sait|observe|constate|mesure|trouve)\b"
+    r"|\b(?:en réalité|de fait|empiriquement|dans les faits|historiquement)\b"
+    r"|\b(?:it is|it's) (?:established|proven|documented|well known)\b"
+    r"|\b(?:in fact|empirically|historically|research shows|data shows)\b"
+    r"|\b(?:19|20)\d{2}\b"
+    r"|\b(?:trends?|tendances?|declin\w*|increas\w*|decreas\w*"
+    r"|rising|falling|grew|growing|doubled|tripled"
+    r"|baisse|hausse|croissance|recul)\b"
+    r"|\bover the (?:past|last) \w+\b",
+    re.IGNORECASE,
+)
+
+#: What keeps a restatement attributed. Narrow on purpose: the point is the
+#: voice, and a report that says whose claim it is has done what the consigne
+#: asks. Pronouns are included so the attribution may lead the next sentence
+#: (« Un contre-argument objecte. Selon lui, les études … »).
+_ATTRIBUTION_MARKERS = re.compile(
+    r"contre-argument\w*"
+    r"|\bobjections?\b|\bobjecte(?:nt)?\b|\bobjecter\b"
+    r"|\bcontradict(?:eur|eurs|rice|rices)\b"
+    r"|\bcontre-discours\b|\brépliques?\b"
+    r"|\bselon (?:lui|elle|eux|elles|le contre|la contre|un contre"
+    r"|une objection)\b"
+    r"|\bd'après (?:lui|elle|eux|elles)\b"
+    r"|\bla partie adverse\b",
+    re.IGNORECASE,
+)
+
+
+def counter_asserts_a_fact(text: str) -> bool:
+    """#3158 — does this counter-argument assert something about the world?
+
+    Shared by the producer (does the line need a provenance tag?) and by the
+    check (is an unattributed restatement a defect?), so the two can never
+    disagree about which objections carry a claim.
+    """
+    return bool(_FACT_ASSERTION_MARKERS.search(text or ""))
+
+
+def _fact_asserting_counters(state: Any) -> List[Tuple[str, "set[str]"]]:
+    """The fact-asserting counters, with the tokens a restatement of THAT
+    claim carries — tokens no OTHER counter carries.
+
+    Same distinctive-token construction as :func:`_index_counters`: a word
+    every objection shares cannot place a sentence, so only a claim this
+    counter and no other one makes can be recognised as a restatement.
+    """
+    entries = [
+        e
+        for e in (getattr(state, "counter_arguments", []) or [])
+        if isinstance(e, dict)
+        and e.get("target_arg_id")
+        and isinstance(e.get("counter_content"), str)
+        and e["counter_content"].strip()
+    ]
+    token_sets = [_weave_tokens(e["counter_content"]) for e in entries]
+    out: List[Tuple[str, "set[str]"]] = []
+    for index, entry in enumerate(entries):
+        if not counter_asserts_a_fact(entry["counter_content"]):
+            continue
+        others: "set[str]" = set()
+        for j, tokens in enumerate(token_sets):
+            if j != index:
+                others |= tokens
+        distinctive = token_sets[index] - others
+        if len(distinctive) >= 2:
+            out.append((str(entry.get("id", "?")), distinctive))
+    return out
+
+
+def _unattributed_claim_flags(
+    paragraphs: List[str],
+    fact_counters: List[Tuple[str, "set[str]"]],
+    max_flags: int,
+) -> List[Dict[str, Any]]:
+    """#3158 — sentences that restate a counter's factual claim in the
+    report's own voice."""
+    flags: List[Dict[str, Any]] = []
+    for paragraph in paragraphs:
+        if len(flags) >= max_flags:
+            break
+        attributed_in_previous_sentence = False
+        for sentence in _sentences(paragraph):
+            if len(flags) >= max_flags:
+                return flags
+            tokens = _weave_tokens(sentence)
+            restated = [
+                counter_id
+                for counter_id, distinctive in fact_counters
+                if len(distinctive & tokens) >= 2
+            ]
+            attributes = _ATTRIBUTION_MARKERS.search(sentence) is not None
+            if restated and not attributes and not attributed_in_previous_sentence:
+                flags.append(
+                    {
+                        "kind": "counter_claim_in_own_voice",
+                        "sentence": sentence,
+                        # ids only — the tokens are corpus-derived
+                        "measured": {"counters": restated},
+                    }
+                )
+            attributed_in_previous_sentence = attributes
+    return flags
+
+
+# --- #3158 (second instance): a fallacy NAME is a detection, not a judgement --
+#
+# Through the debate channel Act III restated a reply's verdict as the report's
+# own finding: « le dilemme sur les résolutions […] est lui-même un faux
+# dilemme », while none of the 28 ``identified_fallacies`` named that unit. A
+# fallacy name in the report's voice reads as a DETECTION, and the detectors
+# recorded nothing there; the deep synthesis of the same render cites that unit
+# among the claims that fare better, so the report contradicted itself.
+#
+# Only names a detector classification can be checked against belong here: the
+# two-word-and-longer labels the taxonomy produces. « C'est un sophisme » names
+# no class, so it is not a detection the state could fail to carry, and it does
+# not fire.
+_FALLACY_NAME_RE = re.compile(
+    r"\b(?:faux dilemmes?|fausses? dichotomies?|hommes? de paille|épouvantails?"
+    r"|pentes? glissantes?|généralisations? (?:hâtives?|abusives?)"
+    r"|appels? à l'autorité|appels? à l'émotion|appels? au peuple"
+    r"|appels? à l'ignorance|ad hominem|post hoc|pétitions? de principe"
+    r"|cercles? vicieux|fausses? analogies?|fausses? causes?|whataboutism\w*"
+    r"|non[- ]sequitur)\b",
+    re.IGNORECASE,
+)
+
+
+def _units_with_fallacy_record(state: Any) -> "set[str]":
+    """The units a detector actually recorded a fallacy on.
+
+    The key is ``target_argument_id``: ``SharedState.add_fallacy`` writes it
+    (``shared_state.py``), and the paid states carry it on 30/31, 28/29 and
+    29/30 records. ``target_arg_id`` is the COUNTER key — reading it here made
+    ``recorded`` always empty and flagged every name on a recorded unit.
+    """
+    out: "set[str]" = set()
+    records = getattr(state, "identified_fallacies", None)
+    entries = records.values() if isinstance(records, dict) else records or []
+    for data in entries:
+        if isinstance(data, dict) and data.get("target_argument_id"):
+            out.add(str(data["target_argument_id"]))
+    return out
+
+
+def _unbacked_fallacy_name_flags(
+    paragraphs: List[str],
+    state: Any,
+    units_indexed: Dict[str, "set[str]"],
+    max_flags: int,
+) -> List[Dict[str, Any]]:
+    """#3158 — a fallacy name in the report's voice on a unit no detector
+    recorded one for.
+
+    Four ways a sentence may legitimately carry a name, and none is flagged: it
+    names no unit (then it is not a claim about a unit), it is negated (« ne
+    relève aucun faux dilemme »), it attributes the name to the objection that
+    made it, or the unit carries a fallacy record.
+    """
+    if not units_indexed:
+        return []
+    recorded = _units_with_fallacy_record(state)
+    flags: List[Dict[str, Any]] = []
+    for paragraph in paragraphs:
+        if len(flags) >= max_flags:
+            break
+        for sentence in _sentences(paragraph):
+            if len(flags) >= max_flags:
+                return flags
+            tokens = _weave_tokens(sentence)
+            named_units = sorted(
+                unit
+                for unit, distinctive in units_indexed.items()
+                if distinctive & tokens
+            )
+            if not named_units:
+                continue
+            match = _FALLACY_NAME_RE.search(sentence)
+            if match is None or _is_negated(sentence, match.start()):
+                continue
+            if _ATTRIBUTION_MARKERS.search(sentence) is not None:
+                continue
+            unbacked = [unit for unit in named_units if unit not in recorded]
+            if unbacked:
+                flags.append(
+                    {
+                        "kind": "fallacy_name_without_record",
+                        "sentence": sentence,
+                        "measured": {"name": match.group(0), "units": unbacked},
+                    }
+                )
+    return flags
+
+
 def _index_units(state: Any) -> Dict[str, "set[str]"]:
-    """Per-unit distinctive description tokens — what places a paragraph."""
+    """Per-unit distinctive description tokens — what places a paragraph.
+
+    The value IS the description: ``UnifiedAnalysisState.add_argument``
+    (``shared_state.py``) writes ``identified_arguments[arg_id] = description``
+    — the only writer — so every real state carries a ``str`` (measured on
+    all 12 paid states of R1101–R1109). Reading a ``["description"]`` key
+    made this index empty on every real run, and every check gated on
+    ``units_indexed`` inert (#3202).
+    """
     args = getattr(state, "identified_arguments", None)
     if not isinstance(args, dict):
         return {}
     entries: List[Tuple[str, "set[str]"]] = []
-    for arg_id, data in args.items():
-        description = data.get("description") if isinstance(data, dict) else None
+    for arg_id, description in args.items():
         if isinstance(description, str) and description.strip():
             entries.append((str(arg_id), _weave_tokens(description)))
     out: Dict[str, "set[str]"] = {}
@@ -825,6 +1058,7 @@ def check_reading_license(
     # #3151 — the weave-binding index: what the writer received, and where
     # each piece was bound when the evidence handed it over.
     counters_indexed = _index_counters(state)
+    fact_counters = _fact_asserting_counters(state)
     units_indexed = _index_units(state)
     counter_scores = _counter_scores(state)
     # #3157 — the cited frame's own node sets, so a membership claim is read
@@ -953,6 +1187,18 @@ def check_reading_license(
             max_flags - len(flags),
         )
     )
+    # #3158 — the change of voice rides after the binding flags, same budget:
+    # it reads sentences, but only the paragraphs that carry an objection.
+    flags.extend(
+        _unattributed_claim_flags(paragraphs, fact_counters, max_flags - len(flags))
+    )
+    # #3158 (second instance) — a fallacy NAME stated as a finding must sit on
+    # a unit a detector recorded one for.
+    flags.extend(
+        _unbacked_fallacy_name_flags(
+            paragraphs, state, units_indexed, max_flags - len(flags)
+        )
+    )
 
     return {
         "flags": flags,
@@ -963,6 +1209,7 @@ def check_reading_license(
             "self_contradiction_recorded": self_contradiction,
             "fol_decisions": fol_decisions,
             "counters_with_target": len(counters_indexed),
+            "counters_asserting_a_fact": len(fact_counters),
             "units_indexed": len(units_indexed),
             "dung_frames_with_nodes": len(frames),
             "named_extension_frames": len(named_extensions),

@@ -288,6 +288,13 @@ class CounterEvidence:
 # denominator of a grade (#1907).
 _TOTAL_VIRTUES = 9
 
+#: #3158 — the provenance tag every counter line carries (option (b), R1109).
+#: It names the PROVENANCE, not a class: under (b) it rides on demands and
+#: reframings too, and a label that said « affirmation factuelle » would tell
+#: the writer something false about most of the lines it marks. The
+#: attribution instruction lives once, in the consigne.
+_UNSOURCED_CLAIM_TAG = "[objection d'un générateur — non vérifiée, non sourcée]"
+
 
 @dataclass
 class ArgEvidence:
@@ -1703,7 +1710,21 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                 # present — an empty strategy renders as an absence, not ().
                 _strat = (ca.strategy or "").strip()
                 _slot = f" ({_strat})" if _strat else ""
-                lines.append(f"      Contre-argument{_slot} : {ca.snippet}")
+                # #3158 — EVERY counter line carries its provenance, not only
+                # the ones a vocabulary calls "factual". A counter is an
+                # objection a generator produced: nothing verified it, the
+                # state records no source for it, whatever its wording. The
+                # predicate (``asserts_fact``) was measured on doc_B and could
+                # not separate « asserts a fact » from « demands evidence » —
+                # 14 of 19 tags on methodological demands, 5 plain empirical
+                # claims left untagged — so it no longer decides what the
+                # writer is told. It lives on for the render check only
+                # (:func:`check_reading_license`, flag ``counter_claim_in_own_voice``),
+                # where a restatement of a reframing still earns no flag.
+                _provenance = f" {_UNSOURCED_CLAIM_TAG}"
+                lines.append(
+                    f"      Contre-argument{_slot}{_provenance} : {ca.snippet}"
+                )
             if a.dung_rejected:
                 # Track D #1280 — frame honestly: the Dung graph is built from
                 # the extracted arguments, so the verdict is a reorganisation of
@@ -2231,6 +2252,14 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         "faiblesse — il a tourné sans rien distinguer.\n"
         "- Si un mouvement n'a ni sophisme ni verdict formel (les soutiens), "
         "dis ce qui le tient (le caractère, la cohérence).\n"
+        # #3158 — le contre-argument est le canal de l'objection ; CHAQUE
+        # ligne en porte la provenance (option (b), R1109).
+        "- Toute ligne de contre-argument porte "
+        f"« {_UNSOURCED_CLAIM_TAG} » : c'est une objection produite par un "
+        "générateur, que rien n'a vérifiée. Rien de ce qu'elle avance n'est "
+        "un fait du rapport : écris « un contre-argument objecte que… », "
+        "jamais la thèse reprise comme un constat. Tu ne peux pas la "
+        "vérifier — tu ne la signes donc pas.\n"
         "- JARGON INTERNE INTERDIT dans la prose : ne recopie JAMAIS un "
         "identifiant technique brut — token snake_case (agent_1, social_choice, "
         "modal_kb…), nom d'agent numéroté, ou nom de méthode/modèle interne. "
