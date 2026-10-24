@@ -19,14 +19,16 @@ claims block, so the order of what Act III cites first does not change, and
 each text travels under the existing excerpt budget with a drop notice
 (#1622/#2850 idiom: fires from the gap, never from the cap alone).
 
-Support relations are deliberately NOT read: they are not wired into the
-state (the extraction's support-relations channel is unwritten), so the
-argument map's only unit-to-unit edges today are the ``verification_*``
-attacks. A reply the speaker makes IS an attack edge in the built graph
-(the reply attacks the charge).
+Support relations ARE read too (rework, measured by the review:
+``bipolar_results[*].supports`` carries unit-to-unit pairs on the real
+states — 7 on R1109 doc_A, 6 on R1107 doc_B), with their own relation
+wording under the same filters. Older states write text-shaped support
+pairs; those ends match no unit and join nothing.
 
 * witness — a unit joined to a citation by an attack edge reaches Act III's
   evidence with its text and the cited neighbor on its line.
+* support witnesses — one per direction (``soutient`` / ``soutenu par``),
+  plus a control that a support pair whose end is not a unit joins nothing.
 * controls — no edge to a citation ⇒ no join; already-cited ⇒ no duplicate;
   sidecar edges ⇒ ignored; the existing citations keep their order.
 * mutation — dropping the join call reddens every join witness.
@@ -65,6 +67,7 @@ def _joined_state(
     name="verification_grounded",
     extra_args=None,
     fallacy_targets=("arg_1",),
+    supports=(),
 ):
     """doc_A's shape in synthetic words: a charge the analysis cites (a
     fallacy targets it) and a reply only the argument map knows."""
@@ -94,6 +97,7 @@ def _joined_state(
         counter_arguments=[],
         argument_quality_scores=None,
         dung_frameworks={"fw_1": _framework(attacks, name=name)},
+        bipolar_results=[{"supports": [list(p) for p in supports]}],
     )
 
 
@@ -142,6 +146,61 @@ class TestTheJoinReachesTheEvidence:
             ln for ln in section.splitlines() if "arg_2" in ln and "suit la lune" in ln
         )
         assert "attaque arg_1" in line
+
+
+class TestTheSupportEdges:
+    """#3214 rework — the support relation (#1645) joins under the same
+    filters, with its own wording. Born red against the attacks-only join:
+    a unit only a support edge links to a citation stayed unjoined."""
+
+    def test_a_unit_joined_by_a_support_edge_reaches_act3(self):
+        state = _joined_state(attacks=(), supports=(("arg_2", "arg_1"),))
+        evidence = build_act3_evidence(state)
+        pair = next((r, t) for u, r, t in evidence.joined_excerpts if u == "arg_2")
+        assert pair[0] == "soutient arg_1"
+        assert "suit la lune" in pair[1]
+
+    def test_the_supported_direction_is_named_too(self):
+        """The support edge may run the other way: a unit the CITATION
+        supports is joined as supported-by, not as supporting."""
+        state = _joined_state(attacks=(), supports=(("arg_1", "arg_3"),))
+        evidence = build_act3_evidence(state)
+        pair = next((r, t) for u, r, t in evidence.joined_excerpts if u == "arg_3")
+        assert pair[0] == "soutenu par arg_1"
+        assert "registre du port" in pair[1]
+
+    def test_a_support_pair_whose_end_is_not_a_unit_joins_nothing(self):
+        """Both shapes the real states carry: an unknown id end, and the
+        text-shaped pairs older states write — neither is a weighed unit,
+        so neither is a relation between units."""
+        state = _joined_state(
+            attacks=(),
+            supports=(
+                ("arg_2", "arg_999"),
+                (
+                    "La jetée accueille les chaloupes.",
+                    "Le registre du port note chaque marée.",
+                ),
+            ),
+        )
+        evidence = build_act3_evidence(state)
+        assert evidence.joined_excerpts == []
+
+    def test_an_already_cited_unit_is_not_duplicated_by_a_support(self):
+        """Same guard as the attacks: a cited unit stays a citation, the
+        support edge does not re-list it in the joined population."""
+        state = _joined_state(attacks=(), supports=(("arg_2", "arg_1"),))
+        state.counter_arguments = [
+            {
+                "id": "ca_1",
+                "target_arg_id": "arg_2",
+                "strategy": "direct refutation",
+                "counter_content": "La lune ne suffit pas à expliquer la marée.",
+                "score": 0.5,
+            }
+        ]
+        evidence = build_act3_evidence(state)
+        assert {u for u, _r, _t in evidence.joined_excerpts} == set()
 
 
 class TestTheControlsStayGreen:

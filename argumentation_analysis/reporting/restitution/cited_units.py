@@ -398,20 +398,26 @@ def act2_joined_unit_ids(
     Act III then denied, in good faith, the reply Act II had weighed.
 
     The join is deliberately NARROW: only a unit ``identified_arguments``
-    holds AND a ``verification_*`` attack edge joins to a unit already in
-    ``cited_order`` (either direction — a reply attacks the charge; a charge
-    attacks what it answers). Sidecar frameworks are skipped (#1912: their
-    extensions are not native evidence, and neither are their edges), and an
-    edge whose other end the units table does not hold joins nothing.
-    Support relations are not read either: they are not wired into the
-    state, so the map's only unit-to-unit edges today are its attacks.
+    holds AND a map edge joins to a unit already in ``cited_order`` (either
+    direction — a reply attacks the charge; a charge attacks what it
+    answers). Sidecar frameworks are skipped (#1912: their extensions are
+    not native evidence, and neither are their edges), and an edge whose
+    other end the units table does not hold joins nothing. Support
+    relations are read too (#3214 rework — #1645's relation, which the
+    review measured wired in after all): ``bipolar_results[*].supports``
+    carries unit-to-unit pairs on the measured states, joined under the
+    same filters with its own wording. Older states write text-shaped
+    support pairs; those ends match no key of the units table and join
+    nothing, exactly like an attack edge to a lost id.
 
     Returns ``(unit_id, relation)`` pairs ordered by the cited neighbor's
     position in ``cited_order`` (a unit joined to an early citation first),
     ties by id — deterministic, and the joined population stays AFTER the
     citations it extends (#3214: the order of what Act III cites first does
-    not change). The relation names that neighbor: ``attaque {cite}`` or
-    ``attaqué par {cite}``.
+    not change). The relation names that neighbor: ``attaque {cite}``,
+    ``attaqué par {cite}``, ``soutient {cite}`` or ``soutenu par {cite}``.
+    A unit both attacked and supported keeps its best edge under that same
+    order (attack first on a tie).
     """
     args = getattr(state, "identified_arguments", None)
     if not isinstance(args, dict) or not args:
@@ -424,6 +430,19 @@ def act2_joined_unit_ids(
         return []
     # best edge per candidate: (neighbor position, unit id) then its relation
     best: Dict[str, Tuple[int, str, str]] = {}
+
+    def _offer(cand: str, cite: str, rel: str) -> None:
+        # only an edge between two WEIGHED units is a join — a method
+        # name or a lost id on either end is not a relation between units
+        if cand in cited_set or cite not in cited_set:
+            return
+        if cand not in args or cand == cite:
+            return
+        key = (position[cite], cand)
+        current = best.get(cand)
+        if current is None or key < (current[0], cand):
+            best[cand] = (position[cite], cite, rel)
+
     for fw in frameworks.values():
         if not (isinstance(fw, dict) and is_native_dung_framework(fw)):
             continue
@@ -438,20 +457,28 @@ def act2_joined_unit_ids(
             ):
                 continue
             a, b = atk[0].strip(), atk[1].strip()
-            # only an edge between two WEIGHED units is a join — a method
-            # name or a lost id on either end is not a relation between units
-            for cand, cite, rel in (
-                (a, b, f"attaque {b}"),
-                (b, a, f"attaqué par {a}"),
-            ):
-                if cand in cited_set or cite not in cited_set:
+            _offer(a, b, f"attaque {b}")
+            _offer(b, a, f"attaqué par {a}")
+    # #3214 rework — the support edges (#1645): same shape (string pairs),
+    # same filters, their own relation wording.
+    bipolar = getattr(state, "bipolar_results", None)
+    if isinstance(bipolar, list):
+        for entry in bipolar:
+            if not isinstance(entry, dict):
+                continue
+            supports = entry.get("supports")
+            if not isinstance(supports, list):
+                continue
+            for sup in supports:
+                if not (
+                    isinstance(sup, (list, tuple))
+                    and len(sup) == 2
+                    and all(isinstance(x, str) for x in sup)
+                ):
                     continue
-                if cand not in args or cand == cite:
-                    continue
-                key = (position[cite], cand)
-                current = best.get(cand)
-                if current is None or key < (current[0], cand):
-                    best[cand] = (position[cite], cite, rel)
+                a, b = sup[0].strip(), sup[1].strip()
+                _offer(a, b, f"soutient {b}")
+                _offer(b, a, f"soutenu par {a}")
     return [
         (cand, rel)
         for cand, (_pos, _cite, rel) in sorted(

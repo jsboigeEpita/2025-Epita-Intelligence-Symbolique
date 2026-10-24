@@ -2644,7 +2644,9 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
     for unit_id in sorted(cited_unit_ids(state)):
         _cite(unit_id)
     # #3214 — the units Act II weighs, joined to a citation above by an
-    # argument-map attack edge. Act III's populations are the ones the
+    # argument-map edge (attack, or support since the rework — #1645's
+    # relation, measured wired into ``bipolar_results``). Act III's
+    # populations are the ones the
     # conclusion asks ABOUT; Act II weighs every unit, and the reply it
     # weighed (an attack edge in the graph) reached Act III only if some
     # citation population happened to include it — on the measured state it
@@ -3073,7 +3075,7 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
     else:
         joined_block = (
             "  (aucune unité pesée par l'Acte II ne rejoint les citations "
-            "par une attaque du graphe)"
+            "par une arête du graphe)"
         )
     _omitted_joined = evidence.joined_excerpts_total - len(evidence.joined_excerpts)
     if _omitted_joined > 0:
@@ -3359,10 +3361,10 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         # good faith what Act II weighed a page earlier. Context, not a new
         # inventory (the cap and its notice say so).
         "[REVENDICATIONS PESÉES PAR L'ACTE II — jointes aux citations par le "
-        f"graphe d'attaques]\n"
-        "  Unités que l'Acte II a pesées et qu'une attaque du graphe relie à\n"
-        "  une citation ci-dessus : contexte de la conclusion, pas un\n"
-        "  inventaire supplémentaire à énumérer.\n"
+        f"graphe d'arguments]\n"
+        "  Unités que l'Acte II a pesées et qu'une arête du graphe (attaque\n"
+        "  ou soutien) relie à une citation ci-dessus : contexte de la\n"
+        "  conclusion, pas un inventaire supplémentaire à énumérer.\n"
         f"{joined_block}\n\n"
         f"[VERDICT GATED — plafond de claim honnête]\n{synthesis_block}\n\n"
         f"[CE QUI TIENT — forces (qualité)]\n{strengths_lines}\n\n"
