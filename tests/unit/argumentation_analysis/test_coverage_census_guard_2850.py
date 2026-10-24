@@ -1619,6 +1619,18 @@ REGISTRY = {
         "first 200 chars of an already-produced string",
         "display only",
     ),
+    (
+        "argumentation_analysis/utils/taxonomy_loader.py",
+        "segments",
+        "2",
+        1,
+    ): (
+        "population_cap",
+        "the middle segments of a taxonomy path deeper than three levels "
+        "(root, branch and leaf are kept, the levels between are dropped)",
+        "the root > branch > leaf chain fallacy_taxonomy_label prints at the "
+        "three evidence sites — #2850",
+    ),
     ("argumentation_analysis/utils/text_processing.py", "text", "70", 1): (
         "display",
         "first 70 chars of an already-produced string",
