@@ -116,6 +116,14 @@ def _canaried_state() -> UnifiedAnalysisState:
     # would fabricate a shape no producer emits — the #1664 anti-pattern this
     # module exists to catch, not to reproduce.
     s.identified_arguments["arg_1"] = NL  # pass 3 (_TEXT_STRIP_DICTS)
+    # ``add_argument`` (shared_state.py:311) is the sole producer of
+    # ``argument_provenance`` — the entry carries closed-vocab ``producer`` /
+    # ``offset_basis``, int ``offset``, and the VERBATIM ``source_quote``
+    # (#2850's carrier, #3162's read). #3217: that quote survived sanitize
+    # byte-identical (360/360 on the stored states) while the argument text
+    # beside it was stripped. Planted through the real ``add_*`` call the
+    # writer makes (state_writers.py:1623), not a hand-built dict.
+    s.add_argument(NL, producer="llm_extract", source_quote=NL2)
     s.identified_fallacies["fal_1"] = {  # pass 4 (.justification)
         "type": "ad_hominem",
         "justification": NL,
@@ -305,6 +313,7 @@ def _canaried_state() -> UnifiedAnalysisState:
 WRITTEN_TOP_LEVEL_FIELDS = frozenset(
     {
         "identified_arguments",
+        "argument_provenance",
         "identified_fallacies",
         "belief_sets",
         "argument_quality_scores",
@@ -611,6 +620,17 @@ class TestSubstitutionControl:
     @pytest.mark.parametrize(
         "table_attr,remove_field,survivor_field,expected_path_fragment",
         [
+            # Pass 4 (#3217): argument_provenance.source_quote — the verbatim
+            # corpus quote the producer extracted. Removing the entry re-leaks
+            # it under the provenance container; the structural keys
+            # (producer/offset/offset_basis) stay covered by nothing else,
+            # which is deliberate — they are closed vocabulary.
+            (
+                "_TEXT_STRIP_DICT_OF_DICTS",
+                "argument_provenance",
+                "argument_provenance",
+                ".source_quote",
+            ),
             # Pass 4b: dung_frameworks.arguments/attacks.
             (
                 "_OPAQUE_LIST_SUBKEYS",
