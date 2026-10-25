@@ -352,7 +352,9 @@ class TestTheCliPrintsWhatTheRecordCarries:
         rendered = console.export_text()
         assert "Governance (copeland)" in rendered
         assert "arg_7" in rendered
-        assert "vote social-choice" in rendered
+        # #3238 — re-pinned from "vote social-choice": the origin label
+        # now speaks the reader's French.
+        assert "vote de la délibération" in rendered
         # the dead body is gone: no trailing empty colon line
         assert "Governance (copeland): \n" not in rendered
 
