@@ -1076,13 +1076,36 @@ def _collect_quality_strengths(
 # discourse-level sentence itself and the writer copies it (#3159).
 _DISCOURSE_BAR = 0.75
 
+# #3244 — the reader-facing name of each virtue, for the verdict sentence
+# ONLY. The sentence is code-written and copied verbatim (« reprends-le tel
+# quel »), so the identifier it interpolated reached the reader (R1111a:
+# « refutation_constructive », « redondance_faible »; R1110b: « clarte »).
+# The state's identifiers are NOT renamed — ``VERTUES``, the quality plugin
+# and every reader keyed by them keep the ids; the strengths list below in
+# the prompt keeps them too (the data side, the ``social_choice`` precedent
+# #3238). An id missing here falls through as itself and reddens the
+# totality witness (the mapping reads the producer's own ``VERTUES``).
+VIRTUE_DISPLAY_FR = {
+    "clarte": "clarté",
+    "pertinence": "pertinence",
+    "presence_sources": "présence de sources",
+    "refutation_constructive": "réfutation constructive",
+    "structure_logique": "structure logique",
+    "analogie_pertinente": "analogie pertinente",
+    "fiabilite_sources": "fiabilité des sources",
+    "exhaustivite": "exhaustivité",
+    "redondance_faible": "faible redondance",
+}
+
 
 def discourse_virtue_sentence(strengths: List[QualityStrength]) -> str:
     """The discourse-level virtue statement, pre-composed (#3159).
 
     Names every virtue that reaches the bar with its measured base (k/m
     arguments evaluated, N units), and says plainly when none does — the
-    honest absence replaces the rule, it does not soften it.
+    honest absence replaces the rule, it does not soften it. Each virtue is
+    named by its reader-facing French (#3244, ``VIRTUE_DISPLAY_FR``) — the
+    writer copies the sentence verbatim, so the identifier must not ride it.
     """
     passed = [
         s
@@ -1096,7 +1119,8 @@ def discourse_virtue_sentence(strengths: List[QualityStrength]) -> str:
             "arguments qui la portent, avec sa base."
         )
     named = " ; ".join(
-        f"{s.virtue} ({s.args_at_top}/{s.args_evaluated} arguments évalués, "
+        f"{VIRTUE_DISPLAY_FR.get(s.virtue, s.virtue)} "
+        f"({s.args_at_top}/{s.args_evaluated} arguments évalués, "
         f"{s.units_total} unités)"
         for s in passed
     )
