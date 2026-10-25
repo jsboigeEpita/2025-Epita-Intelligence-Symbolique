@@ -219,6 +219,13 @@ PROSE_BASELINE = frozenset(
         "source_metadata",
         "stakes_and_stakeholders",
         "structured_arg_status",
+        # #3131 — the local tier's ledger record, read by the absence
+        # collector (act3) for its skip/error statuses. The phase's facts
+        # were written since #834 and enriched since #3113/#3124 with no
+        # reader at all; the wire-or-retire triage kept the phase and read
+        # the record. Counts and statuses only — the ``response`` field
+        # never reaches the prose.
+        "local_llm_results",
         # #1911 — ``global_projection.py`` reads the bag that carries the
         # deep-synthesis value gates; the key left ANNEXE_ONLY for the
         # intersection. The ``synthese_globale`` appendix row attests the
@@ -291,6 +298,11 @@ PROSE_ONLY = frozenset(
         "argument_provenance",
         "analysis_coverage",
         "raw_text",
+        # #3131 — same family: the local tier's ledger record carries the
+        # counts, statuses and served model behind one bounds line and the
+        # absence-ledger entry. A rendering carrier of the tier's fate, not
+        # an analytical dimension the appendix would attest.
+        "local_llm_results",
     }
 )
 
