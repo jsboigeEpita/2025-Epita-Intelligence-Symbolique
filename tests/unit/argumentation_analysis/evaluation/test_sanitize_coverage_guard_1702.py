@@ -61,7 +61,11 @@ import pytest
 from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 from argumentation_analysis.evaluation import sanitize_state as _sanitize_mod
 from argumentation_analysis.evaluation.sanitize_state import sanitize_state
-from argumentation_analysis.orchestration.state_writers import _write_atms_to_state
+from argumentation_analysis.orchestration.state_writers import (
+    _write_atms_to_state,
+    _write_fact_extraction_to_state,
+    _write_jtms_to_state,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -228,7 +232,18 @@ def _canaried_state() -> UnifiedAnalysisState:
         {"original_text": NL, "variables": {"p": NL2}}
     )
     s.semantic_index_refs.append({"query": NL, "snippet": NL2})  # pass 5
-    s.extracts.append({"content": NL})  # pass 5
+    # #3242 — extracts, through the real ``_write_fact_extraction_to_state``
+    # writer (state_writers.py:1592): it appends ``{"type", "content",
+    # "source_quote"}`` straight onto ``state.extracts``, bypassing
+    # ``add_extract`` — a hand plant without the quote key was blind to the
+    # leaf, which is exactly how 427 verbatim source spans survived on the
+    # stored states. A bare-string claim rides along to keep the no-quote
+    # shape exercised.
+    _write_fact_extraction_to_state(
+        {"claims": [{"text": NL, "source_quote": NL2}, NL2], "arguments": []},
+        s,
+        {},
+    )
     s.source_metadata = {"title": NL, "genre": "speech"}  # pass 2b (dict values)
     s.narrative_synthesis = NL  # pass 7
     s.act1_framing = NL  # pass 7
@@ -302,6 +317,49 @@ def _canaried_state() -> UnifiedAnalysisState:
     # bare-string-only plant exercised a shape the JTMS producer no longer
     # emits — the #1664 anti-pattern — so the dict leaves stayed invisible.
     s.add_jtms_belief(NL, True, justifications=[{"in_list": [NL2], "out_list": [NL]}])
+
+    # #3242 — the retraction cascade trace, through the real
+    # ``_write_jtms_to_state`` writer (state_writers.py:722 stores the chain
+    # the JTMS session produced, invoke_callables.py:3618).
+    # ``trigger``/``retracted``/``cascaded`` carry belief names (jtms_core.py
+    # :236/:422 — measured on the stored states: 412/412 cascaded items equal
+    # a raw ``jtms_beliefs`` name); ``reason`` is the producer's closed
+    # formula (``f"directly set to {validity}"``, jtms_core.py:240) and
+    # carries a real literal — planting NL there would freeze a gap no
+    # producer can write (#1664, the atms-label precedent above).
+    _write_jtms_to_state(
+        {
+            "beliefs": {},
+            "retraction_chain": [
+                {
+                    "trigger": NL,
+                    "retracted": [NL],
+                    "cascaded": [NL, NL2],
+                    "reason": "directly set to False",
+                }
+            ],
+        },
+        s,
+        {},
+    )
+
+    # #3242 — ``fol_shared_signature``, the FOL pass-1 writer's exact product
+    # (invoke_callables.py:10412 assigns ``{sorts, predicates, constants_raw,
+    # fol_solver}`` inline in the async LLM path — no ``add_*`` API exists, so
+    # the plant mirrors the assigned shape). ``constants_raw`` carries the
+    # canary as KEY and as value (both halves nominative — 1 588 keys /
+    # 1 208 NL values on the coordinator's 79 states, personal names among
+    # the keys); ``sorts`` members are the same identifiers under closed sort
+    # names (the pass-1 prompt: 'If unsure about sort, use "Thing"').
+    # ``predicates`` (sort-typed signature) and ``fol_solver`` (a solver id)
+    # carry no canary: not this issue's surface, no scrub on suspicion
+    # (#1664).
+    s.fol_shared_signature["src_1"] = {
+        "sorts": {"Person": [NL], "Thing": [NL, NL2]},
+        "predicates": {"advocate": ["Person", "Thing"]},
+        "constants_raw": {NL: NL2, NL2: NL},
+        "fol_solver": "tweety",
+    }
 
     # atms_contexts + the ATMS-written jtms beliefs, planted through the real
     # ``_write_atms_to_state`` (which does ``state.atms_contexts =
@@ -383,11 +441,19 @@ WRITTEN_TOP_LEVEL_FIELDS = frozenset(
         "final_conclusion",
         "stakes_and_stakeholders",
         "dung_frameworks",
+        # #3242 — populated by the real ``_write_fact_extraction_to_state``
+        # writer's ``record_anchor_census()`` (#2973): counts, per-producer
+        # tallies and ``arg_N`` ids — structural, the governance_decisions
+        # verdict (declared and exercised, no NL canary: planting NL here
+        # would fabricate a shape no producer writes, #1664).
+        "analysis_coverage",
         "formal_synthesis_reports",
         "fol_analysis_results",
+        "fol_shared_signature",
         "propositional_analysis_results",
         "modal_analysis_results",
         "jtms_beliefs",
+        "jtms_retraction_chain",
         "atms_contexts",
         "governance_decisions",
     }
@@ -610,8 +676,15 @@ class TestScrubberCoverageGuard:
         )
         # Every populated producer field must be declared (anti-drift).
         undeclared = written_now - WRITTEN_TOP_LEVEL_FIELDS
-        # Tolerate only the pass-1 top-level strips and structural bookkeeping
-        # the scrubber removes or that are not producer NL surfaces.
+        # Tolerate only the pass-1 top-level strips, the structural
+        # bookkeeping the scrubber removes or never fills, and — #3242 — the
+        # containers the census measured (issue comment 6399207162, 49 stored
+        # states). ``fol_shared_signature`` and ``jtms_retraction_chain`` LEFT
+        # this set: both are now canaried through their real writers above
+        # and scrubbed (passes 5h / 5b). Every remaining entry carries its
+        # measurement beside it; the five NL-bearing ones are owned by the
+        # follow-up #3249 (reader census + decision per leaf — no scrub on
+        # suspicion, #1664).
         tolerated = {
             "raw_text",
             "raw_text_snippet",
@@ -620,17 +693,20 @@ class TestScrubberCoverageGuard:
             "id",
             "task_count",
             "deanonymized",
-            "structured_arg_status",
-            "atomic_propositions",
-            "fol_shared_signature",
-            "fol_signature",
-            "jtms_retraction_chain",
-            "restitution_acts_degraded",
-            "workflow_results",
+            "source_id",
+            # producer NL measured on the stored states (#3242 census),
+            # each awaiting its #3249 census:
+            "structured_arg_status",  # 48 states, 288 NL ≥ 30
+            "atomic_propositions",  # 48 states, 734 NL — atoms named after the text
+            "fol_signature",  # 48 states, 197 NL — members carry entity names
+            "restitution_acts_degraded",  # 41 states, 51 NL (degraded notes)
+            "workflow_results",  # 49 states, 47 NL — free-form values
+            # unexercised on this corpus (0 of 49 states carry them, #3242
+            # census; #3131's crossing measured the same for
+            # local_llm_results' ``response``):
             "ai_shield_results",
             "local_llm_results",
             "deliberation_trace",
-            "source_id",
         }
         undeclared = undeclared - tolerated
         assert not undeclared, (
@@ -799,6 +875,29 @@ class TestSubstitutionControl:
                 "attack_weights",
                 "dung_frameworks",
                 ".formalism_specific.attack_weights",
+            ),
+            # Pass 5 (#3242): extracts.source_quote — the verbatim source
+            # span the real fact-extraction writer attaches to each claim.
+            (
+                "_TEXT_STRIP_LISTS",
+                "extracts",
+                "extracts",
+                ".source_quote",
+            ),
+            # Pass 5h (#3242): the FOL signature atom maps — constants_raw
+            # keys+values, sorts members (the same table, one entry).
+            (
+                "_OPAQUE_ATOM_MAP_SUBKEYS",
+                "fol_shared_signature",
+                "fol_shared_signature",
+                ".constants_raw",
+            ),
+            # Pass 5b (#3242): the retraction-chain belief-name leaves.
+            (
+                "_OPAQUE_LIST_OF_DICTS_SUBKEYS",
+                "jtms_retraction_chain",
+                "jtms_retraction_chain",
+                ".cascaded",
             ),
         ],
     )
