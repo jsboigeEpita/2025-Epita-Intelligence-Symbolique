@@ -101,3 +101,18 @@ def detector_confidence_note(confidence: Optional[float]) -> str:
     if confidence is None:
         return "confiance du détecteur : non mesurée"
     return f"confiance du détecteur : {_confidence_fr(confidence)}"
+
+
+# #3248 — the ONE reader-facing ladder for a detection's standing, and the
+# ban on the figure above. The fallacy evidence lines print the detector's
+# own number (``detector_confidence_note``); the R1113a writer copied that
+# figure into the narrative (« avec une confiance de détection de 0,6 à
+# 0,7 ») while the same render said the standing in words three pages
+# earlier — both vocabularies live in one render and the reader cannot
+# weigh a « 0,6 ». One constant, grafted into BOTH acts' consignes (the
+# #3237 gesture); the check-side class lives in reader_vocabulary_check.
+DETECTION_STANDING_RULE = (
+    "Le standing d'une détection se dit en mots — lecture provisoire, "
+    "moyenne ou ferme — jamais en chiffre : la confiance chiffrée du "
+    "détecteur ne paraît jamais dans le récit ; dis le en mots."
+)

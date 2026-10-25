@@ -47,6 +47,7 @@ from .cited_units import (  # #2967: shared cited-unit budget + boundary cut
 from argumentation_analysis.core.fallacy_attribution import (  # #3180
     confidence_of,  # #3231
     detector_confidence_note,  # #3231
+    DETECTION_STANDING_RULE,  # #3248
     is_reported_move,
     move_author_label_of,
     move_author_of,
@@ -2264,6 +2265,11 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         "détection que le détecteur lui-même tient pour provisoire — confiance "
         "basse, ou réserve écrite dans sa justification — se raconte comme une "
         "lecture PROVISOIRE du procédé, jamais comme une faute établie. "
+        # #3248 — l'échelle en mots et l'interdiction du chiffre, une seule
+        # constante pour les deux actes (le geste #3237) : le writer copiait
+        # la décimale de la ligne evidence (« une confiance de détection de
+        # 0,6 », R1113a) — les mots #3234 et le chiffre vivaient ensemble.
+        f"{DETECTION_STANDING_RULE} "
         "N'invente JAMAIS une "
         "fonction que la justification ne porte pas : si elle ne dit que la "
         "faute, dis la faute.\n"

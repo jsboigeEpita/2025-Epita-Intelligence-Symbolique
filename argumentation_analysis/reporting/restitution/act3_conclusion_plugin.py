@@ -97,6 +97,7 @@ from .cited_units import (  # #2965 (Acte III slice) — same budget as Act II
 from argumentation_analysis.core.fallacy_attribution import (  # #3180
     confidence_of,  # #3231
     detector_confidence_note,  # #3231
+    DETECTION_STANDING_RULE,  # #3248
     is_reported_move,
     is_speaker_move,
     move_author_label_of,
@@ -3538,7 +3539,11 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         # ne la remplace.
         "  standing du nommé suit son détecteur : une détection à confiance\n"
         "  basse, ou que sa justification tient pour provisoire, se cite comme\n"
-        "  une lecture provisoire — jamais comme une faute établie.\n"
+        "  une lecture provisoire — jamais comme une faute établie. "
+        # #3248 — même échelle, même constante que l'Acte II (le geste
+        # #3237 : une échelle, un père) : le chiffre du détecteur est un
+        # vocabulaire de preuve, jamais du récit.
+        f"{DETECTION_STANDING_RULE}\n"
         "- JARGON INTERNE INTERDIT dans la prose : ne recopie JAMAIS un\n"
         "  identifiant technique brut — token snake_case (agent_1, social_choice,\n"
         "  modal_kb…), nom d'agent numéroté, ou nom de méthode/modèle interne.\n"
