@@ -52,6 +52,7 @@ from argumentation_analysis.reporting.restitution import (
     act2_narrative_plugin,
     act3_conclusion_plugin,
 )
+from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 from argumentation_analysis.reporting.restitution.cited_units import (
     governance_origin,
     render_governance_lead,
@@ -208,6 +209,28 @@ class TestTheCheckKnowsTheTokenClass:
         reverted = lead.replace("le vote de la délibération", "le vote social-choice")
         assert "social-choice" in reverted, "the mutation did not take"
         assert check_reader_vocabulary(reverted).band == "FAIL"
+
+
+class TestTheHierarchyInstructionNamesTheP1Role:
+    """The #3225 held edit (this PR's second commit): the Act III hierarchy
+    instruction hands the writer the French role BESIDE the label — the
+    same gesture as « l'identifiant interne… décris-le par son RÔLE ». The
+    P1/P2/P3 vocabulary class catches the copies; this witness pins the
+    prompt side that removes the temptation. Born red on the pre-edit
+    prompt (« les P1 d'abord », no role named)."""
+
+    def test_both_instruction_sites_carry_the_french_role(self) -> None:
+        from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
+            build_act3_evidence,
+            build_act3_prompt,
+        )
+
+        state = UnifiedAnalysisState("texte synthétique sans valeur de corpus")
+        prompt = build_act3_prompt(build_act3_evidence(state))
+        # The HIÉRARCHIE instruction — the ordering site.
+        assert "les P1 (points décisifs) d'abord" in prompt
+        # The QUESTION instruction — the verdict-derivation site.
+        assert "(les points décisifs, P1, d'abord)" in prompt
 
 
 @pytest.mark.skipif(not _STORED_STATES, reason="no stored states on this seat")
