@@ -239,8 +239,11 @@ def governance_origin(
     review of #3000): the two fallback paths do not write a ranked unit at
     all, and framing their winners as ranked arguments was the R1078 blocker.
 
-    * ``vote_aggregate`` → no warning, ``"le vote social-choice"`` (a
-      model-recommended *method* is carried in ``note``, not the verdict);
+    * ``vote_aggregate`` → no warning, ``"le vote de la délibération"``
+      (#3238 — the label used to be ``"le vote social-choice"``, a
+      code-written English token both acts' prompts carried and the writer
+      copied onto the reader surface; a model-recommended *method* is
+      carried in ``note``, not the verdict);
       ``kind="vote"`` — ``winner`` is a ranked unit id;
     * ``llm_resolution`` → the model-recommendation warning; ``kind=
       "llm_strategy"`` — the writer stores the LLM's
@@ -264,7 +267,7 @@ def governance_origin(
             if method_provenance == "llm_recommendation"
             else ""
         )
-        return "", "le vote social-choice", note, "vote"
+        return "", "le vote de la délibération", note, "vote"
     if provenance == "llm_resolution":
         return (
             GOVERNANCE_MODEL_WARNING,

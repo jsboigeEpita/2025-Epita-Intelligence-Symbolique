@@ -35,6 +35,9 @@ have turned the contract around.
 * ``#\d{3,4}`` issue numbers — unambiguous, FAIL at first hit;
 * standalone ``P1``/``P2``/``P3`` verdict-hierarchy labels — the prompt's
   own instruction vocabulary copied into prose, FAIL at first hit (#3225);
+* ``social-choice`` / ``social_choice`` — the governance engine's name for
+  the vote, however spelled; the reader-facing vote is « le vote de la
+  délibération », FAIL at first hit (#3238);
 * ``spec §`` / ``§\d`` internal spec pointers — unambiguous, FAIL;
 * serialized dict literals ``{"key": …}`` — unambiguous in French prose,
   FAIL;
@@ -70,6 +73,22 @@ _ISSUE_NUMBER_RE = re.compile(r"(?<![0-9A-Za-z_])#\d{3,4}\b")
 # only — ``P10`` and ``arg_P1`` belong to other vocabularies and stay out,
 # and the appendix's premise numbering is out of scope with the fold.
 _HIERARCHY_LABEL_RE = re.compile(r"(?<![0-9A-Za-z_])P[123](?![0-9A-Za-z_])")
+
+# #3238 — the governance machinery's own name for the vote:
+# ``governance_origin`` used to return « le vote social-choice » as the
+# origin label of a ``vote_aggregate`` winner, and the writer copied the
+# prompt token (R1110c: « Le vote social-choice désigne lui aussi cette
+# réponse… »). Both spellings are machinery on the reader surface — the
+# hyphenated label and the internal snake_case method name
+# (``method = "social_choice"``, measured ×15 on the stored corpus). The
+# method name stays in the state and on the prompt's data side by design
+# (both acts' consignes forbid copying it by name); this class holds the
+# reader surface. Letter-bounded both sides, the P[123] precedent — the
+# French words that share letters (« climat social », « le choix ») never
+# match: the regex needs the English « choice » right after the join.
+_METHOD_TOKEN_RE = re.compile(
+    r"(?<![0-9A-Za-z_-])social[-_]choice(?![0-9A-Za-z_-])", re.IGNORECASE
+)
 
 # Internal spec pointers, both spellings the fixed surfaces carried.
 _SPEC_REF_RE = re.compile(r"\bspec\s*§|§\s*\d")
@@ -148,6 +167,18 @@ def check_reader_vocabulary(body: str) -> GateVerdict:
             f"sur la surface lecteur (ex : {hierarchy_hits[0].group(0)}). "
             f"P1/P2/P3 sont le vocabulaire du prompt : le récit traduit la "
             f"hiérarchie, il ne la recopie pas."
+        )
+
+    method_hits = list(_METHOD_TOKEN_RE.finditer(body))
+    if method_hits:
+        worst = "FAIL"
+        reasons.append(
+            f"Vocabulaire interne (#3238) — "
+            f"{accord(len(method_hits), 'nom interne de la méthode de vote', 'noms internes de la méthode de vote')} "
+            f"sur la surface lecteur (ex : « {method_hits[0].group(0)} »). "
+            f"Le vote se nomme en français (« le vote de la délibération ») ; "
+            f"« social-choice »/« social_choice » est le vocabulaire du "
+            f"moteur, pas du récit."
         )
 
     spec_hits = list(_SPEC_REF_RE.finditer(body))

@@ -54,7 +54,9 @@ from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import 
     build_act3_prompt,
 )
 
-_VOTE = "vote social-choice"
+# #3238 — re-pinned from "vote social-choice": the origin label now speaks
+# the reader's French (« le vote de la délibération », cited_units).
+_VOTE = "vote de la délibération"
 _STRATEGY_WARNING = "RECOMMANDATION DE STRATÉGIE"
 
 
