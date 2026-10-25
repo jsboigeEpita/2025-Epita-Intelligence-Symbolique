@@ -534,3 +534,23 @@ def cause_phrase(cause: Dict[str, Any]) -> str:
             " — en retirer une quelconque rend l'ensemble satisfiable"
         )
     return phrase
+
+
+# #3237 — the cause rule both acts' prompts carry, from this module (the
+# cause vocabulary's one home, the same shape as ``SPEAKER_NAMING_RULE``).
+# Act III stated it inline since #3107; Act II received the recorded causes on
+# its evidence lines but not the rule that binds the prose to them, and it is
+# the act that misstated the cause (R1110c: a formal contradiction whose
+# recorded cause is ``between_sources`` told the reader « le point où les
+# deux voix se heurtent »). One rule, one father — the acts import, they
+# never copy, so no second wording can drift.
+FORMAL_CAUSE_NAMING_RULE = (
+    "Quand une théorie du premier ordre est inconsistante, ou que "
+    "l'encodage propositionnel est insatisfiable, DIS LA CAUSE que le "
+    "constat porte (elle est écrite dans CE QUE LES CADRES STRUCTURÉS "
+    "ÉTABLISSENT : « contradiction entre voix », « auto-contradiction "
+    "de … », « contradiction entre unités sources », « cause non "
+    "établie ») ; n'attribue jamais cette inconsistance au raisonnement "
+    "d'un locuteur en particulier, et jamais à la portée des "
+    "quantificateurs quand la cause porte une paire de littéraux ground."
+)

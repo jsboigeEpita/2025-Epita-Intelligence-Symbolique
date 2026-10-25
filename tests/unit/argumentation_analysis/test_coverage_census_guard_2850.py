@@ -1411,6 +1411,19 @@ REGISTRY = {
         "display only",
     ),
     (
+        "argumentation_analysis/reporting/restitution/formal_cause_check.py",
+        "sentence",
+        "120",
+        1,
+    ): (
+        "display",
+        "first 120 chars of the flagged rendered-act sentence in the FAIL "
+        "reason (#3237) — the sentence stays whole in the act the reader "
+        "just read, and the producer-side strip has already removed it "
+        "from the persisted act; the reason's quote is the audit pointer",
+        "display only",
+    ),
+    (
         "argumentation_analysis/reporting/restitution/act3_conclusion_plugin.py",
         "citable_args",
         "_MAX_CLAIM_EXCERPTS",

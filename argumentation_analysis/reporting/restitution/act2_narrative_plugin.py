@@ -101,7 +101,10 @@ from .specialist_roles import (
     classify_specialist_roles,
 )
 from .readability_gate import GateVerdict, ReadabilityGate
-from argumentation_analysis.orchestration.fol_cause import cause_phrase
+from argumentation_analysis.orchestration.fol_cause import (  # #3237: the cause rule too
+    FORMAL_CAUSE_NAMING_RULE,
+    cause_phrase,
+)
 from argumentation_analysis.orchestration.selection import (
     SelectableUnit,
     select_for_budget,
@@ -2236,6 +2239,11 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         # locuteur » sans jamais lire la donnée qui dit qui il est.
         f"{SPEAKER_NAMING_RULE}\n"
         f"{READING_BASIS_RULE}\n"
+        # #3237 — the cause rule Act III already carried, from the same
+        # father (fol_cause): Act II receives the recorded causes on its
+        # evidence lines; without the rule that binds the prose to them, it
+        # misstates the cause (R1110c). Same constant, no second copy.
+        f"- {FORMAL_CAUSE_NAMING_RULE}\n"
         # #3231 — le standing du verdict pèse ce que le détecteur a pesé : sa
         # confiance est imprimée sur chaque ligne Procédé et sa justification
         # va jusqu'à sa dernière phrase (c'est là qu'un détecteur écrit sa
@@ -2402,6 +2410,21 @@ async def build_act2_narrative(
         logger.info(
             "act2 woven bound restatement removed (record passage carries it): %s",
             _restated[:90],
+        )
+
+    # #3237 — a woven sentence that ties a formal contradiction to voices
+    # clashing, when every recorded cause says otherwise, is removed the same
+    # way (#1605 shape): the act's evidence lines already carry the record's
+    # own cause phrase, so nothing true is lost. The post-render check
+    # (formal_cause_check) stays as the guarantee — a rule the writer can
+    # break is not one (#3159).
+    from .formal_cause_check import strip_voice_clash_cause_sentences
+
+    narrative, _removed_clash = strip_voice_clash_cause_sentences(narrative, state)
+    for _clash in _removed_clash:
+        logger.info(
+            "act2 woven voice-clash cause removed (record states otherwise): %s",
+            _clash[:90],
         )
 
     # #3134 — the record's own bounds close the act, after the prose, BEFORE

@@ -32,6 +32,7 @@ from .acts import ACT_TITLES, RestitutionActs
 from .act_reader_contract_check import check_act_reader_contract
 from .appendix import render_appendix
 from .factual_consistency_check import check_factual_consistency
+from .formal_cause_check import check_formal_cause_attribution  # #3237
 from .readability_gate import GateVerdict, ReadabilityGate
 from .reader_vocabulary_check import check_reader_vocabulary
 from .surplus_grounding_check import check_surplus_grounding
@@ -171,6 +172,12 @@ class RestitutionReportRenderer:
         # as defense-in-depth with the #1297 prompt guardrail. Skipped honestly
         # (PASS) when no state was provided (no source of truth to check against).
         verdict = verdict.merge(check_factual_consistency(body, state))
+
+        # #3237 — the recorded formal cause is the only cause a formal
+        # constat may state: a voice-clash sentence for a contradiction the
+        # run recorded otherwise is flagged (defense in depth with the Act II
+        # prompt rule and producer-side strip, the #3159 lesson).
+        verdict = verdict.merge(check_formal_cause_attribution(body, state))
 
         # #1914 criteria 8 + 5 — the reader-chair fixture: the surplus claim
         # in the prose must be grounded in the state's re-derived
