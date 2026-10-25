@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from .formal_derivation import is_real_formula
 from .fr_accord import accord
@@ -44,6 +44,11 @@ SITE_LABELS_FR = {
     # stratified UNITS for the formulas (pass 2): two readings, two sites.
     "fol_reasoning_units": "logique du premier ordre — lecture par unités",
     "propositional_logic_units": "logique propositionnelle — lecture par unités",
+    # #3131 — the local tier's own reading: it selects #2850 units (or a
+    # bounded head) like every budgeted phase, and its skip/error statuses
+    # are reading statuses here — the record the phase kept since #3113,
+    # finally read.
+    "local_llm": "palier local d'analyse",
 }
 
 # The French label a reader understands, per producer of the run's units —
@@ -63,6 +68,14 @@ _STATUS_PHRASES_FR = {
     ),
     "empty_input": "aucun texte à lire",
     "short_input": "texte plus court que la fenêtre — lu en entier",
+    # #3131 — the local tier's own statuses (#3113), in the same reader's
+    # words: a status nobody reads is the #1019 shape, and a raw
+    # ``skipped: not_configured`` token on the reader surface is the
+    # code-written-English-token class (#3225/#3244) the vocabulary check
+    # exists for.
+    "skipped: not_configured": "non évalué — aucun endpoint local configuré",
+    "skipped: endpoint_unavailable": "non évalué — endpoint local injoignable",
+    "error": "non évalué — erreur d'appel",
 }
 
 
@@ -248,6 +261,21 @@ def _site_fed(site: str, state: Any) -> str:
             )
             return f"l'extraction LLM ({llm} unités sur {len(prov)})"
         return "l'extraction LLM (population non enregistrée)"
+    # #3131 — the units the local tier read fed its own analysis; the served
+    # model is the one extra fact its ledger carries (#3124: the hub serves an
+    # alias with another model by design), so the line names who answered,
+    # never what it answered (the response is not a bound).
+    if site == "local_llm":
+        records = getattr(state, "local_llm_results", None)
+        last = records[-1] if isinstance(records, list) and records else None
+        served = (
+            str(last.get("served_model"))
+            if isinstance(last, dict) and last.get("served_model")
+            else None
+        )
+        if served:
+            return f"l'analyse locale du palier (modèle servi : {served})"
+        return "l'analyse locale du palier"
     # #3136 — the head reads fix the VOCABULARY; the formulas come from the
     # units site below. Crediting the verdicts here is the #3105 defect on
     # the logic axis: the formulas cite units spread across the text, which
@@ -370,8 +398,50 @@ def build_reading_record(state: Any) -> ReadingRecord:
                     span_hi=int(entry.get("span_hi", 0) or 0),
                 )
             )
+    # #3131 — the local tier's own reading, from its ledger record (the
+    # phase is not a #1737 table site; its selection lives in
+    # ``local_llm_results`` since #3124). Appended after the table sites: it
+    # is the tier's one line, whatever the workflow ordered around it.
+    local_line = _local_llm_reading_line(state)
+    if local_line is not None:
+        record.lines.append(local_line)
     record.basis = _whole_text_basis(state, record.source_chars)
     return record
+
+
+def _local_llm_reading_line(state: Any) -> Optional[ReadingLine]:
+    """#3131 — the local tier's reading, resolved from its ledger record.
+
+    The LAST record speaks (the phase runs once per run; defensive if that
+    ever changes). An empty or absent list is the honest absent case — the
+    phase did not run in this workflow, no line renders, no bound is
+    invented (the naming contract's absent case).
+
+    A completed ``error`` record speaks its status, never its unit counts:
+    units were sent and nothing came back, so a line claiming a reading
+    would overstate what the run holds. The counts live in the trace.
+    """
+    records = getattr(state, "local_llm_results", None)
+    if not isinstance(records, list) or not records:
+        return None
+    last = records[-1]
+    if not isinstance(last, dict):
+        return None
+    line = ReadingLine(site="local_llm", fed=_site_fed("local_llm", state))
+    status = str(last.get("status", "") or "")
+    if status == "completed":
+        line.status = "selected"
+        if last.get("input_mode") == "selected_units":
+            line.units = int(last.get("input_units", 0) or 0)
+            line.unit_total = int(last.get("input_units_total", 0) or 0)
+        else:
+            # document_window: the bounded head the tier was sent. #3124
+            # records ``input_length`` = the sent window itself.
+            line.window = int(last.get("input_length", 0) or 0)
+    else:
+        # skip/error statuses reach the reader through _STATUS_PHRASES_FR.
+        line.status = status
+    return line
 
 
 def format_reading_line(line: ReadingLine, source_chars: int) -> str:

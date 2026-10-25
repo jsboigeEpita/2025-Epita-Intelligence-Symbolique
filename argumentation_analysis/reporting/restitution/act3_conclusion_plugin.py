@@ -257,6 +257,12 @@ _ABSENT_DIMENSION_LABELS: Dict[str, str] = {
     "delp_reasoning": "la décision dialectique sur requêtes défaisables",
     "eaf_reasoning": "les croyances épistémiques par agent",
     "adf_reasoning": "l'acceptation à trois valeurs des énoncés",
+    # #3131 — the local tier. Its skip/error statuses are collected from
+    # ``state.local_llm_results`` by ``_collect_local_llm_dimension`` below;
+    # and as a key of this map the executor-failure father (``state_writers.
+    # _absence_ledger_axes``) covers a phase-level death automatically —
+    # there is no second list to keep.
+    "local_llm": "le palier local d'analyse (modèle servi sur place)",
 }
 
 # Verdict bands (adapted from #1008 §2.1 to the restitution coverage model).
@@ -1205,7 +1211,52 @@ def _collect_absent_dimensions(state: Any) -> List[AbsentDimension]:
                 )
             )
     out.extend(_collect_undecided_formal_axes(state))
+    out.extend(_collect_local_llm_dimension(state))
     return sorted(out, key=lambda d: d.label)
+
+
+def _collect_local_llm_dimension(state: Any) -> List[AbsentDimension]:
+    """#3131 — the local tier's skip/error, as a lost dimension.
+
+    ``state.local_llm_results`` carries the phase's own statuses since #3113:
+    ``skipped: not_configured``, ``skipped: endpoint_unavailable``, ``error``.
+    The tier is a dimension the run did not evaluate when any of them is the
+    last word, and the conclusion's scope must say so, the same as any
+    structured axis that never ran. A completed record is not an absence
+    (the tier spoke — its reading line, not this ledger, carries it); an
+    empty list is not one either (the phase was never in this workflow —
+    silence, like every unrecorded site).
+
+    The reason mirrors the family contract — the producer's own message for
+    an error (capped like every ledger reason), a code-authored French
+    sentence for the two skips, whose cause is a configuration fact the
+    record already names.
+    """
+    records = getattr(state, "local_llm_results", None)
+    if not isinstance(records, list) or not records:
+        return []
+    last = records[-1]
+    if not isinstance(last, dict):
+        return []
+    status = str(last.get("status", "") or "")
+    if status == "completed":
+        return []
+    if status == "skipped: not_configured":
+        reason = "aucun endpoint local configuré — le palier n'a pas été sollicité"
+    elif status == "skipped: endpoint_unavailable":
+        reason = "l'endpoint local était injoignable au moment de la phase"
+    else:
+        reason = _truncate(
+            str(last.get("error", "") or "") or "erreur d'appel", _ABSENCE_REASON_CAP
+        )
+    return [
+        AbsentDimension(
+            capability="local_llm",
+            label=_ABSENT_DIMENSION_LABELS.get("local_llm", "local llm"),
+            status=status,
+            reason=reason,
+        )
+    ]
 
 
 def _collect_undecided_formal_axes(state: Any) -> List[AbsentDimension]:

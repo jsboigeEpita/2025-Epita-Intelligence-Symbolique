@@ -152,7 +152,7 @@ KNOWN_DEFECTS: List[Tuple[str, str]] = [
     ),
     (
         "#3131",
-        "local_llm_results is written but has no reader — its facts never reach the renders",
+        "local_llm_results had no reader before the bounds-line wiring — renders prior to it carry no local-tier fact",
     ),
     (
         "#3125",
