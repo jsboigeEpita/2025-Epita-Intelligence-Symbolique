@@ -3,7 +3,7 @@
   "issue": 1961,
   "phase": 4,
   "inventory": {
-    "argumentation_analysis/services/jtms/jtms_core.py": 518,
+    "argumentation_analysis/services/jtms/jtms_core.py": 534,
     "argumentation_analysis/services/jtms/atms_core.py": 242,
     "argumentation_analysis/services/jtms/conflict_resolution.py": 305,
     "argumentation_analysis/agents/core/logic/dung_native.py": 308,
@@ -56,6 +56,20 @@
           "cascaded": [
             "C",
             "B"
+          ],
+          "cascade_edges": [
+            {
+              "through_in": [
+                "B"
+              ],
+              "conclusion": "C"
+            },
+            {
+              "through_in": [
+                "A"
+              ],
+              "conclusion": "B"
+            }
           ],
           "reason": "directly set to None"
         }

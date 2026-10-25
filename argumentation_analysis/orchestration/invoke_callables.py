@@ -3419,7 +3419,10 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             )
             _recorded_edges += 1
 
-    for claim_dict, claim in zip(raw_claims[: len(claim_beliefs)], claim_beliefs):
+    # #2850: no new window here — claim_beliefs is built from raw_claims[:6]
+    # above (the registered cap), so zipping on the shorter side pairs each
+    # claim with exactly its own dict, no second slice needed.
+    for claim_dict, claim in zip(raw_claims, claim_beliefs):
         # #3226 — a claim's recorded source unit, when the producer stamps
         # one (``source_unit`` / ``source_units``). Extract currently stamps
         # none: that is the honest absence the result carries, not an edge
@@ -3756,7 +3759,7 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             # #3226 — the absence is part of the measurement: claims with no
             # recorded relation stay unjustified, the render says so.
             _disclosures.append(
-                f"{len(_jtms_result['claims_without_recorded_support'])} de "
+                f"{len(_claims_without_support)} de "
                 f"{_jtms_result['claims_in_network']} claims sans support enregistré"
             )
         if "arguments_from_sentences" in _jtms_result:

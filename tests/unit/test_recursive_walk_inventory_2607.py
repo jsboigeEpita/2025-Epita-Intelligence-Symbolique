@@ -43,6 +43,9 @@ ROOTS_BY_WALK = {
     "unit/argumentation_analysis/orchestration/test_is_modal_kb_consistent_census_2993.py": [
         "SEARCH_ROOTS (argumentation_analysis production)"
     ],
+    "unit/argumentation_analysis/orchestration/test_jtms_recorded_relations_cascade_3226.py": [
+        "_STORED_STATES (argumentation_analysis/evaluation/results, gitignored)"
+    ],
     "unit/argumentation_analysis/orchestration/test_one_capability_surface_1842.py": [
         "root (PROD_ROOT or synthetic)"
     ]
