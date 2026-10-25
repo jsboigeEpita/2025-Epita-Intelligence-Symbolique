@@ -10,8 +10,10 @@ from unittest.mock import MagicMock, patch
 class TestInvokeJTMS:
     """Tests for _invoke_jtms function."""
 
-    async def test_args_and_claims_produce_in_list_justifications(self):
-        """Arguments collectively support claims (not sequential chain)."""
+    async def test_claims_get_justifications_only_from_recorded_relations(self):
+        """#3226: the synthetic all-args IN-list network is gone — a claim
+        carries a justification only for a relation the run recorded (a
+        stamped source unit), and unrecorded claims are said so."""
         from argumentation_analysis.orchestration.unified_pipeline import _invoke_jtms
 
         context = {
@@ -20,20 +22,28 @@ class TestInvokeJTMS:
                     {"text": "Evidence supports the claim"},
                     {"text": "Statistical data confirms"},
                 ],
-                "claims": [{"text": "The policy is effective"}],
+                "claims": [
+                    {"text": "The policy is effective"},
+                    {"text": "The costs are contained", "source_unit": "arg_2"},
+                ],
             }
         }
         result = await _invoke_jtms("text", context)
 
+        assert result["belief_count"] >= 4  # 2 args + 2 claims
+        # No recorded relation for claim 1: no justification, honest absence.
+        unrecorded = result["beliefs"].get("The policy is effective")
+        assert unrecorded is not None
+        assert unrecorded["justifications"] == []
+        assert result["claims_without_recorded_support"] == ["The policy is effective"]
+        # The stamped source unit IS the recorded dependency the key counts
+        # (it used to measure the synthetic args→claims network).
         assert result["has_real_dependencies"] is True
-        assert result["belief_count"] >= 3  # 2 args + 1 claim
-        # The claim should have justifications with in_list containing the arguments
-        claim_belief = result["beliefs"].get("The policy is effective")
-        assert claim_belief is not None
-        assert len(claim_belief["justifications"]) > 0
-        # Check in_list contains both arguments
-        in_list = claim_belief["justifications"][0]["in_list"]
-        assert len(in_list) == 2
+        # Claim 2's recorded source unit wires exactly one edge.
+        recorded = result["beliefs"].get("The costs are contained")
+        assert recorded is not None
+        in_lists = [j["in_list"] for j in recorded["justifications"]]
+        assert in_lists == [["arg_2:Statistical data confirms"]]
 
     async def test_fallacies_retract_undermined_beliefs(self):
         """A fallacy carrying its target's arg_N id retracts that belief."""
@@ -156,7 +166,9 @@ class TestInvokeJTMS:
         assert "beliefs" in result
 
     async def test_no_separate_claims_uses_synthetic(self):
-        """Args without claims → overall_argument_validity conclusion."""
+        """#3226: args without claims manufacture no synthetic conclusion —
+        the claim-less ``elif`` branch was the same defect class (all args
+        in one IN-list that recorded nothing)."""
         from argumentation_analysis.orchestration.unified_pipeline import _invoke_jtms
 
         context = {
@@ -170,22 +182,19 @@ class TestInvokeJTMS:
         }
         result = await _invoke_jtms("text", context)
 
-        # Should create synthetic conclusion
-        assert "overall_argument_validity" in result["beliefs"]
-        synth = result["beliefs"]["overall_argument_validity"]
-        assert len(synth["justifications"]) > 0
-        # Both args should be in the IN-list
-        in_list = synth["justifications"][0]["in_list"]
-        assert len(in_list) == 2
+        assert "overall_argument_validity" not in result["beliefs"]
+        assert result["claims_without_recorded_support"] == []
 
     async def test_beliefs_have_structured_justifications(self):
-        """Belief justifications expose in_list and out_list (not just repr)."""
+        """Belief justifications expose in_list and out_list (not just
+        repr) — pinned on a RECORDED relation (#3226): the claim's stamped
+        source unit."""
         from argumentation_analysis.orchestration.unified_pipeline import _invoke_jtms
 
         context = {
             "phase_extract_output": {
                 "arguments": [{"text": "Premise one"}],
-                "claims": [{"text": "Conclusion one"}],
+                "claims": [{"text": "Conclusion one", "source_unit": "arg_1"}],
             }
         }
         result = await _invoke_jtms("text", context)

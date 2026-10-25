@@ -2142,6 +2142,44 @@ def _resolve_debate_quality(
     return None, "unscored"
 
 
+def _debate_retraction_lines(jtms_output: Dict[str, Any]) -> List[str]:
+    """Debate-context lines for JTMS retractions (#3226).
+
+    Only beliefs that are actually False are listed — ``valid=None`` is the
+    recompute's "unknown", not a retraction (the old ``not
+    v.get("valid", True)`` filter counted every unknown claim as retracted).
+    Each listed belief carries WHY it fell, from the retraction chain's
+    ``causes`` map: « set False by fallacy X on unit Y » or « cascaded
+    through justification J » — so a cascade is never read as a judgement
+    on the claim it reaches.
+    """
+    if not isinstance(jtms_output, dict):
+        return []
+    beliefs = jtms_output.get("beliefs")
+    if not isinstance(beliefs, dict) or not beliefs:
+        return []
+    retracted = [
+        name
+        for name, v in beliefs.items()
+        if isinstance(v, dict) and v.get("valid") is False
+    ]
+    if not retracted:
+        return []
+    causes: Dict[str, str] = {}
+    for entry in jtms_output.get("retraction_chain", []) or []:
+        if isinstance(entry, dict):
+            _entry_causes = entry.get("causes")
+            if isinstance(_entry_causes, dict):
+                causes.update(_entry_causes)
+    lines = ["RETRACTED BELIEFS (JTMS):"]
+    for name in retracted[:5]:
+        cause = causes.get(name)
+        lines.append(f"  {name} ({cause})" if cause else f"  {name}")
+    if len(retracted) > 5:
+        lines.append(f"  … and {len(retracted) - 5} more")
+    return ["\n".join(lines)]
+
+
 async def _invoke_debate_analysis(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -2345,15 +2383,9 @@ async def _invoke_debate_analysis(
                     )
             # (#289) Cross-KB: JTMS beliefs inform debate about retracted claims
             if isinstance(jtms_output, dict) and jtms_output.get("beliefs"):
-                retracted = [
-                    k
-                    for k, v in jtms_output["beliefs"].items()
-                    if isinstance(v, dict) and not v.get("valid", True)
-                ]
-                if retracted:
-                    debate_parts.append(
-                        f"RETRACTED BELIEFS (JTMS): {', '.join(retracted[:5])}"
-                    )
+                # #3226 — only actually-False beliefs, each with its cause
+                # (a cascade is not a judgement on the claim it reaches).
+                debate_parts.extend(_debate_retraction_lines(jtms_output))
                 if not jtms_output.get("formal_consistency", True):
                     debate_parts.append(
                         "WARNING: Formal inconsistency detected in PL/FOL analysis"
@@ -3339,27 +3371,78 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             confidence=confidence,
         )
 
-    # ── Step 2: Arguments support claims (dependency network) ────────
-    # Each argument supports related claims (not sequential chain)
-    if arg_beliefs and claim_beliefs:
-        # Arguments collectively support each claim
-        for claim in claim_beliefs:
-            # All arguments are IN-list for each claim
+    # ── Step 2: Justifications carry only RECORDED relations (#3226) ──
+    # The synthetic network is gone: Step 2 used to put ALL argument beliefs
+    # in EVERY claim's IN-list (and, claim-less, in a synthetic
+    # ``overall_argument_validity`` conclusion), so one fallacy on one unit
+    # cascaded the retraction to every extracted claim — a justification
+    # that recorded nothing. A justification is added now only for a
+    # relation the run recorded: a bipolar support pair between two units
+    # ([source, target] — source REINFORCES target), or a claim's recorded
+    # source unit. A claim with no recorded support stays an unjustified
+    # belief (valid=None, the recompute's honest "unknown") and the result
+    # says so (``claims_without_recorded_support``).
+    _belief_by_uid = dict(zip(_raw_arg_ids, arg_beliefs))
+    _recorded_edges = 0
+    _claims_without_support: List[str] = []
+    # #3226 — why each belief became False, for the retraction chain and
+    # the debate context: a cascade is never read as a judgement on the
+    # claim it reaches.
+    _trigger_causes: Dict[str, str] = {}
+
+    _support_pairs: List[Tuple[str, str]] = []
+    _raw_supports = context.get("supports", [])
+    if isinstance(_raw_supports, list):
+        _support_pairs.extend(
+            (str(p[0]), str(p[1]))
+            for p in _raw_supports
+            if isinstance(p, (list, tuple)) and len(p) == 2
+        )
+    _bipolar_results = getattr(_jtms_state, "bipolar_results", None) or []
+    if isinstance(_bipolar_results, list):
+        # Recorded supports from a previous bipolar pass (the phase runs
+        # AFTER jtms in the pipeline, so these exist on re-runs and on
+        # pre-supplied states) — same [source, target] pair convention.
+        for _bipolar_entry in _bipolar_results:
+            if isinstance(_bipolar_entry, dict):
+                _support_pairs.extend(
+                    (str(p[0]), str(p[1]))
+                    for p in _bipolar_entry.get("supports", []) or []
+                    if isinstance(p, (list, tuple)) and len(p) == 2
+                )
+    for source_uid, target_uid in _support_pairs:
+        source_belief = _belief_by_uid.get(source_uid)
+        target_belief = _belief_by_uid.get(target_uid)
+        if source_belief and target_belief and source_belief != target_belief:
             session.add_justification(
-                arg_beliefs, [], claim, agent_source="unified_pipeline"
+                [source_belief], [], target_belief, agent_source="unified_pipeline"
             )
-    elif arg_beliefs:
-        # No separate claims — arguments support a synthetic conclusion
-        conclusion = "overall_argument_validity"
-        session.add_belief(
-            conclusion,
-            agent_source="unified_pipeline",
-            context={"belief_type": "synthetic_conclusion"},
-            confidence=0.5,
-        )
-        session.add_justification(
-            arg_beliefs, [], conclusion, agent_source="unified_pipeline"
-        )
+            _recorded_edges += 1
+
+    for claim_dict, claim in zip(raw_claims[: len(claim_beliefs)], claim_beliefs):
+        # #3226 — a claim's recorded source unit, when the producer stamps
+        # one (``source_unit`` / ``source_units``). Extract currently stamps
+        # none: that is the honest absence the result carries, not an edge
+        # to invent.
+        source_uids: List[str] = []
+        if isinstance(claim_dict, dict):
+            single = claim_dict.get("source_unit")
+            if isinstance(single, str):
+                source_uids.append(single)
+            many = claim_dict.get("source_units")
+            if isinstance(many, list):
+                source_uids.extend(str(u) for u in many)
+        wired = False
+        for uid in source_uids:
+            source_belief = _belief_by_uid.get(uid)
+            if source_belief and source_belief != claim:
+                session.add_justification(
+                    [source_belief], [], claim, agent_source="unified_pipeline"
+                )
+                _recorded_edges += 1
+                wired = True
+        if not wired:
+            _claims_without_support.append(claim)
 
     # ── Step 3: Accept premises (set initial validity) ───────────────
     for name in arg_beliefs:
@@ -3464,6 +3547,11 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             )
             # Retract the undermined argument
             session.jtms.set_belief_validity(target_arg, False)
+            _trigger_causes[target_arg] = (
+                f"set False by fallacy {fallacy_type} on unit "
+                f"{target_arg.split(':', 1)[0] if ':' in target_arg else target_arg}"
+            )
+            _recorded_edges += 1  # the defeat justification above is a real edge
 
     # ── Step 5: Counter-arguments → competing beliefs ────────────────
     _jtms_counter_head = counter_args[:4]
@@ -3515,6 +3603,7 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
                 rebuttal_name,
                 agent_source="counter_argument_generator",
             )
+            _recorded_edges += 1  # the rebuttal justification above is a real edge
 
     # ── Step 5b: Formal inconsistency → flag in belief network (#285) ─
     if not formal_consistency and arg_beliefs:
@@ -3585,6 +3674,25 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             entry["quality"] = quality_annotations[name]
         beliefs_output[name] = entry
 
+    # ── Retraction chain with causes (#3226) ──────────────────────────
+    # Each entry keeps its shape (trigger/retracted/cascaded/reason) for
+    # its readers (narrative_synthesis, html_report, cross_reference_graph,
+    # deep_synthesis) and gains the cause of every drop: the trigger's
+    # fallacy, each cascade's justification edge.
+    _retraction_chain = session.jtms.get_retraction_chain()
+    for _chain_entry in _retraction_chain:
+        _causes: Dict[str, str] = {}
+        _trigger_name = _chain_entry.get("trigger")
+        if _trigger_name in _trigger_causes:
+            _causes[_trigger_name] = _trigger_causes[_trigger_name]
+        for _edge in _chain_entry.get("cascade_edges", []) or []:
+            _through = _edge.get("through_in", []) or []
+            _causes[_edge.get("conclusion", "")] = (
+                f"cascaded through justification {' + '.join(_through)}"
+            )
+        if _causes:
+            _chain_entry["causes"] = _causes
+
     _jtms_result = {
         "beliefs": beliefs_output,
         "belief_count": len(session.extended_beliefs),
@@ -3605,17 +3713,21 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
         # the text_sequence restitution) — never only in a comment.
         "claims_in_network": len(claim_beliefs),
         "claims_total": _jtms_claims_total,
+        # #3226 — the honest absence: claims the run recorded no source for.
+        # Their beliefs are unjustified (valid=None), never cascaded False.
+        "claims_without_recorded_support": _claims_without_support,
         "fallacies_considered": len(_jtms_fallacy_head),
         "fallacies_total": _jtms_fallacies_total,
         "counter_arguments_considered": len(_jtms_counter_head),
         "counter_arguments_total": _jtms_counters_total,
-        "has_real_dependencies": bool(
-            arg_beliefs and (claim_beliefs or fallacy_beliefs)
-        ),
+        # #3226 — re-based on recorded edges (support pairs, claim source
+        # units, defeats, rebuttals): the synthetic claims network this key
+        # used to measure no longer exists.
+        "has_real_dependencies": bool(_recorded_edges),
         "formal_consistency": formal_consistency,
         "session_version": session.version,
         "consistency_checks": session.consistency_checks,
-        "retraction_chain": session.jtms.get_retraction_chain(),
+        "retraction_chain": _retraction_chain,
     }
     if _jtms_sentences_total is not None:
         # The sentence fallback fired: its cap is disclosed too (honest
@@ -3640,6 +3752,13 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             f"{_jtms_result['counter_arguments_considered']} de {_jtms_result['counter_arguments_total']} contre-arguments",
             f"{_jtms_result['claims_in_network']} de {_jtms_result['claims_total']} claims",
         ]
+        if claim_beliefs:
+            # #3226 — the absence is part of the measurement: claims with no
+            # recorded relation stay unjustified, the render says so.
+            _disclosures.append(
+                f"{len(_jtms_result['claims_without_recorded_support'])} de "
+                f"{_jtms_result['claims_in_network']} claims sans support enregistré"
+            )
         if "arguments_from_sentences" in _jtms_result:
             _disclosures.append(
                 f"{_jtms_result['arguments_from_sentences']} de {_jtms_result['sentences_total']} phrases"

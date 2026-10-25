@@ -237,6 +237,10 @@ class JTMS:
                 "trigger": belief_name,
                 "retracted": [belief_name],
                 "cascaded": [],
+                # #3226 — the structural edge under each cascaded drop (the
+                # justification the propagation followed). Sibling key:
+                # `cascaded` keeps its list-of-str shape for its readers.
+                "cascade_edges": [],
                 "reason": f"directly set to {validity}",
             }
             self._retraction_trace.append(tracing_entry)
@@ -404,8 +408,12 @@ class JTMS:
         """Depth-first post-order walk from the retracted belief: every
         conclusion whose label dropped from True is recorded as cascaded —
         the same order the propagation cascade used to produce (deepest
-        first)."""
-        cascaded = self._retraction_trace[-1]["cascaded"]
+        first). Each drop also records the justification it followed
+        (#3226): the cascade names the edge it propagated through, never a
+        bare list of names read as judgements."""
+        entry = self._retraction_trace[-1]
+        cascaded = entry["cascaded"]
+        cascade_edges = entry["cascade_edges"]
         visited = set()
 
         def visit(belief: Belief) -> None:
@@ -420,6 +428,12 @@ class JTMS:
                     and conclusion.valid is not True
                 ):
                     cascaded.append(conclusion.name)
+                    cascade_edges.append(
+                        {
+                            "through_in": [p.name for p in justification.in_list],
+                            "conclusion": conclusion.name,
+                        }
+                    )
 
         visit(trigger)
 
@@ -437,7 +451,9 @@ class JTMS:
         """Return the accumulated retraction cascade trace.
 
         Each entry is:
-            {trigger: str, retracted: [str], cascaded: [str], reason: str}
+            {trigger: str, retracted: [str], cascaded: [str],
+             cascade_edges: [{through_in: [str], conclusion: str}],
+             reason: str}
         """
         return list(self._retraction_trace)
 
