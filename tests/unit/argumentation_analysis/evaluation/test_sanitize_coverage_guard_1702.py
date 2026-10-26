@@ -63,6 +63,8 @@ from argumentation_analysis.evaluation import sanitize_state as _sanitize_mod
 from argumentation_analysis.evaluation.sanitize_state import sanitize_state
 from argumentation_analysis.orchestration.state_writers import (
     _write_atms_to_state,
+    _write_external_fol_solver_to_state,
+    _write_external_modal_solver_to_state,
     _write_fact_extraction_to_state,
     _write_jtms_to_state,
 )
@@ -308,6 +310,36 @@ def _canaried_state() -> UnifiedAnalysisState:
     s.add_fol_analysis_result(["p ∧ q"], True, ["q"], 0.9, message=NL)
     s.add_propositional_analysis_result(["p ∧ q"], True, {"p": True}, message=NL)
     s.add_modal_analysis_result(["□p"], True, ["belief"], message=NL)
+
+    # #3239 rework — the NESTED twin of the axis ``message``:
+    # ``external_checks[*].message``. Planted through the REAL producers, on the
+    # formula list each entry already holds (``_attach_external_recheck`` only
+    # attaches to an existing theory — the re-check route, not the append one).
+    # Before this plant the guard's oracle stopped at the top-level leaf, so a
+    # nested survivor was invisible to the frozen baseline: the surface the
+    # coordinator measured (42 clear leaves on ai-01) could not have appeared
+    # here at all. The oracle is producer-side, so the fix belongs in the plant,
+    # not in the tolerated set.
+    _write_external_fol_solver_to_state(
+        {
+            "formulas": ["p ∧ q"],
+            "solver": "eprover",
+            "consistent": False,
+            "message": NL2,
+        },
+        s,
+        {},
+    )
+    _write_external_modal_solver_to_state(
+        {
+            "formulas": ["□p"],
+            "solver": "vampire",
+            "valid": False,
+            "message": NL2,
+        },
+        s,
+        {},
+    )
 
     # --- jtms_beliefs: belief name can be argument text; justifications free-form
     # #3235 — the real ``_write_jtms_to_state`` shape: the JTMS phase
@@ -558,15 +590,6 @@ EXPECTED_UNCOVERED: dict[str, frozenset[str]] = {
     # export, so pass 5 drops it. The canary plant above stays (a regression
     # in pass 5 re-leaks here immediately).
     #
-    # Formal-logic status messages can carry NL (``"unavailable: <reason>"``).
-    # Not in any scrubber table. #3235 settled the sibling gaps; these stay
-    # frozen under their own OPEN owner: #3239 (0/0/2 argument-text matches
-    # measured — a producer census must decide drop vs closed-vocabulary).
-    "fol_analysis_results": frozenset({"fol_analysis_results[*].message"}),
-    "propositional_analysis_results": frozenset(
-        {"propositional_analysis_results[*].message"}
-    ),
-    "modal_analysis_results": frozenset({"modal_analysis_results[*].message"}),
     # ``jtms_beliefs`` and ``atms_contexts`` no longer appear here: #3235
     # settled both frozen gaps. jtms — the belief name (``{unit_id}:{text}``)
     # and both justification shapes (dict ``in_list``/``out_list`` leaves and
@@ -580,6 +603,16 @@ EXPECTED_UNCOVERED: dict[str, frozenset[str]] = {
     # survives untouched — the ``dung_frameworks.name`` verdict, so the canary
     # plants a real literal. The plants above stay exactly as they were: a
     # regression in any of those passes re-leaks here immediately.
+    #
+    # #3239 closed the last three: the formal-logic ``message`` leaf is
+    # dropped on export for ``fol_analysis_results``,
+    # ``propositional_analysis_results`` and ``modal_analysis_results``
+    # (producer census in ``sanitize_state._TEXT_STRIP_LISTS``: PL is closed
+    # vocabulary, FOL adds prover notes, modal/SAT can echo parser text; no
+    # export reader reads the leaf, and the tri-state verdict survives). The
+    # canary plants above stay: a regression in that pass re-leaks here
+    # immediately. The frozen gap set is now empty — every NL slot a producer
+    # writes is covered, and any NEW one reddens this test.
 }
 
 
