@@ -216,7 +216,18 @@ _OPAQUE_FORMALISM_SPECIFIC = {
 # nominative text to drop (the rest of each item is preserved).
 _TEXT_STRIP_LISTS = {
     "counter_arguments": {"counter_content", "generated_text", "original_argument"},
-    "extracts": {"content"},
+    # #3242 — ``source_quote`` is the verbatim source span the fact-extraction
+    # writer attaches to each claim (``_write_fact_extraction_to_state``,
+    # state_writers.py:1592, which appends straight onto ``state.extracts``,
+    # bypassing ``add_extract``). Measured on the stored states: a verbatim
+    # span on essentially every state (the coordinator's replay counted 427
+    # spans ≥ 30 chars on 81/81 states; 6 of 7 extracts on the latest doc_A
+    # pass). No export reader reads it — the render's quality phase reads
+    # ``source_quote`` from the LIVE extraction payload (the measure_1710
+    # ``arguments[i]`` schema), never from a sanitized export. The #3217
+    # ``argument_provenance`` verdict on the extracts axis: drop the leaf,
+    # keep the record (``type`` survives, ``content`` already rides this pass).
+    "extracts": {"content", "source_quote"},
     "debate_transcripts": {"proponent_move", "opponent_move", "topic"},
     "transcription_segments": {"text", "speaker"},
     "neural_fallacy_scores": {"text_segment"},
@@ -286,6 +297,20 @@ _OPAQUE_LIST_OF_DICTS_SUBKEYS = {
     # ``_generate_hypotheses``; 4 distinct values, 0 argument-text matches,
     # measured) — the ``dung_frameworks.name`` verdict, it stays untouched.
     "atms_contexts": {"assumptions"},
+    # #3242 — the retraction cascade trace (``{trigger, retracted, cascaded,
+    # reason}``, jtms_core.py:236 via ``session.jtms.get_retraction_chain()``,
+    # invoke_callables.py:3618). ``trigger``/``retracted``/``cascaded`` all
+    # carry belief names — the very ``{unit_id}:{text[:66]}`` names pass 4b
+    # opacifies under ``jtms_beliefs`` one container over (measured on the
+    # stored states: 412/412 cascaded items equal a raw ``jtms_beliefs`` name;
+    # the coordinator's replay counted 661 on 78 states). The one export
+    # reader (``pattern_mining.JtmsRetractionRateDetector``) reads
+    # ``len(retraction_chain)`` only, which this pass never touches. Opacify,
+    # not drop: the same deterministic ``opaque_id`` as pass 4b keeps the
+    # cross-container join. ``reason`` is deliberately NOT listed — a closed
+    # formula at the producer (``f"directly set to {validity}"``,
+    # jtms_core.py:240), the ``dung_frameworks.name`` verdict.
+    "jtms_retraction_chain": {"trigger", "retracted", "cascaded"},
 }
 
 # #3228: the display-label maps on the seven AF containers — sub-key
@@ -312,6 +337,36 @@ _OPAQUE_LABEL_MAP_SUBKEYS = {
     "dialogue_results": {"argument_labels"},
     "probabilistic_results": {"argument_labels"},
     "bipolar_results": {"argument_labels"},
+}
+
+# #3242 — dict-of-dicts fields whose sub-key is an ATOM MAP keyed by the
+# source-derived constant identifiers of the FOL pass-1 signature
+# (``state.fol_shared_signature[source_id] = {sorts, predicates,
+# constants_raw, fol_solver}``, invoke_callables.py:10412). The FOL 2-pass
+# pass 1 derives its constants from the text — the identifiers include
+# personal names (the coordinator measured 1 588 keys / 1 208 NL values ≥ 30
+# chars on 79 states; 1 115 / 912 on this seat's 49) — so BOTH halves of the
+# map are nominative, the ``argument_labels`` lesson of #3228: a table that
+# only opacifies values leaves the keys republishing the census in clear.
+# Zero export readers name this container (census, #3242 comment), but the
+# signature's own internal join is total and free to keep: ``sorts`` members
+# ARE the ``constants_raw`` keys (``sorts = {"Thing": list(constants.keys())}``
+# when the model gives none), so both ride the same deterministic
+# ``opaque_id`` and the join survives the scrub.
+# Leaf -> mode:
+#   "keys_and_values"  keys are nominative atoms AND values their NL
+#                      meaning — opacify both (the ``contraries`` mapping
+#                      precedent of pass 4d).
+#   "values"           keys are a CLOSED vocabulary (sort names: the pass-1
+#                      prompt pins 'If unsure about sort, use "Thing"', and
+#                      the fallback synthesises exactly that) — keys survive
+#                      the ``dung_frameworks.name`` verdict, only the atom
+#                      members are opacified.
+# ``predicates`` (sort-typed signatures) and ``fol_solver`` (a solver id) are
+# deliberately NOT listed: the issue measured and named the constants axis
+# only, and no scrub rides suspicion (#1664).
+_OPAQUE_ATOM_MAP_SUBKEYS: dict[str, dict[str, str]] = {
+    "fol_shared_signature": {"constants_raw": "keys_and_values", "sorts": "values"},
 }
 
 # List-of-dicts fields with a dict sub-key whose *KEYS* are claim texts
@@ -751,6 +806,38 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
                 mapping = item.get(sk)
                 if isinstance(mapping, dict):
                     item[sk] = _opacify_mapping(mapping)
+
+    # 5h. #3242 — opacify the atom maps of the FOL pass-1 shared signature
+    #     (``fol_shared_signature[*].constants_raw`` / ``.sorts``). The
+    #     container is dict-keyed (``{source_id: {...}}``), so the 5b/5c
+    #     list-of-dicts gates could never reach it — the same shape
+    #     blindness 5d fixed for ``jtms_beliefs``. ``constants_raw`` is
+    #     opacified keys AND values (both halves nominative); ``sorts`` keeps
+    #     its closed-vocabulary sort names and opacifies the atom members.
+    #     The deterministic ``opaque_id`` keeps the container's internal
+    #     constants↔sorts join, and the map arity (len()) survives every
+    #     reader. Untouched leaves (``predicates``, ``fol_solver``) ride
+    #     through by being absent from the table.
+    for field, modes in _OPAQUE_ATOM_MAP_SUBKEYS.items():
+        container = data.get(field)
+        if not isinstance(container, dict):
+            continue
+        for entry in container.values():
+            if not isinstance(entry, dict):
+                continue
+            for sk, mode in modes.items():
+                val = entry.get(sk)
+                if not isinstance(val, dict):
+                    continue
+                if mode == "keys_and_values":
+                    entry[sk] = {
+                        (
+                            opaque_id(k) if isinstance(k, str) and k else k
+                        ): _opacify_list_values(v)
+                        for k, v in val.items()
+                    }
+                else:  # "values" — the sort names are a closed vocabulary
+                    entry[sk] = {k: _opacify_list_values(v) for k, v in val.items()}
 
     # 6. Opacify symbol-mapping sub-keys inside list-of-dicts fields
     #    (nl_to_logic_translations[*].variables).
