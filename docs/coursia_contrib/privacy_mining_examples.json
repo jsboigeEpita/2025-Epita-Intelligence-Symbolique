@@ -4,7 +4,7 @@
   "phase": 6,
   "inventory": {
     "argumentation_analysis/evaluation/opaque_id.py": 65,
-    "argumentation_analysis/evaluation/sanitize_state.py": 1017,
+    "argumentation_analysis/evaluation/sanitize_state.py": 1040,
     "argumentation_analysis/evaluation/pattern_mining.py": 512
   },
   "opaque_cases": [

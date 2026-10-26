@@ -533,11 +533,34 @@ def _strip_text_from_dict(data: dict[str, Any], text_keys: set[str]) -> dict[str
     return {k: v for k, v in data.items() if k not in text_keys}
 
 
-def _strip_text_from_list(
-    items: list[dict[str, Any]], text_keys: set[str]
-) -> list[dict[str, Any]]:
-    """Remove text-bearing keys from each dict in a list."""
-    return [_strip_text_from_dict(item, text_keys) for item in items]
+def _strip_text_from_list(items: list[Any], text_keys: set[str]) -> list[Any]:
+    """Remove text-bearing keys from each dict in a list.
+
+    #3254 — shape-tolerant on a measured old artefact: one stored state
+    carries ``counter_arguments`` as bare strings (the field's original
+    ``List[str]`` shape — no production writer emits it any more: the
+    counter-argument writer filters non-dicts before the adder,
+    state_writers.py:608, and the adder only ever appends dicts,
+    shared_state.py:1283). A bare
+    string IS the text leaf the dict form drops, so it takes the Dung
+    ``arguments`` verdict instead: one ``opaque_id`` for the whole prose,
+    the slot and the list arity preserved for the count readers
+    (``counter_argument_count``, the appendix's « contre_arguments »
+    count — the only export readers, both ``len()``). Anything else that
+    is not a string carries no NL text by type and rides through
+    unchanged — no scrub rides suspicion (#1664). Before this, the
+    traversal called ``.items()`` on the string and the whole export
+    aborted (fail-closed, but the chokepoint died for that state).
+    """
+    cleaned: list[Any] = []
+    for item in items:
+        if isinstance(item, dict):
+            cleaned.append(_strip_text_from_dict(item, text_keys))
+        elif isinstance(item, str):
+            cleaned.append(opaque_id(item) if item else item)
+        else:
+            cleaned.append(item)
+    return cleaned
 
 
 def _opacify_mapping(mapping: Any) -> Any:
