@@ -367,6 +367,16 @@ _OPAQUE_LABEL_MAP_SUBKEYS = {
 # only, and no scrub rides suspicion (#1664).
 _OPAQUE_ATOM_MAP_SUBKEYS: dict[str, dict[str, str]] = {
     "fol_shared_signature": {"constants_raw": "keys_and_values", "sorts": "values"},
+    # #3252 crossing on #3242 — the sibling ``causes`` map the cascade
+    # writer adds to each retraction-chain entry (invoke_callables.py:3697):
+    # ``{belief name: "cascaded through justification <names>"}``. BOTH
+    # halves are nominative — the keys are belief names, the values embed
+    # justification names in a free string — so the ``constants_raw``
+    # verdict applies: keys and values opacified, map arity (len()) intact.
+    # The value is opacified whole: the embedded names ride one opaque id
+    # with the string, the join that matters (belief name ↔ ``jtms_beliefs``
+    # and the chain keys) lives in the KEYS.
+    "jtms_retraction_chain": {"causes": "keys_and_values"},
 }
 
 # List-of-dicts fields with a dict sub-key whose *KEYS* are claim texts
@@ -394,6 +404,14 @@ _OPAQUE_LIST_OF_DICTS_MAPPING_KEYS = {
 _OPAQUE_NESTED_ITEM_SUBKEYS = {
     "dialogue_results": {"trace": {"argument", "target"}},
     "debate_transcripts": {"exchanges": {"point", "rebuttal"}},
+    # #3252 crossing on #3242 — each retraction-chain entry gained
+    # ``cascade_edges`` (invoke_callables.py:3691): a list of
+    # ``{through_in: [belief names], conclusion: belief name}``, every name
+    # the very ``{unit_id}:{text[:66]}`` shape ``trigger``/``retracted``/
+    # ``cascaded`` already opacify in pass 5b. The edge count and each
+    # edge's arity survive; the deterministic ``opaque_id`` keeps the join
+    # with ``jtms_beliefs`` (pass 4b) and with the sibling chain keys.
+    "jtms_retraction_chain": {"cascade_edges": {"through_in", "conclusion"}},
     # #1649 privacy follow-up: aspic_results[*].attacks = the qualified attacks
     # surfaced top-level by the #1681 writer (and now read by the #1699 reader).
     # Each attack dict = {target, attacker_premises, scope, attacker_rule}.
@@ -817,12 +835,16 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
     #     The deterministic ``opaque_id`` keeps the container's internal
     #     constants↔sorts join, and the map arity (len()) survives every
     #     reader. Untouched leaves (``predicates``, ``fol_solver``) ride
-    #     through by being absent from the table.
+    #     through by being absent from the table. #3252 crossing: the gate
+    #     takes both shapes now (5d's precedent) — ``jtms_retraction_chain``
+    #     is list-shaped and its ``causes`` map rides ``keys_and_values``;
+    #     the existing dict-shaped entry's behaviour is unchanged.
     for field, modes in _OPAQUE_ATOM_MAP_SUBKEYS.items():
         container = data.get(field)
-        if not isinstance(container, dict):
+        if not isinstance(container, (dict, list)):
             continue
-        for entry in container.values():
+        entries = container.values() if isinstance(container, dict) else container
+        for entry in entries:
             if not isinstance(entry, dict):
                 continue
             for sk, mode in modes.items():
