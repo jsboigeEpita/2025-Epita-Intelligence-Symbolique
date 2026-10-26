@@ -1429,3 +1429,18 @@ if not _pytest_porte_le_fix_14971():
         return rep, dup
 
     _pytest_main_3080.Session._collect_one_node = _collect_one_node_reconciled_3080
+
+
+# --- #3240 : un probe disparu ne tue plus une collection enfant -------------
+#
+# Les collecteurs Dir/Package de pytest 9.1.1 consultent le disque sur une
+# entrée avant que pytest_ignore_collect n'applique norecursedirs. Un probe
+# `_probe_*` supprimé entre le listing et Session.collect devient un nœud, et
+# le samefile_nofollow de Windows lève FileNotFoundError en lstat. Le module
+# partagé filtre l'entrée ignorée par son motif avant tout accès disque ; il
+# s'autodésactive hors de la version mesurée. Témoin né-rouge :
+# tests/unit/test_probe_collection_race_3240.py.
+
+from tests.collection_repair_3240 import install_3240 as _install_3240
+
+_install_3240()
