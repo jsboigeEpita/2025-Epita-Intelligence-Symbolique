@@ -63,6 +63,8 @@ from argumentation_analysis.evaluation import sanitize_state as _sanitize_mod
 from argumentation_analysis.evaluation.sanitize_state import sanitize_state
 from argumentation_analysis.orchestration.state_writers import (
     _write_atms_to_state,
+    _write_external_fol_solver_to_state,
+    _write_external_modal_solver_to_state,
     _write_fact_extraction_to_state,
     _write_jtms_to_state,
 )
@@ -308,6 +310,36 @@ def _canaried_state() -> UnifiedAnalysisState:
     s.add_fol_analysis_result(["p ∧ q"], True, ["q"], 0.9, message=NL)
     s.add_propositional_analysis_result(["p ∧ q"], True, {"p": True}, message=NL)
     s.add_modal_analysis_result(["□p"], True, ["belief"], message=NL)
+
+    # #3239 rework — the NESTED twin of the axis ``message``:
+    # ``external_checks[*].message``. Planted through the REAL producers, on the
+    # formula list each entry already holds (``_attach_external_recheck`` only
+    # attaches to an existing theory — the re-check route, not the append one).
+    # Before this plant the guard's oracle stopped at the top-level leaf, so a
+    # nested survivor was invisible to the frozen baseline: the surface the
+    # coordinator measured (42 clear leaves on ai-01) could not have appeared
+    # here at all. The oracle is producer-side, so the fix belongs in the plant,
+    # not in the tolerated set.
+    _write_external_fol_solver_to_state(
+        {
+            "formulas": ["p ∧ q"],
+            "solver": "eprover",
+            "consistent": False,
+            "message": NL2,
+        },
+        s,
+        {},
+    )
+    _write_external_modal_solver_to_state(
+        {
+            "formulas": ["□p"],
+            "solver": "vampire",
+            "valid": False,
+            "message": NL2,
+        },
+        s,
+        {},
+    )
 
     # --- jtms_beliefs: belief name can be argument text; justifications free-form
     # #3235 — the real ``_write_jtms_to_state`` shape: the JTMS phase

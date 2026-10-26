@@ -278,6 +278,39 @@ _TEXT_STRIP_LISTS = {
     "modal_analysis_results": {"message"},
 }
 
+# #3239 rework — the NESTED twin of the formal-logic status leaf above:
+# ``external_checks[*].message``. ``_attach_external_recheck``
+# (state_writers.py:2918-2929) hangs one dict per re-check on the entry it
+# re-ran, carrying ``solver`` / the verdict key / ``agrees`` / ``message``,
+# and that ``message`` is the provenance string
+# (``_external_provenance(output)``, the same free-form text the top-level
+# leaf carries). Pass 5 drops the container's OWN ``message``; the re-check's
+# leaf hangs one level deeper and traversed intact — a second NL surface the
+# flat table cannot read, not a copy of the first: on this seat the two are
+# never the same string (raw corpus: 229/131/229 top-level leaves, 28 FOL +
+# 28 modal nested twins, **0 identical**), so dropping the outer leaf scrubs
+# nothing of the inner one.
+#
+# Producer census — exactly TWO containers grow ``external_checks``:
+# ``_write_external_fol_solver_to_state`` (:2976) and
+# ``_write_external_modal_solver_to_state`` (:3028) are the only callers of
+# the shared helper (verified by grep over the production tree; the PL leg
+# has no external re-check writer and the raw corpus confirms it — 0 of 393
+# ``propositional_analysis_results`` entries carries the key). The PL twin
+# therefore does not exist and is not declared: no scrub rides suspicion
+# (#1664).
+#
+# Same verdict as the outer leaf — drop the leaf, keep the record: the
+# readers weigh ``solver``, the verdict key (``consistent``/``valid``) and
+# the ``agrees`` tri-state; no export reader reads the provenance string
+# (the axis readers take the verdict and the counts). Arity of
+# ``external_checks`` survives with the leaf gone.
+# field -> {sub_key: {nested leaf}}
+_NESTED_TEXT_STRIP_SUBKEYS: dict[str, dict[str, set[str]]] = {
+    "fol_analysis_results": {"external_checks": {"message"}},
+    "modal_analysis_results": {"external_checks": {"message"}},
+}
+
 # LIST-of-dicts fields whose sub-keys carry the same nominative claim text that
 # 4b/4c opacify for ``dung_frameworks`` (#1664): top-level field -> {sub_key}.
 # Each sub-key is passed through ``_opacify_list_values``, which handles a bare
@@ -882,6 +915,40 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
                     }
                 else:  # "values" — the sort names are a closed vocabulary
                     entry[sk] = {k: _opacify_list_values(v) for k, v in val.items()}
+
+    # 5i. #3239 rework — drop the NESTED status leaf, one level under the
+    #     container pass 5 already strips: ``external_checks[*].message``
+    #     (the re-check provenance ``_attach_external_recheck`` attaches,
+    #     state_writers.py:2921-2928). One level down is exactly where the
+    #     flat table cannot reach it — the same shape blindness 5d/5h fixed
+    #     for ``jtms_beliefs`` and ``fol_shared_signature``. Same verdict as
+    #     the outer leaf: drop the leaf, keep the record, so ``solver``, the
+    #     verdict key and the ``agrees`` tri-state survive with the list
+    #     arity; no export reader reads the provenance string. Only the two
+    #     containers that grow ``external_checks`` are declared (measured:
+    #     the PL leg has no external re-check writer, 0/393 entries carry the
+    #     key). A non-dict re-check entry rides through unchanged — no
+    #     producer writes one and the stored corpus holds none, so declaring
+    #     a branch for it would be a shape invented here (#1664).
+    for field, nested_spec in _NESTED_TEXT_STRIP_SUBKEYS.items():
+        entries = data.get(field)
+        if not isinstance(entries, list):
+            continue
+        for item in entries:
+            if not isinstance(item, dict):
+                continue
+            for subtree_key, leaf_keys in nested_spec.items():
+                subtree = item.get(subtree_key)
+                if not isinstance(subtree, list):
+                    continue
+                item[subtree_key] = [
+                    (
+                        _strip_text_from_dict(leaf_item, leaf_keys)
+                        if isinstance(leaf_item, dict)
+                        else leaf_item
+                    )
+                    for leaf_item in subtree
+                ]
 
     # 6. Opacify symbol-mapping sub-keys inside list-of-dicts fields
     #    (nl_to_logic_translations[*].variables).
