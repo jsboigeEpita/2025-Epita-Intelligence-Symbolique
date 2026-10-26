@@ -254,6 +254,28 @@ _TEXT_STRIP_LISTS = {
     # content is the atom identities (measured: 207/21 NL strings, 4/0
     # matching argument text on this seat).
     "atms_contexts": {"derivable_beliefs", "contradicting_beliefs"},
+    # #3239 — the formal-logic status messages. Producer census (every
+    # ``message=`` site that reaches these three containers):
+    # ``_write_propositional_to_state`` (state_writers.py:1678 copies
+    # ``output["message"]``), ``_write_fol_to_state`` (:1713-1729 — the
+    # ``unavailable:<reason>`` token or the prover's own message),
+    # ``_write_modal_to_state`` (:1772-1783, same, including the parser/JVM
+    # exception text of modal_handler.py:379-408), ``_write_sat_to_state``
+    # (:2229, the backend's ``error`` string) and the external-solver writers
+    # (:2994/:3044, ``external solver (<id>)[: msg]``). PL is closed
+    # vocabulary (2 literals, pl_handler.py:200-204); FOL adds prover notes
+    # and the Mace4 interpretation; modal and SAT can echo parser or JVM
+    # text. Not declarable as closed vocabulary — the coordinator measured
+    # 0/0/2 argument-text matches on 80 stored states (2 on modal), so drop.
+    # Export readers: none. The axis readers (appendix, act2/act3, the
+    # campaign render) read ``consistent``/``satisfiable``/``valid`` and
+    # counts; ``pattern_mining`` reads ``valid``. The tri-state verdict
+    # already attests degradation, so the leaf carries no export-only value.
+    # Decision: drop the leaf, keep the record — the #3229/#3217 gesture on
+    # the status axis. Not a catch-all: three named containers, one leaf.
+    "fol_analysis_results": {"message"},
+    "propositional_analysis_results": {"message"},
+    "modal_analysis_results": {"message"},
 }
 
 # LIST-of-dicts fields whose sub-keys carry the same nominative claim text that

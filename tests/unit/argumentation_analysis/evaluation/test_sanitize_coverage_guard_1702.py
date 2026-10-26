@@ -558,15 +558,6 @@ EXPECTED_UNCOVERED: dict[str, frozenset[str]] = {
     # export, so pass 5 drops it. The canary plant above stays (a regression
     # in pass 5 re-leaks here immediately).
     #
-    # Formal-logic status messages can carry NL (``"unavailable: <reason>"``).
-    # Not in any scrubber table. #3235 settled the sibling gaps; these stay
-    # frozen under their own OPEN owner: #3239 (0/0/2 argument-text matches
-    # measured — a producer census must decide drop vs closed-vocabulary).
-    "fol_analysis_results": frozenset({"fol_analysis_results[*].message"}),
-    "propositional_analysis_results": frozenset(
-        {"propositional_analysis_results[*].message"}
-    ),
-    "modal_analysis_results": frozenset({"modal_analysis_results[*].message"}),
     # ``jtms_beliefs`` and ``atms_contexts`` no longer appear here: #3235
     # settled both frozen gaps. jtms — the belief name (``{unit_id}:{text}``)
     # and both justification shapes (dict ``in_list``/``out_list`` leaves and
@@ -580,6 +571,16 @@ EXPECTED_UNCOVERED: dict[str, frozenset[str]] = {
     # survives untouched — the ``dung_frameworks.name`` verdict, so the canary
     # plants a real literal. The plants above stay exactly as they were: a
     # regression in any of those passes re-leaks here immediately.
+    #
+    # #3239 closed the last three: the formal-logic ``message`` leaf is
+    # dropped on export for ``fol_analysis_results``,
+    # ``propositional_analysis_results`` and ``modal_analysis_results``
+    # (producer census in ``sanitize_state._TEXT_STRIP_LISTS``: PL is closed
+    # vocabulary, FOL adds prover notes, modal/SAT can echo parser text; no
+    # export reader reads the leaf, and the tri-state verdict survives). The
+    # canary plants above stay: a regression in that pass re-leaks here
+    # immediately. The frozen gap set is now empty — every NL slot a producer
+    # writes is covered, and any NEW one reddens this test.
 }
 
 
