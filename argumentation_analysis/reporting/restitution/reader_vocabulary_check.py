@@ -42,6 +42,10 @@ have turned the contract around.
   ``redondance_faible``, « clarte »…) — the quality engine's 8 spellings
   whose French display differs; the verdict names each virtue in the
   reader's French, FAIL at first hit (#3244);
+* « confiance »/« confidence » + a 0,x decimal on one line — the
+  detector's raw evidence figure copied into prose (« confiance de
+  détection de 0,6 »); the standing travels in words only (provisoire /
+  moyenne / ferme), FAIL at first hit (#3248);
 * ``spec §`` / ``§\d`` internal spec pointers — unambiguous, FAIL;
 * serialized dict literals ``{"key": …}`` — unambiguous in French prose,
   FAIL;
@@ -110,6 +114,19 @@ _VIRTUE_ID_RE = re.compile(
     r"analogie_pertinente|fiabilite_sources|presence_sources|"
     r"structure_logique|clarte|exhaustivite)(?![0-9A-Za-z_])"
 )
+
+# #3248 — the detector's raw decimal confidence, evidence vocabulary copied
+# onto the reader surface: the fallacy evidence lines print the figure
+# (« confiance du détecteur : 0,4 », fallacy_attribution.detector_confidence_
+# note) and the R1113a writer copied it into the narrative (« avec une
+# confiance de détection de 0,6 à 0,7 ») while the same render said the
+# standing in words three pages earlier — both vocabularies live in one
+# render and the reader cannot weigh a « 0,6 ». BOTH tokens must sit on the
+# same line: « confiance » with no figure is the #3231 ladder doing its
+# job, and a bare decimal belongs to other families. The ladder words
+# (provisoire, moyenne, ferme) never carry a 0,x — they cannot match.
+_CONFIDENCE_WORD_RE = re.compile(r"confiance|confidence", re.IGNORECASE)
+_DECIMAL_ZERO_RE = re.compile(r"\b0[.,]\d")
 
 # Internal spec pointers, both spellings the fixed surfaces carried.
 _SPEC_REF_RE = re.compile(r"\bspec\s*§|§\s*\d")
@@ -248,6 +265,22 @@ def check_reader_vocabulary(body: str) -> GateVerdict:
             f"{accord(len(gate_echoes), 'écho du diagnostic de gate', 'échos du diagnostic de gate')} "
             f"dans le récit (ex : « {gate_echoes[0][:100]} »). Le gate "
             f"parle dans le pli, jamais dans l'acte."
+        )
+
+    confidence_lines = [
+        line.strip()
+        for line in _lines(body)
+        if _CONFIDENCE_WORD_RE.search(line) and _DECIMAL_ZERO_RE.search(line)
+    ]
+    if confidence_lines:
+        worst = "FAIL"
+        reasons.append(
+            f"Vocabulaire interne (#3248) — "
+            f"{accord(len(confidence_lines), 'ligne portant la confiance chiffrée du détecteur', 'lignes portant la confiance chiffrée du détecteur')} "
+            f"sur la surface lecteur (ex : « {confidence_lines[0][:100]} »). "
+            f"Le standing d'une détection se dit en mots (provisoire, "
+            f"moyenne, ferme) ; le chiffre du détecteur reste du côté des "
+            f"preuves."
         )
 
     badges = [line.strip() for line in _lines(body) if _BARE_BADGE_RE.match(line)]
