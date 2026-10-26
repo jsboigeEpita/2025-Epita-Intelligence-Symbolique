@@ -38,6 +38,10 @@ have turned the contract around.
 * ``social-choice`` / ``social_choice`` — the governance engine's name for
   the vote, however spelled; the reader-facing vote is « le vote de la
   délibération », FAIL at first hit (#3238);
+* snake_case virtue identifiers (``refutation_constructive``,
+  ``redondance_faible``, « clarte »…) — the quality engine's 8 spellings
+  whose French display differs; the verdict names each virtue in the
+  reader's French, FAIL at first hit (#3244);
 * ``spec §`` / ``§\d`` internal spec pointers — unambiguous, FAIL;
 * serialized dict literals ``{"key": …}`` — unambiguous in French prose,
   FAIL;
@@ -88,6 +92,23 @@ _HIERARCHY_LABEL_RE = re.compile(r"(?<![0-9A-Za-z_])P[123](?![0-9A-Za-z_])")
 # match: the regex needs the English « choice » right after the join.
 _METHOD_TOKEN_RE = re.compile(
     r"(?<![0-9A-Za-z_-])social[-_]choice(?![0-9A-Za-z_-])", re.IGNORECASE
+)
+
+# #3244 — the quality engine's virtue identifiers. The pre-calculated
+# verdict used to interpolate them raw (« Le discours tient sur … ;
+# refutation_constructive (…) ; redondance_faible (…) », R1111a; « clarte »,
+# R1110b) and the writer is instructed to copy that sentence verbatim. The
+# 8 spellings whose display name differs: the 6 snake_case compounds and
+# the 2 accent-stripped singles. ``pertinence`` is excluded by construction
+# — its display name IS the French word, so flagging it would be a false
+# positive by definition. Letter-bounded both sides: the accented display
+# words (« clarté », « exhaustivité », measured on 59 of 144 stored bodies)
+# never match, and internal key shapes (``argument_quality_scores``) stay
+# out. The data side keeps the ids by design (#3238 precedent).
+_VIRTUE_ID_RE = re.compile(
+    r"(?<![0-9A-Za-z_])(?:refutation_constructive|redondance_faible|"
+    r"analogie_pertinente|fiabilite_sources|presence_sources|"
+    r"structure_logique|clarte|exhaustivite)(?![0-9A-Za-z_])"
 )
 
 # Internal spec pointers, both spellings the fixed surfaces carried.
@@ -179,6 +200,18 @@ def check_reader_vocabulary(body: str) -> GateVerdict:
             f"Le vote se nomme en français (« le vote de la délibération ») ; "
             f"« social-choice »/« social_choice » est le vocabulaire du "
             f"moteur, pas du récit."
+        )
+
+    virtue_hits = list(_VIRTUE_ID_RE.finditer(body))
+    if virtue_hits:
+        worst = "FAIL"
+        reasons.append(
+            f"Vocabulaire interne (#3244) — "
+            f"{accord(len(virtue_hits), 'identifiant interne de vertu', 'identifiants internes de vertu')} "
+            f"sur la surface lecteur (ex : « {virtue_hits[0].group(0)} »). "
+            f"Chaque vertu se nomme en français dans le récit (« réfutation "
+            f"constructive », « faible redondance », « clarté »…) ; "
+            f"l'identifiant snake_case est le vocabulaire du moteur qualité."
         )
 
     spec_hits = list(_SPEC_REF_RE.finditer(body))

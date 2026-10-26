@@ -127,10 +127,12 @@ class TestAct3DiscourseVirtue:
         prompt = build_act3_prompt(evidence)
         start = prompt.index("VERDICT PRÉ-CALCULÉ")
         sentence = prompt[start : prompt.index("Aucune autre vertu", start)]
-        assert _REDONDANCE in sentence
+        # #3244 — re-pinned from the identifier: the verdict sentence names
+        # each virtue by its reader-facing French (VIRTUE_DISPLAY_FR, act3).
+        assert "faible redondance" in sentence
         assert "7/8 arguments évalués" in sentence
         assert (
-            _CLARTE not in sentence
+            "clarté" not in sentence and _CLARTE not in sentence
         ), "clarté at 4/8 must not be said of the discourse"
 
     def test_no_virtue_at_the_bar_says_so_plainly(self):
