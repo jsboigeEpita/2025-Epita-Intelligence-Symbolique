@@ -15,6 +15,7 @@ inconsistent. Synthetic predicates and constants only.
 import asyncio
 import os
 import sys
+import threading
 import time
 from unittest.mock import MagicMock
 
@@ -155,22 +156,104 @@ def _eprover_pids():
     }
 
 
+def _sample_our_eprover_pids(stop, seen):
+    """Sample, until ``stop``, every EProver among THIS process's descendants.
+
+    #3219: E and the child ``--auto-schedule`` forks are descendants of the
+    process that started them; a neighbour xdist worker's E is a child of that
+    worker, not of this one, so it never enters ``seen``.
+    """
+    import psutil
+
+    us = psutil.Process()
+    while not stop.is_set():
+        try:
+            for child in us.children(recursive=True):
+                if (child.name() or "").lower().startswith("eprover"):
+                    seen.add(child.pid)
+        except psutil.Error:
+            pass  # a child exits mid-enumeration; the next sample retries
+        stop.wait(0.05)
+
+
+def _run_a_runaway_e_and_assert_no_survivor(eprover_module):
+    """Run the runaway E and assert every EProver process THIS call started is
+    gone (#3219). Returns the sampled PIDs so the caller can refuse a green it
+    cannot distinguish from an empty measurement."""
+    import psutil
+    from argumentation_analysis.core.eprover_runner import run_eprover
+
+    stop = threading.Event()
+    seen = set()
+    sampler = threading.Thread(
+        target=_sample_our_eprover_pids, args=(stop, seen), daemon=True
+    )
+    sampler.start()
+    try:
+        with pytest.raises(RuntimeError, match="timed out") as raised:
+            run_eprover(_pigeonhole(9), eprover_module._get_eprover_path(), timeout=3)
+    finally:
+        stop.set()
+        sampler.join(timeout=5)
+
+    assert not isinstance(raised.value, eprover_module.EProverInputRejected)
+    # measurement before verdict: the run was observed to start E, or the
+    # survivor assertion below would pass vacuously
+    assert seen, "no EProver descendant was sampled: the witness measured nothing"
+    deadline = time.monotonic() + 10
+    while any(psutil.pid_exists(pid) for pid in seen) and time.monotonic() < deadline:
+        time.sleep(0.5)
+    alive = {pid for pid in seen if psutil.pid_exists(pid)}
+    assert not alive, f"EProver processes started by this call still alive: {alive}"
+    return seen
+
+
 def test_a_timeout_kills_every_e_process(eprover):
     """DoD 2: the runner stops a runaway search, and ``--auto-schedule``'s
     child goes with its parent (killing the parent alone leaves it running,
-    measured on Windows)."""
-    from argumentation_analysis.core.eprover_runner import run_eprover
+    measured on Windows).
 
-    before = _eprover_pids()
+    #3219: the witness is scoped to the process tree its own call starts. The
+    seat-wide form (every EProver on the machine minus a before-set) reds
+    under xdist whenever a neighbour worker's E is alive at the final check —
+    the single red of the 19 473-test ai-01 union (R1110,
+    ``assert not ({53396} - set())``), which could not tell a leak from a
+    neighbour."""
+    _run_a_runaway_e_and_assert_no_survivor(eprover)
 
-    with pytest.raises(RuntimeError, match="timed out") as raised:
-        run_eprover(_pigeonhole(9), eprover._get_eprover_path(), timeout=3)
 
-    assert not isinstance(raised.value, eprover.EProverInputRejected)
-    deadline = time.monotonic() + 10
-    while _eprover_pids() - before and time.monotonic() < deadline:
-        time.sleep(0.5)
-    assert not _eprover_pids() - before
+def test_a_neighbour_eprover_never_reds_the_witness(eprover, monkeypatch):
+    """#3219 DoD 1: a neighbour E that appears mid-run — the shape of the
+    ai-01 R1110 union red — reds the seat-wide witness and never the
+    process-tree one.
+
+    The neighbour is injected at ``_eprover_pids`` (the seat-wide instrument):
+    this pytest process's PID, alive for the whole test and no EProver at all.
+    It appears one second after the patch — mid-run: after any before-set a
+    witness snapshots at its start (t≈0), before the final check of a timed-out
+    run (t≈3s), which is exactly when a neighbour worker's E appears under
+    xdist and why the before-set cannot cancel it. Born red against the
+    previous witness on this seat (1 failed). The post-run assertion measures
+    that the injection reproduces the union red's shape: a foreign alive PID
+    the seat-wide instrument counts as E."""
+    real_eprover_pids = _eprover_pids
+    before = real_eprover_pids()
+    patched_at = time.monotonic()
+
+    def a_neighbour_eprover_appears_mid_run():
+        pids = real_eprover_pids()
+        if time.monotonic() - patched_at > 1.0:
+            pids |= {os.getpid()}
+        return pids
+
+    monkeypatch.setattr(
+        sys.modules[__name__], "_eprover_pids", a_neighbour_eprover_appears_mid_run
+    )
+    assert os.getpid() not in _eprover_pids() - before  # not yet: run not started
+
+    seen = _run_a_runaway_e_and_assert_no_survivor(eprover)
+    assert seen
+    assert os.getpid() in _eprover_pids() - before  # the union red's shape
 
 
 @pytest.mark.parametrize("solver", ["tweety", "eprover", "prover9", "mace4"])
