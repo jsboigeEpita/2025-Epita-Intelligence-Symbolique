@@ -19,7 +19,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from tests.nested_pytest import both, run_bounded
-from tests.spinning_threads import describe, left_alive, spinning
+from tests.spinning_threads import describe, left_alive, spinning, verdict_of
 
 
 def _reads_a_mock_stream(stop):
@@ -40,11 +40,18 @@ def test_a_thread_that_spins_is_named():
     stop = threading.Event()
     thread = _started(_reads_a_mock_stream, stop)
     try:
-        spun = spinning(left_alive(before))
-        assert spun == [thread]
-        message = describe(spun)
+        trail = []
+        spun = spinning(left_alive(before), trail=trail)
+        # #3218: the return value alone cannot tell a clear verdict from an
+        # exhausted measurement, and this witness reddened in CI (run
+        # 40079683346) printing `assert [] == [...]` and nothing else. The
+        # trail is the evidence, and it is in the red.
+        assert verdict_of(trail) == "caught", describe(spun, trail)
+        assert spun == [thread], describe(spun, trail)
+        message = describe(spun, trail)
         assert thread.name in message, message
         assert "in _reads_a_mock_stream" in message, message
+        assert "window trail" in message, message
     finally:
         stop.set()
         thread.join(5)
@@ -115,6 +122,60 @@ def test_the_relative_rule_catches_what_the_absolute_bar_missed():
     # The calibration itself starved below accounting noise: the window
     # carries no signal — not a pass, not a fail.
     assert _credits(used=0.020, gettable=0.003) is None
+
+
+def test_a_window_under_two_charge_ticks_is_unmeasurable():
+    """#3218: one charge tick of budget is not a measurement.
+
+    The CI red measured ``gettable=15.6ms, used=0ms`` on a spinner alive
+    throughout: one tick against zero is the same reading a spinner gives
+    when its charge is booked in the next window, and three such windows in a
+    row were a silent ``clear``. Two ticks are the first window where the two
+    differ by a whole tick: a spinner at ``FACTOR`` owes one, a waiter owes
+    none. The tick is the ai-01 quantum, passed explicitly — the witness
+    states the arithmetic, not the seat."""
+    from tests.spinning_threads import _credits
+
+    tick = 0.015625
+    assert _credits(used=0.0, gettable=tick, quantum=tick) is None
+    assert _credits(used=0.0, gettable=1.9 * tick, quantum=tick) is None
+    # Two ticks: measurable, and the waiter is not flagged by it.
+    assert _credits(used=0.0, gettable=2 * tick, quantum=tick) is False
+    assert _credits(used=tick, gettable=2 * tick, quantum=tick) is True
+
+
+def test_the_tick_floor_uses_this_seat_s_thread_clock():
+    """#3218: the quantum is measured on the seat, never hard-coded — a
+    hard-coded 15.625 ms would state the wrong resolution wherever the seat
+    charges differently (and would silently stop protecting it)."""
+    from tests.spinning_threads import _credits, thread_time_quantum
+
+    quantum = thread_time_quantum()
+    assert quantum > 0, "the seat exposed no positive thread-time increment"
+    assert _credits(used=0.0, gettable=quantum, quantum=quantum) is None
+    assert _credits(used=0.0, gettable=2 * quantum, quantum=quantum) is False
+
+
+def test_the_clear_warning_carries_the_windows_that_produced_it():
+    """#3218: a clear is reported with its evidence when the threads did use
+    CPU, and a waiter's clear stays quiet (no used window to report)."""
+    from tests.spinning_threads import burned, clear_warning
+
+    thread = threading.Thread(target=lambda: None, name="the-burner")
+    trail = [
+        (0.100, 0.100, True),
+        (0.050, 0.100, True),
+        (0.000, 0.100, False),
+        (0.000, 0.100, False),
+        (0.000, 0.100, False),
+    ]
+    assert burned(trail) is True
+    message = clear_warning([thread], trail)
+    assert "the-burner" in message, message
+    assert "used=100ms" in message and "-> True" in message, message
+    assert "5 window(s)" in message, message
+    assert "clear" in message.lower(), message
+    assert burned([(0.001, 0.100, False)] * 3) is False
 
 
 # This spinner records nothing and spins until the session releases it: the
@@ -337,6 +398,22 @@ def test_a_thread_that_ends_mid_measurement_is_reported(tmp_path):
     assert done.returncode == 0, both(out, done.stderr)
     assert "1 passed" in out, both(out, done.stderr)
     assert "ERROR at teardown" not in out, both(out, done.stderr)
+
+
+# #3218 has no nested witness for the warned clear, by measurement. Forcing
+# one needs a suspect that registers at least one used window (used >= half
+# of what the calibration burner got in the same window) and then stops —
+# a majority GIL share for exactly two window-cycles. But a window-cycle is
+# not WINDOW: the per-window psutil read takes ~60 ms on this seat, during
+# which the calibration burns and the suspects may or may not, and the GIL
+# split of two burning threads is not 50/50 (measured here, anchored burner
+# vs calibration: 125 ms vs 46.9 ms in one cycle, 29%) — so the used window
+# is a coin the scheduler flips, and a witness built on it flakes exactly
+# the way this issue repairs. The warned clear is witnessed where it is
+# deterministic instead: `burned` and `clear_warning` at the function level
+# above, and the plugin branch is their four-line composition. A retry
+# around the nested run would hide the coin, not remove it — the DoD forbids
+# it.
 
 
 # The rationed regime of the #3125 rework: hogs started at import hold

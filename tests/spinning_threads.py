@@ -33,6 +33,20 @@ read as a silent ``clear``). Its name is recorded in ``ended`` and the plugin
 warns with the trail — a thread that ended cannot be cleared by the windows
 that followed its death.
 
+Two reds said nothing about themselves (#3218): the verdict ``clear`` left no
+trace, and a window holding one charge tick of the seat's thread clock read as
+a measured unused one. So now two things hold. **The floors are stated in the
+instrument's resolution**: the seat's thread-time quantum is measured at run
+time (``thread_time_quantum``), and a window whose ``gettable`` is under
+``MIN_TICKS`` of them is unmeasurable (``None``), never a measured ``False`` —
+at one tick, ``used=0`` against ``gettable=1 tick`` is the same reading a
+spinner gives when its charge landed in the next window. **A clear on suspects
+that burned is not silent**: a trailer that used CPU in at least one window and
+was then cleared by ``SAMPLES`` unused ones warns with its trail
+(``clear_warning``), while a waiter — no used window at all — stays quiet, so a
+normal session gains no warning from the threads it legitimately leaves
+waiting.
+
 Loaded as a plugin by ``tests/conftest.py``. ``psutil``, which times each
 thread, is imported only when a test leaves a thread alive.
 """
@@ -64,6 +78,15 @@ CAL_FLOOR = 0.005
 # Absolute floor per window: below this a thread is scheduler noise (a
 # waiter's blip), however little the calibration got.
 USED_FLOOR = 0.003
+# #3218: how many charge ticks of the seat's thread clock a window must offer
+# before its decision means anything. At one tick, ``used=0`` is the reading
+# both a waiter and a spinner give — a spinner whose charge was booked in the
+# next window (measured on ai-01: a 100 ms window with ``gettable=15.6ms``
+# against a live spinner read ``used=0ms``, and three of them in a row were a
+# silent clear). At two ticks the two are one whole tick apart: a spinner at
+# ``FACTOR`` owes a full tick, a waiter owes none. Three would throw away the
+# two-tick windows ai-01 measured under load (31.25 ms) for no more signal.
+MIN_TICKS = 2
 # Total windows attempted, measurable or not: SAMPLES measured windows must
 # fit within it, so a starved run ends instead of hanging.
 MAX_ATTEMPTS = 3 * SAMPLES
@@ -97,17 +120,91 @@ def _burn_until(stop: threading.Event) -> None:
         pass
 
 
-def _credits(used: float, gettable: float) -> bool | None:
+_QUANTUM: float | None = None
+
+
+def thread_time_quantum(span: float = 0.4) -> float:
+    """The smallest increment in which this seat charges CPU to a thread
+    (#3218), in seconds; ``0.0`` when no positive increment showed up.
+
+    Measured, never assumed: the sampling engine of the seat decides the
+    step, so a hard-coded 15.625 ms would state the wrong resolution on any
+    other seat. A burner thread of this process is sampled for ``span``
+    seconds and the charge steps are read off the deltas between two
+    readings — every delta is a whole number of steps, so the step is their
+    greatest common divisor (in whole microseconds), not their smallest
+    member: reading a thread's time walks the whole process table on some
+    seats (measured here: ~60 ms per read, several charge steps), and the
+    smallest delta a slow reader ever sees can be a multiple. A step measured
+    too small only admits a noisier window; one measured too large would
+    discard good ones."""
+    from math import gcd
+
+    import psutil
+
+    process = psutil.Process()
+    stop = threading.Event()
+    burner = threading.Thread(
+        target=_burn_until,
+        args=(stop,),
+        daemon=True,
+        name="spinning-detector-quantum",
+    )
+    burner.start()
+    try:
+        ident = burner.native_id
+
+        def read() -> float:
+            for entry in process.threads():
+                if entry.id == ident:
+                    return entry.user_time + entry.system_time
+            return 0.0
+
+        start = time.monotonic()
+        previous = read()
+        steps: list[int] = []
+        while time.monotonic() - start < span:
+            current = read()
+            delta = round((current - previous) * 1_000_000)
+            if delta > 0:
+                steps.append(delta)
+            previous = current
+        if not steps:
+            return 0.0
+        step = steps[0]
+        for value in steps[1:]:
+            step = gcd(step, value)
+        return step / 1_000_000
+    finally:
+        stop.set()
+        burner.join(1)
+
+
+def _quantum() -> float:
+    """``thread_time_quantum``, measured once per process."""
+    global _QUANTUM
+    if _QUANTUM is None:
+        _QUANTUM = thread_time_quantum()
+    return _QUANTUM
+
+
+def _credits(used: float, gettable: float, quantum: float | None = None) -> bool | None:
     """The #3125 window decision, apart from the timing so it can be
     witnessed without a thread race.
 
-    ``None`` — the window is unmeasurable (the calibration burner itself
-    got less than ``CAL_FLOOR``: the process was starved below accounting
-    noise). ``True`` — the suspects kept at least ``FACTOR`` of what was
-    gettable, and something absolute (``USED_FLOOR``): scheduler noise
-    alone never flags a waiter. ``False`` — a measured window the suspects
-    did not use."""
+    ``None`` — the window is unmeasurable: the calibration burner itself got
+    less than ``CAL_FLOOR`` (the process was starved below accounting noise),
+    or its whole budget is under ``MIN_TICKS`` charge ticks of the seat's
+    thread clock (``quantum``, measured by ``thread_time_quantum`` when the
+    caller passes none — #3218). ``True`` — the suspects kept at least
+    ``FACTOR`` of what was gettable, and something absolute (``USED_FLOOR``):
+    scheduler noise alone never flags a waiter. ``False`` — a measured window
+    the suspects did not use."""
     if gettable < CAL_FLOOR:
+        return None
+    if quantum is None:
+        quantum = _quantum()
+    if quantum > 0 and gettable < MIN_TICKS * quantum:
         return None
     return used >= max(FACTOR * gettable, USED_FLOOR)
 
@@ -157,6 +254,10 @@ def spinning(
     zero, never negative)."""
     if not threads:
         return []
+    # #3218: the instrument's own resolution, measured once per process
+    # before the calibration burner starts so the two never sample each
+    # other.
+    quantum = _quantum()
     trues = 0
     false_streak = 0
     attempts = 0
@@ -183,7 +284,7 @@ def spinning(
             )
             gettable = max(0.0, second.get(cal_id, 0.0) - first.get(cal_id, 0.0))
             first = second
-            decision = _credits(used, gettable)
+            decision = _credits(used, gettable, quantum)
             if trail is not None:
                 trail.append((used, gettable, decision))
             dead = [thread for thread in threads if not thread.is_alive()]
@@ -240,6 +341,14 @@ def verdict_of(trail: list[tuple[float, float, bool | None]]) -> str:
     return "undetermined"
 
 
+def burned(trail: list[tuple[float, float, bool | None]]) -> bool:
+    """Whether any measured window of ``trail`` met the bar (#3218): a
+    thread that used CPU at least once, as opposed to a waiter that never
+    did. This is what separates a clear worth reporting from a waiter's
+    ordinary one."""
+    return any(decision is True for _, _, decision in trail)
+
+
 def undetermined_warning(
     threads: list[threading.Thread], trail: list[tuple[float, float, bool | None]]
 ) -> str:
@@ -254,8 +363,32 @@ def undetermined_warning(
     return (
         f"#2538 could not measure whether these thread(s) spin: {names} "
         f"({len(trail)} window(s) attempted, verdict undetermined — the "
-        f"calibration burner starved below its floor, so this is neither a "
-        f"pass nor a clear): {windows}"
+        f"calibration burner starved below its floor, or its budget stayed "
+        f"under {MIN_TICKS} ticks of this seat's thread clock, so this is "
+        f"neither a pass nor a clear): {windows}"
+    )
+
+
+def clear_warning(
+    threads: list[threading.Thread],
+    trail: list[tuple[float, float, bool | None]],
+) -> str:
+    """The warning for a clear verdict on threads that did use CPU (#3218):
+    at least one window met the bar and ``SAMPLES`` measured windows in a row
+    then did not, so the check read them as finished work — which is a
+    verdict, and it carries its evidence. A waiter produces no used window
+    and stays quiet."""
+    names = ", ".join(thread.name for thread in threads)
+    windows = "; ".join(
+        f"used={used * 1000:.0f}ms gettable={gettable * 1000:.0f}ms -> {decision}"
+        for used, gettable, decision in trail
+    )
+    return (
+        f"#3218 cleared {names} after it used CPU: at least one window met "
+        f"the #2538 bar, then {SAMPLES} measured windows in a row did not — a "
+        f"thread that burned and stopped reads as finished work here, so this "
+        f"is the evidence for that verdict, not a silent pass ({len(trail)} "
+        f"window(s) attempted): {windows}"
     )
 
 
@@ -335,4 +468,11 @@ def pytest_runtest_teardown(item, nextitem):
             warnings.warn(ended_warning(suspects, ended, trail))
         elif suspects and verdict_of(trail) == "undetermined":
             warnings.warn(undetermined_warning(suspects, trail))
+        elif suspects and verdict_of(trail) == "clear" and burned(trail):
+            # #3218: a clear is the one verdict that used to leave no trace,
+            # and it is also the verdict the CI flake printed on a spinner
+            # alive throughout. A thread that burned then stopped is a real
+            # verdict worth its evidence; a waiter (no used window) is the
+            # silent case the plugin is built around, and stays silent.
+            warnings.warn(clear_warning(suspects, trail))
     return result
