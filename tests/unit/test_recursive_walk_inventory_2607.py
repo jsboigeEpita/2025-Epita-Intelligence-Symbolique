@@ -53,6 +53,9 @@ ROOTS_BY_WALK = {
     "unit/argumentation_analysis/orchestration/test_phase_producer_reader_1626.py": [
         "ROOT/argumentation_analysis/reporting/restitution (production renderer)"
     ],
+    "unit/argumentation_analysis/reporting/restitution/test_detection_confidence_words_3248.py": [
+        "_STORED_STATES (argumentation_analysis/evaluation/results, gitignored)"
+    ],
     "unit/argumentation_analysis/reporting/restitution/test_discourse_verdict_display_3244.py": [
         "_STORED_STATES (argumentation_analysis/evaluation/results, gitignored)"
     ],
