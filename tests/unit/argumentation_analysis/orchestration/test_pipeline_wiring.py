@@ -692,6 +692,9 @@ class TestDebateCrossKB:
         assert "[PENALIZED by fallacy]" in prompt
         # JTMS was read: the invalid belief is surfaced as retracted, and the
         # formal_consistency=False flag raises the inconsistency warning.
-        assert "RETRACTED BELIEFS (JTMS): Argument with low quality" in prompt
+        # #3226: the retraction block is multi-line now — one belief per
+        # line, each with its cause when the chain carries one.
+        assert "RETRACTED BELIEFS (JTMS):" in prompt
+        assert "Argument with low quality" in prompt
         assert "Formal inconsistency detected" in prompt
         assert isinstance(result, dict)
