@@ -34,8 +34,16 @@ were not, for the simple reason that they are declared ``List[Dict]`` and the
 passes written for Dung gate on ``isinstance(..., dict)``.
 
 Known and deliberately NOT covered, each for a stated reason:
-  * ``workflow_results`` — a free-form dict with no imposed schema; scrubbing
-    it needs a policy, not a table entry.
+  * ``workflow_results`` — a free-form dict with no imposed schema, so the
+    policy is the #3249 census, not a table entry: on the stored states the
+    only ≥30-char leaf family is ``deep_synthesis_value_gates.
+    vg1_citation_density.distinct_fields_cited`` — state container names
+    (12 distinct values measured), a join vocabulary rather than prose.
+  * ``restitution_acts_degraded`` — the degradation notes are a closed
+    vocabulary at the producer (#3249 census: 14 templates with digits
+    collapsed, every one a code literal of the act writers / readability
+    gate, 0 source-text matches); the reading folder reads them from the raw
+    local dump, never from a sanitized export.
   * ``formal_synthesis_reports[*].phase_results.*.formulas`` — symbolic, but
     Track 2 makes symbols readable (which is why ``variables`` IS opacified);
     the producer has to be read before deciding.
@@ -109,6 +117,20 @@ _TEXT_STRIP_DICT_OF_DICTS = {
     # text beside them was stripped. ``producer``/``offset``/``offset_basis``
     # are closed-vocabulary/int and survive: drop the leaf, keep the record.
     "argument_provenance": {"source_quote"},
+    # #3249 — the honest-absence ledger's free-form ``reason`` leaf. The
+    # record is ``{capability, status, degraded, reason, extension_count}``
+    # (``add_structured_arg_status``, shared_state.py:1846), written by the
+    # six per-axis recorders of ``_record_structured_arg_status`` plus the
+    # #3087 failure father. ``status`` is a closed vocabulary at every
+    # producer (measured on the stored states: 5 literals); ``reason`` is
+    # free-form producer prose, and the ``unavailable`` leg carries the
+    # insight's ``refusal_detail`` / the output's ``message`` (docstring,
+    # shared_state.py:1904-1913) — the ``errors[*].message`` class of #3261,
+    # not declarable closed. The one export reader of the ledger
+    # (``rederive_surplus_aggregate.py:142-147``) reads the capability keys
+    # and the ``degraded`` boolean, never ``reason``. Drop the leaf, keep the
+    # record — the #3239/#3261 gesture on the status axis.
+    "structured_arg_status": {"reason"},
 }
 
 # Dict-of-dicts fields whose *list sub-keys* carry nominative text entries
@@ -333,6 +355,37 @@ _NESTED_TEXT_STRIP_SUBKEYS: dict[str, dict[str, set[str]]] = {
     "fol_analysis_results": {"external_checks": {"message"}},
     "modal_analysis_results": {"external_checks": {"message"}},
 }
+
+# #3249 — whole containers whose every string is a source-derived atom or
+# signature line, with no structural sub-key worth distinguishing: the whole
+# value rides ``_opacify_list_values`` so arity (and any cross-container atom
+# join, the ``atms_contexts.assumptions`` gesture) survives.
+#
+#   ``atomic_propositions`` — ``Dict[source_key, List[str]]``
+#   (shared_state.py:834), sole writer invoke_callables.py:9739-9744 storing
+#   the LLM-extracted proposition atoms. Measured on the stored states: 1 473
+#   NL strings on 71/90, atoms named after the text's entities. The only
+#   export reader (``run_fp5_formal_matrix.py:115``) reads the count field;
+#   the source keys survive untouched.
+#
+#   ``fol_signature`` — ``List[str]`` of FOL signature lines
+#   (invoke_callables.py:1644-1646 / state_writers.py:1745-1750); the member
+#   lists carry entity names (measured: 405 NL on 71/90). Export readers
+#   count it (``run_spectacular_comparison.py:148`` reads ``len()``) and test
+#   populated-ness (:101) — both survive the arity-preserving opacification.
+#
+# NOT here, decided by measurement on the same corpus: the
+# ``restitution_acts_degraded`` notes are a closed vocabulary at the producer
+# (14 templates with digits collapsed, every one a code literal of the act
+# writers / readability gate; 0 source-text matches) and the only ≥30-char
+# leaf family under ``workflow_results`` is
+# ``deep_synthesis_value_gates.vg1_citation_density.distinct_fields_cited`` —
+# state container names (12 distinct values measured), a join vocabulary, not
+# prose. Both stay tolerated with that measurement beside their guard entry;
+# no scrub rides a closed vocabulary (#1664).
+_OPAQUE_WHOLE_CONTAINER_ATOMS: frozenset[str] = frozenset(
+    {"atomic_propositions", "fol_signature"}
+)
 
 # LIST-of-dicts fields whose sub-keys carry the same nominative claim text that
 # 4b/4c opacify for ``dung_frameworks`` (#1664): top-level field -> {sub_key}.
@@ -995,6 +1048,21 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
                     )
                     for leaf_item in subtree
                 ]
+
+    # 5j. #3249 — opacify the whole-atom containers: every string inside
+    #     ``atomic_propositions`` (dict of atom lists) and ``fol_signature``
+    #     (list of signature lines) is a source-derived atom, so the entire
+    #     value rides ``_opacify_list_values`` — the ``dung_frameworks.
+    #     arguments`` gesture applied to the whole field. Arity survives for
+    #     the ``len()`` readers; the deterministic ``opaque_id`` keeps any
+    #     cross-container atom join. Handles both shapes (dict-keyed and
+    #     list); non-string leaves pass through as everywhere else.
+    for field in _OPAQUE_WHOLE_CONTAINER_ATOMS:
+        container = data.get(field)
+        if isinstance(container, dict):
+            data[field] = {k: _opacify_list_values(v) for k, v in container.items()}
+        elif isinstance(container, list):
+            data[field] = _opacify_list_values(container)
 
     # 6. Opacify symbol-mapping sub-keys inside list-of-dicts fields
     #    (nl_to_logic_translations[*].variables).

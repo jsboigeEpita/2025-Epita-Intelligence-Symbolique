@@ -440,6 +440,28 @@ def _canaried_state() -> UnifiedAnalysisState:
     # entity labels, not claim text.
     s.add_governance_decision("borda", "option_a", {"option_a": 0.6})
 
+    # #3249 — ``structured_arg_status``, planted through the real
+    # ``add_structured_arg_status`` writer (shared_state.py:1846; the six
+    # per-axis recorders of ``_record_structured_arg_status`` plus the #3087
+    # failure father all go through it). ``status`` is a closed vocabulary at
+    # every producer (5 literals measured on the stored states), ``degraded``
+    # tri-state, ``extension_count`` int — only ``reason`` carries NL
+    # (free-form producer prose; the ``unavailable`` leg embeds the insight's
+    # ``refusal_detail``), so the canary goes there and nowhere else: planting
+    # NL in ``status`` would freeze a gap no producer can write (#1664).
+    s.add_structured_arg_status(
+        "setaf_reasoning", "evaluated", True, NL, extension_count=2
+    )
+
+    # #3249 — ``atomic_propositions`` / ``fol_signature``, the two
+    # whole-atom containers. No ``add_*`` API exists: the producers assign
+    # them directly (invoke_callables.py:9744 stores the extracted proposition
+    # atoms per source key; :1646 / state_writers.py:1745-1750 assign the
+    # signature lines list) — the plant mirrors the assigned shape, the
+    # ``fol_shared_signature`` precedent above.
+    s.atomic_propositions["src_1"] = [NL, NL2]
+    s.fol_signature = [NL]
+
     return s
 
 
@@ -498,6 +520,12 @@ WRITTEN_TOP_LEVEL_FIELDS = frozenset(
         # through that real writer above (the only append site; the three
         # production callers pass exception text).
         "errors",
+        # #3249 — the three formerly-tolerated containers, now canaried and
+        # scrubbed (leaf drop for the ledger's ``reason``; whole-container
+        # opacification for the two atom lists — passes 4 / 5j).
+        "structured_arg_status",
+        "atomic_propositions",
+        "fol_signature",
     }
 )
 
@@ -720,14 +748,14 @@ class TestScrubberCoverageGuard:
         # Every populated producer field must be declared (anti-drift).
         undeclared = written_now - WRITTEN_TOP_LEVEL_FIELDS
         # Tolerate only the pass-1 top-level strips, the structural
-        # bookkeeping the scrubber removes or never fills, and — #3242 — the
-        # containers the census measured (issue comment 6399207162, 49 stored
-        # states). ``fol_shared_signature`` and ``jtms_retraction_chain`` LEFT
-        # this set: both are now canaried through their real writers above
-        # and scrubbed (passes 5h / 5b). Every remaining entry carries its
-        # measurement beside it; the five NL-bearing ones are owned by the
-        # follow-up #3249 (reader census + decision per leaf — no scrub on
-        # suspicion, #1664).
+        # bookkeeping the scrubber removes or never fills, and the #3249
+        # verdicts (issue comment 6399207162 census, 49 stored states).
+        # ``fol_shared_signature``, ``jtms_retraction_chain``,
+        # ``structured_arg_status``, ``atomic_propositions`` and
+        # ``fol_signature`` LEFT this set: all five are now canaried through
+        # their real writers above and scrubbed (passes 5h / 5b / 4 / 5j).
+        # The two #3249 survivors stay tolerated WITH their measured
+        # closed-vocabulary verdict — no scrub on suspicion (#1664).
         tolerated = {
             "raw_text",
             "raw_text_snippet",
@@ -737,13 +765,19 @@ class TestScrubberCoverageGuard:
             "task_count",
             "deanonymized",
             "source_id",
-            # producer NL measured on the stored states (#3242 census),
-            # each awaiting its #3249 census:
-            "structured_arg_status",  # 48 states, 288 NL ≥ 30
-            "atomic_propositions",  # 48 states, 734 NL — atoms named after the text
-            "fol_signature",  # 48 states, 197 NL — members carry entity names
-            "restitution_acts_degraded",  # 41 states, 51 NL (degraded notes)
-            "workflow_results",  # 49 states, 47 NL — free-form values
+            # #3249 verdict — 14 distinct literals measured on the 41 states
+            # that carry it, ALL code-side templates (``Cadrage
+            # indisponible — le LLM n'a rien produit (fail-loud, #1108)`` &c.,
+            # state_writers.py:2642-2656 copies them verbatim; 0 of 51 values
+            # match the argument text). The reading folder reads the raw
+            # dump, never the sanitized export — closed vocabulary, kept.
+            "restitution_acts_degraded",
+            # #3249 verdict — the only ≥30-char leaf family is
+            # ``vg1_citation_density.distinct_fields_cited[*]``: 12 distinct
+            # values measured across the 49 states, every one a state
+            # container name (``propositional_analysis_results`` &c.) — a
+            # join vocabulary, not prose. Kept.
+            "workflow_results",
             # unexercised on this corpus (0 of 49 states carry them, #3242
             # census; #3131's crossing measured the same for
             # local_llm_results' ``response``):
@@ -942,6 +976,33 @@ class TestSubstitutionControl:
                 "jtms_retraction_chain",
                 ".cascaded",
             ),
+            # Pass 4 (#3249): the honest-absence ledger's ``reason`` leaf —
+            # free-form producer prose (the ``unavailable`` leg embeds the
+            # refusal detail). Removing the entry re-leaks the canary under
+            # the capability record; ``status`` / ``degraded`` /
+            # ``extension_count`` stay structural.
+            (
+                "_TEXT_STRIP_DICT_OF_DICTS",
+                "structured_arg_status",
+                "structured_arg_status",
+                ".reason",
+            ),
+            # Pass 5j (#3249): the whole-atom containers. The table is a flat
+            # frozenset, so removing one field disarms its opacification and
+            # the raw atom text survives at the container's leaves (arity
+            # readers keep their count either way).
+            (
+                "_OPAQUE_WHOLE_CONTAINER_ATOMS",
+                "atomic_propositions",
+                "atomic_propositions",
+                "atomic_propositions[*]",
+            ),
+            (
+                "_OPAQUE_WHOLE_CONTAINER_ATOMS",
+                "fol_signature",
+                "fol_signature",
+                "fol_signature[*]",
+            ),
         ],
     )
     def test_removing_a_rule_lets_the_canary_through(
@@ -954,7 +1015,12 @@ class TestSubstitutionControl:
     ) -> None:
         original_table = getattr(_sanitize_mod, table_attr)
         # Surgical copy minus the one field — the rest of the table stays armed.
-        reduced = {k: v for k, v in original_table.items() if k != remove_field}
+        # Dict tables are field->spec maps; the whole-atom table (#3249) is a
+        # flat frozenset of field names — both shapes lose exactly one entry.
+        if hasattr(original_table, "items"):
+            reduced = {k: v for k, v in original_table.items() if k != remove_field}
+        else:
+            reduced = frozenset(x for x in original_table if x != remove_field)
         monkeypatch.setattr(_sanitize_mod, table_attr, reduced)
 
         survivors = _surviving_paths(
