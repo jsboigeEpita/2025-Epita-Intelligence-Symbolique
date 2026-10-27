@@ -1,0 +1,40 @@
+{
+  "key": "c9ca1ff7e665126ea8e7e97cea00d6cfbff57fc2fcde78314397e5be688f82dd",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_TK16fiOARjN8WIan2V27TcFg",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"Le texte ne repose pas sur la colère, l'indignation ou la haine ; cette branche ne correspond pas.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Edi90vt6s3lYVgrFuJbA6SWOGDBdf",
+        "created": 1793133190,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1618,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 520,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 45,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

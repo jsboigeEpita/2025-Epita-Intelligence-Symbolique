@@ -1,0 +1,48 @@
+{
+  "key": "82c7c623868d03cfa9e793959215654e0eae277573b93a982c8c1ecf2bca23ee",
+  "value": {
+    "id": "chatcmpl-EdiD8VryojlRC5t4xQDbNXb4UJVI9",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"arguments\":[{\"text\":\"L’option A défend l’organisation d’un tournoi inter-villes comprenant un buffet et des prix, afin d’accroître la visibilité du club et de recruter de nouveaux membres.\",\"source_quote\":\"Option A : organiser un tournoi inter-villes avec buffet et prix pour 2000 euros, ce qui augmentera la visibilite du club et recrutera de nouveaux membres.\",\"move_author\":\"reported\"},{\"text\":\"L’option B défend l’investissement intégral du budget dans du matériel pédagogique, notamment des échiquiers, des horloges et des supports de cours, en réponse à l’usure du matériel actuel.\",\"source_quote\":\"Option B : investir les 2000 euros en materiel pedagogique, echiquiers neufs, horloges et supports de cours, car les echiquiers actuels sont uses.\",\"move_author\":\"reported\"},{\"text\":\"L’option C défend un compromis entre les objectifs de visibilité et de pédagogie en répartissant également le budget entre un tournoi réduit et le matériel pédagogique.\",\"source_quote\":\"Option C : un format hybride, 1000 euros pour un tournoi reduit et 1000 euros pour le materiel pedagogique, equilibre entre visibilite et pedagogie.\",\"move_author\":\"reported\"}],\"claims\":[{\"text\":\"Le club d’échecs dispose d’un budget participatif de 2 000 euros.\",\"source_quote\":\"Le club d'echecs dispose d'un budget participatif de 2000 euros.\"},{\"text\":\"L’option A prévoit un coût total de 2 000 euros pour le tournoi inter-villes, le buffet et les prix.\",\"source_quote\":\"organiser un tournoi inter-villes avec buffet et prix pour 2000 euros\"},{\"text\":\"Selon l’option A, le tournoi augmenterait la visibilité du club.\",\"source_quote\":\"ce qui augmentera la visibilite du club\"},{\"text\":\"Selon l’option A, le tournoi permettrait de recruter de nouveaux membres.\",\"source_quote\":\"et recrutera de nouveaux membres\"},{\"text\":\"L’option B prévoit l’achat d’échiquiers neufs, d’horloges et de supports de cours.\",\"source_quote\":\"echiquiers neufs, horloges et supports de cours\"},{\"text\":\"Les échiquiers actuellement utilisés par le club sont usés.\",\"source_quote\":\"car les echiquiers actuels sont uses\"},{\"text\":\"L’option C répartit le budget en deux parts égales de 1 000 euros.\",\"source_quote\":\"1000 euros pour un tournoi reduit et 1000 euros pour le materiel pedagogique\"}],\"summary\":\"Le texte présente trois positions concurrentes pour l’utilisation d’un budget de 2 000 euros : privilégier la visibilité par un tournoi, moderniser le matériel pédagogique, ou combiner les deux objectifs à parts égales.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133446,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 883,
+      "prompt_tokens": 517,
+      "total_tokens": 1400,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 288,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

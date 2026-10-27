@@ -1,0 +1,48 @@
+{
+  "key": "c85dc5de528fec0b1cb686caec7bdb7e0f04c68f2499027532542682e93cad1a",
+  "value": {
+    "id": "chatcmpl-EdiI9oraFHfX80B7ejHxwSS5UhDYp",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. La transition énergétique est nécessaire.\\n2. La transition énergétique est économiquement avantageuse à long terme.\\n3. Ceux qui minimisent la crise climatique utilisent souvent des données sélectives pour soutenir leur position.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133757,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 97,
+      "prompt_tokens": 211,
+      "total_tokens": 308,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 38,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

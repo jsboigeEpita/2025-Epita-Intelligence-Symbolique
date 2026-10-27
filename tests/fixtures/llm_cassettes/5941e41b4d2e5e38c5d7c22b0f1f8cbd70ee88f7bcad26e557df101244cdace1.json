@@ -1,0 +1,48 @@
+{
+  "key": "5941e41b4d2e5e38c5d7c22b0f1f8cbd70ee88f7bcad26e557df101244cdace1",
+  "value": {
+    "id": "chatcmpl-Edi6B7kEWqIoGG2oo2MHyZviNimn2",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Le gouvernement présente à tort le fait de travailler plus longtemps comme allant de soi ou comme étant dans l’ordre naturel des choses, ce qui constitue un sophisme naturaliste.\\n2. Affirmer que le système s’effondrera dans cinq ans si aucune mesure n’est prise constitue un appel à la peur.\\n3. Selon les chiffres présentés par le ministre des Finances, le déficit atteindra 2,3 % du PIB d’ici 2030.\\n4. Cette projection du déficit repose sur des hypothèses de croissance optimistes, à savoir une croissance annuelle de 1,8 %.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133015,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 257,
+      "prompt_tokens": 299,
+      "total_tokens": 556,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 117,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

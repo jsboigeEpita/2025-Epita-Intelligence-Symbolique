@@ -1,14 +1,14 @@
 {
   "key": "589eb432521c35cde16fbedf1684b8393020b9cb7f5fdc3735f88c51a3f027cd",
   "value": {
-    "id": "chatcmpl-Ec9CakEuwBh6rHhLDIsWuMAiGWB27",
+    "id": "chatcmpl-EdiFcbDXKcrvh1WWZB0C2df04GJl4",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":0.0,\"exhibit\":\"Prémisse : les études scientifiques montrent que la vaccination a éradiqué la variole et réduit considérablement la polio. Conclusion : la vaccination est indispensable à la santé publique. Verdict : saut logique net, car la prémisse ne suffit pas à établir le caractère indispensable de la vaccination.\"}",
+          "content": "{\"score\":0.0,\"exhibit\":\"Chaîne : les études montrent que la vaccination a éradiqué la variole et fortement réduit la polio → la vaccination est indispensable à la santé publique. Verdict : saut logique net, car les prémisses ne suffisent pas à établir l’indispensabilité.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1792760544,
+    "created": 1793133600,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 122,
+      "completion_tokens": 150,
       "prompt_tokens": 274,
-      "total_tokens": 396,
+      "total_tokens": 424,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 43,
+        "reasoning_tokens": 77,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

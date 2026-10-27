@@ -1,14 +1,14 @@
 {
   "key": "857548bf8c6b74b1216684e46ab7aea88fb5c1418320bfe2274d47191fe3ca66",
   "value": {
-    "id": "chatcmpl-Ec96ESKkWAl2XuS878gKGQTUjoNOw",
+    "id": "chatcmpl-Edi9uRDhGLM5ThSYIzG3KQKf8JDHw",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\n  \"sorts\": {\n    \"Person\": [\"vous\"],\n    \"Opinion\": [\"votre_avis\"],\n    \"Proposition\": []\n  },\n  \"predicates\": {\n    \"Expert\": [\"Person\"],\n    \"Unanimous\": [\"Person\"],\n    \"True\": [\"Proposition\"],\n    \"HasOpinion\": [\"Person\", \"Opinion\"],\n    \"OpinionCounts\": [\"Opinion\"]\n  },\n  \"constants\": {\n    \"vous\": \"the addressee\",\n    \"votre_avis\": \"the addressee's opinion\"\n  }\n}",
+          "content": "{\n  \"sorts\": {\n    \"Person\": [\"vous\"],\n    \"Group\": [\"experts\"],\n    \"Opinion\": [\"avis\"],\n    \"Proposition\": []\n  },\n  \"predicates\": {\n    \"Expert\": [\"Person\"],\n    \"Unanimous\": [\"Group\"],\n    \"True\": [\"Proposition\"],\n    \"Owns\": [\"Person\", \"Opinion\"],\n    \"Counts\": [\"Opinion\"]\n  },\n  \"constants\": {\n    \"vous\": \"the addressee\",\n    \"experts\": \"the group of experts\",\n    \"avis\": \"the addressee's opinion\"\n  }\n}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1792760150,
+    "created": 1793133246,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 637,
+      "completion_tokens": 922,
       "prompt_tokens": 195,
-      "total_tokens": 832,
+      "total_tokens": 1117,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 512,
+        "reasoning_tokens": 779,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

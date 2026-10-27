@@ -1617,11 +1617,22 @@ def _write_fact_extraction_to_state(
                     arg_text = text
                     if quote:
                         arg_text = f'{text} [quote: "{quote[:100]}"]'
+                    # #3162 item 2 — the extraction's own statement about whose
+                    # position the unit carries travels with the unit. Anything
+                    # the model did not state stays absent: ``add_argument``
+                    # gates the closed vocabulary, so a malformed value is
+                    # dropped there, never coerced into a default here.
+                    stated_author = arg.get("move_author")
                     # #2850 slice A — provenance: llm_extract, offset from the
                     # FULL quote (the stored text truncates it at 100 chars; a
                     # prefix find is still a find).
                     arg_id = state.add_argument(
-                        arg_text, producer="llm_extract", source_quote=quote or None
+                        arg_text,
+                        producer="llm_extract",
+                        source_quote=quote or None,
+                        move_author=(
+                            stated_author if isinstance(stated_author, str) else None
+                        ),
                     )
                     _record_assert_move(state, arg_id, quote, raw_text)
             elif isinstance(arg, str) and arg.strip():

@@ -1,0 +1,40 @@
+{
+  "key": "0d5db27c98ef2ae75ccea1f18def092e1f1e615e62f26d1d9a79447d0d1d0438",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_O8LKOdEcsm1fTHQkqvtCj1W0",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"846\",\"matches\":false,\"justification\":\"La phrase affirme un succès, mais ne présente pas d'ambiguïté sémantique ou structurelle identifiable. Elle peut relever d'une affirmation non étayée ou d'une autre branche, pas de l'ambiguïté.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Edi8I2FyyeAUgig9BVkRWnQQm3AnI",
+        "created": 1793133146,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2015,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 917,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 83,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

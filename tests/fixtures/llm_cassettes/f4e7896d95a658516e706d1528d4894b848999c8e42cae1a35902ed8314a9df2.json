@@ -1,14 +1,14 @@
 {
   "key": "f4e7896d95a658516e706d1528d4894b848999c8e42cae1a35902ed8314a9df2",
   "value": {
-    "id": "chatcmpl-Ec9CjRmqcoHka72qt2uIkvmxT9mJu",
+    "id": "chatcmpl-EdiGBnalt5INvSJkFKZ8wzkP9bc8D",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"distinct_points\":\"1. L’affirmation selon laquelle les produits pharmaceutiques cachent leurs effets secondaires est une théorie du complot sans fondement.\\n2. Des taux de vaccination élevés protègent les personnes qui ne peuvent pas être vaccinées grâce à l’immunité collective.\"}",
+          "content": "{\"distinct_points\":\"1. Des taux de vaccination élevés protègent les personnes qui ne peuvent pas être vaccinées grâce à l’immunité collective.\\n2. L’affirmation selon laquelle les entreprises pharmaceutiques cachent les effets secondaires est une théorie du complot sans fondement.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1792760553,
+    "created": 1793133635,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 117,
+      "completion_tokens": 124,
       "prompt_tokens": 234,
-      "total_tokens": 351,
+      "total_tokens": 358,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 47,
+        "reasoning_tokens": 54,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

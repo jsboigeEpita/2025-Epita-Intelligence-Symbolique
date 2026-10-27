@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_N1cceU3gE74p1mcE48elWqNt",
+          "id": "call_LvTHgbMXydwIXj1IBlZsEjfU",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"175\",\"matches\":false,\"justification\":\"La phrase rapporte simplement que le président affirme le succès de la politique économique, sans fournir assez de contexte pour établir une manipulation, un procédé persuasif ou une autre sous-catégorie d’influence.\",\"confidence\":\"high\",\"move_author\":\"reported\",\"move_author_label\":\"le président\"}"
+          "arguments": "{\"node_pk\":\"175\",\"matches\":false,\"justification\":\"La phrase affirme simplement un succès économique sans fournir d'argument, mais elle ne permet pas d'identifier spécifiquement une manipulation, une technique rhétorique ou un appel à l'émotion.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Ec94NnZNvGOPi2hjTO59vwrkafJSR",
-        "created": 1792760035,
+        "id": "chatcmpl-Edi8GYv7lQZM2WjsR0BChKEvkpjE2",
+        "created": 1793133144,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1896,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 87,
+          "completion_tokens": 78,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

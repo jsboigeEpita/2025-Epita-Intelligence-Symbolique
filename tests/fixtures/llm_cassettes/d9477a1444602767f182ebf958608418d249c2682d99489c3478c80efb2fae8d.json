@@ -1,0 +1,48 @@
+{
+  "key": "d9477a1444602767f182ebf958608418d249c2682d99489c3478c80efb2fae8d",
+  "value": {
+    "id": "chatcmpl-EdiAxZVIJLSwG9Q1LEAglkD5ZbQPl",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":false,\"opposing_claim\":\"\",\"main_thesis\":\"L’option A consiste à utiliser les 2000 euros pour organiser un tournoi inter-villes avec buffet et prix afin d’accroître la visibilité du club.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133311,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 133,
+      "prompt_tokens": 302,
+      "total_tokens": 435,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 74,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

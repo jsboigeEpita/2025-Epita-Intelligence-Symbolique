@@ -1,0 +1,48 @@
+{
+  "key": "22c77d66a0d7797b6f456b7356520e84d35fd15ce8f45d916ca0e66d4128f14e",
+  "value": {
+    "id": "chatcmpl-EdiHADIABDrkZfeJxgVgkvASthPjY",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points 1 et 2 présentent deux idées distinctes : le risque d’erreur judiciaire irréversible et le danger permanent de certains criminels. Le point 3 introduit un argument économique distinct, bien qu’il soit incomplet (« supérieur à celui »). Aucune redondance sémantique notable n’est démontrée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133696,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 134,
+      "prompt_tokens": 295,
+      "total_tokens": 429,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 45,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

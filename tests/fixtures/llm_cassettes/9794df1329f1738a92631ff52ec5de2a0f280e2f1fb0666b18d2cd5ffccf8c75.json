@@ -1,0 +1,48 @@
+{
+  "key": "9794df1329f1738a92631ff52ec5de2a0f280e2f1fb0666b18d2cd5ffccf8c75",
+  "value": {
+    "id": "chatcmpl-Edi628XFmqLnCPHXzMFkAIy511WNJ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Le gouvernement affirme que, si aucune action n'est prise immédiatement, le système s'effondrera dans cinq ans, en s'appuyant sur un scénario de crise imminente.\",\"conclusion\":\"Cette affirmation constitue un appel à la peur classique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133006,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 389,
+      "prompt_tokens": 313,
+      "total_tokens": 702,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 321,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

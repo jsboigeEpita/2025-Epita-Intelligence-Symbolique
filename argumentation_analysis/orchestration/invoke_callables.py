@@ -9268,6 +9268,21 @@ _OPPOSING_POSITIONS_INSTRUCTION = (
     "description of another item."
 )
 
+# #3162 item 2 — WHOSE position each extracted item carries. #1745 (above)
+# says *which* positions to extract; it never says to mark them, so the
+# restitution acts could not tell the speaker's units from the positions the
+# text reports/rebuts (the Act III writer inverted a defeat of an opponent
+# position into a weakness of the speaker). Closed vocabulary, the same two
+# words #3180 already uses for fallacies; omitting the key is the honest
+# answer when the text does not let us tell (#1019 — never a default).
+_MOVE_AUTHOR_INSTRUCTION = (
+    " For each extracted item, state WHOSE position it carries with "
+    "'move_author': 'speaker' when the item states the analysed text's own "
+    "position, 'reported' when the item states a position the text reports, "
+    "cites or argues against (a third party's). Omit the key when the text "
+    "does not let you tell."
+)
+
 
 async def _invoke_fact_extraction(
     input_text: str, context: Dict[str, Any]
@@ -9325,9 +9340,11 @@ async def _invoke_fact_extraction(
             "(2) extracting factual claims that can be verified, "
             "(3) noting rhetorical strategies used (without labeling them as fallacies). "
             + _OPPOSING_POSITIONS_INSTRUCTION
+            + _MOVE_AUTHOR_INSTRUCTION
             + lang_clause
             + " Respond with ONLY a JSON object:\n"
-            '{"arguments": [{"text": "arg description", "source_quote": "exact quote..."}], '
+            '{"arguments": [{"text": "arg description", "source_quote": "exact quote...", '
+            '"move_author": "speaker|reported"}], '
             '"claims": [{"text": "claim description", "source_quote": "exact quote..."}], '
             '"summary": "brief analysis summary"}'
         )

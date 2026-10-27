@@ -1,0 +1,48 @@
+{
+  "key": "155dca68aa2e2f873f4fd41023c7ae4c60868262a870e5d87244278af5a7f067",
+  "value": {
+    "id": "chatcmpl-EdiICBNBuiW1VtRhPXTFp6r0VWwPR",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne relie l’augmentation de 1,1 degré et la vitesse actuelle du changement à l’idée qu’il ne s’explique pas seulement par les variations naturelles et qu’il est largement dû à une cause non précisée, mais le verdict est un saut logique : la conclusion ne découle pas suffisamment des prémisses.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133760,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 122,
+      "prompt_tokens": 296,
+      "total_tokens": 418,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 36,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "key": "e5ee8650b774e27b1c07dd8ca9df34d3d5f7fab0bc449d1d897cde3f747f6e64",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_Qvyv1zxAPshNESfDSxVl1KZa",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"801\",\"matches\":false,\"justification\":\"La phrase rapporte simplement que le président qualifie la politique économique de « succès incontestable ». Elle n’emploie pas de définition complexe ou obscure ; ce n’est donc pas un défaut d’élucidation.\",\"confidence\":\"high\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Edi8PcLWxVQDNnuhMVX6skAY4oCMA",
+        "created": 1793133153,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 938,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 88,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

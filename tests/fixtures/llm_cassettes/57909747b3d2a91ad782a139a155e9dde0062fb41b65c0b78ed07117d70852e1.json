@@ -1,0 +1,48 @@
+{
+  "key": "57909747b3d2a91ad782a139a155e9dde0062fb41b65c0b78ed07117d70852e1",
+  "value": {
+    "id": "chatcmpl-EdiDRagE5IsuBiTBzztIRK2FmQr47",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\":false,\"engagement_verdict\":\"pas_de_refutation\",\"reasoning\":\"L’option C propose une répartition alternative mais ne réfute pas directement l’argument de l’option B selon lequel les échiquiers usés justifient d’investir les 2000 euros dans le matériel pédagogique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133465,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 198,
+      "prompt_tokens": 390,
+      "total_tokens": 588,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 120,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

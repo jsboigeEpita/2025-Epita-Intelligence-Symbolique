@@ -1,0 +1,48 @@
+{
+  "key": "56886717f1597a412bb66970a74ca866e9852cb645d79b59077a4db778fbd1ab",
+  "value": {
+    "id": "chatcmpl-Edi6385VxrzW6NLwUO5u1DWY4hsbB",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Jargon technique ou spécialisé non défini : « PIB », « homme de paille » et « appel à l’émotion ». Aucun anaphore clairement non résolvable ni phrase excessivement emboîtée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133007,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 170,
+      "prompt_tokens": 342,
+      "total_tokens": 512,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 106,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

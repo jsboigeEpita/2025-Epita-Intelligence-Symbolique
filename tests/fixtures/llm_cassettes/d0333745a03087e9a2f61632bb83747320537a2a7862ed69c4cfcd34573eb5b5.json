@@ -1,0 +1,48 @@
+{
+  "key": "d0333745a03087e9a2f61632bb83747320537a2a7862ed69c4cfcd34573eb5b5",
+  "value": {
+    "id": "chatcmpl-Edi5t6cfU6cgcx4ywvR6OO9FZ0JpQ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Le gouvernement soutient qu’une réforme urgente, notamment le fait de travailler plus longtemps, est nécessaire parce que le déficit atteindra 2,3 % du PIB d’ici 2030 et que cette évolution serait « dans l’ordre des choses ».\",\"main_thesis\":\"La justification gouvernementale de la réforme est contestable, car elle repose sur des hypothèses de croissance optimistes et déforme la position de l’opposition, qui propose une autre réforme plutôt que la suppression des retraites.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793132997,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 282,
+      "prompt_tokens": 362,
+      "total_tokens": 644,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 161,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

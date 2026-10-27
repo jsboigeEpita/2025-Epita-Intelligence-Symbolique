@@ -1,14 +1,14 @@
 {
   "key": "f46f3c862a5c0886c10c218bddb3871a54af2d7b664d9621425cb355b85650ed",
   "value": {
-    "id": "chatcmpl-Ec91Sunspl18xfLpd5KzctfVkLFaU",
+    "id": "chatcmpl-Edi5q6U5USBAmOtrK1MtKDxCCHWWj",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":1.0,\"exhibit\":\"Position adverse identifiée : la réforme des retraites est nécessaire parce que tous les pays européens l'ont déjà adoptée. Verdict : engagement réel avec cette thèse adverse, ce qui constitue une réfutation constructive pleinement démontrée.\"}",
+          "content": "{\"score\":1.0,\"exhibit\":\"Position adverse identifiée : la réforme des retraites est nécessaire parce que tous les pays européens l’ont déjà adoptée. Verdict : engagement réel avec cette thèse adverse.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1792759854,
+    "created": 1793132994,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 133,
+      "completion_tokens": 115,
       "prompt_tokens": 263,
-      "total_tokens": 396,
+      "total_tokens": 378,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 67,
+        "reasoning_tokens": 61,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

@@ -6,8 +6,8 @@
       "content": "{\"query_ideas\":[{\"formula\":\"[](p)\"},{\"formula\":\"<>(p)\"},{\"formula\":\"[](q)\"},{\"formula\":\"<>(q)\"}]}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Ec9Bysp2hpDnjPVqj4iP54hWxdJyo",
-        "created": 1792760506,
+        "id": "chatcmpl-EdiF3UIYBRPbrNIUoeeuJKNSU6ToP",
+        "created": 1793133565,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 176,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 95,
+          "completion_tokens": 98,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 55,
+            "reasoning_tokens": 58,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

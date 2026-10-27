@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_QzihCYyl7fHsMOsNr5eApn12",
+          "id": "call_nHP77pUzBqyPlW20ZNilInBD",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"761\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"Le texte rejette l’avis des non-experts en raison de leur statut ou de l’origine de leur opinion, plutôt qu’en examinant le contenu de leurs arguments. La seconde affirmation commet donc un sophisme génétique, même si l’appel à l’unanimité des experts dans la première peut relever d’un autre raisonnement.\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"761\",\"matches\":false,\"justification\":\"Le texte invoque l'unanimité des experts et exclut l'avis des non-experts; il s'agit d'un appel à l'autorité et d'un rejet de l'opinion selon le statut de la personne, plutôt que d'un rejet d'une idée en raison de son origine. Le sophisme génétique ne correspond donc pas à ce passage.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Ec95iDLtkVvoVi25GZUTFI2X5Uwvc",
-        "created": 1792760118,
+        "id": "chatcmpl-Edi9eYm3WMQcLALwhuJK9YvvbwloF",
+        "created": 1793133230,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 939,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 108,
+          "completion_tokens": 111,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

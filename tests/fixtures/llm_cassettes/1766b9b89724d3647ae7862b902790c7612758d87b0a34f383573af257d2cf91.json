@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"Test(test9)\",\n    \"Memoire(test9)\",\n    \"Numero(test9, neuf)\",\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"Test\": \"est un test\",\n    \"Memoire\": \"concerne la mémoire\",\n    \"Numero\": \"a pour numéro\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La première phrase indique qu'il existe un test de mémoire identifié par test9. Elle est représentée par Test(test9), Memoire(test9) et Numero(test9, neuf). La seconde phrase affirme que tout objet qui est un test est important, ce qui se traduit par forall X: (Test(X) => Important(X)).\"\n}",
+      "content": "{\n  \"formulas\": [\n    \"Test(test9)\",\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"« Test mémoire numéro 9 » est représenté par le fait que test9 est un test. « Tous les tests sont importants » signifie que tout objet qui est un test est important.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Ec99WH5kYgItdpXgaqyTOSml8cn0W",
-        "created": 1792760354,
+        "id": "chatcmpl-EdiD3b7oK7KO5HZWT997l3eGyxEpP",
+        "created": 1793133441,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 285,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 545,
+          "completion_tokens": 311,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 357,
+            "reasoning_tokens": 189,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

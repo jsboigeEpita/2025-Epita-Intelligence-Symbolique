@@ -1,14 +1,14 @@
 {
   "key": "3ae251cfd4b8340cb76919b177a7e37374cdb25b6b8a0ed23383dd2a928ae4ac",
   "value": {
-    "id": "chatcmpl-Ec91XVkjWdVXUvHch95HgeA3Vraag",
+    "id": "chatcmpl-Edi5vaZ4nopTF1GgReSWqSBMVi3j0",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":0.0,\"exhibit\":\"Chaîne reconstruite : « Tous les pays européens ont déjà adopté la réforme des retraites » → « La réforme des retraites est nécessaire ». Verdict : saut logique net, car l’adoption par les pays européens ne démontre pas à elle seule la nécessité de la réforme.\"}",
+          "content": "{\"score\":0.0,\"exhibit\":\"Chaîne reconstruite : « Tous les pays européens ont déjà adopté la réforme des retraites » → « La réforme des retraites est nécessaire ». Verdict : saut logique, car l’adoption généralisée ne suffit pas à démontrer la nécessité.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1792759859,
+    "created": 1793132999,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 70,
+      "completion_tokens": 99,
       "prompt_tokens": 264,
-      "total_tokens": 334,
+      "total_tokens": 363,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 0,
+        "reasoning_tokens": 29,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

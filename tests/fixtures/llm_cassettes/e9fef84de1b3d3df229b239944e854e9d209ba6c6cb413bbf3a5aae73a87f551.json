@@ -1,0 +1,40 @@
+{
+  "key": "e9fef84de1b3d3df229b239944e854e9d209ba6c6cb413bbf3a5aae73a87f551",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_uLKC8H1mosBectokHqqffplE",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"327\",\"matches\":false,\"justification\":\"Le texte ne s'appuie pas sur le dégoût ou l'aversion pour discréditer une proposition ; il relève plutôt de l'appel à l'autorité et du rejet d'un avis selon le statut de son auteur.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Edi96kMGr43NOV6ljNhh2IRP3VZi9",
+        "created": 1793133196,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1608,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 510,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 85,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

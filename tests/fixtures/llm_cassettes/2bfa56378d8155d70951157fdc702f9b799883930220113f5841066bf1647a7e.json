@@ -1,0 +1,48 @@
+{
+  "key": "2bfa56378d8155d70951157fdc702f9b799883930220113f5841066bf1647a7e",
+  "value": {
+    "id": "chatcmpl-EdiC77ldbLOwlnM0WZpY3Wfz5Vbpa",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "[\n  {\n    \"counter_argument\": \"Élargir le fonds de livres jeunesse peut être moins prioritaire si la collection actuelle répond déjà aux besoins, tandis que l’accès à des ressources numériques manque davantage aux usagers.\",\n    \"strategy_used\": \"questionnement de la priorité\",\n    \"target_argument\": \"[arg_1]\",\n    \"strength\": \"moderate\",\n    \"reasoning\": \"Cette objection remet en cause la priorité supposée de l’investissement sans prétendre que l’option A est nécessairement inutile.\"\n  },\n  {\n    \"counter_argument\": \"Créer un espace numérique avec seulement 3000 euros risque de produire un équipement limité, rapidement obsolète ou insuffisant pour assurer une maintenance et un accès de qualité.\",\n    \"strategy_used\": \"analyse de faisabilité\",\n    \"target_argument\": \"[arg_2]\",\n    \"strength\": \"strong\",\n    \"reasoning\": \"L’argument souligne que le coût initial ne garantit pas la viabilité du projet, notamment en raison des dépenses d’équipement, de maintenance et de renouvellement.\"\n  },\n  {\n    \"counter_argument\": \"Répartir la somme entre les deux projets peut conduire à financer deux initiatives de manière trop limitée pour qu’aucune ne produise un impact réellement significatif.\",\n    \"strategy_used\": \"dilemme de l’efficacité\",\n    \"target_argument\": \"[arg_3]\",\n    \"strength\": \"moderate\",\n    \"reasoning\": \"Cette objection met en évidence le risque de dilution des ressources et suggère qu’une concentration du budget pourrait être plus efficace.\"\n  }\n]",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133383,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 384,
+      "prompt_tokens": 320,
+      "total_tokens": 704,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 51,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

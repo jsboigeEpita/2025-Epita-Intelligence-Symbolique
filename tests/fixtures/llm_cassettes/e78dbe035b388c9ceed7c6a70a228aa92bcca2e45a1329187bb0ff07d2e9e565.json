@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_3w9VP3sTsJfSWomA4Y2j3ORM",
+          "id": "call_H6chQ6mcetCzN49bx2n2YZAm",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"3\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"L’énoncé se limite à affirmer que la politique économique est un « succès incontestable », sans fournir de raisons, de données ni d’éléments probants. Il constitue donc une affirmation vide plutôt qu’un argument étayé.\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"3\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"L’énoncé affirme que la politique économique est un succès « incontestable » sans fournir aucun élément, donnée ou raisonnement pour l’établir. Il s’agit d’une affirmation vide, sans valeur argumentative.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Ec94edLye2TY2NpUZIeiTTNSkIFtN",
-        "created": 1792760052,
+        "id": "chatcmpl-Edi8NTkKLH3QtxEjHbelZruYCHkko",
+        "created": 1793133151,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2328,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 88,
+          "completion_tokens": 82,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

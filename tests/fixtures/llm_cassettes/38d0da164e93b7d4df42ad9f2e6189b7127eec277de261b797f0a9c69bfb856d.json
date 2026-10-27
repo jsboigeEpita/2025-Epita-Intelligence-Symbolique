@@ -1,14 +1,14 @@
 {
   "key": "38d0da164e93b7d4df42ad9f2e6189b7127eec277de261b797f0a9c69bfb856d",
   "value": {
-    "id": "chatcmpl-Ec94ftEYoGt46P2jwu20bdtlUH5CR",
+    "id": "chatcmpl-Edi8RtGp54qcH9qaj4krNOLqg90Nv",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"formulas\":[\"AffirmsIncontestableSuccess(president, economicPolicy)\"],\"predicates\":{\"AffirmsIncontestableSuccess\":[\"Person\",\"Policy\"]},\"sorts\":{\"Person\":[\"president\"],\"Policy\":[\"economicPolicy\"]},\"constants\":{\"president\":\"the president\",\"economicPolicy\":\"the economic policy\"},\"confidence\":0.93}",
+          "content": "{\"formulas\":[\"President(president)\",\"EconomicPolicy(economicPolicy)\",\"AffirmsUnquestionableSuccess(president,economicPolicy)\"],\"predicates\":{\"President\":[\"Person\"],\"EconomicPolicy\":[\"Policy\"],\"AffirmsUnquestionableSuccess\":[\"Person\",\"Policy\"]},\"sorts\":{\"Person\":[\"president\"],\"Policy\":[\"economicPolicy\"]},\"constants\":{\"president\":\"the president\",\"economicPolicy\":\"the economic policy\"},\"confidence\":0.93}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1792760053,
+    "created": 1793133155,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 449,
+      "completion_tokens": 531,
       "prompt_tokens": 295,
-      "total_tokens": 744,
+      "total_tokens": 826,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 370,
+        "reasoning_tokens": 429,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

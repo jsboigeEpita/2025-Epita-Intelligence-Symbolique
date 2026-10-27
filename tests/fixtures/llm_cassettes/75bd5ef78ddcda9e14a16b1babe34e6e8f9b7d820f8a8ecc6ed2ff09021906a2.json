@@ -1,0 +1,48 @@
+{
+  "key": "75bd5ef78ddcda9e14a16b1babe34e6e8f9b7d820f8a8ecc6ed2ff09021906a2",
+  "value": {
+    "id": "chatcmpl-Edi84j80fs0wGEXLYvPx8uJXTPb35",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"arguments\":[{\"text\":\"La politique économique est un succès incontestable.\",\"source_quote\":\"la politique economique est un succes incontestable\",\"move_author\":\"reported\"}],\"claims\":[{\"text\":\"Le président affirme que la politique économique est un succès incontestable.\",\"source_quote\":\"Le president affirme que la politique economique est un succes incontestable.\"}],\"summary\":\"Le texte rapporte l’affirmation présidentielle selon laquelle la politique économique constitue un succès incontestable.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133132,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 212,
+      "prompt_tokens": 391,
+      "total_tokens": 603,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 107,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

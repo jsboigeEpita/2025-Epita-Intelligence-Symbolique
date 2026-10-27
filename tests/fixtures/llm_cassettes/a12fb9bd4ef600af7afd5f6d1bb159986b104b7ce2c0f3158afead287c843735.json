@@ -1,14 +1,14 @@
 {
   "key": "a12fb9bd4ef600af7afd5f6d1bb159986b104b7ce2c0f3158afead287c843735",
   "value": {
-    "id": "chatcmpl-Ec96teGUwn3OJcql3trHHeO2HCa3i",
+    "id": "chatcmpl-EdiAZP2KNnwpZAqDncnFzL7ZM7OHn",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":0.5,\"exhibit\":\"Les deux points portent sur le rôle de l’expertise, mais ils avancent des thèses distinctes : le premier affirme que l’unanimité des experts suffit à établir la vérité, tandis que le second exclut la valeur probante des avis non experts. Le second reprend donc partiellement le même critère d’autorité, tout en ajoutant une précision sur les avis profanes.\"}",
+          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points apportent des idées distinctes : le premier affirme que l’unanimité des experts suffit à établir la vérité, tandis que le second exclut la valeur probante de l’avis d’un non-expert. Ils concernent tous deux le poids de l’expertise, mais ne se répètent pas en substance.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1792760191,
+    "created": 1793133287,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 211,
+      "completion_tokens": 147,
       "prompt_tokens": 274,
-      "total_tokens": 485,
+      "total_tokens": 421,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 112,
+        "reasoning_tokens": 60,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

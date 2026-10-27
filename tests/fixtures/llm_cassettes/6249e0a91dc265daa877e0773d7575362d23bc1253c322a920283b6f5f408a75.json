@@ -1,0 +1,48 @@
+{
+  "key": "6249e0a91dc265daa877e0773d7575362d23bc1253c322a920283b6f5f408a75",
+  "value": {
+    "id": "chatcmpl-EdiAruxwwppuvuf8jeSWC4tReP3OV",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":false,\"opposing_claim\":\"\",\"main_thesis\":\"L’option B propose d’affecter l’intégralité du budget de 2000 euros à l’achat de matériel pédagogique et d’échiquiers neufs.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133305,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 134,
+      "prompt_tokens": 306,
+      "total_tokens": 440,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 74,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

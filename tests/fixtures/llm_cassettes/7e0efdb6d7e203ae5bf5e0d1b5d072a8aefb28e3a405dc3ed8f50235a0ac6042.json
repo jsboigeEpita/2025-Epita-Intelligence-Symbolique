@@ -1,0 +1,40 @@
+{
+  "key": "7e0efdb6d7e203ae5bf5e0d1b5d072a8aefb28e3a405dc3ed8f50235a0ac6042",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_26iuUmT8RL5rSMudjmnp9GZu",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"190\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"L'argument présente l'unanimité des experts comme preuve suffisante et disqualifie l'avis des non-experts, afin d'intimider l'auditoire et de lui faire croire qu'il n'est pas compétent pour discuter.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Edi9XfXI0JiAzrlQTS60GTp8OWbhr",
+        "created": 1793133223,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1949,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 851,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 89,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

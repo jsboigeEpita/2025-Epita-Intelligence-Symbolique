@@ -1,0 +1,48 @@
+{
+  "key": "db117501e6a3ec9036c8a420cd2d43a450fbc7615b4624f6a0b4f684f605a67a",
+  "value": {
+    "id": "chatcmpl-EdiI6SvQSckTl6h59eiifXMehozIb",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La position adverse est clairement identifiée : le climat a toujours changé, donc le changement actuel ne serait ni exceptionnel ni principalement causé par l’activité humaine. L’engagement est jugé réel, ce qui indique que cette thèse adverse a été effectivement prise en compte et réfutée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133754,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 112,
+      "prompt_tokens": 272,
+      "total_tokens": 384,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 34,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

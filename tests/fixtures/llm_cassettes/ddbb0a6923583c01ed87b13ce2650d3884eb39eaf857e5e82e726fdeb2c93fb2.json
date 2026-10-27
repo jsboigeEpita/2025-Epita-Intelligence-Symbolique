@@ -1,0 +1,48 @@
+{
+  "key": "ddbb0a6923583c01ed87b13ce2650d3884eb39eaf857e5e82e726fdeb2c93fb2",
+  "value": {
+    "id": "chatcmpl-EdiAp3U0oszOgyxqbMLc0UOp9MfSL",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La citation est tronquée (« augmentant la visi »), ce qui crée un obstacle de sens incomplet, mais cet obstacle est résolvable par le contexte.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133303,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 81,
+      "prompt_tokens": 248,
+      "total_tokens": 329,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 29,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

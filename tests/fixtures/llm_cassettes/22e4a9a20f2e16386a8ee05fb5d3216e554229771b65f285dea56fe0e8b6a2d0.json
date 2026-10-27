@@ -1,0 +1,48 @@
+{
+  "key": "22e4a9a20f2e16386a8ee05fb5d3216e554229771b65f285dea56fe0e8b6a2d0",
+  "value": {
+    "id": "chatcmpl-EdiFfqF6UpQqogNQYNTRcc3sCUrct",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Les études scientifiques montrent que la vaccination a éradiqué la variole et réduit considérablement la poliomyélite ; ceux qui affirment que les vaccins sont dangereux ignorent des décennies de recherche clinique.\",\"conclusion\":\"Les vaccins sont indispensables pour la santé publique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133603,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 167,
+      "prompt_tokens": 272,
+      "total_tokens": 439,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 93,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

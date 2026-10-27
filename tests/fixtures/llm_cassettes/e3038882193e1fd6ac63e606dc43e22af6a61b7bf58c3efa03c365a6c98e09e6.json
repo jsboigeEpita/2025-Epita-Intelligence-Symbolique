@@ -1,14 +1,14 @@
 {
   "key": "e3038882193e1fd6ac63e606dc43e22af6a61b7bf58c3efa03c365a6c98e09e6",
   "value": {
-    "id": "chatcmpl-Ec9FLY0sKA3N33UpDCv9Cgze8nWeh",
+    "id": "chatcmpl-EdiI3VhPNGjq6GzxBjLIYdRdySMWq",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":0.0,\"exhibit\":\"Chaîne reconstruite : les mesures de température globale montrent une augmentation de 1,1 degré depuis l’ère préindustrielle, donc le changement climatique est une réalité scientifique incontestable. Verdict : saut logique net entre la prémisse et la conclusion.\"}",
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne relie la prémisse « Les mesures de température globale montrent une augmentation de 1,1 degré depuis l’ère préindustrielle » à la conclusion « Le changement climatique est une réalité scientifique incontestable », mais le verdict indique un saut logique net.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1792760715,
+    "created": 1793133751,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -32,7 +32,7 @@
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 40,
+        "reasoning_tokens": 38,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },
