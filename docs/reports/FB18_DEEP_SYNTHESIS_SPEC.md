@@ -87,11 +87,11 @@ Add a **terminal `deep_synthesis` phase** to the spectacular DAG (after all othe
    - **Counter-arguments**: Generated opposition strategies
    - **Belief state**: JTMS justifications and retractions
 3. **Artifact anchoring requirement**: Each insight in the synthesis MUST cite ≥1 specific artifact (e.g., "Argument 3 was flagged as ad populum [fallacy_analysis.arg3.type], which the Dung grounded extension excludes [dung_extensions.grounded.excludes=arg3], and the quality score confirms low fiabilité_sources [quality.arg3.fiabilite_sources=0.2]").
-4. **Output format**: Structured markdown with sections (not free prose):
-   - `## Transversal Patterns` — cross-argument insights that no single detector produces
-   - `## Rhetorical Strategy Assessment` — how arguments work together as a system
-   - `## Structural Vulnerabilities` — what the formal analysis reveals about argumentative weaknesses
-   - `## Interpretive Synthesis` — the "so what?" — what the whole picture means
+4. **Output format**: Structured markdown with sections (not free prose). Since #3259 the block reads in the report's French — the producer prompt states the language and teaches the French headings (`GROUNDED_SECTION_SPECS` in `deep_synthesis_agent.py`, the single vocabulary VG-3 enforces):
+   - `## Motifs transversaux` — cross-argument insights that no single detector produces
+   - `## Évaluation de la stratégie rhétorique` — how arguments work together as a system
+   - `## Vulnérabilités structurelles` — what the formal analysis reveals about argumentative weaknesses
+   - `## Synthèse interprétative` — the "so what?" — what the whole picture means
    - Each section: prose + inline artifact citations
 
 **Value-gates**:
