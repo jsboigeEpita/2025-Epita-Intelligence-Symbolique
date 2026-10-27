@@ -338,7 +338,24 @@ class RhetoricalAnalysisState:
         n'est pas écrite, une valeur absente n'est pas défautée (#1019). Le
         champ vit dans ``argument_provenance[arg_id]``, donc seulement quand
         ``producer`` en a ouvert l'entrée.
+
+        #3268 — ``description`` qui EST un nom de champ de l'état est refusée
+        (``ValueError``) : le run committé porte ``arg_1 : "analysis_state"``,
+        ``arg_2 : "arguments"`` — l'extracteur a recraché un nom de conteneur,
+        et un lecteur en aval le compte comme une unité. Le vocabulaire refusé
+        est lu **sur l'instance** (``vars(self)``) : une sous-classe qui ajoute
+        son propre champ est couverte sans toucher à cette méthode, et aucune
+        liste de littéraux ne vieillit ici (anti-pendule). La porte ne dit rien
+        de la forme du texte — une paraphrase absente de ``raw_text`` reste
+        acceptée.
         """
+        if isinstance(description, str):
+            field_name = description.strip()
+            if field_name in vars(self):
+                raise ValueError(
+                    f"add_argument: '{field_name}' est un nom de champ de "
+                    f"{type(self).__name__}, pas une description d'argument (#3268)"
+                )
         arg_id = self._generate_id("arg", self.identified_arguments)
         self.identified_arguments[arg_id] = description
         if producer:
