@@ -339,6 +339,33 @@ class RhetoricalAnalysisState:
         champ vit dans ``argument_provenance[arg_id]``, donc seulement quand
         ``producer`` en a ouvert l'entrée.
         """
+        # #3268 — un argument EST un fragment du texte, pas le nom d'un champ
+        # de cet état. Un producteur qui écrit ce qu'il lit de sa propre
+        # structure enregistre un argument fantôme : ``identified_arguments``
+        # grandit, et la garde de croissance le compte comme une progression
+        # (``_get_growth_fingerprint`` prend ``len()``), donc le run se valide
+        # sans qu'aucun argument n'existe. Constaté en distillation
+        # (jsboige/CoursIA#18395 : ``arg_1 = "analysis_state"``), et rien dans
+        # la chaîne ne le refusait — le seul verrou était un compte, dans un
+        # test.
+        #
+        # Le vocabulaire refusé est dérivé de L'INSTANCE (``vars``), jamais
+        # d'une constante : une liste noire codée en dur est un contrepoids,
+        # qui périme au premier champ renommé et ne couvre que les noms qu'on
+        # a pensé à y mettre. Mesuré avant la porte : 829 littéraux atteignant
+        # un ``add_argument`` dans l'arbre (état et argparse confondus, mesure
+        # volontairement sur-inclusive), 0 collision avec les attributs d'une
+        # instance — la réparation ne touche aucun appelant existant.
+        #
+        # Elle refuse un NOM DE CHAMP, pas une non-citation : la paraphrase
+        # reste un argument (témoin dédié), sinon la porte casserait les
+        # extractions honnêtes et se substituerait à la provenance, qui traite
+        # déjà la traçabilité.
+        if isinstance(description, str) and description.strip() in vars(self):
+            raise ValueError(
+                f"add_argument: '{description.strip()}' est le nom d'un champ "
+                "de l'état, pas un argument du texte (#3268)"
+            )
         arg_id = self._generate_id("arg", self.identified_arguments)
         self.identified_arguments[arg_id] = description
         if producer:
