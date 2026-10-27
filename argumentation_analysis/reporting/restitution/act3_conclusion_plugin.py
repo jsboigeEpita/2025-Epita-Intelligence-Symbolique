@@ -95,6 +95,7 @@ from .cited_units import (  # #2965 (Acte III slice) — same budget as Act II
     truncate_head_and_tail,  # #3231 — the producer's final sentence survives the cap
 )
 from argumentation_analysis.core.fallacy_attribution import (  # #3180
+    MOVE_AUTHOR_REPORTED,  # #3162 item 2 — whose position a unit carries
     confidence_of,  # #3231
     detector_confidence_note,  # #3231
     DETECTION_STANDING_RULE,  # #3248
@@ -222,6 +223,21 @@ _ASPIC_SCOPE_GLOSS: Dict[str, str] = {
 _FORMALISM_NODE_CAP = 120  # truncate corpus-derived atoms (privacy HARD, #1702)
 _ABA_CONTRARY_PAIR_CAP = 3  # max assumption↔contrary pairs named in prose
 _SETAF_JOINT_ATTACK_CAP = 3  # max collective-attack coalitions named
+# #3162 item 2 — the reading rule the Act III briefing carries ONLY when a
+# SETAF line is qualified « (position rapportée) ». It states the direction of
+# the defeat (the reported position's camp loses, the attacker is not weakened)
+# and forbids inferring a side from an unqualified line. Conditional by
+# construction: no qualifier, no rule.
+_SETAF_REPORTED_POSITION_RULE = (
+    "- ATTAQUE D'UNE POSITION RAPPORTÉE : quand une ligne du bloc CE QUE LES\n"
+    "  CADRES STRUCTURÉS ÉTABLISSENT porte « (position rapportée) », la cible\n"
+    "  est une position que le texte rapporte, cite ou combat — pas celle du\n"
+    "  locuteur. Qu'une coalition la renverse est une défaite de ce camp-là :\n"
+    "  ce n'est jamais une faiblesse de l'attaquant. N'écris pas que l'édifice\n"
+    "  du locuteur se tient mal parce qu'une position rapportée tombe. Une\n"
+    "  ligne sans ce qualificatif ne dit à qui est la position : n'en infère\n"
+    "  aucun camp.\n"
+)
 _WEIGHTED_DIST_ATTACK_CAP = 8  # max attacks sampled for the weight distribution
 # #2952 sites 1a-3 (DeLP / EAF / ADF) — same prompt-budget discipline as above.
 _DELP_VERDICT_CAP = 3  # max named dialectical verdicts (warranted/defeated)
@@ -1721,6 +1737,31 @@ def _setaf_coalitions_by_target(
     return index
 
 
+_SETAF_REPORTED_QUALIFIER = "(position rapportée)"
+
+
+def _setaf_target_side(state: Any, target: str) -> str:
+    """#3162 item 2 — the target's stated side, or nothing when unmeasured.
+
+    Reads ``argument_provenance[target]["move_author"]`` **raw**, never through
+    ``move_author_of()``: that predicate's ``speaker`` default is the fallacy
+    reader's historical attribution, and a unit's provenance carries no such
+    history — an absent field means "not stated" and must render as no
+    qualifier at all (#1019). Only the two closed vocabulary values are
+    considered, and only ``reported`` changes the line.
+    """
+    provenance = getattr(state, "argument_provenance", None)
+    if not isinstance(provenance, dict):
+        return ""
+    entry = provenance.get(target)
+    if not isinstance(entry, dict):
+        return ""
+    value = entry.get("move_author")
+    if isinstance(value, str) and value.strip() == MOVE_AUTHOR_REPORTED:
+        return f" {_SETAF_REPORTED_QUALIFIER}"
+    return ""
+
+
 def _setaf_finding(state: Any) -> Optional[StructuredArgFinding]:
     """Project the COLLECTIVE attack — what SETAF alone says (#1667).
 
@@ -1777,9 +1818,12 @@ def _setaf_finding(state: Any) -> Optional[StructuredArgFinding]:
             if proper_subset:
                 continue
             listed = ", ".join(f"« {n} »" for n in named)
+            # #3162 item 2 — whose position the TARGET is, when the state says
+            # (raw provenance, same-target lookup; absent = no side claimed).
+            side = _setaf_target_side(state, str(target).strip())
             joint.append(
                 f"une coalition de {len(named)} arguments ({listed}) renverse "
-                f"« {t} » qu'aucun ne renverse seul"
+                f"« {t} »{side} qu'aucun ne renverse seul"
             )
             if len(joint) >= _SETAF_JOINT_ATTACK_CAP:
                 break
@@ -3282,6 +3326,19 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
             "abouti sur ce corpus)"
         )
 
+    # #3162 item 2 — the reading rule follows the qualifier it governs. A
+    # SETAF line qualified « (position rapportée) » says the target is a
+    # position the text reports/cites; the writer inverted exactly that into
+    # "the speaker's case stands poorly". Conditional on the qualifier: a
+    # briefing with no such line gets no rule (never instruct the writer about
+    # a side nothing stated, and never claim a side a line did not carry).
+    setaf_side_rule = ""
+    if any(
+        f.capability == "setaf_reasoning" and _SETAF_REPORTED_QUALIFIER in f.statement
+        for f in evidence.structured_findings
+    ):
+        setaf_side_rule = _SETAF_REPORTED_POSITION_RULE
+
     # #1667 — the symmetric presence side. Rendered in both states, exactly like
     # the absence block above: an empty section and a missing section read the
     # same to the LLM, and this channel exists precisely because a silence was
@@ -3512,6 +3569,7 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         # écrire, tel quel.
         f"{SPEAKER_NAMING_RULE}\n"
         f"{READING_BASIS_RULE}\n"
+        f"{setaf_side_rule}"
         # #3237 — the cause rule is now the shared constant from fol_cause
         # (the vocabulary's one home): Act II misstated a recorded cause
         # because only this act carried the rule. Same words, one father.

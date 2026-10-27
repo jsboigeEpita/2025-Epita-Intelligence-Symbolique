@@ -314,6 +314,7 @@ class RhetoricalAnalysisState:
         producer: Optional[str] = None,
         source_quote: Optional[str] = None,
         offset: Optional[int] = None,
+        move_author: Optional[str] = None,
     ) -> str:
         """Ajoute un argument identifié et retourne son ID.
 
@@ -330,6 +331,13 @@ class RhetoricalAnalysisState:
         (base ``"producer-recorded"``) : la recherche par ``locate_unit_offset``
         n'est plus que le fallback (producteur sans position, ou position hors
         bornes du texte source).
+
+        #3162 item 2 — ``move_author`` dit À QUI est la position portée par
+        l'unité, dans le vocabulaire fermé de #3180 (``speaker`` | ``reported``),
+        et suit la MÊME porte que ``add_fallacy`` : une valeur hors vocabulaire
+        n'est pas écrite, une valeur absente n'est pas défautée (#1019). Le
+        champ vit dans ``argument_provenance[arg_id]``, donc seulement quand
+        ``producer`` en a ouvert l'entrée.
         """
         arg_id = self._generate_id("arg", self.identified_arguments)
         self.identified_arguments[arg_id] = description
@@ -354,6 +362,8 @@ class RhetoricalAnalysisState:
                 entry["offset_basis"] = basis
             if source_quote:
                 entry["source_quote"] = str(source_quote)
+            if move_author in ("speaker", "reported"):
+                entry["move_author"] = str(move_author)
             self.argument_provenance[arg_id] = entry
         state_logger.info(f"Argument ajouté: {arg_id} - '{description[:60]}...'")
         state_logger.debug(
