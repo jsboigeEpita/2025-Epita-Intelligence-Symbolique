@@ -276,6 +276,29 @@ _TEXT_STRIP_LISTS = {
     "fol_analysis_results": {"message"},
     "propositional_analysis_results": {"message"},
     "modal_analysis_results": {"message"},
+    # #3261 — the top-level ``errors`` container. Producer census:
+    # ``log_error`` (shared_state.py:584) appends
+    # ``{id, agent_name, message, timestamp}`` and is the only writer, with
+    # exactly three callers. ``invoke_callables.py:14581-14589`` builds
+    # ``"stakes extraction {status}: {ExceptionType}: {e}"`` from the stakes
+    # extractor's ``result["error"]`` (stakes_extractor.py:198/202): its
+    # ``parse_error`` leg carries a ``JSONDecodeError``/``KeyError``/
+    # ``IndexError`` string — a position, never the document; the model
+    # output itself goes to ``stakes``/``stakeholders``/``register``, already
+    # scrubbed above, never into the error. The ``llm_error`` leg, though,
+    # is ``str(e)`` of a foreign API exception whose vocabulary no table can
+    # promise closed. ``workflow_dsl.py:1218`` passes ``str(result.error)``
+    # (the phase-error reason); ``sherlock_modern_orchestrator.py:131``
+    # passes ``str(exception)``. Measured on the ai-01 states: 9 leaves ≥ 30
+    # chars / 85 states, every sampled prefix technical — but the leaf is
+    # not declarable technical-only, so it is not kept.
+    # Export readers: one — the synthesis snapshot counts
+    # ``len(errors)`` as ``error_count`` (shared_state.py:658); nothing
+    # reads ``message`` from a sanitized export. Decision: drop the leaf,
+    # keep the record — ``id``/``agent_name``/``timestamp`` and the arity
+    # survive, the #3239 gesture on the errors axis. Not a catch-all: one
+    # named container, one leaf.
+    "errors": {"message"},
 }
 
 # #3239 rework — the NESTED twin of the formal-logic status leaf above:

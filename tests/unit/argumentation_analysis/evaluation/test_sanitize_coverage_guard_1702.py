@@ -341,6 +341,12 @@ def _canaried_state() -> UnifiedAnalysisState:
         {},
     )
 
+    # #3261 — the errors container, through its only writer
+    # (``shared_state.log_error``; the three production callers pass
+    # exception text: the stakes prefix + provider message, the phase-error
+    # reason, the sherlock exception). Not in any table before this entry.
+    s.log_error("StakesExtractor", NL)
+
     # --- jtms_beliefs: belief name can be argument text; justifications free-form
     # #3235 — the real ``_write_jtms_to_state`` shape: the JTMS phase
     # serialises justifications as dicts (``{"in_list": [name[:40]...],
@@ -488,6 +494,10 @@ WRITTEN_TOP_LEVEL_FIELDS = frozenset(
         "jtms_retraction_chain",
         "atms_contexts",
         "governance_decisions",
+        # #3261 — written by ``log_error`` (shared_state.py:584), canaried
+        # through that real writer above (the only append site; the three
+        # production callers pass exception text).
+        "errors",
     }
 )
 
