@@ -1,0 +1,48 @@
+{
+  "key": "1616ecd193d29530d8f410a7835647348aa37e3223dda81654dcd550c60bcbc7",
+  "value": {
+    "id": "chatcmpl-EdiFyJsoyuxcYVexq6Wl3kBobOnMK",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Les points 1 et 2 réfutent tous deux la défiance envers les produits pharmaceutiques ou les vaccins, ce qui crée une redondance thématique partielle. Toutefois, le point 1 cible spécifiquement une théorie du complot sur la dissimulation des effets secondaires, tandis que le point 2 insiste sur le manque de prise en compte des décennies de recherche clinique. Le point 3 est tronqué (« Des taux de v »), donc son éventuelle redondance ne peut pas être évaluée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133622,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 203,
+      "prompt_tokens": 298,
+      "total_tokens": 501,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 75,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

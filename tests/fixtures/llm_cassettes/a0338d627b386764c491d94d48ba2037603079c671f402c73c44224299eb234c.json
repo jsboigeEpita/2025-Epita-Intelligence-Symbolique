@@ -1,0 +1,48 @@
+{
+  "key": "a0338d627b386764c491d94d48ba2037603079c671f402c73c44224299eb234c",
+  "value": {
+    "id": "chatcmpl-EdiFeE0oQPduKdrqGLRevJWCNhGvw",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Position adverse identifiée : les vaccins sont dangereux et les entreprises pharmaceutiques cachent leurs effets secondaires. Verdict d’engagement : non-sequitur, donc aucune réfutation constructive démontrée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133602,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 94,
+      "prompt_tokens": 261,
+      "total_tokens": 355,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 33,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "key": "63087d5be0c58157e6dfeb1c9fb62d7216ebde0acf03ef5d4a25b90f12634e4c",
+  "value": {
+    "id": "chatcmpl-EdiAqzwEDtjhWtbPtrYnh2R6BcFG2",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"Utiliser l'intégralité du budget de 2000 euros pour organiser un tournoi inter-villes avec buffet et prix afin d'accroître la visibilité du club.\",\"digressions\":\"La mention de trois options divergentes et la présentation de l'option B, qui consiste à investir les 2000 euros dans du matériel pédagogique et des échiquiers neufs, s'écartent de cette thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133304,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 219,
+      "prompt_tokens": 281,
+      "total_tokens": 500,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 116,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

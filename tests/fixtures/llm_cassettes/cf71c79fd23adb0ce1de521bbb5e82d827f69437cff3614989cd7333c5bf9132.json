@@ -1,0 +1,40 @@
+{
+  "key": "cf71c79fd23adb0ce1de521bbb5e82d827f69437cff3614989cd7333c5bf9132",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_DxVzwXxcq26MGEk5Sod95sC3",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"347\",\"matches\":false,\"justification\":\"Le texte ne rejette pas un argument en raison de son ton grossier ou insultant; il invoque plutôt l'unanimité des experts et exclut l'avis des non-experts.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Edi9CiOd2GeIlpaJXhYYA5KQn0xaC",
+        "created": 1793133202,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1645,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 547,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 78,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

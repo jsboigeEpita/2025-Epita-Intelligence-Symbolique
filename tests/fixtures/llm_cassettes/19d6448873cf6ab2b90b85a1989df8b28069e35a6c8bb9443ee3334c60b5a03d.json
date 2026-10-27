@@ -1,0 +1,48 @@
+{
+  "key": "19d6448873cf6ab2b90b85a1989df8b28069e35a6c8bb9443ee3334c60b5a03d",
+  "value": {
+    "id": "chatcmpl-Edi6m7yg7hWDQLtTKx6vTq4te1dBG",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points portent sur des critiques distinctes : le premier vise l’appel à l’émotion autour des enfants, tandis que le second dénonce un homme de paille concernant une proposition supposée de suppression des retraites. Aucune redondance sémantique notable n’est démontrée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133052,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 150,
+      "prompt_tokens": 299,
+      "total_tokens": 449,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 69,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

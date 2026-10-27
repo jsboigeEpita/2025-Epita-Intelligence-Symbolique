@@ -1,0 +1,40 @@
+{
+  "key": "2544bcb5409e1a129a8f9bd48155ae7a3ef099035352babf586353ae212f814c",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_FgrVranOX8KIFb05BVwHTPKX",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1353\",\"matches\":false,\"justification\":\"Le texte ne pose aucune question insinuant une accusation. Il affirme plutôt que l'unanimité des experts prouve la vérité et disqualifie l'avis des non-experts; cela relève d'un appel à l'autorité et d'un empoisonnement du puits, pas de cette catégorie.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Edi9s5hSlL6EA7LZhmosTojHVjZpF",
+        "created": 1793133244,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 922,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 101,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

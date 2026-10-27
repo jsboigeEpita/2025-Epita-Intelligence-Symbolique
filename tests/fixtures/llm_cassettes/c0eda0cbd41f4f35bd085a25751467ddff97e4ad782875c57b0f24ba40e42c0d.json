@@ -1,0 +1,40 @@
+{
+  "key": "c0eda0cbd41f4f35bd085a25751467ddff97e4ad782875c57b0f24ba40e42c0d",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_tDdph6Khw5jPoLuNCUNuKh6A",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"332\",\"matches\":false,\"justification\":\"Le texte ne cherche pas à énerver l'adversaire ni à le discréditer en provoquant sa colère ; il présente plutôt un appel à l'autorité et une disqualification de l'opinion des non-experts.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Edi91Xbo7IxuDKFjSnqWhyP3N3BiV",
+        "created": 1793133191,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1685,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 587,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 82,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

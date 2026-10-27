@@ -1,14 +1,14 @@
 {
   "key": "f82308d140ab3cafe791bd2c9c07272081cbdf825261fadef9a7f57e01f0aec3",
   "value": {
-    "id": "chatcmpl-Ec96gAxoo6XaC99DhEBZ3Z4dwgI1R",
+    "id": "chatcmpl-EdiANdiLbXKbGBvf8Rj9EcXjVhsCR",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_chain\":true,\"premises\":\"Les experts sont unanimes.\",\"conclusion\":\"C’est vrai.\"}",
+          "content": "{\"has_chain\":true,\"premises\":\"Les experts sont unanimes.\",\"conclusion\":\"C'est vrai.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1792760178,
+    "created": 1793133275,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 544,
+      "completion_tokens": 343,
       "prompt_tokens": 206,
-      "total_tokens": 750,
+      "total_tokens": 549,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 512,
+        "reasoning_tokens": 311,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

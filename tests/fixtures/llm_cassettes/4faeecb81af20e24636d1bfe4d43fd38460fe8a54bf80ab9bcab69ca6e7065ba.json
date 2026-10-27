@@ -6,25 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_yAg7wnYjWQIk97Htr85uQJ22",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"134\"}"
-        },
-        {
-          "id": "call_hMJmfFvFAeCVbGS27LVJlTAr",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"153\"}"
-        },
-        {
-          "id": "call_ZZ2S9tPLURMIf1KhXoAnAEw8",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"165\"}"
+          "id": "call_QfpqpqPsWSdrH4SjbgcGa1Mn",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"133\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"L'affirmation présente la réussite de la politique économique comme « incontestable » sans fournir d'éléments permettant de tirer une conclusion aussi catégorique : c'est une surinterprétation.\",\"move_author\":\"speaker\",\"move_author_label\":\"Le président\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Ec94OQpAberrRQuRrrtOo2PbAvNMM",
-        "created": 1792760036,
+        "id": "chatcmpl-Edi8IJ3ILv3ByvBWo9q5JNr2jEUfM",
+        "created": 1793133146,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2035,
@@ -35,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 76,
+          "completion_tokens": 85,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

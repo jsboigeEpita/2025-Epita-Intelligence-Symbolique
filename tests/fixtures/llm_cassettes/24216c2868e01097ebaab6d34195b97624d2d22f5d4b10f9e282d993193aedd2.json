@@ -1,0 +1,40 @@
+{
+  "key": "24216c2868e01097ebaab6d34195b97624d2d22f5d4b10f9e282d993193aedd2",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_cwWHZGSW4dzYg3CnZg9mVhDL",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"888\",\"confidence\":\"medium\",\"matches\":true,\"justification\":\"Le président présente la politique économique comme un « succès incontestable », formulation catégorique qui peut induire en erreur en occultant toute information ou nuance contraire. Le texte ne fournit toutefois pas assez d’éléments pour établir un mensonge ou une attention sélective plus spécifique.\",\"move_author\":\"speaker\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Edi8I84YSUmmA5c3moriLzDE4avQc",
+        "created": 1793133146,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1985,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 887,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 102,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

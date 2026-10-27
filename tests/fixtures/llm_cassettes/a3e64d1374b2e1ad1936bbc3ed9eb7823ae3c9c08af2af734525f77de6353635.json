@@ -1,0 +1,48 @@
+{
+  "key": "a3e64d1374b2e1ad1936bbc3ed9eb7823ae3c9c08af2af734525f77de6353635",
+  "value": {
+    "id": "chatcmpl-EdiFjvZ1Jl3Bxe62bBYAdJp4TQclY",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\":false,\"structure_verdict\":\"saut_logique\",\"reasoning\":\"Les bénéfices historiques de la vaccination et l’absence de fondement d’une théorie du complot ne suffisent pas à établir que tous ceux qui jugent les vaccins dangereux négligent des décennies de recherche clinique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133607,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 364,
+      "prompt_tokens": 411,
+      "total_tokens": 775,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 291,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "key": "b31cfd923d869ef9a7a559390194f8a36467feab419cdbca416cd966ffdbef74",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_dosiRm9nnICKEIW8W6YpLKuK",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"351\",\"matches\":false,\"justification\":\"Le texte ne cherche pas à faire accepter une proposition en promettant un avantage personnel ; il invoque plutôt l’autorité des experts et exclut les non-experts.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Edi9DSJJ2EhkM4J7qNrfvrHh24HuX",
+        "created": 1793133203,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1649,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 551,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 69,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

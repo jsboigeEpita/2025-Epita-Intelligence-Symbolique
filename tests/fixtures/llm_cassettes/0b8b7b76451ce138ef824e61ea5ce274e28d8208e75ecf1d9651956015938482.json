@@ -1,0 +1,48 @@
+{
+  "key": "0b8b7b76451ce138ef824e61ea5ce274e28d8208e75ecf1d9651956015938482",
+  "value": {
+    "id": "chatcmpl-Edi6UQk53qnj1iQTOMV0zZmVJTEFZ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"La réforme envisagée consisterait à supprimer les retraites, ou quelqu’un aurait proposé leur suppression.\",\"main_thesis\":\"L’évocation des enfants et l’appel à l’émotion détournent la discussion des questions techniques relatives au financement des retraites.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133034,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 257,
+      "prompt_tokens": 295,
+      "total_tokens": 552,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 183,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

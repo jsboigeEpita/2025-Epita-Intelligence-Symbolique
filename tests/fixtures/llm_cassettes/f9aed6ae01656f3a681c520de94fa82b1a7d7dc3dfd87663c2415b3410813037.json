@@ -1,0 +1,40 @@
+{
+  "key": "f9aed6ae01656f3a681c520de94fa82b1a7d7dc3dfd87663c2415b3410813037",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_AbiKan6yN1bCG3jB87j35Vbp",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1313\",\"matches\":false,\"justification\":\"L’énoncé affirme simplement que la politique économique est un succès; il n’évite aucune question ni aucun point de fond identifiable.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Edi8GFBidhFLrnaMpluVzapc9fDuL",
+        "created": 1793133144,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1900,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 802,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 67,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "key": "ab2b06ade8a280fb7cb39ba2d5c0ef4967e439084db37a52127d038ab55e8fcf",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_FLtmAo4grpfTw7RTBrv169UO",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"74\"}"
+        },
+        {
+          "id": "call_cm8bG0Ul8iviY2KJbz31MKRl",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\": \"73\", \"matches\": true, \"confidence\": \"high\", \"justification\": \"Les deux arguments accordent une valeur décisive à l’autorité des experts et excluent l’avis des non-experts, sans fournir de justification indépendante; cela correspond à une obéissance aveugle à une autorité jugée suprême.\", \"move_author\": \"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Edi9kfpU5SpzvLUJLBVrZLX2wSd6t",
+        "created": 1793133236,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1619,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 521,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 126,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "key": "2b27f417926ce2b7a399b4a8c50afc353f095da7127b36b643e14ec1fc309c92",
+  "value": {
+    "id": "chatcmpl-Edi65Xkq1nzbu0T5poH4PDdEgyoGo",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. La comparaison avec les autres pays européens doit tenir compte des différences structurelles entre les systèmes de retraite.\\n2. L’affirmation du Premier ministre selon laquelle la réforme est nécessaire parce que tous les pays européens l’ont déjà faite constitue un argument d’autorité et ne suffit pas à justifier la réforme, notamment parce qu’elle ignore ces différences structurelles.\\n3. L’affirmation selon laquelle le système s’effondrera dans cinq ans si aucune action n’est prise relève d’un appel à la peur.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133009,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 401,
+      "prompt_tokens": 251,
+      "total_tokens": 652,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 280,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

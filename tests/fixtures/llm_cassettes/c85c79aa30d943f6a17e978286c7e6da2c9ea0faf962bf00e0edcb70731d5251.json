@@ -1,0 +1,48 @@
+{
+  "key": "c85c79aa30d943f6a17e978286c7e6da2c9ea0faf962bf00e0edcb70731d5251",
+  "value": {
+    "id": "chatcmpl-EdiAvOMPNX5NOqebh4dI66alNi20P",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse défend l'utilisation des 2000 euros pour un tournoi inter-villes avec buffet et prix afin d'accroître la visibilité du club. La digression est localisée dans la mention de trois options divergentes, notamment l'option B consacrée au matériel pédagogique et aux échiquiers neufs.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133309,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 202,
+      "prompt_tokens": 321,
+      "total_tokens": 523,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 117,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "key": "7f480580c67261def542c510876883f8744c5137c0053203117245f69b22854e",
+  "value": {
+    "id": "chatcmpl-Edi68rm2OfPOp30yQFMSXpsrJCHmw",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La chaîne relie l’annonce d’un effondrement imminent et d’un scénario de crise à la conclusion qu’il s’agit d’un appel à la peur. L’inférence est présente, mais elle reste imparfaite, car la description d’une menace ne suffit pas à établir à elle seule le caractère fallacieux ou « classique » de l’appel à la peur.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133012,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 173,
+      "prompt_tokens": 286,
+      "total_tokens": 459,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 79,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "key": "3700f7838f8e9f26c7407cde8613346fa483bef3676c9dd5332220be35f28d9f",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_3FjbfQIAFx4V11IzfQPERZCx",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1312\",\"matches\":false,\"justification\":\"La phrase affirme simplement le succès incontestable de la politique économique, sans perturber le débat, éviter une question, complexifier la discussion ni discréditer un adversaire.\",\"confidence\":\"high\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Edi8IKtv7XgXkzVuIiaDsmfUtHDOk",
+        "created": 1793133146,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1981,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 883,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 83,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

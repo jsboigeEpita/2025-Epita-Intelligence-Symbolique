@@ -6,26 +6,36 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_0lKMkvMleNnNnwa0ma49jj3C",
-          "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"798\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L'affirmation présente comme « succès incontestable » une évaluation vague et absolue, sans fournir de critères ni de preuves; elle s'appuie ainsi sur une formulation linguistique destinée à convaincre.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+          "id": "call_KdI7z6CQikjnj4Xa6i4snkbb",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"799\"}"
+        },
+        {
+          "id": "call_friM9YlnaZl7TTKWk9KH8nTL",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"846\"}"
+        },
+        {
+          "id": "call_uwP0Stvuw5VuBV1QDxLuPc9v",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"833\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Ec94N1dHeCiBKeGTbd8GP37r0JLGw",
-        "created": 1792760035,
+        "id": "chatcmpl-Edi8G8CBcX5oWPD8RRQG2weUuk0My",
+        "created": 1793133144,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1874,
           "prompt_tokens_details": {
             "audio_tokens": 0,
-            "cache_write_tokens": 776,
-            "cached_tokens": 1095,
+            "cache_write_tokens": 1871,
+            "cached_tokens": 0,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 87,
+          "completion_tokens": 76,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

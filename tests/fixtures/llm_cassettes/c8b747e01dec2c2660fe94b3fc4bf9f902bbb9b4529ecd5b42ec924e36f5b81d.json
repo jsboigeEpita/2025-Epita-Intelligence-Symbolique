@@ -1,0 +1,40 @@
+{
+  "key": "c8b747e01dec2c2660fe94b3fc4bf9f902bbb9b4529ecd5b42ec924e36f5b81d",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_geAkC1JLZDHOhCQdFdL8X8Yb",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"326\",\"matches\":false,\"justification\":\"Le texte invoque l’unanimité des experts et exclut l’avis des non-experts; il ne discrédite pas l’adversaire en lui faisant honte ni en invoquant une réprobation morale. Cette feuille « appel à la honte » ne correspond donc pas.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Edi94X1SXzQmBBqhGw8C3VkgFRwvY",
+        "created": 1793133194,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 927,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 97,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

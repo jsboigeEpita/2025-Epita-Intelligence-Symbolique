@@ -1,0 +1,48 @@
+{
+  "key": "8b329fc6974d737b9839d01e8ffab868556fa234aaa3a18555853b6049239570",
+  "value": {
+    "id": "chatcmpl-Edi8iwAjRsqASj4osh92KtkSncfGo",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"arguments\":[{\"text\":\"L'unanimité des experts est présentée comme une raison suffisante pour considérer une affirmation comme vraie.\",\"source_quote\":\"Les experts sont unanimes, c'est donc vrai.\",\"move_author\":\"speaker\"},{\"text\":\"Les personnes qui ne sont pas expertes ne seraient pas légitimes à exprimer un avis pris en compte.\",\"source_quote\":\"Si vous n'etes pas expert, votre avis ne compte pas.\",\"move_author\":\"speaker\"}],\"claims\":[{\"text\":\"Les experts sont unanimes au sujet de l'affirmation discutée.\",\"source_quote\":\"Les experts sont unanimes\"},{\"text\":\"Une affirmation soutenue unanimement par les experts est vraie.\",\"source_quote\":\"c'est donc vrai\"},{\"text\":\"L'avis d'une personne qui n'est pas experte ne compte pas.\",\"source_quote\":\"Si vous n'etes pas expert, votre avis ne compte pas\"}],\"summary\":\"Le texte défend deux positions : l'unanimité des experts garantirait la vérité, et les non-experts seraient dépourvus d'un avis pertinent ou recevable.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133172,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 354,
+      "prompt_tokens": 410,
+      "total_tokens": 764,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 124,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "key": "157ee32c469cf522424c33a2e9477230c2a0589ca81e61e244403347b0172876",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_QmKZUuBtIknTkHPOYvC3AaUM",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1389\",\"matches\":true,\"justification\":\"L'argument 2 écarte l'avis d'une personne uniquement parce qu'elle n'est pas experte, au lieu de répondre au contenu de sa critique. Cela correspond directement à la réponse de courtier. L'argument 1 ajoute un appel à l'autorité, mais le nœud présenté est bien illustré par l'argument 2.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Edi9pogDwUDvzQqpBchilpsmnzHXE",
+        "created": 1793133241,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 930,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 113,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

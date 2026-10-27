@@ -1,0 +1,40 @@
+{
+  "key": "5fa2a6a709f3b6a42767040266cdf792495aebeb05eeffd92904acd622d8700d",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_CDAtFUIlLG165Lef4QItNYut",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1282\",\"matches\":false,\"justification\":\"L’énoncé affirme le succès de la politique économique, mais ne soutient pas que la vérité est subjective ou propre à chaque individu; ce n’est donc pas un relativisme abusif.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Edi8N88UGlzla56HZCT77NZjjCn0x",
+        "created": 1793133151,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1667,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 569,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 75,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

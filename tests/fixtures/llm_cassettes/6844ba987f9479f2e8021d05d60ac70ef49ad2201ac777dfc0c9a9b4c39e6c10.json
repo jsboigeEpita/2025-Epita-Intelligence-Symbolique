@@ -1,0 +1,40 @@
+{
+  "key": "6844ba987f9479f2e8021d05d60ac70ef49ad2201ac777dfc0c9a9b4c39e6c10",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_OKn0ZU8GG4SZgOYG9qTglStb",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"301\",\"confidence\":\"high\",\"matches\":false,\"justification\":\"L'argument invoque l'unanimité des experts et exclut l'avis des non-experts; il ne présente pas une affirmation comme vraie simplement parce qu'une personne y croit avec assurance. Cette branche ne correspond pas.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Edi9OyBrtT0pM9Wb5ceieHvAF55SZ",
+        "created": 1793133214,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1576,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 478,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 84,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

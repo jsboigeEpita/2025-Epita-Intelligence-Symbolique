@@ -1,0 +1,48 @@
+{
+  "key": "b786ca37f3ecfd65b00c574c43dd43b609ff7015e63f7f81e406c16452f3f73f",
+  "value": {
+    "id": "chatcmpl-Edi6C0mp3BUY3AommNqkoXn3507ka",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Deux idées partiellement distinctes : le premier point pose une exigence méthodologique sur la comparaison des systèmes de retraite, tandis que le second conteste l’argument du Premier ministre fondé sur l’exemple des autres pays européens. Ils se recoupent toutefois autour de la pertinence de cette comparaison.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133016,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 203,
+      "prompt_tokens": 287,
+      "total_tokens": 490,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 120,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

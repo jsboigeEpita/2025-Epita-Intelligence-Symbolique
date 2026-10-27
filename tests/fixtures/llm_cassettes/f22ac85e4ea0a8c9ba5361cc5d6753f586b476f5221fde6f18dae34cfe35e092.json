@@ -1,14 +1,14 @@
 {
   "key": "f22ac85e4ea0a8c9ba5361cc5d6753f586b476f5221fde6f18dae34cfe35e092",
   "value": {
-    "id": "chatcmpl-Ec9CdutAPxzvWhp9uEUQj5PJn8KQw",
+    "id": "chatcmpl-EdiG2L890kAupPpBcwRLi4y7J43Vd",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"engages_real_claim\":false,\"engagement_verdict\":\"non_sequitur\",\"reasoning\":\"La réfutation affirme que l'immunité collective protège les personnes non vaccinées, mais ne répond pas à l'allégation selon laquelle les produits pharmaceutiques cachent leurs effets secondaires.\"}",
+          "content": "{\"engages_real_claim\":true,\"engagement_verdict\":\"engagement_réel\",\"reasoning\":\"La réfutation vise directement l’affirmation selon laquelle les produits pharmaceutiques cacheraient leurs effets secondaires, même si l’appel à l’immunité collective est un argument distinct et non pertinent.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1792760547,
+    "created": 1793133626,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 63,
+      "completion_tokens": 204,
       "prompt_tokens": 331,
-      "total_tokens": 394,
+      "total_tokens": 535,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 0,
+        "reasoning_tokens": 131,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

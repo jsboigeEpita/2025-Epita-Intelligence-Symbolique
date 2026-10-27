@@ -1,0 +1,48 @@
+{
+  "key": "0a6b8e8d76c98120e63c5bbb6f48e41187cefa1c61c4b4eae461fa0e10f500d1",
+  "value": {
+    "id": "chatcmpl-EdiDkmA3H7w1L8w90B9mr2i0Nx2C2",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points abordent des options différentes : le point 1 décrit le compromis de l’option C, tandis que le point 2 commence à présenter l’option B. Aucune redondance n’est démontrée, même si le point 2 est incomplet.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793133484,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 178,
+      "prompt_tokens": 305,
+      "total_tokens": 483,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 102,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
