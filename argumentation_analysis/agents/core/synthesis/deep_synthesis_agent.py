@@ -143,45 +143,75 @@ class DeepSynthesisAgent(BaseAgent):
     # FB-18 Mode A (#1039) — grounded transversal synthesis prompt. The LLM
     # receives an intelligence briefing of verified artifacts (never raw
     # text) and must anchor every insight in [artifact:...] citations.
-    GROUNDED_SYNTHESIS_PROMPT: ClassVar[str] = (
-        "You are an intelligence analyst writing the grounded transversal "
-        "synthesis of a rhetorical-analysis run. You receive an ARTIFACT "
-        "BRIEFING: a list of verified analysis artifacts, each prefixed by a "
-        "citation key of the form [artifact:<field>.<key>]. You never see "
-        "the raw discourse — only the verified artifacts.\n"
-        "\n"
-        "Produce exactly 4 markdown sections, each heading on its own line:\n"
-        "\n"
-        "## Transversal Patterns\n"
-        "Patterns that span multiple artifact types (e.g. a fallacy family "
-        "recurring across arguments that also fail formal verification, or "
-        "counter-arguments converging on the same structural weak point).\n"
-        "\n"
-        "## Rhetorical Strategy Assessment\n"
-        "What the artifact constellation reveals about the speaker's "
-        "strategy: which devices carry the discourse, what they achieve.\n"
-        "\n"
-        "## Structural Vulnerabilities\n"
-        "Where the argumentation is weakest: arguments outside the grounded "
-        "extension, high-scoring counter-arguments, retracted beliefs, "
-        "formal inconsistencies.\n"
-        "\n"
-        "## Interpretive Synthesis\n"
-        "The closing interpretive thesis: what this discourse does and how "
-        "robust it is under multi-method scrutiny.\n"
-        "\n"
-        "HARD RULES:\n"
-        "1. EVERY insight (each sentence making an analytical claim) MUST "
-        "cite at least one artifact, using the citation key VERBATIM as "
-        "given in the briefing, e.g. [artifact:identified_fallacies.f1].\n"
-        "2. At least one insight MUST combine citations from two or more "
-        "DIFFERENT artifact fields in the same sentence or paragraph "
-        "(cross-artifact insight).\n"
-        "3. NEVER invent citation keys absent from the briefing.\n"
-        "4. Do NOT narrate the pipeline or list counts; interpret.\n"
-        "5. Opaque IDs only (Speaker_A, arg_1) — never real names.\n"
-        "6. 6-10 paragraphs total, analytical register, no hedging."
+    # #3259 — the block reads in the report's French, like the acts before
+    # it: the producer prompt states the language and teaches the French
+    # headings. ONE vocabulary below drives BOTH the prompt and the VG-3
+    # completeness check (the #3123 precedent: the reader and the check
+    # read the same constant, they can never disagree).
+    GROUNDED_SECTION_SPECS: ClassVar[List[Tuple[str, str]]] = [
+        (
+            "## Motifs transversaux",
+            "Des motifs qui franchissent plusieurs types d'artefacts (une "
+            "famille de sophisme récurrente sur des arguments qui échouent "
+            "aussi à la vérification formelle ; des contre-arguments "
+            "convergeant vers le même point faible structurel).",
+        ),
+        (
+            "## Évaluation de la stratégie rhétorique",
+            "Ce que la constellation d'artefacts révèle de la stratégie du "
+            "locuteur : quels procédés portent le discours, ce qu'ils "
+            "obtiennent.",
+        ),
+        (
+            "## Vulnérabilités structurelles",
+            "Là où l'argumentation est la plus faible : arguments hors de "
+            "l'extension admise, contre-arguments à fort score, croyances "
+            "rétractées, incohérences formelles.",
+        ),
+        (
+            "## Synthèse interprétative",
+            "La thèse interprétative de clôture : ce que fait ce discours et "
+            "sa robustesse sous l'examen multi-méthodes.",
+        ),
+    ]
+    #: the completeness check's vocabulary — derived, never hand-kept.
+    REQUIRED_GROUNDED_SECTIONS: ClassVar[List[str]] = [
+        heading for heading, _ in GROUNDED_SECTION_SPECS
+    ]
+
+    _sections_block = "\n\n".join(
+        f"{heading}\n{description}" for heading, description in GROUNDED_SECTION_SPECS
     )
+    GROUNDED_SYNTHESIS_PROMPT: ClassVar[str] = (
+        "Tu es un analyste du renseignement rédigeant la synthèse "
+        "transversale ancrée d'une analyse rhétorique. Tu reçois un BRIEFING "
+        "D'ARTEFACTS : une liste d'artefacts d'analyse vérifiés, chacun "
+        "préfixé par une clé de citation de la forme "
+        "[artifact:<champ>.<clé>]. Tu ne vois jamais le discours brut — "
+        "seulement les artefacts vérifiés.\n"
+        "\n"
+        "Rédige en français, exactement 4 sections markdown, chaque titre "
+        "sur sa propre ligne :\n"
+        "\n"
+        f"{_sections_block}\n"
+        "\n"
+        "RÈGLES DURES :\n"
+        "1. CHAQUE proposition (toute phrase formulant un jugement "
+        "analytique) DOIT citer au moins un artefact, avec la clé de "
+        "citation REPRISE MOT POUR MOT telle que donnée dans le briefing, "
+        "p. ex. [artifact:identified_fallacies.f1].\n"
+        "2. Au moins une proposition DOIT combiner des citations de deux ou "
+        "plus champs d'artefacts DIFFÉRENTS dans la même phrase ou le même "
+        "paragraphe (lecture transversale).\n"
+        "3. N'invente JAMAIS une clé de citation absente du briefing.\n"
+        "4. Ne narre pas le pipeline et ne liste pas des comptes : "
+        "interprète.\n"
+        "5. Identifiants opaques uniquement (Speaker_A, arg_1) — jamais de "
+        "noms réels.\n"
+        "6. 6 à 10 paragraphes au total, registre analytique, sans "
+        "précaution oratoire."
+    )
+    del _sections_block
 
     # FB-18 — canonical list of state artifact fields. Used both for the
     # state-empty guard (VG-2) and the metadata field count; keep in sync
@@ -2126,7 +2156,7 @@ class DeepSynthesisAgent(BaseAgent):
             )
             prompt = (
                 f"{_opaque_guard}{self.GROUNDED_SYNTHESIS_PROMPT}\n\n{briefing}\n\n"
-                "Write the 4-section grounded transversal synthesis now."
+                "Rédige maintenant la synthèse transversale ancrée en 4 sections."
             )
             result = await self.kernel.invoke_prompt(
                 function_name="deep_synthesis_grounded_transversal",
@@ -2145,12 +2175,9 @@ class DeepSynthesisAgent(BaseAgent):
     #: measures against it, so the reader and the check never disagree.
     SPARSE_ATTACK_DENSITY: ClassVar[float] = 1.0
 
-    REQUIRED_GROUNDED_SECTIONS: ClassVar[List[str]] = [
-        "## Transversal Patterns",
-        "## Rhetorical Strategy Assessment",
-        "## Structural Vulnerabilities",
-        "## Interpretive Synthesis",
-    ]
+    # #3259 — REQUIRED_GROUNDED_SECTIONS now lives beside the prompt that
+    # teaches it (derived from GROUNDED_SECTION_SPECS): one vocabulary,
+    # stated once, read by both the producer and the completeness check.
 
     @staticmethod
     def validate_value_gates(

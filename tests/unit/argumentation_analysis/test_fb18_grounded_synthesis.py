@@ -171,30 +171,30 @@ class TestArtifactBriefing:
 # =========================================================================
 
 
-_GOOD_SYNTHESIS = """## Transversal Patterns
+_GOOD_SYNTHESIS = """## Motifs transversaux
 
-The relevance-family attack [artifact:identified_fallacies.fallacy_1] targets
-the same argument that falls outside the grounded extension
-[artifact:dung_frameworks.dung_1], a convergence of informal and formal
-diagnostics.
+L'attaque de la famille de la pertinence [artifact:identified_fallacies.fallacy_1] vise
+le même argument que l'extension admise exclut
+[artifact:dung_frameworks.dung_1], une convergence des diagnostics
+informels et formels.
 
-## Rhetorical Strategy Assessment
+## Évaluation de la stratégie rhétorique
 
-The discourse leans on threat framing [artifact:identified_arguments.arg_2],
-which the strongest counter-argument [artifact:counter_arguments.ca_1]
-directly undercuts with historical evidence.
+Le discours s'appuie sur le cadrage par la menace [artifact:identified_arguments.arg_2],
+que le contre-argument le plus fort [artifact:counter_arguments.ca_1]
+contredit directement par la preuve historique.
 
-## Structural Vulnerabilities
+## Vulnérabilités structurelles
 
-Argument arg_1 is attacked and excluded from the grounded extension
-[artifact:dung_frameworks.dung_1]; its supporting fallacy
-[artifact:identified_fallacies.fallacy_1] makes it doubly fragile.
+L'argument arg_1 est attaqué et exclu de l'extension admise
+[artifact:dung_frameworks.dung_1] ; le sophisme qui le soutient
+[artifact:identified_fallacies.fallacy_1] le rend doublement fragile.
 
-## Interpretive Synthesis
+## Synthèse interprétative
 
-Under multi-method scrutiny the sovereignty case rests on contested premises
-[artifact:identified_arguments.arg_1] and does not survive dialectical
-verification [artifact:dung_frameworks.dung_1].
+Sous l'examen multi-méthodes, le cas de souveraineté repose sur des prémisses
+contestées [artifact:identified_arguments.arg_1] et ne survit pas à la
+vérification dialectique [artifact:dung_frameworks.dung_1].
 """
 
 
@@ -237,10 +237,10 @@ class TestValueGates:
 
     def test_vg3_fails_on_template_without_citations(self):
         template = (
-            "## Transversal Patterns\n\nGeneric prose.\n\n"
-            "## Rhetorical Strategy Assessment\n\nGeneric prose.\n\n"
-            "## Structural Vulnerabilities\n\nGeneric prose.\n\n"
-            "## Interpretive Synthesis\n\nGeneric prose without any citation.\n"
+            "## Motifs transversaux\n\nProse générique.\n\n"
+            "## Évaluation de la stratégie rhétorique\n\nProse générique.\n\n"
+            "## Vulnérabilités structurelles\n\nProse générique.\n\n"
+            "## Synthèse interprétative\n\nProse générique sans aucune citation.\n"
         )
         vg = DeepSynthesisAgent.validate_value_gates(
             template, populated_artifact_fields=4
@@ -249,8 +249,8 @@ class TestValueGates:
 
     def test_vg3_fails_on_missing_sections(self):
         partial = (
-            "## Transversal Patterns\n\n"
-            "Cited insight [artifact:identified_arguments.arg_1].\n"
+            "## Motifs transversaux\n\n"
+            "Jugement cité [artifact:identified_arguments.arg_1].\n"
         )
         vg = DeepSynthesisAgent.validate_value_gates(
             partial, populated_artifact_fields=4
@@ -268,14 +268,14 @@ class TestValueGates:
 
     def test_vg4_fails_when_no_paragraph_spans_two_fields(self):
         single_field = (
-            "## Transversal Patterns\n\n"
-            "Insight one [artifact:identified_arguments.arg_1].\n\n"
-            "## Rhetorical Strategy Assessment\n\n"
-            "Insight two [artifact:identified_arguments.arg_2].\n\n"
-            "## Structural Vulnerabilities\n\n"
-            "Insight three [artifact:identified_arguments.arg_3].\n\n"
-            "## Interpretive Synthesis\n\n"
-            "Closing [artifact:identified_arguments.arg_1].\n"
+            "## Motifs transversaux\n\n"
+            "Jugement un [artifact:identified_arguments.arg_1].\n\n"
+            "## Évaluation de la stratégie rhétorique\n\n"
+            "Jugement deux [artifact:identified_arguments.arg_2].\n\n"
+            "## Vulnérabilités structurelles\n\n"
+            "Jugement trois [artifact:identified_arguments.arg_3].\n\n"
+            "## Synthèse interprétative\n\n"
+            "Clôture [artifact:identified_arguments.arg_1].\n"
         )
         vg = DeepSynthesisAgent.validate_value_gates(
             single_field, populated_artifact_fields=4
