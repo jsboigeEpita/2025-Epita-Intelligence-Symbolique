@@ -1,0 +1,40 @@
+{
+  "key": "3d235291f69b8fc40bd74976ffba6fd85369ca3a381c170478085044870bcd79",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_B1J3MncxRelwqBzL74ov0oP5",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"302\",\"matches\":false,\"justification\":\"Le texte commet plutôt un appel à l'autorité et une disqualification de l'avis des non-experts. Il n'étend pas une première bonne impression liée à un aspect à l'ensemble d'une personne ou d'une proposition; l'effet de halo ne correspond donc pas.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdmMXfBPi67xJnGpqBucSOsyuVKOm",
+        "created": 1793149405,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 950,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 95,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "key": "86807c4c4b5de5ce79ad7321ff7545c4cd87c78294462bbb6c5492636f55744d",
+  "value": {
+    "id": "chatcmpl-EdmJEUueRgFdPAshpcCRzqgkaBP0i",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Le ministre des Finances utilise une projection chiffrée du déficit — atteignant 2,3 % du PIB d’ici 2030 — pour soutenir la nécessité d’agir sur le système des retraites.\\n2. Les syndicats reprochent au gouvernement de commettre un sophisme naturaliste en affirmant que travailler plus longtemps est « dans l’ordre des choses ».\\n3. La projection du déficit repose sur des hypothèses de croissance jugées optimistes, à savoir 1,8 % par an.\\n4. L’opposition accuse le gouvernement de construire un homme de paille : personne ne propose de supprimer les retraites, mais seulement de les réformer différemment.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149200,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 251,
+      "prompt_tokens": 303,
+      "total_tokens": 554,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 90,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

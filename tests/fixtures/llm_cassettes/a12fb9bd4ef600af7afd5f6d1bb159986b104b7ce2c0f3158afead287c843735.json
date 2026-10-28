@@ -1,14 +1,14 @@
 {
   "key": "a12fb9bd4ef600af7afd5f6d1bb159986b104b7ce2c0f3158afead287c843735",
   "value": {
-    "id": "chatcmpl-EdiAZP2KNnwpZAqDncnFzL7ZM7OHn",
+    "id": "chatcmpl-EdmNYCTqbGCvBJwQjAb3TKVv0z6QX",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points apportent des idées distinctes : le premier affirme que l’unanimité des experts suffit à établir la vérité, tandis que le second exclut la valeur probante de l’avis d’un non-expert. Ils concernent tous deux le poids de l’expertise, mais ne se répètent pas en substance.\"}",
+          "content": "{\"score\":0.5,\"exhibit\":\"Les deux points sont distincts : le premier attribue une force probante suffisante à l’unanimité des experts, tandis que le second exclut la valeur de l’avis des non-experts. Ils se recoupent toutefois sur le rôle de l’expertise dans l’évaluation d’une affirmation.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793133287,
+    "created": 1793149468,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 147,
+      "completion_tokens": 142,
       "prompt_tokens": 274,
-      "total_tokens": 421,
+      "total_tokens": 416,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 60,
+        "reasoning_tokens": 59,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

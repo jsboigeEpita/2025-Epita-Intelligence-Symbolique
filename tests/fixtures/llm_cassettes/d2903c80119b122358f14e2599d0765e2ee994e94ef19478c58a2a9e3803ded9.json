@@ -1,0 +1,48 @@
+{
+  "key": "d2903c80119b122358f14e2599d0765e2ee994e94ef19478c58a2a9e3803ded9",
+  "value": {
+    "id": "chatcmpl-EdmOafguIEHg5FjBnKjoEEPZyTdBX",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.72,\"fairness_assessment\":\"La méthode permet de comparer équitablement les trois usages du budget et d'intégrer les préférences, mais elle devrait aussi évaluer les coûts, les bénéfices attendus et les besoins réels plutôt que de compter uniquement les votes.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"Option A\",\"position\":\"Privilégie un tournoi inter-villes avec buffet et prix pour accroître la visibilité et l'attractivité du club.\",\"influence\":0.33},{\"agent\":\"Option B\",\"position\":\"Privilégie l'investissement complet dans du matériel pédagogique et des échiquiers neufs afin de renforcer les ressources internes.\",\"influence\":0.4},{\"agent\":\"Option C\",\"position\":\"Propose une répartition équilibrée entre un tournoi réduit et l'achat de matériel, afin de préserver les deux objectifs.\",\"influence\":0.27}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"Les options poursuivent des objectifs légitimes mais reposent sur des hypothèses insuffisamment vérifiées et des alternatives incomplètes. Une procédure de choix social, précédée d'une estimation des besoins et des effets attendus, devrait comparer les options et permettre un compromis ajusté plutôt qu'un partage arbitraire à parts égales. Le compromis est susceptible de préserver la cohésion tout en limitant le risque de financer une action dont l'impact n'est pas démontré.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149532,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 384,
+      "prompt_tokens": 660,
+      "total_tokens": 1044,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 64,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "key": "84ec0deb807c0c0e8074d190812b6017d39dcf127d7ddf6751f6211e0868dac4",
+  "value": {
+    "id": "chatcmpl-EdmWmtNcFjXGbU671WQxL1rizOlyG",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points 1 et 2 abordent des idées distinctes : le biais dans la sélection des données et l’unanimité des modèles sur l’impact humain. Le point 3 est tronqué (« La transition énergétique est nécess… »), donc aucune redondance ne peut être identifiée à ce stade.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793150040,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 138,
+      "prompt_tokens": 290,
+      "total_tokens": 428,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 55,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

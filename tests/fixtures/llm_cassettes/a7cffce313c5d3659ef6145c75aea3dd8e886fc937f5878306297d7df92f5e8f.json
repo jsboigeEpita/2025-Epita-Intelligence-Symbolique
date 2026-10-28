@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"forall X: (Homme(X) => Mortel(X))\",\n    \"Homme(socrate)\"\n  ],\n  \"predicates\": {\n    \"Homme\": \"est un homme\",\n    \"Mortel\": \"est mortel\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La première phrase affirme que tout individu qui est un homme est mortel. La seconde affirme que Socrate est un homme.\"\n}",
+      "content": "{\n  \"formulas\": [\n    \"forall X: (Homme(X) => Mortel(X))\",\n    \"Homme(socrate)\"\n  ],\n  \"predicates\": {\n    \"Homme\": \"est un homme\",\n    \"Mortel\": \"est mortel\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La première phrase indique que tout individu qui est un homme est mortel. La seconde affirme que Socrate est un homme.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdiCRx2ahxdbDEIYpELKkvRG9PB7F",
-        "created": 1793133403,
+        "id": "chatcmpl-EdmPhFUW1zUzUIjOIVn8Z8kagham1",
+        "created": 1793149601,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 286,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 127,
+          "completion_tokens": 128,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 11,
+            "reasoning_tokens": 12,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

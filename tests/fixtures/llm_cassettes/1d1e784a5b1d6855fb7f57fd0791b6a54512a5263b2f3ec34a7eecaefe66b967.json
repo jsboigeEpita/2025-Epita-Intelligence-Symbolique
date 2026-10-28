@@ -1,0 +1,33 @@
+{
+  "key": "1d1e784a5b1d6855fb7f57fd0791b6a54512a5263b2f3ec34a7eecaefe66b967",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "**Hypothèse :** Une personne est entrée par la porte restée ouverte et a pris l’objet manquant, probablement sans forcer l’entrée.",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdmRpkvlEcdd0rO5mnvtRbKteMk9f",
+        "created": 1793149733,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 32,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 77,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 37,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

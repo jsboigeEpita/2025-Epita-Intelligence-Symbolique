@@ -1,0 +1,48 @@
+{
+  "key": "c0a0adc1adb3926e68526a0277979bf254eae495b7bed98b964f0b9e8a0adb44",
+  "value": {
+    "id": "chatcmpl-EdmTjgcn3sqJujLJ6xuN1IpMxw5vY",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points visibles sont distincts : le premier rapporte une affirmation sur les risques perçus des vaccins, tandis que le deuxième présente des résultats historiques sur leur efficacité. Aucune redondance en substance n’est identifiable dans l’extrait fourni.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149851,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 140,
+      "prompt_tokens": 292,
+      "total_tokens": 432,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 70,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

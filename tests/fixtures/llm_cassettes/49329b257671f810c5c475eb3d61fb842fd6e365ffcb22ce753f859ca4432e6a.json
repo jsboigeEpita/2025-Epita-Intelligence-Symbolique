@@ -1,0 +1,40 @@
+{
+  "key": "49329b257671f810c5c475eb3d61fb842fd6e365ffcb22ce753f859ca4432e6a",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_j390tpu3Zg1KWsnZjEn4Z14S",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1\",\"matches\":false,\"justification\":\"Les phrases sont de simples énoncés descriptifs et ne présentent pas d’argument dont les prémisses seraient insuffisantes pour établir une conclusion.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdmKhpCY5Wg12G1YbyTnboOhVLpSJ",
+        "created": 1793149291,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1902,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1899,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 70,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

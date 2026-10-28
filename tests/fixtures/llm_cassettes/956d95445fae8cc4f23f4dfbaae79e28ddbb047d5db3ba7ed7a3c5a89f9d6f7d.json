@@ -1,0 +1,33 @@
+{
+  "key": "956d95445fae8cc4f23f4dfbaae79e28ddbb047d5db3ba7ed7a3c5a89f9d6f7d",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "## 🕯️ Nouvelle enquête : *Le Mystère du Manoir Tudor*\n\nLa pluie tambourine contre les vitraux du **Manoir Tudor**. À 22 h 30, un cri retentit depuis la bibliothèque.\n\nLe maître des lieux, **Sir Alistair Blackwood**, est retrouvé mort près de son bureau. La porte était verrouillée de l’intérieur. Une fenêtre est entrouverte malgré l’orage.\n\n### La victime\n- **Sir Alistair Blackwood**, 62 ans  \n- Cause apparente : blessure profonde à la poitrine  \n- Arme introuvable\n\n### Les suspects présents au manoir\n- **Lady Eleanor Blackwood**, son épouse  \n- **Victoria Blackwood**, sa fille  \n- **Edmund Blackwood**, son frère  \n- **Dr Samuel Reed**, médecin de la famille  \n- **Miss Clara Whitmore**, gouvernante  \n- **Jonathan Graves**, majordome  \n\n### Premiers indices\n- Un verre de brandy brisé près du corps  \n- Une trace de boue sur le tapis  \n- Une page arrachée du journal intime de la victime  \n- L’horloge de la bibliothèque arrêtée à **22 h 17**  \n- Une odeur persistante de lavande dans la pièce  \n\nTous les suspects sont rassemblés dans le grand salon. Personne ne peut quitter le manoir.\n\n**Que souhaitez-vous faire ?**  \n1. Examiner la scène du crime  \n2. Interroger un suspect  \n3. Fouiller la bibliothèque  \n4. Examiner le corps  \n5. Inspecter les autres pièces du manoir",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdmRfKjBxx26mxvP8ZOuV2YnIDEzN",
+        "created": 1793149723,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 29,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 421,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 82,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

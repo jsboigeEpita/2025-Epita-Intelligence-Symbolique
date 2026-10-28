@@ -1,0 +1,48 @@
+{
+  "key": "8ef941979e89d9d3eb17f57a5826eac89489d025292b93366927d36c5df8e155",
+  "value": {
+    "id": "chatcmpl-EdmRRMeu8XNZLP34wwSIUVM37Txsg",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.58,\"fairness_assessment\":\"A ranked or scored vote fairly compares the three budget options, but should account for the club’s educational needs and require transparent evidence about expected recruitment benefits.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"Agent A\",\"position\":\"Supports spending the full budget on an inter-city tournament with food and prizes to increase visibility and recruit members.\",\"influence\":0.32},{\"agent\":\"Agent B\",\"position\":\"Supports investing the full budget in new educational equipment because current boards and related materials are worn.\",\"influence\":0.4},{\"agent\":\"Agent C\",\"position\":\"Supports splitting the budget between a smaller tournament and educational equipment to balance visibility and teaching.\",\"influence\":0.28}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"The options reflect legitimate strategic priorities rather than incompatible values. A social-choice process should rank or score all options, while a collaborative compromise can use the result to design a proportionate or phased allocation based on equipment urgency, tournament feasibility, and measurable recruitment goals.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149709,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 333,
+      "prompt_tokens": 601,
+      "total_tokens": 934,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 98,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

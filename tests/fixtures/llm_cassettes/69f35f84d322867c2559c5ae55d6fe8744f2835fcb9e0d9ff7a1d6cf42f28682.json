@@ -1,0 +1,40 @@
+{
+  "key": "69f35f84d322867c2559c5ae55d6fe8744f2835fcb9e0d9ff7a1d6cf42f28682",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_IhKdRdJuNMVGA8BjPyeGPGO5",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"973\",\"matches\":false,\"justification\":\"La phrase affirme simplement que la politique économique est un succès incontestable. Elle ne décrit aucun changement de critères du débat ni déplacement des exigences.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdmLTH5G7xQluMn9GJJzkjSdlWrcQ",
+        "created": 1793149339,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2265,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1167,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 67,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

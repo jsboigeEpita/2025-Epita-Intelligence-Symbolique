@@ -6,25 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_BMS0mMY5GNjMEWxEFXeMVfAu",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"3\"}"
-        },
-        {
-          "id": "call_tY9xrHow8E7hEpILF4nKlQQE",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"33\"}"
-        },
-        {
-          "id": "call_qCgFq5LJf16nltjPPBxwuSDL",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"55\"}"
+          "id": "call_5eWGSp0MwxKi7s93FIsYVZ7N",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"2\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"L’énoncé affirme que la politique économique est un succès incontestable sans fournir aucune preuve ni donnée. Il s’agit d’une généralisation hâtive fondée sur une affirmation non étayée.\",\"move_author\":\"speaker\",\"move_author_label\":\"Le président\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Edi8MBs9efNmfG9SjLLPmwpnvs6dp",
-        "created": 1793133150,
+        "id": "chatcmpl-EdmLbfFmKlX44JK5TzIqQs00sX0DJ",
+        "created": 1793149347,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2103,
@@ -35,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 76,
+          "completion_tokens": 87,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

@@ -1,14 +1,14 @@
 {
   "key": "cab8e27c0787047ee23df9eb35659b0da6a5bacc5dce5828567a383713eee8b3",
   "value": {
-    "id": "chatcmpl-EdiHwSfw3ytTJB12ztpsK9QdPov12",
+    "id": "chatcmpl-EdmWQsyCLrMUPyYd9noyUW4bBGmPk",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_thesis\":true,\"thesis\":\"Le changement climatique actuel est sans précédent par sa vitesse et est principalement dû aux activités humaines.\",\"digressions\":\"\"}",
+          "content": "{\"has_thesis\":true,\"thesis\":\"Le changement climatique actuel est principalement dû aux activités humaines et se distingue par une vitesse sans précédent.\",\"digressions\":\"\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793133744,
+    "created": 1793150018,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 157,
+      "completion_tokens": 114,
       "prompt_tokens": 256,
-      "total_tokens": 413,
+      "total_tokens": 370,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 114,
+        "reasoning_tokens": 70,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

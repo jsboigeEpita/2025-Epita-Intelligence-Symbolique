@@ -1,0 +1,48 @@
+{
+  "key": "9bbf315287078f14554f2249e3abffae28227733537431387a117efb4743a81e",
+  "value": {
+    "id": "chatcmpl-EdmU5rOSROBlh3zItfvmGFzfjK8aS",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "[\n  {\n    \"counter_argument\": \"Les succès historiques de la vaccination ne suffisent pas à justifier automatiquement chaque vaccin, chaque calendrier ou chaque politique vaccinale actuelle, qui doivent être évalués séparément selon leurs bénéfices et leurs risques.\",\n    \"strategy_used\": \"distinction\",\n    \"target_argument\": \"[arg_2]\",\n    \"strength\": \"strong\",\n    \"reasoning\": \"L’argument généralise des résultats historiques incontestables à toutes les situations contemporaines sans établir que les mêmes conclusions s’appliquent à chaque intervention.\"\n  },\n  {\n    \"counter_argument\": \"L’immunité collective dépend du vaccin, de sa couverture réelle, de la durée de la protection et de la transmissibilité de la maladie ; elle ne protège donc pas nécessairement toutes les personnes qui ne peuvent pas être vaccinées.\",\n    \"strategy_used\": \"qualification\",\n    \"target_argument\": \"[arg_6]\",\n    \"strength\": \"moderate\",\n    \"reasoning\": \"L’argument présente un mécanisme réel, mais comme une protection garantie alors que son efficacité varie selon les conditions épidémiologiques.\"\n  },\n  {\n    \"counter_argument\": \"Dire que les vaccins sont indispensables à la santé publique est trop absolu : leur utilité peut être majeure, mais elle doit être appréciée maladie par maladie et combinée à d’autres mesures comme la surveillance, l’hygiène et l’accès aux soins.\",\n    \"strategy_used\": \"réfutation de la généralisation\",\n    \"target_argument\": \"[arg_1]\",\n    \"strength\": \"strong\",\n    \"reasoning\": \"Le terme « indispensables » transforme une contribution importante en nécessité universelle sans démontrer qu’aucune autre mesure ne pourrait remplir les mêmes fonctions.\"\n  },\n  {\n    \"counter_argument\": \"Le fait que certaines personnes affirment que les vaccins présentent des risques importants ne démontre ni l’ampleur réelle de ces risques ni leur rapport avec les bénéfices attendus.\",\n    \"strategy_used\": \"distinction entre affirmation et preuve\",\n    \"target_argument\": \"[arg_3]\",\n    \"strength\": \"strong\",\n    \"reasoning\": \"L’énoncé décrit une position sans fournir d’élément permettant d’en évaluer la véracité ou la pertinence.\"\n  },\n  {\n    \"counter_argument\": \"L’existence d’effets secondaires connus ou de débats sur leur déclaration ne prouve pas que les entreprises pharmaceutiques les cachent ; une telle accusation exige des preuves précises et indépendantes.\",\n    \"strategy_used\": \"demande de preuve\",\n    \"target_argument\": \"[arg_5]\",\n    \"strength\": \"strong\",\n    \"reasoning\": \"L’argument repose sur une accusation générale qui confond éventuellement sous-déclaration, incertitude scientifique et dissimulation intentionnelle.\"\n  },\n  {\n    \"counter_argument\": \"Des décennies de recherche clinique renforcent les connaissances sur les vaccins, mais elles n’éliminent pas les effets indésirables rares ni la nécessité de réévaluer continuellement les données et les politiques.\",\n    \"strategy_used\": \"nuance\",\n    \"target_argument\": \"[arg_4]\",\n    \"strength\": \"moderate\",\n    \"reasoning\": \"L’ancienneté de la recherche constitue un élément pertinent, mais elle ne suffit pas à invalider toute critique ni à garantir l’absence de risques résiduels.\"\n  }\n]",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149873,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 868,
+      "prompt_tokens": 465,
+      "total_tokens": 1333,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 159,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

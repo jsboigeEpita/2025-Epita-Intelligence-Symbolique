@@ -1,0 +1,48 @@
+{
+  "key": "f5bc930b5ea3f01394e85f504a3bf369a28d798600acd31e022a9469bce0e347",
+  "value": {
+    "id": "chatcmpl-EdmJEKKptJ4f4gRJLgYEQjh8l8BFn",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Le gouvernement affirme que, sans action immédiate, le système s’effondrera dans cinq ans.\\n2. Cet argument d’autorité ne tient pas compte des différences structurelles entre les systèmes.\\n3. La prédiction d’un effondrement dans cinq ans constitue un appel classique à la peur.\\n4. Selon les syndicats, le gouvernement commet un sophisme naturaliste en prétendant que travailler plus longtemps est « dans l’ordre des choses ».\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149200,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 187,
+      "prompt_tokens": 264,
+      "total_tokens": 451,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 75,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

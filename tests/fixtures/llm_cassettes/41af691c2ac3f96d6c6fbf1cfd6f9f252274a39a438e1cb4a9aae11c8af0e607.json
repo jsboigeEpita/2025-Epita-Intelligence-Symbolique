@@ -1,14 +1,14 @@
 {
   "key": "41af691c2ac3f96d6c6fbf1cfd6f9f252274a39a438e1cb4a9aae11c8af0e607",
   "value": {
-    "id": "chatcmpl-EdiI15doSuaKRLPAnN81ZI55bf3vN",
+    "id": "chatcmpl-EdmWQL5cwyEnlqhbLZD9flT5RR2SU",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"chain_holds\":false,\"structure_verdict\":\"saut_logique\",\"reasoning\":\"Une hausse mesurée de 1,1 degré étaye l’existence d’un réchauffement, mais ne suffit pas à rendre la conclusion « incontestable » ni à établir à elle seule toute la réalité scientifique du changement climatique.\"}",
+          "content": "{\"chain_holds\":false,\"structure_verdict\":\"saut_logique\",\"reasoning\":\"Une hausse mesurée de la température mondiale étaye l’existence d’un changement climatique, mais ne suffit pas à elle seule à établir qu’il s’agit d’une réalité scientifique incontestable.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793133749,
+    "created": 1793150018,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 162,
+      "completion_tokens": 117,
       "prompt_tokens": 343,
-      "total_tokens": 505,
+      "total_tokens": 460,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 87,
+        "reasoning_tokens": 51,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

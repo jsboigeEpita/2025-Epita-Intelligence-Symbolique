@@ -1,0 +1,40 @@
+{
+  "key": "bfdb4f44f6def0bf99aa0d33101779ef52198f63c6d63d964518d51e6747144e",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_vCo1WOvGNywj4nS2lIjTUgTm",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"2\",\"matches\":false,\"justification\":\"« Le soleil brille. Il fait beau. » énonce simplement deux affirmations descriptives sans construire d’argument à partir d’anecdotes ou d’impressions pour tirer une généralisation.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdmKhrxOlMsJlJALkSyUpvtYEWwz1",
+        "created": 1793149291,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2072,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 974,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 79,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

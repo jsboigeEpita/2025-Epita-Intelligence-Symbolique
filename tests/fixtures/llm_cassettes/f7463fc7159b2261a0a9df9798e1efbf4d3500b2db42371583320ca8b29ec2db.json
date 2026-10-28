@@ -1,0 +1,48 @@
+{
+  "key": "f7463fc7159b2261a0a9df9798e1efbf4d3500b2db42371583320ca8b29ec2db",
+  "value": {
+    "id": "chatcmpl-EdmNqso2fvJWHKnODn1fGjsFQJHjO",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Investir les 2000 euros en matériel pédagogique et en échiquiers neufs.\",\"main_thesis\":\"Organiser un tournoi inter-villes avec buffet et prix pour 2000 euros afin d’accroître la visibilité du club.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149486,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 104,
+      "prompt_tokens": 299,
+      "total_tokens": 403,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 34,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

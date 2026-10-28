@@ -1,0 +1,48 @@
+{
+  "key": "16ddce9eedb6adb11c45a779509be03e297b588c3e129d0957ad1c5d9fa0e40a",
+  "value": {
+    "id": "chatcmpl-EdmIs1eCnvWetwc0LgHaFnztR6AH7",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.2,\"exhibit\":\"La thèse affirme que la portée de la projection est limitée par des hypothèses de croissance optimistes de 1,8 % par an. Des digressions notables portent sur la réplique des syndicats au sophisme naturaliste du travail plus long et sur la dénonciation par l’opposition d’un homme de paille, ce qui dilue l’argument central.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149178,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 154,
+      "prompt_tokens": 314,
+      "total_tokens": 468,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 56,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

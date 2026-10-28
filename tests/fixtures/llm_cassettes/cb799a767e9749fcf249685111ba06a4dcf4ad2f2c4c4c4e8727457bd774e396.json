@@ -1,0 +1,48 @@
+{
+  "key": "cb799a767e9749fcf249685111ba06a4dcf4ad2f2c4c4c4e8727457bd774e396",
+  "value": {
+    "id": "chatcmpl-EdmTdeVwpU5vOP2Bsqn8wLI6SFMsm",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Trois points distincts : nécessité des vaccins pour la santé publique, éradication de la variole et forte réduction de la polio. Les deux derniers illustrent l’efficacité vaccinale sans répéter substantiellement le premier ni se répéter entre eux.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149845,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 136,
+      "prompt_tokens": 275,
+      "total_tokens": 411,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 63,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

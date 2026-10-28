@@ -1,0 +1,48 @@
+{
+  "key": "e04ee6c2bebc3654e57a7f6dd5f2edb0ad1b91f2f948e640fc5075a93be9e222",
+  "value": {
+    "id": "chatcmpl-EdmUZg6F5a4CAJogfFlGhwzAE2VFG",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Certains criminels sont irrécupérables et représentent un danger permanent pour la société, ce qui peut justifier la peine de mort.\",\"main_thesis\":\"La peine de mort devrait être rejetée, car son irréversibilité rend toute erreur judiciaire fatale et ses coûts peuvent être supérieurs à ceux de l’emprisonnement à vie.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149903,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 168,
+      "prompt_tokens": 280,
+      "total_tokens": 448,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 75,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

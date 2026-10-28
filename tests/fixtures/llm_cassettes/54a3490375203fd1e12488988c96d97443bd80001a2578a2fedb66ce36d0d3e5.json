@@ -1,0 +1,48 @@
+{
+  "key": "54a3490375203fd1e12488988c96d97443bd80001a2578a2fedb66ce36d0d3e5",
+  "value": {
+    "id": "chatcmpl-EdmTgqnKttHoFZBrrjrBzzpXvGnVA",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Les points sont globalement distincts : le premier porte sur des résultats historiques, le deuxième sur le rôle essentiel en santé publique, et le troisième sur la solidité des preuves face aux critiques. Il existe toutefois un chevauchement entre les deux premiers, qui soutiennent tous deux l’importance des vaccins, ainsi qu’un lien entre le troisième et la justification de leur sécurité.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149848,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 155,
+      "prompt_tokens": 291,
+      "total_tokens": 446,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 59,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "key": "320031d677050379ed0e4eb4d8d0f598039e8a4c7f401693ee76757b54d6d0f9",
+  "value": {
+    "id": "chatcmpl-EdmJ5SYjeu1GZBTMIqwE0LToBnu2f",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La chaîne relie l’hypothèse de croissance optimiste de 1,8 % par an à la conclusion que la portée de la projection est limitée, ce qui constitue une progression logique, mais l’inférence reste implicite et insuffisamment étayée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149191,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 239,
+      "prompt_tokens": 271,
+      "total_tokens": 510,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 164,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

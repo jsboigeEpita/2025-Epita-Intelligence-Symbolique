@@ -1,14 +1,14 @@
 {
   "key": "bff01f89a6758b0abc3581545ac7576b9420e05e6d35ac75779ea488b5151f65",
   "value": {
-    "id": "chatcmpl-EdiI7D77PGiawIDMtxgLqYAV3MyO7",
+    "id": "chatcmpl-EdmWaSaSw5ZyD064MMfs4BkJyRq6T",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_chain\":true,\"premises\":\"Les mesures de température globale montrent une augmentation de 1,1 degré depuis l’ère préindustrielle ; le changement actuel se produit à une vitesse sans précédent ; les modèles prédictifs sont unanimes sur l’impact des activités humaines.\",\"conclusion\":\"Le changement climatique actuel ne s’explique pas seulement par les variations naturelles passées et il est largement dû aux activités humaines.\"}",
+          "content": "{\"has_chain\":true,\"premises\":\"Les mesures de température globale montrent une augmentation de 1,1 degré depuis l’ère préindustrielle ; les sceptiques omettent la vitesse sans précédent du changement actuel ; les modèles prédictifs sont unanimes sur l’impact des activités humaines.\",\"conclusion\":\"L’argument selon lequel le climat a toujours changé ne réfute pas que le changement climatique actuel soit exceptionnellement rapide et dû aux activités humaines.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793133755,
+    "created": 1793150028,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 261,
+      "completion_tokens": 258,
       "prompt_tokens": 269,
-      "total_tokens": 530,
+      "total_tokens": 527,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 165,
+        "reasoning_tokens": 155,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

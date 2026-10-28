@@ -1,0 +1,48 @@
+{
+  "key": "a0940c1c3cd4c799e44f5acada6c5bdbdd6092f094a31c5649dbf097f62be0af",
+  "value": {
+    "id": "chatcmpl-EdmUYl98JrosGq23TFnUMcXtEq6Tu",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Certains criminels sont irrécupérables et représentent un danger permanent pour la société ; les avancées en ADN réduisent considérablement le risque d’erreur judiciaire.\",\"conclusion\":\"Les criminels irrécupérables et durablement dangereux pour la société justifient la peine de mort.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149902,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 183,
+      "prompt_tokens": 295,
+      "total_tokens": 478,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 103,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

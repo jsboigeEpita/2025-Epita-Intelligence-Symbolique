@@ -1,0 +1,48 @@
+{
+  "key": "54ae7b674ed174166a8dbdb0ef7d75845dd4238ed18ecd3171e4b37dae5197f7",
+  "value": {
+    "id": "chatcmpl-EdmJXmPKb0J8y7ub7ZY2lKtJaHRZo",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Position adverse : personne n'a proposé de supprimer les retraites, mais seulement de les réformer différemment. Verdict : non sequitur, sans engagement réel avec cette position.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149219,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 97,
+      "prompt_tokens": 267,
+      "total_tokens": 364,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 40,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

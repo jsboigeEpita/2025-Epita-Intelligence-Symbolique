@@ -6,25 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_MA4UYteIKj5ewShhiKvKyT5y",
+          "id": "call_0qTXNYLbuAhYh9whnZDUCYtn",
           "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"800\"}"
-        },
-        {
-          "id": "call_eUrEefnPfzVnvIUGudTBic1O",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"804\"}"
-        },
-        {
-          "id": "call_IYIFiTR66OKnItJt62iM7Ode",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"826\"}"
+          "arguments": "{\"node_pk\":\"800\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Edi8JM7bSZAH57DQHXnglGzA4909b",
-        "created": 1793133147,
+        "id": "chatcmpl-EdmLVNkpM0hidtNlW1tconWXLM3bB",
+        "created": 1793149341,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1947,
@@ -35,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 76,
+          "completion_tokens": 22,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
