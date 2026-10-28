@@ -504,8 +504,8 @@ jobs:
         #     the INFORMAL variants xfail for that same reason before calling,
         #     the SHERLOCK ones "pass" by swallowing the error and producing
         #     local JTMS findings). There is no traffic to record — a cassette
-        #     for an error cannot exist — so they wait for the fixture repair,
-        #     not for a record.
+        #     for an error cannot exist — so they wait for the fixture repair
+        #     (#3273), not for a record.
         run: |
           $marker = "requires_api and not llm_light"
           Write-Host "Band marker: $marker"
