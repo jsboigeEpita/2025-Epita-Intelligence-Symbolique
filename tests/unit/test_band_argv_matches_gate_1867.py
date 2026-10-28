@@ -29,9 +29,10 @@ REPLAY = "requires_api and not llm_light"
 # #2829 emptied it by admitting tests/agents/ with its cassettes. #1867
 # option (a) admitted tests/integration/triage/ and
 # tests/integration/argumentation_analysis/ to the gate and the live band;
-# #2932 admitted them to the replay-band too, cassettes and all (11
-# cache-routed tests recorded, the other 3 deselected with a measured
-# reason), so their entries are gone. #1783 (user decision 2026-10-06,
+# #2932 admitted them to the replay-band too: of the 15 requires_api tests
+# the two directories hold, 9 run in the band (6 on cassettes recorded with
+# the band's own argv, 3 deterministic xfail) and the other 6 are deselected
+# in the workflow with the measured reason, so their entries are gone. #1783 (user decision 2026-10-06,
 # option (a)) named the integration root files one by one; the two below are
 # the root files whose ONLY tests are requires_api and not llm_light (1 + 2),
 # so the live band never selects them and the replay job waits for their
