@@ -46,7 +46,8 @@ name: requires_api band (scheduled real-LLM lane)
 # replay here now; the 3 INFORMAL_FALLACY variants fail on a return-shape
 # contract, not on their analysis (#3280: the agent returns the raw SK
 # FunctionResult where the family's dict is expected), so they stay
-# deselected with #3280 as owner (22 -> 19 flags, not 22 -> 16).
+# deselected with #3280 as owner (19 flags unchanged -- a swap of one
+# family for the other; 19 -> 16 once #3280 is repaired).
 # tests/unit/test_band_argv_matches_gate_1867.py holds both equalities, so
 # the gate's argv can no longer move alone.
 #
@@ -437,9 +438,10 @@ jobs:
           LLM_CACHE_DIR: .cache/llm_replay_band
           REPLAY_GATE: '1'
           REPLAY_STATS_OUT: replay_stats.json
-        # The 22 deselect flags below (occurrence-counted: 13 carried by the
-        # #2829 admission, 6 added by the #2932 admission, 3 by the #3273
-        # fixture repair -- see the paragraphs at the end) cover the
+        # The 19 deselect flags below (occurrence-counted: 13 carried by the
+        # #2829 admission, 6 added by the #2932 admission; the #3273 record
+        # then swapped 3 SHERLOCK_JTMS out for 3 INFORMAL_FALLACY in, owner
+        # #3280 -- see the paragraphs at the end) cover the
         # non-light tests the cache cannot
         # serve (measured 2026-09-28 by --collect-only on this argv: 80
         # requires_api, 9 llm_light, 42 left), each with a MEASURED reason
