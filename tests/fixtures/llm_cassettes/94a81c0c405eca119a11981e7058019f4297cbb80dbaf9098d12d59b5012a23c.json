@@ -1,0 +1,48 @@
+{
+  "key": "94a81c0c405eca119a11981e7058019f4297cbb80dbaf9098d12d59b5012a23c",
+  "value": {
+    "id": "chatcmpl-Edvht92wddgZKiOFr6vNTDeUdfFmx",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne reconstruite présente deux prémisses — les avancées dans les analyses ADN réduisent le risque d’erreur judiciaire et la peine de mort aurait un effet dissuasif — puis conclut que la peine de mort est justifiée et devrait être maintenue. Verdict : saut logique net, car ces prémisses ne suffisent pas à établir la conclusion.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793185325,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 131,
+      "prompt_tokens": 287,
+      "total_tokens": 418,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 38,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

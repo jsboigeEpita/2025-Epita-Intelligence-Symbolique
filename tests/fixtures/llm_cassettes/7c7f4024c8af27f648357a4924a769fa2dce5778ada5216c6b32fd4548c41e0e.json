@@ -1,0 +1,48 @@
+{
+  "key": "7c7f4024c8af27f648357a4924a769fa2dce5778ada5216c6b32fd4548c41e0e",
+  "value": {
+    "id": "chatcmpl-EdvhlEJVtTp2z3CNWvibnoVJEZbYe",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Certains criminels sont irrécupérables et représentent un danger permanent pour la société, ce qui justifie leur élimination selon cette position.\\n2. Le système judiciaire peut commettre des erreurs.\\n3. Les avancées en matière d’ADN réduisent considérablement le risque d’erreur judiciaire.\\n4. La peine de mort est irréversible, de sorte qu’une erreur judiciaire peut avoir des conséquences fatales.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793185317,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 217,
+      "prompt_tokens": 259,
+      "total_tokens": 476,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 112,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

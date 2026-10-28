@@ -1,0 +1,33 @@
+{
+  "key": "5422ab989e713a26d0858ea94996684d299c42676b551cd89ba643bd59529f03",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "**Hypothèse :** Le sénateur veut augmenter le financement des écoles publiques, mais cela ne signifie pas nécessairement qu’il souhaite dépenser de l’argent sans contrôle ni responsabilisation.  \n\nL’argument présenté déforme donc probablement sa position : c’est un **homme de paille**.",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdvdoY0TUpUMBNT6dc02ZYGOWL4uX",
+        "created": 1793185072,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 52,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 207,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 137,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,14 +1,14 @@
 {
   "key": "8b329fc6974d737b9839d01e8ffab868556fa234aaa3a18555853b6049239570",
   "value": {
-    "id": "chatcmpl-EdmLqOdOklW6QiJHylfjUTxOc8CCi",
+    "id": "chatcmpl-EdvXXpQiXgvtFevpEHSF2tiTKam31",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[{\"text\":\"L’unanimité des experts est présentée comme une raison suffisante pour considérer une proposition comme vraie.\",\"source_quote\":\"Les experts sont unanimes, c'est donc vrai.\",\"move_author\":\"speaker\"},{\"text\":\"Le texte soutient que l’avis d’une personne qui n’est pas experte ne doit pas être pris en compte.\",\"source_quote\":\"Si vous n'etes pas expert, votre avis ne compte pas.\",\"move_author\":\"speaker\"}],\"claims\":[{\"text\":\"Les experts sont unanimes sur la question évoquée.\",\"source_quote\":\"Les experts sont unanimes\"},{\"text\":\"La vérité d’une proposition découle de l’unanimité des experts, selon le texte.\",\"source_quote\":\"c'est donc vrai\"},{\"text\":\"L’avis d’une personne qui n’est pas experte ne compte pas.\",\"source_quote\":\"Si vous n'etes pas expert, votre avis ne compte pas\"}],\"summary\":\"Le texte avance deux positions : l’autorité unanime des experts est utilisée pour établir la vérité, et la parole des non-experts est exclue. Il emploie une stratégie d’appel à l’autorité et de restriction de la légitimité des participants au débat.\"}",
+          "content": "{\"arguments\":[{\"text\":\"L’unanimité des experts est présentée comme une raison suffisante pour considérer une proposition comme vraie.\",\"source_quote\":\"Les experts sont unanimes, c'est donc vrai.\",\"move_author\":\"speaker\"},{\"text\":\"Seuls les experts seraient légitimés à donner un avis pertinent ; l’opinion d’une personne qui n’est pas experte ne compterait pas.\",\"source_quote\":\"Si vous n'etes pas expert, votre avis ne compte pas.\",\"move_author\":\"speaker\"}],\"claims\":[{\"text\":\"Les experts sont unanimes.\",\"source_quote\":\"Les experts sont unanimes\"},{\"text\":\"L’avis d’une personne qui n’est pas experte ne compte pas.\",\"source_quote\":\"Si vous n'etes pas expert, votre avis ne compte pas.\"}],\"summary\":\"Le texte avance deux positions : l’unanimité des experts établirait la vérité d’une proposition, et les personnes non expertes seraient privées de toute autorité d’opinion. Il recourt à l’appel à l’autorité et à une opposition entre experts et non-experts.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793149362,
+    "created": 1793184683,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 467,
+      "completion_tokens": 501,
       "prompt_tokens": 410,
-      "total_tokens": 877,
+      "total_tokens": 911,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 210,
+        "reasoning_tokens": 270,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

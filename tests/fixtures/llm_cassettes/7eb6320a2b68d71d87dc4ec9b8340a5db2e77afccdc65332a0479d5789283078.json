@@ -1,14 +1,14 @@
 {
   "key": "7eb6320a2b68d71d87dc4ec9b8340a5db2e77afccdc65332a0479d5789283078",
   "value": {
-    "id": "chatcmpl-EdmWW2fmbCzN3hAQNqSaK7J4wg51f",
+    "id": "chatcmpl-EdvizN2JCJOAF8MpOapts1S8cCWyn",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"engages_real_claim\":false,\"engagement_verdict\":\"non_sequitur\",\"reasoning\":\"La réfutation reconnaît que le climat a toujours changé, mais l’argument sur la vitesse actuelle et les activités humaines ne contredit pas logiquement cette affirmation.\"}",
+          "content": "{\"engages_real_claim\":true,\"engagement_verdict\":\"engagement_réel\",\"reasoning\":\"La réfutation répond directement à l’affirmation que le climat a toujours changé en distinguant cette réalité de la vitesse exceptionnelle du réchauffement actuel.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793150024,
+    "created": 1793185393,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 161,
+      "completion_tokens": 320,
       "prompt_tokens": 321,
-      "total_tokens": 482,
+      "total_tokens": 641,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 97,
+        "reasoning_tokens": 257,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

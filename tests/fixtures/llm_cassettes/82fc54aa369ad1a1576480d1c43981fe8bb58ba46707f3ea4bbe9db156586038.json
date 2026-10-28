@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_0DFxcBf8cRabFwmCXgAHdhhO",
-          "name": "Exploration-conclude_no_fallacy",
-          "arguments": "{\"reason\":\"Les deux phrases sont des affirmations simples et ne jouent pas sur plusieurs sens d’un mot, ni sur une ambiguïté équivoque.\"}"
+          "id": "call_agxP8rMTdk4ZGeu8KElGujky",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"855\",\"matches\":false,\"justification\":\"Les phrases « Le soleil brille. Il fait beau. » n’exploitent pas plusieurs sens d’un même mot et ne présentent aucune ambiguïté équivoque.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdmKhqk78vJOL9BGzCTtmMPgXCdoH",
-        "created": 1793149291,
+        "id": "chatcmpl-EdvWMYRWvdVCvoed7xHgvbS2ioCXf",
+        "created": 1793184610,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1836,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 52,
+          "completion_tokens": 70,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

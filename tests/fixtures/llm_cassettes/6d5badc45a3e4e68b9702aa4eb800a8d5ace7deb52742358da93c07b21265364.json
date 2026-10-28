@@ -1,0 +1,48 @@
+{
+  "key": "6d5badc45a3e4e68b9702aa4eb800a8d5ace7deb52742358da93c07b21265364",
+  "value": {
+    "id": "chatcmpl-EdvV1QwKAcYdHobhB5rM5448TFyjJ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points sont distincts : le premier conteste le caractère prétendument naturel ou inévitable du travail prolongé, tandis que le second avance une prévision d’effondrement du système dans un délai de cinq ans en l’absence d’action. Aucune redondance substantielle n’est identifiable.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793184527,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 192,
+      "prompt_tokens": 295,
+      "total_tokens": 487,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 109,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

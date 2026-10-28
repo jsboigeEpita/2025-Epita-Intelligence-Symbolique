@@ -1,14 +1,14 @@
 {
   "key": "c2742318f69e5ebb179d43175945342b89ab79fcc9697ae0d5922d5c8ef942ba",
   "value": {
-    "id": "chatcmpl-EdmUgmH7d0fFwXnIJ2nPQwHeWhXKC",
+    "id": "chatcmpl-EdvhnUwxb6It5vjMVwzAvy1SUpWYF",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":1.0,\"exhibit\":\"Les trois points apportent des idées distinctes : effet dissuasif, nécessité normative dans les cas extrêmes et réduction du risque d’erreur grâce à l’ADN. Aucune redondance substantielle n’est identifiable.\"}",
+          "content": "{\"score\":1.0,\"exhibit\":\"Les trois points abordent des idées distinctes : l’effet dissuasif, la nécessité dans les cas extrêmes et la réduction du risque d’erreur judiciaire grâce à l’ADN. Aucune redondance substantielle n’est visible.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793149910,
+    "created": 1793185319,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 139,
+      "completion_tokens": 118,
       "prompt_tokens": 300,
-      "total_tokens": 439,
+      "total_tokens": 418,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 71,
+        "reasoning_tokens": 47,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

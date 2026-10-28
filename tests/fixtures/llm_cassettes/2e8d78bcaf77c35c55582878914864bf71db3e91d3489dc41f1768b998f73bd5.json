@@ -1,0 +1,40 @@
+{
+  "key": "2e8d78bcaf77c35c55582878914864bf71db3e91d3489dc41f1768b998f73bd5",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_bjjCATHA8duOMmSpQ1T1KwB1",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"73\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"Le président présente la réussite de la politique économique comme incontestable en s’appuyant implicitement sur son statut d’autorité, sans fournir de justification ni de preuves. Cela correspond à accorder une valeur à l’affirmation en raison d’une autorité jugée suprême.\",\"move_author\":\"speaker\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdvXGVKSi6SQmPKAxhRuVE9SyAlfs",
+        "created": 1793184666,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1599,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 501,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 102,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

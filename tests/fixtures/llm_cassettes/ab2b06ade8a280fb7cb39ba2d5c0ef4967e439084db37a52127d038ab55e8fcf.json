@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_LY0GLnIUsBjatp3JPUCwrkzq",
+          "id": "call_10Tq4hMYT50qRDGf2kMjLlfV",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"73\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"Le texte commet un argument d’obéissance aveugle : il traite l’unanimité des experts comme suffisante pour établir la vérité et exclut tout avis non expert sans examiner les raisons. Aucun sous-type plus spécifique disponible ne correspond mieux.\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"73\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"Le texte traite l’unanimité des experts comme preuve suffisante de la vérité et disqualifie tout avis non expert sans examiner les raisons. Cela constitue une soumission aveugle à une autorité jugée supérieure.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdmMpBjiio5wPaR5QOC1OyhyibmGZ",
-        "created": 1793149423,
+        "id": "chatcmpl-EdvYd65JkGwPehbGxUxkL3qJExLrP",
+        "created": 1793184751,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1619,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 90,
+          "completion_tokens": 84,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

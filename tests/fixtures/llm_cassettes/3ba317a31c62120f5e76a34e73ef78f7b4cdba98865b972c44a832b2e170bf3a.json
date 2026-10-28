@@ -1,14 +1,14 @@
 {
   "key": "3ba317a31c62120f5e76a34e73ef78f7b4cdba98865b972c44a832b2e170bf3a",
   "value": {
-    "id": "chatcmpl-EdmWjxAhk2yqw4VvXZ7zgyK7BhzQ6",
+    "id": "chatcmpl-EdvjF5IjhR7lx44TzsAdTLcMwSg7I",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"distinct_points\":\"1. Les sceptiques soutiennent que le climat a toujours changé.\\n2. Les mesures montrent une augmentation de 1,1 °C de la température globale depuis l’ère préindustrielle.\\n3. Le changement climatique actuel se distingue par une vitesse sans précédent.\\n4. Les modèles prédictifs concluent unanimement que les activités humaines ont un impact sur le climat.\"}",
+          "content": "{\"distinct_points\":\"1. Les sceptiques soutiennent que le climat a toujours changé. 2. Les mesures de température globale montrent une augmentation de 1,1 degré depuis l’ère préindustrielle. 3. Le changement climatique actuel se produit à une vitesse sans précédent, que les sceptiques omettent. 4. Les modèles prédictifs s’accordent sur l’impact des activités humaines.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793150037,
+    "created": 1793185409,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 158,
+      "completion_tokens": 166,
       "prompt_tokens": 229,
-      "total_tokens": 387,
+      "total_tokens": 395,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 64,
+        "reasoning_tokens": 71,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

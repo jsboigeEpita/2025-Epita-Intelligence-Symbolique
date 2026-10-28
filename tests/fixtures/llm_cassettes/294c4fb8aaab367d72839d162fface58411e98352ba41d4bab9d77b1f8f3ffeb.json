@@ -1,0 +1,48 @@
+{
+  "key": "294c4fb8aaab367d72839d162fface58411e98352ba41d4bab9d77b1f8f3ffeb",
+  "value": {
+    "id": "chatcmpl-EdvZpM5mJmt1yTPo3JpriugcOTyeP",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse décrit l’investissement intégral du budget dans du matériel pédagogique et de nouveaux échiquiers. Les digressions sont localisées dans la description des options A et C, qui ne portent pas directement sur l’option B.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793184825,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 140,
+      "prompt_tokens": 316,
+      "total_tokens": 456,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 72,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

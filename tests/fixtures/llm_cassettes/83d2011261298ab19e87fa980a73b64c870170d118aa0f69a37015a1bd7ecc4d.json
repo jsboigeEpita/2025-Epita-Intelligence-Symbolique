@@ -1,0 +1,48 @@
+{
+  "key": "83d2011261298ab19e87fa980a73b64c870170d118aa0f69a37015a1bd7ecc4d",
+  "value": {
+    "id": "chatcmpl-EdvaWVouWFfH6FwVdjfoM6QU3jjDg",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.58,\"fairness_assessment\":\"A ranked social-choice vote is fair because it compares all three budget allocations transparently and allows stakeholders to express preferences beyond a binary choice. Equal voting power should be maintained, with explicit criteria for visibility, educational value, and risk.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"Agent A\",\"position\":\"Favor a full-budget inter-city tournament with buffet and prizes to increase the club's visibility.\",\"influence\":0.34},{\"agent\":\"Agent B\",\"position\":\"Favor investing the entire budget in educational materials and new chessboards, emphasizing durable internal benefits.\",\"influence\":0.38},{\"agent\":\"Agent C\",\"position\":\"Favor an equal hybrid allocation between a smaller tournament and new equipment, seeking balance between outreach and resources.\",\"influence\":0.28}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"The three options reflect legitimate and partly compatible goals, but each has a significant weakness: uncertain tournament impact, reduced visibility from an equipment-only strategy, or insufficient funding for both under an equal split. Use a ranked vote after agreeing on measurable criteria, then implement a conditional compromise such as targeted equipment spending plus a smaller tournament with a defined communication plan and success metrics.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793184868,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 365,
+      "prompt_tokens": 567,
+      "total_tokens": 932,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 93,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

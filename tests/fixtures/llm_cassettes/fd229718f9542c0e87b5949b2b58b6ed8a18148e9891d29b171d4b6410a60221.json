@@ -1,0 +1,40 @@
+{
+  "key": "fd229718f9542c0e87b5949b2b58b6ed8a18148e9891d29b171d4b6410a60221",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_RdLGCnq5hGeBdIUJhLASQGP6",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"Le texte porte sur l'appel à l'autorité et l'exclusion de l'avis des non-experts, pas sur le contrôle minutieux du travail de subordonnés; aucune spécialisation de Microgestion ne correspond.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdvYSiORoq79fmD5i3pHgbTGa2SUD",
+        "created": 1793184740,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1611,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 513,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 68,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "key": "31f483a9c2a81d87b5eca9875f9ef8687f821973a0f21cc8236a6a9eafc8e598",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "**Hypothèse :** La Terre tourne autour du Soleil en suivant une orbite elliptique.",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdvdruXHOIxyiWPbCHkaVyc0AMfVl",
+        "created": 1793185075,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 41,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 101,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 72,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

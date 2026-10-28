@@ -1,0 +1,48 @@
+{
+  "key": "0fba020264b69c819ea9703df05964c9143b730c445019989eebb0822a8de6ef",
+  "value": {
+    "id": "chatcmpl-EdvUk2YxSi4vHpSPGGcyiXZ0SEOW1",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La position adverse est clairement identifiée : le gouvernement et le ministre des finances invoquent le déficit futur pour justifier une réforme des retraites, notamment le fait de travailler plus longtemps. L'engagement est réel, la thèse adverse étant effectivement prise en compte et réfutée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793184510,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 107,
+      "prompt_tokens": 275,
+      "total_tokens": 382,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 30,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

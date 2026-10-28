@@ -1,0 +1,48 @@
+{
+  "key": "510bd94f36fc2df08a817c13e15e32f12900303bf108e82aac24cd863cb113b2",
+  "value": {
+    "id": "chatcmpl-EdvjFkx9KLcAEHdKmagZ26eGEaiDZ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Le changement climatique actuel se distingue des variations passées par sa vitesse sans précédent.\\n2. La température globale a augmenté de 1,1 °C depuis l’ère préindustrielle.\\n3. Les modèles prédictifs concluent unanimement que les activités humaines ont un impact sur le climat.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793185409,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 251,
+      "prompt_tokens": 234,
+      "total_tokens": 485,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 172,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

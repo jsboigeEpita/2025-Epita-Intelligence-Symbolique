@@ -1,0 +1,48 @@
+{
+  "key": "521be55fe3eee907bb9cb6c32aa01260ac6f60bbdee28733301f2672024989de",
+  "value": {
+    "id": "chatcmpl-EdvUeT1lAgHAdcMTheW9eUz918Fhu",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\":true,\"engagement_verdict\":\"engagement_réel\",\"reasoning\":\"La réfutation vise directement la prédiction d’effondrement à cinq ans en contestant sa justification et son caractère alarmiste, même si l’objection sur le sophisme naturaliste est secondaire et partiellement hors sujet.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793184504,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 280,
+      "prompt_tokens": 389,
+      "total_tokens": 669,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 204,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

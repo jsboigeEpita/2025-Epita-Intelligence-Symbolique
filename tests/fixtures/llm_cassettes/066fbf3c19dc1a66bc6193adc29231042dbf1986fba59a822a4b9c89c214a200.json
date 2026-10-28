@@ -6,15 +6,30 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_z0pdSQxom1gdrQJADDtB8eu0",
-          "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"72\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"Le président affirme que la politique économique est un succès incontestable, sans fournir d'éléments justificatifs ; la valeur de l'affirmation repose sur l'autorité en place.\",\"move_author\":\"speaker\",\"move_author_label\":\"Le président\"}"
+          "id": "call_rPvzxJDdi5GeBumgHqVSWCH2",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"73\"}"
+        },
+        {
+          "id": "call_1LC4TlTO8u8BZ48sJoEqfi19",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"75\"}"
+        },
+        {
+          "id": "call_VEtzM4SuaTjojAYOzk17mAqa",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"76\"}"
+        },
+        {
+          "id": "call_D5qqnYQjARoIu1P5Sqwrhc0Y",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"77\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdmLat0pcXbPzD6dIjb9IDudpAoID",
-        "created": 1793149346,
+        "id": "chatcmpl-EdvXFjQUU1hWTBzgLL07WSqHuCDK0",
+        "created": 1793184665,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1736,
@@ -25,7 +40,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 83,
+          "completion_tokens": 95,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

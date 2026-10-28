@@ -1,14 +1,14 @@
 {
   "key": "49d317e5beaae5f68d7bb5e350325c56d9ca35e9ed059f8d45bc771a6fbbe348",
   "value": {
-    "id": "chatcmpl-EdmWPVWd45bTZITRCqoin1m2Nu6zt",
+    "id": "chatcmpl-EdvisaIt3ssKr39duv72NTX7jnnMm",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_chain\":true,\"premises\":\"Les mesures de température globale montrent une augmentation de 1,1 degré depuis l’ère préindustrielle.\",\"conclusion\":\"Le changement climatique est une réalité scientifique incontestable.\"}",
+          "content": "{\"has_chain\":true,\"premises\":\"Les mesures de température globale montrent une augmentation de 1,1 degré depuis l'ère préindustrielle.\",\"conclusion\":\"Le changement climatique constitue une réalité scientifique incontestable.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793150017,
+    "created": 1793185386,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 115,
+      "completion_tokens": 138,
       "prompt_tokens": 233,
-      "total_tokens": 348,
+      "total_tokens": 371,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 60,
+        "reasoning_tokens": 83,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

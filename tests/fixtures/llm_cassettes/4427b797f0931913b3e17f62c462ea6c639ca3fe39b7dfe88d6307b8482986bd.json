@@ -1,0 +1,48 @@
+{
+  "key": "4427b797f0931913b3e17f62c462ea6c639ca3fe39b7dfe88d6307b8482986bd",
+  "value": {
+    "id": "chatcmpl-EdvZsLgJP2SbQOb8C20mo8Nw6f6h5",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse recommande de consacrer les 2000 euros à un tournoi inter-villes avec buffet et prix pour accroître la visibilité du club. La mention de l’option B, consistant à investir dans du matériel pédagogique et des échiquiers neufs, constitue une digression hors sujet.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793184828,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 124,
+      "prompt_tokens": 305,
+      "total_tokens": 429,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 43,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

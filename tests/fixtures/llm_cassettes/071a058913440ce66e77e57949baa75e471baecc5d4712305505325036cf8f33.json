@@ -1,0 +1,40 @@
+{
+  "key": "071a058913440ce66e77e57949baa75e471baecc5d4712305505325036cf8f33",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_kQniVW90tN47qMs2YB0kDiQC",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"314\",\"matches\":false,\"justification\":\"Le texte ne demande pas au public de se montrer indulgent ou compréhensif et ne cherche pas à le rendre favorable par une bienveillance initiale. Il invoque plutôt l'unanimité des experts et exclut l'avis des non-experts, ce qui relève d'une autre question argumentative, pas de l'appel à la bienveillance.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdvYKR7956tac9nE9Wk1ZsQ82Ae9g",
+        "created": 1793184732,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 959,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 109,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

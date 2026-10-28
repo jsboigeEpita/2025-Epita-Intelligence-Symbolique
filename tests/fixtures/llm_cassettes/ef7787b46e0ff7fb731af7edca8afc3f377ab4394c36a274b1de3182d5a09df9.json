@@ -1,0 +1,48 @@
+{
+  "key": "ef7787b46e0ff7fb731af7edca8afc3f377ab4394c36a274b1de3182d5a09df9",
+  "value": {
+    "id": "chatcmpl-EdvUiRjwajWtNxuEKjfxo8MFPGxmj",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"L'affirmation selon laquelle il faut travailler plus longtemps parce que ce serait « dans l'ordre des choses » constitue un sophisme naturaliste ; l'affirmation selon laquelle, sans action immédiate, le système s'effondrera dans cinq ans constitue un appel à la peur ; la projection d'un déficit de 2,3 % du PIB en 2030 repose sur des hypothèses de croissance optimistes de 1,8 % par an.\",\"conclusion\":\"Les arguments du gouvernement en faveur du fait de travailler plus longtemps ne justifient pas solidement cette mesure, et les syndicats sont fondés à en contester le caractère naturel ou évident.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793184508,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 392,
+      "prompt_tokens": 337,
+      "total_tokens": 729,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 238,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

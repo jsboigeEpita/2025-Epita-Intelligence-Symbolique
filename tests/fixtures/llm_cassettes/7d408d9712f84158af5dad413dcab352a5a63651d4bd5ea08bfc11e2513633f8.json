@@ -1,0 +1,40 @@
+{
+  "key": "7d408d9712f84158af5dad413dcab352a5a63651d4bd5ea08bfc11e2513633f8",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_EG8maDHr9XxFsqEyBRHj25nn",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"799\",\"matches\":false,\"justification\":\"Le texte ne redéfinit pas les termes de manière biaisée ; il commet plutôt un appel à l'autorité et un argument d'autorité disqualifiante, qui ne relèvent pas de cette branche.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdvYnE5MMAWkReucasDzad007y9JC",
+        "created": 1793184761,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1966,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 868,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 80,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

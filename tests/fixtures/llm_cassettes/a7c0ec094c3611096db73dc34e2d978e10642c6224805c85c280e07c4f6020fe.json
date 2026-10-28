@@ -1,0 +1,48 @@
+{
+  "key": "a7c0ec094c3611096db73dc34e2d978e10642c6224805c85c280e07c4f6020fe",
+  "value": {
+    "id": "chatcmpl-EdvUswS2vRd9uHvlD0Nn7BPxbesNr",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne reconstruite invoque le caractère fallacieux de l’argument selon lequel il faudrait travailler plus longtemps parce que ce serait « dans l’ordre des choses », puis conclut que les arguments du gouvernement ne justifient pas solidement cette mesure. Le verdict indique un saut logique net entre la prémisse tronquée et la conclusion.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793184518,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 146,
+      "prompt_tokens": 297,
+      "total_tokens": 443,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 58,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

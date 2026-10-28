@@ -1,0 +1,48 @@
+{
+  "key": "510e7da38370aab6056e3a2e9d7bd11e6905fca2ca6a163dec0385b2af394fa2",
+  "value": {
+    "id": "chatcmpl-Edvam3tP9BgzDZFoUqraF5OZ8Mjwf",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La thèse propose de répartir les 3000 euros à parts égales entre le fonds de livres et l’espace numérique. La mention de l’option B, consistant à créer un espace numérique avec des ordinateurs en libre accès, précise directement l’un des deux volets de cette répartition et reste donc pertinente.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793184884,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 175,
+      "prompt_tokens": 284,
+      "total_tokens": 459,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 89,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

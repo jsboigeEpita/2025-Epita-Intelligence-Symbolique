@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\"fallacy_name\":\"Lapalissade\",\"taxonomy_pk\":\"31\",\"explanation\":\"Le texte énonce des banalités évidentes et triviales (« Le soleil brille. Il fait beau. »), sans véritable argumentation.\",\"confidence\":0.98,\"move_author\":\"speaker\",\"move_author_label\":\"speaker\"}",
+      "content": "{\"fallacy_name\":\"Lapalissade\",\"taxonomy_pk\":\"31\",\"explanation\":\"Le texte énonce des banalités présentées comme des affirmations, sans fournir de raisonnement ni de justification.\",\"confidence\":0.74,\"move_author\":\"speaker\",\"move_author_label\":\"speaker\"}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdmKi3Eg2NYcTcn3a2fKPzMZQp9Ne",
-        "created": 1793149292,
+        "id": "chatcmpl-EdvWObBQUXJJEypjANjmAjoiUJeM2",
+        "created": 1793184612,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 23001,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 144,
+          "completion_tokens": 240,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 71,
+            "reasoning_tokens": 173,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

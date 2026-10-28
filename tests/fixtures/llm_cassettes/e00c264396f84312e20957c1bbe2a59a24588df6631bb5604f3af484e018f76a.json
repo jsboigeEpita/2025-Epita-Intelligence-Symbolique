@@ -1,0 +1,48 @@
+{
+  "key": "e00c264396f84312e20957c1bbe2a59a24588df6631bb5604f3af484e018f76a",
+  "value": {
+    "id": "chatcmpl-Edvb0IkPTWXgSXLdGHVM4sg59jnqs",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les trois points sont distincts : l’option A concerne l’élargissement du fonds de livres jeunesse, le deuxième point établit la concurrence entre trois usages des 3000 euros, et l’option B propose un espace numérique avec ordinateurs en libre accès. Aucune redondance substantielle n’est présente.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793184898,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 122,
+      "prompt_tokens": 293,
+      "total_tokens": 415,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 37,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

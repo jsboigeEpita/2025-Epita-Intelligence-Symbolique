@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_7EY6p6TMwmHODzTM5ZnQ3SK8",
+          "id": "call_GDHC5HfStbHgWePMn94tiLdG",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"175\",\"matches\":false,\"justification\":\"Le texte énonce simplement deux faits météorologiques, sans tentative de manipulation, de persuasion fallacieuse ou d'influence de l'auditoire.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"175\",\"matches\":false,\"justification\":\"Les énoncés « Le soleil brille. Il fait beau. » sont de simples constats descriptifs et ne manipulent pas l’auditoire pour le persuader.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdmKh4VbxmlXYCewVtAVfsGTMbEcy",
-        "created": 1793149291,
+        "id": "chatcmpl-EdvWMmT9iYewn2LjxtEYZs4H5astW",
+        "created": 1793184610,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1891,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 71,
+          "completion_tokens": 77,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

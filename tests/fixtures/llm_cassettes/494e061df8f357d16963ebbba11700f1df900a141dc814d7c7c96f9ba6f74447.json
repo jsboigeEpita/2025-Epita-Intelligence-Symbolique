@@ -6,35 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_SBL7ci3qjd8SnOMfJOyTOacI",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"342\"}"
-        },
-        {
-          "id": "call_sUFrPxjsaOClE6ILenapiAIu",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"343\"}"
-        },
-        {
-          "id": "call_yrk9dshoY515YyBuMnMj05CR",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"344\"}"
-        },
-        {
-          "id": "call_poMBFr4JyOocQ4AQUCYlmHga",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"345\"}"
-        },
-        {
-          "id": "call_8wiFc3SolKrdTB0qtSsN7E4b",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"346\"}"
+          "id": "call_utRfYmrZMnyxhrwDWMxQwVIO",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"341\",\"matches\":false,\"justification\":\"Le texte ne contient ni menace ni représailles. Il s'agit plutôt d'un appel à l'autorité et d'un argument ad hominem fondé sur le statut d'expert, donc cette branche ne correspond pas.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdmMOTWTBAkJ7Khpktclu5n4HWBF5",
-        "created": 1793149396,
+        "id": "chatcmpl-EdvYCB7QH4Ia5gQv68IidIUQapHz4",
+        "created": 1793184724,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1742,
@@ -45,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 114,
+          "completion_tokens": 80,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

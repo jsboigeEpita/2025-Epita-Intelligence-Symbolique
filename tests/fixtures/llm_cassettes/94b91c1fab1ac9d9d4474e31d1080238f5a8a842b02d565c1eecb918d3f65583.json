@@ -1,0 +1,48 @@
+{
+  "key": "94b91c1fab1ac9d9d4474e31d1080238f5a8a842b02d565c1eecb918d3f65583",
+  "value": {
+    "id": "chatcmpl-EdvUcu0rwc6IH9OcUCmGUdndThu6M",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La thèse affirme la nécessité d’agir sur le système des retraites, notamment par une réforme, en raison du déficit projeté. Aucune digression n’est identifiée ; toutes les propositions servent donc directement cette thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793184502,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 93,
+      "prompt_tokens": 271,
+      "total_tokens": 364,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 26,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

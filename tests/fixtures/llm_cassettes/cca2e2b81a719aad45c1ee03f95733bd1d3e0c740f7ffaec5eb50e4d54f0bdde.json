@@ -1,0 +1,48 @@
+{
+  "key": "cca2e2b81a719aad45c1ee03f95733bd1d3e0c740f7ffaec5eb50e4d54f0bdde",
+  "value": {
+    "id": "chatcmpl-EdvUTiYGIBmrujBvY7CeKWobFfljW",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"La justification est peu solide, car la projection financière repose sur des hypothèses de croissance optimistes de 1,8 % par an.\",\"digressions\":\"L’accusation de sophisme naturaliste concernant l’idée que travailler plus longtemps serait « dans l’ordre des choses » ; l’accusation d’homme de paille selon laquelle personne n’aurait proposé de supprimer les retraites.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793184493,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 245,
+      "prompt_tokens": 325,
+      "total_tokens": 570,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 146,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

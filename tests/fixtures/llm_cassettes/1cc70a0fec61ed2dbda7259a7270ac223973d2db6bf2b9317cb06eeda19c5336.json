@@ -1,0 +1,48 @@
+{
+  "key": "1cc70a0fec61ed2dbda7259a7270ac223973d2db6bf2b9317cb06eeda19c5336",
+  "value": {
+    "id": "chatcmpl-EdvgFlRAP79cslFmPKZ3nqqvOL0hl",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Chaîne reconstruite : les personnes qui affirment que les vaccins sont dangereux ignorent des décennies de recherche clinique ; conclusion : l’argument selon lequel les produits pharmaceutiques cachent les effets secondaires est une théorie du complot sans fond. Verdict : saut logique net, car la prémisse ne permet pas d’établir la conclusion.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793185223,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 121,
+      "prompt_tokens": 287,
+      "total_tokens": 408,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 30,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

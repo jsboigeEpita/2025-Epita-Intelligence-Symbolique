@@ -1,0 +1,48 @@
+{
+  "key": "865e95d705b0126e2d2f28b7089433665659c9f8fccb53c8b144eb76be9d0fc2",
+  "value": {
+    "id": "chatcmpl-EdvbXilUGekvJe0UD0al8pZY8iVyE",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.68,\"fairness_assessment\":\"A ranked or scored vote treats the three budget options equally and captures preferences beyond a simple majority, while requiring transparent criteria for public benefit, feasibility, and sustainability.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"agent_1\",\"position\":\"Supports allocating the full 3,000 euros to expanding the children’s book collection.\",\"influence\":0.33},{\"agent\":\"agent_2\",\"position\":\"Supports allocating the full 3,000 euros to creating a public-access digital space with computers.\",\"influence\":0.33},{\"agent\":\"agent_3\",\"position\":\"Supports splitting the budget equally between the book collection and digital space.\",\"influence\":0.34}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"The three options reflect legitimate but competing public-service priorities, with no clear debate winner. Use a transparent multi-criteria social-choice process, including needs assessment and total-cost estimates, then prefer a compromise or staged allocation if it achieves broad support and remains financially viable.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793184931,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 326,
+      "prompt_tokens": 519,
+      "total_tokens": 845,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 92,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

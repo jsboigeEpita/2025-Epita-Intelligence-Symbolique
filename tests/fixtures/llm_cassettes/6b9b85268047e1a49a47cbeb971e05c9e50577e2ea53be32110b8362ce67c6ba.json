@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"exists X: (Idee(X) && Incolore(X) && Verte(X) && DortFurieusement(X))\"\n  ],\n  \"predicates\": {\n    \"Idee\": \"est une idée\",\n    \"Incolore\": \"est incolore\",\n    \"Verte\": \"est verte\",\n    \"DortFurieusement\": \"dort furieusement\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La phrase affirme l'existence d'au moins une idée qui est à la fois incolore et verte, et qui dort furieusement. Les adjectifs et le groupe verbal sont représentés par des prédicats appliqués à la même variable X.\"\n}",
+      "content": "{\n  \"formulas\": [\n    \"exists X: (Idee(X) && Incolore(X) && Verte(X) && DortFurieusement(X))\"\n  ],\n  \"predicates\": {\n    \"Idee\": \"est une idée\",\n    \"Incolore\": \"est incolore\",\n    \"Verte\": \"est verte\",\n    \"DortFurieusement\": \"dort furieusement\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La phrase affirme l'existence d'au moins une entité qui est une idée, qui est incolore, qui est verte et qui dort furieusement. L'adjectif « verte » est conservé tel quel, même si l'énoncé est sémantiquement étrange ou contradictoire dans l'usage ordinaire.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdmPkuEhXFbMiw0RwXxo6IXCEkrNY",
-        "created": 1793149604,
+        "id": "chatcmpl-Edvbk0tCTpqw8ARZPwKElBMp1rKAx",
+        "created": 1793184944,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 286,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 339,
+          "completion_tokens": 397,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 166,
+            "reasoning_tokens": 207,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_KNlvg4bPC6DuIbx8dDs4pSYg",
+          "id": "call_fQPlTzO5iWyImAQv7JmopKVt",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"696\",\"matches\":false,\"justification\":\"La phrase affirme simplement un succès, sans prémisse ni raisonnement permettant d'identifier une erreur de raisonnement spécifique.\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"696\",\"matches\":false,\"justification\":\"L’énoncé affirme simplement un succès, sans raisonnement incohérent identifiable ni prémisse permettant d’établir une sous-catégorie précise.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdmLS1quTJfb3aLP295oXdGdwkubW",
-        "created": 1793149338,
+        "id": "chatcmpl-EdvXAYi6mlzlrvnTM8a75EBX8RaED",
+        "created": 1793184660,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1904,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 59,
+          "completion_tokens": 70,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

@@ -1,0 +1,48 @@
+{
+  "key": "2bfdabb12077d09061f3aa21a5489b28315b5f47e407b25bdf3eddafe610f133",
+  "value": {
+    "id": "chatcmpl-EdvV5MNUpocAuweourP4s0pIMB2u3",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"L'opposition proposerait de supprimer les retraites.\",\"main_thesis\":\"Le débat déforme la position de l'opposition, qui propose seulement une réforme différente des retraites, tandis que les projections financières reposent sur des hypothèses optimistes et que l'appel à l'émotion détourne des questions techniques.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793184531,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 170,
+      "prompt_tokens": 351,
+      "total_tokens": 521,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 85,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
