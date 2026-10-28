@@ -130,6 +130,20 @@ class InformalFallacyAgent(BaseAgent):
     async def analyze_text(
         self, text_to_analyze: str, auto_invoke_kernel_functions: bool = True, **kwargs
     ) -> Any:
+        """Analyse le texte et retourne la completion du kernel, non déroulée.
+
+        #3280(b) — le contrat de retour de CETTE famille est la completion
+        brute : le ``FunctionResult`` de ``kernel.invoke_prompt``, dont la
+        valeur est la prose d'analyse. Aucune couche n'auteure de ``findings``
+        structurés (``ComplexFallacyAnalyzer`` n'expose aucune
+        ``@kernel_function``), donc une forme ``{"summary": ...,
+        "findings": [...]}`` exigerait de fabriquer cette structure en
+        parsant la prose. Les consommateurs production déroulent eux-mêmes
+        (l'adaptateur hiérarchique, ``informal_agent_adapter.py:202-217``,
+        étiquette ``agent_raw_output``) ou affichent (démo). L'autre famille
+        de l'usine — ``SherlockJTMSAgent`` — rend un mapping ; les deux
+        contrats sont documentés chacun chez soi, aucun n'est uniformisé.
+        """
         # history doit être passé en kwarg
         history = kwargs.get("history", ChatHistory())
         return await self.invoke_single(

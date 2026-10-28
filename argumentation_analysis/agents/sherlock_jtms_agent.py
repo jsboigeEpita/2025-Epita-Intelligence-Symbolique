@@ -596,6 +596,17 @@ des conclusions rationnelles à partir des preuves disponibles."""
         """
         Analyse un texte brut comme une nouvelle série d'indices.
         Ceci sert de point d'entrée standardisé pour l'agent.
+
+        #3280(b) — le contrat de retour de CETTE famille est un mapping
+        ``{"summary": str, "details": dict, "findings": list}`` où
+        ``findings`` sont des hypothèses JTMS (sans ``fallacy_name`` — le
+        test famille le sait et n'exige ce champ que des familles qui
+        l'auteurent). Cette forme est celle que le test famille attendait
+        avant que quiconque ne l'honore ; elle est tenue ici depuis, et
+        documentée pour ce qu'elle est : un contrat propre à cette famille,
+        pas une norme de l'usine — ``InformalFallacyAgent`` rend la
+        completion brute du kernel, et chacun des deux contrats est testé
+        chez son porteur.
         """
         self._logger.info(f"Analyse de texte reçue via analyze_text: '{text[:100]}...'")
         # Transformer le texte brut en un format de 'clue' attendu par l'agent
