@@ -63,6 +63,39 @@ def test_every_carried_name_is_refused_not_only_a_sample(state) -> None:
         state.add_argument("reading_window_status")
 
 
+def test_no_carried_name_survives_the_gate(state) -> None:
+    """Every attribute of THIS instance is refused, not a hand-picked sample.
+
+    Folded in from the sibling PR #3270, which took the sweep approach where
+    this file took the two-shape approach. The sweep is strictly stronger: it
+    fails on an attribute neither witness above would have thought to name.
+    """
+    names = sorted(vars(state))
+    assert names, "vars(state) must expose the instance fields — #3268 relies on it"
+    for name in names:
+        with pytest.raises(ValueError):
+            state.add_argument(name)
+
+
+def test_a_subclass_field_is_refused_without_touching_the_writer() -> None:
+    """Extension case, also from #3270: a new field needs no edit to the gate.
+
+    The base-vs-rich witness below proves the vocabulary is dynamic across the
+    two shipped classes; this one proves the same for a class that does not
+    exist yet.
+    """
+
+    class ExtendedState(RhetoricalAnalysisState):
+        def __init__(self, initial_text: str) -> None:
+            super().__init__(initial_text)
+            self.verdict_ledger: dict = {}
+
+    subclass_state = ExtendedState(SOURCE_TEXT)
+    assert "verdict_ledger" in vars(subclass_state)
+    with pytest.raises(ValueError):
+        subclass_state.add_argument("verdict_ledger")
+
+
 def test_the_vocabulary_is_derived_from_the_instance_not_a_blacklist() -> None:
     """A name carried only by the richer state is refused there, accepted here.
 
