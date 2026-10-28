@@ -717,10 +717,22 @@ def main(argv: Optional[List[str]] = None) -> int:
             doc_id = stem.replace("signature_", "").replace("state_full_", "")
             if doc_id not in campaign_ids:
                 continue
-            shutil.copy2(src, dst / src.name)
+            target = dst / src.name
+            # #3284 — re-rendering from this folder's own annexes meets
+            # itself: copying a file onto itself raises SameFileError AFTER
+            # every reading file is written, so the folder looked done while
+            # the producer reported failure. The annex is already where it
+            # belongs: nothing to copy.
+            if target.exists() and src.samefile(target):
+                continue
+            shutil.copy2(src, target)
 
     if args.report and args.report.exists():
-        shutil.copy2(args.report, args.out / args.report.name)
+        report_target = args.out / args.report.name
+        # Same trap as the annexes one step above (#3284): a --report that
+        # already lives inside the output folder is in place already.
+        if not (report_target.exists() and args.report.samefile(report_target)):
+            shutil.copy2(args.report, report_target)
 
     print(f"reading folder: {args.out}")
     print(
