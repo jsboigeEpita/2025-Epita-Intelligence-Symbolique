@@ -266,7 +266,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if str(REPO) not in sys.path:
         sys.path.insert(0, str(REPO))
-    # Bound early (see record_sk_cassette.py's import-order note).
+    # Bound early: running this file as a script puts scripts/cassettes on
+    # sys.path, and binding the name before the app imports is immune to the
+    # downstream ModuleNotFoundError that a late import dies of.
     from scripts.cassettes.export import refresh_manifest
 
     if args.refresh_manifest_only:

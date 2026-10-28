@@ -34,10 +34,13 @@ _EVAL_DIR = os.path.join(_REPO_ROOT, "tests/unit/argumentation_analysis/evaluati
 # reload (#2475): the child is keyless on every checkout, .env or not.
 _EMPTIED_CONFIG = ("OPENAI_API_KEY", "OPENROUTER_API_KEY", "TEXT_CONFIG_PASSPHRASE")
 
-# The two hermetic repairs the census made outside the evaluation directory:
+# The hermetic repairs the census made outside the evaluation directory:
 # their subject is code, so they must never read the suite host's config
 # again. (The two api probes the same census classified are `requires_api`,
-# hence outside this pass's selection — `-m` below.)
+# hence outside this pass's selection — `-m` below.) The cassette drift
+# detector that used to sit here (`TestCommittedCassettesStillReplay`) was
+# retired with its subject in #3266 — a retired node is not hermetic or
+# otherwise, and the child run exits 4 on it.
 
 # Tests whose subject IS the ambient config: they cannot pass keyless, by
 # construction, so this pass leaves them out. `requires_dataset_passphrase`
@@ -45,8 +48,6 @@ _EMPTIED_CONFIG = ("OPENAI_API_KEY", "OPENROUTER_API_KEY", "TEXT_CONFIG_PASSPHRA
 # which is what this pass does to it: unselected, they turned the pass red.
 _AMBIENT_SUBJECT_MARKERS = "not requires_api and not requires_dataset_passphrase"
 _REPAIRED_HERMETIC_NODES = (
-    "tests/unit/argumentation_analysis/plugins/test_cassette_round_trip.py"
-    "::TestCommittedCassettesStillReplay::test_replay_path_uses_cache",
     "tests/unit/scripts/analysis/test_export_scda_state_privacy.py",
 )
 
