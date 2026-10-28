@@ -300,8 +300,46 @@ class RhetoricalAnalysisState:
         safe_index = min(index, 9999)
         return f"{prefix}_{safe_index + 1}"
 
+    def _refuse_field_name_as_content(self, writer: str, value: Any) -> None:
+        """#3268/#3275 — un texte n'est pas le nom d'un champ de cet état.
+
+        Le défaut mesuré (#3268, distillation jsboige/CoursIA#18395) : un
+        producteur qui écrit ce qu'il lit de sa propre structure enregistre une
+        entrée fantôme (``arg_1 = "analysis_state"``), et tous les lecteurs aval
+        la comptent — la garde de croissance prend ``len()``, donc le run se
+        valide sans qu'aucun contenu n'existe.
+
+        **Une seule source de vocabulaire pour les six writers** : les noms que
+        CETTE instance porte (``vars``). Une liste noire codée en dur est un
+        contrepoids — elle périme au premier champ renommé et ne couvre que les
+        noms qu'on a pensé à y mettre ; les témoins anti-pendule de #3268 et de
+        #3275 mesurent exactement ce coût (un champ de sous-classe accepté sur
+        la base, refusé sur la sous-classe).
+
+        Refuse un NOM DE CHAMP, pas une non-citation : la paraphrase reste un
+        contenu (témoins dédiés dans les deux suites), sinon la porte casserait
+        les extractions honnêtes et se substituerait à la provenance, qui traite
+        déjà la traçabilité.
+
+        Mesures avant écriture : #3268 — 829 littéraux atteignant un
+        ``add_argument``, 0 collision ; #3275 — 168 littéraux sur les cinq
+        writers frères (``add_task`` 31, ``add_fallacy`` 90,
+        ``add_belief_set`` 18, ``add_extract`` 4, ``add_counter_argument`` 25),
+        0 collision avec le vocabulaire des deux classes.
+        """
+        if isinstance(value, str) and value.strip() in vars(self):
+            raise ValueError(
+                f"{writer}: '{value.strip()}' est le nom d'un champ de l'état, "
+                "pas un contenu du texte (#3268, #3275)"
+            )
+
     def add_task(self, description: str) -> str:
-        """Ajoute une tâche d'analyse et retourne son ID."""
+        """Ajoute une tâche d'analyse et retourne son ID.
+
+        #3275 — la tâche EST un fragment du texte : un nom de champ de l'état
+        est refusé par la porte partagée (#3268), comme pour les autres writers.
+        """
+        self._refuse_field_name_as_content("add_task", description)
         task_id = self._generate_id("task", self.analysis_tasks)
         self.analysis_tasks[task_id] = description
         state_logger.info(f"Tâche ajoutée: {task_id} - '{description[:60]}...'")
@@ -339,33 +377,10 @@ class RhetoricalAnalysisState:
         champ vit dans ``argument_provenance[arg_id]``, donc seulement quand
         ``producer`` en a ouvert l'entrée.
         """
-        # #3268 — un argument EST un fragment du texte, pas le nom d'un champ
-        # de cet état. Un producteur qui écrit ce qu'il lit de sa propre
-        # structure enregistre un argument fantôme : ``identified_arguments``
-        # grandit, et la garde de croissance le compte comme une progression
-        # (``_get_growth_fingerprint`` prend ``len()``), donc le run se valide
-        # sans qu'aucun argument n'existe. Constaté en distillation
-        # (jsboige/CoursIA#18395 : ``arg_1 = "analysis_state"``), et rien dans
-        # la chaîne ne le refusait — le seul verrou était un compte, dans un
-        # test.
-        #
-        # Le vocabulaire refusé est dérivé de L'INSTANCE (``vars``), jamais
-        # d'une constante : une liste noire codée en dur est un contrepoids,
-        # qui périme au premier champ renommé et ne couvre que les noms qu'on
-        # a pensé à y mettre. Mesuré avant la porte : 829 littéraux atteignant
-        # un ``add_argument`` dans l'arbre (état et argparse confondus, mesure
-        # volontairement sur-inclusive), 0 collision avec les attributs d'une
-        # instance — la réparation ne touche aucun appelant existant.
-        #
-        # Elle refuse un NOM DE CHAMP, pas une non-citation : la paraphrase
-        # reste un argument (témoin dédié), sinon la porte casserait les
-        # extractions honnêtes et se substituerait à la provenance, qui traite
-        # déjà la traçabilité.
-        if isinstance(description, str) and description.strip() in vars(self):
-            raise ValueError(
-                f"add_argument: '{description.strip()}' est le nom d'un champ "
-                "de l'état, pas un argument du texte (#3268)"
-            )
+        # #3268, porte partagée depuis #3275 : vocabulaire dérivé de
+        # ``vars(self)`` dans ``_refuse_field_name_as_content`` — rationale,
+        # mesures et anti-pendule documentés là-bas, une seule fois.
+        self._refuse_field_name_as_content("add_argument", description)
         arg_id = self._generate_id("arg", self.identified_arguments)
         self.identified_arguments[arg_id] = description
         if producer:
@@ -437,7 +452,11 @@ class RhetoricalAnalysisState:
         avait localisé dans une parole RAPPORTÉE. Vide = non dit : le champ
         n'est alors pas stocké, et les lecteurs gardent l'attribution au
         locuteur sans inventer de tiers (famille #1019).
+
+        #3275 — la justification EST un fragment du texte : un nom de champ de
+        l'état y est refusé par la porte partagée de #3268.
         """
+        self._refuse_field_name_as_content("add_fallacy", justification)
         fallacy_id = self._generate_id("fallacy", self.identified_fallacies)
         entry: Dict[str, Any] = {"type": fallacy_type, "justification": justification}
         if family:
@@ -490,7 +509,11 @@ class RhetoricalAnalysisState:
         ``propositions`` (PL) est conservé quand il est fourni : l'agent
         propositionnel n'interroge que des propositions déclarées, donc un
         belief set reconstruit sans elles ne donne aucune requête (#2643).
+
+        #3275 — le contenu EST du texte formel, pas le nom d'un champ : la
+        porte partagée de #3268 le refuse.
         """
+        self._refuse_field_name_as_content("add_belief_set", content)
         normalized_type = logic_type.strip().lower().replace(" ", "_")
         bs_id = self._generate_id(f"{normalized_type}_bs", self.belief_sets)
         entry: Dict[str, Any] = {"logic_type": logic_type, "content": content}
@@ -608,7 +631,13 @@ class RhetoricalAnalysisState:
         )
 
     def add_extract(self, name: str, content: str) -> str:
-        """Ajoute un extrait de texte et retourne son ID."""
+        """Ajoute un extrait de texte et retourne son ID.
+
+        #3275 — ``content`` est le texte extrait ; ``name`` reste une
+        étiquette libre (ce n'est pas une position de contenu). La porte
+        partagée de #3268 ne porte donc que sur ``content``.
+        """
+        self._refuse_field_name_as_content("add_extract", content)
         if not hasattr(self, "extracts"):
             self.extracts = []
         extract_id = self._generate_id("extract", self.extracts)
@@ -1302,7 +1331,14 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         ``target_arg_id`` (the echoed target matched no offered id) — an
         unlinked counter is a measured fact, not a silent one. Stored only
         when non-empty, same honest-absence rule.
+
+        #3275 — ``counter_content`` est un fragment du texte : un nom de champ
+        de l'état y est refusé par la porte partagée de #3268. ``original_arg``
+        est laissé hors porte, faute de mesure : aucun littéral du recensement
+        (#3275 : 25 littéraux) ne s'y écho, et l'élargir sans preuve serait la
+        porte au-delà de ce qu'elle sait.
         """
+        self._refuse_field_name_as_content("add_counter_argument", counter_content)
         ca_id = self._generate_id("ca", self.counter_arguments)
         entry = {
             "id": ca_id,
