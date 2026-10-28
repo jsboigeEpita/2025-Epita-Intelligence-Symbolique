@@ -129,3 +129,45 @@ Deux enseignements que la grille doit garder :
   zero-shot, remontée en lecture intégrale seulement si un S ou un M apparaît).
 - Zéro appel LLM pour juger. La lecture est du texte déjà produit.
 - Une passe par cycle, restitution sous forme de tableau cité, jamais d'impression générale.
+
+## 7. Mesure de corpus faite **avant** la passe complète — S1 est structurellement absent
+
+`01_tableau_corpus.md` donne, pour les 49 documents, le triplet de verdicts formels
+(FOL / propositionnelle / modale). Distribution complète, mesurée le 2026-10-28 :
+
+| triplet | documents |
+|---|---|
+| `3/3/2` | **48** |
+| `0/0/0` | 1 (le seul document `non_argumentative`) |
+
+**48 sur 48 documents `ok` portent le même triplet**, alors que le corpus va de 264 à
+2 762 977 caractères et de 4 à 6 013 arguments extraits. Un compte constant sur toute la
+population ne peut discriminer aucun document.
+
+Conséquence pour la grille, et c'est la plus lourde : **S1 (surplus formel) n'est pas
+disponible au niveau corpus dans cette campagne.** Le triplet est une constante du harnais,
+pas un verdict sur le texte — le dossier de lecture le dit déjà à demi-mot (« les talons non
+traduits #3123 s'y comptent comme résultats »). Le surplus ne peut donc venir que de **S2**
+(exclusion/acception Dung), **S3** (convergence nommée) ou **S4** (couverture déclarée). La
+conclusion du §4 doit nommer sa nature parmi ces trois-là.
+
+**Ce que cette mesure n'établit pas, et qu'il ne faut pas lui faire dire.** Elle porte sur le
+**nombre**, pas sur le **contenu** : trois verdicts de polarités différentes produiraient le
+même triplet. Un document peut donc porter un S1 réel que le tableau ne montre pas — il faut
+lire les verdicts eux-mêmes dans les annexes de la fiche. La formulation honnête est : *le
+tableau du corpus ne peut pas établir de S1 ; une fiche peut encore en porter un, et c'est à
+la lecture de le montrer, citation à l'appui.*
+
+Forme à retenir : c'est un instrument **agrégé** qui révèle un défaut que 49 lectures
+individuelles auraient pu manquer, une par une.
+
+## 8. Ce qui, après la §7, reste à mesurer
+
+| axe | état |
+|---|---|
+| S2 (Dung) | à lire fiche par fiche — présent au moins sur `doc_A_08` |
+| S3 (convergence) | à lire fiche par fiche — le seul surplus déjà démontré |
+| S4 (honnêteté) | à lire fiche par fiche — présent au moins sur `doc_A_08` |
+| S1 (formel) | **indisponible au niveau corpus** ; possible par fiche, à vérifier dans les annexes |
+| S5 (qualité) | **mesuré comme absence** sur les documents lus |
+| M1 / M2 | à établir par comparaison avec le zero-shot de chaque fiche |
