@@ -46,8 +46,13 @@ def agent_factory():
     kernel = sk.Kernel()
     llm_service_id = "default"
     try:
+        # #3273 — no hardcoded model_id: the factory resolves the environment's
+        # default (OPENAI_CHAT_MODEL_ID). "test_model" does not exist at OpenAI
+        # (the removed INFORMAL xfail said so itself), and every call made
+        # through it answered 404 model_not_found (record run 40607307597:
+        # 9/9 SHERLOCK calls) — the SHERLOCK variants passed by swallowing it.
         llm_service = create_llm_service(
-            service_id=llm_service_id, model_id="test_model", force_authentic=True
+            service_id=llm_service_id, force_authentic=True
         )
         kernel.add_service(llm_service)
     except Exception as e:
@@ -69,13 +74,6 @@ def test_agent_performance(agent_factory, agent_type, test_case):
     """
     Parametrized test to run each agent against each test case.
     """
-    # INFORMAL_FALLACY uses model_id="test_model" which doesn't exist at OpenAI.
-    _broken_types = {
-        AgentType.INFORMAL_FALLACY,
-    }
-    if agent_type in _broken_types:
-        pytest.xfail(f"{agent_type.name}: invalid model_id in test environment")
-
     # Arrange
     agent = agent_factory.create_agent(agent_type)
     input_text = test_case["text"]
