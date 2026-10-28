@@ -431,3 +431,103 @@ class TestPricingFollowsTheRunsProvenance:
         monkeypatch.setattr(folder, "RESULTS_ROOT", root)
         with pytest.raises(SystemExit, match="no zero-shot record"):
             folder.main(_producer_argv(tmp_path, root / "campaign_2841_lecture"))
+
+
+def _mark_non_argumentative(tmp_path: Path, doc_id: str = "a53fc485_ext0") -> None:
+    """Rewrite one planted doc into the REAL non-argumentative shape.
+
+    Measured on the campaign's artifacts (#3278): the signature carries
+    ``document_classification`` at its root with ``outcome`` =
+    ``{"status": "non_argumentative", "phase": "extract"}``, and the state's
+    act keys are present but empty strings — the shape that rendered four
+    "absent de l'état" placeholders while the honest phrase stayed on stdout.
+    """
+    sig_path = tmp_path / "signatures" / f"signature_{doc_id}.json"
+    sig = json.loads(sig_path.read_text(encoding="utf-8"))
+    sig["outcome"] = {"status": "non_argumentative", "phase": "extract"}
+    sig["document_classification"] = "non_argumentative"
+    sig_path.write_text(json.dumps(sig, ensure_ascii=False), encoding="utf-8")
+    state_path = tmp_path / "state_dumps" / f"state_full_{doc_id}.json"
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    for key in (
+        "act1_framing",
+        "act2_narrative",
+        "act3_conclusion",
+        "narrative_synthesis",
+    ):
+        state[key] = ""
+    state_path.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
+
+
+class TestNonArgumentativeRender:
+    """#3278 — the valid no-analysis case is a terminal classification, not
+    an absence.
+
+    The fiche of a ``non_argumentative`` document must name the
+    classification and carry the batch runner's own phrase (one source, two
+    callers — a second wording is the divergence #3123 caught), and must not
+    show four "absent de l'état" acts: the reader of the ONE document with no
+    analysis is the one who most needs to know why."""
+
+    def test_fiche_names_the_classification_not_empty_acts(self, tmp_path, monkeypatch):
+        root = _plant_campaign(tmp_path)
+        _mark_non_argumentative(tmp_path)
+        out = root / "campaign_2841_lecture"
+        monkeypatch.setattr(folder, "RESULTS_ROOT", root)
+        assert folder.main(_producer_argv(tmp_path, out)) == 0
+        fiche = (out / "02_rendus" / "01_a53fc485_ext0_Titre-Alpha.md").read_text(
+            encoding="utf-8"
+        )
+        assert "non_argumentative" in fiche
+        assert (
+            "absent de l'état — acte i" not in fiche
+        ), "the terminal classification still renders as an absence"
+
+    def test_the_phrase_is_the_batch_runners_single_source(self, tmp_path, monkeypatch):
+        root = _plant_campaign(tmp_path)
+        _mark_non_argumentative(tmp_path)
+        out = root / "campaign_2841_lecture"
+        monkeypatch.setattr(folder, "RESULTS_ROOT", root)
+        assert folder.main(_producer_argv(tmp_path, out)) == 0
+        fiche = (out / "02_rendus" / "01_a53fc485_ext0_Titre-Alpha.md").read_text(
+            encoding="utf-8"
+        )
+        from scripts.dataset.run_corpus_batch import (
+            render_non_argumentative_restitution,
+        )
+
+        expected = render_non_argumentative_restitution(
+            "a53fc485_ext0", {"status": "non_argumentative", "phase": "extract"}
+        )
+        assert (
+            expected in fiche
+        ), "the fiche carries its own wording instead of the runner's phrase"
+
+    def test_a_failed_document_keeps_its_failure_render(self, tmp_path, monkeypatch):
+        """The #1909 guard: an extraction failure stays a failure — the
+        honest-classification render must not relabel it. A failed doc has no
+        ``document_classification`` key, so it keeps today's render (empty
+        acts read as absent), and the phrase must NOT appear on it."""
+        root = _plant_campaign(tmp_path)
+        sig_path = tmp_path / "signatures" / "signature_zz_free_ext0.json"
+        sig = json.loads(sig_path.read_text(encoding="utf-8"))
+        sig["outcome"] = {"status": "failed", "reason": "extraction error"}
+        sig_path.write_text(json.dumps(sig, ensure_ascii=False), encoding="utf-8")
+        state_path = tmp_path / "state_dumps" / "state_full_zz_free_ext0.json"
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        for key in (
+            "act1_framing",
+            "act2_narrative",
+            "act3_conclusion",
+            "narrative_synthesis",
+        ):
+            state[key] = ""
+        state_path.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
+        out = root / "campaign_2841_lecture"
+        monkeypatch.setattr(folder, "RESULTS_ROOT", root)
+        assert folder.main(_producer_argv(tmp_path, out)) == 0
+        fiche = (out / "02_rendus" / "03_zz_free_ext0_Titre-Gamma.md").read_text(
+            encoding="utf-8"
+        )
+        assert "absent de l'état — acte i" in fiche
+        assert "not a failure" not in fiche
