@@ -1,14 +1,14 @@
 {
   "key": "4b8d0e483df2dd87c60093fc07c1a9ac0eae8a7b6697e8e6c2e132c5db56d8c1",
   "value": {
-    "id": "chatcmpl-EdmWBQHbKJO0e1Xdk7Ym12ZB54G3m",
+    "id": "chatcmpl-EdvidtvBpbl2FCC9fd9YlLgTQOXWM",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[{\"text\":\"Le changement climatique constitue une réalité scientifique incontestable.\",\"source_quote\":\"Le changement climatique est une realite scientifique incontestable.\",\"move_author\":\"speaker\"},{\"text\":\"Les sceptiques soutiennent que le climat a toujours changé.\",\"source_quote\":\"Les sceptiques affirment que le climat a toujours change\",\"move_author\":\"reported\"},{\"text\":\"L'argument selon lequel le climat a toujours changé ne tient pas compte de la vitesse sans précédent du changement actuel.\",\"source_quote\":\"mais ils omettent la vitesse sans precedent du changement actuel.\",\"move_author\":\"speaker\"},{\"text\":\"Les activités humaines ont un impact sur le climat, comme le montrent les modèles prédictifs.\",\"source_quote\":\"Les modeles predictifs sont unanimes sur l'impact des activites humaines.\",\"move_author\":\"speaker\"},{\"text\":\"Les personnes qui minimisent la crise climatique s'appuient souvent sur des données sélectionnées pour défendre leur position.\",\"source_quote\":\"Ceux qui minimisent la crise climatique utilisent souvent des donnees selectives pour soutenir leur position.\",\"move_author\":\"speaker\"},{\"text\":\"La transition énergétique est nécessaire et économiquement avantageuse à long terme.\",\"source_quote\":\"La transition energetique est non seulement necessaire mais aussi economiquement avantageuse a long terme.\",\"move_author\":\"speaker\"}],\"claims\":[{\"text\":\"La température globale a augmenté de 1,1 degré depuis l'ère préindustrielle.\",\"source_quote\":\"Les mesures de temperature globale montrent une augmentation de 1.1 degres depuis l'ere preindustrielle.\"},{\"text\":\"Le climat a toujours changé.\",\"source_quote\":\"Les sceptiques affirment que le climat a toujours change\"},{\"text\":\"La vitesse du changement climatique actuel est sans précédent.\",\"source_quote\":\"la vitesse sans precedent du changement actuel.\"},{\"text\":\"Les modèles prédictifs sont unanimes quant à l'impact des activités humaines sur le climat.\",\"source_quote\":\"Les modeles predictifs sont unanimes sur l'impact des activites humaines.\"},{\"text\":\"Les personnes qui minimisent la crise climatique utilisent souvent des données sélectives.\",\"source_quote\":\"Ceux qui minimisent la crise climatique utilisent souvent des donnees selectives\"},{\"text\":\"La transition énergétique est économiquement avantageuse à long terme.\",\"source_quote\":\"economiquement avantageuse a long terme\"}],\"summary\":\"Le texte défend la réalité scientifique du changement climatique et l'importance de sa vitesse actuelle, en s'appuyant sur les mesures de température et les modèles prédictifs. Il rapporte l'objection des sceptiques selon laquelle le climat a toujours changé, puis la conteste. Il attribue aussi aux minimisateurs un recours fréquent à des données sélectives et présente la transition énergétique comme une nécessité économiquement bénéfique.\"}",
+          "content": "{\"arguments\":[{\"text\":\"Le changement climatique constitue une réalité scientifique incontestable.\",\"source_quote\":\"Le changement climatique est une realite scientifique incontestable.\",\"move_author\":\"speaker\"},{\"text\":\"Les sceptiques soutiennent que le climat a toujours changé.\",\"source_quote\":\"Les sceptiques affirment que le climat a toujours change\",\"move_author\":\"reported\"},{\"text\":\"La vitesse sans précédent du changement actuel distingue la situation présente des variations climatiques passées.\",\"source_quote\":\"ils omettent la vitesse sans precedent du changement actuel\",\"move_author\":\"speaker\"},{\"text\":\"Les activités humaines ont des effets sur le climat, comme le confirmeraient unanimement les modèles prédictifs.\",\"source_quote\":\"Les modeles predictifs sont unanimes sur l'impact des activites humaines.\",\"move_author\":\"speaker\"},{\"text\":\"La transition énergétique est nécessaire et présente aussi un avantage économique à long terme.\",\"source_quote\":\"La transition energetique est non seulement necessaire mais aussi economiquement avantageuse a long terme.\",\"move_author\":\"speaker\"}],\"claims\":[{\"text\":\"Les températures mondiales ont augmenté de 1,1 degré depuis l'ère préindustrielle.\",\"source_quote\":\"Les mesures de temperature globale montrent une augmentation de 1.1 degres depuis l'ere preindustrielle.\",\"move_author\":\"speaker\"},{\"text\":\"Le climat a toujours changé.\",\"source_quote\":\"Les sceptiques affirment que le climat a toujours change\",\"move_author\":\"reported\"},{\"text\":\"La vitesse du changement climatique actuel est sans précédent.\",\"source_quote\":\"la vitesse sans precedent du changement actuel\",\"move_author\":\"speaker\"},{\"text\":\"Les modèles prédictifs s'accordent unanimement sur l'impact des activités humaines.\",\"source_quote\":\"Les modeles predictifs sont unanimes sur l'impact des activites humaines.\",\"move_author\":\"speaker\"},{\"text\":\"Les personnes qui minimisent la crise climatique utilisent souvent des données sélectives pour soutenir leur position.\",\"source_quote\":\"Ceux qui minimisent la crise climatique utilisent souvent des donnees selectives pour soutenir leur position.\",\"move_author\":\"speaker\"},{\"text\":\"La transition énergétique est économiquement avantageuse à long terme.\",\"source_quote\":\"economiquement avantageuse a long terme\",\"move_author\":\"speaker\"}],\"summary\":\"Le texte défend la réalité et l'importance du changement climatique en opposant à son propre point de vue l'affirmation selon laquelle le climat a toujours changé. Il invoque des mesures de température, la vitesse du changement, les modèles prédictifs et les avantages économiques de la transition énergétique.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793150003,
+    "created": 1793185371,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 770,
+      "completion_tokens": 818,
       "prompt_tokens": 493,
-      "total_tokens": 1263,
+      "total_tokens": 1311,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 204,
+        "reasoning_tokens": 297,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

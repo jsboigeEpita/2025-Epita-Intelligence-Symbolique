@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_RmXZMbjvxNhbpydhcGVsVePL",
+          "id": "call_NBL8Vq2OXAzArocgvo7zXcgC",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"175\",\"matches\":false,\"justification\":\"La phrase rapporte simplement l’affirmation du président qu’une politique est un succès; elle ne fournit pas assez de contexte pour établir une manipulation de l’auditoire ou une autre sous-catégorie d’influence.\",\"confidence\":\"high\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+          "arguments": "{\"node_pk\":\"175\",\"matches\":true,\"confidence\":\"medium\",\"justification\":\"L’affirmation catégorique d’un succès « incontestable » cherche à persuader sans fournir de justification ni d’éléments factuels. Elle relève ici de l’influence au sens général, sans indice suffisant pour identifier une sous-catégorie plus spécifique.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdmLSMLTeEsCZDaWde0tmuDdbqGoj",
-        "created": 1793149338,
+        "id": "chatcmpl-EdvXADTSIROaaRvI68qZ6yYc98orl",
+        "created": 1793184660,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1896,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 91,
+          "completion_tokens": 100,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

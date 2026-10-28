@@ -1,14 +1,14 @@
 {
   "key": "f5997b030a222b80c319fb3353416b80882839290e5af2653d59311235033b0a",
   "value": {
-    "id": "chatcmpl-EdmUWbU2cKazz5dXy1smIXiL4euBj",
+    "id": "chatcmpl-EdvhZx6X5jbNx22HJv7vjuD8lrReM",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_chain\":true,\"premises\":\"La peine de mort dissuade les crimes les plus graves, notamment les meurtres de masse. Les avancées en ADN réduisent considérablement le risque d’erreur judiciaire.\",\"conclusion\":\"La peine de mort est une sanction nécessaire dans certains cas extrêmes.\"}",
+          "content": "{\"has_chain\":true,\"premises\":\"La peine de mort dissuade les crimes les plus graves, notamment les meurtres de masse ; les avancées en ADN réduisent considérablement le risque d’erreur judiciaire.\",\"conclusion\":\"La peine de mort est une sanction nécessaire dans certains cas extrêmes.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793149900,
+    "created": 1793185305,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 139,
+      "completion_tokens": 130,
       "prompt_tokens": 278,
-      "total_tokens": 417,
+      "total_tokens": 408,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 66,
+        "reasoning_tokens": 57,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

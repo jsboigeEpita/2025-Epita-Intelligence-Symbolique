@@ -1,0 +1,48 @@
+{
+  "key": "d226a06c50f0686d050f9865149209aa6d94065366422aa07f2b2a3f0686eb2d",
+  "value": {
+    "id": "chatcmpl-EdvhZvDSdnkwKOIvnsowz4bw0wV8g",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La thèse défend le maintien de la peine de mort en invoquant deux axes pertinents : son effet dissuasif sur les crimes les plus graves et la possibilité de réduire le risque d’erreur dans son application. Aucune digression n’est identifiée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793185305,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 100,
+      "prompt_tokens": 278,
+      "total_tokens": 378,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 25,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

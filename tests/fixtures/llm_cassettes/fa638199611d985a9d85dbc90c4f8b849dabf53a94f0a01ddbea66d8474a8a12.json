@@ -1,0 +1,48 @@
+{
+  "key": "fa638199611d985a9d85dbc90c4f8b849dabf53a94f0a01ddbea66d8474a8a12",
+  "value": {
+    "id": "chatcmpl-EdvaqhQhU1I62kaU1vzFrfNg3loFf",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\":false,\"engagement_verdict\":\"pas_de_refutation\",\"reasoning\":\"Le texte affirme seulement le choix de l’option A et mentionne l’option B comme alternative, sans réfuter ses avantages ni répondre directement à cette position.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793184888,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 137,
+      "prompt_tokens": 315,
+      "total_tokens": 452,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 73,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

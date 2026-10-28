@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_vatWsD4wk8aoHC7I8KeYWzm1",
+          "id": "call_XUhui7Jb6g74l20n6FKAIpBm",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"326\",\"matches\":false,\"justification\":\"Le texte invoque l’unanimité des experts et exclut l’avis des non-experts, mais il ne cherche pas à discréditer l’adversaire en lui faisant honte ni en invoquant une réprobation sociale. L’appel à la honte ne correspond donc pas à la fallacie présente.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"326\",\"matches\":false,\"justification\":\"Le texte invoque l'unanimité des experts et exclut l'avis des non-experts, ce qui relève plutôt de l'appel à l'autorité et de l'argument d'autorité pertinente, mais il ne cherche pas à discréditer l'adversaire en lui imposant honte ou réprobation sociale.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdmMEjf0qppF9sSGgbDrYGq0JsVUc",
-        "created": 1793149386,
+        "id": "chatcmpl-EdvY0SHgMRnURTygA9p1JNyZeSwp9",
+        "created": 1793184712,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 927,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 102,
+          "completion_tokens": 104,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

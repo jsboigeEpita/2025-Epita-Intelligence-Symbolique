@@ -1,0 +1,40 @@
+{
+  "key": "dc42de93ceda0ca735521535f2e839629a43e04de27b628c058ca4e55aece71f",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_7Ya2Aw1r7RCmj3gKPuAfTRe1",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"51\",\"matches\":false,\"justification\":\"L’énoncé rapporte une affirmation présidentielle présentée comme incontestable, mais ne confond pas explicitement une perspective individuelle avec une objectivité universelle au sens du sophisme du psychologue.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdvXDmpOVwPRImZV8rsQRlTG9bECl",
+        "created": 1793184663,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1582,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 484,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 74,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "key": "f04e194c5a38d03b746916907d1182cd2fc33d1bcaf6a84252d6fabdde4137d3",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_CEIatzzC1W47Zj5zB00Wx1kb",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"889\",\"matches\":true,\"confidence\":\"medium\",\"justification\":\"Le président affirme que la politique économique est un succès incontestable, mais l'énoncé seul ne fournit pas de preuve qu'il sait cette affirmation fausse. Il s'agit néanmoins d'une affirmation catégorique présentée comme vraie sans fondement explicite, correspondant au mensonge au niveau disponible.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdvXH86YmTvZKLb7ye9OdjYZuR0Gx",
+        "created": 1793184667,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2296,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1198,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 105,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "key": "59fc3e0c9601091fe7f20cc08d42538453a67751bc7d5dbcf8002f829d895a76",
+  "value": {
+    "id": "chatcmpl-EdvUs4LHr95t0mNcB94S0QcIZbCEy",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Les deux points critiquent le recours aux autres pays européens, mais ils portent sur des défauts distincts : le premier relève de la non-comparabilité structurelle des systèmes de retraite, tandis que le second dénonce l’argument consistant à invoquer le fait que tous les pays auraient déjà réformé. Il existe donc un chevauchement thématique, sans répétition complète.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793184518,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 229,
+      "prompt_tokens": 289,
+      "total_tokens": 518,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 129,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,14 +1,14 @@
 {
   "key": "432ba44b90581e5f3ea76a49eec31d301580cb691f119a88abddb4479c860f5d",
   "value": {
-    "id": "chatcmpl-EdmNbYGhBNCpW8e4mvIZW4ivsp7xX",
+    "id": "chatcmpl-EdvZcaRbamW9cnlvFBiuvEsh6L0WT",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[{\"text\":\"L'option A défend l'organisation d'un tournoi inter-villes comprenant un buffet et des prix, afin d'accroître la visibilité du club.\",\"source_quote\":\"Option A : organiser un tournoi inter-villes avec buffet et prix pour 2000 euros, augmentant la visibilite du club.\",\"move_author\":\"reported\"},{\"text\":\"L'option B défend l'investissement intégral du budget dans du matériel pédagogique et des échiquiers neufs.\",\"source_quote\":\"Option B : investir les 2000 euros en materiel pedagogique et echiquiers neufs.\",\"move_author\":\"reported\"},{\"text\":\"L'option C défend un compromis entre événement et équipement, en répartissant équitablement le budget entre un tournoi réduit et du matériel.\",\"source_quote\":\"Option C : un format hybride, 1000 euros tournoi reduit et 1000 euros materiel.\",\"move_author\":\"reported\"},{\"text\":\"Le texte met en scène trois usages concurrents du même budget annuel : accroître la visibilité, améliorer les ressources pédagogiques ou combiner ces deux objectifs.\",\"source_quote\":\"Trois options divergentes s'affrontent.\",\"move_author\":\"speaker\"}],\"claims\":[{\"text\":\"Le club d'échecs dispose d'un budget participatif annuel de 2 000 euros.\",\"source_quote\":\"Le club d'echecs dispose d'un budget participatif annuel de 2000 euros.\"},{\"text\":\"L'option A prévoit un coût total de 2 000 euros.\",\"source_quote\":\"organiser un tournoi inter-villes avec buffet et prix pour 2000 euros\"},{\"text\":\"L'organisation du tournoi de l'option A est présentée comme augmentant la visibilité du club.\",\"source_quote\":\"augmentant la visibilite du club\"},{\"text\":\"L'option B prévoit d'investir 2 000 euros dans du matériel pédagogique et des échiquiers neufs.\",\"source_quote\":\"investir les 2000 euros en materiel pedagogique et echiquiers neufs\"},{\"text\":\"L'option C répartit le budget en deux montants égaux de 1 000 euros.\",\"source_quote\":\"1000 euros tournoi reduit et 1000 euros materiel\"}],\"summary\":\"Le texte présente trois options concurrentes pour l'utilisation d'un budget annuel de 2 000 euros : financer un tournoi visant la visibilité, acheter du matériel pédagogique, ou combiner les deux à parts égales.\"}",
+          "content": "{\"arguments\":[{\"text\":\"L'option A consiste à consacrer les 2000 euros à un tournoi inter-villes comprenant un buffet et des prix, afin d'accroître la visibilité du club.\",\"source_quote\":\"Option A : organiser un tournoi inter-villes avec buffet et prix pour 2000 euros, augmentant la visibilite du club.\",\"move_author\":\"reported\"},{\"text\":\"L'option B consiste à investir l'intégralité du budget dans du matériel pédagogique et de nouveaux échiquiers.\",\"source_quote\":\"Option B : investir les 2000 euros en materiel pedagogique et echiquiers neufs.\",\"move_author\":\"reported\"},{\"text\":\"L'option C propose de partager le budget à parts égales entre un tournoi réduit et l'achat de matériel.\",\"source_quote\":\"Option C : un format hybride, 1000 euros tournoi reduit et 1000 euros materiel.\",\"move_author\":\"reported\"}],\"claims\":[{\"text\":\"Le club d'échecs dispose chaque année d'un budget participatif de 2000 euros.\",\"source_quote\":\"Le club d'echecs dispose d'un budget participatif annuel de 2000 euros.\"},{\"text\":\"Le tournoi inter-villes avec buffet et prix est prévu pour coûter 2000 euros.\",\"source_quote\":\"organiser un tournoi inter-villes avec buffet et prix pour 2000 euros\"},{\"text\":\"L'organisation du tournoi inter-villes augmenterait la visibilité du club.\",\"source_quote\":\"augmentant la visibilite du club\"},{\"text\":\"L'option B prévoit un investissement de 2000 euros dans du matériel pédagogique et de nouveaux échiquiers.\",\"source_quote\":\"investir les 2000 euros en materiel pedagogique et echiquiers neufs\"},{\"text\":\"L'option C répartit le budget en deux enveloppes de 1000 euros, l'une pour un tournoi réduit et l'autre pour du matériel.\",\"source_quote\":\"1000 euros tournoi reduit et 1000 euros materiel\"}],\"summary\":\"Le texte présente trois positions concurrentes concernant l'utilisation d'un budget annuel de 2000 euros : financer entièrement un tournoi, investir entièrement dans du matériel, ou combiner les deux à parts égales.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793149471,
+    "created": 1793184812,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 613,
+      "completion_tokens": 562,
       "prompt_tokens": 476,
-      "total_tokens": 1089,
+      "total_tokens": 1038,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 104,
+        "reasoning_tokens": 103,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

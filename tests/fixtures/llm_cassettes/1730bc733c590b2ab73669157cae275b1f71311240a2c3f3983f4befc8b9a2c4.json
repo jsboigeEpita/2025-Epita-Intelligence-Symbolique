@@ -1,0 +1,48 @@
+{
+  "key": "1730bc733c590b2ab73669157cae275b1f71311240a2c3f3983f4befc8b9a2c4",
+  "value": {
+    "id": "chatcmpl-EdvfxAq9iilJ8Iwj8IDJDNG1Beoq0",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"Les vaccins sont sûrs et efficaces, et les affirmations selon lesquelles ils seraient dangereux ne sont pas fondées.\",\"digressions\":\"\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793185205,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 137,
+      "prompt_tokens": 266,
+      "total_tokens": 403,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 88,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

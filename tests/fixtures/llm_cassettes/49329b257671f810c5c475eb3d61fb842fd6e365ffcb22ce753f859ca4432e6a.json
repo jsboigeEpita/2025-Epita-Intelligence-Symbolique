@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_j390tpu3Zg1KWsnZjEn4Z14S",
+          "id": "call_rr8XUfmhST2gy5jujg1tuvf4",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"1\",\"matches\":false,\"justification\":\"Les phrases sont de simples énoncés descriptifs et ne présentent pas d’argument dont les prémisses seraient insuffisantes pour établir une conclusion.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"1\",\"matches\":false,\"justification\":\"Les deux phrases sont de simples affirmations descriptives et ne constituent pas un argument insuffisant démontrant une proposition plus large.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdmKhpCY5Wg12G1YbyTnboOhVLpSJ",
-        "created": 1793149291,
+        "id": "chatcmpl-EdvWMM4XXSa3qMQhiLBLcUck2OLtk",
+        "created": 1793184610,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1902,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 70,
+          "completion_tokens": 61,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

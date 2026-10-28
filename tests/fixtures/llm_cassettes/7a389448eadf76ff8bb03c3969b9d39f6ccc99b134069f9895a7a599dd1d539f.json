@@ -1,0 +1,48 @@
+{
+  "key": "7a389448eadf76ff8bb03c3969b9d39f6ccc99b134069f9895a7a599dd1d539f",
+  "value": {
+    "id": "chatcmpl-EdvUxIbdZNg80HOX0uO0xbnEJ4x9J",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"L'opposition ne propose pas de supprimer les retraites, mais de les réformer autrement, et le débat déforme sa position.\",\"digressions\":\"La présentation détaillée des chiffres du déficit (2,3 % du PIB en 2030) et des hypothèses de croissance optimistes de 1,8 % par an constitue une digression par rapport à la thèse centrale.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793184523,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 311,
+      "prompt_tokens": 330,
+      "total_tokens": 641,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 212,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

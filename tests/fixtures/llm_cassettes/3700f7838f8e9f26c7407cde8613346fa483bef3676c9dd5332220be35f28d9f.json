@@ -1,0 +1,40 @@
+{
+  "key": "3700f7838f8e9f26c7407cde8613346fa483bef3676c9dd5332220be35f28d9f",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_cp5ZfzAySA77QAHvZ07wSUfk",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1312\",\"matches\":false,\"justification\":\"La phrase affirme un succès économique mais ne perturbe pas un débat, n’évite pas une question et ne discrédite pas un adversaire.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdvXChS0CKdHe4vHfkFy8KvfUmAzo",
+        "created": 1793184662,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1981,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 883,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 74,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,14 +1,14 @@
 {
   "key": "cd59eeab115f2cd2afcf0e3475c2d7f8b3b889fbfc16c928df9c5e3226dcf277",
   "value": {
-    "id": "chatcmpl-EdmTRadNkAvAVGWh4DJhCOLiVvacs",
+    "id": "chatcmpl-Edvfw8AijL8S6jqASyyZiY1qjUuAf",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Les vaccins sont dangereux et la vaccination présente des risques importants.\",\"main_thesis\":\"Les vaccins sont globalement sûrs et efficaces, comme le montrent les recherches scientifiques et leur rôle dans l’éradication de la variole et la réduction de la polio.\"}",
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Les vaccins sont dangereux et la vaccination présente des risques importants; les entreprises pharmaceutiques cacheraient leurs effets secondaires.\",\"main_thesis\":\"La vaccination est efficace et ne présente pas les risques importants allégués par ses détracteurs, comme le montrent les études scientifiques et l’histoire de l’éradication de la variole et de la réduction de la polio.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793149833,
+    "created": 1793185204,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 120,
+      "completion_tokens": 156,
       "prompt_tokens": 287,
-      "total_tokens": 407,
+      "total_tokens": 443,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 43,
+        "reasoning_tokens": 57,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

@@ -1,14 +1,14 @@
 {
   "key": "0bfe1a5abf2fce2ec4ccf2558bde250519eb5468aa5fb65b309402a6216540c4",
   "value": {
-    "id": "chatcmpl-EdmTXeE5GNDWeplbRfvooEsiext7E",
+    "id": "chatcmpl-Edvg3F0iq93k9BCGZQHiMJp3VNdUE",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_chain\":true,\"premises\":\"Les études scientifiques montrent que la vaccination a éradiqué la variole et réduit considérablement la polio ; ceux qui affirment que les vaccins sont dangereux ignorent des décennies de recherche clinique ; l’idée que les produits pharmaceutiques cachent les effets secondaires est une théorie du complot sans fondement.\",\"conclusion\":\"L’affirmation selon laquelle les vaccins sont dangereux n’est pas fondée.\"}",
+          "content": "{\"has_chain\":true,\"premises\":\"Les études scientifiques montrent que la vaccination a éradiqué la variole et réduit considérablement la polio. Les personnes qui affirment que les vaccins sont dangereux ignorent des décennies de recherche clinique. L’idée que les produits pharmaceutiques cachent les effets secondaires est une théorie du complot sans fondement.\",\"conclusion\":\"L’affirmation selon laquelle les vaccins sont dangereux est infondée.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793149839,
+    "created": 1793185211,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 242,
+      "completion_tokens": 221,
       "prompt_tokens": 279,
-      "total_tokens": 521,
+      "total_tokens": 500,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 139,
+        "reasoning_tokens": 118,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

@@ -1,0 +1,48 @@
+{
+  "key": "21049b74931cf3a4a2382bace8cc5483bcb474ebb46d70896a6cfcdce623b204",
+  "value": {
+    "id": "chatcmpl-EdvcxH6NcOJinbvEJdppKyPrLIACW",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Il faut concilier la visibilité apportée par un tournoi et la pédagogie apportée par du matériel pédagogique; les échiquiers actuels sont usés, ce qui justifie d'investir dans du nouveau matériel.\",\"conclusion\":\"L'option C est à retenir : un format hybride répartissant les 2000 euros à parts égales entre un tournoi réduit et du matériel pédagogique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793185019,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 337,
+      "prompt_tokens": 311,
+      "total_tokens": 648,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 240,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

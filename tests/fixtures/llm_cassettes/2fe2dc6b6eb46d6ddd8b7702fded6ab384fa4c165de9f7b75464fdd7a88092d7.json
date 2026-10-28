@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"start_marker\": \"Nous avons créé plus d'emplois en deux ans que n'importe quelle administration en quatre.\",\n  \"end_marker\": \"C'est un progrès économique réel.\",\n  \"explanation\": \"L'extrait commence par l'affirmation explicite de la création d'emplois et se termine par l'évaluation positive de ce résultat économique. La phrase sur le faible niveau du chômage est pertinente dans le contexte, mais elle ne porte pas directement sur la création d'emplois.\"\n}",
+      "content": "{\n  \"start_marker\": \"Nous avons créé plus d'emplois en deux ans que n'importe quelle administration en quatre.\",\n  \"end_marker\": \"C'est un progrès économique réel.\",\n  \"explanation\": \"L'extrait commence par la déclaration explicite sur la création d'emplois et se termine par la phrase qui en souligne la portée économique. Les deux marqueurs sont des chaînes exactement présentes dans le texte source.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdmRqiZgYmhSdk85PhDrm5BRRupsr",
-        "created": 1793149734,
+        "id": "chatcmpl-EdveAs3ERN3gKYXPYtvbEUDLMI01f",
+        "created": 1793185094,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 234,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 178,
+          "completion_tokens": 169,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 64,
+            "reasoning_tokens": 71,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }
