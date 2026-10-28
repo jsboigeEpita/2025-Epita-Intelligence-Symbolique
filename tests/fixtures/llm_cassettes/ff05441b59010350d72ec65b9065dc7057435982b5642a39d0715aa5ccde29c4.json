@@ -1,0 +1,48 @@
+{
+  "key": "ff05441b59010350d72ec65b9065dc7057435982b5642a39d0715aa5ccde29c4",
+  "value": {
+    "id": "chatcmpl-EdmTUDbD3gNfh2vdjVIJwLinvzMEW",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\":true,\"engagement_verdict\":\"engagement_réel\",\"reasoning\":\"La réfutation répond directement à l'affirmation que les vaccins seraient dangereux et que les entreprises pharmaceutiques cacheraient leurs effets secondaires en invoquant les données scientifiques et en contestant le fondement de cette accusation.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149836,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 71,
+      "prompt_tokens": 334,
+      "total_tokens": 405,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

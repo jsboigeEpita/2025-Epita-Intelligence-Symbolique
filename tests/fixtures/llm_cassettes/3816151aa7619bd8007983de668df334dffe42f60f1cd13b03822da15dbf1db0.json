@@ -1,0 +1,48 @@
+{
+  "key": "3816151aa7619bd8007983de668df334dffe42f60f1cd13b03822da15dbf1db0",
+  "value": {
+    "id": "chatcmpl-EdmUaS5gjEIyzqD0cuzyzHCK6aZ57",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\":false,\"structure_verdict\":\"saut_logique\",\"reasoning\":\"Les prémisses établissent seulement l’existence de criminels dangereux et une réduction du risque d’erreur grâce à l’ADN, sans justifier que ces faits rendent nécessaire ou légitime la peine de mort.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149904,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 142,
+      "prompt_tokens": 425,
+      "total_tokens": 567,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 70,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

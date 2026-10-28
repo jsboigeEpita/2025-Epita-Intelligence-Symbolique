@@ -1,0 +1,40 @@
+{
+  "key": "4811e757b327f0d004b84f3130c017d4ee3d592e3d6c4777d4214c756566b402",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_7EY6p6TMwmHODzTM5ZnQ3SK8",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"175\",\"matches\":false,\"justification\":\"Le texte énonce simplement deux faits météorologiques, sans tentative de manipulation, de persuasion fallacieuse ou d'influence de l'auditoire.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdmKh4VbxmlXYCewVtAVfsGTMbEcy",
+        "created": 1793149291,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1891,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 793,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 71,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

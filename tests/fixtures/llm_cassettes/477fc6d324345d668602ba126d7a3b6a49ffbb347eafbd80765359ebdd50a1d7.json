@@ -1,0 +1,40 @@
+{
+  "key": "477fc6d324345d668602ba126d7a3b6a49ffbb347eafbd80765359ebdd50a1d7",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_4boh5bcB21C7XfIHMtMlePIz",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1378\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"Les deux arguments évaluent la validité d’une proposition selon le statut ou l’appartenance de ceux qui la soutiennent : l’un invoque l’unanimité des experts comme preuve suffisante, l’autre exclut l’avis des non-experts. Le second constitue clairement un appel à l’identité, et l’ensemble ne justifie pas la proposition par son bien-fondé.\",\"move_author\":\"speaker\",\"move_author_label\":\"les auteurs des arguments\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdmMui377xmxp8Ih9t9Nlkirr3lX3",
+        "created": 1793149428,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 945,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 128,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_uLKC8H1mosBectokHqqffplE",
+          "id": "call_bYwZbYRgMhbSwUqz8LoqR8ZE",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"327\",\"matches\":false,\"justification\":\"Le texte ne s'appuie pas sur le dégoût ou l'aversion pour discréditer une proposition ; il relève plutôt de l'appel à l'autorité et du rejet d'un avis selon le statut de son auteur.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"327\",\"matches\":false,\"justification\":\"Le texte ne repose pas sur le dégoût ou l'aversion; il utilise plutôt l'autorité des experts et l'exclusion des non-experts.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Edi96kMGr43NOV6ljNhh2IRP3VZi9",
-        "created": 1793133196,
+        "id": "chatcmpl-EdmMGHv2usyG1poYt1AkJbqQw5iuJ",
+        "created": 1793149388,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1608,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 85,
+          "completion_tokens": 67,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

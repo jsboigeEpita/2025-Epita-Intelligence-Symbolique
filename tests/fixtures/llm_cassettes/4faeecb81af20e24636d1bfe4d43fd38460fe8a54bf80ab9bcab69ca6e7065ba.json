@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_QfpqpqPsWSdrH4SjbgcGa1Mn",
+          "id": "call_nNDsRARPA3fVgJiHWf9K6an6",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"133\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"L'affirmation présente la réussite de la politique économique comme « incontestable » sans fournir d'éléments permettant de tirer une conclusion aussi catégorique : c'est une surinterprétation.\",\"move_author\":\"speaker\",\"move_author_label\":\"Le président\"}"
+          "arguments": "{\"node_pk\":\"133\",\"matches\":true,\"confidence\":\"medium\",\"justification\":\"Le président conclut que la politique économique est un « succès incontestable » sans fournir d’éléments permettant de soutenir une conclusion aussi catégorique ; il s’agit d’une conclusion exagérée par rapport aux informations disponibles.\",\"move_author\":\"speaker\",\"move_author_label\":\"Le président\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Edi8IJ3ILv3ByvBWo9q5JNr2jEUfM",
-        "created": 1793133146,
+        "id": "chatcmpl-EdmLT6gW10hCI4Ux3JmF9f1VlBDZL",
+        "created": 1793149339,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2035,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 85,
+          "completion_tokens": 91,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

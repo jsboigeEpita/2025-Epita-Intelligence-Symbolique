@@ -1,0 +1,48 @@
+{
+  "key": "eb593e364da9e73f91939ce22bb760aa0e0b4d1e5382c20d5be5876f4b1b77f0",
+  "value": {
+    "id": "chatcmpl-EdmJlBs13JGwvmVNrzg7yEuALme3W",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points sont distincts : le premier porte sur la déformation de la position de l’opposition, tandis que le second concerne l’hypothèse sous-jacente à la projection du déficit. Aucune redondance localisée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149233,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 124,
+      "prompt_tokens": 299,
+      "total_tokens": 423,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 54,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

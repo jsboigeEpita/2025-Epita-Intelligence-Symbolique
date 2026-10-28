@@ -1,0 +1,33 @@
+{
+  "key": "2fe2dc6b6eb46d6ddd8b7702fded6ab384fa4c165de9f7b75464fdd7a88092d7",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\n  \"start_marker\": \"Nous avons créé plus d'emplois en deux ans que n'importe quelle administration en quatre.\",\n  \"end_marker\": \"C'est un progrès économique réel.\",\n  \"explanation\": \"L'extrait commence par l'affirmation explicite de la création d'emplois et se termine par l'évaluation positive de ce résultat économique. La phrase sur le faible niveau du chômage est pertinente dans le contexte, mais elle ne porte pas directement sur la création d'emplois.\"\n}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdmRqiZgYmhSdk85PhDrm5BRRupsr",
+        "created": 1793149734,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 234,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 178,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 64,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

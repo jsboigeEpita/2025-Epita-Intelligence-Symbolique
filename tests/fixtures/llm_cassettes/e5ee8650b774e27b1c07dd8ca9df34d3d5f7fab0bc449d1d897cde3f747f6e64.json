@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_Qvyv1zxAPshNESfDSxVl1KZa",
+          "id": "call_r6DZHf7enWayr2VAxy5s7pSc",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"801\",\"matches\":false,\"justification\":\"La phrase rapporte simplement que le président qualifie la politique économique de « succès incontestable ». Elle n’emploie pas de définition complexe ou obscure ; ce n’est donc pas un défaut d’élucidation.\",\"confidence\":\"high\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+          "arguments": "{\"node_pk\":\"801\",\"matches\":false,\"justification\":\"La phrase rapporte une affirmation du président selon laquelle la politique économique est un succès incontestable, mais elle n’emploie pas de définition complexe ou obscurcissante. Le défaut d’élucidation n’est donc pas présent.\",\"confidence\":\"high\",\"move_author\":\"reported\",\"move_author_label\":\"le président\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Edi8PcLWxVQDNnuhMVX6skAY4oCMA",
-        "created": 1793133153,
+        "id": "chatcmpl-EdmLXPyvSwZe3gIfRf6VOYyvIraR6",
+        "created": 1793149343,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 938,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 88,
+          "completion_tokens": 92,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

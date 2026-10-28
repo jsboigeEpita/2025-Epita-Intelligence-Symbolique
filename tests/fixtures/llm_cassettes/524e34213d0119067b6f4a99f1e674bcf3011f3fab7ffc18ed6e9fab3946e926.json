@@ -1,0 +1,48 @@
+{
+  "key": "524e34213d0119067b6f4a99f1e674bcf3011f3fab7ffc18ed6e9fab3946e926",
+  "value": {
+    "id": "chatcmpl-EdmWbZc6RbxWcgaZig39h44rLU6dV",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points sont distincts : le premier porte sur la nécessité et les bénéfices économiques de la transition énergétique ; le second porte sur l’usage sélectif des données par les minimisateurs de la crise climatique. Aucune redondance sémantique notable.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793150029,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 107,
+      "prompt_tokens": 279,
+      "total_tokens": 386,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 33,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

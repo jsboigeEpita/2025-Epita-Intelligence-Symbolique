@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_cwWHZGSW4dzYg3CnZg9mVhDL",
+          "id": "call_rzW6KFkEeKmabnXoijMRX3tn",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"888\",\"confidence\":\"medium\",\"matches\":true,\"justification\":\"Le président présente la politique économique comme un « succès incontestable », formulation catégorique qui peut induire en erreur en occultant toute information ou nuance contraire. Le texte ne fournit toutefois pas assez d’éléments pour établir un mensonge ou une attention sélective plus spécifique.\",\"move_author\":\"speaker\",\"move_author_label\":\"Le président\"}"
+          "arguments": "{\"node_pk\":\"888\",\"confidence\":\"medium\",\"matches\":true,\"justification\":\"L’énoncé présente comme « succès incontestable » une évaluation absolue de la politique économique sans fournir de faits ni mentionner d’éventuelles informations contradictoires. Il s’agit d’une présentation potentiellement trompeuse des faits, mais le texte ne permet pas d’établir qu’il s’agit spécifiquement d’un mensonge ou d’une attention sélective.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Edi8I84YSUmmA5c3moriLzDE4avQc",
-        "created": 1793133146,
+        "id": "chatcmpl-EdmLcIRJxTyd0EFMWFHDiSKEvxJ4D",
+        "created": 1793149348,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1985,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 102,
+          "completion_tokens": 124,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

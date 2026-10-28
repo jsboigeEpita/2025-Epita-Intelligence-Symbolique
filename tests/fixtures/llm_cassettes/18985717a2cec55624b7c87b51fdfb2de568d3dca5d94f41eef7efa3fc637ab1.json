@@ -1,0 +1,48 @@
+{
+  "key": "18985717a2cec55624b7c87b51fdfb2de568d3dca5d94f41eef7efa3fc637ab1",
+  "value": {
+    "id": "chatcmpl-EdmQfLq5ff4CEEA1AJjs4QlG37ABe",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse défend l’option A — organiser un tournoi inter-villes avec buffet et prix pour 2000 euros — afin d’accroître la visibilité du club et de recruter. Deux digressions sont localisées : la remarque méta-discursive sur les trois options et la présentation de l’option B, qui ne contribuent pas directement à défendre l’option A.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149661,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 194,
+      "prompt_tokens": 325,
+      "total_tokens": 519,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 94,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "key": "65f7850290f6d971d204c2b2840355bc92031ca0ca5268e282fb92f87ba8fca4",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_jTiA43JDa5yh6FBa5W66mDvN",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"699\",\"confidence\":\"high\",\"matches\":false,\"justification\":\"Les arguments invoquent une prétendue unanimité des experts et excluent les non-experts, ce qui relève d'un appel à l'autorité et d'un argument ad hominem, pas d'un raisonnement circulaire.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdmMjTGz6edm8MHPnDJQpt0ABG5Qb",
+        "created": 1793149417,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1603,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 505,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 84,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

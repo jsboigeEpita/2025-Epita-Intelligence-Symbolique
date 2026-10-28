@@ -1,0 +1,48 @@
+{
+  "key": "f5ae09e6bc6e16febd81d28e209dfb33ad5712a189ad19945bafd6deac9933b1",
+  "value": {
+    "id": "chatcmpl-EdmUuZA9DSxRr3LBrqfxEyk93wZVK",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Les points 1 et 3 portent tous deux sur le risque d’erreur judiciaire et les condamnations injustes : le point 1 énonce le danger, tandis que le point 3 présente les avancées de l’ADN comme une réduction de ce risque. Le point 2 est distinct, car il traite de l’effet dissuasif de la peine de mort.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149924,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 163,
+      "prompt_tokens": 303,
+      "total_tokens": 466,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 65,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

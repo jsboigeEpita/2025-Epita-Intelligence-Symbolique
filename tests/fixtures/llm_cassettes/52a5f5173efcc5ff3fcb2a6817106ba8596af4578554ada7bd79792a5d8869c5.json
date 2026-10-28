@@ -1,0 +1,40 @@
+{
+  "key": "52a5f5173efcc5ff3fcb2a6817106ba8596af4578554ada7bd79792a5d8869c5",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_O72XuXWakX3CW5FP9kQIYH8h",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1024\",\"matches\":false,\"justification\":\"L'affirmation d'un succès économique incontestable, sans preuve, ne constitue pas en elle-même un biais naturel spécifique identifiable dans cette branche.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdmLaage2dMfDLTW3cRgAhSx4qby6",
+        "created": 1793149346,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1756,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 658,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 65,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

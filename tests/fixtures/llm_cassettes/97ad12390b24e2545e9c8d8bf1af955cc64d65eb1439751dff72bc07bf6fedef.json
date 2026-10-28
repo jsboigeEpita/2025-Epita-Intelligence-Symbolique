@@ -1,0 +1,48 @@
+{
+  "key": "97ad12390b24e2545e9c8d8bf1af955cc64d65eb1439751dff72bc07bf6fedef",
+  "value": {
+    "id": "chatcmpl-EdmQkjibFJR3c8NN4ylarMrEjJbO0",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Chaîne reconstruite : « Les échiquiers actuels sont usés » → « Il faut investir la totalité des 2000 euros dans du matériel pédagogique, notamment des échiquiers neufs, des horloges e… ». Verdict : saut logique net, car l’usure des échiquiers ne suffit pas à établir qu’il faut investir la totalité du budget ni à justifier l’ensemble des achats proposés.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149666,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 143,
+      "prompt_tokens": 282,
+      "total_tokens": 425,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 38,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

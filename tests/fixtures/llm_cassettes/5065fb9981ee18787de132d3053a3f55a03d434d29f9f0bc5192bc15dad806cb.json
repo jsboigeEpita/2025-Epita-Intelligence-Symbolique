@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\"query_ideas\":[\"rue_mouillee\",\"pluie\"]}",
+      "content": "{\"query_ideas\":[\"pluie\",\"rue_mouillee\"]}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdiFB5jHJps0QJEGUGc4fl8qQ6Ork",
-        "created": 1793133573,
+        "id": "chatcmpl-EdmT2HTQPTK3kzM2nJrjaKVwZPGG5",
+        "created": 1793149808,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 469,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 43,
+          "completion_tokens": 18,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 19,
+            "reasoning_tokens": 0,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

@@ -1,14 +1,14 @@
 {
   "key": "3384c81a2a29c4e701fb897071e96d10fa7a1b7a28edf7bdb0d94da283fe5372",
   "value": {
-    "id": "chatcmpl-EdiAUuSjsMMN2mY1EHKWRJJSQxPq2",
+    "id": "chatcmpl-EdmNT16vSP9bkqjB4V8wF5b5oFFsZ",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":0.0,\"exhibit\":\"Les experts sont unanimes → « C'est vrai. » ; verdict : saut logique.\"}",
+          "content": "{\"score\":0.0,\"exhibit\":\"Prémisse : « Les experts sont unanimes. » Conclusion : « C’est vrai. » Verdict : saut logique net, car l’unanimité des experts ne suffit pas à établir la vérité de l’énoncé.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793133282,
+    "created": 1793149463,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,9 +26,9 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 32,
+      "completion_tokens": 60,
       "prompt_tokens": 253,
-      "total_tokens": 285,
+      "total_tokens": 313,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,

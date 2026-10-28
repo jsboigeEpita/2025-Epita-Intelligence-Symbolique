@@ -1,0 +1,48 @@
+{
+  "key": "58528716e84fbe73ba436ca0f5ac14118712e910c5a6cbb5cd20aa35cd858d9c",
+  "value": {
+    "id": "chatcmpl-EdmIzMsC16dcJ0NUrcxcQhU1Jtl8Q",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La projection du ministre des finances — déficit à 2,3 % du PIB d’ici 2030, fondée sur une croissance annuelle de 1,8 % — est clairement identifiée et fait l’objet d’un engagement réel.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149185,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 110,
+      "prompt_tokens": 284,
+      "total_tokens": 394,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 42,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

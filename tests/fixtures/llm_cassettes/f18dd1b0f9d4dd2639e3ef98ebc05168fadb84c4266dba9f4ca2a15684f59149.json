@@ -1,0 +1,33 @@
+{
+  "key": "f18dd1b0f9d4dd2639e3ef98ebc05168fadb84c4266dba9f4ca2a15684f59149",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\n  \"start_marker\": \"La déclaration cruciale sur l'économie verte est enfouie ici.\",\n  \"end_marker\": \"ici.\",\n  \"explanation\": \"L'extrait pertinent est la phrase explicitement consacrée à l'économie verte. Le marqueur de début reprend la phrase complète, tandis que le marqueur de fin correspond à sa terminaison exacte. Aucun intitulé autonome « Le point sur l'économie verte » n'apparaît dans la source.\"\n}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdmRt0fc5Bbm7myf6o8fQQLMASOhl",
+        "created": 1793149737,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 6801,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 6798,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 468,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 363,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

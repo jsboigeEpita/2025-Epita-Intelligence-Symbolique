@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_O8LKOdEcsm1fTHQkqvtCj1W0",
+          "id": "call_HwXbXvEhaCk5dszWU4fjL6Vm",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"846\",\"matches\":false,\"justification\":\"La phrase affirme un succès, mais ne présente pas d'ambiguïté sémantique ou structurelle identifiable. Elle peut relever d'une affirmation non étayée ou d'une autre branche, pas de l'ambiguïté.\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"846\",\"matches\":false,\"justification\":\"La phrase est claire et ne présente pas d'ambiguïté sémantique ou structurelle identifiable.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Edi8I2FyyeAUgig9BVkRWnQQm3AnI",
-        "created": 1793133146,
+        "id": "chatcmpl-EdmLT5wayZvHkew0Kwroa1QY59lGC",
+        "created": 1793149339,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2015,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 83,
+          "completion_tokens": 57,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

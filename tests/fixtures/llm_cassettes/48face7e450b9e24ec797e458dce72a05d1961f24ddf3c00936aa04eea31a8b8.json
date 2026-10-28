@@ -1,0 +1,40 @@
+{
+  "key": "48face7e450b9e24ec797e458dce72a05d1961f24ddf3c00936aa04eea31a8b8",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_xpQ4X56TD8WqLdh3ztP0dFaf",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1243\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"Le président affirme que la politique économique est un « succès incontestable », présentant cette croyance comme indiscutable sans fournir de preuves ni considérer d’éventuelles données contraires. Il s’agit d’un dogmatisme général, sans élément indiquant une sous-catégorie plus spécifique.\",\"move_author\":\"reported\",\"move_author_label\":\"le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdmLZaxeWW6vo7Q6U0Li1HdJdlGjY",
+        "created": 1793149345,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1950,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 852,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 106,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

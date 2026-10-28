@@ -6,8 +6,8 @@
       "content": "{\"formulas\":[\"alice_studies => alice_succeeds\",\"alice_studies\",\"alice_succeeds\"]}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdiFDBsczExLSyWHnPKtPrJOwQDVb",
-        "created": 1793133575,
+        "id": "chatcmpl-EdmT5bO1A7vdZTaQZUweNZHLA4jZ4",
+        "created": 1793149811,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 389,

@@ -1,0 +1,48 @@
+{
+  "key": "f217254f8a22f4ff188aa37d6fbc44d241fc903ed48b9ef766e36fc4a0cfe038",
+  "value": {
+    "id": "chatcmpl-EdmJ2zgHkdWKyPwQ55xNQqTXprcdy",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\":true,\"engagement_verdict\":\"engagement_réel\",\"reasoning\":\"La réfutation conteste directement à la fois la justification du déficit et l’argument selon lequel travailler plus longtemps serait « dans l’ordre des choses », même si l’accusation d’homme de paille sur la suppression des retraites est distincte.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149188,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 183,
+      "prompt_tokens": 429,
+      "total_tokens": 612,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 100,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

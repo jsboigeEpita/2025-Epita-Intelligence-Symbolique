@@ -1,14 +1,14 @@
 {
   "key": "7db535c850adb0f6ad7cfa3435976cb0d0893e4c19b13799eaf4c9f8938ce5af",
   "value": {
-    "id": "chatcmpl-Edi7OSYHBVGF4RhlC3GjH6K6Pq3cZ",
+    "id": "chatcmpl-EdmKVNxf65nBifuMFGvUXFUUsRffU",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[],\"claims\":[{\"text\":\"Le soleil brille.\",\"source_quote\":\"Le soleil brille.\"},{\"text\":\"Il fait beau.\",\"source_quote\":\"Il fait beau.\"}],\"summary\":\"Le texte énonce deux affirmations factuelles sur les conditions météorologiques.\"}",
+          "content": "{\"arguments\":[],\"claims\":[{\"text\":\"The sun is shining.\",\"source_quote\":\"Le soleil brille.\"},{\"text\":\"The weather is fine.\",\"source_quote\":\"Il fait beau.\"}],\"summary\":\"The text states two brief weather-related claims: that the sun is shining and that the weather is fine.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793133090,
+    "created": 1793149279,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 116,
+      "completion_tokens": 97,
       "prompt_tokens": 334,
-      "total_tokens": 450,
+      "total_tokens": 431,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 47,
+        "reasoning_tokens": 22,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

@@ -1,0 +1,40 @@
+{
+  "key": "dfbf344441803e872413435d4e49ef3f1534f39cba2a1763c3a38f6c917b3385",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_kXFYe5lAkcqr7GCiDS0clb6d",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"344\",\"matches\":false,\"justification\":\"Le texte invoque l'unanimité des experts et exclut les avis des non-experts, ce qui peut relever d'un appel à l'autorité ou d'un argument ad hominem circonstanciel, mais il ne discrimine ni ne marginalise personne sur la base d'un handicap. Le capacitisme ne correspond donc pas à cette branche.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EdmMRJlGRQgc8E5sDSqHnSjazAEII",
+        "created": 1793149399,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 919,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 109,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

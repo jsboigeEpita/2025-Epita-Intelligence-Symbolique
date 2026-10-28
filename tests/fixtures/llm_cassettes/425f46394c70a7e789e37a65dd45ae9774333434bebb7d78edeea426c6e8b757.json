@@ -1,0 +1,48 @@
+{
+  "key": "425f46394c70a7e789e37a65dd45ae9774333434bebb7d78edeea426c6e8b757",
+  "value": {
+    "id": "chatcmpl-EdmQkDiHbZckj8zMbcCKVMUs9qA3i",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"L’option C alloue 1000 euros à un tournoi réduit et 1000 euros au matériel pédagogique, ce qui permet de poursuivre à la fois un objectif de visibilité et un objectif de pédagogie.\",\"conclusion\":\"L’option C constitue un compromis équilibré entre visibilité et pédagogie.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149666,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 314,
+      "prompt_tokens": 308,
+      "total_tokens": 622,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 235,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

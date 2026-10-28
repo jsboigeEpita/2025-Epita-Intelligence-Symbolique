@@ -1,0 +1,48 @@
+{
+  "key": "6c487fedbc0b3b9bc089919a5ded347edfc5686655b6f94fefaa571bbae82d3d",
+  "value": {
+    "id": "chatcmpl-EdmIrZ1rxJFawCKwMG5OgFGjypKWL",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse affirme que l’argument du Premier ministre néglige les différences structurelles entre les systèmes de retraite. Aucune digression précise n’est fournie, mais le verdict signale une digression localisée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793149177,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 195,
+      "prompt_tokens": 263,
+      "total_tokens": 458,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 130,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
