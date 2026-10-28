@@ -17,11 +17,16 @@ Produces 1-2 paragraphs of human-readable narrative weaving together
 results from all analysis KBs (fallacies, JTMS, ATMS, Dung, quality,
 counter-arguments). Reads from UnifiedAnalysisState and generates
 prose without LLM calls — purely template-based for reliability.
-Track CC (#636) adds an optional LLM prose layer over the convergent
-synthesis skeleton produced by Track BB (#634).
+
+Track CC's ``narrate_convergence`` LLM prose layer was **retired** (#3266). It
+had no production caller through the mounted path: ``_PLUGIN_REGISTRY`` builds
+this plugin with no argument, so ``_kernel`` was always ``None`` and the layer
+fell back to the template on every call anyway. Its grounded prompt builder
+``_build_prose_prompt`` **stays** — it is the prompt a live path uses,
+``DeepSynthesisAgent._llm_convergence_prose`` (#644), and the two prose
+constants travel with it.
 """
 
-import logging
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from argumentation_analysis.reporting.restitution.native_dung import (
@@ -43,8 +48,6 @@ except ImportError:
         return decorator
 
     SK_AVAILABLE = False
-
-logger = logging.getLogger(__name__)
 
 
 def build_narrative(state: Any) -> str:
@@ -832,23 +835,20 @@ class NarrativeSynthesisPlugin:
 
     .. warning::
         **Template summary (non-LLM) — not the analytical synthesis** (FB-31
-        #1108). The ``narrative_synthesis`` / ``convergent_synthesize``
-        kernel functions are f-string templates; ``narrate_convergence`` has
-        an LLM prose layer but SILENTLY falls back to template output when
-        no kernel is configured or the LLM call fails. That fallback is
-        indistinguishable from LLM output to a downstream reader — treat any
-        narrative from this plugin as a *count-summary*, not the grounded
-        analysis (see ``DeepSynthesisAgent.grounded_transversal_synthesis``
-        and Section 9 ``final_synthesis`` for the fail-loud analytical path).
+        #1108). Both kernel functions are f-string templates, and the LLM prose
+        layer Track CC added (``narrate_convergence``) was retired (#3266):
+        through the mounted path it was unreachable — ``_PLUGIN_REGISTRY``
+        builds this plugin with no kernel, so it always returned the template
+        behind a log line. Treat any narrative from this plugin as a
+        *count-summary*, not the grounded analysis (see
+        ``DeepSynthesisAgent.grounded_transversal_synthesis`` and Section 9
+        ``final_synthesis`` for the fail-loud analytical path).
 
     Produces human-readable analysis summaries by weaving together
-    outputs from all pipeline phases. Pass an SK Kernel instance to
-    enable the LLM prose layer (Track CC #636); without it the plugin
-    falls back to template-based output.
+    outputs from all pipeline phases. Construction takes no argument: the
+    class carries no per-instance state, so the registry and the factory both
+    instantiate it bare.
     """
-
-    def __init__(self, kernel: Optional[Any] = None) -> None:
-        self._kernel = kernel
 
     @kernel_function(
         name="narrative_synthesis",
@@ -890,46 +890,3 @@ class NarrativeSynthesisPlugin:
         ns = type("State", (), state_data)()
         result = build_convergent_synthesis(ns)
         return json.dumps(result, ensure_ascii=False)
-
-    @kernel_function(
-        name="narrate_convergence",
-        description="Generate LLM-grounded analytical prose over convergent "
-        "synthesis results. Each verdict paragraph cites the concordant methods "
-        "by name with specific evidence (fallacy type, quality score, Dung "
-        "semantics, JTMS retraction). Strictly grounded — no hallucinated claims. "
-        "Falls back to template narrative when no LLM kernel is configured or "
-        "when the LLM call fails.",
-    )
-    async def narrate_convergence(self, state_json: str = "{}") -> str:
-        """Generate LLM-polished prose from convergent synthesis evidence.
-
-        Calls build_convergent_synthesis internally, then invokes the kernel's
-        LLM with a strictly grounded prompt. Falls back to the template narrative
-        when no kernel is configured, no convergent verdicts exist, or the LLM
-        call raises an exception.
-        """
-        import json
-
-        try:
-            state_data = json.loads(state_json)
-        except (json.JSONDecodeError, TypeError):
-            state_data = {}
-
-        ns = type("State", (), state_data)()
-        synthesis = build_convergent_synthesis(ns)
-
-        if not synthesis.get("convergent_verdicts") or self._kernel is None:
-            return synthesis["narrative"]
-
-        prompt = _build_prose_prompt(synthesis)
-        try:
-            result = await self._kernel.invoke_prompt(prompt)
-            prose = str(result).strip()
-            if prose:
-                return prose
-            return synthesis["narrative"]
-        except Exception:
-            logger.warning(
-                "narrate_convergence: LLM call failed, falling back to template"
-            )
-            return synthesis["narrative"]
