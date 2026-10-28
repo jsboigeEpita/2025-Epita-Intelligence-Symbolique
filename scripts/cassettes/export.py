@@ -82,9 +82,10 @@ def keys_digest(keys: list[str]) -> str:
 def refresh_manifest(fixtures_dir: Path, *, note: str) -> bool:
     """Re-bind an existing manifest to the dir's current cassette set (#2323).
 
-    The one legitimate writer besides a record job is the surgical SK-path
-    refresh (``record_sk_cassette.py`` — the record job cannot record the SK
-    path: pytest mocks it, #1603 constat A). Such a patch changes the cassette
+    The one legitimate writer besides a record job is a surgical cassette-set
+    change (today: the rekey pass in ``rekey_settings_class.py``; historically
+    the SK-path refresh script retired with ``narrate_convergence`` in #3266).
+    Such a patch changes the cassette
     set, which would leave the manifest's count/digest stale and the import
     gate red. This function re-computes them over the dir AS IT NOW STANDS and
     declares the patch in ``sk_patches`` (with the patching env's signature —

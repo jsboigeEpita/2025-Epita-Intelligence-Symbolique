@@ -135,8 +135,10 @@ class TestImportGate:
 
 
 class TestRefreshManifest:
-    """The surgical SK-patch path (#2323): record_sk_cassette.py changes the
-    cassette set, so the manifest must re-bind in the same transaction."""
+    """The surgical patch path (#2323): a writer outside the record job (the
+    rekey pass; historically the SK-path refresh script retired in #3266)
+    changes the cassette set, so the manifest must re-bind in the same
+    transaction."""
 
     def test_refresh_rebinds_after_a_patch(self, fixtures_dir: Path) -> None:
         _write_manifest(fixtures_dir)

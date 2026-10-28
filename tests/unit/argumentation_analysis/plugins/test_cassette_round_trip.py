@@ -1,7 +1,7 @@
 """Cassette probes for the LLM replay loop (#1603), split by failure regime (#1950).
 
-This module carries **two properties that must not share a test**, because a
-red on one calls for the opposite action of a red on the other:
+This module carries the property that must be **green under every contract
+change**, plus the shape invariants on what is committed:
 
 - **A — do the export/import scripts round-trip losslessly?**
   ``TestExportImportScriptsRoundTrip``. Must ALWAYS be green. It builds its
@@ -9,30 +9,27 @@ red on one calls for the opposite action of a red on the other:
   prompt, no quality contract, and not even on which cassettes are
   committed. A red here means the scripts are broken — fix the scripts.
 
-- **B — are the committed cassettes still fresh w.r.t. the production
-  prompt?** ``TestCommittedCassettesStillReplay``. This is a **drift
-  detector**, and it is *meant* to redden when a contract changes. A red
-  here means: RE-RECORD the cassette. It does NOT mean the code is wrong.
+- **Shape invariants** on the committed fixture dir,
+  ``TestCommittedCassettesAreWellFormed``. Also contract-independent.
 
-Fusing them (the pre-#1950 shape) made B block any PR that legitimately
-improved a contract: #1942/#1946 changed the quality wording, that wording
-descends into the ``narrate_convergence`` prompt, the prompt is hashed into
-the cache key, so the cassette recorded against the old contract could no
-longer replay — and three PRs were held on a test that was telling the truth
-about the wrong thing.
+Property B — "are the committed cassettes still fresh w.r.t. the production
+prompt?" — **was retired with its subject** (#3266). It drove
+``narrate_convergence`` and read the ``hit`` counter, because that function
+caught every exception around ``invoke_prompt`` and fell back to the template:
+on a cache miss the call still *succeeded* and returned a non-empty string, so
+only ``hit`` could see the drift. With that function gone there is no single
+prompt left to drive, and the detector has no mechanism.
 
-How B actually detects drift. ``narrate_convergence`` catches every exception
-around ``invoke_prompt`` and falls back to the template narrative (see
-``narrative_synthesis_plugin.py``), so on a cache miss the call still
-*succeeds* and returns a non-empty string; and ``live`` stays 0 because replay
-mode raises instead of calling out. The only signal that survives that
-fallback is the ``hit`` counter — assertions on the result, or on ``live``
-alone, cannot see the drift.
+What still guards replay is not a test but the band itself: the replay job
+runs the SK-path and raw-path cassettes through ``replay_stats_plugin`` and
+fails on ``live != 0`` and on a miss, so a drifted key reddens the record lane
+with its own ``hit``/``miss_replay`` attribution. That is a weaker statement
+than B's — B named the exact prompt — and it is the honest one after the
+retirement.
 """
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import json
 import subprocess
@@ -45,47 +42,14 @@ REPO = Path(__file__).resolve().parents[4]  # tests/unit/.../test_*.py -> repo r
 SCRIPTS = REPO / "scripts" / "cassettes"
 FIXTURES_DIR = REPO / "tests" / "fixtures" / "llm_cassettes"
 
-RECORD_SCRIPT = "python scripts/cassettes/record_sk_cassette.py"
-
 # The provenance manifest (#2323) is NOT a cassette: it shares the fixtures dir
 # but holds run/env metadata, not {"key", "value"}. Every cassette-shaped glob
 # must exclude it (same exclusion as import.py's _fixture_keys).
 MANIFEST_NAME = "MANIFEST.json"
 
 
-def _cassette_stems(*, value_is: str | None = None) -> list[str]:
-    """Return cassette file stems (sha256 keys), sorted by stem.
-
-    ``value_is="list"`` filters to SK-path cassettes (role/content lists — the
-    shape ``_deserialize_response`` expects); ``value_is="dict"`` filters to
-    raw-path cassettes (``ChatCompletion.model_dump()`` dicts). The fixture dir
-    mixes both shapes since the pipeline lane records raw-path values (#1603).
-
-    Sorted by **stem**, deliberately not by mtime (#1950 defect 2). On a fresh
-    ``git clone`` every file gets essentially the same mtime, so mtime order is
-    arbitrary; the pre-#1950 code took ``[0]`` of that order and stayed
-    deterministic only by the accident of there being exactly one list-shaped
-    cassette. No caller selects an element any more — B loads them all — but a
-    stable order keeps failure output reproducible.
-    """
-    stems = [p.stem for p in FIXTURES_DIR.glob("*.json") if p.name != MANIFEST_NAME]
-    if value_is is not None:
-        want = list if value_is == "list" else dict
-        stems = [
-            s
-            for s in stems
-            if isinstance(
-                json.loads((FIXTURES_DIR / f"{s}.json").read_text(encoding="utf-8"))[
-                    "value"
-                ],
-                want,
-            )
-        ]
-    return sorted(stems)
-
-
 class TestCommittedCassettesAreWellFormed:
-    """Shape invariants on what is committed. Independent of A and B."""
+    """Shape invariants on what is committed. Independent of A."""
 
     def test_at_least_one_cassette_is_committed(self):
         """The fixture directory has at least one cassette.
@@ -239,129 +203,3 @@ class TestExportImportScriptsRoundTrip:
             "scripts are not lossless; check for pydantic / JSON normalization "
             "drift."
         )
-
-
-class TestCommittedCassettesStillReplay:
-    """Property B — drift detector between committed cassettes and the prompt.
-
-    A red here is NOT a code defect. It means the production prompt moved and
-    the committed cassette no longer matches it. The expected action is to
-    re-record. Do not answer it with ``xfail(strict=True)`` (which swallows any
-    outcome) or a skip (worse than a red — it goes invisible).
-    """
-
-    def test_replay_path_uses_cache(self, monkeypatch, tmp_path: Path):
-        """Given the committed SK-path cassettes, replay yields hit>=1, live=0."""
-        # The SK-service path deserializes LIST values (role/content). A
-        # raw-path DICT cassette would iterate its keys and crash — so only
-        # list-shaped cassettes are loaded here (#1603).
-        stems = _cassette_stems(value_is="list")
-        if not stems:
-            pytest.skip("no SK-path (list-valued) cassette committed")
-
-        # Load them ALL. There is no "pick one" step left to be non-deterministic
-        # about (#1950 defect 2): committing a second list-shaped cassette can no
-        # longer change which one is exercised, because every one is present.
-        replay_db = tmp_path / "replay_db"
-        replay_db.mkdir()
-        _populate_db(replay_db, stems)
-
-        # #2411: the service constructor needs *a* key; this test owns its own
-        # rather than reading the suite host's. No call can leave: replay mode
-        # raises on a miss and the httpx spy catches any outbound request.
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-2411-cassette")
-        monkeypatch.setenv("LLM_CACHE_MODE", "replay")
-        monkeypatch.setenv("LLM_CACHE_DIR", str(replay_db))
-
-        # CACHE_DIR is computed at llm_cache import time and used as the fallback
-        # by CachedChatCompletion.__init__ — it does NOT re-read the env var.
-        # When llm_cache was first imported during an earlier test (no env var
-        # set), CACHE_DIR is frozen to the default and a later monkeypatch.setenv
-        # has no effect on the wrap's cache_dir. Patch the module attribute too
-        # so the wrap opens the populated replay_db, not an empty default.
-        import argumentation_analysis.services.llm_cache as llm_cache_mod
-
-        monkeypatch.setattr(llm_cache_mod, "CACHE_DIR", replay_db)
-        llm_cache_mod.reset_raw_cache()
-
-        assert llm_cache_mod.get_cache_mode() == "replay"
-        llm_cache_mod.reset_cache_stats()
-
-        # Spy on httpx so any outbound call would raise.
-        import httpx
-
-        real_send = httpx.AsyncClient.send
-
-        async def anti_theatre(self, request, *a, **kw):
-            if "openrouter" in str(request.url) or "openai.com" in str(request.url):
-                raise RuntimeError(
-                    f"OUTBOUND CALL DETECTED in replay mode to {request.url}"
-                )
-            return await real_send(self, request, *a, **kw)
-
-        httpx.AsyncClient.send = anti_theatre
-        try:
-            from semantic_kernel import Kernel
-            from argumentation_analysis.core.llm_service import create_llm_service
-            from argumentation_analysis.plugins.narrative_synthesis_plugin import (
-                NarrativeSynthesisPlugin,
-            )
-            from tests.unit.argumentation_analysis.plugins.test_narrate_convergence import (
-                _convergent_state_json,
-            )
-
-            kernel = Kernel()
-            # force_authentic=True: bypass the test-env mock so we exercise the
-            # real CachedChatCompletion wrap (the cassette is the layer under
-            # test, not the LLM provider).
-            svc = create_llm_service("narration_test_replay_unit", force_authentic=True)
-            assert (
-                getattr(svc, "mode", None) == "replay"
-            ), "service was not wrapped in replay mode — cache wiring failed"
-            kernel.add_service(svc)
-            plugin = NarrativeSynthesisPlugin(kernel=kernel)
-
-            result = asyncio.run(
-                plugin.narrate_convergence(state_json=_convergent_state_json())
-            )
-        finally:
-            httpx.AsyncClient.send = real_send
-
-        stats = llm_cache_mod.get_cache_stats()
-
-        # anti-#1019: `live` must be 0 in replay.
-        assert stats["live"] == 0, (
-            f"replay triggered a live API call (live={stats['live']}); "
-            "either the cache miss wasn't a hit or the cache.get returned None"
-        )
-
-        # The drift signal. `result` is NOT a witness here: narrate_convergence
-        # catches the replay miss and returns the template narrative, so it
-        # stays non-empty under full drift. Only `hit` sees it.
-        assert stats["hit"] >= 1, (
-            f"DRIFT, not a code defect: none of the {len(stems)} committed "
-            "SK-path cassette(s) matched the current production prompt "
-            f"(hit={stats['hit']}, miss_replay={stats['miss_replay']}).\n"
-            "The narration prompt embeds the quality wording, so any deliberate "
-            "contract change moves the cache key.\n"
-            f"Expected action: RE-RECORD with `{RECORD_SCRIPT}`, then commit the "
-            "new <sha256>.json (see tests/fixtures/llm_cassettes/README.md).\n"
-            "Do NOT patch production to match a stale cassette, and do NOT "
-            "answer this with xfail/skip."
-        )
-        assert result, "replay returned an empty string — cache value is broken"
-
-
-def _populate_db(db_dir: Path, keys: list[str]) -> None:
-    """Materialize the named cassettes into a fresh diskcache DB."""
-    import diskcache  # type: ignore[import-not-found]
-
-    cache = diskcache.Cache(str(db_dir))
-    try:
-        for key in keys:
-            cassette = json.loads(
-                (FIXTURES_DIR / f"{key}.json").read_text(encoding="utf-8")
-            )
-            cache.set(cassette["key"], cassette["value"])
-    finally:
-        cache.close()

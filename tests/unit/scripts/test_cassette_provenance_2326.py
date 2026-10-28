@@ -386,34 +386,9 @@ class TestStructuralGateUnchanged:
         rc = cassette_import.main([str(harvest_dir), str(tmp_path / "db")])
         assert rc == 0
 
-
-class TestRecordSkAppendMode:
-    """#2326 root repair, script half: the record job needs the SK-path
-    cassette to land in the DB the pytest record run already filled."""
-
-    def test_append_preserves_the_existing_db(self, tmp_path: Path) -> None:
-        from scripts.cassettes.record_sk_cassette import _prepare_cache_dir
-
-        cache = tmp_path / "shared_db"
-        cache.mkdir()
-        sentinel = cache / "pytest_recorded.json"
-        sentinel.write_text("{}", encoding="utf-8")
-        _prepare_cache_dir(cache, append=True)
-        assert sentinel.exists()
-
-    def test_default_wipes_the_scratch_db(self, tmp_path: Path) -> None:
-        from scripts.cassettes.record_sk_cassette import _prepare_cache_dir
-
-        cache = tmp_path / "scratch"
-        cache.mkdir()
-        stale = cache / "stale.json"
-        stale.write_text("{}", encoding="utf-8")
-        _prepare_cache_dir(cache, append=False)
-        assert not stale.exists()
-
-    def test_append_creates_a_missing_dir(self, tmp_path: Path) -> None:
-        from scripts.cassettes.record_sk_cassette import _prepare_cache_dir
-
-        cache = tmp_path / "fresh"
-        _prepare_cache_dir(cache, append=True)
-        assert cache.is_dir()
+# The script half of the #2326 root repair (``TestRecordSkAppendMode`` over
+# ``record_sk_cassette._prepare_cache_dir``) was retired with its subject in
+# #3266: the script recorded the sole SK-path cassette of the retired
+# ``narrate_convergence``, and both the script and its workflow step are gone
+# with it. The workflow half (one shared DB, one export, one manifest) is
+# unchanged — the pytest record run fills the DB on its own.
