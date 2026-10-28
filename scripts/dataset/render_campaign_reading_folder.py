@@ -299,6 +299,11 @@ def doc_facts(
         ),
         "reading_window_status": st.get("reading_window_status"),
         "restitution_acts_degraded": st.get("restitution_acts_degraded"),
+        # The terminal classification lives at the signature's root and is
+        # written ONLY for the non-argumentative case (#1909 slice 2) — its
+        # absence is data, not a hole, and keys the honest render below.
+        "classification": sig.get("document_classification"),
+        "outcome": sig.get("outcome") or {},
     }
 
 
@@ -372,16 +377,41 @@ def render_fiche(
     lines.append("")
     lines.append("## Le pipeline, en texte intégral")
     lines.append("")
-    for heading, text in acts:
-        lines.append(f"### {heading}")
+    if facts.get("classification") == "non_argumentative":
+        # #3278 — the empty acts of a non-argumentative document are a
+        # terminal classification, not an absence: the reader of the one
+        # document with no analysis is the one who most needs to know why.
+        # The phrase is the batch runner's own (one source, two callers —
+        # a second wording here is the divergence #3123 caught), imported
+        # lazily so the offline producer stays import-light.
+        from scripts.dataset.run_corpus_batch import (
+            render_non_argumentative_restitution,
+        )
+
+        lines.append(
+            "**Classification terminale : document non-argumentatif.** "
+            "Aucun acte n'est produit pour ce document, et c'est le "
+            "comportement attendu — même phrase que le batch runner :"
+        )
         lines.append("")
-        if isinstance(text, str) and text:
-            lines.append(text)
-        else:
-            lines.append(
-                f"*(absent de l'état — {heading.lower()} non produit pour ce document)*"
+        lines.append(
+            "> "
+            + render_non_argumentative_restitution(
+                facts["opaque_id"], facts.get("outcome") or {}
             )
+        )
         lines.append("")
+    else:
+        for heading, text in acts:
+            lines.append(f"### {heading}")
+            lines.append("")
+            if isinstance(text, str) and text:
+                lines.append(text)
+            else:
+                lines.append(
+                    f"*(absent de l'état — {heading.lower()} non produit pour ce document)*"
+                )
+            lines.append("")
     question = st.get("interpretive_question")
     if isinstance(question, str) and question:
         lines.append("### Question interprétative")
