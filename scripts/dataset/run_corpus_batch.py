@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import faulthandler
 import json
 import logging
 import os
@@ -928,6 +929,14 @@ async def _run_single(
     if checkpoint_mgr is not None and not partial:
         checkpoint_mgr.remove(opaque_id_str)
 
+    # #2080 — armed at the coroutine's tail: the window between this return
+    # and the caller's next loop iteration is asyncio.run's teardown
+    # (asyncgens, then the unbounded executor join) — where the exit-hang
+    # lives. Arming any earlier would spend the threshold on analysis
+    # wall-time (~770 s on a healthy document). The caller's finally
+    # disarms the moment asyncio.run comes back.
+    _arm_teardown_watchdog(opaque_id_str)
+
     return signature
 
 
@@ -940,6 +949,44 @@ def _merge_snapshots(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str
         else:
             merged[key] = val
     return merged
+
+
+# ---------------------------------------------------------------------------
+# #2080 — asyncio.run() teardown watchdog
+#
+# A real campaign froze after a document was fully persisted: the coroutine
+# had returned (signature written), but asyncio.run's shutdown never came
+# back — shutdown_default_executor joins the default-executor workers with
+# no timeout, and one worker was stuck in a native call (R1090 named one
+# culprit, an unbounded JVM enumeration, bounded at its source since #3050;
+# this instrument is how any OTHER culprit names itself on the next real
+# occurrence). Pure observation: exit=False — nothing is killed, no timeout
+# masks the hang; repeat=False — one dump carries the culprit's frame, not
+# one dump per interval. 60 s sits under the 90 s kill-after-silence a
+# per-document supervisor uses, so the dump lands before any external kill.
+# ---------------------------------------------------------------------------
+
+_TEARDOWN_WATCHDOG_S = 60.0
+
+
+def _arm_teardown_watchdog(
+    opaque_id: str,
+    seconds: float = _TEARDOWN_WATCHDOG_S,
+    file: Optional[Any] = None,
+) -> None:
+    """Arm the one-shot #2080 teardown dump (observation only, exit=False)."""
+    faulthandler.dump_traceback_later(
+        seconds, repeat=False, exit=False, file=file if file is not None else sys.stderr
+    )
+    logger.info(
+        "[%s] teardown watchdog armed (%.0fs, pid=%d): silence followed by a "
+        "faulthandler dump below means the asyncio.run teardown hung — native "
+        "frames while it spins: py-spy dump --native --pid %d",
+        opaque_id,
+        seconds,
+        os.getpid(),
+        os.getpid(),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1110,21 +1157,32 @@ def main(argv: Optional[List[str]] = None) -> int:
     signatures: List[Dict[str, Any]] = []
     for i, doc in enumerate(docs, 1):
         logger.info("[%d/%d] Processing %s", i, len(docs), doc["opaque_id"])
-        sig = asyncio.run(
-            _run_single(
-                text=doc["full_text"],
-                source_name=doc["source_name"],
-                opaque_id_str=doc["opaque_id"],
-                workflow=args.workflow,
-                metadata=doc["metadata"],
-                state_dumps_dir=state_dumps_dir,
-                signatures_dir=args.output_dir,
-                skip_existing=args.skip_existing,
-                timeout=args.timeout,
-                checkpoint_mgr=checkpoint_mgr,
-                provenance=batch_provenance,
+        # #2080 — _run_single arms the teardown watchdog at its tail; this
+        # finally is the disarm. It runs on the healthy return (teardown took
+        # milliseconds — cancel before the one-shot can fire) and on a
+        # raising teardown (a stale one-shot would fire during the NEXT
+        # document's analysis and report a hang where there is none). When
+        # the teardown HANGS, neither branch runs: the one-shot fires into
+        # the log and names the stuck worker — exactly the datum #2080
+        # wants, with nothing killed and nothing masked.
+        try:
+            sig = asyncio.run(
+                _run_single(
+                    text=doc["full_text"],
+                    source_name=doc["source_name"],
+                    opaque_id_str=doc["opaque_id"],
+                    workflow=args.workflow,
+                    metadata=doc["metadata"],
+                    state_dumps_dir=state_dumps_dir,
+                    signatures_dir=args.output_dir,
+                    skip_existing=args.skip_existing,
+                    timeout=args.timeout,
+                    checkpoint_mgr=checkpoint_mgr,
+                    provenance=batch_provenance,
+                )
             )
-        )
+        finally:
+            faulthandler.cancel_dump_traceback_later()
         if sig is not None:
             signatures.append(sig)
             outcome = sig.get("outcome")
