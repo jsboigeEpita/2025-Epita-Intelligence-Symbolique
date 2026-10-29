@@ -107,6 +107,34 @@ _FORMAL_CONSISTENCY_MARKERS = re.compile(
 
 _NEGATION = re.compile(r"\b(ne|n['’]|pas|jamais|sans|aucun\w*)\b", re.IGNORECASE)
 
+#: #3287 — the English denials, kept SEPARATE from ``_NEGATION`` on purpose.
+#: The French tokens are read through the 32-character window of
+#: :func:`_is_negated`; English ones are read only when they are adjacent to
+#: the marker they deny. The reason is the measured false positive: the R1124
+#: render wrote "this breadth reflects sparse attack coverage, not a robust
+#: discourse", which the French-only pattern could not see, and the obvious
+#: repair (add ``not`` to the pattern above) would silence a genuinely
+#: affirmative clause as soon as another clause carried a negation inside its
+#: 32 characters. ``not only`` / ``not merely`` assert what follows, so they
+#: deny nothing where they sit.
+_EN_NEGATION = re.compile(
+    r"(?:\bnot\b(?!\s+(?:only|merely|just|simply)\b)|\bnever\b|n['’]t|"
+    r"\bno\s+longer\b|\bhardly\b|\bbarely\b|\bfar\s+from\b|\brather\s+than\b|"
+    r"\binstead\s+of\b|\banything\s+but\b)",
+    re.IGNORECASE,
+)
+
+#: What may separate an English denial from the marker it denies: a few words
+#: of the same noun phrase ("not a", "does not establish a"), never a
+#: punctuation mark. A clause break ends the denial's scope.
+_EN_NEGATION_TAIL = re.compile(r"[^.;:,!?]{0,28}")
+
+#: A coordination inside the gap joins two claims: "not sparse but a robust
+#: discourse" asserts the robustness, so the ``not`` must not license it.
+_EN_CONJUNCTION = re.compile(
+    r"\b(?:and|but|yet|or|nor|while|whereas|although|though)\b", re.IGNORECASE
+)
+
 #: #3150 — a containment word. « la contradiction reste confinée » is a claim
 #: about a contradiction's EXTENT, and it is only licensed for a contradiction
 #: the state actually reasoned over.
@@ -913,15 +941,37 @@ def _sentences(text: str) -> List[str]:
     return [s.strip() for s in _SENTENCE_SPLIT.split(text or "") if s.strip()]
 
 
+def _english_negates(window: str) -> bool:
+    """True when an English denial sits ADJACENT to the end of ``window``.
+
+    Adjacency, not the window, is what bounds the English scope (#3287): the
+    nearest denial must reach the marker through the same noun phrase — no
+    punctuation, no coordination — so another clause's ``not`` cannot license
+    a claim this one asserts.
+    """
+    last = None
+    for match in _EN_NEGATION.finditer(window):
+        last = match
+    if last is None:
+        return False
+    tail = window[last.end() :]
+    if _EN_CONJUNCTION.search(tail):
+        return False
+    return bool(_EN_NEGATION_TAIL.fullmatch(tail))
+
+
 def _is_negated(sentence: str, start: int) -> bool:
     """True when a negation sits just before ``start`` ("n'est pas robuste").
 
     A 32-character window keeps the test cheap and local: a negation further
     away belongs to another clause, and treating it as one would silence real
-    claims that follow a negative aside.
+    claims that follow a negative aside. English denials are the exception
+    (#3287): they are read only when adjacent to the marker, because the same
+    window carries them across clauses far more easily than French syntax does
+    — see :func:`_english_negates`.
     """
     window = sentence[max(0, start - 32) : start]
-    return bool(_NEGATION.search(window))
+    return bool(_NEGATION.search(window)) or _english_negates(window)
 
 
 def _dung_measurements(state: Any) -> List[Dict[str, Any]]:
