@@ -45,9 +45,14 @@ name: requires_api band (scheduled real-LLM lane)
 # variants pass on real 200s (they had been passing on swallowed 404s) and
 # replay here now; the 3 INFORMAL_FALLACY variants fail on a return-shape
 # contract, not on their analysis (#3280: the agent returns the raw SK
-# FunctionResult where the family's dict is expected), so they stay
-# deselected with #3280 as owner (19 flags unchanged -- a swap of one
-# family for the other; 19 -> 16 once #3280 is repaired).
+# FunctionResult where the family's dict is expected), so they stayed
+# deselected with #3280 as owner -- until #3282 landed the per-agent
+# return contract (decision (b) on a measured caller census: the test
+# asserts each agent's documented shape, the INFORMAL legs assert the
+# completion prose unrolled exactly as the production adapter does).
+# The repair record dispatched on this branch re-measures them live;
+# on green their 3 flags leave the list and their cassettes land
+# (19 -> 16).
 # tests/unit/test_band_argv_matches_gate_1867.py holds both equalities, so
 # the gate's argv can no longer move alone.
 #
@@ -438,10 +443,10 @@ jobs:
           LLM_CACHE_DIR: .cache/llm_replay_band
           REPLAY_GATE: '1'
           REPLAY_STATS_OUT: replay_stats.json
-        # The 19 deselect flags below (occurrence-counted: 13 carried by the
-        # #2829 admission, 6 added by the #2932 admission; the #3273 record
-        # then swapped 3 SHERLOCK_JTMS out for 3 INFORMAL_FALLACY in, owner
-        # #3280 -- see the paragraphs at the end) cover the
+        # The 16 deselect flags below (occurrence-counted: 13 carried by the
+        # #2829 admission, 6 added by the #2932 admission, then the #3280
+        # repair record removed the 3 INFORMAL_FALLACY flags of the #3273
+        # admission -- see the paragraphs at the end) cover the
         # non-light tests the cache cannot
         # serve (measured 2026-09-28 by --collect-only on this argv: 80
         # requires_api, 9 llm_light, 42 left), each with a MEASURED reason
@@ -515,20 +520,23 @@ jobs:
         #     measured 9/9 SHERLOCK calls 404 model_not_found on it — they
         #     "passed" by swallowing the error), and record 40668986102
         #     measured them passing on real 200s, so their cassettes exist;
-        #   - the 3 INFORMAL_FALLACY variants of the same file are deselected
-        #     for a DIFFERENT, measured reason and are owned by #3280: the
-        #     same record got 200s and correct analyses from them and then
-        #     failed on `assert "summary" in result` — the agent returns the
-        #     raw SK FunctionResult, while SherlockJTMSAgent returns the dict
-        #     the test asserts. That assertion never ran before; it sat
-        #     behind the xfail #3273 removed. Deselecting it here is NOT the
-        #     repair: #3280 carries the census and the two candidate
-        #     contracts, and the record that admits these 3 removes these
-        #     flags (19 -> 16).
+        #   - the 3 INFORMAL_FALLACY variants of the same file LEFT this
+        #     list with the #3280 repair: they had been deselected because
+        #     record 40668986102 got 200s and correct analyses from them and
+        #     then failed on `assert "summary" in result` — the agent returns
+        #     the raw SK FunctionResult, while SherlockJTMSAgent returns the
+        #     dict the test asserted. #3282 resolved it as decision (b) on a
+        #     measured caller census: each agent's documented return contract
+        #     is asserted per agent (the INFORMAL legs assert the completion
+        #     prose, unrolled exactly as the production adapter does), so the
+        #     legs are recordable as-is. The record dispatched on this branch
+        #     admits them; on green their cassettes land and the replay band
+        #     replays them from here (preflight: 53 collected, the 3 legs
+        #     among them).
         run: |
           $marker = "requires_api and not llm_light"
           Write-Host "Band marker: $marker"
-          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ tests/integration/triage/ tests/integration/argumentation_analysis/ tests/agents/ tests/test_fact_checking_integration.py tests/test_integration_success_validation.py tests/test_orchestration_integration.py tests/test_readme_quickstart.py tests/test_regression_golden.py tests/integration/jpype_tweety/ tests/integration/logical_agents/ tests/soutenance/ tests/integration/test_1796_adf_eaf_decide.py tests/integration/test_authenticite_finale_gpt4o.py tests/integration/test_cluedo_extended_workflow_recovered1.py tests/integration/test_fol_pipeline_integration.py tests/integration/test_invoke_modal_logic_reaches_solver.py tests/integration/test_logic_agents_integration.py tests/integration/test_mace4_real.py tests/integration/test_orchestration_finale_integration.py tests/integration/test_sherlock_watson_demo_integration.py tests/integration/test_test_runner_integration.py tests/integration/test_unified_investigation.py tests/integration/test_unified_system_integration.py -m "$marker" --deselect "tests/test_regression_golden.py::TestGoldenStandardWorkflow" --deselect "tests/unit/argumentation_analysis/orchestration/test_regression_golden.py::TestGoldenIntegration::test_run_unified_analysis_standard_thresholds" --deselect "tests/unit/argumentation_analysis/test_value_gates.py::TestFOLValueGate::test_fol_consistent_is_bool_when_tweety_available" --deselect "tests/integration/orchestration/test_replay_cache_sk_path.py" --deselect "tests/unit/argumentation_analysis/evaluation/test_fallacy_benchmark.py::TestModeRunners::test_mode_c_constrained" --deselect "tests/unit/argumentation_analysis/evaluation/test_judge_advanced.py::TestEvaluateMethod::test_evaluate_with_api" --deselect "tests/config/test_config_real_gpt.py" --deselect "tests/integration/api/test_deliberation_genuine_verdict.py::TestDeliberationGenuineVerdictViaAPI::test_deliberation_decides_governance_firsthand_via_http" --deselect "tests/unit/argumentation_analysis/orchestration/test_fact_extraction_opposing_poles_1745.py::TestInventoryCarriesBothPoles::test_inventory_carries_both_poles_of_explicit_opposition" --deselect "tests/unit/argumentation_analysis/workflows/test_democratech.py::TestDemocratechE2EGenuineFirsthand::test_governance_decides_firsthand_on_multi_option_proposition" --deselect "tests/scripts/test_proof_bo2b_dashboard_1493.py::test_proof_script_cli_real_llm_path" --deselect "tests/integration/orchestration/test_replay_cache_determinism.py::TestReplayCacheDeterminism::test_record_then_replay_yields_identical_governance_verdict" --deselect "tests/integration/orchestration/test_replay_cache_profiling_batch.py::TestReplayCacheProfilingBatch::test_batch_record_then_replay_zero_live_and_profiled" --deselect "tests/integration/triage/test_cluedo_orchestration_integration.py::TestCluedoOrchestrationRealIntegration::test_real_sherlock_case_description" --deselect "tests/integration/triage/test_cluedo_orchestration_integration.py::TestCluedoOrchestrationRealIntegration::test_real_watson_analysis" --deselect "tests/integration/triage/test_sherlock_watson_moriarty_real_gpt.py::test_sherlock_watson_moriarty_real_gpt_in_subprocess" --deselect "tests/integration/triage/test_agent_family.py::test_agent_performance[TC001_Ad_Hominem-AgentType.INFORMAL_FALLACY]" --deselect "tests/integration/triage/test_agent_family.py::test_agent_performance[TC002_Straw_Man-AgentType.INFORMAL_FALLACY]" --deselect "tests/integration/triage/test_agent_family.py::test_agent_performance[TC003_No_Fallacy-AgentType.INFORMAL_FALLACY]" -p scripts.cassettes.replay_stats_plugin --junitxml=pytest_report_replay.xml -v --timeout=900 --timeout-method=thread
+          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ tests/integration/triage/ tests/integration/argumentation_analysis/ tests/agents/ tests/test_fact_checking_integration.py tests/test_integration_success_validation.py tests/test_orchestration_integration.py tests/test_readme_quickstart.py tests/test_regression_golden.py tests/integration/jpype_tweety/ tests/integration/logical_agents/ tests/soutenance/ tests/integration/test_1796_adf_eaf_decide.py tests/integration/test_authenticite_finale_gpt4o.py tests/integration/test_cluedo_extended_workflow_recovered1.py tests/integration/test_fol_pipeline_integration.py tests/integration/test_invoke_modal_logic_reaches_solver.py tests/integration/test_logic_agents_integration.py tests/integration/test_mace4_real.py tests/integration/test_orchestration_finale_integration.py tests/integration/test_sherlock_watson_demo_integration.py tests/integration/test_test_runner_integration.py tests/integration/test_unified_investigation.py tests/integration/test_unified_system_integration.py -m "$marker" --deselect "tests/test_regression_golden.py::TestGoldenStandardWorkflow" --deselect "tests/unit/argumentation_analysis/orchestration/test_regression_golden.py::TestGoldenIntegration::test_run_unified_analysis_standard_thresholds" --deselect "tests/unit/argumentation_analysis/test_value_gates.py::TestFOLValueGate::test_fol_consistent_is_bool_when_tweety_available" --deselect "tests/integration/orchestration/test_replay_cache_sk_path.py" --deselect "tests/unit/argumentation_analysis/evaluation/test_fallacy_benchmark.py::TestModeRunners::test_mode_c_constrained" --deselect "tests/unit/argumentation_analysis/evaluation/test_judge_advanced.py::TestEvaluateMethod::test_evaluate_with_api" --deselect "tests/config/test_config_real_gpt.py" --deselect "tests/integration/api/test_deliberation_genuine_verdict.py::TestDeliberationGenuineVerdictViaAPI::test_deliberation_decides_governance_firsthand_via_http" --deselect "tests/unit/argumentation_analysis/orchestration/test_fact_extraction_opposing_poles_1745.py::TestInventoryCarriesBothPoles::test_inventory_carries_both_poles_of_explicit_opposition" --deselect "tests/unit/argumentation_analysis/workflows/test_democratech.py::TestDemocratechE2EGenuineFirsthand::test_governance_decides_firsthand_on_multi_option_proposition" --deselect "tests/scripts/test_proof_bo2b_dashboard_1493.py::test_proof_script_cli_real_llm_path" --deselect "tests/integration/orchestration/test_replay_cache_determinism.py::TestReplayCacheDeterminism::test_record_then_replay_yields_identical_governance_verdict" --deselect "tests/integration/orchestration/test_replay_cache_profiling_batch.py::TestReplayCacheProfilingBatch::test_batch_record_then_replay_zero_live_and_profiled" --deselect "tests/integration/triage/test_cluedo_orchestration_integration.py::TestCluedoOrchestrationRealIntegration::test_real_sherlock_case_description" --deselect "tests/integration/triage/test_cluedo_orchestration_integration.py::TestCluedoOrchestrationRealIntegration::test_real_watson_analysis" --deselect "tests/integration/triage/test_sherlock_watson_moriarty_real_gpt.py::test_sherlock_watson_moriarty_real_gpt_in_subprocess" -p scripts.cassettes.replay_stats_plugin --junitxml=pytest_report_replay.xml -v --timeout=900 --timeout-method=thread
 
       - name: Anti-vacuity gate (live==0, hit>=1, miss_replay==0)
         if: always()
