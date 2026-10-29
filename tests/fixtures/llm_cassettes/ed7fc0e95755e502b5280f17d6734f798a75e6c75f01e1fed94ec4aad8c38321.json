@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_fQPlTzO5iWyImAQv7JmopKVt",
+          "id": "call_ZLvXZrMDsdt2mMAHGLQudpIP",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"696\",\"matches\":false,\"justification\":\"L’énoncé affirme simplement un succès, sans raisonnement incohérent identifiable ni prémisse permettant d’établir une sous-catégorie précise.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"696\",\"matches\":false,\"justification\":\"La phrase affirme simplement que le président considère la politique économique comme un succès incontestable, sans fournir de raisonnement permettant d'identifier une erreur logique spécifique. Elle ne suffit pas à établir une fallacie.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdvXAYi6mlzlrvnTM8a75EBX8RaED",
-        "created": 1793184660,
+        "id": "chatcmpl-EeCfAT3gusTcRFPVi2JN5t6BTi5Mc",
+        "created": 1793250504,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1904,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 70,
+          "completion_tokens": 83,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

@@ -1,0 +1,48 @@
+{
+  "key": "669dc795af8d707e8668f7bd9a4cca54b4bdf38804f210d9d6a688b3f74de157",
+  "value": {
+    "id": "chatcmpl-EeCiBLdDiPUPlNe36WDsp28Y0307b",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points présentent deux options distinctes et non redondantes : l’option B finance du matériel pédagogique et des échiquiers neufs, tandis que l’option A organise un tournoi inter-villes avec buffet et prix pour accroître la visibilité du club.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250691,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 68,
+      "prompt_tokens": 301,
+      "total_tokens": 369,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_CEIatzzC1W47Zj5zB00Wx1kb",
+          "id": "call_3WO2jKh0vIyTHQPYOMTO6jjq",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"889\",\"matches\":true,\"confidence\":\"medium\",\"justification\":\"Le président affirme que la politique économique est un succès incontestable, mais l'énoncé seul ne fournit pas de preuve qu'il sait cette affirmation fausse. Il s'agit néanmoins d'une affirmation catégorique présentée comme vraie sans fondement explicite, correspondant au mensonge au niveau disponible.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+          "arguments": "{\"node_pk\":\"889\",\"matches\":true,\"confidence\":\"medium\",\"justification\":\"La phrase affirme catégoriquement le succès incontestable de la politique économique, mais ne fournit aucun élément permettant d’établir que cette affirmation est fausse ou sciemment mensongère. Néanmoins, dans le cadre taxonomique fourni, elle correspond au mensonge générique plutôt qu’à une sous-catégorie plus spécifique.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdvXH86YmTvZKLb7ye9OdjYZuR0Gx",
-        "created": 1793184667,
+        "id": "chatcmpl-EeCfF9bNw8glgz40FZobw1LMkmnYQ",
+        "created": 1793250509,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2296,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 105,
+          "completion_tokens": 114,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

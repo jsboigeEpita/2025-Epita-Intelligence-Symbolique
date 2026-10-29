@@ -1,0 +1,48 @@
+{
+  "key": "2ccbbc16c6068a591e9b6539e655de1272f95ef143745becc05ad227595a5407",
+  "value": {
+    "id": "chatcmpl-EeCitUnyh5TIJGsHER8O8nOXUfCoZ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.62,\"fairness_assessment\":\"La méthode permet de comparer équitablement visibilité externe, qualité des activités internes et équilibre budgétaire, sans laisser la victoire argumentative de l’agent B déterminer seule la décision.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"agent_1\",\"position\":\"Favorable à l’option A, consacrant tout le budget à un tournoi inter-villes avec buffet et prix pour accroître la visibilité du club.\",\"influence\":0.33},{\"agent\":\"agent_2\",\"position\":\"Favorable à l’option B, consacrant tout le budget à du matériel pédagogique et à de nouveaux échiquiers afin de renforcer durablement les activités internes.\",\"influence\":0.4},{\"agent\":\"agent_3\",\"position\":\"Favorable à l’option C, partageant le budget entre un tournoi réduit et l’achat de matériel pour rechercher un équilibre entre rayonnement et amélioration interne.\",\"influence\":0.27}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"Un vote social-choice avec critères explicites et classement des options est le plus approprié face à trois priorités légitimes et aux coûts d’opportunité identifiés. L’option C constitue un compromis initial, mais devrait être ajustée après estimation des coûts et objectifs mesurables, par exemple avec un tournoi plus ciblé et un achat prioritaire de matériel essentiel.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250735,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 428,
+      "prompt_tokens": 565,
+      "total_tokens": 993,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 118,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

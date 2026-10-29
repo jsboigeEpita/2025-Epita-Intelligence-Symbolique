@@ -50,9 +50,10 @@ name: requires_api band (scheduled real-LLM lane)
 # return contract (decision (b) on a measured caller census: the test
 # asserts each agent's documented shape, the INFORMAL legs assert the
 # completion prose unrolled exactly as the production adapter does).
-# The repair record dispatched on this branch re-measures them live;
-# on green their 3 flags leave the list and their cassettes land
-# (19 -> 16).
+# The repair record dispatched on this branch measured them passing
+# live (run 40820280746: 51P/3S/1XF, the 3 legs on real 200s, 667
+# cassettes exported, 0 refused, 266 251 tokens); their 3 flags left
+# the list and their cassettes landed (19 -> 16).
 # tests/unit/test_band_argv_matches_gate_1867.py holds both equalities, so
 # the gate's argv can no longer move alone.
 #
@@ -529,10 +530,12 @@ jobs:
         #     measured caller census: each agent's documented return contract
         #     is asserted per agent (the INFORMAL legs assert the completion
         #     prose, unrolled exactly as the production adapter does), so the
-        #     legs are recordable as-is. The record dispatched on this branch
-        #     admits them; on green their cassettes land and the replay band
-        #     replays them from here (preflight: 53 collected, the 3 legs
-        #     among them).
+        #     legs are recordable as-is. Record 40820280746 (dispatched on
+        #     this branch) measured them passing live (51P/3S/1XF, the 3
+        #     legs on real 200s, 667 cassettes exported, 0 refused, 266 251
+        #     tokens < cap 2 M); their cassettes landed with this admission
+        #     and the replay band replays them from here (local replay of
+        #     the 3 legs: 3 passed, hit=3, miss_replay=0, egress 0).
         run: |
           $marker = "requires_api and not llm_light"
           Write-Host "Band marker: $marker"

@@ -1,0 +1,48 @@
+{
+  "key": "20dd2c73f49edb46fa2dc017ddff2a1e76893c7253a9b84b34d96872b774459f",
+  "value": {
+    "id": "chatcmpl-EeCrNrbTgYWu2EzoiMQewEC7Gwz5u",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Les mesures de température globale montrent une augmentation de 1,1 degré depuis l’ère préindustrielle ; la vitesse du changement actuel est sans précédent ; les modèles prédictifs sont unanimes sur l’impact des activités humaines.\",\"conclusion\":\"L’argument selon lequel le climat a toujours changé ne tient pas compte de la vitesse sans précédent du changement actuel et ne suffit donc pas à réfuter l’idée que le changement actuel est fortement lié aux activités humaines.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793251261,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 229,
+      "prompt_tokens": 279,
+      "total_tokens": 508,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 117,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

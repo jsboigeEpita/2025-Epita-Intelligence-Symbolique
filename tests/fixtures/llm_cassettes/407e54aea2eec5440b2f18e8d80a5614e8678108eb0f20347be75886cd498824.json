@@ -1,0 +1,40 @@
+{
+  "key": "407e54aea2eec5440b2f18e8d80a5614e8678108eb0f20347be75886cd498824",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_oeMIMtQvRNa6FEWJTW87uL7F",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"350\",\"matches\":false,\"justification\":\"Le texte invoque l’unanimité des experts et exclut l’avis des non-experts; il ne contient ni explication présomptueuse aux femmes ni sous-entendu de supériorité masculine. Cette feuille ne correspond donc pas.\",\"confidence\":\"high\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EeCg8vrtREv0FsoeOaAupjFpNEnHZ",
+        "created": 1793250564,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 926,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 85,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

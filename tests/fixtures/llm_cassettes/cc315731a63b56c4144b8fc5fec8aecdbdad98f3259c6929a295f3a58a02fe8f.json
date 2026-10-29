@@ -6,20 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_CfpiuEmeXEbf0b7PycKPBtxe",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"599\"}"
-        },
-        {
-          "id": "call_7KgpMuovZMvizrISBxdsJ1nH",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"600\"}"
+          "id": "call_Qr5AVvKh2KW4QyKn1xz0xR8y",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"598\",\"matches\":false,\"justification\":\"Le texte ne déduit pas une règle générale à partir d’un échantillon restreint ; il invoque plutôt l’unanimité des experts et exclut les avis des non-experts. La généralisation hâtive n’est donc pas le meilleur classement de cette branche.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdvZ0iBBWCwiWonSWE6V4MDXzOh27",
-        "created": 1793184774,
+        "id": "chatcmpl-EeCgxsV8avZrVj7mAc99t5AGVM8uo",
+        "created": 1793250615,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1642,
@@ -30,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 57,
+          "completion_tokens": 96,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

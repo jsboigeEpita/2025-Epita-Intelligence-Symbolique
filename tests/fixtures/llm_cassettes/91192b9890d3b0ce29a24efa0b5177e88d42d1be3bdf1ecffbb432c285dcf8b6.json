@@ -1,14 +1,14 @@
 {
   "key": "91192b9890d3b0ce29a24efa0b5177e88d42d1be3bdf1ecffbb432c285dcf8b6",
   "value": {
-    "id": "chatcmpl-Edvfgm0jX2Jd6pS5KGM86qs9HnopU",
+    "id": "chatcmpl-EeCoO9Mnqml9oXx62BA0dkK183wg0",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[{\"text\":\"Les vaccins sont nécessaires à la protection de la santé publique.\",\"source_quote\":\"Les vaccins sont indispensables pour la sante publique.\",\"move_author\":\"speaker\"},{\"text\":\"La vaccination a joué un rôle majeur dans l’éradication de la variole et la réduction de la polio.\",\"source_quote\":\"Les etudes scientifiques montrent que la vaccination a eradique la variole et reduit considerablement la polio.\",\"move_author\":\"speaker\"},{\"text\":\"Les personnes qui soutiennent que les vaccins sont dangereux affirment que la vaccination présente des risques importants.\",\"source_quote\":\"Ceux qui affirment que les vaccins sont dangereux\",\"move_author\":\"reported\"},{\"text\":\"Les opposants aux vaccins négligent les nombreuses années de recherche clinique consacrées à leur innocuité et à leur efficacité.\",\"source_quote\":\"ignorent les decades de recherche clinique.\",\"move_author\":\"speaker\"},{\"text\":\"Les produits pharmaceutiques dissimulent les effets secondaires des vaccins.\",\"source_quote\":\"L'argument selon lequel les produits pharmaceutiques cachent les effets secondaires\",\"move_author\":\"reported\"},{\"text\":\"L’idée que les produits pharmaceutiques cachent les effets secondaires est présentée comme une théorie du complot dépourvue de fondement.\",\"source_quote\":\"est une theorie du complot sans fondement.\",\"move_author\":\"speaker\"},{\"text\":\"Des taux de vaccination élevés protègent également les personnes qui ne peuvent pas être vaccinées grâce à l’immunité collective.\",\"source_quote\":\"Les taux de vaccination eleves protegent aussi ceux qui ne peuvent pas etre vaccines grace a l'immunite collective.\",\"move_author\":\"speaker\"}],\"claims\":[{\"text\":\"La vaccination a éradiqué la variole.\",\"source_quote\":\"la vaccination a eradique la variole\"},{\"text\":\"La vaccination a considérablement réduit la polio.\",\"source_quote\":\"et reduit considerablement la polio.\"},{\"text\":\"Des décennies de recherche clinique portent sur les vaccins.\",\"source_quote\":\"les decades de recherche clinique.\"},{\"text\":\"Des taux de vaccination élevés peuvent protéger les personnes qui ne peuvent pas être vaccinées par l’intermédiaire de l’immunité collective.\",\"source_quote\":\"Les taux de vaccination eleves protegent aussi ceux qui ne peuvent pas etre vaccines grace a l'immunite collective.\"},{\"text\":\"L’affirmation selon laquelle les produits pharmaceutiques cachent les effets secondaires est dépourvue de fondement.\",\"source_quote\":\"cachent les effets secondaires est une theorie du complot sans fondement.\"}],\"summary\":\"Le texte défend la vaccination en invoquant ses résultats historiques, la recherche clinique et l’immunité collective. Il rapporte puis rejette deux positions adverses : l’idée que les vaccins sont dangereux et celle que les entreprises pharmaceutiques dissimulent leurs effets secondaires. Les principales stratégies rhétoriques sont l’appel aux études scientifiques, l’argument historique et la disqualification de l’objection comme théorie du complot.\"}",
+          "content": "{\"arguments\":[{\"text\":\"Les vaccins sont indispensables à la santé publique.\",\"source_quote\":\"Les vaccins sont indispensables pour la sante publique.\",\"move_author\":\"speaker\"},{\"text\":\"La vaccination a éradiqué la variole et a considérablement réduit la poliomyélite, ce qui soutient son importance pour la santé publique.\",\"source_quote\":\"Les etudes scientifiques montrent que la vaccination a eradique la variole et reduit considerablement la polio.\",\"move_author\":\"speaker\"},{\"text\":\"Les vaccins sont dangereux.\",\"source_quote\":\"Ceux qui affirment que les vaccins sont dangereux\",\"move_author\":\"reported\"},{\"text\":\"Les produits pharmaceutiques cachent les effets secondaires des vaccins.\",\"source_quote\":\"L'argument selon lequel les produits pharmaceutiques cachent les effets secondaires\",\"move_author\":\"reported\"},{\"text\":\"Les taux élevés de vaccination protègent également les personnes qui ne peuvent pas être vaccinées grâce à l’immunité collective.\",\"source_quote\":\"Les taux de vaccination eleves protegent aussi ceux qui ne peuvent pas etre vaccines grace a l'immunite collective.\",\"move_author\":\"speaker\"}],\"claims\":[{\"text\":\"Des études scientifiques montrent que la vaccination a éradiqué la variole.\",\"source_quote\":\"Les etudes scientifiques montrent que la vaccination a eradique la variole\"},{\"text\":\"La vaccination a considérablement réduit la poliomyélite.\",\"source_quote\":\"et reduit considerablement la polio.\"},{\"text\":\"Des décennies de recherche clinique existent sur les vaccins.\",\"source_quote\":\"ignorent les decades de recherche clinique.\"},{\"text\":\"L’affirmation selon laquelle les produits pharmaceutiques cachent les effets secondaires est présentée comme une théorie du complot sans fondement.\",\"source_quote\":\"est une theorie du complot sans fondement.\"},{\"text\":\"Des taux élevés de vaccination procurent une protection aux personnes qui ne peuvent pas être vaccinées par le mécanisme de l’immunité collective.\",\"source_quote\":\"Les taux de vaccination eleves protegent aussi ceux qui ne peuvent pas etre vaccines grace a l'immunite collective.\"}],\"summary\":\"Le texte défend l’importance des vaccins pour la santé publique en invoquant leurs effets historiques, les décennies de recherche clinique et la protection indirecte par l’immunité collective. Il rapporte et rejette deux positions opposées : l’idée que les vaccins sont dangereux et celle que les entreprises pharmaceutiques dissimulent leurs effets secondaires.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793185188,
+    "created": 1793251076,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 808,
+      "completion_tokens": 624,
       "prompt_tokens": 479,
-      "total_tokens": 1287,
+      "total_tokens": 1103,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 188,
+        "reasoning_tokens": 117,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

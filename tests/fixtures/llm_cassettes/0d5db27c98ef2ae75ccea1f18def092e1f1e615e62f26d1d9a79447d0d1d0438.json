@@ -6,22 +6,22 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_e3YlNTE1UiFogUqS2NO5Wjnz",
+          "id": "call_uUJs4jyggz1T489jdfxoQLqv",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"846\",\"matches\":false,\"justification\":\"La phrase affirme simplement que la politique économique est un succès incontestable. Elle ne contient pas d’ambiguïté manifeste ni plusieurs interprétations pertinentes.\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"846\",\"matches\":false,\"justification\":\"La phrase affirme un succès sans ambiguïté sémantique ni structurelle notable; elle n'exploite pas plusieurs sens.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdvXCi27NijrEezS9GAimVuDQAdbO",
-        "created": 1793184662,
+        "id": "chatcmpl-EeCfBfNR6JWg69YIfZCKPoI0YIBuA",
+        "created": 1793250505,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2015,
           "prompt_tokens_details": {
             "audio_tokens": 0,
-            "cache_write_tokens": 0,
-            "cached_tokens": 2012,
+            "cache_write_tokens": 917,
+            "cached_tokens": 1095,
             "image_tokens": null,
             "text_tokens": null
           },

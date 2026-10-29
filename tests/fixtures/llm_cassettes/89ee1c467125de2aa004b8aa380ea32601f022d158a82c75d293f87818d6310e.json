@@ -1,0 +1,48 @@
+{
+  "key": "89ee1c467125de2aa004b8aa380ea32601f022d158a82c75d293f87818d6310e",
+  "value": {
+    "id": "chatcmpl-EeCl8V2X8PRRVsJnFBUb09je0Wcei",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.2,\"exhibit\":\"La thèse défend l’option B, qui consiste à investir tout le budget dans du matériel pédagogique neuf pour remplacer les échiquiers usés et améliorer les équipements. La présentation de l’option A, consacrée à un tournoi inter-villes avec buffet et prix pour accroître la visibilité et recruter, ainsi que celle de l’option C, constituent des digressions notables qui diluent l’argument principal.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250874,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 206,
+      "prompt_tokens": 320,
+      "total_tokens": 526,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 98,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

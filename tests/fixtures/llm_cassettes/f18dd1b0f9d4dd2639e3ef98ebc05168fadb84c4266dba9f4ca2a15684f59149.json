@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"start_marker\": \"La déclaration cruciale sur l'économie verte est enfouie ici.\",\n  \"end_marker\": \"ici.\",\n  \"explanation\": \"Le texte source ne contient qu'une seule mention explicite de l'économie verte. L'extrait pertinent se limite à la phrase « La déclaration cruciale sur l'économie verte est enfouie ici. ». Le marqueur de début reprend cette phrase complète, tandis que le marqueur de fin correspond à sa terminaison exacte.\"\n}",
+      "content": "{\n  \"start_marker\": \"La déclaration cruciale sur l'économie verte est enfouie ici.\",\n  \"end_marker\": \"La déclaration cruciale sur l'économie verte est enfouie ici.\",\n  \"template_start\": null,\n  \"explanation\": \"Le texte source ne contient pas de section explicitement intitulée « Le point sur l'économie verte ». La seule occurrence thématique pertinente est la phrase « La déclaration cruciale sur l'économie verte est enfouie ici. ». Les deux bornes sont donc fixées sur cette phrase exacte, qui constitue à elle seule l'extrait correspondant.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdveDNQojBDZKdGXp7588efY5JGr7",
-        "created": 1793185097,
+        "id": "chatcmpl-EeCmsCCpi5KKeXXm7no72AOOAUpsf",
+        "created": 1793250982,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 6801,
@@ -18,7 +18,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 622,
+          "completion_tokens": 644,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

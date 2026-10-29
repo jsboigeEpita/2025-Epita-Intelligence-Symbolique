@@ -1,0 +1,48 @@
+{
+  "key": "27661d07bd77b894c7fca8d6245959fe33969bdd39d2121e818ec8ed5ab5f648",
+  "value": {
+    "id": "chatcmpl-EeCphDsJFvSz00gTYw1L6DB3a0Dph",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\":false,\"structure_verdict\":\"saut_logique\",\"reasoning\":\"Les prémisses fournissent des arguments en faveur de la peine de mort, mais elles ne suffisent pas à établir qu’elle est nécessaire sans prémisse supplémentaire reliant dissuasion et réduction du risque d’erreur à cette nécessité.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793251157,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 174,
+      "prompt_tokens": 404,
+      "total_tokens": 578,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 99,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

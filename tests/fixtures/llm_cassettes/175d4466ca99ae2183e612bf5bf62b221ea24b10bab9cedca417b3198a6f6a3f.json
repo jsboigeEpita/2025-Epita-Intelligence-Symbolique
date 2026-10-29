@@ -1,0 +1,75 @@
+{
+  "key": "175d4466ca99ae2183e612bf5bf62b221ea24b10bab9cedca417b3198a6f6a3f",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_GRMJgzmJ0LKMYgnYv77RpRd6",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"360\"}"
+        },
+        {
+          "id": "call_lz2eIQDsou9dJ2WZqRbgOprK",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"361\"}"
+        },
+        {
+          "id": "call_6lGPoYIkRSRdAofutqdijmG5",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"363\"}"
+        },
+        {
+          "id": "call_Oy7RGzjlotqamQets3NXn672",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"364\"}"
+        },
+        {
+          "id": "call_yiccNnpIO9ZNuI7Ny4FAJ1iB",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"365\"}"
+        },
+        {
+          "id": "call_GuLdjs9Zg32ebsGNGfBjZddD",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"366\"}"
+        },
+        {
+          "id": "call_VLKv1y07C2fXBTGDhNRpGLIv",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"367\"}"
+        },
+        {
+          "id": "call_zXqyWU9EyutdKzPsyGJMNtbs",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"368\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EeCgP1ciRrMqmIkA1ed4Vj1tAeBhs",
+        "created": 1793250581,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1952,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 854,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 171,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

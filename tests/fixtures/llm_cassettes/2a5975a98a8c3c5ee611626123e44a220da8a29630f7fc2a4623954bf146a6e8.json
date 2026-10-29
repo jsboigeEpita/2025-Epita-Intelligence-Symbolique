@@ -6,20 +6,20 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_deMTNCY1KGK3536exzTcT0SX",
+          "id": "call_DGqn56wKy1BKWhQ9lYTJ6Wzy",
           "name": "Exploration-explore_branch",
           "arguments": "{\"node_pk\": \"598\"}"
         },
         {
-          "id": "call_egzBI7M1JFAyU439nI6WiQ7l",
+          "id": "call_g7OKg7Eqh3FaXfPc5D50vvIJ",
           "name": "Exploration-explore_branch",
           "arguments": "{\"node_pk\": \"601\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdvYzHwnLUGcCLVrrWqtgO7cXPcqX",
-        "created": 1793184773,
+        "id": "chatcmpl-EeCgwWvQtatQEDQ6bFsLpD2ayn6D9",
+        "created": 1793250614,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1737,

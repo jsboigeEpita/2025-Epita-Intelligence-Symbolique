@@ -1,0 +1,40 @@
+{
+  "key": "b19d5461df192b5217bb2197b799602842d9df4c6727fa56b16df04efb48a02d",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_2lrtYIrmAD29W1L6vcYBUgFh",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"2\",\"matches\":false,\"justification\":\"Les énoncés « Le soleil brille » et « Il fait beau » ne construisent pas de généralisation à partir d’impressions ou d’anecdotes; ils ne présentent aucun argument généralisant.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EeCeVShlzzzsag1DtkzWgU15X1IOf",
+        "created": 1793250463,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2142,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1044,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 83,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

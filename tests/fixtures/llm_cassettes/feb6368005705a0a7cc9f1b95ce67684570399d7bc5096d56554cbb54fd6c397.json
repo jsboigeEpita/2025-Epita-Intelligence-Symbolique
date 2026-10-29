@@ -1,0 +1,40 @@
+{
+  "key": "feb6368005705a0a7cc9f1b95ce67684570399d7bc5096d56554cbb54fd6c397",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_QCReBwxlbW9vxFVzVg8x2U5F",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"826\",\"matches\":false,\"justification\":\"L'énoncé affirme un succès incontestable, mais ne donne aucune définition contradictoire ou incohérente d'un terme.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EeCfEU3zh5ZsXNfM8yx7CNT0wHxIY",
+        "created": 1793250508,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1745,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 647,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 62,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

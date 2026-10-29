@@ -1,0 +1,48 @@
+{
+  "key": "492657a4f63f99b26a596abeaa93debab93d27cb3a59483730f63a9ea6e281ee",
+  "value": {
+    "id": "chatcmpl-EeClzbUPLCIbUm6cPOlhchFGyJDOP",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.65,\"fairness_assessment\":\"La méthode permet de comparer équitablement les trois options selon des critères explicites, notamment l’impact pédagogique, la visibilité, le recrutement et l’utilisation du budget. L’option B bénéficie d’arguments solides, mais aucune option ne satisfait seule tous les objectifs.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"Agent A\",\"position\":\"Privilégie un tournoi inter-villes avec buffet et prix afin d’accroître la visibilité du club et de recruter de nouveaux membres.\",\"influence\":0.3},{\"agent\":\"Agent B\",\"position\":\"Privilégie l’investissement intégral dans du matériel pédagogique neuf pour améliorer durablement les conditions d’apprentissage.\",\"influence\":0.4},{\"agent\":\"Agent C\",\"position\":\"Propose un partage égal du budget entre un tournoi réduit et du matériel pédagogique afin de concilier visibilité et pédagogie.\",\"influence\":0.3}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"Un vote social-choice pondéré par des critères convenus collectivement est préférable, car les options poursuivent des objectifs légitimes mais concurrents. Il est recommandé d’adopter un compromis révisable, par exemple un investissement majoritaire dans le matériel et un événement de visibilité à coût maîtrisé, avec évaluation des résultats avant le prochain budget.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250927,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 414,
+      "prompt_tokens": 582,
+      "total_tokens": 996,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 116,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

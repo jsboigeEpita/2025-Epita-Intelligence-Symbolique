@@ -6,15 +6,25 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_sa3QMljG8n54PFdsFvHm6biC",
-          "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"1352\",\"matches\":false,\"justification\":\"Le texte invoque l'unanimité des experts (appel à l'autorité) et exclut les avis des non-experts (disqualification de la personne), mais ne discrédite pas un adversaire au moyen d'informations préjudiciables au sens spécifique de l'empoisonnement du puits.\",\"move_author\":\"speaker\"}"
+          "id": "call_18pIy8SOPhLafvE25jBEvJwu",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"1354\"}"
+        },
+        {
+          "id": "call_gcNpSo17SpSSLcoemd3OjSmK",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"1357\"}"
+        },
+        {
+          "id": "call_Sa5U1OXj4AtmSDzOnypHuj2h",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"1352\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdvYulxt2eOt1uAwITVzTiSJr12R7",
-        "created": 1793184768,
+        "id": "chatcmpl-EeCgrnBwOk5O8g7PUngqVsmE1VCQa",
+        "created": 1793250609,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1828,
@@ -25,7 +35,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 99,
+          "completion_tokens": 79,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

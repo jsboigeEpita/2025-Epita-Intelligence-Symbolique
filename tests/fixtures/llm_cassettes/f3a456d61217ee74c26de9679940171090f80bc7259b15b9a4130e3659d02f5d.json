@@ -1,0 +1,48 @@
+{
+  "key": "f3a456d61217ee74c26de9679940171090f80bc7259b15b9a4130e3659d02f5d",
+  "value": {
+    "id": "chatcmpl-EeChwiuUtlSE4IRvlRLSwqXE8ePFg",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"L'option C propose de répartir équitablement le budget entre un tournoi réduit et l'achat de matériel.\",\"digressions\":\"La proposition de l'option B d'investir les 2000 euros en matériel pédagogique et en échiquiers neufs.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250676,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 149,
+      "prompt_tokens": 252,
+      "total_tokens": 401,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 76,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

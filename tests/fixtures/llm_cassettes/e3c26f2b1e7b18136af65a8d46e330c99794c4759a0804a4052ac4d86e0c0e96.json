@@ -1,0 +1,48 @@
+{
+  "key": "e3c26f2b1e7b18136af65a8d46e330c99794c4759a0804a4052ac4d86e0c0e96",
+  "value": {
+    "id": "chatcmpl-EeCojcKq9Ay4A9ikjgs2hIlzTbQfA",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne relie les succès historiques de la vaccination et l’existence d’études scientifiques à la conclusion que les vaccins sont indispensables à la santé publique, mais le verdict indique un saut logique net : la conclusion ne découle pas suffisamment des prémisses fournies.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793251097,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 110,
+      "prompt_tokens": 282,
+      "total_tokens": 392,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 37,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

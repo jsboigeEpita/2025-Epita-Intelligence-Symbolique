@@ -1,14 +1,14 @@
 {
   "key": "3ba993cc5c89cf6158cb268c8819255085aa9b8d61a352dbd407d3e5ab768133",
   "value": {
-    "id": "chatcmpl-Edvfy7mhS7fOWK1ySJcwKOWx64F34",
+    "id": "chatcmpl-EeCoe8YF9ASusBbqJHvA3wfLbDwba",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":0.0,\"exhibit\":\"Position adverse identifiée : « Les vaccins sont dangereux ». Verdict d’engagement : non sequitur ; aucun engagement constructif avec cette thèse n’est démontré.\"}",
+          "content": "{\"score\":0.0,\"exhibit\":\"Position adverse identifiée : « Les vaccins sont dangereux ». Verdict d’engagement : non sequitur ; aucune réfutation constructive démontrée.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793185206,
+    "created": 1793251092,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,9 +26,9 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 102,
+      "completion_tokens": 97,
       "prompt_tokens": 249,
-      "total_tokens": 351,
+      "total_tokens": 346,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,

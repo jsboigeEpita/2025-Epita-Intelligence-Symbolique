@@ -1,0 +1,48 @@
+{
+  "key": "69fab056c6b807209c2fa2a0aa5af968f8fc2cd65d572d26f7e4b072626eed45",
+  "value": {
+    "id": "chatcmpl-EeCpvVj2tMnEQCeNoQKfJSD3JhiyX",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":false,\"opposing_claim\":\"\",\"main_thesis\":\"L’emprisonnement à vie est préférable à la peine de mort, notamment parce que les appels et les procédures coûtent souvent plus cher et que la peine de mort est irréversible en cas d’erreur judiciaire.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793251171,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 582,
+      "prompt_tokens": 274,
+      "total_tokens": 856,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 512,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

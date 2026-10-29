@@ -1,0 +1,40 @@
+{
+  "key": "6e1842aeff1c98466d48ce580ca3186813b20f7d0ec2c95ede9bdf645da9f4af",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_nlUxbbe9BkO5mEzVgjzAghsg",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"349\",\"matches\":false,\"justification\":\"Le texte commet plutôt un appel à l’autorité et une disqualification de l’avis des non-experts. Il ne donne pas principalement du poids à la conclusion en invoquant la gravité ou la solennité de la situation ; le nœud Appel à la gravité ne correspond donc pas.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EeCgABPwWvCZLiU5CYBwC27YGsBAS",
+        "created": 1793250566,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 945,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 103,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

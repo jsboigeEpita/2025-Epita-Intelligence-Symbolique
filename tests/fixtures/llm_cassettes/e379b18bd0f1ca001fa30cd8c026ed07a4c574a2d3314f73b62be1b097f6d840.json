@@ -1,0 +1,40 @@
+{
+  "key": "e379b18bd0f1ca001fa30cd8c026ed07a4c574a2d3314f73b62be1b097f6d840",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_qUa7I2rAkM6Q5RaFin5cWfGO",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"801\",\"matches\":false,\"justification\":\"Le texte ne repose pas sur des définitions complexes ou obscures. Il contient plutôt un appel à l'autorité et une disqualification de l'opinion des non-experts, mais cela ne relève pas du défaut d'élucidation.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EeCgg6IzjdiGIwAxjPpDMTxHZYd57",
+        "created": 1793250598,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 957,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 87,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

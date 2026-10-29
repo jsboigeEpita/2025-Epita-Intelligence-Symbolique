@@ -1,0 +1,48 @@
+{
+  "key": "9befb3cb19e3bece3a825217589380c856e3f92c027f089b555684e1e32cc666",
+  "value": {
+    "id": "chatcmpl-EeCrTAN6453SCib8a2GwVspn3j7tn",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les mesures montrent une hausse de 1,1 degré depuis l’ère préindustrielle et une vitesse de changement sans précédent ; il s’ensuit que l’argument selon lequel le climat a toujours changé ne prend pas en compte la rapidité exceptionnelle du changement actuel. Verdict : progression logique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793251267,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 135,
+      "prompt_tokens": 298,
+      "total_tokens": 433,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 54,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

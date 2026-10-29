@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_kEBDSO775kYKOogUcQrjMRgM",
+          "id": "call_PQpxnAD8acijUN5LsYpElV7X",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"327\",\"matches\":false,\"justification\":\"Le texte ne repose pas sur le dégoût ou l’aversion ; il invoque plutôt l’unanimité des experts et disqualifie les non-experts.\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"327\",\"matches\":false,\"justification\":\"Le texte ne repose pas sur le dégoût ou l'aversion pour discréditer une proposition ; il s'agit plutôt d'un appel à l'autorité et d'une disqualification de l'avis des non-experts.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdvY1o32E6fLzGy34wxsdAxGPgDDw",
-        "created": 1793184713,
+        "id": "chatcmpl-EeCg0ksd8ZBKiRHLrWDfXuMS3hsd7",
+        "created": 1793250556,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1608,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 69,
+          "completion_tokens": 84,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

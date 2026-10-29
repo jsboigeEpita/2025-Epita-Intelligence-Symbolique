@@ -1,0 +1,48 @@
+{
+  "key": "b452b4eb53a25a72519a36b28f6b7b9af0bcd11dc732e9004c991d76fc7aeeac",
+  "value": {
+    "id": "chatcmpl-EeCcjyl1YDmM5cNoqapFXSso7HqJf",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"L'opposition soutient que le débat déforme la position réelle de ses adversaires en présentant à tort leur projet comme une suppression des retraites, alors qu'ils proposent seulement une réforme différente.\",\"digressions\":\"La présentation par le ministre des finances d'une projection de déficit à 2,3 % du PIB en 2030, ainsi que la critique de ses hypothèses de croissance optimistes de 1,8 % par an, s'écartent de cette thèse sur la déformation des positions. Le fait de qualifier l'argument « pensez à vos enfants » d'appel à l'émotion et de diversion des questions techniques de financement constitue également une critique distincte.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250353,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 543,
+      "prompt_tokens": 332,
+      "total_tokens": 875,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 385,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

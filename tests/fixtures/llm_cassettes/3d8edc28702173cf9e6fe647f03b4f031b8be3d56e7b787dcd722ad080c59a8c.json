@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_uHlbAXIY6SztptErbKRQiQPD",
+          "id": "call_UfxFWFKOp2zb1h4Sg4qG6XNp",
           "name": "Exploration-explore_branch",
           "arguments": "{\"node_pk\":\"325\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdvY3RrSbbx8JW0qQ29AIsJ5C6Llu",
-        "created": 1793184715,
+        "id": "chatcmpl-EeCg2fZkaTcsS6ApJELN7Yny7zTYQ",
+        "created": 1793250558,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1596,

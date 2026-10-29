@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_JCcGvkprvtUWju0gJyeof88q",
-          "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"332\",\"matches\":false,\"justification\":\"Le texte ne cherche pas à énerver ou à déstabiliser émotionnellement l’adversaire ; il présente plutôt un appel à l’autorité et une disqualification de l’avis d’un non-expert.\",\"move_author\":\"speaker\"}"
+          "id": "call_jpXvMlMn8PnMvVV9SB4VbV9Q",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"Le texte ne cherche pas à énerver l’adversaire pour le discréditer ; il invoque plutôt l’unanimité des experts et exclut l’avis des non-experts.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdvXxL5wdqUFzky7qRbSertZTaeZu",
-        "created": 1793184709,
+        "id": "chatcmpl-EeCfwR5CTwDjrZEK6A1CzLZr0b6Br",
+        "created": 1793250552,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1685,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 81,
+          "completion_tokens": 63,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

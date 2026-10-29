@@ -1,0 +1,48 @@
+{
+  "key": "ad48aff048e90ba9e96662a14bb110306767817706c8678fdd6cf31948ff0013",
+  "value": {
+    "id": "chatcmpl-EeCdCuxxkFzFB5FXJUoYG7NjwrspP",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points 1 et 2 apportent deux idées distinctes : une prédiction d’effondrement imminent et une critique de l’argument d’autorité ignorant les différences structurelles. Le point 3 étant tronqué (« L’affir »), aucune redondance supplémentaire ne peut être identifiée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250382,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 153,
+      "prompt_tokens": 296,
+      "total_tokens": 449,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 71,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

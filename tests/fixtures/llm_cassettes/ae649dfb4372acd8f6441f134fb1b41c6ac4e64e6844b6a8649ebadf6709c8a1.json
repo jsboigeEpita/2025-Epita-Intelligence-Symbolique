@@ -1,0 +1,48 @@
+{
+  "key": "ae649dfb4372acd8f6441f134fb1b41c6ac4e64e6844b6a8649ebadf6709c8a1",
+  "value": {
+    "id": "chatcmpl-EeCcwTT7yiAfEmr4zAiCC7Vt5c0yK",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Chaîne reconstruite : « Tous les pays européens ont déjà réalisé la réforme des retraites » → « La réforme des retraites est nécessaire ». Verdict : saut logique, car la réalisation de la réforme par les pays européens ne démontre pas à elle seule sa nécessité.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250366,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 98,
+      "prompt_tokens": 264,
+      "total_tokens": 362,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 24,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

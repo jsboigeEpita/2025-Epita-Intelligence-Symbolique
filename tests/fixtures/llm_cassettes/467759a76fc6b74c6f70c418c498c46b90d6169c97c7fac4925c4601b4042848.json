@@ -1,0 +1,48 @@
+{
+  "key": "467759a76fc6b74c6f70c418c498c46b90d6169c97c7fac4925c4601b4042848",
+  "value": {
+    "id": "chatcmpl-EeCrN1IOLWR7Gy2OE3KlEqfvjNZ0w",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Prémisses : les mesures indiquent une hausse globale de 1,1 °C depuis l’ère préindustrielle et une vitesse de changement actuelle exceptionnelle. Conclusion : le changement climatique actuel ne s’explique pas seulement par le fait que le climat a toujours changé, les activités humaines étant impliquées. Verdict : saut logique, car les prémisses fournies ne suffisent pas à établir cette conclusion.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793251261,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 166,
+      "prompt_tokens": 300,
+      "total_tokens": 466,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 63,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

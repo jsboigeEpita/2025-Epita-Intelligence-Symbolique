@@ -1,0 +1,48 @@
+{
+  "key": "5ce4f14c487c04b0deeb6dd865f6593cfb033113fc9343101e76e6d4f7b43af6",
+  "value": {
+    "id": "chatcmpl-EeCcnxW5RG5wehKOhfAu8bgoIF3lc",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"La réforme des retraites est nécessaire parce que tous les pays européens l’ont déjà réalisée.\",\"main_thesis\":\"L’argument du Premier ministre ne tient pas, car il s’appuie sur un argument d’autorité qui ignore les différences structurelles entre les systèmes de retraite.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250357,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 133,
+      "prompt_tokens": 269,
+      "total_tokens": 402,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 56,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

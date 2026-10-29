@@ -1,0 +1,40 @@
+{
+  "key": "eeec101972fe7abd0086388a1f1ece2977716217b81bb569df2eb55845efc9bf",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_qdwc4zvUnNU1ROrPdtxwpafN",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"942\",\"matches\":false,\"justification\":\"La phrase rapporte simplement une affirmation du président sans fausse, mal identifiée ou inventée attribution de source; elle n'établit pas une fausse attribution.\",\"confidence\":\"high\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EeCfCfAkKHnHeIbl1ZhrkmZR5hJ28",
+        "created": 1793250506,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1932,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 834,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 79,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

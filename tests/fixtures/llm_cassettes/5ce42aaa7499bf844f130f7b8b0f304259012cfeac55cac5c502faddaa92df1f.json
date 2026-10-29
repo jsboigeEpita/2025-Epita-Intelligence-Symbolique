@@ -1,0 +1,48 @@
+{
+  "key": "5ce42aaa7499bf844f130f7b8b0f304259012cfeac55cac5c502faddaa92df1f",
+  "value": {
+    "id": "chatcmpl-EeCcv5hJoXSF32D1Fpfa5D4xt92TO",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"L'opposition aurait proposé de supprimer les retraites, et les projections de déficit ainsi que l'appel à penser aux enfants suffiraient à justifier la réforme.\",\"main_thesis\":\"Le débat déforme la position réelle de l'opposition et repose sur des arguments fragiles ou fallacieux : projections fondées sur une croissance optimiste et appel à l'émotion plutôt qu'examen technique du financement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250365,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 323,
+      "prompt_tokens": 353,
+      "total_tokens": 676,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 219,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
