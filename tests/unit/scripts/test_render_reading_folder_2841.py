@@ -531,3 +531,53 @@ class TestNonArgumentativeRender:
         )
         assert "absent de l'état — acte i" in fiche
         assert "not a failure" not in fiche
+
+
+class TestRerenderFromOwnAnnexes:
+    """#3284 — a re-render from the folder's own annexes is the campaign's
+    refresh gesture, and it crashed at the final annex copy.
+
+    Measured (po-2025, 29/10): rendering with signatures/states/zeroshot =
+    the folder's own ``04_annexes/*`` raised ``shutil.SameFileError`` at the
+    copy loop — AFTER every reading file was written, so the folder looked
+    complete while the producer reported failure. ``--report`` pointing at a
+    report already inside ``out`` is the same trap one line later."""
+
+    def test_rerender_from_own_annexes_returns_zero(self, tmp_path, monkeypatch):
+        root = _plant_campaign(tmp_path)
+        out = root / "campaign_2841_lecture"
+        monkeypatch.setattr(folder, "RESULTS_ROOT", root)
+        report = tmp_path / "campaign_report.md"
+        report.write_text("# report\n", encoding="utf-8")
+        argv = _producer_argv(tmp_path, out) + ["--report", str(report)]
+        assert folder.main(argv) == 0  # first render: foreign dirs, copies
+        in_folder_report = out / report.name
+        assert in_folder_report.exists()
+        rerender = [
+            "--signatures-dir",
+            str(out / "04_annexes" / "signatures"),
+            "--states-dir",
+            str(out / "04_annexes" / "states"),
+            "--zeroshot-dir",
+            str(out / "04_annexes" / "zeroshot"),
+            "--report",
+            str(in_folder_report),
+            "--out",
+            str(out),
+        ]
+        assert folder.main(rerender) == 0, "the refresh gesture crashed"
+        # The annexes survive the no-op copy, still campaign-filtered.
+        states = sorted(p.name for p in (out / "04_annexes" / "states").glob("*.json"))
+        assert len(states) == len(DOCS)
+        assert not any("decoy" in name for name in states)
+        assert (out / "02_rendus" / "01_a53fc485_ext0_Titre-Alpha.md").exists()
+        assert in_folder_report.exists()
+
+    def test_a_foreign_source_still_copies_into_the_annexes(
+        self, tmp_path, monkeypatch
+    ):
+        """Non-vacuity: the skip must only fire on the same file — a source
+        outside the folder still lands in the annexes."""
+        out = _run_producer(tmp_path, monkeypatch)
+        sigs = list((out / "04_annexes" / "signatures").glob("*.json"))
+        assert len(sigs) == len(DOCS)
