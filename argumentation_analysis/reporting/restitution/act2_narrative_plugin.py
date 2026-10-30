@@ -2440,6 +2440,34 @@ async def build_act2_narrative(
             _clash[:90],
         )
 
+    # #3297 — a whole-scope superlative needs a measured ranking to stand on.
+    # The check runs on the MODEL PROSE, before the record's own bounds are
+    # appended below: the bounds are the record's wording, not the writer's
+    # claim, and the act must not be degraded for them. #3159 gave the writer
+    # the ranking and the rule; nothing read the act afterwards, so the rule
+    # could be broken in silence (R1125a: « le plus fragile du dispositif »).
+    from .whole_scope_superlative_check import (
+        whole_scope_superlative_note,
+        whole_scope_superlative_sentences,
+    )
+
+    _superlative_note = whole_scope_superlative_note(
+        narrative,
+        ranking_line=evidence.quality_ranking,
+        act_label="Acte II",
+    )
+    if _superlative_note:
+        # The excerpt stays on the trace (the degraded motif is a code
+        # literal, #3249) — same surface the voice-clash strip logs to.
+        _flagged = whole_scope_superlative_sentences(
+            narrative, ranking_line=evidence.quality_ranking
+        )
+        logger.warning(
+            "Acte II whole-scope superlative: %s | %s",
+            _superlative_note,
+            "; ".join(s[:90] for s in _flagged[:3]),
+        )
+
     # #3134 — the record's own bounds close the act, after the prose, BEFORE
     # the §4 self-check so the gate reads the text the reader receives.
     _bounds_passage = format_reader_bounds_passage(evidence.readings)
@@ -2474,6 +2502,12 @@ async def build_act2_narrative(
             "Axe qualité non concluable ici (argument_quality_scores "
             "indisponible) — vertus tues, fail-loud."
         )
+    # #3297 — the motive of the whole-scope superlative lands in the act's
+    # degraded map, hence in ``restitution_acts_degraded``. The prose is NOT
+    # rewritten: the reader sees the claim, the report carries the reason it
+    # is unbacked.
+    if _superlative_note:
+        degraded["act2_whole_scope_superlative"] = _superlative_note
     vm = evidence.virtuous_mode
     # Positive outcome — reported by ``is_virtuous``, never filed under
     # ``degraded`` (see the note in ``act1_framing_plugin``): #1608 turned

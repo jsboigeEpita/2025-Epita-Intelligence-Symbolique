@@ -4109,6 +4109,45 @@ async def build_act3_conclusion(
                     "Le livrable ne porte que l'avis de retrait."
                 )
 
+    # #3297 — a whole-scope superlative needs a measured ranking to stand on,
+    # and Act III's own ranking is the salience hierarchy. A sentence naming
+    # a unit the assessment ranks first (P1, weight 1) rests on it; everything
+    # else whole-scope is unbacked. The check runs POST claim-gate (a removed
+    # claim cannot be flagged) and PRE bounds-passage (the record's numbers
+    # are code, not the writer's claim) — same placement logic as Act II.
+    # Criterion 4 of the reader contract REQUIRES a ranking marker in Act III,
+    # so « le plus » backed by P1 is licensed, never banned (anti-pendulum).
+    # The prose is NOT rewritten: the degraded motif is a code literal
+    # (``restitution_acts_degraded`` is a closed producer vocabulary as far
+    # as the sanitizer is concerned, #3249), the excerpt goes to the trace.
+    from .whole_scope_superlative_check import (
+        whole_scope_superlative_note,
+        whole_scope_superlative_sentences,
+    )
+
+    _p1_ids = (
+        [
+            cite
+            for item in evidence.salience.ranked
+            if item.weight == 1
+            for cite in item.cites
+            if re.fullmatch(r"arg_\d+", cite)
+        ]
+        if evidence.salience is not None
+        else []
+    )
+    _superlative_note = whole_scope_superlative_note(
+        narrative, licensed_ids=_p1_ids, act_label="Acte III"
+    )
+    if _superlative_note:
+        _flagged = whole_scope_superlative_sentences(narrative, licensed_ids=_p1_ids)
+        logger.warning(
+            "Acte III whole-scope superlative: %s | %s",
+            _superlative_note,
+            "; ".join(s[:90] for s in _flagged[:3]),
+        )
+        degraded["act3_whole_scope_superlative"] = _superlative_note
+
     # #3134 — the record's own bounds close the act, after the prose: the
     # numbers the reader receives come from the record, not from the model.
     # Grafted BEFORE the §4 self-check so the gate reads the text the reader
