@@ -1,0 +1,48 @@
+{
+  "key": "f67b93caa188de290b95c4d6e63a21565750897ea7c29452d720a6a9f26475ed",
+  "value": {
+    "id": "chatcmpl-EeChvBJ6DvzrBvAYyveTZ7ikEIdrK",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"La citation entre crochets est tronquée (« augmentant la visi »), ce qui en rend le sens incomplet. De plus, le texte annonce trois options, mais n’en présente que deux, ce qui crée une incohérence pouvant gêner la compréhension.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250675,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 258,
+      "prompt_tokens": 301,
+      "total_tokens": 559,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 183,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

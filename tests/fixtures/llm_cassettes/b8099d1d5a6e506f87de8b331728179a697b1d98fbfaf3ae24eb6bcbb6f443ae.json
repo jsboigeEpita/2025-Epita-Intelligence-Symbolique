@@ -1,0 +1,48 @@
+{
+  "key": "b8099d1d5a6e506f87de8b331728179a697b1d98fbfaf3ae24eb6bcbb6f443ae",
+  "value": {
+    "id": "chatcmpl-EeCd4j0ZZI68KK0Xm2bRfPNKLNpws",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Les adversaires proposent une autre réforme des retraites, et non leur suppression.\",\"conclusion\":\"Le débat déforme la position réelle des adversaires.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250374,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 237,
+      "prompt_tokens": 345,
+      "total_tokens": 582,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 188,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

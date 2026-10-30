@@ -1,0 +1,48 @@
+{
+  "key": "b04d8ac944c4a3efb502c7eb96aa84628925d63d578126021de62eb5b729eb61",
+  "value": {
+    "id": "chatcmpl-EeCpdxEZhse5ppPOMJYsJewc4OyjK",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Le système judiciaire peut se tromper, et une erreur dans l'application de la peine de mort serait fatale puisqu'elle est irréversible.\",\"main_thesis\":\"La peine de mort peut être justifiée pour certains criminels irrécupérables qui représentent un danger permanent pour la société.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793251153,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 354,
+      "prompt_tokens": 296,
+      "total_tokens": 650,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 274,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

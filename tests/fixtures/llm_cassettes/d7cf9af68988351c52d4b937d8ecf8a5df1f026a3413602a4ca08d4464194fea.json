@@ -1,0 +1,48 @@
+{
+  "key": "d7cf9af68988351c52d4b937d8ecf8a5df1f026a3413602a4ca08d4464194fea",
+  "value": {
+    "id": "chatcmpl-EeCjsJslOPNsOschR89j1s4dYZ4zJ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.58,\"fairness_assessment\":\"Les trois options répondent à des besoins légitimes et les arguments sont globalement rationnels, mais l'option numérique comporte des coûts récurrents et le partage égal peut réduire l'efficacité de chaque investissement. Une comparaison transparente des besoins, des coûts complets et de l'usage attendu est nécessaire pour garantir l'équité.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"agent_1\",\"position\":\"Privilégie l'élargissement du fonds de livres jeunesse afin de renforcer l'offre éducative et culturelle pour les enfants.\",\"influence\":0.33},{\"agent\":\"agent_2\",\"position\":\"Privilégie la création d'un espace numérique librement accessible pour répondre aux besoins d'accès à Internet et aux outils numériques.\",\"influence\":0.34},{\"agent\":\"agent_3\",\"position\":\"Préconise une répartition égale des 3000 euros entre les livres et l'espace numérique afin de satisfaire les deux publics.\",\"influence\":0.33}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"La méthode social_choice est la plus adaptée pour comparer les trois projets selon des critères communs et agréger les préférences sans donner un poids excessif au seul débatteur déclaré gagnant. Un compromis conditionnel est recommandé : évaluer d'abord les coûts de maintenance, les bénéficiaires et la faisabilité, puis financer prioritairement le projet ayant le meilleur impact, tout en réservant si possible une part minimale à l'autre besoin ou en organisant un financement progressif.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250796,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 493,
+      "prompt_tokens": 518,
+      "total_tokens": 1011,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 149,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

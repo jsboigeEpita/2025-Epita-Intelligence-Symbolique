@@ -1,0 +1,40 @@
+{
+  "key": "d9e93ef5cd83af0b17ec414c9c51330ec1bb0392d4b8d98540c1efba1fb6eaf1",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_ekZQqeblJbB0UhR8CTSja5z9",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"972\",\"matches\":false,\"justification\":\"L’énoncé rapporte simplement que le président qualifie la politique économique de succès incontestable. Il ne montre pas qu’une personne a omis un élément significatif par focalisation excessive; la cécité d’inattention n’est donc pas établie.\",\"confidence\":\"high\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EeCfD4Rtv433d4mpeN6BQQUYkQbZ9",
+        "created": 1793250507,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 913,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 99,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

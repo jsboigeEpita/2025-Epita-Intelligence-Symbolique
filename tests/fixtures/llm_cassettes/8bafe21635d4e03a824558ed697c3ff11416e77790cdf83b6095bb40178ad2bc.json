@@ -1,0 +1,40 @@
+{
+  "key": "8bafe21635d4e03a824558ed697c3ff11416e77790cdf83b6095bb40178ad2bc",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_x7lXr4VOSgyVwRCWOOUw6GJh",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"55\",\"matches\":false,\"justification\":\"Le texte énonce simplement deux affirmations météorologiques sans objection préalable ni justification improvisée ; il ne manifeste pas de sauvetage ad hoc.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EeCeUzLE2yTS5LBQOHdxl7ns1V2Fi",
+        "created": 1793250462,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1931,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 833,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 69,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

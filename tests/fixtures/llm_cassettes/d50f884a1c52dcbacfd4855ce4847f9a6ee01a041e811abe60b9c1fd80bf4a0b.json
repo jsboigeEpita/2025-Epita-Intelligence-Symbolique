@@ -1,0 +1,48 @@
+{
+  "key": "d50f884a1c52dcbacfd4855ce4847f9a6ee01a041e811abe60b9c1fd80bf4a0b",
+  "value": {
+    "id": "chatcmpl-EeCpXNrcaBq9iTLZ3ZDxB4kGSlmhi",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"obstacle_genuinely_opaque\":true,\"clarity_verdict\":\"opaque_réel\",\"reasoning\":\"« Elle » ne peut pas être rattachée avec certitude à un antécédent féminin présent dans le passage, et le contexte ne permet pas d’identifier clairement ce qu’elle désigne.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793251147,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 201,
+      "prompt_tokens": 360,
+      "total_tokens": 561,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 126,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

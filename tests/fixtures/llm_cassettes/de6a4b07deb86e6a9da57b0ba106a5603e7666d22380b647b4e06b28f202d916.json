@@ -1,0 +1,48 @@
+{
+  "key": "de6a4b07deb86e6a9da57b0ba106a5603e7666d22380b647b4e06b28f202d916",
+  "value": {
+    "id": "chatcmpl-EeCphaDUOdCWA9Xu91cL3OuW4Y4Mi",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse soutient que les progrès de l’ADN réduisent considérablement le risque d’erreur judiciaire. Deux digressions sont localisées : l’effet dissuasif contre les crimes graves et l’idée que certains criminels sont irrécupérables et dangereux en permanence. L’ensemble reste lié à la justice pénale, mais ces éléments ne démontrent pas directement la réduction des erreurs judiciaires.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793251157,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 174,
+      "prompt_tokens": 305,
+      "total_tokens": 479,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 69,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

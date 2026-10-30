@@ -1,0 +1,48 @@
+{
+  "key": "62afec457f06b71c960148df26a7f05beb4cce5420c8768c8f1cfede485d517b",
+  "value": {
+    "id": "chatcmpl-EeCjL4JdpAa64PnEs2668XQb3q2Ot",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Les points 1 et 2 proposent deux usages distincts de la somme, tandis que le point 3 combine ces deux mêmes usages en les répartissant à parts égales. Il y a donc une redondance partielle, mais le troisième point apporte une stratégie de compromis.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250763,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 136,
+      "prompt_tokens": 293,
+      "total_tokens": 429,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 59,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

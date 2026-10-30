@@ -1,0 +1,40 @@
+{
+  "key": "c73f37fc9ed742a04c2ee4e6388fa251425b022b5bde6581ec24cec39270b811",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_w83F5pafRRzxwAd8mSziWEn0",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"360\",\"matches\":false,\"justification\":\"Le texte ne juxtapose pas deux positions contradictoires ou ambiguës pour embrouiller l'auditoire. Il présente plutôt un appel à l'autorité et une disqualification de l'avis des non-experts; ce n'est donc pas une équivoque antithétique.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EeCgRQlINPs0fKVjUXoUfH2xk2XjR",
+        "created": 1793250583,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 957,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 97,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

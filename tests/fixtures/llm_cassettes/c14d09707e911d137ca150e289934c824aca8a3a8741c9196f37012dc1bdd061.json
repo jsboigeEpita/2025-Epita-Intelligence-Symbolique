@@ -1,0 +1,48 @@
+{
+  "key": "c14d09707e911d137ca150e289934c824aca8a3a8741c9196f37012dc1bdd061",
+  "value": {
+    "id": "chatcmpl-EeCph4DXLJsbWkbrqkxDnUi3iHyyI",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\":true,\"engagement_verdict\":\"pas_de_refutation\",\"reasoning\":\"La réponse traite bien du risque d’erreur judiciaire en invoquant l’ADN, mais elle reconnaît elle-même que toute erreur liée à une peine irréversible resterait fatale et ne réfute donc pas réellement la position adverse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793251157,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 364,
+      "prompt_tokens": 362,
+      "total_tokens": 726,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 285,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

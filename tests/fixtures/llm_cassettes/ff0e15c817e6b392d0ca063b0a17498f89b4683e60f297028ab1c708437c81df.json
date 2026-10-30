@@ -1,0 +1,48 @@
+{
+  "key": "ff0e15c817e6b392d0ca063b0a17498f89b4683e60f297028ab1c708437c81df",
+  "value": {
+    "id": "chatcmpl-EeClF5fS35V0hguzfHfyLwXyI7BC3",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Les échiquiers actuels sont usés.\",\"conclusion\":\"Il faut investir les 2000 euros dans du matériel pédagogique (option B).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250881,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 560,
+      "prompt_tokens": 311,
+      "total_tokens": 871,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 512,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

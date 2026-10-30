@@ -1,14 +1,14 @@
 {
   "key": "75bd5ef78ddcda9e14a16b1babe34e6e8f9b7d820f8a8ecc6ed2ff09021906a2",
   "value": {
-    "id": "chatcmpl-EdvWtZRthYlBjNC6lDiv3FqRMTvfp",
+    "id": "chatcmpl-EeCeyULrakczvnHDA7dznQKbnGXOM",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[{\"text\":\"Le président soutient que la politique économique constitue un succès incontestable.\",\"source_quote\":\"Le president affirme que la politique economique est un succes incontestable.\",\"move_author\":\"reported\"}],\"claims\":[{\"text\":\"Le président affirme que la politique économique est un succès incontestable.\",\"source_quote\":\"Le president affirme que la politique economique est un succes incontestable.\"}],\"summary\":\"Le texte rapporte la position du président, qui présente la politique économique comme un succès incontestable.\"}",
+          "content": "{\"arguments\":[{\"text\":\"La politique économique est un succès incontestable.\",\"source_quote\":\"la politique economique est un succes incontestable\",\"move_author\":\"reported\"}],\"claims\":[{\"text\":\"Le président affirme que la politique économique est un succès incontestable.\",\"source_quote\":\"Le president affirme que la politique economique est un succes incontestable.\"}],\"summary\":\"Le texte rapporte la position du président, qui présente la politique économique comme un succès incontestable.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793184643,
+    "created": 1793250492,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 211,
+      "completion_tokens": 206,
       "prompt_tokens": 391,
-      "total_tokens": 602,
+      "total_tokens": 597,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 97,
+        "reasoning_tokens": 101,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

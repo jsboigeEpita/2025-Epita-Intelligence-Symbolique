@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "## 🕯️ Nouvelle enquête : *Le meurtre du Manoir Tudor*\n\nLa pluie bat les vitraux du vieux manoir. À **22 h 15**, un cri retentit depuis la bibliothèque.\n\nVous découvrez **Sir Reginald Tudor**, propriétaire des lieux, mort près de son bureau. Une profonde blessure à la tempe suggère qu’il a été frappé avec un objet lourd. La fenêtre est ouverte, mais la boue sur le rebord ne révèle aucune trace évidente.\n\n### Les suspects présents au manoir\n\n- **Lady Eleanor Tudor**, l’épouse de la victime — froide et élégante.\n- **Victor Tudor**, son neveu — récemment déshérité.\n- **Clara Bell**, la gouvernante — au service de la famille depuis trente ans.\n- **Dr James Harrow**, le médecin de famille — nerveux depuis le dîner.\n- **Edmund Price**, l’associé financier — affirme être arrivé ce soir même.\n- **Miss Agatha Reed**, préceptrice — prétend n’avoir rien entendu.\n\n### Premiers éléments\n\n- L’arme semble être un **chandelier en bronze**, retrouvé au sol.\n- Une tasse de thé intacte se trouve sur le bureau.\n- Le coffre-fort est ouvert, mais rien ne semble manquer.\n- L’horloge de la bibliothèque est arrêtée à **21 h 50**.\n- Tous les suspects affirment avoir un alibi.\n\nLa police locale est bloquée par l’orage. Vous avez carte blanche.\n\n**Que faites-vous en premier ?**  \n1. Examiner minutieusement la scène du crime.  \n2. Interroger un suspect.  \n3. Fouiller le bureau et le coffre-fort.  \n4. Inspecter les couloirs et les chambres.",
+      "content": "## 🕯️ Cluedo au Manoir Tudor\n\nLa pluie fouette les vitres du vieux manoir. À **23 h 17**, un cri retentit dans l’aile est.\n\nDans la **bibliothèque**, le riche propriétaire **Sir Réginald Tudor** est retrouvé mort près de son bureau. La porte était verrouillée de l’intérieur, mais une fenêtre donne sur les jardins détrempés.\n\nSur les lieux, vous découvrez :\n\n- un **verre de whisky brisé** ;\n- une **montre arrêtée à 23 h 05** ;\n- une **tache de boue** près de la cheminée ;\n- une page arrachée d’un carnet portant simplement les mots :  \n  **« Ce soir, tout sera révélé. »**\n\nLes six personnes présentes au manoir sont réunies dans le grand salon :\n\n1. **Lady Eleanor Tudor**, l’épouse de la victime ;\n2. **Victor Tudor**, son neveu endetté ;\n3. **Miss Clara Bell**, sa secrétaire personnelle ;\n4. **Le colonel Arthur Blackwood**, ancien associé de Sir Réginald ;\n5. **Dr Julian Hart**, médecin de famille ;\n6. **Agatha Finch**, la gouvernante.\n\nLa police locale est bloquée par une coulée de boue. Jusqu’à son arrivée, vous êtes chargé de l’enquête.\n\n**Que souhaitez-vous faire ?**  \n- Inspecter la bibliothèque ;  \n- Interroger un suspect ;  \n- Examiner le corps ;  \n- Fouiller une autre pièce du manoir ;  \n- Reconstituer les déplacements de chacun.",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdvdwqIgO79LXcmJOZ02PZ2yqpLcc",
-        "created": 1793185080,
+        "id": "chatcmpl-EeCmdHzmQjcDQSygliFvHlHDhRRF6",
+        "created": 1793250967,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 29,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 504,
+          "completion_tokens": 392,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 125,
+            "reasoning_tokens": 53,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

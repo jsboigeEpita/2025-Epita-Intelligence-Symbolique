@@ -6,15 +6,25 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_DPLjWujyIOfwcl73MS4s0Rai",
-          "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"800\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"L’expression « succès incontestable » est vague et non spécifiée : aucun critère, indicateur ni domaine précis ne permet d’établir ce succès, ce qui laisse l’affirmation évasive.\",\"move_author\":\"speaker\",\"move_author_label\":\"Le président\"}"
+          "id": "call_BlwWIHviZmCyz9IIMPlCqlaS",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"801\"}"
+        },
+        {
+          "id": "call_iHEtolIM6VQ2X9qycWHwAPV2",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"802\"}"
+        },
+        {
+          "id": "call_vfhGGyC1tH7tpWdziMRMs6Cv",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"803\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdvXFU1G9FathMRejpfbVy8tFbABo",
-        "created": 1793184665,
+        "id": "chatcmpl-EeCfGK6yJF9ISCfap153T4iYBftFo",
+        "created": 1793250510,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1658,
@@ -25,7 +35,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 88,
+          "completion_tokens": 76,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

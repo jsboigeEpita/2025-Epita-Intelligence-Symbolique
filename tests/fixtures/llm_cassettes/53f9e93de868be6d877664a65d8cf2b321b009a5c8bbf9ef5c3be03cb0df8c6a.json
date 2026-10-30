@@ -1,0 +1,48 @@
+{
+  "key": "53f9e93de868be6d877664a65d8cf2b321b009a5c8bbf9ef5c3be03cb0df8c6a",
+  "value": {
+    "id": "chatcmpl-EeCrEchRW4kAyUJ0lO1WfoyLhK1ft",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La thèse soutient que l’argument fondé sur le changement climatique passé néglige la vitesse sans précédent du changement actuel. Aucune digression concrète n’est identifiée ; l’argument reste donc centré sur cette distinction.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793251252,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 136,
+      "prompt_tokens": 267,
+      "total_tokens": 403,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 67,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

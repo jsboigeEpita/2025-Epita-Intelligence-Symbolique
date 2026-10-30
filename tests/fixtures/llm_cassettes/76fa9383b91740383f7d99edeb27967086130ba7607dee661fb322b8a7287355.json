@@ -1,0 +1,40 @@
+{
+  "key": "76fa9383b91740383f7d99edeb27967086130ba7607dee661fb322b8a7287355",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_8jwmq3RzXqKDCq5ak5RdJwH6",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"3\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"Les deux affirmations (« Le soleil brille. Il fait beau. ») sont de simples énoncés sans rôle argumentatif ni soutien à une conclusion; elles constituent un argument vide.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EeCeWDl3rNn8laOa4f4xlNGO3b9XY",
+        "created": 1793250464,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2308,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1210,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 78,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

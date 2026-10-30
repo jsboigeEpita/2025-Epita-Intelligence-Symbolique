@@ -6,15 +6,25 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_7GofU4dHpqiJvnrf1TNpTMzJ",
-          "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"2\",\"matches\":false,\"justification\":\"Le texte énonce simplement deux observations météorologiques, sans généralisation, argument ni preuve anecdotique.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+          "id": "call_GdbpUfpHfRhAnOupU2u1HZzv",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"3\"}"
+        },
+        {
+          "id": "call_lUYcozMXqrcJdtNTpbGq9lF6",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"33\"}"
+        },
+        {
+          "id": "call_AHlLTYjQ00etaoHD2NYpcNfI",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"55\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdvWM2NrZzh8USqSvkeEIHQ5Gt6J1",
-        "created": 1793184610,
+        "id": "chatcmpl-EeCeTMZe7LIO6LJBm9IBk1ZLSPGH7",
+        "created": 1793250461,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2072,
@@ -25,7 +35,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 62,
+          "completion_tokens": 76,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

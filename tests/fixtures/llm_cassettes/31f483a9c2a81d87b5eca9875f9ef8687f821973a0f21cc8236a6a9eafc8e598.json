@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "**Hypothèse :** La Terre tourne autour du Soleil en suivant une orbite elliptique.",
+      "content": "**Hypothèse :** La Terre tourne autour du Soleil sur une orbite, ce qui explique notamment la succession des saisons et le mouvement apparent du Soleil dans le ciel.",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdvdruXHOIxyiWPbCHkaVyc0AMfVl",
-        "created": 1793185075,
+        "id": "chatcmpl-EeCmXXV8XwLWm9GaHiOr3EzgmmgLR",
+        "created": 1793250961,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 41,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 101,
+          "completion_tokens": 113,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 72,
+            "reasoning_tokens": 69,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

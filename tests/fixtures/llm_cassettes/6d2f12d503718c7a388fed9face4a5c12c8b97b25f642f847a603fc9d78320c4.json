@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_wpZS09nixZcNdKAMJ4Z5h4h1",
+          "id": "call_5Z0Bprpnakl0BKpijRIrRIUg",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"325\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L'argument 2 écarte l'avis d'une personne au seul motif qu'elle n'est pas experte (« votre avis ne compte pas »), au lieu d'examiner ses raisons. Cela correspond à l'appel au dédain. L'argument 1 peut constituer un appel à l'autorité, mais il ne rend pas l'identification de ce nœud incorrecte.\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"325\",\"matches\":true,\"confidence\":\"0.98\",\"justification\":\"L'argument 2 écarte l'avis de toute personne non experte au lieu d'examiner ses raisons; il déclare implicitement que sa proposition ne mérite pas considération en raison de son statut. C'est bien un appel au dédain. L'argument 1 relève séparément d'un appel à l'autorité, mais cela n'empêche pas l'identification de ce nœud pour l'argument 2.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdvY59aFrMaAmKRAo8VpY2xUrnnhz",
-        "created": 1793184717,
+        "id": "chatcmpl-EeCg3ciPP2TNXNlifjXI1Bclnq2vT",
+        "created": 1793250559,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 951,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 119,
+          "completion_tokens": 131,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

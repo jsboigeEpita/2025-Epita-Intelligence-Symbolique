@@ -1,0 +1,48 @@
+{
+  "key": "0bd3a4185c762db2aeb4ec4aa0d6e7d64c7477d609d4f3cae3f40e93ec1a337a",
+  "value": {
+    "id": "chatcmpl-EeCcu9SadtUTZaSM3rixnm5XJn7Cr",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"L'affirmation gouvernementale selon laquelle, sans action immédiate, le système des retraites s'effondrera dans cinq ans repose sur un argument d'autorité, ne tient pas compte des différences structurelles entre les systèmes et cherche à susciter la peur. De plus, prétendre que travailler plus longtemps est « dans l'ordre des choses » ne suffit pas à le justifier.\",\"conclusion\":\"La justification gouvernementale de l'allongement de la durée du travail est fallacieuse et ne permet pas d'établir qu'il faut travailler plus longtemps.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250364,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 326,
+      "prompt_tokens": 308,
+      "total_tokens": 634,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 192,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

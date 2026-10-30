@@ -1,0 +1,48 @@
+{
+  "key": "3027c3468b2b9dff0713097aed6e7253a65c499436335bf97f9c6c88c597c6f1",
+  "value": {
+    "id": "chatcmpl-EeCqCU6fLDnKjdVF9nEBofayLd67c",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La chaîne relie le coût souvent supérieur et l’irréversibilité de la peine de mort à la conclusion que l’emprisonnement à vie lui est préférable. L’inférence est présente, mais elle reste partielle car le lien normatif entre ces prémisses et la préférence conclue n’est pas pleinement explicité.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793251188,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 142,
+      "prompt_tokens": 293,
+      "total_tokens": 435,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 56,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

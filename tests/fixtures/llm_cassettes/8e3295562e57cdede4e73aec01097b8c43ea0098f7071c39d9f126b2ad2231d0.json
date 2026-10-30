@@ -1,0 +1,48 @@
+{
+  "key": "8e3295562e57cdede4e73aec01097b8c43ea0098f7071c39d9f126b2ad2231d0",
+  "value": {
+    "id": "chatcmpl-EeCpahIWfv1VON2XKYk1bnHBCSCS9",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.2,\"exhibit\":\"Anaphore non résolvable : « Elle » dans « Elle sert de dissuasion » n’a pas d’antécédent féminin clair, tandis que « l’ADN » et « les progrès » sont masculins. Aucun jargon technique non défini ni phrase excessivement complexe n’est relevé. Verdict : opaque réel, mais le sens global reste partiellement reconstructible.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793251150,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 161,
+      "prompt_tokens": 279,
+      "total_tokens": 440,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 64,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

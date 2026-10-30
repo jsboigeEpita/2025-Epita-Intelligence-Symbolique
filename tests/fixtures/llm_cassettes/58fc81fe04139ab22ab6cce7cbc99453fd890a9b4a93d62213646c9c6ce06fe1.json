@@ -1,0 +1,48 @@
+{
+  "key": "58fc81fe04139ab22ab6cce7cbc99453fd890a9b4a93d62213646c9c6ce06fe1",
+  "value": {
+    "id": "chatcmpl-EeCrSJdiq2LLzZBSd5NRpZbUtWaMs",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Les activités humaines ont un impact sur le climat.\\n2. Les modèles prédictifs seraient unanimes pour attribuer un impact climatique aux activités humaines.\\n3. Le changement climatique actuel se produit à une vitesse sans précédent, ce que les sceptiques omettent.\\n4. Ceux qui minimisent la crise climatique utilisent souvent des données sélectives pour soutenir leur position.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793251266,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 218,
+      "prompt_tokens": 240,
+      "total_tokens": 458,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 125,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

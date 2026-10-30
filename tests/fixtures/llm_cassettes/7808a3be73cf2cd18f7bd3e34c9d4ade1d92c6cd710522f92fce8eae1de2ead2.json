@@ -1,0 +1,48 @@
+{
+  "key": "7808a3be73cf2cd18f7bd3e34c9d4ade1d92c6cd710522f92fce8eae1de2ead2",
+  "value": {
+    "id": "chatcmpl-EeCjCk5ofnHCSlVybeHz3gbPmSgtQ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse défend l’utilisation des 3000 euros pour créer un espace numérique avec des ordinateurs accessibles librement. Les digressions sont localisées dans la présentation des options A (élargir le fonds de livres jeunesse) et C (répartir la somme entre livres et espace numérique), qui constituent des alternatives ne servant pas directement cette thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250754,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 143,
+      "prompt_tokens": 310,
+      "total_tokens": 453,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 49,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

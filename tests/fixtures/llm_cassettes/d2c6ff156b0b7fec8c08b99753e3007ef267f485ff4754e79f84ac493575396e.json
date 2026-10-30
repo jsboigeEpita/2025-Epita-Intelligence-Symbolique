@@ -1,0 +1,48 @@
+{
+  "key": "d2c6ff156b0b7fec8c08b99753e3007ef267f485ff4754e79f84ac493575396e",
+  "value": {
+    "id": "chatcmpl-EeCcpx7Dkk3I647fVyYhUS32OQcZI",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Le gouvernement soutient qu’il est naturel et nécessaire de travailler plus longtemps et que, sans action immédiate, le système s’effondrera dans cinq ans.\",\"main_thesis\":\"Les arguments du gouvernement en faveur du travail plus long reposent sur un sophisme naturaliste, un appel à la peur et des projections financières fondées sur des hypothèses de croissance optimistes.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250359,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 205,
+      "prompt_tokens": 340,
+      "total_tokens": 545,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 107,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

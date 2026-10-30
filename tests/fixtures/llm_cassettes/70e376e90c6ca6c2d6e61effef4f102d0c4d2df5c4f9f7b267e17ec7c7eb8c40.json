@@ -1,0 +1,40 @@
+{
+  "key": "70e376e90c6ca6c2d6e61effef4f102d0c4d2df5c4f9f7b267e17ec7c7eb8c40",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_iuyOQeWaPP8bEtBoOBYZ6DC6",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1354\",\"matches\":false,\"justification\":\"Le texte commet plutôt un appel à l'autorité et une disqualification de l'avis des non-experts (argument ad hominem/coupure de la parole), mais il ne cherche pas principalement à influencer un auditoire au lieu de répondre à l'interlocuteur. Ce n'est donc pas le nœud « convaincre le public plutôt que l'adversaire ».\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EeCgsh0Iz9Y6V5px7ik092HBN8tEj",
+        "created": 1793250610,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 950,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 117,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "key": "f815e19a21b10527667a9f1b566be0d3c187462dcc6e26d8b113ec5440eb146a",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_zyknlNMiEpwnKAamiRwjcNyg",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"342\",\"matches\":false,\"justification\":\"Le texte invoque l'unanimité des experts et disqualifie l'avis des non-experts, mais il ne cherche pas à persuader en criant, menaçant ou intimidant directement l'interlocuteur. Il relève plutôt d'un appel à l'autorité et d'une disqualification de l'opinion, pas de l'appel à la véhémence.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EeCgGmQORjduyK6s9aJ7MwUzAqqBR",
+        "created": 1793250572,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 940,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 114,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

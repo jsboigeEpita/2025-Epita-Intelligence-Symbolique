@@ -1,0 +1,48 @@
+{
+  "key": "59b60a41db07f3de3a6b1dc14f207ac7a353bac660289cecc89f5a0e1d2956a7",
+  "value": {
+    "id": "chatcmpl-EeCclrCagofRPgzeRzVYO49nJUu8k",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse conteste l'argument du gouvernement selon lequel une action immédiate serait nécessaire pour éviter l'effondrement du système des retraites dans cinq ans. Une digression mineure porte sur la remarque des syndicats accusant le gouvernement de commettre un sophisme naturaliste en présentant le fait de travailler plus longtemps comme étant « dans l'ordre des choses ».\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250355,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 133,
+      "prompt_tokens": 314,
+      "total_tokens": 447,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 37,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

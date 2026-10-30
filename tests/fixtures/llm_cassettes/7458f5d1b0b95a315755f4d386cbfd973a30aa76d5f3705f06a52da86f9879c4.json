@@ -1,0 +1,48 @@
+{
+  "key": "7458f5d1b0b95a315755f4d386cbfd973a30aa76d5f3705f06a52da86f9879c4",
+  "value": {
+    "id": "chatcmpl-EeCrBaVe7xC57dmkOmRtFGGV6eJSk",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\":false,\"engagement_verdict\":\"non_sequitur\",\"reasoning\":\"Montrer que le réchauffement actuel est rapide et atteint 1,1 degré ne réfute pas l'affirmation selon laquelle le climat a toujours changé, car les deux propositions peuvent être vraies simultanément.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793251249,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 213,
+      "prompt_tokens": 320,
+      "total_tokens": 533,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 138,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

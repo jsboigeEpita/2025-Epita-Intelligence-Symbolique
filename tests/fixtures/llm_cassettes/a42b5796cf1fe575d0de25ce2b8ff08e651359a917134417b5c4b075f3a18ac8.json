@@ -1,0 +1,48 @@
+{
+  "key": "a42b5796cf1fe575d0de25ce2b8ff08e651359a917134417b5c4b075f3a18ac8",
+  "value": {
+    "id": "chatcmpl-EeCiJw5SlW9PEqAHimcRLarqszEyI",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Chaîne reconstruite : consacrer la totalité du budget de 2000 euros à un tournoi inter-villes avec buffet et prix → cette option accroîtra la visibilité du club. Verdict : saut logique, car la conclusion ne découle pas directement de la prémisse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250699,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 100,
+      "prompt_tokens": 276,
+      "total_tokens": 376,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 25,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

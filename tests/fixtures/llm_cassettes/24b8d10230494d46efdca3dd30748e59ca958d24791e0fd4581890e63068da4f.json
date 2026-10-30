@@ -1,0 +1,48 @@
+{
+  "key": "24b8d10230494d46efdca3dd30748e59ca958d24791e0fd4581890e63068da4f",
+  "value": {
+    "id": "chatcmpl-EeCi0RvODO2ByWCaoGlrfreTLNLyD",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse porte sur la répartition équitable du budget par l’option C entre un tournoi réduit et l’achat de matériel. Une digression localisée présente l’option B, qui investirait les 2000 euros en matériel pédagogique et en échiquiers neufs.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250680,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 164,
+      "prompt_tokens": 291,
+      "total_tokens": 455,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 87,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

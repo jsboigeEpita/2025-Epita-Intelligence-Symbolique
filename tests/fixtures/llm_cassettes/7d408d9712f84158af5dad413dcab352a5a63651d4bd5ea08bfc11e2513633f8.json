@@ -6,15 +6,25 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_EG8maDHr9XxFsqEyBRHj25nn",
-          "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"799\",\"matches\":false,\"justification\":\"Le texte ne redéfinit pas les termes de manière biaisée ; il commet plutôt un appel à l'autorité et un argument d'autorité disqualifiante, qui ne relèvent pas de cette branche.\",\"move_author\":\"speaker\"}"
+          "id": "call_MM3Ei5kR0r8IdO7DqGzIBMUP",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"800\"}"
+        },
+        {
+          "id": "call_wNYbH4EZkpm84g2M7aolZKDY",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"804\"}"
+        },
+        {
+          "id": "call_8q8uyXtcbmNkepxaLK2Z8bvi",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"826\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdvYnE5MMAWkReucasDzad007y9JC",
-        "created": 1793184761,
+        "id": "chatcmpl-EeCgdNLsZj4XOn4w2QwwnwcqCfnSv",
+        "created": 1793250595,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1966,
@@ -25,7 +35,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 80,
+          "completion_tokens": 76,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

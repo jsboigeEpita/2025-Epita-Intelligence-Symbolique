@@ -1,0 +1,48 @@
+{
+  "key": "8aba2f3273ac8f1e0870dfd63fb84870eaab5798452c3f9928e004bc1e9ea342",
+  "value": {
+    "id": "chatcmpl-EeCl4Kr7qocQekfimRaJdLEJypM6Q",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"L'option B défend l'investissement de la totalité du budget dans du matériel pédagogique neuf afin de remplacer les échiquiers usés et d'améliorer les supports d'apprentissage.\",\"digressions\":\"La présentation de l'option A, qui propose d'organiser un tournoi inter-villes avec buffet et prix pour accroître la visibilité du club et recruter de nouveaux membres ; la présentation de l'option C, qui propose un format hybride répartissant le budget entre un tournoi réduit et du matériel pédagogique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250870,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 166,
+      "prompt_tokens": 344,
+      "total_tokens": 510,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 42,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

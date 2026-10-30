@@ -1,0 +1,48 @@
+{
+  "key": "8b5fd4a9d24a52cb66b8420b1c2103b9ba528242c9051cf76f2509c94b2fb23b",
+  "value": {
+    "id": "chatcmpl-EeCdDsBdYbvcl2aoW3rynrC4T6Vc9",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Le débat déforme la position de l’opposition en présentant à tort ses adversaires comme voulant supprimer les retraites, alors qu’ils proposent seulement une réforme différente.\\n2. La projection d’un déficit atteignant 2,3 % du PIB en 2030 repose sur des hypothèses de croissance optimistes de 1,8 % par an.\\n3. L’argument « pensez à vos enfants » est un appel à l’émotion qui détourne le débat des questions techniques de financement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250383,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 174,
+      "prompt_tokens": 305,
+      "total_tokens": 479,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 55,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

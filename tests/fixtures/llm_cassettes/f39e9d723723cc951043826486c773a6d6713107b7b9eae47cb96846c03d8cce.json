@@ -1,0 +1,40 @@
+{
+  "key": "f39e9d723723cc951043826486c773a6d6713107b7b9eae47cb96846c03d8cce",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_KXn8SsbeLBfB4FWZDmBJVESs",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"32\",\"matches\":false,\"justification\":\"L'énoncé rapporte simplement que le président qualifie la politique économique de « succès incontestable ». Il s'agit d'une affirmation non étayée, mais ce n'est pas nécessairement une platitude destinée à endormir la vigilance de l'auditoire; le nœud Bromure n'est donc pas établi.\",\"confidence\":\"high\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EeCfKBGYc97qbFy8OriahElse6iFY",
+        "created": 1793250514,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 923,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 113,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

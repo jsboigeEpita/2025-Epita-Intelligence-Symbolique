@@ -1,0 +1,40 @@
+{
+  "key": "551633e727c330b4bb5718a4b63f1acc6e1f7d12f7802c9842d3e1eda6028cdf",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_31t7rvRaoanu4AttVUl2tNIo",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"33\",\"matches\":false,\"justification\":\"Les phrases « Le soleil brille. Il fait beau. » énoncent simplement des faits et ne présentent pas une habitude, une impression ou un exemple comme preuve d’une conclusion générale.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EeCeUTwhzLFfuimvoukhoY6rL7260",
+        "created": 1793250462,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2099,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1001,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 78,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

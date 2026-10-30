@@ -6,26 +6,26 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_rr8XUfmhST2gy5jujg1tuvf4",
+          "id": "call_i0noLU0vGna8FHxi5ldTUJnA",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"1\",\"matches\":false,\"justification\":\"Les deux phrases sont de simples affirmations descriptives et ne constituent pas un argument insuffisant démontrant une proposition plus large.\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"1\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"Les deux affirmations (« Le soleil brille » et « Il fait beau ») sont de simples énoncés sans argument ni preuve suffisante pour établir une proposition plus large; elles illustrent une insuffisance argumentative.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EdvWMM4XXSa3qMQhiLBLcUck2OLtk",
-        "created": 1793184610,
+        "id": "chatcmpl-EeCeTWwr6SUqrVbeFjYLLWJ5omlvw",
+        "created": 1793250461,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1902,
           "prompt_tokens_details": {
             "audio_tokens": 0,
-            "cache_write_tokens": 1899,
-            "cached_tokens": 0,
+            "cache_write_tokens": 804,
+            "cached_tokens": 1095,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 61,
+          "completion_tokens": 85,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

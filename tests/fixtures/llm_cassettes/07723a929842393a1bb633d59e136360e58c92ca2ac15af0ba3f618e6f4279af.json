@@ -1,0 +1,40 @@
+{
+  "key": "07723a929842393a1bb633d59e136360e58c92ca2ac15af0ba3f618e6f4279af",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_ICdd8ZvRJssTjWv4NQXNBLbc",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"962\",\"confidence\":\"medium\",\"matches\":true,\"justification\":\"L'affirmation catégorique du président présente le succès comme incontestable sans fournir d'éléments ni reconnaître d'éventuels faits défavorables; elle retient implicitement seulement les éléments favorables à sa conclusion.\",\"move_author\":\"speaker\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EeCfDEyV6Pwc3ryagGXwzUyFE29YF",
+        "created": 1793250507,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1677,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 579,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 91,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "key": "e5e7309ec1504479901ba24e599c9d6a8eff39d855a230f7822ae03e1d4f5b54",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_yIeQxCvMGBNKncZGqAhv9CPX",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"183\",\"matches\":false,\"justification\":\"Le texte invoque l’unanimité des experts et exclut l’avis des non-experts. Cela relève plutôt d’un appel à l’autorité et d’un argument ad hominem circonstanciel, non d’une pétition de principe : la conclusion n’est pas simplement présupposée dans les prémisses.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EeCgVp12joOfTXtml2mKS2kl2Ktte",
+        "created": 1793250587,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 938,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 104,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

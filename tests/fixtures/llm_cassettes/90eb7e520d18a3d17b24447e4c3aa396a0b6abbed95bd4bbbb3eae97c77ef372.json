@@ -1,0 +1,48 @@
+{
+  "key": "90eb7e520d18a3d17b24447e4c3aa396a0b6abbed95bd4bbbb3eae97c77ef372",
+  "value": {
+    "id": "chatcmpl-EeCq4WQzicA9Fxo6p122agcCxiJ1O",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les trois points portent sur des idées distinctes : réduction du risque d’erreur judiciaire grâce à l’ADN, effet dissuasif de la peine de mort et dangerosité persistante de certains criminels. Aucune redondance sémantique notable n’est observable, malgré l’interruption du troisième point.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793251180,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 128,
+      "prompt_tokens": 303,
+      "total_tokens": 431,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 41,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

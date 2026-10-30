@@ -1,0 +1,48 @@
+{
+  "key": "8ad017fcea7cf68e75b4b23ab59f4b82fff4c375383f715bd6aec6907da93d5b",
+  "value": {
+    "id": "chatcmpl-EeCcuWP0YARoIKQinIFW0sNt38vN9",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Position adverse identifiée : la réforme des retraites serait nécessaire puisque tous les pays européens l’auraient déjà mise en œuvre et que l’inaction provoquerait l’effondrement du système dans cinq ans. Verdict : engagement réel avec cette thèse adverse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793250364,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 128,
+      "prompt_tokens": 281,
+      "total_tokens": 409,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 55,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
