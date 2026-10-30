@@ -6,6 +6,7 @@ Uses injected mock pipeline to avoid API calls.
 from __future__ import annotations
 
 import asyncio
+import faulthandler
 import json
 import sys
 from pathlib import Path
@@ -17,6 +18,16 @@ SCRIPT_DIR = Path(__file__).resolve().parents[3] / "scripts" / "dataset"
 sys.path.insert(0, str(SCRIPT_DIR))
 
 import run_corpus_batch as runner
+
+
+@pytest.fixture(autouse=True)
+def _disarm_teardown_watchdog():
+    """#2080 — these tests call ``_run_single`` directly, so its tail arms a
+    real 60 s faulthandler one-shot that only ``main()``'s finally cancels.
+    Cancel it here: a dump landing in some other test's captured stderr a
+    minute later reads as a hang that never happened."""
+    yield
+    faulthandler.cancel_dump_traceback_later()
 
 
 def _mock_pipeline(return_value):
@@ -259,9 +270,7 @@ class TestRunSingle:
 
         rich = {
             "zero_shot_surplus": {
-                "established_items": [
-                    {"nature": "decisif_formel", "cites": ["FOL"]}
-                ],
+                "established_items": [{"nature": "decisif_formel", "cites": ["FOL"]}],
                 "established_by_nature": {"decisif_formel": 1},
                 "procedural_items": 0,
                 "carries_non_procedural_surplus": True,
@@ -271,7 +280,9 @@ class TestRunSingle:
         assert "1/2 documents carry non-procedural surplus" in out2
         assert "decisif_formel=1" in out2
 
-        partial = {"zero_shot_surplus": {"unavailable_reason": "no state object (partial run)"}}
+        partial = {
+            "zero_shot_surplus": {"unavailable_reason": "no state object (partial run)"}
+        }
         out3 = runner.render_surplus_aggregate([rich, partial])
         assert "1/1 documents carry" in out3
         assert "1 document(s) unavailable" in out3
