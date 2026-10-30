@@ -71,6 +71,7 @@ from argumentation_analysis.orchestration.fol_cause import (
 from argumentation_analysis.orchestration.kb_atom_renaming import rename_atoms_apart
 from argumentation_analysis.orchestration.selection import (
     SelectableUnit,
+    coverage_figure,
     merged_population_units,
     select_for_budget,
     state_text_length,
@@ -2570,6 +2571,89 @@ async def _invoke_debate_analysis(
     return base_scores  # type: ignore[no-any-return]
 
 
+def _record_governance_vote_population(
+    state: Any, options: Sequence[str]
+) -> Optional[Dict[str, Any]]:
+    """#2850 R1107 — the population the VOTE was decided over.
+
+    One key, two producers. ``analysis_coverage["governance"]`` names the
+    CONFLICT selection (6 units of the merged population, stratified), while
+    the verdict is decided over the QUALITY population — the keys of
+    ``per_argument_scores``. Measured on the R1106 state (doc_A): the
+    conflict read arg_16/27/42/50/70/85, the vote elected arg_15 — a unit
+    the record never named. Any reader asking "the deliberation examined k
+    of N units" would have quoted the wrong k AND the wrong units.
+
+    The vote therefore records ITS population, under its own key
+    (``governance_vote``): k of N plus the ids it voted on. The conflict
+    keeps its own record — two populations, two keys, never one.
+
+    Nothing is selected here: the options ARE the units the vote consumed
+    (the quality phase's population), so the figure is measured on them
+    with the same geometry as every recorded coverage (bands, span, largest
+    uncovered stretch). No prompt changes, no new LLM call, no budget moved.
+
+    #3293 (review po-2023, points 2 and 3) — two honest-absence rules:
+
+    * **No fabricated N.** A stateless context has no visible population; the
+      denominator was then ``max(len(units), len(options))`` = ``k``, i.e. a
+      100 % coverage claim over a population nobody can see. The record now
+      carries ``k`` and the ids and NO ``N`` — the absence this module
+      practises everywhere else.
+    * **k counts what the geometry measured.** An option the population does
+      not carry is recorded apart (``outside_population``), never folded into
+      k: k, the bands and the span then describe ONE population. (The vote's
+      options come from ``per_argument_scores``, whose keys are the
+      ``unit_id``s of the quality phase's selection over
+      ``merged_population_units`` — a code provenance. A replayed
+      ``quality_output`` may still name another state's units, so the case is
+      recorded, not assumed away.)
+
+    Returns the record (``k``/ids, and ``N`` when the population is visible),
+    or ``None`` when there is no vote to describe (no options — an honest
+    absence, never a zero that would read as a coverage).
+    """
+    if not options:
+        return None
+    units = merged_population_units(state)
+    by_id = {u.unit_id: u for u in units}
+    voted = [by_id[o] for o in options if o in by_id]
+    outside = [str(o) for o in options if o not in by_id]
+    if units:
+        # The population is visible: k is what the geometry measured on it.
+        record: Dict[str, Any] = {
+            "k": len(voted),
+            "unit_ids": [str(u.unit_id) for u in voted],
+            "source": "quality_per_argument_scores",
+        }
+        if outside:
+            record["outside_population"] = outside
+        bands_covered, bands_total, span, stretch = coverage_figure(
+            voted, state_text_length(state)
+        )
+        record["N"] = len(units)
+        if state is not None and hasattr(state, "record_analysis_coverage"):
+            state.record_analysis_coverage(
+                "governance_vote",
+                record["k"],
+                record["N"],
+                bands_covered,
+                bands_total,
+                span=span,
+                largest_uncovered_stretch=stretch,
+                unit_ids=record["unit_ids"],
+            )
+        return record
+    # No visible population: k and the ids are all that can be proven. No N —
+    # a manufactured denominator would read as a 100 % coverage.
+    record = {
+        "k": len(options),
+        "unit_ids": [str(o) for o in options],
+        "source": "quality_per_argument_scores",
+    }
+    return record
+
+
 def _derive_governance_profile(
     quality_output: Dict[str, Any],
 ) -> Tuple[List[str], List[List[str]], List[Any], bool, str]:
@@ -2921,6 +3005,12 @@ async def _invoke_governance(
         governance_verdict = _aggregate_governance_votes(g_agents, g_options, g_ballots)
         governance_verdict["degraded"] = False
         governance_verdict["derivation_reason"] = g_reason
+        # #2850 R1107 — the vote names the population it was decided over,
+        # apart from the conflict's own record. The winner is a member of
+        # this set; the record says so.
+        governance_verdict["vote_population"] = _record_governance_vote_population(
+            context.get("_state_object"), g_options
+        )
     else:
         governance_verdict = {
             "degraded": True,

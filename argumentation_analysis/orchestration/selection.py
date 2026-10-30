@@ -30,6 +30,7 @@ __all__ = [
     "SelectableUnit",
     "SelectionResult",
     "select_for_budget",
+    "coverage_figure",
     "stratified_position",
     "merged_population_units",
     "state_text_length",
@@ -371,6 +372,44 @@ def select_for_budget(
             "implemented strategy is 'stratified_position'"
         )
     return stratified_position(units, n, band_count=band_count, text_length=text_length)
+
+
+def coverage_figure(
+    units: Sequence[SelectableUnit],
+    text_length: Optional[int] = None,
+    band_count: Optional[int] = None,
+) -> Tuple[int, int, Optional[Tuple[float, float]], Optional[float]]:
+    """The coverage figure of a GIVEN population — not of a selection.
+
+    ``select_for_budget`` measures what a budget KEPT; this measures what a
+    population ALREADY IS. A phase that does not select but CONSUMES (the
+    governance vote: its options are the units the quality phase scored, not
+    a fresh pick) still has a coverage — it must be measurable on the very
+    units it consumed, or the record names another set.
+
+    Same geometry, same honesty rules as the recorded path: fixed text bands
+    when the text length is known (the span then says HOW THIN the covered
+    fraction is), no bands and no span without it (a fraction of an unknown
+    text would be invented), and a unit without an offset claims no position.
+
+    Returns ``(bands_covered, bands_total, span, largest_uncovered_stretch)``.
+    """
+    positioned = [u for u in units if isinstance(u.offset, int)]
+    offsets = [int(u.offset or 0) for u in positioned]
+    bands_total = 0
+    bands_covered = 0
+    span: Optional[Tuple[float, float]] = None
+    if text_length and positioned:
+        bands = band_count if band_count is not None else 3
+        bands_total = bands
+        bands_covered = len({_text_band(o, text_length, bands) for o in offsets})
+        span = (min(offsets) / text_length, max(offsets) / text_length)
+    return (
+        bands_covered,
+        bands_total,
+        span,
+        _largest_uncovered_stretch(offsets, text_length),
+    )
 
 
 def state_text_length(state: Any) -> Optional[int]:
