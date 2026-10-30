@@ -133,16 +133,31 @@ def _probe_torch() -> Dict[str, Any]:
 
 
 def _anthropic_route_in_env() -> bool:
-    """The run resolves to Anthropic's OpenAI-compatible route (#3096).
+    """Whether this run's LLM calls land on Anthropic's route (#3096).
 
-    Both forms count: the named route (#3103, ``ANTHROPIC_CHAT_MODEL_ID``)
-    and the legacy overwrite (``OPENAI_CHAT_MODEL_ID`` holding a claude-*
-    model, or ``OPENAI_BASE_URL`` pointing at Anthropic)."""
-    if os.environ.get("ANTHROPIC_CHAT_MODEL_ID"):
-        return True
-    if (os.environ.get("OPENAI_CHAT_MODEL_ID") or "").startswith("claude-"):
-        return True
-    return "api.anthropic.com" in (os.environ.get("OPENAI_BASE_URL") or "")
+    Asked of the ONE resolver, never re-derived here. The manifest used to
+    answer from the environment directly — ``ANTHROPIC_CHAT_MODEL_ID`` set,
+    ``OPENAI_CHAT_MODEL_ID`` starting with ``claude-``, or ``OPENAI_BASE_URL``
+    naming Anthropic — and that answer was a second route resolver, which is
+    the defect #2352 counts (the census reddened on the ``OPENAI_CHAT_MODEL_ID``
+    read). It also diverged from the layer it describes: ``llm_cache`` applies
+    the effort and the thinking knob on ``anthropic_route(model_id)``, so a
+    non-``claude-*`` named id or a bare Anthropic base URL made the manifest
+    stamp "measured inert" over a knob the run would actually have applied.
+
+    A probe reports, never raises: a declared named route without its key
+    raises at resolution by design (#3096 item 6), and the startup factory
+    refuses the run long before a manifest is written — no call is made, so
+    no Anthropic route is in effect.
+    """
+    from argumentation_analysis.core.llm_service import resolve_chat_endpoint
+    from argumentation_analysis.services.llm_cache import anthropic_route
+
+    try:
+        _api_key, _base_url, model_id = resolve_chat_endpoint()
+    except Exception:  # noqa: BLE001 — a probe reports, never raises
+        return False
+    return anthropic_route(model_id)
 
 
 def _probe_overrides() -> Dict[str, Any]:

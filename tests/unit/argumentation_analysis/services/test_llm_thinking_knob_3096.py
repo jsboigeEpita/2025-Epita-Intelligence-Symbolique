@@ -344,9 +344,40 @@ class TestThinkingIsPartOfTheRequestIdentity:
 
 
 class TestTheKnobIsRecorded:
+    """The manifest asks the ONE resolver, so each fixture here STATES the
+    route it means instead of leaning on whatever the seat's ``.env`` holds."""
+
+    _ROUTE_VARS = (
+        "OPENAI_API_KEY",
+        "OPENAI_BASE_URL",
+        "OPENAI_CHAT_MODEL_ID",
+        "OPENROUTER_API_KEY",
+        "OPENROUTER_BASE_URL",
+        "OPENROUTER_CHAT_MODEL_ID",
+        "ANTHROPIC_API_KEY",
+        "ANTHROPIC_BASE_URL",
+        "ANTHROPIC_CHAT_MODEL_ID",
+    )
+
+    def _clean(self, monkeypatch):
+        for var in self._ROUTE_VARS:
+            monkeypatch.delenv(var, raising=False)
+
+    def _named_route(self, monkeypatch, model_id="claude-haiku-5-5"):
+        """A resolvable named route — id AND key. The id alone raises (#3096
+        item 6), and a fixture that leaned on an ambient key measured the
+        seat, not the route."""
+        monkeypatch.setenv("ANTHROPIC_CHAT_MODEL_ID", model_id)
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-sentinel")
+
+    def _openai_route(self, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-openai-sentinel")
+        monkeypatch.setenv("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
+
     def test_the_manifest_carries_the_thinking_knob(self, monkeypatch):
+        self._clean(monkeypatch)
+        self._named_route(monkeypatch)
         monkeypatch.setenv("LLM_ANTHROPIC_THINKING", "between_tools")
-        monkeypatch.setenv("ANTHROPIC_CHAT_MODEL_ID", "claude-haiku-5-5")
         assert (
             environment_manifest()["overrides"]["pinned_overrides"][
                 "LLM_ANTHROPIC_THINKING"
@@ -358,8 +389,9 @@ class TestTheKnobIsRecorded:
         """Never presented as effective where it is measured inert: on the
         Anthropic route the manifest records value + verdict, not a bare
         pin."""
+        self._clean(monkeypatch)
+        self._named_route(monkeypatch)
         monkeypatch.setenv("LLM_REASONING_EFFORT", "low")
-        monkeypatch.setenv("ANTHROPIC_CHAT_MODEL_ID", "claude-haiku-5-5")
         entry = environment_manifest()["overrides"]["pinned_overrides"][
             "LLM_REASONING_EFFORT"
         ]
@@ -368,10 +400,9 @@ class TestTheKnobIsRecorded:
 
     def test_the_effort_stands_bare_off_the_route(self, monkeypatch):
         """#3104's record is unchanged where the control is real."""
+        self._clean(monkeypatch)
+        self._openai_route(monkeypatch)
         monkeypatch.setenv("LLM_REASONING_EFFORT", "low")
-        monkeypatch.delenv("ANTHROPIC_CHAT_MODEL_ID", raising=False)
-        monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
-        monkeypatch.setenv("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
         assert (
             environment_manifest()["overrides"]["pinned_overrides"][
                 "LLM_REASONING_EFFORT"
@@ -382,21 +413,43 @@ class TestTheKnobIsRecorded:
     def test_the_thinking_knob_names_the_misroute(self, monkeypatch):
         """Set but no Anthropic route resolved — the manifest says so instead
         of stamping a command nothing obeys."""
+        self._clean(monkeypatch)
+        self._openai_route(monkeypatch)
         monkeypatch.setenv("LLM_ANTHROPIC_THINKING", "between_tools")
-        monkeypatch.delenv("ANTHROPIC_CHAT_MODEL_ID", raising=False)
-        monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
-        monkeypatch.setenv("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
         entry = environment_manifest()["overrides"]["pinned_overrides"][
             "LLM_ANTHROPIC_THINKING"
         ]
         assert isinstance(entry, dict) and entry["value"] == "between_tools"
         assert "not applied" in entry["verdict"]
 
+    def test_a_named_route_that_is_not_claude_is_not_the_anthropic_route(
+        self, monkeypatch
+    ):
+        """The manifest answers what the call layer does, not what the
+        environment merely declares.
+
+        Born red against the previous predicate, which answered True from
+        ``ANTHROPIC_CHAT_MODEL_ID`` being *set*: it stamped "measured inert"
+        over an effort that ``llm_cache`` does apply here, because the call
+        layer routes on ``anthropic_route(model_id)`` and a non-``claude-*``
+        id is not that route (#3096, #2352).
+        """
+        self._clean(monkeypatch)
+        self._named_route(monkeypatch, model_id="gc@glm-5.3")
+        monkeypatch.setenv("LLM_REASONING_EFFORT", "low")
+        assert (
+            environment_manifest()["overrides"]["pinned_overrides"][
+                "LLM_REASONING_EFFORT"
+            ]
+            == "low"
+        ), "the effort IS applied on this route — the manifest must not claim inert"
+
     def test_the_stamp_renders_the_verdict(self, monkeypatch):
         """The run-visible surface reads ``k=v (verdict)`` — a reader of the
         signature sees the control is inert, not pinned-and-effective."""
+        self._clean(monkeypatch)
+        self._named_route(monkeypatch)
         monkeypatch.setenv("LLM_REASONING_EFFORT", "low")
-        monkeypatch.setenv("OPENAI_BASE_URL", "https://api.anthropic.com/v1/")
         stamp = render_environment_stamp(environment_manifest())
         assert "LLM_REASONING_EFFORT=low (measured inert" in stamp
 
