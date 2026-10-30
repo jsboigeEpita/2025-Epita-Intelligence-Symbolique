@@ -99,6 +99,9 @@ jobs:
           Write-Host "✅ React build produced: $((Get-ChildItem -Recurse build | Measure-Object).Count) files"
 
       - name: Record run (bills real API usage)
+        # id: record — the salvage steps below and the cassettes-PR gate read
+        # steps.record.outcome (#3281).
+        id: record
         shell: pwsh
         timeout-minutes: ${{ fromJson(inputs.max_minutes) }}
         env:
@@ -122,7 +125,13 @@ jobs:
       # consumer remains. The pytest record run above fills the DB on its
       # own — one run, one export, one provenance still holds.
 
+      # #3281: a red record step used to skip this step and the cost step,
+      # discarding a paid DB with the runner (run 40668986102: 637 requests,
+      # 0 cassettes; second occurrence). if: always() salvages the artifacts.
+      # NO continue-on-error anywhere: the job still fails on the record
+      # step's own red, and a red privacy audit on a green run still blocks.
       - name: Export cassettes + blocking privacy audit
+        if: always()
         shell: pwsh
         run: |
           python scripts/cassettes/export.py ${{ inputs.record_db }} staging_cassettes
@@ -132,6 +141,7 @@ jobs:
           Write-Host "Exported cassettes: $((Get-ChildItem staging_cassettes -Filter *.json | Where-Object Name -ne 'MANIFEST.json' | Measure-Object).Count)"
 
       - name: Cost artifact + fail-loud token cap
+        if: always()  # #3281: salvage the spend measurement of a red record run too
         shell: pwsh
         env:
           LLM_CACHE_DIR: ${{ inputs.record_db }}
@@ -168,8 +178,12 @@ jobs:
       # is not allowed in a step-level `if:` (GitHub rejects the whole file —
       # caught 2026-08-17 when both branch pushes failed with 0s parse runs),
       # so the gate lives in the shell.
+      # #3281: gated on the record step's success — with the export now
+      # salvaged after a red record, an ungated PR would auto-open with
+      # PARTIAL cassettes. Partial cassettes are never automatically
+      # admitted: the artifact is the deliverable, admission is a human one.
       - name: Open cassettes PR (optional, needs CASSETTES_PR_TOKEN)
-        if: always()
+        if: always() && steps.record.outcome == 'success'
         shell: pwsh
         env:
           CASSETTES_PR_TOKEN: ${{ secrets.CASSETTES_PR_TOKEN }}
