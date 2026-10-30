@@ -96,6 +96,32 @@ class TestTheDefect:
         assert check_whole_scope_superlative(body).band == "PASS"
         assert whole_scope_superlative_sentences(body) == []
 
+    def test_the_verdict_reasons_never_quote_the_act(self):
+        """The verdict names a count and the issue, never the sentence.
+
+        A reason that quoted the act would carry a corpus sentence onto a
+        diagnostic surface the sanitizer does not police (#3249), and the
+        ``sentence[:120]`` that built it was a coverage-census site the
+        root guard read and the registry did not know (#2850). The sentences
+        stay reachable through the public collector; the verdict is not the
+        place they leave the report.
+        """
+        verdict = check_whole_scope_superlative(_R1125A, ranking_line=_RANKING_LINE)
+        assert verdict.band == "FAIL"
+        flagged = whole_scope_superlative_sentences(
+            _R1125A, ranking_line=_RANKING_LINE
+        )
+        assert flagged, "the witness needs a flagged sentence to prove anything"
+        for reason in verdict.reasons:
+            for sentence in flagged:
+                assert sentence.strip()[:40] not in reason, (
+                    "the verdict quotes the act; the sentence must stay out "
+                    "of the reasons (#3249)"
+                )
+            assert "«" not in reason, (
+                "no quote marks in a reason: it carries a count, not prose"
+            )
+
 
 class TestTheLicences:
     """What backs a whole-scope superlative."""

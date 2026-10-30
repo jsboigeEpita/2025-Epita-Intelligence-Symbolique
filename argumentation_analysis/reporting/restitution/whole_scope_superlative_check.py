@@ -268,16 +268,23 @@ def check_whole_scope_superlative(
     FAIL when the prose claims a rank over the whole report that no
     measurement backs. Silent PASS otherwise — including when the act has no
     ranking at all and the prose makes no such claim.
+
+    The reasons carry the COUNT and the issue, never the sentence — the same
+    rule `whole_scope_superlative_note` follows below: a verdict that quotes
+    the act carries a corpus sentence onto a diagnostic surface the sanitizer
+    does not police (#3249). The sentences themselves stay available to
+    whoever wants them through `whole_scope_superlative_sentences`; the
+    verdict does not have to be the place they leave the report (#3297).
     """
     flagged = whole_scope_superlative_sentences(
         body, ranking_line=ranking_line, licensed_ids=licensed_ids
     )
     if not flagged:
         return GateVerdict(band="PASS", reasons=[])
+    plural = "s" if len(flagged) > 1 else ""
     reasons = [
-        "un superlatif porte sur l'ensemble du rapport alors qu'aucun "
-        "classement mesuré ne l'adosse : « " + sentence[:120] + " » (#3297)"
-        for sentence in flagged
+        f"{len(flagged)} superlatif{plural} de portée globale sans classement "
+        "mesuré pour l'adosser (#3297)"
     ]
     return GateVerdict(band="FAIL", reasons=reasons)
 
