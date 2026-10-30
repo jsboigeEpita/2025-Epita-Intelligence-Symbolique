@@ -795,8 +795,12 @@ _PROSE_INSTRUCTIONS = (
 # Epic #1258 / Track 1 #1259 — item (7) split out so it can be dropped when the
 # working state is deanonymized (real names allowed in the prose).
 _PROSE_OPAQUE_RULE = (
+    # #3296 — the label list used to carry ``arg_1``, which ordered the machine
+    # id into the prose while the readability gate (#2980) counts every
+    # printed id as jargon. FB-34 forbids the source NAME; the id clause is
+    # removed, the ban kept (R1126 arbitration).
     "(7) OPAQUE-ID DISCIPLINE (FB-34 #1118): refer to the source/speaker/states "
-    "ONLY by opaque labels (Speaker_A, State_Q, arg_1, doc_A) — never emit a real "
+    "ONLY by opaque labels (Speaker_A, State_Q, doc_A) — never emit a real "
     "name, leader, country, party, or date. Characterize the argumentation "
     "abstractly; if a real name is needed to make a point, drop the point."
 )
