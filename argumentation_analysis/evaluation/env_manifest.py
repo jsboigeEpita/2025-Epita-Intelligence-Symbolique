@@ -132,32 +132,30 @@ def _probe_torch() -> Dict[str, Any]:
         }
 
 
-def _anthropic_route_in_env() -> bool:
-    """Whether this run's LLM calls land on Anthropic's route (#3096).
+def _route_state() -> Dict[str, Any]:
+    """The route this run's calls would land on, or why none would (#3096).
 
-    Asked of the ONE resolver, never re-derived here. The manifest used to
-    answer from the environment directly — ``ANTHROPIC_CHAT_MODEL_ID`` set,
-    ``OPENAI_CHAT_MODEL_ID`` starting with ``claude-``, or ``OPENAI_BASE_URL``
-    naming Anthropic — and that answer was a second route resolver, which is
-    the defect #2352 counts (the census reddened on the ``OPENAI_CHAT_MODEL_ID``
-    read). It also diverged from the layer it describes: ``llm_cache`` applies
-    the effort and the thinking knob on ``anthropic_route(model_id)``, so a
-    non-``claude-*`` named id or a bare Anthropic base URL made the manifest
-    stamp "measured inert" over a knob the run would actually have applied.
+    Asked of the ONE resolver, never re-derived here. Three states, never two:
+    ``{"anthropic": True|False}`` when the resolver answered, or
+    ``{"resolution_error": "TypeName: message"}`` when it refused. A declared
+    route that cannot resolve is NOT "no route" — it is a run that refuses,
+    and the abort stamp is written in exactly that case (#2282: a run that
+    aborts is when the environment is the prime suspect), so swallowing the
+    refusal into ``False`` would stamp a bare knob value over a run that made
+    no call at all (R1126c).
 
-    A probe reports, never raises: a declared named route without its key
-    raises at resolution by design (#3096 item 6), and the startup factory
-    refuses the run long before a manifest is written — no call is made, so
-    no Anthropic route is in effect.
+    Like ``_probe_torch``, the probe NAMES what it caught rather than
+    swallowing it; and the refusal's message carries the absence of the key,
+    never its value, so naming it exposes nothing.
     """
     from argumentation_analysis.core.llm_service import resolve_chat_endpoint
     from argumentation_analysis.services.llm_cache import anthropic_route
 
     try:
         _api_key, _base_url, model_id = resolve_chat_endpoint()
-    except Exception:  # noqa: BLE001 — a probe reports, never raises
-        return False
-    return anthropic_route(model_id)
+    except Exception as exc:  # noqa: BLE001 — a probe names, never raises
+        return {"resolution_error": f"{type(exc).__name__}: {exc}"}
+    return {"anthropic": anthropic_route(model_id)}
 
 
 def _probe_overrides() -> Dict[str, Any]:
@@ -186,7 +184,25 @@ def _probe_overrides() -> Dict[str, Any]:
     # Anthropic route ``LLM_REASONING_EFFORT`` is measured INERT (comment
     # 6527232924); off that route ``LLM_ANTHROPIC_THINKING`` commands a road
     # the run is not on. Both carry their verdict instead of a bare value.
-    if "LLM_REASONING_EFFORT" in overrides and _anthropic_route_in_env():
+    route = _route_state()
+    resolution_error = route.get("resolution_error")
+    on_anthropic = route.get("anthropic")
+    if resolution_error is not None:
+        # R1126c — the route the knobs were declared against could not
+        # resolve: BOTH carry the refusal, named, because the abort stamp
+        # (#2282) is the one surface guaranteed to be read in this state,
+        # and a bare value there would read as applied.
+        for var in ("LLM_REASONING_EFFORT", "LLM_ANTHROPIC_THINKING"):
+            if var in overrides:
+                overrides[var] = {
+                    "value": overrides[var],
+                    "verdict": (
+                        f"route not resolved ({resolution_error}) — the run "
+                        "refuses at the startup factory and no call is made "
+                        "(#3096 item 5, #2282)"
+                    ),
+                }
+    elif "LLM_REASONING_EFFORT" in overrides and on_anthropic:
         overrides["LLM_REASONING_EFFORT"] = {
             "value": overrides["LLM_REASONING_EFFORT"],
             "verdict": (
@@ -195,7 +211,11 @@ def _probe_overrides() -> Dict[str, Any]:
                 "control that acts there"
             ),
         }
-    if "LLM_ANTHROPIC_THINKING" in overrides and not _anthropic_route_in_env():
+    if (
+        resolution_error is None
+        and "LLM_ANTHROPIC_THINKING" in overrides
+        and not on_anthropic
+    ):
         overrides["LLM_ANTHROPIC_THINKING"] = {
             "value": overrides["LLM_ANTHROPIC_THINKING"],
             "verdict": (

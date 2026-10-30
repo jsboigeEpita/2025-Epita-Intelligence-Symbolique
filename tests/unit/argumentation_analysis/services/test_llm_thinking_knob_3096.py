@@ -444,6 +444,35 @@ class TestTheKnobIsRecorded:
             == "low"
         ), "the effort IS applied on this route — the manifest must not claim inert"
 
+    def test_an_unresolvable_named_route_is_named_not_swallowed(self, monkeypatch):
+        """A declared route that cannot resolve is not "no route" (R1126c).
+
+        The id is declared without its key, so the ONE resolver raises — a
+        run in this state aborts, and the abort stamp (#2282) is the one
+        surface guaranteed to be read. A bare value there reads as *applied*
+        over a run that made no call, and "no Anthropic route resolved"
+        hides a route that was declared and refused. Both knobs must name
+        the non-resolution and its cause.
+        """
+        self._clean(monkeypatch)
+        monkeypatch.setenv("ANTHROPIC_CHAT_MODEL_ID", "claude-haiku-5-5")
+        # no ANTHROPIC_API_KEY: the named route is declared, not resolvable
+        monkeypatch.setenv("LLM_REASONING_EFFORT", "low")
+        monkeypatch.setenv("LLM_ANTHROPIC_THINKING", "between_tools")
+        pinned = environment_manifest()["overrides"]["pinned_overrides"]
+        for var in ("LLM_REASONING_EFFORT", "LLM_ANTHROPIC_THINKING"):
+            entry = pinned[var]
+            assert isinstance(entry, dict), (
+                f"{var} must carry a verdict — a bare value reads as applied "
+                "over a run that made no call"
+            )
+            assert (
+                "route not resolved" in entry["verdict"]
+            ), "the manifest must name the non-resolution, not bury it"
+            assert (
+                "ValueError" in entry["verdict"]
+            ), "the resolver's declared refusal is the named cause"
+
     def test_the_stamp_renders_the_verdict(self, monkeypatch):
         """The run-visible surface reads ``k=v (verdict)`` — a reader of the
         signature sees the control is inert, not pinned-and-effective."""
