@@ -531,13 +531,22 @@ def coverage_range_sentence(
     stakes and the render said « L'extracteur dégage trente enjeux », a figure
     the record contradicts by five. ``stakes_count`` is the record's list
     length — zero means the record names none and no count is said.
+
+    #3293 — ``governance_vote`` is excluded too, for the same reason as
+    ``stakes``: the sentence says what each module SELECTED, and the vote
+    consumed the quality phase's population instead of selecting one.
     """
     figures = {
         phase: fig
         for phase, fig in coverage_map.items()
-        if isinstance(fig, dict)
-        and "k" in fig
-        and phase not in ("anchor_census", "stakes")
+        if isinstance(fig, dict) and "k" in fig
+        # #3293 — ``governance_vote`` joins ``stakes`` in the exclusions: this
+        # sentence reports what each MODULE SELECTED (« selon les modules »),
+        # while the vote CONSUMES the quality phase's population. Its k is not
+        # a selection, so letting it move the min..max would change the Act I
+        # sentence on every run where governance is derivable. The key stays in
+        # the per-key coverage list, named for what it is.
+        and phase not in ("anchor_census", "stakes", "governance_vote")
     }
     ks = [int(fig["k"]) for fig in figures.values() if isinstance(fig.get("k"), int)]
     if not ks:

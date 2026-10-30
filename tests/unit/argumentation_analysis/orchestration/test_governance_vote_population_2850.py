@@ -85,7 +85,7 @@ async def _run(state: UnifiedAnalysisState, quality: Dict[str, Any]) -> Dict[str
 async def test_the_vote_records_its_own_population_apart_from_the_conflicts():
     """The defect: one key, two producers. Two populations ⇒ two records."""
     state = _state_with_units()
-    result = await _run(state, _quality(_VOTE_IDS))
+    await _run(state, _quality(_VOTE_IDS))
 
     coverage = state.analysis_coverage
 
@@ -106,8 +106,11 @@ async def test_the_vote_records_its_own_population_apart_from_the_conflicts():
     assert vote["N"] == 12
 
     # Two populations, two keys — the conflict's record is NOT the vote's.
+    # Said plainly (#3293, review nit): the conflict's six units do not NAME
+    # the vote's three. The two sets do overlap (arg_2 is in both here), so
+    # the claim is containment, not a total disjointness that would be false.
     assert vote["unit_ids"] != conflict["unit_ids"]
-    assert set(vote["unit_ids"]) & set(conflict["unit_ids"]) != set(_VOTE_IDS)
+    assert not set(_VOTE_IDS) <= set(conflict["unit_ids"])
 
 
 @pytest.mark.asyncio

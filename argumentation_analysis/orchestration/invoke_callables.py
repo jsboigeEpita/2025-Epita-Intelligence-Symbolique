@@ -2593,39 +2593,64 @@ def _record_governance_vote_population(
     with the same geometry as every recorded coverage (bands, span, largest
     uncovered stretch). No prompt changes, no new LLM call, no budget moved.
 
-    Returns the record (``k``/``N``/ids), or ``None`` when there is no vote
-    to describe (no options — an honest absence, never a zero that would
-    read as a coverage).
+    #3293 (review po-2023, points 2 and 3) — two honest-absence rules:
+
+    * **No fabricated N.** A stateless context has no visible population; the
+      denominator was then ``max(len(units), len(options))`` = ``k``, i.e. a
+      100 % coverage claim over a population nobody can see. The record now
+      carries ``k`` and the ids and NO ``N`` — the absence this module
+      practises everywhere else.
+    * **k counts what the geometry measured.** An option the population does
+      not carry is recorded apart (``outside_population``), never folded into
+      k: k, the bands and the span then describe ONE population. (The vote's
+      options come from ``per_argument_scores``, whose keys are the
+      ``unit_id``s of the quality phase's selection over
+      ``merged_population_units`` — a code provenance. A replayed
+      ``quality_output`` may still name another state's units, so the case is
+      recorded, not assumed away.)
+
+    Returns the record (``k``/ids, and ``N`` when the population is visible),
+    or ``None`` when there is no vote to describe (no options — an honest
+    absence, never a zero that would read as a coverage).
     """
     if not options:
         return None
     units = merged_population_units(state)
     by_id = {u.unit_id: u for u in units}
     voted = [by_id[o] for o in options if o in by_id]
-    bands_covered, bands_total, span, stretch = coverage_figure(
-        voted, state_text_length(state)
-    )
-    # The denominator is the population the options were drawn from — the
-    # merged population of the document. A stateless context has none: the
-    # vote's own options are then all that can be proven.
-    n_total = max(len(units), len(options))
-    record: Dict[str, Any] = {
+    outside = [str(o) for o in options if o not in by_id]
+    if units:
+        # The population is visible: k is what the geometry measured on it.
+        record: Dict[str, Any] = {
+            "k": len(voted),
+            "unit_ids": [str(u.unit_id) for u in voted],
+            "source": "quality_per_argument_scores",
+        }
+        if outside:
+            record["outside_population"] = outside
+        bands_covered, bands_total, span, stretch = coverage_figure(
+            voted, state_text_length(state)
+        )
+        record["N"] = len(units)
+        if state is not None and hasattr(state, "record_analysis_coverage"):
+            state.record_analysis_coverage(
+                "governance_vote",
+                record["k"],
+                record["N"],
+                bands_covered,
+                bands_total,
+                span=span,
+                largest_uncovered_stretch=stretch,
+                unit_ids=record["unit_ids"],
+            )
+        return record
+    # No visible population: k and the ids are all that can be proven. No N —
+    # a manufactured denominator would read as a 100 % coverage.
+    record = {
         "k": len(options),
-        "N": n_total,
         "unit_ids": [str(o) for o in options],
         "source": "quality_per_argument_scores",
     }
-    if state is not None and hasattr(state, "record_analysis_coverage"):
-        state.record_analysis_coverage(
-            "governance_vote",
-            record["k"],
-            n_total,
-            bands_covered,
-            bands_total,
-            span=span,
-            largest_uncovered_stretch=stretch,
-            unit_ids=record["unit_ids"],
-        )
     return record
 
 
