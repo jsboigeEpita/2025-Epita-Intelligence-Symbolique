@@ -869,6 +869,11 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
     support_by_option: dict[str, int] = {}
     n_methods_decided: int | None = None
     winner_basis: str | None = None
+    # #2850 R1107 — the population the vote was decided over (k of N + the
+    # unit ids). Stored only when the verdict carried it (honest absence):
+    # the winner is a member of it, and the conflict's own population is a
+    # DIFFERENT set, recorded apart.
+    vote_population: dict[str, Any] | None = None
     if isinstance(vote_result, dict) and vote_result.get("winner"):
         winner = str(vote_result["winner"])
         winner_provenance = "vote_aggregate"
@@ -901,6 +906,12 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
             basis = verdict.get("winner_basis")
             if isinstance(basis, str) and basis.strip():
                 winner_basis = basis.strip()
+            # #2850 R1107 — the population the vote decided over (k of N +
+            # ids). Read from the verdict, never recomputed here: a writer
+            # that re-derived it would state a population it did not see.
+            population = verdict.get("vote_population")
+            if isinstance(population, dict) and population.get("unit_ids"):
+                vote_population = dict(population)
     elif llm_gov.get("recommended_resolution"):
         winner = str(llm_gov["recommended_resolution"])
         winner_provenance = "llm_resolution"
@@ -936,6 +947,8 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
         support_by_option=support_by_option or None,
         n_methods_decided=n_methods_decided,
         winner_basis=winner_basis,
+        # #2850 R1107 — the vote's own population, apart from the conflict's.
+        vote_population=vote_population,
     )
 
 

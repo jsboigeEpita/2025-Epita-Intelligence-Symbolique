@@ -1470,6 +1470,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         support_by_option: Optional[Dict[str, int]] = None,
         n_methods_decided: Optional[int] = None,
         winner_basis: Optional[str] = None,
+        vote_population: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Add a governance voting decision.
 
@@ -1503,6 +1504,11 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         QUALITATIVELY (``cited_units.qualitative_support_band``), never as a
         counter (#1914).
 
+        #2850 R1107 — ``vote_population`` names the units the vote was
+        decided OVER (k of N + their ids): the winner is a member of it.
+        The conflict detection has its own population, recorded apart —
+        one key with two producers was the defect this field closes.
+
         Optional fields are stored only when set (honest absence).
         """
         gd_id = self._generate_id("gov", self.governance_decisions)
@@ -1528,6 +1534,12 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             entry["n_methods_decided"] = n_methods_decided
         if winner_basis:
             entry["winner_basis"] = winner_basis
+        if vote_population:
+            # #2850 R1107 — the population the winner was chosen FROM (k of N
+            # + the unit ids). The winner is a member of it; without it a
+            # reader cannot tell which set of units the deliberation
+            # examined (the conflict's own record names another one).
+            entry["vote_population"] = dict(vote_population)
         self.governance_decisions.append(entry)
         state_logger.info(f"Governance decision added: {gd_id} ({method}: {winner})")
         return gd_id
