@@ -1581,9 +1581,16 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
 # --- the conducted prompt (spec §4 weaving rule, no template) ----------------
 
 _OPAQUE_ID_DIRECTIVE = (
+    # #3296 — FB-34 is a privacy rule: it forbids the source's NAME, and it
+    # used to also order the machine id (« Désigne chaque argument par son ID
+    # opaque (arg_1, arg_2…) »). The order contradicted the readability gate
+    # (#2980), which counts every printed ``arg_N`` as jargon, and the order
+    # won: 5 of 41 renders carried raw ids. The clause is REMOVED, the ban
+    # kept (arbitration R1126). Designation moves to the per-act label table
+    # with its legend (#2896/#2965) — nothing is added here in its place.
     "DISCIPLINE D'IDENTIFIANTS OPAQUES (FB-34) — OBLIGATOIRE :\n"
-    "- Désigne chaque argument par son ID opaque (arg_1, arg_2…), JAMAIS par un\n"
-    "  nom de source, d'auteur, de lieu ou de date.\n"
+    "- Ne désigne JAMAIS un argument par un nom de source, d'auteur, de lieu\n"
+    "  ou de date.\n"
     "- Ne reproduis JAMAIS de passage verbatim du texte source : paraphrase le\n"
     "  MOUVEMENT argumentatif en une phrase qui dit quelque chose.\n"
     "- Les familles de sophismes (ad hominem, ad verecundiam…) sont des\n"

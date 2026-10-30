@@ -75,8 +75,16 @@ class DeepSynthesisAgent(BaseAgent):
         "country, party, institution, leader, date, and any named entity "
         "MUST NEVER appear in your output by their real name. Refer to every "
         "entity ONLY by an opaque label: the speaker is `Speaker_A`, a state "
-        "is `State_Q`, an era is `era_A`, the document is `doc_A`, an argument "
-        'is `arg_1`. Characterize content ABSTRACTLY ("the speaker frames X '
+        "is `State_Q`, an era is `era_A`, the document is `doc_A`. "
+        # #3296 — the label list used to end on « an argument is `arg_1` »,
+        # which ORDERED the machine id into the prose. The readability gate
+        # (#2980) counts every printed ``arg_N`` as jargon, so the brief
+        # contradicted the gate and won (5 of 41 renders carried raw ids).
+        # The clause is REMOVED, the ban on real names kept (R1126
+        # arbitration). The id still reaches this prompt inside the
+        # ``[artifact:…]`` anchors, where VG1 counts it — that is the data
+        # channel, not a designation order.
+        'Characterize content ABSTRACTLY ("the speaker frames X '
         'as historically inevitable") — never quote or paraphrase proper '
         "nouns even if they appear in the data blocks below (those blocks may "
         "carry named entities inherited from upstream extraction; treat them "
