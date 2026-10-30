@@ -12,11 +12,11 @@ must be named in ``INERT_DESELECT`` with the issue that owns its measurement;
 an entry that starts matching again — or whose flag left the workflow — fails
 too, so an allowance cannot outlive its cause.
 
-The collect runs pytest in a subprocess over the flagged files only: 61 s to
-117 s measured for this file across runs (2026-10-30), on 16 files / 54
-nodes — the subprocess collect dominates, a bare probe of the same collect
-costs 21 s. It deliberately carries no ``slow`` marker: excluded from the
-gate, it would guard nothing.
+The collect runs pytest in a subprocess over the flagged files only: 27 s to
+117 s measured for this file across runs (2026-10-30) — 15 files / 48 nodes
+since #3291 removed the inert flag. The subprocess collect dominates: a bare
+probe of the same collect costs 21 s. It deliberately carries no ``slow``
+marker: excluded from the gate, it would guard nothing.
 """
 
 import re
@@ -33,17 +33,16 @@ PYTEST_CALL = "--no-capture-output pytest "
 MARKER_ASSIGN = '$marker = "'
 
 # Flag -> issue that owns the measurement which made it inert.
-# #3039 removed ``requires_api`` from that test on its own measurement (0 cache
-# keys; the method reads local state), so it now runs under the gate filter,
-# keyless, and the flag deselects nothing. Nothing is unprotected while that
-# holds — the path makes no LLM call. The flag itself is workflow scope: #3291
-# carries the keep-or-remove decision, this entry only stops the drift from
-# being invisible in the meantime.
-INERT_DESELECT = {
-    "tests/integration/triage/test_cluedo_orchestration_integration.py"
-    "::TestCluedoOrchestrationRealIntegration"
-    "::test_real_sherlock_case_description": "#3039",
-}
+# EMPTY since #3291. Its only entry was #3039's flag for
+# test_real_sherlock_case_description: that issue removed the test's
+# ``requires_api`` marker on its own measurement (0 cache keys; the method
+# reads local state), so the test left this call's selection and the flag
+# matched nothing. #1867 option (a) authorised the workflow half, and the
+# flag is now gone from the replay call — leaving the entry behind would
+# trip this guard's symmetry check, which is exactly what that check is for:
+# an allowance must not outlive its cause. A future inert flag is named here
+# with the issue that measures it, never silenced.
+INERT_DESELECT: dict = {}
 
 
 def _calls() -> dict:
@@ -58,6 +57,11 @@ def _calls() -> dict:
             flags = re.findall(r'--deselect "([^"]+)"', stripped)
             if flags:
                 calls[marker] = flags
+    assert calls, (
+        f"no call carrying a --deselect flag was found in {BAND_YML.name}: the "
+        "parse found nothing, so the parametrised test below would vanish "
+        "instead of failing. A void parse is an error, never a pass."
+    )
     return calls
 
 

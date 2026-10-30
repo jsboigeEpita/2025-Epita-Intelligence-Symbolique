@@ -29,12 +29,15 @@ REPLAY = "requires_api and not llm_light"
 # #2829 emptied it by admitting tests/agents/ with its cassettes. #1867
 # option (a) admitted tests/integration/triage/ and
 # tests/integration/argumentation_analysis/ to the gate and the live band;
-# #2932 admitted them to the replay-band too: of the 15 requires_api tests
-# the two directories hold, 9 run in the band (on cassettes recorded with
-# the band's own argv; the 3 SHERLOCK_JTMS variants joined them with the
-# #3273 record) and the other 6 are deselected in the workflow with the
-# measured reason (2 no-LLM, 1 subprocess, 3 INFORMAL_FALLACY variants
-# whose return-shape contract is #3280), so their entries are gone. #1783 (user decision 2026-10-06,
+# #2932 admitted them to the replay-band too. Re-derived 2026-10-30 on
+# 5c025bd70 (#3291; every figure from `--collect-only -q` under each band's
+# own marker): the two directories hold 14 requires_api tests, 0 of them in
+# the live band, and 12 run in the replay band — 14 = 12 run + 2 deselected
+# (test_real_watson_analysis: no LLM call; and
+# test_sherlock_watson_moriarty_real_gpt_in_subprocess: its LLM work happens
+# in a child process). The 3 SHERLOCK_JTMS variants joined with the #3273
+# record and the 3 INFORMAL_FALLACY variants with #3286, so neither is
+# deselected any more. #1783 (user decision 2026-10-06,
 # option (a)) named the integration root files one by one; the two below are
 # the root files whose ONLY tests are requires_api and not llm_light (1 + 2),
 # so the live band never selects them and the replay job waits for their
