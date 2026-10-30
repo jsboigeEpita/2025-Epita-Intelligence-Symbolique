@@ -29,10 +29,14 @@ from argumentation_analysis.services.llm_cache import CachedChatCompletion, OFF
 
 
 class _CaptureSKInner(ChatCompletionClientBase):
-    """SK inner capturing the settings object each call carried."""
+    """SK inner capturing the settings object each call carried.
 
-    def __init__(self) -> None:
-        super().__init__(service_id="cap", ai_model_id="claude-haiku-5-5")
+    R1126: defaults to a model where ``reasoning_effort`` acts — on claude-*
+    models the effort is measured inert (#3096 comment 6527232924) and the
+    knob is no longer applied there (pinned in test_llm_thinking_knob_3096)."""
+
+    def __init__(self, model: str = "gpt-5.6-luna") -> None:
+        super().__init__(service_id="cap", ai_model_id=model)
         self._captured = []
 
     @property
@@ -83,10 +87,15 @@ def _run_sk(inner, settings) -> None:
     )
 
 
-async def _run_raw(client) -> None:
+async def _run_raw(client, model: str = "gpt-5.6-luna") -> None:
+    # R1126: the effort is measured INERT on the Anthropic route (#3096
+    # comment 6527232924) and is no longer applied to claude-* models — the
+    # raw-path witnesses therefore run on a model where the control acts.
+    # The inert-route behaviour itself is pinned in
+    # test_llm_thinking_knob_3096.py.
     from argumentation_analysis.services.llm_cache import cached_raw_chat_completion
 
-    await cached_raw_chat_completion(client, model="claude-haiku-5-5", messages=[])
+    await cached_raw_chat_completion(client, model=model, messages=[])
 
 
 @pytest.fixture(autouse=True)

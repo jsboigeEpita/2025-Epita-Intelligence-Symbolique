@@ -7,6 +7,7 @@ Every probe is honest: it reads the real environment of the real run. No
 mocking, no heuristic guessing — either the axis is measured as started or it
 is marked not_started with the reason the probe found.
 """
+
 import os
 import shutil
 from pathlib import Path
@@ -41,10 +42,14 @@ def _probe_jvm() -> Dict[str, Any]:
         # conftest's --disable-jvm-session replaces jpype with a MagicMock
         # whose return is truthy non-bool — the stamp must stay a bool either way.
         jvm_started = bool(jpype.isJVMStarted())
-        jvm_started_note = "JVM running at probe time" if jvm_started else "JVM not running"
+        jvm_started_note = (
+            "JVM running at probe time" if jvm_started else "JVM not running"
+        )
     except ImportError:
         jvm_started = False
-        jvm_started_note = "jpype not importable — JVM state unknown, reported not started"
+        jvm_started_note = (
+            "jpype not importable — JVM state unknown, reported not started"
+        )
 
     result: Dict[str, Any] = {
         "tweety_version_target": tweety_version,
@@ -94,7 +99,9 @@ def _probe_llm_endpoints() -> Dict[str, Any]:
     result["self_hosted_mini_configured"] = bool(
         self_hosted_mini_key and self_hosted_mini_endpoint
     )
-    result["self_hosted_endpoint"] = self_hosted_endpoint if self_hosted_endpoint else None
+    result["self_hosted_endpoint"] = (
+        self_hosted_endpoint if self_hosted_endpoint else None
+    )
     result["self_hosted_mini_endpoint"] = (
         self_hosted_mini_endpoint if self_hosted_mini_endpoint else None
     )
@@ -125,6 +132,19 @@ def _probe_torch() -> Dict[str, Any]:
         }
 
 
+def _anthropic_route_in_env() -> bool:
+    """The run resolves to Anthropic's OpenAI-compatible route (#3096).
+
+    Both forms count: the named route (#3103, ``ANTHROPIC_CHAT_MODEL_ID``)
+    and the legacy overwrite (``OPENAI_CHAT_MODEL_ID`` holding a claude-*
+    model, or ``OPENAI_BASE_URL`` pointing at Anthropic)."""
+    if os.environ.get("ANTHROPIC_CHAT_MODEL_ID"):
+        return True
+    if (os.environ.get("OPENAI_CHAT_MODEL_ID") or "").startswith("claude-"):
+        return True
+    return "api.anthropic.com" in (os.environ.get("OPENAI_BASE_URL") or "")
+
+
 def _probe_overrides() -> Dict[str, Any]:
     """Surface any pinned overrides in effect — a pin must be LOUD."""
     overrides: Dict[str, Any] = {}
@@ -139,10 +159,35 @@ def _probe_overrides() -> Dict[str, Any]:
         "LLM_SEED",
         # #3096 item 5 — the effort a run explicitly set is part of its record.
         "LLM_REASONING_EFFORT",
+        # #3096 item 5 (R1126) — the thinking control a run explicitly set is
+        # part of its record, exactly like the effort.
+        "LLM_ANTHROPIC_THINKING",
     ]:
         val = os.environ.get(var)
         if val is not None:
             overrides[var] = val
+    # #3096 item 5 (R1126) — a recorded control with no effect is the defect
+    # this repairs, so the manifest never presents one as bare fact. On the
+    # Anthropic route ``LLM_REASONING_EFFORT`` is measured INERT (comment
+    # 6527232924); off that route ``LLM_ANTHROPIC_THINKING`` commands a road
+    # the run is not on. Both carry their verdict instead of a bare value.
+    if "LLM_REASONING_EFFORT" in overrides and _anthropic_route_in_env():
+        overrides["LLM_REASONING_EFFORT"] = {
+            "value": overrides["LLM_REASONING_EFFORT"],
+            "verdict": (
+                "measured inert on the Anthropic route (#3096 comment "
+                "6527232924) — not applied; LLM_ANTHROPIC_THINKING is the "
+                "control that acts there"
+            ),
+        }
+    if "LLM_ANTHROPIC_THINKING" in overrides and not _anthropic_route_in_env():
+        overrides["LLM_ANTHROPIC_THINKING"] = {
+            "value": overrides["LLM_ANTHROPIC_THINKING"],
+            "verdict": (
+                "set but no Anthropic route resolved — not applied to any "
+                "call (#3096 item 5)"
+            ),
+        }
     return {"pinned_overrides": overrides}
 
 
@@ -163,6 +208,16 @@ def environment_manifest() -> Dict[str, Any]:
         "torch": _probe_torch(),
         "overrides": _probe_overrides(),
     }
+
+
+def _render_override(value: Any) -> str:
+    """A pin's value — a bare value, or ``value (verdict)`` when the probe
+    attached one (#3096 item 5, R1126)."""
+    if isinstance(value, dict):
+        return "{value} ({verdict})".format(
+            value=value.get("value"), verdict=value.get("verdict")
+        )
+    return str(value)
 
 
 def render_environment_stamp(env: Dict[str, Any]) -> str:
@@ -222,10 +277,18 @@ def render_environment_stamp(env: Dict[str, Any]) -> str:
             )
         )
     else:
-        lines.append("torch: unavailable — {note}".format(note=torch_axis.get("torch_note", "?")))
+        lines.append(
+            "torch: unavailable — {note}".format(note=torch_axis.get("torch_note", "?"))
+        )
     lines.append(
         "overrides: {overrides}".format(
-            overrides=", ".join(f"{k}={v}" for k, v in sorted(overrides.items())) or "none"
+            # #3096 item 5 (R1126): a control measured inert on the resolved
+            # route carries its verdict — ``k=v (verdict)``, never a bare
+            # value that reads as effective.
+            overrides=", ".join(
+                f"{k}={_render_override(v)}" for k, v in sorted(overrides.items())
+            )
+            or "none",
         )
     )
     lines.append("==== END ENVIRONMENT ====")
