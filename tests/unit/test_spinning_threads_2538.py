@@ -144,6 +144,74 @@ def test_a_window_under_two_charge_ticks_is_unmeasurable():
     assert _credits(used=tick, gettable=2 * tick, quantum=tick) is True
 
 
+# #3302 — the fourth CI red of the positive control, as a synthetic trail:
+# CI run 41092477723 printed exactly these four windows for the-spinner,
+# alive throughout (it spins until the session releases it). Every reading is
+# a whole number of the seat's 15.6 ms charge tick, and in each False window
+# the spinner booked one or two ticks while the burner booked five or six.
+_CI_TRAIL = [
+    (0.047, 0.078, True),
+    (0.031, 0.078, False),
+    (0.031, 0.094, False),
+    (0.016, 0.094, False),
+]
+_TICK = 0.015625
+
+
+def test_a_live_spinner_squeezed_to_ticks_is_not_cleared():
+    """#3302, born red: the CI trail above, decided as a rule and with no
+    thread race. The suspect is ALIVE throughout — the child session exits 0
+    today, which is the false negative; #3218's rule reads three sub-bar
+    windows in a row as a clear, and those windows are 1-2 ticks against a
+    burner's 5-6, where one tick flips the ratio. On main this assertion
+    fails with ``'clear' == 'caught'``: the rule itself, not a missing
+    argument."""
+    assert verdict_of(_CI_TRAIL) == "caught"
+
+
+def test_a_thread_on_one_tick_per_window_is_still_running():
+    """A spinner never reaching the ratio bar but booking a tick every
+    window: still using CPU when the measurement ran out — caught, not
+    cleared. The burnt-then-quiet thread below is the other side of the
+    line, and the pair is the control this rule must keep apart."""
+    trail = [(0.016, 0.094, False)] * 9
+    assert verdict_of(trail) == "caught"
+
+
+def test_a_burned_thread_that_went_quiet_is_cleared():
+    """The finished-work control (#3218): a thread that met the bar, then
+    booked NO tick for three measured windows, reads as finished. Its
+    windows are zero-tick — the reading a waiter gives — not sub-bar
+    readings that a scheduler squeeze can produce. Green on main and after
+    #3302: this control must never move."""
+    trail = [(0.100, 0.100, True)] + [(0.000, 0.100, False)] * 3
+    assert verdict_of(trail) == "clear"
+
+
+def test_a_measurement_ending_on_a_starved_window_stays_undetermined():
+    """The #3125 invariant survives #3302: when the calibration starves, the
+    windows carry no signal — even a suspect that booked ticks earlier is
+    not caught by the windows that follow, and the trail that ENDS on an
+    unmeasured window stays undetermined. Green on main and after #3302."""
+    trail = [(0.047, 0.078, True)] + [(0.000, 0.003, None)] * 7
+    assert verdict_of(trail) == "undetermined"
+
+
+def test_a_quiet_window_is_a_zero_tick_window():
+    """The separation is absolute, in charge ticks: zero is the waiter's
+    reading, one tick is already a running thread. The noise floor governs
+    only where the seat charges finer than it."""
+    from tests.spinning_threads import _booked
+
+    assert _booked(0.0, _TICK) is False
+    assert _booked(0.002, _TICK) is False
+    assert _booked(_TICK, _TICK) is True
+    assert _booked(0.016, _TICK) is True
+    # Fine-clock seat: the noise floor decides below one of its ticks.
+    assert _booked(0.002, 0.001) is False
+    assert _booked(0.004, 0.001) is True
+
+
 def test_the_tick_floor_uses_this_seat_s_thread_clock():
     """#3218: the quantum is measured on the seat, never hard-coded — a
     hard-coded 15.625 ms would state the wrong resolution wherever the seat

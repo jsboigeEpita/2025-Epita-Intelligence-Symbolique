@@ -209,6 +209,21 @@ def _credits(used: float, gettable: float, quantum: float | None = None) -> bool
     return used >= max(FACTOR * gettable, USED_FLOOR)
 
 
+def _booked(used: float, quantum: float) -> bool:
+    """Whether the seat charged this suspect any CPU at all in the window:
+    at least one whole charge tick (#3302), or the noise floor on a seat
+    whose clock charges finer than it.
+
+    This is the measurement a clear needs — a waiter and a thread that
+    finished its work are charged **zero**. A spinner squeezed by a loaded
+    scheduler is not: the CI trace that reddened the witness a fourth time
+    read 16/31/31/47 ms against the calibration burner's 78/78/94/94, every
+    reading a whole number of the 15.6 ms tick, so the live spinner booked
+    one to three ticks per window while the ratio bar of ``_credits``
+    (``FACTOR = 0.5``) read the same windows as unused."""
+    return used >= max(USED_FLOOR, quantum)
+
+
 def spinning(
     threads: list[threading.Thread],
     window: float = WINDOW,
@@ -241,10 +256,14 @@ def spinning(
     The Trues are counted within ``MAX_ATTEMPTS`` windows, not as a streak:
     a loaded scheduler squeezes a real spinner below the burner's share for
     isolated windows (measured under ``-n auto``: 31 ms used against 78 ms
-    gettable in one window of a spinner the streak rule missed), and only
-    ``samples`` consecutive unused windows end the measurement — a waiter
-    produces them from the start, a thread that stopped burning produces
-    them right after its last used one.
+    gettable in one window of a spinner the streak rule missed).
+
+    #3302: only ``samples`` consecutive windows in which the suspects were
+    charged **no charge tick at all** end the measurement as a clear — a
+    waiter, or a thread that finished its work. A window below the ratio
+    bar but still on ticks is a thread that kept running, so the windows
+    after it neither clear nor, on their own, catch; a measurement that
+    ends while the suspects still book ticks catches them.
 
     One thread enumeration per window boundary, shared with the next window
     (measured: under a loaded seat each ``psutil`` call can take more than
@@ -259,8 +278,9 @@ def spinning(
     # other.
     quantum = _quantum()
     trues = 0
-    false_streak = 0
+    quiet_streak = 0
     attempts = 0
+    local: list[tuple[float, float, bool | None]] = []
     cal_stop = threading.Event()
     cal = threading.Thread(
         target=_burn_until,
@@ -273,7 +293,7 @@ def spinning(
         watched = list(threads) + [cal]
         cal_id = cal.native_id
         first = _cpu(watched)
-        while trues < samples and attempts < MAX_ATTEMPTS:
+        while attempts < MAX_ATTEMPTS and trues < samples and quiet_streak < samples:
             attempts += 1
             time.sleep(window)
             second = _cpu(watched)
@@ -285,59 +305,92 @@ def spinning(
             gettable = max(0.0, second.get(cal_id, 0.0) - first.get(cal_id, 0.0))
             first = second
             decision = _credits(used, gettable, quantum)
+            window_reading = (used, gettable, decision)
+            local.append(window_reading)
             if trail is not None:
-                trail.append((used, gettable, decision))
+                trail.append(window_reading)
             dead = [thread for thread in threads if not thread.is_alive()]
             if dead:
                 # #3171: a suspect that ended during the measurement gives
                 # no measurement — the windows after it ended read as
                 # unused, and a clear built on them is a silent one. The
-                # caller warns with the trail; no verdict from here.
+                # caller warns with the trail; no verdict from here — and
+                # no #3302 tail verdict either, which needs suspects alive
+                # at the end of the measurement.
                 if ended is not None:
                     ended.extend(thread.name for thread in dead)
-                break
+                return threads if trues >= samples else []
             if decision is None:
                 # Unmeasurable window (the process was starved below
                 # accounting noise): retry it, bounded by MAX_ATTEMPTS.
                 continue
             if decision:
                 trues += 1
-                false_streak = 0
+                quiet_streak = 0
+            elif _booked(used, quantum):
+                # #3302: below the ratio bar but still booking a tick — a
+                # thread that kept running, not one that stopped.
+                quiet_streak = 0
             else:
-                false_streak += 1
-                if false_streak >= samples:
-                    # samples measured windows in a row without use: a
-                    # waiter, or a thread that stopped burning. Not
-                    # spinning.
-                    break
-        return threads if trues >= samples else []
+                quiet_streak += 1
+        # One verdict table for the loop, the hook and the witnesses:
+        # ``verdict_of`` decides the completed trail (including #3302's
+        # "still booking ticks when the measurement ran out").
+        return threads if verdict_of(local, quantum, samples) == "caught" else []
     finally:
         cal_stop.set()
         cal.join(1)
 
 
-def verdict_of(trail: list[tuple[float, float, bool | None]]) -> str:
-    """The verdict of a ``spinning`` window trail: ``"caught"``,
+def verdict_of(
+    trail: list[tuple[float, float, bool | None]],
+    quantum: float | None = None,
+    samples: int = SAMPLES,
+) -> str:
+    """The verdict of a completed ``spinning`` window trail: ``"caught"``,
     ``"clear"``, or ``"undetermined"``.
 
-    ``"clear"`` requires ``SAMPLES`` measured unused windows in a row —
-    a waiter, or a thread that stopped burning. Anything that ends short of
-    ``SAMPLES`` used windows without that streak left the question open:
-    an unmeasured window is not an unused one (#3125 rework)."""
+    ``"clear"`` requires ``samples`` consecutive measurable windows in which
+    the suspects were charged **no CPU tick at all** (#3302): that is the
+    reading a waiter, and a thread that finished its work, give. A spinner
+    a loaded scheduler squeezes below ``FACTOR`` of the burner still books
+    one to three ticks per window (measured on the fourth CI red: a live
+    spinner read 16/31/31/47 ms against a burner's 78/78/94/94) — and
+    #3218's rule cleared it on three sub-bar windows in a row, because a
+    sub-bar window said nothing about whether the thread was still running.
+
+    A window below the bar that still booked a tick is therefore not
+    evidence of a stop; a trail that ends on one — the suspects still
+    booking CPU when the measurement ran out — is ``"caught"``, and so is
+    a thread that never left that state. Unmeasured windows (``None``)
+    neither catch nor clear: a trail that ends on one is
+    ``"undetermined"`` (#3125)."""
+    if quantum is None:
+        quantum = _quantum()
     trues = 0
-    streak = 0
-    for _, _, decision in trail:
+    quiet_run = 0
+    longest_quiet = 0
+    for used, _, decision in trail:
         if decision is None:
             continue
         if decision:
             trues += 1
-            streak = 0
-        else:
-            streak += 1
-    if trues >= SAMPLES:
+            quiet_run = 0
+            continue
+        if _booked(used, quantum):
+            # Below the ratio bar, but the thread kept running: not a stop.
+            quiet_run = 0
+            continue
+        quiet_run += 1
+        longest_quiet = max(longest_quiet, quiet_run)
+    if trues >= samples:
         return "caught"
-    if streak >= SAMPLES:
+    if longest_quiet >= samples:
         return "clear"
+    if trail:
+        last_used, _, last_decision = trail[-1]
+        if last_decision is not None and _booked(last_used, quantum):
+            return "caught"
     return "undetermined"
 
 
@@ -375,9 +428,9 @@ def clear_warning(
 ) -> str:
     """The warning for a clear verdict on threads that did use CPU (#3218):
     at least one window met the bar and ``SAMPLES`` measured windows in a row
-    then did not, so the check read them as finished work — which is a
-    verdict, and it carries its evidence. A waiter produces no used window
-    and stays quiet."""
+    then booked no CPU tick at all (#3302), so the check read them as
+    finished work — which is a verdict, and it carries its evidence. A
+    waiter produces no used window and stays quiet."""
     names = ", ".join(thread.name for thread in threads)
     windows = "; ".join(
         f"used={used * 1000:.0f}ms gettable={gettable * 1000:.0f}ms -> {decision}"
@@ -385,10 +438,10 @@ def clear_warning(
     )
     return (
         f"#3218 cleared {names} after it used CPU: at least one window met "
-        f"the #2538 bar, then {SAMPLES} measured windows in a row did not — a "
-        f"thread that burned and stopped reads as finished work here, so this "
-        f"is the evidence for that verdict, not a silent pass ({len(trail)} "
-        f"window(s) attempted): {windows}"
+        f"the #2538 bar, then {SAMPLES} measured windows in a row booked no "
+        f"CPU tick at all (#3302) — a thread that burned and stopped reads as "
+        f"finished work here, so this is the evidence for that verdict, not a "
+        f"silent pass ({len(trail)} window(s) attempted): {windows}"
     )
 
 
