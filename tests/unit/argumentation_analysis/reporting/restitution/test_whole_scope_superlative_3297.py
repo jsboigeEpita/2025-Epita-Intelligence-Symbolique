@@ -24,6 +24,11 @@ exists):
   construction (anti-pendulum: « le plus » is never banned in general);
 - a tail separated from its head by a clause boundary belongs to the next
   sentence — not flagged (measured: 8 of 46 local whole-scope hits);
+- leg 2 (dispatch R1126): the head learns « meilleur(e)(s) » / « pire(s) »
+  and the tail learns « du propos » — each measured on the stored states
+  BEFORE being kept (head: 14 raw forms, 9 die on the no-tail rule, 5 flag,
+  0 idiom false positives; tail: 15 occurrences, never once attached, 0
+  hits) — and the two idioms the dispatch named stay silent by construction;
 - through the REAL builders: the motive lands in ``degraded`` (hence in
   ``restitution_acts_degraded``), the prose is NOT rewritten, and the motif
   is a code literal carrying no ranking marker — the degraded blockquote
@@ -108,9 +113,7 @@ class TestTheDefect:
         """
         verdict = check_whole_scope_superlative(_R1125A, ranking_line=_RANKING_LINE)
         assert verdict.band == "FAIL"
-        flagged = whole_scope_superlative_sentences(
-            _R1125A, ranking_line=_RANKING_LINE
-        )
+        flagged = whole_scope_superlative_sentences(_R1125A, ranking_line=_RANKING_LINE)
         assert flagged, "the witness needs a flagged sentence to prove anything"
         for reason in verdict.reasons:
             for sentence in flagged:
@@ -118,9 +121,9 @@ class TestTheDefect:
                     "the verdict quotes the act; the sentence must stay out "
                     "of the reasons (#3249)"
                 )
-            assert "«" not in reason, (
-                "no quote marks in a reason: it carries a count, not prose"
-            )
+            assert (
+                "«" not in reason
+            ), "no quote marks in a reason: it carries a count, not prose"
 
 
 class TestTheLicences:
@@ -192,6 +195,66 @@ class TestExclusionsByConstruction:
         body = "Dans le classement qualité, arg_15 demeure le mieux tenu du dispositif."
         hits = whole_scope_superlative_sentences(body, ranking_line=_RANKING_LINE)
         assert len(hits) == 1
+
+
+class TestLeg2Dictionary:
+    """The leg-2 extensions, measured before being kept (dispatch R1126).
+
+    Born red on the leg-1 module: the meilleur/pire heads and the « du
+    propos » tail are not in its dictionary, so the three flagging witnesses
+    below passed silently there. The measured corpus numbers live in the
+    module docstring; the witnesses here are synthetic shapes of the same
+    families, never corpus text.
+    """
+
+    def test_meilleur_head_flags(self):
+        """« la meilleure arme du dispositif » — the R1125a shape in the
+        meilleur form: whole-report scope, no ranking carried by the
+        sentence. Flags even with the ranking line present."""
+        body = (
+            "Ce résultat est net : cette attaque reste la meilleure arme du dispositif."
+        )
+        assert (
+            check_whole_scope_superlative(body, ranking_line=_RANKING_LINE).band
+            == "FAIL"
+        )
+        assert (
+            len(whole_scope_superlative_sentences(body, ranking_line=_RANKING_LINE))
+            == 1
+        )
+
+    def test_pire_head_flags(self):
+        """« le pire point du discours » — the same shape on the pire side."""
+        body = "Cette faiblesse demeure le pire point du discours."
+        assert check_whole_scope_superlative(body).band == "FAIL"
+
+    def test_du_propos_tail_flags(self):
+        """« le plus solide du propos » — the baseline head with the leg-2
+        tail: the scope is the whole report, and no licence names it."""
+        body = "Ce mouvement demeure le plus solide du propos."
+        assert check_whole_scope_superlative(body).band == "FAIL"
+
+    def test_le_meilleur_moyen_is_not_a_ranking(self):
+        """The idiom the dispatch named: « le meilleur moyen » states a
+        method, not a rank over the report — no whole-scope tail attaches,
+        so it stays silent (measured: 9 of 14 raw meilleur/pire heads die
+        exactly here)."""
+        body = "Le meilleur moyen d'exposer la thèse reste la comparaison continue."
+        assert whole_scope_superlative_sentences(body) == []
+
+    def test_le_pire_des_cas_is_excluded_by_construction(self):
+        """The second named idiom: « le pire des cas » — the noun after the
+        head is « cas », a quantifier, exactly like « la plus grande
+        partie ». A share-scenario, never a ranking."""
+        body = "Le pire des cas de figure reste une objection laissée sans réponse."
+        assert whole_scope_superlative_sentences(body) == []
+
+    def test_meilleur_head_keeps_the_licences(self):
+        """The extension rides the same licences as « le plus » — the #3159
+        measured scope licenses a meilleur superlative that names the
+        population it ranks."""
+        body = "Cette attaque demeure la meilleure arme de l'ensemble évalué."
+        assert whole_scope_superlative_sentences(body, ranking_line=_RANKING_LINE) == []
 
 
 # --- through the real builders ------------------------------------------------
