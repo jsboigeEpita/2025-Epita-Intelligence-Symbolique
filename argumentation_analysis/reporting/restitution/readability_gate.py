@@ -250,8 +250,8 @@ _TAXCODE_FAIL_THRESHOLD = 3  # ≥3 → FAIL (same band as a manifest enumeratio
 # job (measured): the digit tail is what keeps ``abs_arg_dung`` out — its tail
 # is a word, not a number, so the token is not an id; the ``\b`` pair is what
 # keeps a *partial* id shape inside a longer word (``subarg_1``, ``arg_1x``,
-# ``my_arg_2bis``) from being read as a printed standalone id. Greek thread
-# letters are the DESIGNED label and never match.
+# ``my_arg_2bis``) from being read as a printed standalone id. Greek letters
+# have their own rule below (#3317) — they never match here.
 _RAW_INTERNAL_ID_RE = re.compile(
     r"\b(?:task|arg|fallacy|fl|fw|qlog|extract|error|ca|jtms|dung|gov"
     r"|[a-z]+_bs)_\d+\b"
@@ -275,17 +275,42 @@ _RAW_ID_FAIL_THRESHOLD = 3  # ≥3 → FAIL (jargon has taken over the prose)
 # already ruled PASS (abs_arg_dung; nl_to_logic, which the census itself
 # sets apart from the metadata class).
 _SNAKE_CASE_RE = re.compile(r"\b[a-z]+_[a-z]+\b")
-_SNAKE_SPAN_RE = re.compile(r"\[artifact:[^\]]*\]|«[^»]*»")
 _SNAKE_WARN_THRESHOLD = 1  # any printed key is worth a reason; 1–2 → WARN
 _SNAKE_FAIL_THRESHOLD = 3  # ≥3 → FAIL (field names have taken the prose)
+
+# #3317 — a Greek letter printed into the render. #3305 gave the WRITER a
+# per-act letter table whose legend decodes it; the legend lives in the
+# prompt only, so a letter that reaches the reader is a designation they
+# cannot resolve — #3296's defect with a letter in place of the id. Measured
+# on the first paid pass after #3305 (R1129a): 18 letter tokens in one act,
+# against 0 before the table (R1127a/b/c). Letters are matched as a
+# standalone token (no letter/digit touching either side, so prose words
+# never match) and inside a « … » quotation they are DATA, not a
+# designation — the citation channel is stripped first, same as below.
+_GREEK_LABEL_RE = re.compile(r"(?<!\w)[αβγδεζηθικλμνξοπρστυφχψω]+(?!\w)")
+_GREEK_WARN_THRESHOLD = 1  # any printed letter is worth a reason; 1–2 → WARN
+_GREEK_FAIL_THRESHOLD = 3  # ≥3 → FAIL (the handle has taken over the prose)
+
+#: Citation channels — their content is quoted data, never a printed
+#: designation or a technical key (shared by #3311's rule and #3317's).
+_QUOTED_SPAN_RE = re.compile(r"\[artifact:[^\]]*\]|«[^»]*»")
 
 
 def _find_snake_case_keys(text: str) -> List[str]:
     """Snake_case field tokens printed into a rendered text, in order."""
-    stripped = _SNAKE_SPAN_RE.sub(" ", text or "")
+    stripped = _QUOTED_SPAN_RE.sub(" ", text or "")
     for token in set(_RAW_INTERNAL_ID_RE.findall(stripped)):
         stripped = re.sub(rf"\b{re.escape(token)}\b", " ", stripped)
     return _SNAKE_CASE_RE.findall(stripped)
+
+
+def _find_greek_labels(text: str) -> List[str]:
+    """Standalone Greek-letter tokens printed into a rendered text, in order.
+
+    A token inside a « … » quotation or an ``[artifact: …]`` anchor is
+    quoted data — stripped before the scan, never counted.
+    """
+    return _GREEK_LABEL_RE.findall(_QUOTED_SPAN_RE.sub(" ", text or ""))
 
 
 def _find_internal_ids(body: str) -> List[str]:
@@ -452,6 +477,7 @@ class ReadabilityGate:
         total_taxcodes = 0
         total_raw_ids = 0
         total_keys = 0
+        total_letters = 0
 
         for n in (1, 2, 3):
             text = acts.as_dict()[n] or ""
@@ -526,6 +552,20 @@ class ReadabilityGate:
                     f"lecteur — #3311). Ex: « {act_keys[0]} »."
                 )
 
+            # (2e) Greek letter labels — the writer's per-act handle printed
+            # into the render (#3317). The legend that decodes it lives in
+            # the PROMPT only, so the reader meets a letter they cannot
+            # resolve: #3296's defect with a letter in place of the id.
+            act_letters = _find_greek_labels(text)
+            total_letters += len(act_letters)
+            if act_letters:
+                reasons.append(
+                    f"{title}: "
+                    f"{accord(len(act_letters), 'lettre de désignation imprimée', 'lettres de désignation imprimées')} "
+                    f"en prose (poignée de l'écrivain, jamais rendue au "
+                    f"lecteur — #3317). Ex: « {act_letters[0]} »."
+                )
+
             # (3) non-dump — repeated numbered dimension headings = enumeration
             dump_n = _count_dump_headings(text)
             if dump_n >= self.dump_fail_threshold:
@@ -557,6 +597,12 @@ class ReadabilityGate:
         if total_keys >= _SNAKE_FAIL_THRESHOLD:
             worst_band = _worsen(worst_band, "FAIL")
         elif total_keys >= _SNAKE_WARN_THRESHOLD:
+            worst_band = _worsen(worst_band, "WARN")
+
+        # aggregate printed letter labels across acts → WARN/FAIL (#3317)
+        if total_letters >= _GREEK_FAIL_THRESHOLD:
+            worst_band = _worsen(worst_band, "FAIL")
+        elif total_letters >= _GREEK_WARN_THRESHOLD:
             worst_band = _worsen(worst_band, "WARN")
 
         return GateVerdict(band=worst_band, reasons=reasons)
@@ -652,6 +698,26 @@ class ReadabilityGate:
                 f"Corps: clé technique snake_case en prose "
                 f"(nom de champ du state, illisible pour le lecteur — #3311). "
                 f"Ex: « {body_keys[0]} »."
+            )
+
+        # #3317 — the writer's per-act letter handle printed into the
+        # assembled prose. Same rule, on the body: the self-controls call
+        # check_body, so a hit lands in the act's ``degraded`` map through
+        # the existing plumbing — the run says it, nothing is rewritten.
+        body_letters = _find_greek_labels(body)
+        if len(body_letters) >= _GREEK_FAIL_THRESHOLD:
+            worst_band = _worsen(worst_band, "FAIL")
+            reasons.append(
+                f"Corps: {len(body_letters)} lettres de désignation imprimées "
+                f"en prose (poignée de l'écrivain, jamais rendue au lecteur — "
+                f"#3317)."
+            )
+        elif len(body_letters) >= _GREEK_WARN_THRESHOLD:
+            worst_band = _worsen(worst_band, "WARN")
+            reasons.append(
+                f"Corps: lettre de désignation imprimée en prose "
+                f"(poignée de l'écrivain, jamais rendue au lecteur — #3317). "
+                f"Ex: « {body_letters[0]} »."
             )
 
         extracted_values = _distinct_extracted_arg_values(body)

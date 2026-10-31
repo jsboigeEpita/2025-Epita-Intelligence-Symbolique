@@ -41,10 +41,15 @@ _BODY_WITH_ID = (
     "directe aurait suffi, détourne l'examen vers la personne."
 )
 
-# The designed label and the appendix vocabulary — both must stay PASS.
+# Appendix vocabulary must stay PASS: ``abs_arg_dung`` is a module name, its
+# tail is a word, not an id. The printed thread letter is NOT in this fixture
+# any more — #3317 measured that the legend decoding it lives in the PROMPT
+# only, so « l'argument α » is an undecodable designation for the reader and
+# the letter rule counts it (see test_greek_label_leak_3317.py).
 _BODY_CLEAN = (
-    "Le fil s'ouvre sur l'argument α, celui que la gouvernance désigne, "
-    "et le lecteur retrouve la preuve repliée sous abs_arg_dung en annexe."
+    "Le fil s'ouvre sur l'argument que la gouvernance désigne par ce qu'il "
+    "soutient, et le lecteur retrouve la preuve repliée sous abs_arg_dung en "
+    "annexe."
 )
 
 
@@ -82,11 +87,14 @@ class TestTheBodyCheckFlagsIdClasses:
         # opaque token only
         assert "revendication" not in " ".join(verdict.reasons)
 
-    def test_positive_control_letters_and_appendix_vocabulary_stay_pass(self) -> None:
-        """« l'argument α » is the designed label and ``abs_arg_dung`` is
-        appendix vocabulary, not a state id — this body stays PASS."""
+    def test_positive_control_appendix_vocabulary_stays_pass(self) -> None:
+        """``abs_arg_dung`` is appendix vocabulary, not a state id — this body
+        stays PASS. The former control also pinned « l'argument α » as PASS;
+        #3317 revoked it: the letter's legend lives in the prompt only, so a
+        printed letter is an undecodable designation (its own rule counts it,
+        test_greek_label_leak_3317.py)."""
         verdict = ReadabilityGate().check_body(_BODY_CLEAN)
-        assert verdict.band == "PASS"
+        assert verdict.band == "PASS", verdict.reasons
 
     def test_three_ids_fail_the_band(self) -> None:
         """A jargon takeover (≥3 printed ids) fails like a manifest
