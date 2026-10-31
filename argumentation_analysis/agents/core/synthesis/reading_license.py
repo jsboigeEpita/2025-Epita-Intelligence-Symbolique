@@ -770,6 +770,13 @@ _FALLACY_ANCHOR_RE = re.compile(
     r"\[artifact:identified_fallacies\.([A-Za-z0-9_.\-]+)\]"
 )
 
+#: #3316 — a clause boundary, read only OUTSIDE anchors: an anchor's own
+#: dots (``identified_fallacies`` **.** ``fallacy_2``) are not punctuation.
+#: The measured trap: a plain ``[.,;:!?]`` search cut the span at the record
+#: key's dot, and the backing anchor became invisible — the first
+#: measurement of the backing rule removed nothing because of it.
+_CLAUSE_PUNCTUATION = re.compile(r"[.,;:!?]")
+
 
 def _units_named_through_anchors(sentence: str, state: Any) -> "set[str]":
     """#3298 — the units a sentence names THROUGH its citations.
@@ -791,6 +798,37 @@ def _units_named_through_anchors(sentence: str, state: Any) -> "set[str]":
     return units
 
 
+def _name_backed_by_anchor(sentence: str, match: "re.Match[str]", records: Any) -> bool:
+    """#3316 — True when the name ``match`` is followed, within its clause,
+    by an ``identified_fallacies`` anchor whose record exists.
+
+    The name is then backed by that record, and the check does not look for
+    other units in the sentence — the false positive this rule kills is a
+    name whose sentence carries a word that coincidentally binds a
+    record-less unit through its description (the ``speaker`` /
+    ``opponent`` class, measured on the stored states: 4 distinct false
+    positives removed, zero true positives lost; subtracting taxonomy
+    vocabulary instead removed nothing — the binding tokens are ordinary
+    words, not label vocabulary). A clause boundary never sits inside an
+    anchor: the anchor's own dots are not punctuation.
+    """
+    if not isinstance(records, dict):
+        return False
+    tail = sentence[match.end() :]
+    anchor_spans = [(a.start(), a.end()) for a in _ANCHOR_RE.finditer(tail)]
+    stop = len(tail)
+    for boundary in _CLAUSE_PUNCTUATION.finditer(tail):
+        if any(start <= boundary.start() < end for start, end in anchor_spans):
+            continue
+        stop = boundary.start()
+        break
+    for key in _FALLACY_ANCHOR_RE.findall(tail[:stop]):
+        data = records.get(key)
+        if isinstance(data, dict) and data.get("target_argument_id"):
+            return True
+    return False
+
+
 def _unbacked_fallacy_name_flags(
     paragraphs: List[str],
     state: Any,
@@ -800,10 +838,12 @@ def _unbacked_fallacy_name_flags(
     """#3158 — a fallacy name in the report's voice on a unit no detector
     recorded one for.
 
-    Four ways a sentence may legitimately carry a name, and none is flagged: it
+    Five ways a sentence may legitimately carry a name, and none is flagged: it
     names no unit (then it is not a claim about a unit), it is negated (« ne
     relève aucun faux dilemme »), it attributes the name to the objection that
-    made it, or the unit carries a fallacy record.
+    made it, the unit carries a fallacy record, or — #3316 — the name itself
+    is backed by a record anchor in its own clause, whatever other word of the
+    sentence coincidentally binds a record-less unit.
 
     #3298 — how a sentence NAMES a unit: an explicit ``arg_N`` in the prose,
     through the anchors that cite a unit or a fallacy record (#3307's
@@ -813,6 +853,7 @@ def _unbacked_fallacy_name_flags(
     if not units_indexed:
         return []
     recorded = _units_with_fallacy_record(state)
+    records = getattr(state, "identified_fallacies", None)
     flags: List[Dict[str, Any]] = []
     for paragraph in paragraphs:
         if len(flags) >= max_flags:
@@ -846,6 +887,8 @@ def _unbacked_fallacy_name_flags(
             if match is None or _is_negated(sentence, match.start()):
                 continue
             if _ATTRIBUTION_MARKERS.search(sentence) is not None:
+                continue
+            if _name_backed_by_anchor(sentence, match, records):
                 continue
             unbacked = [unit for unit in named_units if unit not in recorded]
             if unbacked:
