@@ -109,6 +109,7 @@ from argumentation_analysis.orchestration.fol_cause import (  # #3237
 from argumentation_analysis.utils.taxonomy_loader import (  # #3224
     fallacy_taxonomy_label,
 )
+from .act1_framing_plugin import reader_metadata_view  # #3311
 from .fr_accord import accord
 from .global_projection import (
     GlobalFinding,
@@ -2598,10 +2599,12 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
     """
     # #2845 — the recorded source metadata, truncated like everything else
     # (privacy HARD + prompt budget). Mirrors build_act1_evidence.
+    # #3311 — through the same reader-label view as Acte I: no raw key
+    # reaches this prompt either.
     metadata = getattr(state, "source_metadata", {}) or {}
     if not isinstance(metadata, dict):
         metadata = {}
-    metadata_view = {str(k): _truncate(v, _META_CAP) for k, v in metadata.items() if v}
+    metadata_view = reader_metadata_view(metadata)
 
     args = getattr(state, "identified_arguments", {}) or {}
     fallacies = getattr(state, "identified_fallacies", {}) or {}
@@ -3511,8 +3514,8 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         # les revendications extraites sont une lecture de modèle. Chaque bloc
         # porte sa provenance ; le titre n'en promet plus une seule.
         "DONNÉES DU STATE — provenance étiquetée bloc à bloc "
-        "(ne citer que ces données ; « métadonnée enregistrée » = lu dans "
-        "source_metadata ; « inférée du texte » = lecture de modèle, jamais "
+        "(ne citer que ces données ; « métadonnée enregistrée » = lue à la "
+        "source du corpus ; « inférée du texte » = lecture de modèle, jamais "
         "une donnée vérifiée) :\n\n"
         f"[MÉTADONNÉES DE LA SOURCE — l'origine du discours, telle qu'enregistrée]"
         f"\n{meta_block}\n\n"

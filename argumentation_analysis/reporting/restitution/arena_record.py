@@ -127,11 +127,8 @@ def format_arena_line(record: ArenaRecord) -> str:
             "du texte par l'extracteur d'enjeux)"
         )
     if record.provenance == PROVENANCE_METADATA:
-        return (
-            f"Arène discursive : {record.value} "
-            f"(provenance : {_LABEL_METADATA} — {record.source_key})"
-        )
-    return (
-        f"Arène discursive : {record.value} "
-        f"(provenance : {_LABEL_INFERRED} ; {record.source_key})"
-    )
+        # #3311 — the writer reads the provenance CLASS (enregistrée vs
+        # inférée), never the internal dotted path that carried it;
+        # ``source_key`` stays on the record for tests and debugging.
+        return f"Arène discursive : {record.value} " f"(provenance : {_LABEL_METADATA})"
+    return f"Arène discursive : {record.value} " f"(provenance : {_LABEL_INFERRED})"
