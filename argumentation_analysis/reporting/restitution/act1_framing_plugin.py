@@ -63,6 +63,55 @@ logger = logging.getLogger(__name__)
 _STAKE_CAP = 200
 _STAKEHOLDER_CAP = 120
 _META_CAP = 160
+
+# #3311 — the reader labels for the metadata keys the corpus records. The
+# blocks used to hand the writer the RAW snake_case keys with their raw
+# values, and 18/90 stored renders printed them (« (era : unknown,
+# year_bucket : unknown) ») while the writers' own instructions forbade
+# exactly that (#3159: a rule the writer can break is not one). A key
+# outside the map is humanised (underscores become spaces) so NO key shape
+# can reach a prompt; a placeholder value renders as « non renseigné »,
+# never the raw English « unknown ». The #3073 recorded-vs-inferred
+# distinction stays — only the field names leave the writer's view.
+_META_LABELS: Dict[str, str] = {
+    "discourse_type": "type de discours",
+    "regime_type": "régime",
+    "era": "époque",
+    "year_bucket": "tranche d'années",
+    # The rest is the key population measured on the 49 campaign states
+    # (occurrences: speaker 28, date_or_year 22, title 11, venue 6, then
+    # singletons) — English keys read as English without a label, which is
+    # the same defect class one keystroke later.
+    "speaker": "locuteur",
+    "date_or_year": "date ou année",
+    "title": "titre",
+    "venue": "lieu",
+    "author": "auteur",
+    "context": "contexte",
+    "original_source": "source d'origine",
+    "extraction_date": "date d'extraction",
+}
+_META_PLACEHOLDER = "non renseigné"
+_META_PLACEHOLDER_VALUES = frozenset({"unknown", "none", "null", "n/a"})
+
+
+def reader_metadata_view(metadata: Dict[str, Any]) -> Dict[str, str]:
+    """The metadata block as the WRITER sees it (#3311): reader labels,
+    humanised keys, French placeholder values."""
+    view: Dict[str, str] = {}
+    for key, value in (metadata or {}).items():
+        if not value:
+            continue
+        raw = str(value).strip()
+        rendered = (
+            _META_PLACEHOLDER
+            if raw.lower() in _META_PLACEHOLDER_VALUES
+            else _truncate(raw, _META_CAP)
+        )
+        view[_META_LABELS.get(str(key), str(key).replace("_", " "))] = rendered
+    return view
+
+
 # #1914 — cap for the extracted interpretive question (the carrier that
 # rides into the Acte III prompt): a runaway paragraph under the marker
 # must not balloon the conclusion's data block.
@@ -383,7 +432,8 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
     metadata = getattr(state, "source_metadata", {}) or {}
     if not isinstance(metadata, dict):
         metadata = {}
-    metadata_view = {str(k): _truncate(v, _META_CAP) for k, v in metadata.items() if v}
+    # #3311 — reader labels, never the raw keys: see ``reader_metadata_view``.
+    metadata_view = reader_metadata_view(metadata)
 
     stakes_obj = getattr(state, "stakes_and_stakeholders", {}) or {}
     has_stakes = isinstance(stakes_obj, dict) and bool(
@@ -780,11 +830,17 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
             f"{', '.join(f.matched_contexts)}"
             for f in evidence.expected_spectrum
         )
+        # #3311 — the writer reads the provenance CLASS (enregistrée vs
+        # inférée), never the internal field path « source_metadata.genre »
+        # that used to ride beside it.
+        source_label = (
+            "métadonnée enregistrée"
+            if evidence.genre_source.startswith("source_metadata")
+            else "inférée du texte"
+        )
         spectrum_note = (
-            f"Spectre : DÉRIVÉ du genre « {evidence.genre} » (source : "
-            f"{evidence.genre_source} — "
-            f"{'métadonnée enregistrée' if evidence.genre_source.startswith('source_metadata') else 'inférée du texte'}"
-            f"). Ces familles sont attendues POUR CE "
+            f"Spectre : DÉRIVÉ du genre « {evidence.genre} » "
+            f"(source : {source_label}). Ces familles sont attendues POUR CE "
             f"genre — ancre chacune sur le contexte qui la rend probable."
         )
 
@@ -904,8 +960,9 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         # disait l'inverse). Le bloc dit maintenant sa provenance ligne à
         # ligne : « enregistré » = métadonnée, « inféré » = lecture.
         "DONNÉES DU STATE — provenance étiquetée bloc à bloc "
-        "(« métadonnée enregistrée » = lu dans source_metadata ; « inférée du "
-        "texte » = lecture de modèle, jamais une donnée vérifiée) :\n\n"
+        "(« métadonnée enregistrée » = lue à la source du corpus ; "
+        "« inférée du texte » = lecture de modèle, jamais une donnée "
+        "vérifiée) :\n\n"
         f"[LE TEXTE — métadonnées enregistrées]\n{meta_block}\n\n"
         f"[LES ENJEUX — inférés du texte par l'extracteur (jamais « vérifiés »)]\n{stakes_block}\n\n"
         f"[SPECTRE ATTENDU — dérivation taxonomie]\n{spectrum_note}{spectrum_coda}\n"

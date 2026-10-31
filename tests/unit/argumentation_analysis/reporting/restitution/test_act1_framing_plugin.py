@@ -216,7 +216,8 @@ class TestGenreDerivation:
 class TestBuildEvidence:
     def test_metadata_is_opaque_view(self):
         ev = build_act1_evidence(_political_state())
-        assert ev.metadata["speaker_role"] == "locuteur en autorité"
+        # #3311 — the view is keyed by READER LABELS, never the raw keys.
+        assert ev.metadata["speaker role"] == "locuteur en autorité"
         assert ev.genre in ("politique", "délibératif")
 
     def test_stakes_and_stakeholders_populated(self):

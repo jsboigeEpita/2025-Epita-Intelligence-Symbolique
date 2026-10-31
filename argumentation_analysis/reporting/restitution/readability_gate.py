@@ -259,6 +259,34 @@ _RAW_INTERNAL_ID_RE = re.compile(
 _RAW_ID_WARN_THRESHOLD = 1  # any printed id is worth a reason; 1–2 → WARN
 _RAW_ID_FAIL_THRESHOLD = 3  # ≥3 → FAIL (jargon has taken over the prose)
 
+# #3311 — a snake_case field name printed into an act. The Act I metadata
+# block used to hand the writer the raw keys, and 18/90 stored renders
+# printed them (« (era : unknown, year_bucket : unknown) ») while no rule
+# read the acts for them (#3159: a rule the writer can break is not one).
+# The source now labels the fields (#3311's repair); this rule reads the
+# OUTPUT, so whatever teaching survives is named, never rewritten (#2980's
+# shape). Anchors (the citation channel) and « … » quotations are stripped
+# first — their keys are data — and raw internal ids are left to their own
+# rule (#2980): one token never raises two reasons. The shape is the
+# MEASURED class exactly — two letter segments (discourse_type,
+# year_bucket, regime_type, source_metadata): a digit tail is the id
+# shapes' own discriminator (arg_6, my_arg_2bis stay #2980's), and a third
+# letter segment is the module/appendix vocabulary the #2980 controls
+# already ruled PASS (abs_arg_dung; nl_to_logic, which the census itself
+# sets apart from the metadata class).
+_SNAKE_CASE_RE = re.compile(r"\b[a-z]+_[a-z]+\b")
+_SNAKE_SPAN_RE = re.compile(r"\[artifact:[^\]]*\]|«[^»]*»")
+_SNAKE_WARN_THRESHOLD = 1  # any printed key is worth a reason; 1–2 → WARN
+_SNAKE_FAIL_THRESHOLD = 3  # ≥3 → FAIL (field names have taken the prose)
+
+
+def _find_snake_case_keys(text: str) -> List[str]:
+    """Snake_case field tokens printed into a rendered text, in order."""
+    stripped = _SNAKE_SPAN_RE.sub(" ", text or "")
+    for token in set(_RAW_INTERNAL_ID_RE.findall(stripped)):
+        stripped = re.sub(rf"\b{re.escape(token)}\b", " ", stripped)
+    return _SNAKE_CASE_RE.findall(stripped)
+
 
 def _find_internal_ids(body: str) -> List[str]:
     """Raw internal-id tokens present in a rendered text, in order."""
@@ -423,6 +451,7 @@ class ReadabilityGate:
         total_bare = 0
         total_taxcodes = 0
         total_raw_ids = 0
+        total_keys = 0
 
         for n in (1, 2, 3):
             text = acts.as_dict()[n] or ""
@@ -484,6 +513,19 @@ class ReadabilityGate:
                     f"#2980). Ex: « {act_ids[0]} »."
                 )
 
+            # (2d) snake_case field names — the Act I metadata keys
+            # (#3311): a printed field name is a key the reader cannot
+            # resolve, whatever wrapped it.
+            act_keys = _find_snake_case_keys(text)
+            total_keys += len(act_keys)
+            if act_keys:
+                reasons.append(
+                    f"{title}: "
+                    f"{accord(len(act_keys), 'clé technique snake_case', 'clés techniques snake_case')} "
+                    f"en prose (nom de champ du state, illisible pour le "
+                    f"lecteur — #3311). Ex: « {act_keys[0]} »."
+                )
+
             # (3) non-dump — repeated numbered dimension headings = enumeration
             dump_n = _count_dump_headings(text)
             if dump_n >= self.dump_fail_threshold:
@@ -509,6 +551,12 @@ class ReadabilityGate:
         if total_raw_ids >= _RAW_ID_FAIL_THRESHOLD:
             worst_band = _worsen(worst_band, "FAIL")
         elif total_raw_ids >= _RAW_ID_WARN_THRESHOLD:
+            worst_band = _worsen(worst_band, "WARN")
+
+        # aggregate snake_case field names across acts → WARN/FAIL (#3311)
+        if total_keys >= _SNAKE_FAIL_THRESHOLD:
+            worst_band = _worsen(worst_band, "FAIL")
+        elif total_keys >= _SNAKE_WARN_THRESHOLD:
             worst_band = _worsen(worst_band, "WARN")
 
         return GateVerdict(band=worst_band, reasons=reasons)
@@ -585,6 +633,25 @@ class ReadabilityGate:
                 f"« {body_ids[0].rsplit('_', 1)[0]}_N » en prose "
                 f"(id opaque du state, illisible pour le lecteur — #2980). "
                 f"Ex: « {body_ids[0]} »."
+            )
+
+        # #3311 — snake_case field names printed into the rendered prose
+        # (the Act I metadata keys). The self-controls call check_body, so a
+        # hit lands in the act's ``degraded`` map through the existing
+        # plumbing — the run says it, nothing is rewritten.
+        body_keys = _find_snake_case_keys(body)
+        if len(body_keys) >= _SNAKE_FAIL_THRESHOLD:
+            worst_band = _worsen(worst_band, "FAIL")
+            reasons.append(
+                f"Corps: {len(body_keys)} clés techniques snake_case en prose "
+                f"(noms de champs du state — #3311)."
+            )
+        elif len(body_keys) >= _SNAKE_WARN_THRESHOLD:
+            worst_band = _worsen(worst_band, "WARN")
+            reasons.append(
+                f"Corps: clé technique snake_case en prose "
+                f"(nom de champ du state, illisible pour le lecteur — #3311). "
+                f"Ex: « {body_keys[0]} »."
             )
 
         extracted_values = _distinct_extracted_arg_values(body)
