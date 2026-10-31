@@ -31,6 +31,14 @@ Design, from the measured shapes (c. 6531974201):
 - **The legend carries the referent, never the id** — the capped unit text
   when the state has one, a named absence when it does not (the same
   honesty rule as the thread legend, #2965).
+- **The letters are a handle for the WRITER, never a label for the reader**
+  (#3317). The legend lives in the prompt only; the render carries none, so
+  a letter printed into an act is a designation the reader cannot resolve —
+  #3296's defect with a letter in place of the id (measured: 18 letter
+  tokens in one act, R1129a, against 0 before the table). The legend
+  therefore never ORDERS the letter: prose designates a unit by what it
+  says, a textless one by its role or the named absence, and
+  ``readability_gate`` counts any letter that slips into the render.
 
 The ids stay inside the evidence layer untouched: checks, rejections and
 structured consumers keep reading ``arg_N`` — only the WRITER's view is
@@ -57,14 +65,15 @@ LEGEND_REFERENT_CAP = 200
 LEGEND_HEADING = "LÉGENDE DES DÉSIGNATIONS"
 
 _LEGEND_INTRO = (
-    "chaque lettre grecque désigne UN argument du corpus — l'identifiant "
-    "machine arg_N n'apparaît plus dans ce prompt ; lis chaque lettre par "
-    "cette légende :"
+    "chaque lettre grecque est une poignée de lecture qui t'est destinée — "
+    "ce tableau n'est pas rendu au lecteur. Dans la prose, désigne une unité "
+    "par ce qu'elle dit ; une unité sans texte joint, par son rôle dans le "
+    "propos ou par l'absence nommée :"
 )
 
 _LEGEND_MISSING = (
-    "(texte non joint dans ce prompt — désigne-le par sa lettre, ne lui "
-    "prête pas de texte)"
+    "(texte non joint dans ce prompt — désigne-le par son rôle dans le "
+    "propos ou par l'absence nommée, ne lui prête pas de texte)"
 )
 
 

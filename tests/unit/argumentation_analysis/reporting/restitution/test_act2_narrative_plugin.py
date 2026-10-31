@@ -131,8 +131,11 @@ def _raising_llm(exc: BaseException) -> object:
 
 # A §4-compliant woven narrative (all framework refs anchored on a beat, no
 # isolated score, no dump heading). Must PASS the readability gate — including
-# its no-raw-id rule (#2980): a compliant narrative never prints an opaque
-# state id, the Dung verdict names its subject by its thread letter.
+# its no-raw-id rule (#2980) and its printed-letter rule (#3317): a compliant
+# narrative never prints an opaque state id, and the Dung verdict names its
+# subject by what the act says about it. This fixture used to say « l'argument
+# α » — a thread letter whose legend lives in the PROMPT only, so the reader
+# met an undecodable designation (#3317's measured defect).
 _WOVEN_NARRATIVE = (
     "### Le mouvement ad hominem\n\n"
     "Le premier mouvement appuie la thèse en disqualifiant l'adversaire plutôt "
@@ -142,8 +145,8 @@ _WOVEN_NARRATIVE = (
     "le solveur Tweety confirme l'inconsistance de l'inférence sous-jacente. "
     "Un contre-exemple montre qu'on peut attaquer la thèse sans attaquer la "
     "personne, ce qui isole le procès personnel comme superflu. Le cadre de "
-    "Dung traduit cela mécaniquement: l'argument α est rejeté par la sémantique "
-    "grounded, ne survivant pas à l'attaque.\n\n"
+    "Dung traduit cela mécaniquement: l'argument attaqué est rejeté par la "
+    "sémantique grounded, ne survivant pas à l'attaque.\n\n"
     "### Les soutiens qui tiennent\n\n"
     "Le second mouvement défend une revendication par un raisonnement causal "
     "étayé; la vertu de pertinence éclaire un argument qui reste lié à sa "
