@@ -160,7 +160,9 @@ class TestTheVerdictSentenceSpeaksTheReadersFrench:
         sentence = discourse_virtue_sentence(
             [_strength("redondance_faible", at_top=6, evaluated=7, units=35)]
         )
-        assert "VERDICT PRÉ-CALCULÉ (reprends-le tel quel)" in sentence
+        # #3319: the directive still demands verbatim, and now names the
+        # delimiters it must not copy.
+        assert "VERDICT PRÉ-CALCULÉ (reprends-le tel quel, sans guillemets)" in sentence
         assert "(6/7 arguments évalués, 35 unités)" in sentence
         assert "Aucune autre vertu ne se dit du discours." in sentence
 

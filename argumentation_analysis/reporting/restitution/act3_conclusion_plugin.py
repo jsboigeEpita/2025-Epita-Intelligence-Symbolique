@@ -1141,7 +1141,11 @@ def discourse_virtue_sentence(strengths: List[QualityStrength]) -> str:
     arguments evaluated, N units), and says plainly when none does — the
     honest absence replaces the rule, it does not soften it. Each virtue is
     named by its reader-facing French (#3244, ``VIRTUE_DISPLAY_FR``) — the
-    writer copies the sentence verbatim, so the identifier must not ride it.
+    writer copies the sentence verbatim, so the identifier must not ride it,
+    and printed bare (#3319): a model line handed over between « » comes
+    back between « » in the render, so the instruction says the delimiters
+    are not part of the sentence. The verdict itself stays pre-composed and
+    verbatim — only the quoting changes.
     """
     passed = [
         s
@@ -1161,8 +1165,9 @@ def discourse_virtue_sentence(strengths: List[QualityStrength]) -> str:
         for s in passed
     )
     return (
-        "VERDICT PRÉ-CALCULÉ (reprends-le tel quel) : « Le discours tient sur "
-        f"{named}. » Aucune autre vertu ne se dit du discours."
+        "VERDICT PRÉ-CALCULÉ (reprends-le tel quel, sans guillemets) : "
+        f"Le discours tient sur {named}. "
+        "Aucune autre vertu ne se dit du discours."
     )
 
 

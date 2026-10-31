@@ -42,6 +42,11 @@ have turned the contract around.
   ``redondance_faible``, « clarte »…) — the quality engine's 8 spellings
   whose French display differs; the verdict names each virtue in the
   reader's French, FAIL at first hit (#3244);
+* a « … » span carrying the code-written verdict shape (« Le discours
+  tient sur … k/m arguments évalués … ») — the pre-calculated verdict's
+  own delimiters copied into the render; the shape is pinned to the
+  builder's lead plus its machine figures, so a quoted corpus line never
+  matches, FAIL at first hit (#3319);
 * « confiance »/« confidence » + a 0,x decimal on one line — the
   detector's raw evidence figure copied into prose (« confiance de
   détection de 0,6 »); the standing travels in words only (provisoire /
@@ -113,6 +118,22 @@ _VIRTUE_ID_RE = re.compile(
     r"(?<![0-9A-Za-z_])(?:refutation_constructive|redondance_faible|"
     r"analogie_pertinente|fiabilite_sources|presence_sources|"
     r"structure_logique|clarte|exhaustivite)(?![0-9A-Za-z_])"
+)
+
+# #3319 — the pre-calculated verdict's own delimiters on the reader
+# surface. The producer used to interpolate the verdict between « » and
+# the writer, instructed to copy the sentence, copied the quotes with it
+# (2 renders on the coordinator's saved corpus, R1129 dispatch). The
+# shape is pinned to what only the builder writes: the opening «, the
+# sentence lead ``discourse_virtue_sentence`` composes (« Le discours
+# tient sur ») and its machine figures (``k/m arguments évalués``) — a
+# corpus sentence cannot carry them, so nothing a speaker said can match.
+# A quoted corpus line (« Le discours est dense. ») lacks the shape and
+# stays out. Zero carriers on this seat's 1016 stored reader texts; the
+# population witness turns the measurement into the property (#3244
+# precedent — the carriers live on the coordinator's corpus).
+_QUOTED_VERDICT_RE = re.compile(
+    r"«\s*Le discours tient sur[^»]*?\d+\s*/\s*\d+\s+arguments\s+évalués[^»]*?»"
 )
 
 # #3248 — the detector's raw decimal confidence, evidence vocabulary copied
@@ -229,6 +250,18 @@ def check_reader_vocabulary(body: str) -> GateVerdict:
             f"Chaque vertu se nomme en français dans le récit (« réfutation "
             f"constructive », « faible redondance », « clarté »…) ; "
             f"l'identifiant snake_case est le vocabulaire du moteur qualité."
+        )
+
+    quoted_verdict_hits = list(_QUOTED_VERDICT_RE.finditer(body))
+    if quoted_verdict_hits:
+        worst = "FAIL"
+        reasons.append(
+            f"Vocabulaire interne (#3319) — "
+            f"{accord(len(quoted_verdict_hits), 'verdict pré-calculé imprimé entre guillemets', 'verdicts pré-calculés imprimés entre guillemets')} "
+            f"sur la surface lecteur (ex : « "
+            f"{quoted_verdict_hits[0].group(0)[:80]}… »). Le verdict "
+            f"pré-calculé se recopie mot pour mot, délimiteurs exclus : "
+            f"les guillemets sont ceux du prompt, pas du récit."
         )
 
     spec_hits = list(_SPEC_REF_RE.finditer(body))
