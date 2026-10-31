@@ -214,7 +214,18 @@ class DeepSynthesisAgent(BaseAgent):
         "3. N'invente JAMAIS une clé de citation absente du briefing.\n"
         "4. Ne narre pas le pipeline et ne liste pas des comptes : "
         "interprète.\n"
-        "5. Identifiants opaques uniquement (Speaker_A, arg_1) — jamais de "
+        # #3307 — the clause used to read « Identifiants opaques uniquement
+        # (Speaker_A, arg_1) »: naming ``arg_1`` as the example ORDERED the
+        # machine key into the prose (the #3296 defect class, surviving here
+        # because #3303 repaired OPAQUE_ID_DIRECTIVE, not this prompt). The
+        # measured hole is that the writer had NO designation for units,
+        # fallacies and counters — so the repair gives one, and states where
+        # the key does live (inside the anchor, the data channel VG-1 counts).
+        "5. Désigne le locuteur et les parties par leurs labels opaques "
+        "(Speaker_A, State_Q) ; désigne un argument, un sophisme ou un "
+        "contre-argument par ce qu'il dit ou par un libellé de lecture — "
+        "jamais par sa clé machine (arg_1, fallacy_3, ca_2). La clé ne vit "
+        "que dans la citation [artifact:…], reprise mot pour mot. Jamais de "
         "noms réels.\n"
         "6. 6 à 10 paragraphes au total, registre analytique, sans "
         "précaution oratoire."
@@ -249,6 +260,13 @@ class DeepSynthesisAgent(BaseAgent):
     CITATION_RE: ClassVar[re.Pattern] = re.compile(
         r"\[artifact:([A-Za-z0-9_]+)((?:\.[A-Za-z0-9_\-]+)*)\]"
     )
+
+    # #3307 — the machine-key forms the briefing lines carry. The prompt's
+    # designation rule names these exact forms (one vocabulary, the #3123
+    # precedent: the writer and VG-5 read the same set), and VG-5 counts
+    # them ONLY outside ``[artifact:…]`` anchors — inside the anchor is the
+    # data channel, outside it is a bare id the reader should never see.
+    MACHINE_ID_RE: ClassVar[re.Pattern] = re.compile(r"\b(?:arg|fallacy|ca)_\d+\b")
 
     _llm_service_id: Optional[str] = PrivateAttr(default=None)
     # Epic #1258 / Track 1 #1259 — when False, the opaque-ID discipline is
@@ -2202,6 +2220,11 @@ class DeepSynthesisAgent(BaseAgent):
           neither).
         - VG-4 transversality: at least one paragraph cites >= 2 DISTINCT
           artifact fields (cross-artifact insight).
+        - VG-5 reader designation (#3307): no bare machine key
+          (``arg_N`` / ``fallacy_N`` / ``ca_N``) OUTSIDE its
+          ``[artifact:…]`` anchor — inside the anchor is the data channel
+          VG-1 counts, outside it is an id printed to the reader with no
+          designation behind it.
         """
         citations = DeepSynthesisAgent.CITATION_RE.findall(synthesis_md or "")
         n_citations = len(citations)
@@ -2230,6 +2253,17 @@ class DeepSynthesisAgent(BaseAgent):
                 vg4_pass = True
                 break
 
+        # #3307 — VG-5 counts machine keys only OUTSIDE anchors: the anchors
+        # are stripped first (their keys ARE the citation), then the same
+        # MACHINE_ID_RE the prompt's designation rule names does the count.
+        anchor_stripped = DeepSynthesisAgent.CITATION_RE.sub("", synthesis_md or "")
+        bare_ids = DeepSynthesisAgent.MACHINE_ID_RE.findall(anchor_stripped)
+        bare_by_class = {
+            prefix: sum(1 for token in bare_ids if token.startswith(prefix + "_"))
+            for prefix in ("arg", "fallacy", "ca")
+        }
+        vg5_pass = not bare_ids
+
         return {
             "vg1_citation_density": {
                 "pass": vg1_pass,
@@ -2245,7 +2279,12 @@ class DeepSynthesisAgent(BaseAgent):
             },
             "vg3_no_boilerplate": {"pass": vg3_pass},
             "vg4_transversal_insight": {"pass": vg4_pass},
-            "all_pass": vg1_pass and vg2_pass and vg3_pass and vg4_pass,
+            "vg5_reader_designation": {
+                "pass": vg5_pass,
+                "bare_machine_ids": len(bare_ids),
+                "by_class": bare_by_class,
+            },
+            "all_pass": (vg1_pass and vg2_pass and vg3_pass and vg4_pass and vg5_pass),
         }
 
     @staticmethod
