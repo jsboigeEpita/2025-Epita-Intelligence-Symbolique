@@ -42,6 +42,29 @@ instead of the act strings — the cut ran Acte III into the per-argument
 appendix, so it measured prose the check never reads. The 46 above is the
 number on the strings the check actually receives.
 
+## Leg 2, measured before each addition was kept (#3297 dispatch R1126)
+
+The coordinator's rule: count the false positives an addition brings before
+keeping it. Measured on the stored states again (49 files, ``act2_narrative``
+/ ``act3_conclusion``, licences off — an upper bound), replaying the
+production detector with each candidate dictionary:
+
+* **head ``meilleur(e)(s)`` / ``pire(s)``** — 14 raw heads: 9 die on the
+  attached-tail rule (their scope is not the whole report), 0 quoted, 0
+  quantifier, 0 clause-boundary, and **5 flag** — all in one document's
+  Act III, all one family (« le(s) meilleur(s) score(s) du discours »), i.e.
+  a whole-report superlative whose sentence carries no ranking: 4 genuine
+  catches and 1 borderline whose tail (« de l'ensemble des arguments
+  mesurés ») names a measured population without matching the #3159 licence
+  — reported here, not extended speculatively. **Zero idiom false
+  positives**: « le meilleur moyen » dies on the no-tail rule, and
+  « le pire des cas » — when it occurs — dies on the quantifier noun
+  (« cas ») the same way « la plus grande partie » does.
+* **tail « du propos »** — the string occurs 15 times in one document but
+  **never attached to a superlative head**: 0 new hits, 0 false positives
+  on this corpus. Kept per the dispatch (it costs nothing measured and the
+  attached-tail rule polices it); a corpus that exercises it will say so.
+
 ## What is licensed, and what is not
 
 A whole-scope superlative is **licensed** when the sentence itself carries
@@ -87,16 +110,23 @@ from .readability_gate import GateVerdict
 
 #: The superlative head: « le plus <adj> », « la moins <adj> », « les mieux <adj> ».
 #: Three tokens — a fourth swallows the tail (see the module docstring).
-_SUPERLATIVE = re.compile(r"\b(le|la|les)\s+(plus|mieux|moins)\s+(\w+)", re.IGNORECASE)
+#: The leg-2 forms « le meilleur <adj> » / « le pire <adj> » are the same
+#: three-token shape; measured before being added (see the module docstring).
+_SUPERLATIVE = re.compile(
+    r"\b(le|la|les)\s+(plus|mieux|moins|meilleurs?|meilleures?|pires?)\s+(\w+)",
+    re.IGNORECASE,
+)
 
 #: The noun right after the head, read WITHOUT consuming it.
 _NOUN_AFTER = re.compile(r"\s+(\w+)")
 
-#: Whole-scope tails — the superlative's scope is the whole report.
+#: Whole-scope tails — the superlative's scope is the whole report. The
+#: leg-2 tail « du propos » was measured before being added (module docstring).
 _WHOLE_SCOPE_TAILS = (
     re.compile(r"du\s+dispositif", re.IGNORECASE),
     re.compile(r"du\s+discours", re.IGNORECASE),
     re.compile(r"du\s+texte", re.IGNORECASE),
+    re.compile(r"du\s+propos", re.IGNORECASE),
     re.compile(r"de\s+tout\b", re.IGNORECASE),
     re.compile(r"de\s+l['’]ensemble\b", re.IGNORECASE),
 )
