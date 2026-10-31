@@ -171,6 +171,9 @@ class TestArtifactBriefing:
 # =========================================================================
 
 
+# #3307 — the Vulnérabilités line used to read « L'argument arg_1 … », a bare
+# machine key exactly like the renders VG-5 now flags: a good synthesis
+# designates the unit by what it says. Anchors untouched (VG-1 counts stable).
 _GOOD_SYNTHESIS = """## Motifs transversaux
 
 L'attaque de la famille de la pertinence [artifact:identified_fallacies.fallacy_1] vise
@@ -186,7 +189,7 @@ contredit directement par la preuve historique.
 
 ## Vulnérabilités structurelles
 
-L'argument arg_1 est attaqué et exclu de l'extension admise
+L'argument du cas de souveraineté est attaqué et exclu de l'extension admise
 [artifact:dung_frameworks.dung_1] ; le sophisme qui le soutient
 [artifact:identified_fallacies.fallacy_1] le rend doublement fragile.
 
