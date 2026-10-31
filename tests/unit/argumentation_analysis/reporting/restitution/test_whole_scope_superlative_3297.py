@@ -257,6 +257,93 @@ class TestLeg2Dictionary:
         assert whole_scope_superlative_sentences(body, ranking_line=_RANKING_LINE) == []
 
 
+class TestLeg3Dictionary:
+    """The leg-3 extensions, measured before being kept (the coordinator's
+    paired-reading comment of 2026-10-31 named both forms after R1127b/c).
+
+    Born red on the leg-2 module: « du run » is not among its tails and the
+    pre-head scope form is not read at all, so the flagging witnesses below
+    passed silently there. The measured corpus numbers (3 + 3 hits, 0 false
+    positives each, licences off) live in the module docstring; the shapes
+    here are synthetic, never corpus text.
+    """
+
+    def test_du_run_tail_flags(self):
+        """The R1127b miss, verbatim shape: « le passage le mieux noté du
+        run » — a whole-run ranking the sentence does not carry."""
+        body = "Ce soutien demeure le passage le mieux noté du run."
+        assert (
+            check_whole_scope_superlative(body, ranking_line=_RANKING_LINE).band
+            == "FAIL"
+        )
+        assert (
+            len(whole_scope_superlative_sentences(body, ranking_line=_RANKING_LINE))
+            == 1
+        )
+
+    def test_resultat_formel_du_run_flags(self):
+        """« le résultat formel le plus fort du run » — the measured third
+        hit's family: a rank over the whole run with no base in the sentence."""
+        body = "C'est le résultat formel le plus fort du run."
+        assert whole_scope_superlative_sentences(body) != []
+
+    def test_du_run_keeps_the_licences(self):
+        """The same tail with its ranking base quoted in the sentence rests
+        on the ranking — negative control for the tail."""
+        body = (
+            "Ce soutien demeure le mieux noté du run parmi les 2 unités "
+            "évaluées sur 2."
+        )
+        assert whole_scope_superlative_sentences(body, ranking_line=_RANKING_LINE) == []
+
+    def test_pre_head_scope_flags(self):
+        """The R1127a miss, verbatim shape: the scope noun rides BEFORE the
+        head as the subject (« le discours dérape le plus nettement »)."""
+        body = "C'est là que le discours dérape le plus nettement."
+        assert (
+            check_whole_scope_superlative(body, ranking_line=_RANKING_LINE).band
+            == "FAIL"
+        )
+        assert len(whole_scope_superlative_sentences(body)) == 1
+
+    def test_pre_head_conteste_shape_flags(self):
+        """« c'est là que le discours est le plus contesté » — the measured
+        tunnel-document shape, same pre-head family."""
+        body = (
+            "Trois lectures convergent : c'est là que le discours est le plus contesté."
+        )
+        assert whole_scope_superlative_sentences(body) != []
+
+    def test_pre_head_backed_superlative_stays_licensed(self):
+        """The coordinator's negative control: a « le plus » + adverb backed
+        by a measured ranking does not redden — the licences are
+        sentence-level and shape-agnostic."""
+        body = (
+            "Le discours dérape le plus nettement parmi les 2 unités évaluées " "sur 2."
+        )
+        assert whole_scope_superlative_sentences(body, ranking_line=_RANKING_LINE) == []
+
+    def test_pre_head_boundary_stops_the_scope(self):
+        """A scope noun separated from the head by a sentence boundary
+        belongs to the previous sentence — the same boundary rule the tails
+        follow."""
+        body = "Le dispositif est posé d'emblée. Il résiste le mieux ensuite."
+        assert whole_scope_superlative_sentences(body) == []
+
+    def test_pre_head_quoted_scope_is_not_the_reports_claim(self):
+        """Inside « … » the words are the speaker's — the pre-head scope is
+        excluded exactly like a quoted tail."""
+        body = "Il affirme que « le texte glisse le plus souvent », ce que rien ne confirme."
+        assert whole_scope_superlative_sentences(body) == []
+
+    def test_tail_and_pre_head_counted_once(self):
+        """A sentence carrying both shapes (a post-tail AND a scope subject)
+        is counted once, by its tail — the pre-head rule only runs when no
+        tail claims the head."""
+        body = "Sur les quatre axes, le texte obtient les meilleurs scores du run."
+        assert len(whole_scope_superlative_sentences(body)) == 1
+
+
 # --- through the real builders ------------------------------------------------
 
 
