@@ -411,29 +411,47 @@ class TestActsPresentDivergence:
         """Control — one winner has no localizable text: it keeps a DISTINCT
         designation on the line while the other winner's text is still
         carried. #3296: the designation is the per-act LETTER (the id was
-        never reader-facing vocabulary); the line still names the absence —
-        the honest fallback of #2989, said by the legend and the line."""
+        never reader-facing vocabulary), the line names the absence, and the
+        legend binds that letter to the NAMED absence — never to an invented
+        text (#2965's honesty rule, the DoD-2 positive control of #3296)."""
         import re
 
         state = self._with_unit_texts({"arg_16": self.WINNER_TEXT_16})
-        line = self._divergence_line(build_act2_prompt(build_act2_evidence(state)))
+        prompt = build_act2_prompt(build_act2_evidence(state))
+        line = self._divergence_line(prompt)
         assert self.WINNER_TEXT_16 in line, line
-        assert re.search(
-            r"identifiant « [α-ω]+ » \(texte non localisé\)", line
+        m = re.search(r"identifiant « ([α-ω]+) » \(texte non localisé\)", line)
+        assert (
+            m
         ), f"a winner with no text must keep a distinct, absence-named label: {line}"
         assert not re.search(r"arg_\d+", line), line
+        # the legend binds that letter to the named absence, not to a text
+        legend_line = next(
+            ln
+            for ln in prompt.splitlines()
+            if ln.strip().startswith(f"• {m.group(1)} :")
+        )
+        assert "texte non joint" in legend_line, legend_line
 
     def test_act3_divergence_keeps_the_id_of_a_textless_winner(self) -> None:
         """Control (Acte III) — same rule as Acte II."""
         import re
 
         state = self._with_unit_texts({"arg_16": self.WINNER_TEXT_16})
-        line = self._divergence_line(build_act3_prompt(build_act3_evidence(state)))
+        prompt = build_act3_prompt(build_act3_evidence(state))
+        line = self._divergence_line(prompt)
         assert self.WINNER_TEXT_16 in line, line
-        assert re.search(
-            r"identifiant « [α-ω]+ » \(texte non localisé\)", line
+        m = re.search(r"identifiant « ([α-ω]+) » \(texte non localisé\)", line)
+        assert (
+            m
         ), f"a winner with no text must keep a distinct, absence-named label: {line}"
         assert not re.search(r"arg_\d+", line), line
+        legend_line = next(
+            ln
+            for ln in prompt.splitlines()
+            if ln.strip().startswith(f"• {m.group(1)} :")
+        )
+        assert "texte non joint" in legend_line, legend_line
 
     def test_undiverged_vote_adds_no_divergence_line(self) -> None:
         """Positive control the other way: one winner → no DIVERGE sentence

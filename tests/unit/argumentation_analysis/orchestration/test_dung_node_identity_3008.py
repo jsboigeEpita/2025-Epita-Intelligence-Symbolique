@@ -394,9 +394,9 @@ class TestTheFullChainNamesTheUnit:
         import re
 
         m = re.search(r"ne retient pas (\S+)", prompt)
-        assert m and re.fullmatch(r"[α-ω]+", m.group(1)), (
-            "the rejection line names no letter"
-        )
+        assert m and re.fullmatch(
+            r"[α-ω]+", m.group(1)
+        ), "the rejection line names no letter"
         assert f"ne retient pas {_TRUNC_1}" not in prompt
 
     async def test_a_dung_rejected_unit_is_not_an_unchallenged_strength(
