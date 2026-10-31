@@ -134,7 +134,11 @@ class TestTheJoinReachesTheEvidence:
 
     def test_the_prompt_carries_the_block_after_the_claims(self):
         """#3214 requested: after Act III's own citations, so the order of
-        what it cites first does not change."""
+        what it cites first does not change. #3296: the joined line names the
+        unit by its per-act letter, and the relation names the cited neighbor
+        by that neighbor's own letter — both bound by the one legend."""
+        import re
+
         prompt = build_act3_prompt(build_act3_evidence(_joined_state()))
         claims_at = prompt.index("[CE QUI A ÉTÉ DIT")
         joined_at = prompt.index("[REVENDICATIONS PESÉES PAR L'ACTE II")
@@ -142,10 +146,12 @@ class TestTheJoinReachesTheEvidence:
         # the joined line itself — arg_2 also sits in the claims dict tail, so
         # the search is scoped to the joined section, where the relation rides
         section = prompt.split("[REVENDICATIONS PESÉES PAR L'ACTE II", 1)[1]
-        line = next(
-            ln for ln in section.splitlines() if "arg_2" in ln and "suit la lune" in ln
-        )
-        assert "attaque arg_1" in line
+        line = next(ln for ln in section.splitlines() if "suit la lune" in ln)
+        assert re.search(r"[α-ω]", line), "the joined line names no letter"
+        # the relation names the cited neighbor by a letter too
+        rel = re.search(r"attaque ([α-ω]+)", line)
+        assert rel, line
+        assert not re.search(r"arg_\d+", section), "a raw id reached the writer"
 
 
 class TestTheSupportEdges:

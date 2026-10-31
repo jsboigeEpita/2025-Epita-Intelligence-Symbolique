@@ -57,11 +57,16 @@ def _act3_prompt(fallacy: Dict[str, Any]) -> str:
 class TestAct3NamesTheBranch:
     def test_the_rebuilt_prompt_line_names_the_branch(self):
         """The issue's case 1, on a synthetic state: the line the writer reads
-        carries « Causalité douteuse », the branch the question asked about."""
+        carries « Causalité douteuse », the branch the question asked about.
+        #3296: the unit is named by its per-act letter, not its machine id —
+        the same line, minus the jargon the readability gate counts."""
+        import re
+
         prompt = _act3_prompt(_fallacy())
         assert "Effet cigogne" in prompt
         assert "Causalité douteuse" in prompt
-        assert "arg_1" in prompt
+        assert "arg_1" not in prompt
+        assert re.search(r"[α-ω]", prompt), "the letter table labelled nothing"
 
     def test_a_detection_without_a_path_keeps_the_two_level_label(self):
         prompt = _act3_prompt(_fallacy(taxonomy_path=None))

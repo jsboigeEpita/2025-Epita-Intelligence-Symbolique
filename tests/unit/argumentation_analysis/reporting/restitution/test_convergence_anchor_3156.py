@@ -88,14 +88,24 @@ def _convergence_lines(prompt: str) -> list:
 
 class TestTheConvergenceLineCarriesItsAnchor:
     def test_both_convergent_units_carry_their_excerpt(self):
+        """#3296: the line's key is the unit's per-act letter, not its id —
+        the anchor still travels ON the line, and the legend binds the
+        letter, so the writer cannot bind it to the wrong passage."""
+        import re
+
         prompt = build_act3_prompt(build_act3_evidence(_state()))
         lines = _convergence_lines(prompt)
         assert lines, "the two convergent units must produce convergence lines"
         joined = "\n".join(lines)
-        for unit_id in _CONVERGENT:
-            assert f"{unit_id} — «" in joined, joined
-        assert "passage faible sur la premiere question" in joined
-        assert "passage faible sur la seconde question" in joined
+        for excerpt in (
+            "passage faible sur la premiere question",
+            "passage faible sur la seconde question",
+        ):
+            assert excerpt in joined, joined
+        # each line is keyed by a letter, never a raw id
+        assert not re.search(r"arg_\d+", joined), joined
+        for line in lines:
+            assert re.search(r"[α-ω]+ — «", line), line
 
     def test_the_line_does_not_lend_them_the_distractor(self):
         prompt = build_act3_prompt(build_act3_evidence(_state()))

@@ -23,6 +23,7 @@ What these tests pin (the dispatch DoD):
 
 from __future__ import annotations
 
+import re
 from types import SimpleNamespace
 
 from argumentation_analysis.reporting.restitution import specialist_roles as sr
@@ -288,8 +289,13 @@ class TestActsConsumeTheHierarchy:
         # #2046: readable leads (label — statement), not bracket tags.
         assert "Décisif — " in prompt
         assert "Contradictoire — " in prompt
-        assert "arg_7" in prompt
+        # #3296: the role line cites its unit by the per-act letter (the
+        # legend binds it); the id the classifier keyed on stays in evidence.
+        assert "arg_7" in "\n".join(
+            stmt for r in evidence.role_assignments for stmt in [r.statement]
+        )
         assert "ancres" in prompt
+        assert not re.search(r"arg_\d+", prompt)
 
     def test_difference_is_structural_not_decorative(self):
         """The dispatch DoD pair: same corpus ± what the axes settled.
@@ -300,19 +306,24 @@ class TestActsConsumeTheHierarchy:
         and the FOL axis renders NON-DISCRIMINANT — the narrative
         structurally cannot claim any formal finding moves the judgment.
         """
-        violation = build_act2_prompt(build_act2_evidence(_violation_state()))
+        violation_ev = build_act2_evidence(_violation_state())
+        violation = build_act2_prompt(violation_ev)
         settled = build_act2_prompt(build_act2_evidence(_settled_state()))
         # #2046: readable leads carry the role; the tags are gone.
         assert "Décisif — " in violation
         assert "Contradictoire — " in violation
-        assert "arg_9" in violation
+        # #3296 — the refuted unit is measured at the evidence layer; the
+        # prompt carries its DÉCISIF line, lettered.
+        assert any("arg_9" in r.statement for r in violation_ev.role_assignments)
         assert "Décisif — " not in settled
         assert "Contradictoire — " not in settled
         assert "Corroborant — " not in settled
         assert "Non discriminant — " in settled
         # the Dung-excluded argument keeps its corpus presence in both
-        # states — only the ROLE line disappears (canary discipline).
-        assert "arg_9" in settled
+        # states — only the ROLE line disappears (canary discipline). #3296:
+        # presence is the unit's TEXT travelling (movement + legend), the id
+        # itself no longer prints.
+        assert "these C" in settled
 
     def test_clean_state_renders_honest_absence(self):
         prompt = build_act2_prompt(build_act2_evidence(_ns(_base())))

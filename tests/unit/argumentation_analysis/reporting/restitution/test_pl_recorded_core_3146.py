@@ -194,9 +194,17 @@ class TestUnitsReachTheAct:
 
     def test_the_units_reach_the_conductors_formal_anchor(self):
         """The anchor line the conductor reads names the batch's units — the
-        verdict binds to a move instead of « attached to no move »."""
-        prompt = build_act2_prompt(build_act2_evidence(self._state()))
-        assert "arg_53" in prompt
-        assert "arg_76" in prompt
-        # and the binding rule says the lot, not one unit
+        verdict binds to a move instead of « attached to no move ». #3296:
+        the units are named by their per-act letters (the legend binds them);
+        the raw ids stay in the evidence layer."""
+        import re
+
+        evidence = build_act2_evidence(self._state())
+        prompt = build_act2_prompt(evidence)
         assert "lot de traduction" in prompt
+        # the two batch units are lettered somewhere in the prompt — one
+        # letter each, distinct
+        letters = set(re.findall(r"[α-ω]", prompt))
+        assert len(letters) >= 2, "the batch's two units read as no letters"
+        assert not re.search(r"\barg_53\b", prompt), "a raw id reached the writer"
+        assert not re.search(r"\barg_76\b", prompt)

@@ -94,6 +94,10 @@ from .cited_units import (  # #2965 (Acte III slice) — same budget as Act II
     truncate_at_boundary,
     truncate_head_and_tail,  # #3231 — the producer's final sentence survives the cap
 )
+from .unit_labels import (  # #3296 — per-act label table + legend
+    LEGEND_REFERENT_CAP,
+    label_writer_prompt,
+)
 from argumentation_analysis.core.fallacy_attribution import (  # #3180
     MOVE_AUTHOR_REPORTED,  # #3162 item 2 — whose position a unit carries
     confidence_of,  # #3231
@@ -704,6 +708,10 @@ class Act3Evidence:
     # basis the Acts never spoke, quoted here beside the speaker so the
     # reader learns the bounds of the readings the verdicts rest on.
     readings: ReadingRecord = field(default_factory=ReadingRecord)
+    # #3296 — every unit's capped text, keyed by opaque id: the referent
+    # source for the per-act label table's legend. The ids stay in the
+    # evidence layer; the writer's prompt alone reads them as letters.
+    unit_texts: Dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -2899,6 +2907,12 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         claim_excerpts_total=len(citable_args),
         anchor_excerpts=anchor_excerpts,
         anchors_dropped=len(dropped_anchor_ids),
+        # #3296 — the per-act label table's referent source (same field as
+        # Act II): every identified unit's capped text, keyed by opaque id.
+        unit_texts={
+            str(arg_id): truncate_at_boundary(str(text), LEGEND_REFERENT_CAP)
+            for arg_id, text in args.items()
+        },
         joined_excerpts=joined_excerpts,
         joined_excerpts_total=len(joined_units),
         governance_winner_text=governance_winner_text,
@@ -3389,13 +3403,15 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
             f"  - [{f.kind}] {f.statement} (ancres : {_anchored(f)})"
             for f in evidence.global_findings
         )
-        # #3193 (rework) — a dropped anchor is a bare id again; the reader must
+        # #3193 (rework) — a dropped anchor loses its excerpt; the reader must
         # be told the line lost referents, not guess it (zero in practice: the
-        # cap equals the projection's own bound).
+        # cap equals the projection's own bound). #3296 — the ids themselves
+        # no longer print anywhere (the seam relabels them), so the notice
+        # says the anchor is not designated, not that it stays "bare".
         if evidence.anchors_dropped:
             global_block += (
                 f"\n  - ({evidence.anchors_dropped} ancre(s) omise(s) au plafond "
-                "— les cites concernés restent des identifiants nus)"
+                "— ces unités ne sont désignées nulle part dans ce bloc)"
             )
     else:
         global_block = (
@@ -3484,7 +3500,7 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
     if reading_block:
         reading_block += "\n\n"
 
-    return (
+    prompt = (
         "Tu es l'auteur de l'ACTE III d'un rapport de restitution argumentative\n"
         "— la CONCLUSION ORIENTÉE LECTEUR : un lecteur qui a vu ou lu le discours\n"
         "doit pouvoir s'y retrouver, relier le verdict à ce qui a été dit, et se\n"
@@ -3680,6 +3696,12 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         "  perdue, n'invente aucune réserve.\n"
         "- Rédige en français, markdown léger. 300-600 mots selon la richesse.\n"
     )
+    # #3296 — the seam: every arg_N the data blocks supplied (claims, joined
+    # units, weaknesses/counters/targets, salience statements AND their
+    # cites — the id is built INTO the statement, conclusion_salience) leaves
+    # the writer's view here, relabelled by the per-act table with its
+    # legend. Method cites (FOL, qualite…) are not arg ids and stay.
+    return label_writer_prompt(prompt, evidence.unit_texts)
 
 
 # --- #1605: the scope limitation the narrative must carry --------------------
