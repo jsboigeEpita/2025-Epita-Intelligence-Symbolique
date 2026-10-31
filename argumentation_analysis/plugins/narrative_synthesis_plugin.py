@@ -32,6 +32,9 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from argumentation_analysis.reporting.restitution.native_dung import (
     decode_native_dung,  # #1912: single shared native-Dung decoder (re-exported
 )  # for traceability — same object the two act plugins delegate to)
+from argumentation_analysis.reporting.restitution.unit_labels import (
+    label_writer_prompt,  # #3296: the convergence block's ids ride the per-act
+)  # letter table like every other writer-facing block
 
 try:
     from semantic_kernel.functions import kernel_function
@@ -826,11 +829,20 @@ def _build_prose_prompt(synthesis_result: Dict[str, Any]) -> str:
     deanonymized = bool(synthesis_result.get("deanonymized", True))
     instructions = _PROSE_INSTRUCTIONS + ("" if deanonymized else _PROSE_OPAQUE_RULE)
 
-    return (
-        f"{instructions}\n\n"
-        f"## Convergence Evidence\n{evidence_block}\n\n"
-        f"## Structural Conclusion\n{conclusion}\n\n"
-        f"Write the analytical prose report:"
+    # #3296 — the convergence block handed the writer bare ``arg_N`` keys
+    # (the census's 15th block); the same per-act letter table as the two
+    # acts applies here. Unit texts are read when the producer carries them
+    # (``unit_texts``), else the legend states the honest absence — the same
+    # rule as the acts (#2965).
+    return label_writer_prompt(
+        (
+            f"{instructions}\n\n"
+            f"## Convergence Evidence\n{evidence_block}\n\n"
+            f"## Structural Conclusion\n{conclusion}\n\n"
+            f"Write the analytical prose report:"
+        ),
+        synthesis_result.get("unit_texts", {}),
+        insert_before="## Structural Conclusion",
     )
 
 

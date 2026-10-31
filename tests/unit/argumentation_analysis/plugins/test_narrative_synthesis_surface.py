@@ -62,8 +62,14 @@ class TestBuildProsePrompt:
     """_build_prose_prompt embeds grounded evidence in the prompt."""
 
     def test_contains_arg_id(self):
+        """#3296: the convergence block names the unit by its per-act letter
+        (the legend binds it) — the machine id no longer reaches the writer."""
+        import re
+
         synthesis = build_convergent_synthesis(_convergent_state())
-        assert "arg_1" in _build_prose_prompt(synthesis)
+        prompt = _build_prose_prompt(synthesis)
+        assert re.search(r"[α-ω]", prompt), "the unit is named by no letter"
+        assert not re.search(r"arg_\d+", prompt)
 
     def test_contains_method_names(self):
         synthesis = build_convergent_synthesis(_convergent_state())
@@ -72,8 +78,25 @@ class TestBuildProsePrompt:
         assert "qualite faible" in prompt
 
     def test_contains_structural_conclusion(self):
+        """#3296: the conclusion rides the prompt verbatim, except that a
+        unit id inside it rides as the same letter the evidence block uses —
+        walk the fragments in order and the ids as letters."""
+        import re
+
         synthesis = build_convergent_synthesis(_convergent_state())
-        assert synthesis["conclusion"] in _build_prose_prompt(synthesis)
+        prompt = _build_prose_prompt(synthesis)
+        pos = 0
+        for part in re.split(r"(arg_\d+)", synthesis["conclusion"]):
+            if not part:
+                continue
+            if re.fullmatch(r"arg_\d+", part):
+                m = re.compile(r"[α-ω]+").search(prompt, pos)
+                assert m, "the conclusion's unit reference is not a letter"
+                pos = m.end()
+            else:
+                idx = prompt.find(part, pos)
+                assert idx >= 0, f"conclusion fragment lost: {part!r}"
+                pos = idx + len(part)
 
     def test_no_convergence_shows_placeholder(self):
         state = UnifiedAnalysisState("test")

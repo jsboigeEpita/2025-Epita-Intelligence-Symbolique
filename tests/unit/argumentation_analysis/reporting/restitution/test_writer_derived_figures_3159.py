@@ -189,13 +189,21 @@ class TestAct2QualityRanking:
         assert line.index("arg_69 (5.0)") < line.index("arg_14 (4.5)")
 
     def test_the_prompt_carries_the_ranking(self):
+        """#3296: the ranking line's keys are the per-act letters — the score
+        still rides the line, the id does not (the reader joins letter ↔
+        referent through the one legend)."""
+        import re
+
         state = _state(
             identified_arguments={f"arg_{i}": f"unité {i}" for i in range(90)},
             argument_quality_scores=_doc_a_quality(),
         )
         prompt = build_act2_prompt(build_act2_evidence(state))
         assert "Classement qualité (base : 8 unités évaluées sur 90)" in prompt
-        assert "arg_69 (5.0)" in prompt
+        # the leader's score rides the ranking line, keyed by a letter
+        rank_line = next(ln for ln in prompt.splitlines() if "Classement qualité" in ln)
+        assert re.search(r"[α-ω]+ \(5\.0\)", rank_line), rank_line
+        assert not re.search(r"arg_\d+", prompt)
 
     def test_no_scored_unit_means_no_line(self):
         assert quality_ranking_line({}, 90) == ""

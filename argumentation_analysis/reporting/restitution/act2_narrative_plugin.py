@@ -44,6 +44,11 @@ from .cited_units import (  # #2967: shared cited-unit budget + boundary cut
     truncate_at_boundary,
     truncate_head_and_tail,  # #3231 — the producer's final sentence survives the cap
 )
+from .unit_labels import (  # #3296 — per-act label table + legend
+    LEGEND_REFERENT_CAP,
+    RAW_UNIT_ID_RE,
+    label_writer_prompt,
+)
 from argumentation_analysis.core.fallacy_attribution import (  # #3180
     confidence_of,  # #3231
     detector_confidence_note,  # #3231
@@ -530,6 +535,11 @@ class Act2Evidence:
     governance_divergent_texts: List[Tuple[str, str]] = field(default_factory=list)
     debate_exchanges: List[DebateExchange] = field(default_factory=list)
     args_total: int = 0
+    # #3296 — the per-act label table's referent source: every identified
+    # unit's capped text, keyed by opaque id. The legend binds each Greek
+    # letter to its referent (the #2896/#2965 precedent, generalised to the
+    # whole act); the ids themselves never reach the writer's prompt.
+    unit_texts: Dict[str, str] = field(default_factory=dict)
     # #3180 — the SPEAKER's localised fallacies only. A detection whose
     # ``move_author`` is ``reported`` is carried in ``reported_fallacies`` and
     # never added here: the count is read as "what this discourse commits".
@@ -1051,6 +1061,10 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         quality_axis_available=quality_axis_available,
         quality_ranking=quality_ranking,
         args_total=len(args),
+        unit_texts={
+            str(arg_id): truncate_at_boundary(str(text), LEGEND_REFERENT_CAP)
+            for arg_id, text in args.items()
+        },
         fallacies_total=fallacies_total,
         fallacy_sample_recorded=fallacy_sample is not None,
         fallacy_sample_size=len(fallacy_sample) if fallacy_sample is not None else 0,
@@ -2088,48 +2102,30 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         # the assert-then-retract thread stays readable). Opaque ids stay
         # legitimate in the STRUCTURED data blocks (the Dung trace anchors,
         # #1280); this is the narrative thread, not a data block.
-        _actor_letters = {}
         for _i, m in enumerate(_chosen_moves, start=1):
             label = MOVE_LABELS_FR.get(m.move, m.move)
-            if m.arg_ref:
-                if m.arg_ref not in _actor_letters:
-                    _actor_letters[m.arg_ref] = "αβγδεζηθικλμνξοπρστυφχψω"[
-                        len(_actor_letters)
-                    ]
-                who = f"l'argument {_actor_letters[m.arg_ref]}"
+            if RAW_UNIT_ID_RE.fullmatch(m.arg_ref or ""):
+                who = f"l'argument {m.arg_ref}"
+            elif m.arg_ref:
+                # a phase/axis reference, not a unit: calling it « l'argument
+                # extract » would be a false designation, and the phase's raw
+                # name is not corpus text the writer may narrate. The old
+                # private legend hid these behind a letter that referred to
+                # nothing; the honest render says so on the line itself
+                # (#2965's lesson, applied at the line).
+                who = "un coup non rattaché à un argument"
             else:
                 who = "coup non référencé"
             seq_lines.append(f"  {_i}. {who} — {label} (offset {m.offset})")
-        # #2965 (Expected 3) — la lettre ne servait à rien : le fil disait
-        # « l'argument γ » sans qu'aucune ligne ne dise ce que γ DÉSIGNE, et le
-        # writer ne pouvait le joindre à aucune unité des blocs de mouvement
-        # qu'il reçoit pourtant. La légende porte le RÉFÉRENT, jamais l'id :
-        # #2896 (d) a banni l'id du fil narratif parce que le narrateur l'a
-        # recopié dans la prose (le run payé a imprimé « arg_40 tente de… »).
-        # Le texte tronqué donne au writer de quoi parler ; c'est la règle
-        # d'opacité — le référent voyage, l'identifiant ne s'imprime pas.
-        if _actor_letters:
-            _desc_by_id = {
-                a.arg_id: a.description
-                for mvt in evidence.movements
-                for a in mvt.arguments
-            }
-            seq_lines.append(
-                "  Légende des acteurs du fil (chaque lettre = un référent "
-                "distinct) :"
-            )
-            for _ref, _letter in _actor_letters.items():
-                _desc = _desc_by_id.get(_ref)
-                if _desc:
-                    # the SAME capped description the movement blocks carry, so
-                    # the writer re-links the thread to the beat it already read
-                    seq_lines.append(f"    • l'argument {_letter} : {_desc}")
-                else:
-                    seq_lines.append(
-                        f"    • le fil {_letter} : aucun argument identifié ne "
-                        "porte ce référent — décris le coup, ne lui prête pas "
-                        "de texte."
-                    )
+        # #3296 — the thread no longer owns a private letter map. It kept one
+        # since #2896 (d) + the #2965 legend because nothing else designated
+        # the actors; the per-act label table now does, at the prompt's
+        # assembly seam (unit_labels.py), with ONE legend for every block.
+        # Two letter vocabularies in one prompt would collide — the thread's
+        # α (its first actor) is not the table's α (the prompt's first id) —
+        # so the thread renders the raw arg_ref and the seam relabels it,
+        # same letter as every other block. The #2896 guard (no raw id in the
+        # rendered prompt) is upheld by the seam, not by a second map.
         # #2848 — the truncation is SAID where it is read: k shown over N
         # anchored, covering a–b over the source's L characters.
         if len(_seq.moves) > len(_chosen_moves) and _chosen_moves:
@@ -2191,7 +2187,7 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
     if reading_block:
         reading_block += "\n\n"
 
-    return (
+    prompt = (
         "Tu es l'auteur de l'ACTE II d'un rapport de restitution argumentative.\n"
         "Le récit suit le FIL ARGUMENTATIF (thèse → soutiens → dérapages), découpé\n"
         "par MOUVEMENT argumentatif, PAS par dimension analytique.\n\n"
@@ -2339,6 +2335,11 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         "- Rédige en français, markdown léger (titres thématiques en ###). "
         "300-700 mots selon la richesse réelle.\n"
     )
+    # #3296 — the seam: every arg_N the data blocks supplied (movement
+    # bullets, Dung anchors, quality ranking, role/global cites, the thread)
+    # leaves the writer's view here, relabelled by the per-act table with its
+    # legend. The consignes carry no id (PR #3303), so nothing else changes.
+    return label_writer_prompt(prompt, evidence.unit_texts)
 
 
 # --- LLM-conducted weaving (fail-loud) ---------------------------------------

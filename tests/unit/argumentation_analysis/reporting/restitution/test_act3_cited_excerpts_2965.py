@@ -147,9 +147,25 @@ class TestTheExcerptsFollowTheCitations:
     def test_the_claims_block_is_keyed_by_opaque_id(self) -> None:
         """The join with the weaknesses/counter lines (which cite the same
         ids a few lines away) is carried by the block itself — main printed
-        bare texts with no key."""
+        bare texts with no key. #3296 re-keyed the join: the block now cites
+        the unit by its per-act letter (the id is machine vocabulary, not
+        writer vocabulary), and the legend binds the letter to the text —
+        the referent still travels on the line that asks."""
+        import re
+
         prompt = build_act3_prompt(build_act3_evidence(_cited_outside_head()))
-        assert "  - arg_6 : Le lauréat du vote" in prompt
+        assert not re.search(
+            r"\barg_6\b", prompt
+        ), "the claims block still prints the machine id"
+        key = re.search(r"  - (\S+) : Le lauréat du vote", prompt)
+        assert key, "the claims block lost its key entirely"
+        assert re.fullmatch(
+            r"[α-ω]+", key.group(1)
+        ), f"the key {key.group(1)!r} is not a per-act letter"
+        # the legend binds that letter to the capped unit text
+        assert re.search(
+            rf"•\s*{key.group(1)}\s*:.*lauréat", prompt
+        ), "the letter has no legend referent — a key with nothing to read"
 
     def test_a_cited_units_operative_clause_survives_the_cap(self) -> None:
         """#1914's defect shape: a cited unit's operative clause sat past
