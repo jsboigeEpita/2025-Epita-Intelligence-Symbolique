@@ -343,7 +343,13 @@ class TestActsPresentDivergence:
             "two methods named distinct winners — the narrative prompt must "
             "say the vote diverges, not present one leading argument"
         )
-        assert "arg_16" in prompt and "arg_23" in prompt
+        # #3296 — both winners are designated, by their per-act letters (the
+        # legend binds them); the machine ids no longer reach the writer.
+        import re
+
+        letters = set(re.findall(r"[α-ω]", prompt))
+        assert len(letters) >= 2, "the two winners read as no distinct labels"
+        assert not re.search(r"arg_\d+", prompt)
 
     def test_act3_prompt_presents_the_divergence(self) -> None:
         state = _divergent_state()
@@ -352,7 +358,12 @@ class TestActsPresentDivergence:
             "the conclusion prompt must say the vote diverges instead of "
             "reducing it to a single winner"
         )
-        assert "arg_16" in prompt and "arg_23" in prompt
+        # #3296 — same split as Acte II above.
+        import re
+
+        letters = set(re.findall(r"[α-ω]", prompt))
+        assert len(letters) >= 2, "the two winners read as no distinct labels"
+        assert not re.search(r"arg_\d+", prompt)
 
     # --- #2989 rework — the divergence line names each winner by what it SAYS
 
@@ -397,30 +408,32 @@ class TestActsPresentDivergence:
         ), f"a localizable winner must travel by its text, not its id: {line}"
 
     def test_act2_divergence_keeps_the_id_of_a_textless_winner(self) -> None:
-        """Control — one winner has no localizable text: its id stays on the
-        line while the other winner's text is still carried (the id is the
-        honest fallback, not the default)."""
+        """Control — one winner has no localizable text: it keeps a DISTINCT
+        designation on the line while the other winner's text is still
+        carried. #3296: the designation is the per-act LETTER (the id was
+        never reader-facing vocabulary); the line still names the absence —
+        the honest fallback of #2989, said by the legend and the line."""
+        import re
+
         state = self._with_unit_texts({"arg_16": self.WINNER_TEXT_16})
         line = self._divergence_line(build_act2_prompt(build_act2_evidence(state)))
         assert self.WINNER_TEXT_16 in line, line
-        assert (
-            "arg_23" in line
-        ), f"a winner with no text must keep its id on the line: {line}"
-        assert (
-            "arg_16" not in line
-        ), f"the localizable winner must not ALSO print its id: {line}"
+        assert re.search(
+            r"identifiant « [α-ω]+ » \(texte non localisé\)", line
+        ), f"a winner with no text must keep a distinct, absence-named label: {line}"
+        assert not re.search(r"arg_\d+", line), line
 
     def test_act3_divergence_keeps_the_id_of_a_textless_winner(self) -> None:
         """Control (Acte III) — same rule as Acte II."""
+        import re
+
         state = self._with_unit_texts({"arg_16": self.WINNER_TEXT_16})
         line = self._divergence_line(build_act3_prompt(build_act3_evidence(state)))
         assert self.WINNER_TEXT_16 in line, line
-        assert (
-            "arg_23" in line
-        ), f"a winner with no text must keep its id on the line: {line}"
-        assert (
-            "arg_16" not in line
-        ), f"the localizable winner must not ALSO print its id: {line}"
+        assert re.search(
+            r"identifiant « [α-ω]+ » \(texte non localisé\)", line
+        ), f"a winner with no text must keep a distinct, absence-named label: {line}"
+        assert not re.search(r"arg_\d+", line), line
 
     def test_undiverged_vote_adds_no_divergence_line(self) -> None:
         """Positive control the other way: one winner → no DIVERGE sentence

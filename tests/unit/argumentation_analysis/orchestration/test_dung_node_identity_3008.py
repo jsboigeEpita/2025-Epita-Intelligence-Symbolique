@@ -375,10 +375,28 @@ class TestTheFullChainNamesTheUnit:
             build_act2_evidence,
             build_act2_prompt,
         )
+        from argumentation_analysis.reporting.restitution.specialist_roles import (
+            ROLE_DECISIF,
+        )
 
         state = await _produce_and_write(monkeypatch)
-        prompt = build_act2_prompt(build_act2_evidence(state))
-        assert "ne retient pas arg_1" in prompt
+        evidence = build_act2_evidence(state)
+        prompt = build_act2_prompt(evidence)
+        # #3296 — the rejection line names the unit by its per-act letter
+        # (the legend binds it); the id is evidence-layer vocabulary. The
+        # statement itself, built at evidence time, still keys the id.
+        decisif = [
+            r
+            for r in evidence.role_assignments
+            if r.role == ROLE_DECISIF and "Dung" in r.statement
+        ]
+        assert decisif and "ne retient pas arg_1" in decisif[0].statement
+        import re
+
+        m = re.search(r"ne retient pas (\S+)", prompt)
+        assert m and re.fullmatch(r"[α-ω]+", m.group(1)), (
+            "the rejection line names no letter"
+        )
         assert f"ne retient pas {_TRUNC_1}" not in prompt
 
     async def test_a_dung_rejected_unit_is_not_an_unchallenged_strength(
