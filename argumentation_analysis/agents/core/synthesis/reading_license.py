@@ -110,7 +110,21 @@ _NEGATION = re.compile(
     # the French counterpart of #3287's English ``not``. It rides the same
     # 32-character window as the other French tokens, so a denial sitting in
     # another clause licenses nothing (the #3288 scope rules).
-    r"\b(ne|n['’]|pas|jamais|sans|aucun\w*|(?:et|mais|ou)\s+non)\b",
+    #
+    # #3318 — the bare comma-contrastive denial « X, non Y », the form the
+    # writers use most: 501 raw occurrences on the stored states against 0
+    # « non seulement » and 0 « non sans », and on the coordinator's census
+    # every ``breadth_as_robustness`` flag of the five most recent paid
+    # passes was this shape denying the inference the check accused it of.
+    # It rides the same 32-character window — the #3288 scope rules stay
+    # unwidened — and replaying the whole licence on the stored states
+    # (496 texts) with and without it moves no flag in either direction.
+    # The lookahead keeps the two non-denial « non » forms out: « non
+    # seulement » asserts what follows (#3287's ``not only``), and « non
+    # sans » says "with" — a window carrying ``sans`` is already licensed
+    # by the ``sans`` token above, which this alternative must not extend.
+    r"\b(ne|n['’]|pas|jamais|sans|aucun\w*|(?:et|mais|ou)\s+non)\b"
+    r"|,\s*non\b(?!\s+(?:seulement|sans)\b)",
     re.IGNORECASE,
 )
 
