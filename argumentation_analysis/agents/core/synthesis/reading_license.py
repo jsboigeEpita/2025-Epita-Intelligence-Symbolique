@@ -105,7 +105,14 @@ _FORMAL_CONSISTENCY_MARKERS = re.compile(
     re.IGNORECASE,
 )
 
-_NEGATION = re.compile(r"\b(ne|n['’]|pas|jamais|sans|aucun\w*)\b", re.IGNORECASE)
+_NEGATION = re.compile(
+    # #3298 — « X et non Y » denies Y: the contrastive « et/mais/ou non » is
+    # the French counterpart of #3287's English ``not``. It rides the same
+    # 32-character window as the other French tokens, so a denial sitting in
+    # another clause licenses nothing (the #3288 scope rules).
+    r"\b(ne|n['’]|pas|jamais|sans|aucun\w*|(?:et|mais|ou)\s+non)\b",
+    re.IGNORECASE,
+)
 
 #: #3287 — the English denials, kept SEPARATE from ``_NEGATION`` on purpose.
 #: The French tokens are read through the 32-character window of
@@ -515,10 +522,24 @@ _VIRTUE_PATTERNS: Tuple[Tuple[str, "re.Pattern[str]"], ...] = (
 
 _PARAGRAPH_SPLIT = re.compile(r"\n\s*\n+")
 
+#: #3298 — a citation anchor as the briefing emits it. Its interior is the
+#: state's key vocabulary (``identified_fallacies``, ``arg_16``), never the
+#: prose's: on the R1125a render the word ``identified`` from inside the
+#: anchors was the ONLY token binding a unit the sentence never named.
+_ANCHOR_RE = re.compile(r"\[artifact:[^\]]*\]")
+
 
 def _weave_tokens(text: str) -> "set[str]":
-    """The content tokens of a text, lowercased, stopwords dropped."""
-    return {t.lower() for t in _WEAVE_TOKEN_RE.findall(text or "")} - _WEAVE_STOPWORDS
+    """The content tokens of a text, lowercased, stopwords dropped.
+
+    #3298 — anchor interiors are stripped first: the tokens inside an
+    ``[artifact:…]`` citation are the state's key vocabulary, not the
+    prose's, and on the R1125a render they bound a unit the sentence never
+    named. The unit an anchor names is read where the sentence names it —
+    see :func:`_units_named_through_anchors` — never through its characters.
+    """
+    stripped = _ANCHOR_RE.sub(" ", text or "")
+    return {t.lower() for t in _WEAVE_TOKEN_RE.findall(stripped)} - _WEAVE_STOPWORDS
 
 
 def _index_counters(state: Any) -> List[Tuple[str, str, "set[str]"]]:
@@ -726,6 +747,36 @@ def _units_with_fallacy_record(state: Any) -> "set[str]":
     return out
 
 
+#: #3298 — the two anchors that NAME a unit: directly
+#: (``[artifact:identified_arguments.arg_16]`` — the key is the unit's id) or
+#: through a fallacy record (``[artifact:identified_fallacies.fallacy_16]``
+#: cites a detection, whose ``target_argument_id`` is the unit it sits on).
+_UNIT_ANCHOR_RE = re.compile(r"\[artifact:identified_arguments\.(arg_\d+)\]")
+_FALLACY_ANCHOR_RE = re.compile(
+    r"\[artifact:identified_fallacies\.([A-Za-z0-9_.\-]+)\]"
+)
+
+
+def _units_named_through_anchors(sentence: str, state: Any) -> "set[str]":
+    """#3298 — the units a sentence names THROUGH its citations.
+
+    After #3307 the prose no longer prints bare keys: a unit is cited as
+    ``[artifact:identified_arguments.arg_16]`` (the anchor's key is the
+    unit's id) or through a fallacy record — the anchor cites the detection,
+    and the detection's ``target_argument_id`` names the unit it was
+    recorded on. Both name a unit exactly as an explicit ``arg_N`` in the
+    prose does; an anchor citing anything else names no unit here.
+    """
+    units: "set[str]" = set(_UNIT_ANCHOR_RE.findall(sentence))
+    records = getattr(state, "identified_fallacies", None)
+    if isinstance(records, dict):
+        for key in _FALLACY_ANCHOR_RE.findall(sentence):
+            data = records.get(key)
+            if isinstance(data, dict) and data.get("target_argument_id"):
+                units.add(str(data["target_argument_id"]))
+    return units
+
+
 def _unbacked_fallacy_name_flags(
     paragraphs: List[str],
     state: Any,
@@ -739,6 +790,11 @@ def _unbacked_fallacy_name_flags(
     names no unit (then it is not a claim about a unit), it is negated (« ne
     relève aucun faux dilemme »), it attributes the name to the objection that
     made it, or the unit carries a fallacy record.
+
+    #3298 — how a sentence NAMES a unit: an explicit ``arg_N`` in the prose,
+    through the anchors that cite a unit or a fallacy record (#3307's
+    channel), or by its description's distinctive tokens — never through
+    tokens from inside an anchor.
     """
     if not units_indexed:
         return []
@@ -750,11 +806,25 @@ def _unbacked_fallacy_name_flags(
         for sentence in _sentences(paragraph):
             if len(flags) >= max_flags:
                 return flags
-            tokens = _weave_tokens(sentence)
+            # #3298 — a unit is named where the sentence NAMES it: an
+            # explicit ``arg_N`` in the prose (anchors stripped, so an
+            # anchor's key is never read as prose), through the anchors that
+            # cite a unit or a fallacy record (#3307's channel — the prose
+            # prints no bare key any more), or by its description's
+            # distinctive tokens. Gone: tokens from INSIDE an anchor binding
+            # a unit — on the R1125a render the anchors' own word
+            # ``identified`` bound arg_47 while the sentence, right, named
+            # arg_16 … arg_63 explicitly.
+            prose = _ANCHOR_RE.sub(" ", sentence)
+            tokens = _weave_tokens(prose)
+            explicit_ids = {f"arg_{d}" for d in _UNIT_ID_RE.findall(prose)}
             named_units = sorted(
-                unit
-                for unit, distinctive in units_indexed.items()
-                if distinctive & tokens
+                (explicit_ids | _units_named_through_anchors(sentence, state))
+                | {
+                    unit
+                    for unit, distinctive in units_indexed.items()
+                    if distinctive & tokens
+                }
             )
             if not named_units:
                 continue
