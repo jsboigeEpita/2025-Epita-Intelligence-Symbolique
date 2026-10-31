@@ -65,6 +65,34 @@ production detector with each candidate dictionary:
   on this corpus. Kept per the dispatch (it costs nothing measured and the
   attached-tail rule polices it); a corpus that exercises it will say so.
 
+## Leg 3, the two coordinator-named misses, measured before being kept (#3297)
+
+The paired pass R1127b/c read two whole-scope forms the dictionary still
+let through, and named them on the issue (the coordinator's paired-reading
+comment of 2026-10-31):
+
+* **tail « du run »** (R1127b: « le passage le mieux noté du run ») — 36 raw
+  occurrences on the stored states, **3 new hits, 0 false positives**
+  (licences off, upper bound): the « meilleurs scores/notes du run » family
+  in two documents' Act III (the same claim as leg 2's « du discours »
+  family, one tail apart) and one « le résultat formel le plus fort du
+  run ». All three rank over the whole run with no ranking base in their
+  sentence — the issue's class.
+* **the pre-head scope form** (R1127a: « c'est là que le discours dérape le
+  plus nettement ») — the scope noun rides BEFORE the head, as the subject.
+  Of 309 post-tail-less heads on the stored states, the pre-head rule
+  (scope noun within 60 chars before the head, no clause boundary in the
+  gap, outside « … » quotes) claims **3, 0 false positives**: « c'est là que
+  le discours est le plus contesté », « le texte glisse le plus souvent »
+  (both the tunnel document's acts — the coordinator's own miss shape), and
+  one sentence the « du run » tail already claims — counted once, by its
+  tail, because the pre-head rule only runs when no tail matches.
+
+The negative control the coordinator asked for rides the existing licence
+tests, which are sentence-level and shape-agnostic: a superlative —
+adverbial or not — whose sentence carries the measured scope, the ranking
+base, or a licensed id does not redden.
+
 ## What is licensed, and what is not
 
 A whole-scope superlative is **licensed** when the sentence itself carries
@@ -121,15 +149,29 @@ _SUPERLATIVE = re.compile(
 _NOUN_AFTER = re.compile(r"\s+(\w+)")
 
 #: Whole-scope tails — the superlative's scope is the whole report. The
-#: leg-2 tail « du propos » was measured before being added (module docstring).
+#: leg-2 tail « du propos » and the leg-3 tail « du run » were measured
+#: before being added (module docstring).
 _WHOLE_SCOPE_TAILS = (
     re.compile(r"du\s+dispositif", re.IGNORECASE),
     re.compile(r"du\s+discours", re.IGNORECASE),
     re.compile(r"du\s+texte", re.IGNORECASE),
     re.compile(r"du\s+propos", re.IGNORECASE),
+    re.compile(r"du\s+run", re.IGNORECASE),
     re.compile(r"de\s+tout\b", re.IGNORECASE),
     re.compile(r"de\s+l['’]ensemble\b", re.IGNORECASE),
 )
+
+#: The PRE-HEAD scope form (leg 3): the scope noun rides BEFORE the head —
+#: « c'est là que le discours est le plus contesté » (R1127a), « le texte
+#: glisse le plus souvent ». Measured before being added (module docstring).
+_PRE_SCOPE = re.compile(
+    r"\b(?:le|la|les)\s+(discours|dispositif|texte|propos|run|ensemble)\b",
+    re.IGNORECASE,
+)
+
+#: How far BEFORE the head the scope noun may sit — the subject and its
+#: verb, nothing more.
+_PRE_HEAD_WINDOW = 60
 
 #: A clause boundary — when one sits between the head and the tail, the tail
 #: belongs to the next sentence and the hit is a false positive (measured:
@@ -273,10 +315,26 @@ def whole_scope_superlative_sentences(
             if found and (tail_match is None or found.start() < tail_match.start()):
                 tail_match = found
         if tail_match is None:
-            continue
-        gap = body[match.end() : match.end() + tail_match.start()]
-        if _CLAUSE_BOUNDARY.search(gap):
-            continue  # the tail belongs to the next sentence, not to the head
+            # Leg 3, pre-head scope: the scope noun rides BEFORE the head
+            # (« le discours dérape le plus nettement »). Only when no
+            # post-tail claims the head — a sentence carrying both shapes
+            # is counted once, by its tail.
+            before = body[max(0, match.start() - _PRE_HEAD_WINDOW) : match.start()]
+            scope_match = None
+            for pre in _PRE_SCOPE.finditer(before):
+                pre_gap = before[pre.end() :]
+                if _CLAUSE_BOUNDARY.search(pre_gap):
+                    continue  # the scope belongs to the previous sentence
+                if _is_quoted(body, match.start() - len(before) + pre.start()):
+                    continue  # the speaker's words, not the report's claim
+                scope_match = pre
+                break
+            if scope_match is None:
+                continue
+        if tail_match is not None:
+            gap = body[match.end() : match.end() + tail_match.start()]
+            if _CLAUSE_BOUNDARY.search(gap):
+                continue  # the tail belongs to the next sentence, not to the head
         sentence = _sentence_of(body, match.start())
         if _MEASURED_SCOPE.search(sentence):
             continue
