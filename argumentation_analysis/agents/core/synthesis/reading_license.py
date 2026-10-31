@@ -845,6 +845,92 @@ def _unbacked_fallacy_name_flags(
     return flags
 
 
+#: #3308 — an assertion that a unit carries NO defect. The family #2966
+#: named: a zero never evaluated, read as an evaluated zero (#1019). The
+#: R1127a sentence was « les unités citées ne portent pas de défaut net ».
+_NO_DEFECT_CLAIM_RE = re.compile(
+    r"\b(?:"
+    r"(?:ne |n')(?:portent?|présentent?|comportent?|ont?|a)\s+"
+    r"(?:pas|aucun)\s+(?:de\s+|d')?(?:défaut|faute|sophisme)"
+    r"|sans\s+(?:aucun\s+)?(?:défaut|faute)"
+    r"|(?:aucun|pas de)\s+(?:défaut|faute)\s+(?:net|nettes?|localisé|localisée)"
+    r"|exempt(?:e?s)?\s+de\s+(?:défaut|faute)"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def _no_defect_claim_flags(
+    paragraphs: List[str],
+    state: Any,
+    units_indexed: Dict[str, "set[str]"],
+    max_flags: int,
+) -> List[Dict[str, Any]]:
+    """#3308 — « pas de défaut » said of a unit the fallacy pass never examined.
+
+    Act III concluded, of a divergent vote winner, that « les unités citées ne
+    portent pas de défaut net »; neither winner was in the pass's coverage
+    record (k = 10 of N = 89), so the claim rested on the pass's SILENCE. That
+    is #2966's family — an absence of examination told as an absence of defect
+    (#1019) — and the same defect #2976 repaired in Act II's narrative.
+
+    The claim is a sentence; the units it is about are the ones its PARAGRAPH
+    designates, read exactly as :func:`_unbacked_fallacy_name_flags` reads
+    them (explicit ``arg_N`` in the prose, the #3307 anchors, or a unit's
+    distinctive description tokens). A paragraph that names no unit makes no
+    claim about a unit and is never flagged.
+
+    A unit is only flaggable when the coverage record EXISTS and excludes it.
+    ``_fallacy_examined_ids`` returns ``None`` for a state older than #2966:
+    absence of the record is not evidence of non-examination, so the licence
+    degrades to honest silence rather than inventing a verdict (#2966).
+    """
+    if not units_indexed:
+        return []
+    from argumentation_analysis.reporting.restitution.virtuous_identification import (
+        _fallacy_examined_ids,
+    )
+
+    examined = _fallacy_examined_ids(state)
+    if examined is None:
+        return []
+    flags: List[Dict[str, Any]] = []
+    for paragraph in paragraphs:
+        if len(flags) >= max_flags:
+            break
+        if _NO_DEFECT_CLAIM_RE.search(paragraph) is None:
+            continue
+        prose = _ANCHOR_RE.sub(" ", paragraph)
+        tokens = _weave_tokens(prose)
+        named_units = sorted(
+            (
+                {f"arg_{d}" for d in _UNIT_ID_RE.findall(prose)}
+                | _units_named_through_anchors(paragraph, state)
+            )
+            | {
+                unit
+                for unit, distinctive in units_indexed.items()
+                if distinctive & tokens
+            }
+        )
+        if not named_units:
+            continue
+        unexamined = [unit for unit in named_units if unit not in examined]
+        if not unexamined:
+            continue
+        flags.append(
+            {
+                "kind": "no_defect_claim_on_unexamined_unit",
+                "sentence": paragraph.strip(),
+                "measured": {
+                    "units": unexamined,
+                    "examined": sorted(named_units),
+                },
+            }
+        )
+    return flags
+
+
 def _index_units(state: Any) -> Dict[str, "set[str]"]:
     """Per-unit distinctive description tokens — what places a paragraph.
 
@@ -1577,6 +1663,12 @@ def check_reading_license(
         _unbacked_fallacy_name_flags(
             paragraphs, state, units_indexed, max_flags - len(flags)
         )
+    )
+    # #3308 — « pas de défaut » said of a unit the pass never examined. The
+    # same family as the flag above, one turn further: not a NAME the state
+    # does not hold, but an ABSENCE sold as a measured verdict.
+    flags.extend(
+        _no_defect_claim_flags(paragraphs, state, units_indexed, max_flags - len(flags))
     )
 
     # #3215 — how many units the render binds on the sound bar, over the same

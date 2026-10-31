@@ -660,6 +660,16 @@ class Act3Evidence:
     # for a winner with no text (#2965/#2980 — the writer does not join an
     # id to its unit across a long prompt).
     governance_divergent_texts: List[Tuple[str, str]] = field(default_factory=list)
+    # #3308 — for every unit Act III cites as a VOTE WINNER (the leading
+    # winner and each divergent one), what the fallacy pass established about
+    # ITS defects. R1127a: the writer was told nothing, saw no fallacy listed
+    # on a divergent winner, and concluded « les unités citées ne portent pas
+    # de défaut net » about units the pass had never examined — an absence of
+    # examination read as an absence of defect (#2966/#1019, the #2976 defect
+    # Act II already repairs). Four honest states, never conflated: examined
+    # and clean, examined with N localized defects, NOT examined, and no
+    # coverage record at all (#2966: absence of the record is not coverage).
+    examination_by_unit: Dict[str, str] = field(default_factory=dict)
     # #1605 — dimensions the run did NOT genuinely evaluate, read from
     # ``state.structured_arg_status``. Empty on a healthy run. Non-empty here is
     # not a defect of the pipeline: it is the one thing the conclusion was
@@ -2597,6 +2607,68 @@ def _compute_verdict_band(
     )
 
 
+def _vote_winner_examination(
+    state: Any,
+    winner_ids: List[str],
+    fallacies: Any,
+) -> Dict[str, str]:
+    """#3308 — per cited vote winner, what the fallacy pass established.
+
+    Four states, kept distinct (the whole point of the family #2966 opened):
+
+    * **examined, nothing found** — the pass looked at this unit and localized
+      no fallacy, so « aucun défaut localisé » is a measured statement;
+    * **examined, N found** — the count of the speaker's own localized
+      detections on the unit;
+    * **never examined** — the pass never submitted the unit, so its silence
+      establishes nothing. This is the state R1127a was missing: the writer
+      read it, correctly but unsoundly, as « no defect »;
+    * **no coverage record** — the run predates #2966 or does not record.
+      ``_fallacy_examined_ids`` returns ``None`` there, and the honest answer
+      names the missing record rather than claiming a verdict either way.
+
+    The label travels on the SAME line as the referent (#2965): the writer
+    must not have to join a status to a unit across a long prompt.
+    """
+    from .virtuous_identification import _fallacy_examined_ids
+
+    examined = _fallacy_examined_ids(state)
+    found: Dict[str, int] = {}
+    if isinstance(fallacies, dict):
+        for data in fallacies.values():
+            if not isinstance(data, dict) or not is_speaker_move(data):
+                continue
+            target = str(data.get("target_argument_id") or "").strip()
+            if target:
+                found[target] = found.get(target, 0) + 1
+
+    labels: Dict[str, str] = {}
+    for raw_id in winner_ids:
+        unit_id = str(raw_id or "").strip()
+        if not unit_id:
+            continue
+        if examined is None:
+            label = (
+                "couverture de la détection de sophismes non enregistrée sur "
+                "ce run — aucune conclusion sur ses défauts n'a été établie"
+            )
+        elif unit_id not in examined:
+            label = (
+                "unité NON examinée par la détection de sophismes — son "
+                "absence de défaut n'a PAS été établie, et son silence ne "
+                "prouve rien"
+            )
+        elif found.get(unit_id):
+            n = found[unit_id]
+            label = f"examinée, {n} défaut{'s' if n > 1 else ''} " "localisé" + (
+                "s" if n > 1 else ""
+            )
+        else:
+            label = "examinée, aucun défaut localisé"
+        labels[unit_id] = label
+    return labels
+
+
 def build_act3_evidence(state: Any) -> Act3Evidence:
     """Build the deterministic Acte III evidence bundle from a shared state.
 
@@ -2857,6 +2929,15 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         else []
     )
 
+    # #3308 — the examination status of every unit cited as a vote winner.
+    # R1127a read the pass's silence on a divergent winner as « pas de défaut
+    # net »; the status travels on the same line as the referent (#2965).
+    cited_winner_ids: List[str] = []
+    if governance_verdict is not None:
+        cited_winner_ids.append(str(governance_verdict.winner))
+        cited_winner_ids.extend(str(w) for w, _text in governance_divergent_texts)
+    examination_by_unit = _vote_winner_examination(state, cited_winner_ids, fallacies)
+
     # #3156 — the anchor of every unit a global finding cites, keyed by opaque
     # id. The convergence line carried ids only; the writer, asked to name the
     # passages, bound them to the one nearby unit whose text it had (arg_30,
@@ -2920,6 +3001,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         joined_excerpts_total=len(joined_units),
         governance_winner_text=governance_winner_text,
         governance_divergent_texts=governance_divergent_texts,
+        examination_by_unit=examination_by_unit,
         absent_dimensions=_collect_absent_dimensions(state),
         structured_findings=structured,
         global_findings=global_findings,
@@ -3298,6 +3380,8 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
             support_by_option=gv.support_by_option,
             n_methods_decided=gv.n_methods_decided,
             winner_basis=gv.winner_basis,
+            # #3308 — what the fallacy pass established about THIS winner.
+            examination=evidence.examination_by_unit.get(str(gv.winner).strip(), ""),
         )
         # #2969 / #2989 rework: a divergent vote is part of the verdict —
         # name every distinct winner by WHAT IT SAYS, never reduce the
@@ -3309,6 +3393,8 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
             evidence.governance_divergent_texts,
             support_by_option=gv.support_by_option,
             n_methods_decided=gv.n_methods_decided,
+            # #3308 — each divergent winner's examination status, on its line.
+            examination_by_unit=evidence.examination_by_unit,
         )
         if divergence:
             gov_lead += divergence
