@@ -7,6 +7,7 @@ Every probe is honest: it reads the real environment of the real run. No
 mocking, no heuristic guessing — either the axis is measured as started or it
 is marked not_started with the reason the probe found.
 """
+
 import os
 import shutil
 from pathlib import Path
@@ -41,10 +42,14 @@ def _probe_jvm() -> Dict[str, Any]:
         # conftest's --disable-jvm-session replaces jpype with a MagicMock
         # whose return is truthy non-bool — the stamp must stay a bool either way.
         jvm_started = bool(jpype.isJVMStarted())
-        jvm_started_note = "JVM running at probe time" if jvm_started else "JVM not running"
+        jvm_started_note = (
+            "JVM running at probe time" if jvm_started else "JVM not running"
+        )
     except ImportError:
         jvm_started = False
-        jvm_started_note = "jpype not importable — JVM state unknown, reported not started"
+        jvm_started_note = (
+            "jpype not importable — JVM state unknown, reported not started"
+        )
 
     result: Dict[str, Any] = {
         "tweety_version_target": tweety_version,
@@ -94,7 +99,9 @@ def _probe_llm_endpoints() -> Dict[str, Any]:
     result["self_hosted_mini_configured"] = bool(
         self_hosted_mini_key and self_hosted_mini_endpoint
     )
-    result["self_hosted_endpoint"] = self_hosted_endpoint if self_hosted_endpoint else None
+    result["self_hosted_endpoint"] = (
+        self_hosted_endpoint if self_hosted_endpoint else None
+    )
     result["self_hosted_mini_endpoint"] = (
         self_hosted_mini_endpoint if self_hosted_mini_endpoint else None
     )
@@ -125,6 +132,32 @@ def _probe_torch() -> Dict[str, Any]:
         }
 
 
+def _route_state() -> Dict[str, Any]:
+    """The route this run's calls would land on, or why none would (#3096).
+
+    Asked of the ONE resolver, never re-derived here. Three states, never two:
+    ``{"anthropic": True|False}`` when the resolver answered, or
+    ``{"resolution_error": "TypeName: message"}`` when it refused. A declared
+    route that cannot resolve is NOT "no route" — it is a run that refuses,
+    and the abort stamp is written in exactly that case (#2282: a run that
+    aborts is when the environment is the prime suspect), so swallowing the
+    refusal into ``False`` would stamp a bare knob value over a run that made
+    no call at all (R1126c).
+
+    Like ``_probe_torch``, the probe NAMES what it caught rather than
+    swallowing it; and the refusal's message carries the absence of the key,
+    never its value, so naming it exposes nothing.
+    """
+    from argumentation_analysis.core.llm_service import resolve_chat_endpoint
+    from argumentation_analysis.services.llm_cache import anthropic_route
+
+    try:
+        _api_key, _base_url, model_id = resolve_chat_endpoint()
+    except Exception as exc:  # noqa: BLE001 — a probe names, never raises
+        return {"resolution_error": f"{type(exc).__name__}: {exc}"}
+    return {"anthropic": anthropic_route(model_id)}
+
+
 def _probe_overrides() -> Dict[str, Any]:
     """Surface any pinned overrides in effect — a pin must be LOUD."""
     overrides: Dict[str, Any] = {}
@@ -139,10 +172,57 @@ def _probe_overrides() -> Dict[str, Any]:
         "LLM_SEED",
         # #3096 item 5 — the effort a run explicitly set is part of its record.
         "LLM_REASONING_EFFORT",
+        # #3096 item 5 (R1126) — the thinking control a run explicitly set is
+        # part of its record, exactly like the effort.
+        "LLM_ANTHROPIC_THINKING",
     ]:
         val = os.environ.get(var)
         if val is not None:
             overrides[var] = val
+    # #3096 item 5 (R1126) — a recorded control with no effect is the defect
+    # this repairs, so the manifest never presents one as bare fact. On the
+    # Anthropic route ``LLM_REASONING_EFFORT`` is measured INERT (comment
+    # 6527232924); off that route ``LLM_ANTHROPIC_THINKING`` commands a road
+    # the run is not on. Both carry their verdict instead of a bare value.
+    route = _route_state()
+    resolution_error = route.get("resolution_error")
+    on_anthropic = route.get("anthropic")
+    if resolution_error is not None:
+        # R1126c — the route the knobs were declared against could not
+        # resolve: BOTH carry the refusal, named, because the abort stamp
+        # (#2282) is the one surface guaranteed to be read in this state,
+        # and a bare value there would read as applied.
+        for var in ("LLM_REASONING_EFFORT", "LLM_ANTHROPIC_THINKING"):
+            if var in overrides:
+                overrides[var] = {
+                    "value": overrides[var],
+                    "verdict": (
+                        f"route not resolved ({resolution_error}) — the run "
+                        "refuses at the startup factory and no call is made "
+                        "(#3096 item 5, #2282)"
+                    ),
+                }
+    elif "LLM_REASONING_EFFORT" in overrides and on_anthropic:
+        overrides["LLM_REASONING_EFFORT"] = {
+            "value": overrides["LLM_REASONING_EFFORT"],
+            "verdict": (
+                "measured inert on the Anthropic route (#3096 comment "
+                "6527232924) — not applied; LLM_ANTHROPIC_THINKING is the "
+                "control that acts there"
+            ),
+        }
+    if (
+        resolution_error is None
+        and "LLM_ANTHROPIC_THINKING" in overrides
+        and not on_anthropic
+    ):
+        overrides["LLM_ANTHROPIC_THINKING"] = {
+            "value": overrides["LLM_ANTHROPIC_THINKING"],
+            "verdict": (
+                "set but no Anthropic route resolved — not applied to any "
+                "call (#3096 item 5)"
+            ),
+        }
     return {"pinned_overrides": overrides}
 
 
@@ -163,6 +243,16 @@ def environment_manifest() -> Dict[str, Any]:
         "torch": _probe_torch(),
         "overrides": _probe_overrides(),
     }
+
+
+def _render_override(value: Any) -> str:
+    """A pin's value — a bare value, or ``value (verdict)`` when the probe
+    attached one (#3096 item 5, R1126)."""
+    if isinstance(value, dict):
+        return "{value} ({verdict})".format(
+            value=value.get("value"), verdict=value.get("verdict")
+        )
+    return str(value)
 
 
 def render_environment_stamp(env: Dict[str, Any]) -> str:
@@ -222,10 +312,18 @@ def render_environment_stamp(env: Dict[str, Any]) -> str:
             )
         )
     else:
-        lines.append("torch: unavailable — {note}".format(note=torch_axis.get("torch_note", "?")))
+        lines.append(
+            "torch: unavailable — {note}".format(note=torch_axis.get("torch_note", "?"))
+        )
     lines.append(
         "overrides: {overrides}".format(
-            overrides=", ".join(f"{k}={v}" for k, v in sorted(overrides.items())) or "none"
+            # #3096 item 5 (R1126): a control measured inert on the resolved
+            # route carries its verdict — ``k=v (verdict)``, never a bare
+            # value that reads as effective.
+            overrides=", ".join(
+                f"{k}={_render_override(v)}" for k, v in sorted(overrides.items())
+            )
+            or "none",
         )
     )
     lines.append("==== END ENVIRONMENT ====")

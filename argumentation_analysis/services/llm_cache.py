@@ -388,25 +388,9 @@ _REASONING_EFFORT_ENV = "LLM_REASONING_EFFORT"
 _REASONING_EFFORTS = ("low", "medium", "high")
 _effort_unannounced = True
 _effort_barren_types: List[str] = []
-
-
-def reasoning_effort_override() -> Optional[str]:
-    """The run-wide ``LLM_REASONING_EFFORT`` knob, or ``None`` when unset."""
-    global _effort_unannounced
-    raw = (os.environ.get(_REASONING_EFFORT_ENV) or "").strip().lower()
-    if not raw:
-        return None
-    if raw not in _REASONING_EFFORTS:
-        raise ValueError(
-            f"{_REASONING_EFFORT_ENV}={raw!r} — expected one of "
-            f"{'/'.join(_REASONING_EFFORTS)} (#3096 item 5). Fix the value or "
-            "unset the variable; a typo must not run a pass at the endpoint "
-            "default."
-        )
-    if _effort_unannounced:
-        _effort_unannounced = False
-        logger.info("#3096 item 5: reasoning effort set explicitly: %s", raw)
-    return raw
+# ``reasoning_effort_override`` itself lives with the thinking knob below
+# (R1126): on the Anthropic route the effort is measured inert, and the
+# decision not to apply it there belongs next to the control that does act.
 
 
 def _apply_effort_to_settings(settings: Any, effort: Optional[str]) -> None:
@@ -443,6 +427,184 @@ def _apply_effort_to_raw_kwargs(
     extra = dict(kwargs.get("extra_body") or {})
     if extra.get("reasoning_effort") is None:
         extra["reasoning_effort"] = effort
+    out = dict(kwargs)
+    out["extra_body"] = extra
+    return out
+
+
+# ──── Anthropic thinking knob (#3096 item 5, R1126) ────
+#
+# Measured (comment 6527232924): on Anthropic's OpenAI-compatible endpoint
+# thinking is ON by default and 44 % of billed completion tokens are hidden
+# reasoning; ``reasoning_effort`` does not move it (measured inert — low and
+# high sit in default's noise). The control the endpoint exposes is
+# ``extra_body={"thinking": {"type": "between_tools"}}``: the hidden share
+# drops to ~0. ``{"type": "disabled"}`` is refused by the endpoint (400).
+#
+# ONE run-wide knob (``LLM_ANTHROPIC_THINKING``) rides both funnels the same
+# way ``LLM_REASONING_EFFORT`` rides them (#3104): the SK path sets the
+# declared ``extra_body`` field, the raw path sends ``extra_body`` — an
+# explicit caller setting always wins, an unknown or endpoint-refused value
+# fails loud at the first call, the value is stamped in the run manifest and
+# joins the cassette key. The knob COMMANDS, it does not decide: whether the
+# passes should run with thinking off is a rendering question for the
+# coordinator's paired pass, not a default this file picks (anti-pendulum).
+
+_ANTHROPIC_THINKING_ENV = "LLM_ANTHROPIC_THINKING"
+# The measured-accepted dictionary. Anything else fails loud below; when a
+# new value is measured good, it joins this tuple.
+_ANTHROPIC_THINKING_TYPES = ("between_tools",)
+# Named separately: values the endpoint itself refuses (400, measured) — the
+# knob must fail BEFORE a pass spends a call discovering it.
+_ANTHROPIC_THINKING_REFUSED = ("disabled", "enabled", "auto")
+_thinking_unannounced = True
+_thinking_barren_types: List[str] = []
+_thinking_misrouted = False
+_effort_inert_warned = False
+
+
+def anthropic_route(model_id: Optional[str]) -> bool:
+    """True when the call resolves to Anthropic's OpenAI-compatible route.
+
+    Both route forms put a ``claude-*`` model id in the call: the named
+    route (#3103) through ``ANTHROPIC_CHAT_MODEL_ID``, the legacy overwrite
+    through ``OPENAI_CHAT_MODEL_ID``. Namespaced ids (OpenRouter's
+    ``anthropic/claude-…``) never match."""
+    return bool(model_id) and str(model_id).startswith("claude-")
+
+
+def reasoning_effort_override(model_id: Optional[str] = None) -> Optional[str]:
+    """The run-wide ``LLM_REASONING_EFFORT`` knob, or ``None`` when unset.
+
+    R1126: on the Anthropic route the effort is measured INERT (comment
+    6527232924 — ``low`` and ``high`` sit in default's noise and the hidden
+    thinking share does not move). A knob that is recorded as a pin while
+    moving nothing is the defect class this repairs, so on that route the
+    call layer does not apply it, says so once here, and the manifest
+    carries the verdict (``env_manifest``). The unknown-value check stays
+    FIRST: a typo'd value fails loud whatever the route."""
+    global _effort_unannounced, _effort_inert_warned
+    raw = (os.environ.get(_REASONING_EFFORT_ENV) or "").strip().lower()
+    if not raw:
+        return None
+    if raw not in _REASONING_EFFORTS:
+        raise ValueError(
+            f"{_REASONING_EFFORT_ENV}={raw!r} — expected one of "
+            f"{'/'.join(_REASONING_EFFORTS)} (#3096 item 5). Fix the value or "
+            "unset the variable; a typo must not run a pass at the endpoint "
+            "default."
+        )
+    if model_id is not None and anthropic_route(model_id):
+        if not _effort_inert_warned:
+            _effort_inert_warned = True
+            logger.warning(
+                "#3096 item 5 (R1126): %s=%s is measured INERT on the "
+                "Anthropic route (model %s) — not applied; "
+                "%s is the control that acts there (comment 6527232924).",
+                _REASONING_EFFORT_ENV,
+                raw,
+                model_id,
+                _ANTHROPIC_THINKING_ENV,
+            )
+        return None
+    if _effort_unannounced:
+        _effort_unannounced = False
+        logger.info("#3096 item 5: reasoning effort set explicitly: %s", raw)
+    return raw
+
+
+def anthropic_thinking_override(
+    model_id: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    """The run-wide ``LLM_ANTHROPIC_THINKING`` knob as an extra_body payload.
+
+    ``None`` when unset. Fails loud on a value outside the measured
+    dictionary — a typo must not run a pass with thinking silently at the
+    endpoint default. When the knob is set but the call is NOT on the
+    Anthropic route, it is not applied and that is SAID once: silently
+    skipping a set control is the very defect this knob exists to repair.
+    With no model id to read, the explicit operator intent wins (the knob
+    is never quietly dropped for lack of a signature)."""
+    global _thinking_unannounced, _thinking_misrouted
+    raw = (os.environ.get(_ANTHROPIC_THINKING_ENV) or "").strip().lower()
+    if not raw:
+        return None
+    if raw in _ANTHROPIC_THINKING_TYPES:
+        payload: Optional[Dict[str, Any]] = {"type": raw}
+    elif raw in _ANTHROPIC_THINKING_REFUSED:
+        raise ValueError(
+            f"{_ANTHROPIC_THINKING_ENV}={raw!r} — the endpoint REFUSES this "
+            "value (measured 400, #3096 comment 6527232924): on this model "
+            "thinking is on by default and "
+            "{'thinking': {'type': 'between_tools'}} is what turns the "
+            "hidden share off. Set between_tools or unset the variable."
+        )
+    else:
+        raise ValueError(
+            f"{_ANTHROPIC_THINKING_ENV}={raw!r} — expected one of "
+            f"{'/'.join(_ANTHROPIC_THINKING_TYPES)} (#3096 item 5). Fix the "
+            "value or unset the variable; a typo must not run a pass at the "
+            "endpoint default."
+        )
+    if model_id is not None and not anthropic_route(model_id):
+        if not _thinking_misrouted:
+            _thinking_misrouted = True
+            logger.warning(
+                "#3096 item 5: %s=%s is set but model %r is not on the "
+                "Anthropic route — not applied to this call.",
+                _ANTHROPIC_THINKING_ENV,
+                raw,
+                model_id,
+            )
+        return None
+    if _thinking_unannounced:
+        _thinking_unannounced = False
+        logger.info("#3096 item 5: Anthropic thinking set explicitly: %s", raw)
+    return payload
+
+
+def _apply_thinking_to_settings(
+    settings: Any, thinking: Optional[Dict[str, Any]]
+) -> None:
+    """Carry the knob onto an SK settings object — ``extra_body`` is a
+    declared field on ``OpenAIChatPromptExecutionSettings`` (measured on this
+    SK version). Never overrides an explicit caller choice; a settings class
+    that cannot carry it is named once."""
+    if not thinking or settings is None:
+        return
+    extra = getattr(settings, "extra_body", None)
+    if isinstance(extra, dict) and extra.get("thinking") is not None:
+        return
+    type_name = type(settings).__name__
+    try:
+        settings.extra_body = {
+            **(extra if isinstance(extra, dict) else {}),
+            "thinking": thinking,
+        }
+    except (ValueError, AttributeError) as exc:
+        if type_name not in _thinking_barren_types:
+            _thinking_barren_types.append(type_name)
+            logger.warning(
+                "#3096 item 5: settings class %s cannot carry thinking (%s) "
+                "— its calls run with the endpoint's default thinking",
+                type_name,
+                exc,
+            )
+
+
+def _apply_thinking_to_raw_kwargs(
+    kwargs: Dict[str, Any], thinking: Optional[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """Carry the knob into a raw ``chat.completions.create(**kwargs)`` call.
+
+    ``extra_body`` rides the JSON body on every SDK version and is part of
+    the cassette key (R1227), so a cassette recorded with thinking off never
+    answers a call with it on; a caller that already chose keeps it."""
+    if not thinking:
+        return kwargs
+    extra = dict(kwargs.get("extra_body") or {})
+    if extra.get("thinking") is None:
+        extra["thinking"] = thinking
     out = dict(kwargs)
     out["extra_body"] = extra
     return out
@@ -508,6 +670,10 @@ def _serialize_settings(settings) -> dict:
         # #3096 item 5 — unset adds nothing (cassette keys unchanged); set,
         # the key must differ: two efforts are two different requests.
         "reasoning_effort",
+        # #3096 item 5 (R1227 parity, R1126): the thinking knob rides
+        # ``extra_body`` on the SK path; a cassette recorded with thinking
+        # off must never answer a call with it on. Unset adds nothing.
+        "extra_body",
     ):
         val = getattr(settings, attr, None)
         if val is not None:
@@ -673,7 +839,12 @@ class CachedChatCompletion(ChatCompletionClientBase):
         """Intercept LLM calls with caching logic."""
         if self._mode == OFF or self._cache is None:
             _cache_stats.live += 1
-            _apply_effort_to_settings(settings, reasoning_effort_override())
+            _apply_effort_to_settings(
+                settings, reasoning_effort_override(self._call_model(settings))
+            )
+            _apply_thinking_to_settings(
+                settings, anthropic_thinking_override(self._call_model(settings))
+            )
             response = await self._inner.get_chat_message_contents(
                 chat_history=chat_history, settings=settings, **kwargs
             )
@@ -686,7 +857,12 @@ class CachedChatCompletion(ChatCompletionClientBase):
         # identity — applying it AFTER the key let a replay at another effort
         # read the cassette recorded under this one. Unset still adds nothing
         # (_serialize_settings skips None), so existing cassettes stay valid.
-        _apply_effort_to_settings(settings, reasoning_effort_override())
+        _apply_effort_to_settings(
+            settings, reasoning_effort_override(self._call_model(settings))
+        )
+        _apply_thinking_to_settings(
+            settings, anthropic_thinking_override(self._call_model(settings))
+        )
         key = compute_cache_key(chat_history, settings)
 
         if self._mode == REPLAY:
@@ -781,7 +957,12 @@ class CachedChatCompletion(ChatCompletionClientBase):
         **kwargs,
     ):
         """Stream through the inner service, accounting the call (#2849)."""
-        _apply_effort_to_settings(settings, reasoning_effort_override())
+        _apply_effort_to_settings(
+            settings, reasoning_effort_override(self._call_model(settings))
+        )
+        _apply_thinking_to_settings(
+            settings, anthropic_thinking_override(self._call_model(settings))
+        )
         chunks: List[Any] = []
         async for group in self._inner.get_streaming_chat_message_contents(
             chat_history=chat_history, settings=settings, **kwargs
@@ -921,7 +1102,12 @@ async def cached_raw_chat_completion(client: Any, **kwargs: Any) -> Any:
     deterministic kwargs only (see ``compute_raw_cache_key``).
     """
     mode = get_cache_mode()
-    kwargs = _apply_effort_to_raw_kwargs(kwargs, reasoning_effort_override())
+    kwargs = _apply_effort_to_raw_kwargs(
+        kwargs, reasoning_effort_override(kwargs.get("model"))
+    )
+    kwargs = _apply_thinking_to_raw_kwargs(
+        kwargs, anthropic_thinking_override(kwargs.get("model"))
+    )
     if mode == OFF:
         _cache_stats.live += 1
         response = await client.chat.completions.create(**kwargs)
@@ -988,7 +1174,12 @@ def cached_raw_chat_completion_sync(client: Any, **kwargs: Any) -> Any:
     live silencieux, même contrat que l'async.
     """
     mode = get_cache_mode()
-    kwargs = _apply_effort_to_raw_kwargs(kwargs, reasoning_effort_override())
+    kwargs = _apply_effort_to_raw_kwargs(
+        kwargs, reasoning_effort_override(kwargs.get("model"))
+    )
+    kwargs = _apply_thinking_to_raw_kwargs(
+        kwargs, anthropic_thinking_override(kwargs.get("model"))
+    )
     if mode == OFF:
         _cache_stats.live += 1
         response = client.chat.completions.create(**kwargs)
