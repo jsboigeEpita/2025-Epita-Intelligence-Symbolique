@@ -170,6 +170,7 @@ def render_divergence_clause(
     cap: int = CITED_UNIT_TEXT_CAP,
     support_by_option: Optional[Mapping[str, int]] = None,
     n_methods_decided: Optional[int] = None,
+    examination_by_unit: Optional[Mapping[str, str]] = None,
 ) -> str:
     """The divergent-vote clause: each winner by its TEXT, an id only when no
     text was localized (#2965/#2980 — « ne recopie NI un identifiant
@@ -202,6 +203,12 @@ def render_divergence_clause(
         )
         if band:
             fragment += f" — soutenu {band}"
+        # #3308 — the winner's fallacy-examination status rides the line that
+        # names it (R1127a: the methods' divergent winners were told to carry
+        # « pas de défaut net » while the pass had never looked at them).
+        status = examination_by_unit.get(wid) if examination_by_unit else None
+        if status:
+            fragment += f" — {status}"
         parts.append(fragment)
     joined = " et ".join(parts)
     return (
@@ -348,6 +355,7 @@ def render_governance_lead(
     support_by_option: Optional[Mapping[str, int]] = None,
     n_methods_decided: Optional[int] = None,
     winner_basis: Optional[str] = None,
+    examination: str = "",
 ) -> Tuple[str, str]:
     """The GOUVERNANCE line of both Acts' prompts — one renderer, no drift.
 
@@ -431,6 +439,15 @@ def render_governance_lead(
                 "façon QUALITATIVE (comme cette phrase le fait) — jamais "
                 "sous forme de compteur ni de badge."
             )
+    # #3308 — what the fallacy pass established about THIS unit's defects.
+    # R1127a: Act III told the reader a divergent winner's units carried
+    # « pas de défaut net » where the pass had never examined them — an
+    # absence of examination read as an absence of defect (#2966/#1019).
+    # The status travels on the line that designates the unit (#2965's rule),
+    # and only for the origins whose ``winner`` IS a unit id: a strategy or a
+    # mediation type has no fallacy record to report.
+    if examination and kind in ("vote", "unrecorded"):
+        lead += f"Statut d'examen des sophismes de cet argument : {examination}. "
     return warning, lead + tail
 
 
