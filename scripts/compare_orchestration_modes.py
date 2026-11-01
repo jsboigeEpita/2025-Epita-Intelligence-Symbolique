@@ -497,7 +497,13 @@ def _fmt_count(count: Optional[int]) -> str:
 # narrower than the one being closed (a fabricated 0 on every single run), and
 # it is written down rather than hidden.
 _FALLACY_PRODUCING_CAPABILITIES: FrozenSet[str] = frozenset(
-    {"neural_fallacy_detection", "hierarchical_fallacy_detection"}
+    {
+        "neural_fallacy_detection",
+        "hierarchical_fallacy_detection",
+        # #3326: the post-vote winner reading merges its findings through the
+        # hierarchical writer, so it is a real fallacy producer.
+        "fallacy_winner_reading",
+    }
 )
 _ARGUMENT_PRODUCING_CAPABILITIES: FrozenSet[str] = frozenset({"fact_extraction"})
 

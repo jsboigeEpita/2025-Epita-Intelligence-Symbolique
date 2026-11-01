@@ -939,6 +939,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         span: Optional[Tuple[float, float]] = None,
         largest_uncovered_stretch: Optional[float] = None,
         unit_ids: Optional[List[str]] = None,
+        extra_fields: Optional[Dict[str, Any]] = None,
     ) -> None:
         """#2850 slice A — enregistre la couverture d'une phase sélectrice.
 
@@ -983,6 +984,13 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             entry["span_end"] = float(span[1])
         if largest_uncovered_stretch is not None:
             entry["largest_uncovered_stretch"] = float(largest_uncovered_stretch)
+        if extra_fields:
+            # #3326 — additive surface for a caller that GROWS an existing
+            # record (the winner-targeted reading extends
+            # ``fallacy_per_argument``): the reason a unit was added, in a
+            # closed vocabulary. The base fields stay the single writer's
+            # (this method); extra fields never override them.
+            entry.update(extra_fields)
         self.analysis_coverage[phase] = entry
 
     def record_anchor_census(self) -> None:

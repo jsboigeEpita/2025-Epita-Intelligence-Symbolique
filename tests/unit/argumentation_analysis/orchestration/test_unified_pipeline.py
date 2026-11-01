@@ -285,14 +285,16 @@ class TestPrebuiltWorkflows:
         assert "counter_argument_generation" in caps
 
     def test_build_standard_workflow(self):
-        """Standard workflow has 17 phases (kb chain #2296 + narrative_synthesis #981 + local_llm #835)."""
+        """Standard workflow has 18 phases (kb chain #2296 + narrative_synthesis #981 + local_llm #835 + winner reading #3326)."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             build_standard_workflow,
         )
 
         wf = build_standard_workflow()
         assert wf.name == "standard_analysis"
-        assert len(wf.phases) == 17  # kb belief-set chain wired in #2296
+        # 18 = 17 (kb belief-set chain wired in #2296) + fallacy_winner_reading
+        # (#3326: the vote winner is read after governance).
+        assert len(wf.phases) == 18
         # Quality depends on extract
         quality_phase = wf.get_phase("quality")
         assert "extract" in quality_phase.depends_on

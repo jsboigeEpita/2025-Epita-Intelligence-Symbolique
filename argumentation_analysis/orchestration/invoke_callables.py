@@ -223,6 +223,8 @@ __all__ = [
     "_invoke_asp_reasoning",
     "_invoke_hierarchical_fallacy",
     "_invoke_hierarchical_fallacy_per_argument",
+    "_invoke_fallacy_winner_reading",
+    "_walk_single_fallacy_unit",
     "_normalize_items_with_quotes",
     "_normalize_fallacies_with_quotes",
     "_invoke_fact_extraction",
@@ -8909,6 +8911,262 @@ def _record_logic_units_reading(state_obj: Any, site: str, selection: Any) -> No
     )
 
 
+async def _walk_single_fallacy_unit(
+    arg_text: str,
+    arg_id: str,
+    shared_llm_service: Any,
+    taxonomy_path: str,
+) -> Dict[str, Any]:
+    """Walk ONE unit through the hierarchical fallacy plugin (#3310 #3326).
+
+    Extracted from the per-argument harness so the post-vote winner reading
+    (#3326) runs the SAME walk — one implementation of "read this unit for
+    fallacies", two callers. On timeout, retry once with the fast one-shot
+    path (#652 Track II); a walk that gets no answer returns its error
+    payload, and the CALLER decides what that means for its record (a
+    targeted reading never lands a failed walk in the coverage record).
+
+    D1a (#1167) / #1633 — the enrichment attaches ``target_argument`` (the
+    IDENTIFIER, not free text) and a ``problematic_quote`` match anchor; see
+    the #1633 TRAP note in the per-argument harness before consuming either.
+    """
+
+    def _enrich_fallacies(res: Dict[str, Any]) -> None:
+        """Attach grounded arg link to each fallacy dict in-place."""
+        fallacies = res.get("fallacies")
+        if not isinstance(fallacies, list):
+            return
+        # Verbatim span: cap to keep the quote a tight anchor (privacy +
+        # match precision — the writer matches on desc[:60] prefixes).
+        # NB: the field name ``problematic_quote`` matches the
+        # IdentifiedFallacy schema, but here it is NOT the exact
+        # fallacious phrase — it is a match anchor (the argument's
+        # leading text) used by the writer for ID resolution only, and
+        # is never persisted into the narrated report.
+        quote_span = arg_text.strip()[:200]
+        for f in fallacies:
+            if not isinstance(f, dict):
+                continue
+            # Do not overwrite an explicit plugin-provided target.
+            if not f.get("target_argument"):
+                f["target_argument"] = arg_id
+            if not f.get("problematic_quote") and quote_span:
+                f["problematic_quote"] = quote_span
+
+    plugin = None
+    try:
+        from semantic_kernel.kernel import Kernel
+        from argumentation_analysis.plugins.fallacy_workflow_plugin import (
+            FallacyWorkflowPlugin,
+        )
+
+        master_kernel = Kernel()
+        master_kernel.add_service(shared_llm_service)
+
+        plugin = FallacyWorkflowPlugin(
+            master_kernel=master_kernel,
+            llm_service=shared_llm_service,
+            taxonomy_file_path=taxonomy_path,
+            # #2850 lot 7 — deliberately stateless: this instance
+            # reads ONE unit, and the reading record is
+            # document-scoped (every line renders "k of N chars"
+            # against the document) — a unit-relative read recorded
+            # there would render as a false document bound.
+        )
+
+        result_json = await asyncio.wait_for(
+            plugin.run_guided_analysis(argument_text=arg_text),
+            timeout=120.0,
+        )
+        result: Dict[str, Any] = json.loads(result_json)
+        result["source_arg_id"] = arg_id
+        _enrich_fallacies(result)
+        return result
+    except asyncio.TimeoutError:
+        logger.warning(
+            "Timeout analyzing argument %s — retrying with fast one-shot",
+            arg_id,
+        )
+        if plugin is not None:
+            try:
+                oneshot_json = await asyncio.wait_for(
+                    plugin.run_guided_analysis(
+                        argument_text=arg_text, use_one_shot=True
+                    ),
+                    timeout=45.0,
+                )
+                oneshot: Dict[str, Any] = json.loads(oneshot_json)
+                oneshot["source_arg_id"] = arg_id
+                oneshot["timed_out_fallback"] = True
+                _enrich_fallacies(oneshot)
+                return oneshot
+            except Exception as e:
+                logger.warning(
+                    "One-shot fallback also failed for argument %s: %s",
+                    arg_id,
+                    e,
+                )
+        return {"fallacies": [], "source_arg_id": arg_id, "timed_out": True}
+    except Exception as e:
+        logger.warning("Error analyzing argument %s: %s", arg_id, e)
+        return {"fallacies": [], "source_arg_id": arg_id, "error": str(e)}
+
+
+async def _invoke_fallacy_winner_reading(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """#3326 — walk the vote winners the fallacy pass never examined.
+
+    The vote's options (quality, k=8) and the per-argument fallacy sample
+    (k=10) are two stratified draws sharing a constant 3 units; the winner
+    came from the vote's population and fell outside the fallacy sample on
+    every measured pass — the conclusion leaned on the one unit whose
+    soundness the run never checked. This phase runs AFTER the vote
+    (``depends_on=["governance"]``, measured one to five DAG levels later
+    depending on the workflow) and walks each CITED winner — the leader
+    plus the divergents, the same set Act III names (#2969) — that is
+    outside ``analysis_coverage["fallacy_per_argument"]["unit_ids"]``.
+
+    Honesty rules (#1019):
+    - a winner already in the sample is NEVER read twice (issue DoD
+      control) — it lands in ``already_examined``;
+    - a walk that got no answer never lands in the record: only answered
+      walks populate ``examined_ids``, and only ``examined_ids`` grow the
+      coverage record (in the state writer);
+    - the walk count is capped at 3 (the measured divergence bound, 1–3
+      cited winners per run): a wider divergence is a vote anomaly to
+      surface (``capped_winners``), not a reading mandate;
+    - a winner with no unit text is ``untracked`` — never fabricated;
+    - no vote at all ⇒ a no-op output, not a degraded one: the phase is
+      optional and its absence of work is honest.
+    """
+    state = context.get("_state_object")
+    output: Dict[str, Any] = {
+        "fallacies": [],
+        "examined_ids": [],
+        "already_examined": [],
+        "cited_winners": [],
+        "capped_winners": [],
+        "untracked_winners": [],
+        "exploration_method": "winner_targeted",
+        "extraction_method": "winner_targeted",
+    }
+    if state is None:
+        output["skipped_reason"] = "no state object"
+        return output
+
+    # The cited winners: leader + divergents, from the LAST non-trivial
+    # decision — the same projection Act III frames on (#2969).
+    cited: List[str] = []
+    for d in getattr(state, "governance_decisions", None) or []:
+        if not isinstance(d, dict):
+            continue
+        leader = str(d.get("winner", "")).strip()
+        if leader and leader != "N/A":
+            cited = [leader]
+            for w in d.get("winners") or []:
+                ws = str(w).strip()
+                if ws and ws != "N/A" and ws not in cited:
+                    cited.append(ws)
+    output["cited_winners"] = cited
+    if not cited:
+        return output
+
+    record = state.analysis_coverage.get("fallacy_per_argument")
+    examined = (
+        {str(u) for u in record.get("unit_ids") or []}
+        if isinstance(record, dict)
+        else set()
+    )
+    output["already_examined"] = [w for w in cited if w in examined]
+    missing = [w for w in cited if w not in examined]
+    output["capped_winners"] = missing[3:]
+    to_read = missing[:3]
+
+    taxonomy_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "data",
+        "argumentum_fallacies_taxonomy.csv",
+    )
+    if not os.path.isfile(taxonomy_path):
+        output["degraded"] = True
+        output["last_error"] = "taxonomy file not found"
+        return output
+
+    untracked = [
+        w
+        for w in to_read
+        if not str(getattr(state, "identified_arguments", {}).get(w, "")).strip()
+    ]
+    output["untracked_winners"] = untracked
+    walkable = [w for w in to_read if w not in untracked]
+    if not walkable:
+        if untracked:
+            output["degraded"] = True
+            output["last_error"] = f"{len(untracked)} cited winner(s) have no unit text"
+        return output
+
+    from argumentation_analysis.core.llm_service import create_llm_service
+
+    shared_llm_service = create_llm_service(
+        service_id="fallacy_winner_reading",
+        force_authentic=True,
+    )
+    walks = await asyncio.gather(
+        *(
+            _walk_single_fallacy_unit(
+                str(state.identified_arguments[w]).strip(),
+                w,
+                shared_llm_service,
+                taxonomy_path,
+            )
+            for w in walkable
+        ),
+        return_exceptions=True,
+    )
+
+    failures: List[str] = []
+    examined_now: List[str] = []
+    all_fallacies: List[Dict[str, Any]] = []
+    for w, result in zip(walkable, walks):
+        if isinstance(result, BaseException):
+            failures.append(f"{w}: {type(result).__name__}: {result}")
+            continue
+        why = _unanswered(result)
+        if why:
+            failures.append(f"{w}: {why}")
+            continue
+        examined_now.append(w)
+        for f in result.get("fallacies", []):
+            if isinstance(f, dict):
+                f["source_arg_id"] = w
+                # #3105 — the same walk, the same site vocabulary: this IS
+                # the per-argument reading, targeted after the vote.
+                f["detection_paths"] = ["fallacy_per_argument"]
+                all_fallacies.append(f)
+    output["fallacies"] = all_fallacies
+    output["examined_ids"] = examined_now
+    if failures:
+        output["degraded"] = True
+        output["failed_walks"] = len(failures)
+        output["last_error"] = (
+            f"{len(failures)}/{len(walkable)} winner walk(s) got no answer: "
+            f"{failures[0]}"
+        )
+    if examined_now or failures or untracked:
+        logger.info(
+            "Winner-targeted fallacy reading: %d walked (%d findings), "
+            "%d already examined, %d failed, %d untracked, %d capped",
+            len(examined_now),
+            len(all_fallacies),
+            len(output["already_examined"]),
+            len(failures),
+            len(untracked),
+            len(output["capped_winners"]),
+        )
+    return output
+
+
 async def _invoke_hierarchical_fallacy_per_argument(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -8939,11 +9197,7 @@ async def _invoke_hierarchical_fallacy_per_argument(
         }
 
     try:
-        from semantic_kernel.kernel import Kernel
         from argumentation_analysis.core.llm_service import create_llm_service
-        from argumentation_analysis.plugins.fallacy_workflow_plugin import (
-            FallacyWorkflowPlugin,
-        )
 
         # Extract individual arguments from context or input text
         arguments = _extract_arguments_for_parallel(input_text, context)
@@ -8994,121 +9248,15 @@ async def _invoke_hierarchical_fallacy_per_argument(
             force_authentic=True,
         )
 
-        # Create plugin instances — one per argument for isolation
+        # Create plugin instances — one per argument for isolation.
+        # #3326: the walk itself is module-level (_walk_single_fallacy_unit)
+        # so the post-vote winner reading runs the SAME walk — one
+        # implementation, two callers. The closure keeps its timeout /
+        # one-shot semantics and enrichment contract unchanged.
         async def _analyze_single_arg(arg_text: str, arg_id: str) -> Dict[str, Any]:
-            """Analyze a single argument with its own plugin instance.
-
-            On timeout, retry once with the fast one-shot path before giving
-            up (#652 Track II). The full guided analysis (wide-net + iterative
-            deepening) is several LLM calls and exceeds budget under API
-            latency; returning empty here directly starves the report's fallacy
-            section AND the convergence layer (fallacy is one of its inputs).
-            The one-shot is a single taxonomy-mapped call, so it recovers
-            recall cheaply when the API is slow.
-
-            D1a (#1167): enrich every emitted fallacy with the grounded arg
-            link so the state writer (_write_hierarchical_fallacy_to_state)
-            can attach it to arg_1..N. The plugin's IdentifiedFallacy model
-            has ``problematic_quote`` but the descent never populates it and
-            the confirm_fallacy tool emits no quote; without this enrichment
-            the fallacies arrive orphaned ({type, justification} only) and
-            the writer's text-match fallbacks cannot link them. We attach:
-              - ``target_argument`` = arg_id (a real id from state.identified_
-                arguments, or "arg_N" from the extract phase) — the writer
-                resolves it by direct ID match;
-              - ``problematic_quote`` = a verbatim span capped from the
-                argument text (privacy: stays in-memory in the state, results
-                are gitignored) — the writer's text-match fallback anchor.
-            This surfaces what the descent already grounded (which argument
-            it analyzed) — it does NOT fabricate family/target (anti-pendule).
-
-            #1633 — TRAP, read before adding a consumer of this field: the
-            ``target_argument`` written here is an IDENTIFIER, while the
-            ``target_argument`` of ``phase_counter_output`` is FREE TEXT (see
-            the counter-argument system prompt: ``"target_argument": "which
-            argument"``). Same name, two meanings, two payloads. A consumer that
-            feeds this value to a substring match silently matches nothing —
-            that is exactly how the #289 quality penalty went unapplied from its
-            introduction until #1633, and how the Dung attack graph was built by
-            positional pairing until #1629. Resolve it with
-            ``_resolve_target_argument_index`` / ``_resolve_target_argument_id``;
-            do not text-match it.
-            """
-
-            def _enrich_fallacies(res: Dict[str, Any]) -> None:
-                """Attach grounded arg link to each fallacy dict in-place."""
-                fallacies = res.get("fallacies")
-                if not isinstance(fallacies, list):
-                    return
-                # Verbatim span: cap to keep the quote a tight anchor (privacy +
-                # match precision — the writer matches on desc[:60] prefixes).
-                # NB: the field name ``problematic_quote`` matches the
-                # IdentifiedFallacy schema, but here it is NOT the exact
-                # fallacious phrase — it is a match anchor (the argument's
-                # leading text) used by the writer for ID resolution only, and
-                # is never persisted into the narrated report.
-                quote_span = arg_text.strip()[:200]
-                for f in fallacies:
-                    if not isinstance(f, dict):
-                        continue
-                    # Do not overwrite an explicit plugin-provided target.
-                    if not f.get("target_argument"):
-                        f["target_argument"] = arg_id
-                    if not f.get("problematic_quote") and quote_span:
-                        f["problematic_quote"] = quote_span
-
-            plugin = None
-            try:
-                master_kernel = Kernel()
-                master_kernel.add_service(shared_llm_service)
-
-                plugin = FallacyWorkflowPlugin(
-                    master_kernel=master_kernel,
-                    llm_service=shared_llm_service,
-                    taxonomy_file_path=taxonomy_path,
-                    # #2850 lot 7 — deliberately stateless: this instance
-                    # reads ONE unit, and the reading record is
-                    # document-scoped (every line renders "k of N chars"
-                    # against the document) — a unit-relative read recorded
-                    # there would render as a false document bound.
-                )
-
-                result_json = await asyncio.wait_for(
-                    plugin.run_guided_analysis(argument_text=arg_text),
-                    timeout=120.0,
-                )
-                result: Dict[str, Any] = json.loads(result_json)
-                result["source_arg_id"] = arg_id
-                _enrich_fallacies(result)
-                return result
-            except asyncio.TimeoutError:
-                logger.warning(
-                    "Timeout analyzing argument %s — retrying with fast one-shot",
-                    arg_id,
-                )
-                if plugin is not None:
-                    try:
-                        oneshot_json = await asyncio.wait_for(
-                            plugin.run_guided_analysis(
-                                argument_text=arg_text, use_one_shot=True
-                            ),
-                            timeout=45.0,
-                        )
-                        oneshot: Dict[str, Any] = json.loads(oneshot_json)
-                        oneshot["source_arg_id"] = arg_id
-                        oneshot["timed_out_fallback"] = True
-                        _enrich_fallacies(oneshot)
-                        return oneshot
-                    except Exception as e:
-                        logger.warning(
-                            "One-shot fallback also failed for argument %s: %s",
-                            arg_id,
-                            e,
-                        )
-                return {"fallacies": [], "source_arg_id": arg_id, "timed_out": True}
-            except Exception as e:
-                logger.warning("Error analyzing argument %s: %s", arg_id, e)
-                return {"fallacies": [], "source_arg_id": arg_id, "error": str(e)}
+            return await _walk_single_fallacy_unit(
+                arg_text, arg_id, shared_llm_service, taxonomy_path
+            )
 
         # Parallel execution via asyncio.gather
         tasks = [

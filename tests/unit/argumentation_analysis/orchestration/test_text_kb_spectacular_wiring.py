@@ -71,7 +71,9 @@ class TestSpectacularWorkflowPhases:
         # test_spectacular_workflow_dag) already assert 40; this one was missed.
         # #1625 (R759): L9 `analysis_synthesis` was retired (zero prod reader,
         # no LLM call). Phase count drops from 40 to 39.
-        assert len(wf.phases) == 39
+        # #3326: +1 fallacy_winner_reading (post-vote reading of the winner
+        # the fallacy sample missed). 39 → 40.
+        assert len(wf.phases) == 40
 
 
 class TestInvokeCallables:

@@ -26,6 +26,7 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_semantic_index,
     _invoke_speech_transcription,
     _invoke_hierarchical_fallacy,
+    _invoke_fallacy_winner_reading,
     _invoke_fact_extraction,
     _invoke_propositional_logic,
     _invoke_fol_reasoning,
@@ -276,6 +277,29 @@ def setup_registry(
         # (invoke_callables._invoke_hierarchical_fallacy) and the
         # conversational orchestrator; witness in
         # test_shared_capability_provider_selection_1553.py.
+
+        # #3326 — post-vote targeted fallacy reading. The vote's options
+        # (quality, k=8) and the fallacy sample (k=10) share a constant 3
+        # units; the winner fell outside the sample on every measured pass.
+        # This service walks the cited winners AFTER the vote — a distinct
+        # phase (`fallacy_winner_reading`, depends_on governance in the
+        # standard/full/spectacular builders), hence a distinct capability
+        # with real demanders.
+        try:
+            registry.register_service(
+                name="fallacy_winner_reader",
+                capabilities=["fallacy_winner_reading"],
+                metadata={
+                    "description": (
+                        "Targeted per-argument fallacy walk of the vote "
+                        "winners the fallacy sample never examined (#3326)"
+                    )
+                },
+                invoke=_invoke_fallacy_winner_reading,
+            )
+            registered.append("fallacy_winner_reader")
+        except Exception as e:
+            skipped.append(("fallacy_winner_reader", str(e)))
 
         # Semantic index service (Arg_Semantic_Index)
         try:

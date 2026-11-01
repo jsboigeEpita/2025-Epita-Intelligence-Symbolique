@@ -80,7 +80,7 @@ class TestDAGOrdering:
         ), f"deep_synthesis not in spectacular phases: {phase_names}"
 
     def test_deep_synthesis_depends_on_correct_phases(self):
-        """deep_synthesis should depend on belief_revision and stakes."""
+        """deep_synthesis should depend on belief_revision, stakes and the winner reading."""
         from argumentation_analysis.orchestration.workflows import (
             build_spectacular_workflow,
         )
@@ -91,12 +91,15 @@ class TestDAGOrdering:
         # narrative output is produced via the ``act1_framing`` /
         # ``act2_narrative`` / ``act3_conclusion`` phases. The L9
         # ``synthesis`` aggregation phase was retired in #1625 (R759): zero
-        # prod reader, zero LLM call. deep_synthesis now depends on
+        # prod reader, zero LLM call. deep_synthesis then depended on
         # belief_revision + stakes (the validated DAG edges; both exist as
-        # spectacular phases).
+        # spectacular phases). #3326 adds fallacy_winner_reading: deep_synthesis
+        # levels beside governance, and without the edge its narrative would
+        # race the writer that grows the fallacy coverage record.
         assert set(ds_phase.depends_on) == {
             "belief_revision",
             "stakes",
+            "fallacy_winner_reading",
         }
 
     def test_deep_synthesis_is_after_all_its_predecessors(self):
