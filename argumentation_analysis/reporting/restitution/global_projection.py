@@ -26,7 +26,7 @@ makes the ``synthese_globale`` appendix row answerable.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 # Bounded budget (#1911 DoD): the projection must not dominate the acts'
 # conducted prompts. Each finding renders as ONE line; these caps bound the
@@ -55,7 +55,7 @@ class GlobalFinding:
 
     kind: str
     statement: str
-    cites: tuple
+    cites: Tuple[str, ...]
 
 
 def project_global_findings(state: Any) -> List[GlobalFinding]:

@@ -173,7 +173,7 @@ def _truncate(text: Any, cap: int) -> str:
     return s[: cap - len(_ELLIPSIS)].rstrip() + _ELLIPSIS
 
 
-def _fallacy_target_ids(state: Any) -> set:
+def _fallacy_target_ids(state: Any) -> set[str]:
     """Opaque ids of every argument the SPEAKER's localized fallacy sits on.
 
     #3180 — a reported detection (another party's move that the text merely
@@ -181,7 +181,7 @@ def _fallacy_target_ids(state: Any) -> set:
     makes an otherwise strong argument look contested.
     """
     fallacies = getattr(state, "identified_fallacies", None)
-    out: set = set()
+    out: set[str] = set()
     if isinstance(fallacies, dict):
         for _fid, fdata in fallacies.items():
             if (
@@ -495,7 +495,7 @@ def surplus_projection(surplus: SurplusAssessment) -> Dict[str, Any]:
     counts only. ``carries_non_procedural_surplus`` makes a measured-thin
     document distinguishable from an unwired instrument (non-vacuity).
     """
-    items = [
+    items: List[Dict[str, Any]] = [
         {"nature": item.nature, "cites": list(item.cites)}
         for item in surplus.established
     ]

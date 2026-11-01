@@ -436,7 +436,7 @@ _NUMBER_WORDS = {
 
 def _distinct_extracted_arg_values(body: str) -> "set[int]":
     """Distinct numeric values carried by « N arguments extraits »."""
-    values: set = set()
+    values: set[int] = set()
     for match in _EXTRACTED_ARGS_VALUE_RE.finditer(body):
         token = match.group(1).lower()
         values.add(_NUMBER_WORDS[token] if token in _NUMBER_WORDS else int(token))

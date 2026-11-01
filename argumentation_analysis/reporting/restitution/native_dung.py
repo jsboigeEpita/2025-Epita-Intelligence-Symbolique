@@ -307,7 +307,10 @@ def select_primary_native(frameworks: Any) -> Optional[Dict[str, Any]]:
             ):
                 return fw
     for _fid, fw in frameworks.items():
-        if is_native_dung_framework(fw):
+        # ``is_native_dung_framework`` already rejects every non-dict (its
+        # first statement), so the guard is a no-op at run time — it is what
+        # lets the return be typed as the dict it provably is (#3325).
+        if isinstance(fw, dict) and is_native_dung_framework(fw):
             return fw
     return None
 
@@ -402,9 +405,13 @@ def dung_reading(
                     by_semantics.setdefault(sem, lists)
         return primary, by_semantics
     for fw in frameworks.values():
-        lists = extension_lists(fw)
-        if lists:
-            return fw, lists
+        # #3325 — its own name: the loop above binds ``lists`` as ONE
+        # extension list, this one as the per-semantics mapping. Same value
+        # at run time, two different types, and the reuse was what made the
+        # strict check red.
+        by_sem = extension_lists(fw)
+        if by_sem:
+            return fw, by_sem
     for fw in frameworks.values():
         if isinstance(fw, dict) and not fw.get("extensions"):
             return fw, {}

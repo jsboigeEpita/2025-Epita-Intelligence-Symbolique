@@ -46,7 +46,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from argumentation_analysis.orchestration.fol_cause import cause_short_label
 
@@ -107,7 +107,7 @@ class RoleAssignment:
 
     role: str
     statement: str
-    cites: tuple
+    cites: Tuple[str, ...]
 
 
 def _pl_verdict(result: Dict[str, Any]) -> Optional[bool]:
@@ -119,7 +119,9 @@ def _pl_verdict(result: Dict[str, Any]) -> Optional[bool]:
     return sat if isinstance(sat, bool) else None
 
 
-def _settled_counts(results: Any, verdict_reader) -> Dict[str, int]:
+def _settled_counts(
+    results: Any, verdict_reader: Callable[[Dict[str, Any]], Optional[bool]]
+) -> Dict[str, int]:
     """Count settled-true / settled-false entries of one formal axis."""
     counts = {"true": 0, "false": 0}
     if isinstance(results, list):
@@ -239,7 +241,7 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
     """
     collected: Dict[str, List[RoleAssignment]] = {role: [] for role in ROLE_ORDER}
 
-    def _add(role: str, statement: str, cites: tuple) -> None:
+    def _add(role: str, statement: str, cites: Tuple[str, ...]) -> None:
         if len(statement) > _STATEMENT_CAP:
             # #1914 : cut at the last sentence boundary, never mid-word — a
             # half-sentence anchor invites the conductor to echo broken prose.
