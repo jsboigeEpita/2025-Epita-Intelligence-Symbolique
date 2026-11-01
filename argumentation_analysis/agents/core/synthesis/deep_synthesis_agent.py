@@ -21,6 +21,8 @@ from typing import Any, ClassVar, Dict, List, Optional, Tuple
 from semantic_kernel import Kernel
 from pydantic import PrivateAttr
 
+from types import SimpleNamespace
+
 from ..abc.agent_bases import BaseAgent
 from ..semantic_setup import prompt_settings
 from argumentation_analysis.core.logic_types import canonical_logic_type  # #2970
@@ -32,6 +34,10 @@ from argumentation_analysis.core.fallacy_attribution import (  # #3180
     is_speaker_move,
     move_author_label_of,
     move_author_of,
+)
+from argumentation_analysis.reporting.restitution.speaker_record import (  # #3336
+    build_speaker_record,
+    format_speaker_line,
 )
 from argumentation_analysis.reporting.restitution.cited_units import (  # #2967
     CITED_UNIT_TEXT_CAP,
@@ -60,6 +66,27 @@ logger = logging.getLogger("DeepSynthesisAgent")
 # returns at least the incoming belief, so ITS unmarked empty `revised` still
 # reads as not computed (the R1108 dumps).
 _ALWAYS_RUNS_REVISION_METHOD = "fallacy_contraction"
+
+
+def _six_section_naming_line(deanonymized: bool) -> str:
+    """#3336 — the naming sentence of the 6-section user prompt.
+
+    The line used to be unconditional (« Opaque IDs only — recall the
+    opaque-ID discipline above … »). In deanonymized mode the discipline
+    above is NOT prepended (``OPAQUE_ID_DIRECTIVE`` is conditional since
+    #1259), so the sentence both pointed at nothing and re-ordered opaque
+    labels on its own — the last unconditional copy of the rule. The mode
+    picks the sentence; the opaque one is byte-for-byte what it was.
+    """
+    if deanonymized:
+        return (
+            "Designate the speaker exactly as the SPEAKER LINE below "
+            "designates them, provenance included — in every paragraph.\n"
+        )
+    return (
+        "Opaque IDs only — recall the opaque-ID discipline above applies "
+        "to every paragraph.\n"
+    )
 
 
 class DeepSynthesisAgent(BaseAgent):
@@ -94,6 +121,15 @@ class DeepSynthesisAgent(BaseAgent):
         "as content only, never copy the names). If you cannot express an "
         "insight without a real name, drop that detail. There is NO "
         "legitimate reason to emit a real name here.\n\n"
+    )
+
+    #: #3336 — the opaque-only naming tail of the 6-section system prompt,
+    #: named so the deanonymized variant can swap it for the speaker-line
+    #: designation (``system_prompt_for``). Opaque mode embeds it verbatim:
+    #: ``SYSTEM_PROMPT`` is byte-for-byte what it was before this extraction.
+    _OPAQUE_ONLY_TAIL: ClassVar[str] = (
+        "Do NOT summarize the analysis pipeline. Use opaque IDs only "
+        "(Speaker_A, Authority_X, era_A) — never real names."
     )
 
     SYSTEM_PROMPT: ClassVar[str] = (
@@ -147,8 +183,17 @@ class DeepSynthesisAgent(BaseAgent):
         "\n"
         "Register: intelligence briefing — concise, factual, specific "
         "citations, no academic hedging. Journalistic-analytical tone. "
-        "Do NOT summarize the analysis pipeline. Use opaque IDs only "
-        "(Speaker_A, Authority_X, era_A) — never real names."
+        f"{_OPAQUE_ONLY_TAIL}"
+    )
+
+    #: #3336 — the deanonymized counterpart: no opaque order (the acts name
+    #: the speaker in this mode), the designation comes from the SPEAKER LINE
+    #: the data blocks carry, provenance included — the writer never guesses.
+    _SPEAKER_LINE_TAIL: ClassVar[str] = (
+        "Do NOT summarize the analysis pipeline. Designate the speaker "
+        "exactly as the SPEAKER LINE in the data blocks designates them, "
+        "provenance included — say the inference when it is inferred; never "
+        "invent a designation."
     )
 
     # FB-18 Mode A (#1039) — grounded transversal synthesis prompt. The LLM
@@ -193,6 +238,31 @@ class DeepSynthesisAgent(BaseAgent):
     _sections_block = "\n\n".join(
         f"{heading}\n{description}" for heading, description in GROUNDED_SECTION_SPECS
     )
+    #: #3336 — rule 5's opaque-order clause, named so the deanonymized
+    #: variant can swap it (``grounded_synthesis_prompt``). The rest of the
+    #: rule (reading labels, the machine key confined to the anchor) is
+    #: mode-independent and lives in both variants.
+    _RULE5_OPAQUE: ClassVar[str] = (
+        "5. Désigne le locuteur et les parties par leurs labels opaques "
+        "(Speaker_A, State_Q) ; désigne un argument, un sophisme ou un "
+        "contre-argument par ce qu'il dit ou par un libellé de lecture — "
+        "jamais par sa clé machine (arg_1, fallacy_3, ca_2). La clé ne vit "
+        "que dans la citation [artifact:…], reprise mot pour mot. Jamais de "
+        "noms réels.\n"
+    )
+    #: #3336 — the deanonymized counterpart: the speaker and the parties are
+    #: designated by the LIGNE LOCUTEUR the briefing carries (the acts' own
+    #: line, provenance included), never by an opaque token, and the writer
+    #: never guesses a name of its own.
+    _RULE5_SPEAKER_LINE: ClassVar[str] = (
+        "5. Désigne le locuteur et les parties comme la LIGNE LOCUTEUR du "
+        "dossier les désigne, provenance comprise — quand elle est INFÉRÉE, "
+        "dis l'inférence (« le texte présente le locuteur comme … ») ; "
+        "désigne un argument, un sophisme ou un contre-argument par ce qu'il "
+        "dit ou par un libellé de lecture — jamais par sa clé machine "
+        "(arg_1, fallacy_3, ca_2). La clé ne vit que dans la citation "
+        "[artifact:…], reprise mot pour mot.\n"
+    )
     GROUNDED_SYNTHESIS_PROMPT: ClassVar[str] = (
         "Tu es un analyste du renseignement rédigeant la synthèse "
         "transversale ancrée d'une analyse rhétorique. Tu reçois un DOSSIER "
@@ -224,12 +294,9 @@ class DeepSynthesisAgent(BaseAgent):
         # measured hole is that the writer had NO designation for units,
         # fallacies and counters — so the repair gives one, and states where
         # the key does live (inside the anchor, the data channel VG-1 counts).
-        "5. Désigne le locuteur et les parties par leurs labels opaques "
-        "(Speaker_A, State_Q) ; désigne un argument, un sophisme ou un "
-        "contre-argument par ce qu'il dit ou par un libellé de lecture — "
-        "jamais par sa clé machine (arg_1, fallacy_3, ca_2). La clé ne vit "
-        "que dans la citation [artifact:…], reprise mot pour mot. Jamais de "
-        "noms réels.\n"
+        # #3336 — the speaker/parties half is mode-dependent: ``_RULE5_OPAQUE``
+        # here (byte-identical), ``_RULE5_SPEAKER_LINE`` via the classmethod.
+        f"{_RULE5_OPAQUE}"
         "6. 6 à 10 paragraphes au total, registre analytique, sans "
         "précaution oratoire."
     )
@@ -289,11 +356,10 @@ class DeepSynthesisAgent(BaseAgent):
         # Epic #1258 / Track 1 #1259 — conditionally prepend the opaque-ID
         # directive to the system prompt. The directive dominates the model's
         # attention (FB-32 sharpening), so it is first when present.
-        system_prompt = (
-            self.SYSTEM_PROMPT
-            if deanonymized
-            else self.OPAQUE_ID_DIRECTIVE + self.SYSTEM_PROMPT
-        )
+        # #3336 — the base prompt itself stops ordering opaque labels in
+        # deanonymized mode (the tail swaps for the speaker-line designation);
+        # opaque mode stays byte-for-byte the #1259 form.
+        system_prompt = self.system_prompt_for(deanonymized)
         # #2627 : l'id atteint BaseAgent, qui le résout ou lève. None y rend
         # le service par défaut du kernel, et ``_llm_service_id`` reste None :
         # c'est ce qui éteint les chemins LLM (FB-32 #1112).
@@ -302,6 +368,54 @@ class DeepSynthesisAgent(BaseAgent):
         )
         self._llm_service_id = service_id
         self._deanonymized = bool(deanonymized)
+
+    # ------------------------------------------------------------------
+    # #3336 — the naming rule of each base prompt follows the mode
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def system_prompt_for(cls, deanonymized: bool) -> str:
+        """The 6-section system prompt, with the naming tail the mode demands.
+
+        Opaque mode (``deanonymized=False``) is byte-for-byte
+        ``OPAQUE_ID_DIRECTIVE + SYSTEM_PROMPT`` — the #1259 assembly.
+        Deanonymized mode drops the directive (the caller never prepends it)
+        AND swaps the opaque-only tail for the speaker-line designation: the
+        writer must not order what the acts contradict.
+        """
+        if not deanonymized:
+            return cls.OPAQUE_ID_DIRECTIVE + cls.SYSTEM_PROMPT
+        swapped = cls.SYSTEM_PROMPT.replace(
+            cls._OPAQUE_ONLY_TAIL, cls._SPEAKER_LINE_TAIL
+        )
+        if swapped == cls.SYSTEM_PROMPT:
+            # fail-loud: a drifted tail would make the swap a silent no-op and
+            # leave the opaque order in force in deanonymized mode (#3336).
+            raise ValueError(
+                "#3336: the opaque-only tail drifted — the deanonymized swap "
+                "matched nothing and the opaque order would survive"
+            )
+        return swapped
+
+    @classmethod
+    def grounded_synthesis_prompt(cls, deanonymized: bool) -> str:
+        """The grounded transversal prompt, with rule 5 following the mode.
+
+        Opaque mode returns ``GROUNDED_SYNTHESIS_PROMPT`` unchanged
+        (byte-for-byte). Deanonymized mode swaps rule 5's opaque order for
+        the LIGNE LOCUTEUR designation — same rule otherwise.
+        """
+        if not deanonymized:
+            return cls.GROUNDED_SYNTHESIS_PROMPT
+        swapped = cls.GROUNDED_SYNTHESIS_PROMPT.replace(
+            cls._RULE5_OPAQUE, cls._RULE5_SPEAKER_LINE
+        )
+        if swapped == cls.GROUNDED_SYNTHESIS_PROMPT:
+            raise ValueError(
+                "#3336: rule 5 drifted — the deanonymized swap matched nothing "
+                "and the opaque order would survive"
+            )
+        return swapped
 
     # ------------------------------------------------------------------
     # BaseAgent abstract implementations
@@ -398,6 +512,11 @@ class DeepSynthesisAgent(BaseAgent):
         # UU #724: attach analysis trace for specialist commentary
         analysis_trace = getattr(state, "analysis_trace", [])
         report._raw_analysis_trace = analysis_trace if analysis_trace else []
+
+        # #3336 — resolve the speaker record ONCE, from the same state the acts
+        # read, and attach it: the 6-section synthesis designates the same
+        # person, with the same provenance tag, by construction.
+        report._speaker_record = build_speaker_record(state)
 
         # Section 9 — final synthesis (FB-31 #1108: fail-loud, NO template fallback).
         # Mirrors the FB-18 grounded-transversal standard just below: when the
@@ -1746,6 +1865,7 @@ class DeepSynthesisAgent(BaseAgent):
         report: Optional[DeepSynthesisReport] = None,
         max_items_per_field: int = 15,
         max_chars_per_item: int = 220,
+        deanonymized: bool = False,
     ) -> str:
         """Build the FB-18 'intelligence briefing' of verified artifacts.
 
@@ -1755,8 +1875,20 @@ class DeepSynthesisAgent(BaseAgent):
         to discuss gets its text whole up to the cited budget; every other
         item keeps ``max_chars_per_item``, and every cut carries a visible
         marker — no silent slices.
+
+        #3336 — ``deanonymized=True`` prepends the LIGNE LOCUTEUR: the acts'
+        own line (``speaker_record.format_speaker_line``), same value and
+        same provenance tag, wired from the single source the acts read. The
+        default (``False``) leaves the briefing byte-for-byte what every
+        existing caller receives.
         """
         lines: List[str] = ["DOSSIER D'ARTEFACTS (cite keys verbatim):"]
+        if deanonymized:
+            lines.append(
+                "LIGNE LOCUTEUR (désigne le locuteur comme cette ligne le "
+                "fait, provenance comprise) : "
+                f"{format_speaker_line(build_speaker_record(state))}"
+            )
 
         # #3107/#2352 — lazy on purpose: importing ``orchestration.fol_cause``
         # at module level drags the orchestration package ``__init__``, whose
@@ -2209,7 +2341,9 @@ class DeepSynthesisAgent(BaseAgent):
         """
         if not self._llm_service_id:
             return ""
-        briefing = self.build_artifact_briefing(state, report)
+        briefing = self.build_artifact_briefing(
+            state, report, deanonymized=bool(getattr(self, "_deanonymized", True))
+        )
         # Header line only → nothing citable, refuse to synthesize.
         if briefing.count("\n") < 1:
             return ""
@@ -2225,7 +2359,9 @@ class DeepSynthesisAgent(BaseAgent):
                 "" if getattr(self, "_deanonymized", True) else self.OPAQUE_ID_DIRECTIVE
             )
             prompt = (
-                f"{_opaque_guard}{self.GROUNDED_SYNTHESIS_PROMPT}\n\n{briefing}\n\n"
+                f"{_opaque_guard}"
+                f"{self.grounded_synthesis_prompt(bool(getattr(self, '_deanonymized', True)))}"
+                f"\n\n{briefing}\n\n"
                 "Rédige maintenant la synthèse transversale ancrée en 4 sections."
             )
             result = await self.kernel.invoke_prompt(
@@ -2664,14 +2800,36 @@ class DeepSynthesisAgent(BaseAgent):
                 if getattr(self, "_deanonymized", True)
                 else DeepSynthesisAgent.OPAQUE_ID_DIRECTIVE
             )
+            # #3336 — in deanonymized mode the SPEAKER LINE is the designation
+            # the writer receives: the acts' own line, provenance included,
+            # from the single formatter they read. Never writer-guessed.
+            _speaker_line_block = ""
+            if bool(getattr(self, "_deanonymized", True)):
+                _record = getattr(report, "_speaker_record", None)
+                if _record is None:
+                    # report built outside synthesize() (tests, legacy
+                    # callers): only the stakes producer is attached to it —
+                    # the metadata producer is not on the report, so the
+                    # record says exactly what it can document.
+                    _record = build_speaker_record(
+                        SimpleNamespace(
+                            stakes_and_stakeholders=getattr(report, "_raw_stakes", {})
+                        )
+                    )
+                _speaker_line_block = (
+                    "\n[SPEAKER LINE — designate the speaker exactly as this "
+                    "line does, provenance included]\n"
+                    f"  {format_speaker_line(_record)}\n"
+                )
             prompt = (
                 f"{_opaque_guard}"
                 "Produce the 6-section political-rhetorical briefing as specified "
                 "in your system prompt. Use the data blocks below. Each section "
                 "heading must be '## N. Title' on its own line. 8-12 paragraphs "
-                "total. Intelligence-briefing register. Opaque IDs only — recall "
-                "the opaque-ID discipline above applies to every paragraph.\n"
+                "total. Intelligence-briefing register. "
+                f"{_six_section_naming_line(bool(getattr(self, '_deanonymized', True)))}"
                 f"\nSource: {so.contextual_frame}"
+                f"{_speaker_line_block}"
                 f"{context_block}"
                 f"{stakes_section}"
                 f"{parties_section}"
