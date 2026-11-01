@@ -42,9 +42,13 @@ WORKFLOWS = ROOT / ".github" / "workflows"
 
 # The conda spec forms environment.yml uses. Any other form fails the parse
 # below instead of being skipped: a spec this test cannot read is a spec it
-# does not check.
+# does not check. The optional `=build` tail (#3334) is conda's exact-build
+# pin — `libclang13=22.1.8=default_hf735972_3` — the form the #2856 OpenMP
+# regression is held back with.
 _CONDA_SPEC = re.compile(
-    r"^(?P<name>[A-Za-z0-9_.\-]+)\s*(?:(?P<op>==|>=|<=|=|<)\s*(?P<ver>\S+))?$"
+    r"^(?P<name>[A-Za-z0-9_.\-]+)\s*"
+    r"(?: (?P<op>==|>=|<=|=|<)\s*(?P<ver>[^\s=]+?) )?"
+    r"(?:=(?P<build>[^\s=]+))?$".replace(" ", "")
 )
 
 
@@ -69,6 +73,23 @@ def _locked(lock: dict, manager: str) -> dict[str, str]:
         for p in lock["package"]
         if p["manager"] == manager
     }
+
+
+def _locked_urls(lock: dict, manager: str) -> dict[str, str]:
+    """The lock entry carries no ``build`` key — the build lives in the url
+    (``libclang13-22.1.8-default_hf735972_3.conda``), so that is where a
+    build pin is checked."""
+    return {
+        canonicalize_name(p["name"]): p.get("url", "")
+        for p in lock["package"]
+        if p["manager"] == manager
+    }
+
+
+def _build_pinned_by(url: str, ver: str, build: str) -> bool:
+    """An exact-build spec is met when the locked url carries exactly that
+    version-build pair (``-22.1.8-default_hf735972_3.``)."""
+    return f"-{ver}-{build}." in url
 
 
 def _split_env_deps(env: dict) -> tuple[list[str], list[str]]:
@@ -109,6 +130,7 @@ def test_lock_targets_the_ci_platform_from_environment_yml(env, lock):
 
 def test_every_conda_spec_is_met_by_the_lock(env, lock):
     locked = _locked(lock, "conda")
+    urls = _locked_urls(lock, "conda")
     conda_specs, _ = _split_env_deps(env)
     assert conda_specs, "no conda spec read from environment.yml"
     problems = []
@@ -130,11 +152,53 @@ def test_every_conda_spec_is_met_by_the_lock(env, lock):
             continue
         if not ok:
             problems.append(f"{spec!r}: locked {locked[name]}")
+            continue
+        # #3334 — the exact-build pin: the version matching while a NEWER
+        # build of it ships a different OpenMP runtime was precisely the
+        # #2856 regression, invisible to a version-only check.
+        if m["build"] and not _build_pinned_by(
+            urls[name], m["ver"], m["build"]
+        ):
+            problems.append(
+                f"{spec!r}: locked build differs "
+                f"({urls[name].rsplit('/', 1)[-1]})"
+            )
     assert not problems, (
         "environment.yml asks for what conda-lock.yml does not provide; regenerate "
         "the lock (command in .github/actions/setup-projet-is/action.yml):\n  "
         + "\n  ".join(problems)
     )
+
+
+def test_the_build_pin_form_is_read_and_enforced():
+    """#3334 — a spec this test cannot read is a spec it does not check, so
+    the exact-build form (`name=version=build`) must parse with all three
+    parts, and a locked url on a DIFFERENT build of the same version must
+    read as a problem — the version-only match is what let the #2856
+    regression through."""
+    m = _CONDA_SPEC.match("libclang13=22.1.8=default_hf735972_3")
+    assert m is not None, "the exact-build form no longer parses"
+    assert (m["name"], m["op"], m["ver"], m["build"]) == (
+        "libclang13",
+        "=",
+        "22.1.8",
+        "default_hf735972_3",
+    )
+    m_plain = _CONDA_SPEC.match("numpy=1.25.0")
+    assert m_plain and m_plain["build"] is None
+    m_floor = _CONDA_SPEC.match("black>=23.0.0")
+    assert m_floor and m_floor["build"] is None
+
+    main_build = (
+        "https://conda.anaconda.org/conda-forge/win-64/"
+        "libclang13-22.1.8-default_hf735972_3.conda"
+    )
+    drifting_build = (
+        "https://conda.anaconda.org/conda-forge/win-64/"
+        "libclang13-22.1.8-default_h2778606_7.conda"
+    )
+    assert _build_pinned_by(main_build, "22.1.8", "default_hf735972_3")
+    assert not _build_pinned_by(drifting_build, "22.1.8", "default_hf735972_3")
 
 
 def test_every_pip_spec_is_met_by_the_lock(env, lock):
