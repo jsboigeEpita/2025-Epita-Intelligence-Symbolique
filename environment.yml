@@ -111,6 +111,13 @@ dependencies:
   - nbconvert  # #2864: executes the notebook headless (subprocess `python -m nbconvert`, hermetic kernelspec pinned to sys.executable — the default python3 spec resolves PATH's python, which on a default Windows seat is the WindowsApps stub and kills the kernel). No `jupyter` metapackage on purpose: nbconvert + ipykernel are the minimal execution set, measured (~4 s, 0 error cells, 0 egress — mock data only).
   - ipykernel  # #2864: the kernel nbconvert launches (python -m ipykernel_launcher).
   - referencing<0.37  # #2864: nbformat's conda jsonschema stack pulls referencing 0.37.0 while the pip side's jsonschema-path (API stack) caps it <0.37.0 — two providers of one name (#2884's shape). Pinned conda-side, the solve serves 0.36.2 for everyone and the pip row drops, like websockets #2884. Guarded by tests/unit/test_conda_lock_single_provider_2884.py.
+  # #2856/#3334: at equal version 22.1.8, a NEWER libclang13 build switches its
+  # OpenMP runtime — `default_h2778606_7` depends on llvm-openmp>=22.1.8, whose
+  # libiomp5md.dll overwrites Intel's (torch then dies with WinError 182, the
+  # exact regression #2856 repaired). The build pin keeps `default_hf735972_3`
+  # (no llvm-openmp dependency) for as long as it is served; bump it only
+  # together with an intel-openmp/mkl re-validation on the CI gate.
+  - libclang13=22.1.8=default_hf735972_3
   - coverage
   - unidecode
   - conda-lock
@@ -123,6 +130,12 @@ dependencies:
 
   # La section pip est pour les paquets non disponibles ou problématiques sur Conda
   - pip:
+    # #3325 residual — the last `mypy --strict` error in the restitution
+    # package is the missing stub for `yaml` (act1_framing_plugin reads the
+    # taxonomy YAML). Declared here rather than silenced with
+    # `ignore_missing_imports`: the setting would hide every future missing
+    # stub on that module, the stub package hides exactly one gap.
+    - types-PyYAML
     - textstat  # FB-23 #1088: readability (Flesch) for the quality-radar clarte detector
     - spacy==3.8.14  # #2320 (with the pins below): the quality heuristic's virtue scores feed LLM-cache KEYS, so CI must compute the recording env's scores. The whole spacy stack is pip-managed — see the conda section note.
     - thinc==8.3.13  # #2320: the working pair with spacy 3.8.14 (the dev boxes' proven stack — 79/79 replay keys match the recording env)
