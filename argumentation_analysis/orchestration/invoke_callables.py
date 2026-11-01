@@ -8921,14 +8921,44 @@ async def _walk_single_fallacy_unit(
 
     Extracted from the per-argument harness so the post-vote winner reading
     (#3326) runs the SAME walk — one implementation of "read this unit for
-    fallacies", two callers. On timeout, retry once with the fast one-shot
-    path (#652 Track II); a walk that gets no answer returns its error
+    fallacies", two callers. A walk that gets no answer returns its error
     payload, and the CALLER decides what that means for its record (a
     targeted reading never lands a failed walk in the coverage record).
 
-    D1a (#1167) / #1633 — the enrichment attaches ``target_argument`` (the
-    IDENTIFIER, not free text) and a ``problematic_quote`` match anchor; see
-    the #1633 TRAP note in the per-argument harness before consuming either.
+    On timeout, retry once with the fast one-shot path before giving up
+    (#652 Track II). The full guided analysis (wide-net + iterative
+    deepening) is several LLM calls and exceeds budget under API latency;
+    returning empty here directly starves the report's fallacy section AND
+    the convergence layer (fallacy is one of its inputs). The one-shot is a
+    single taxonomy-mapped call, so it recovers recall cheaply when the API
+    is slow.
+
+    D1a (#1167): enrich every emitted fallacy with the grounded arg link so
+    the state writer (_write_hierarchical_fallacy_to_state) can attach it to
+    arg_1..N. The plugin's IdentifiedFallacy model has ``problematic_quote``
+    but the descent never populates it and the confirm_fallacy tool emits no
+    quote; without this enrichment the fallacies arrive orphaned ({type,
+    justification} only) and the writer's text-match fallbacks cannot link
+    them. We attach:
+      - ``target_argument`` = arg_id (a real id from state.identified_
+        arguments, or "arg_N" from the extract phase) — the writer resolves
+        it by direct ID match;
+      - ``problematic_quote`` = a verbatim span capped from the argument
+        text (privacy: stays in-memory in the state, results are gitignored)
+        — the writer's text-match fallback anchor.
+    This surfaces what the descent already grounded (which argument it
+    analyzed) — it does NOT fabricate family/target (anti-pendule).
+
+    #1633 — TRAP, read before adding a consumer of this field: the
+    ``target_argument`` written here is an IDENTIFIER, while the
+    ``target_argument`` of ``phase_counter_output`` is FREE TEXT (see the
+    counter-argument system prompt: ``"target_argument": "which argument"``).
+    Same name, two meanings, two payloads. A consumer that feeds this value
+    to a substring match silently matches nothing — that is exactly how the
+    #289 quality penalty went unapplied from its introduction until #1633,
+    and how the Dung attack graph was built by positional pairing until
+    #1629. Resolve it with ``_resolve_target_argument_index`` /
+    ``_resolve_target_argument_id``; do not text-match it.
     """
 
     def _enrich_fallacies(res: Dict[str, Any]) -> None:
