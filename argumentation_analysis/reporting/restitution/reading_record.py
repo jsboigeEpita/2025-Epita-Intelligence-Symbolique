@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, NamedTuple, Optional
 
 from .formal_derivation import is_real_formula
 from .fr_accord import accord
@@ -559,6 +559,148 @@ def restated_bound_sentences(text: str) -> List[str]:
         if _BOUND_SHAPE.search(sentence) and _READING_WORD.search(sentence):
             caught.append(sentence)
     return caught
+
+
+# #3310 — an opener that points BACKWARDS at the sentence before it. Cutting
+# the previous sentence leaves the reader with a pronoun that names nothing:
+# R1127c opened Act II on « Leur silence est une absence d'examen » after
+# #3134 removed the sentence that said whose silence it was. The determiners
+# belong here on purpose (« Ce discours » points back as surely as « Ces
+# unités »), and the list errs wide: a false positive only means the bound is
+# withdrawn from a sentence that STAYS, which is the safe side of the trade.
+_ANAPHORIC_OPENER = re.compile(
+    r"^(?:Leurs?|Ils|Elles|Il|Elle|Ce|Cet|Cette|Ces|Cela|Ceci|"
+    r"Celui|Celle|Ceux|Celles)\b",
+    re.IGNORECASE,
+)
+
+#: The number-free form of each bound grammar. « une partie » keeps the
+#: direction of the woven claim without restating a figure the record owns.
+_UNIT_FREE_PHRASE = "une partie des unités"
+_CHAR_FREE_PHRASE = "une partie du texte"
+
+#: A restrictive adverb contradicts the number-free phrase it would now
+#: govern (« Seules une partie des unités… »): it goes with the number it
+#: limited.
+_RESTRICTIVE_LEAD = re.compile(r"^(?:Seules?|Seulement|Uniquement)\s+", re.IGNORECASE)
+
+
+class BoundRemoval(NamedTuple):
+    """What :func:`remove_restated_bounds` did to one act's prose (#3310)."""
+
+    text: str
+    #: sentences whose BOUND was withdrawn in place — the sentence stays
+    #: because the next one opens on an anaphor that needs it
+    withdrawn: int
+    #: sentences removed whole — #3134's behaviour, unchanged
+    removed: int
+
+
+def _number_free_bound(sentence: str) -> Optional[str]:
+    """This module's bound grammar with its figures replaced, or ``None``."""
+
+    def _phrase(match: "re.Match[str]") -> str:
+        units = "unité" in match.group(0).lower()
+        return _UNIT_FREE_PHRASE if units else _CHAR_FREE_PHRASE
+
+    rewritten = _BOUND_SHAPE.sub(_phrase, sentence)
+    return None if rewritten == sentence else rewritten
+
+
+def _tidy_number_free(sentence: str) -> Optional[str]:
+    """Make a rewritten sentence readable: no orphaned adverb, no double space."""
+    rewritten = _RESTRICTIVE_LEAD.sub("", sentence)
+    rewritten = re.sub(r"\s{2,}", " ", rewritten).strip()
+    if not rewritten:
+        return None
+    if rewritten[0].islower():
+        rewritten = rewritten[0].upper() + rewritten[1:]
+    return rewritten
+
+
+def _join_across_cut(before: str, after: str) -> str:
+    """Join what surrounded a removed sentence, and own the separator (#3310).
+
+    ``str.replace(...).strip()`` trimmed the ends of the WHOLE text, so a
+    paragraph could still open on a stray space once its head sentence left.
+    One paragraph break when the sentence sat on its own line, a single space
+    when it sat inside one — decided on the whitespace the strip removed, read
+    with a regex rather than a slice: a truncating slice is a coverage-limiting
+    site to the #2850 census, and this one drops nothing.
+    """
+    head = before.rstrip()
+    tail = after.lstrip()
+    if not head:
+        return tail
+    if not tail:
+        return head
+    breaks = re.search(r"\n[ \t]*$", before) or re.match(r"[ \t]*\n", after)
+    return head + ("\n\n" if breaks else " ") + tail
+
+
+def remove_restated_bounds(
+    text: str,
+    detector: Callable[[str], List[str]] = restated_bound_sentences,
+    number_free: Callable[[str], Optional[str]] = _number_free_bound,
+) -> BoundRemoval:
+    """Remove the sentences that restate a numeric reading bound (#3134/#3310).
+
+    #3134's rule, with the two defects its first enforcement carried repaired:
+
+    * the WHOLE sentence went, so the next sentence lost the referent its
+      pronoun pointed at. When the following sentence opens on an anaphor, the
+      BOUND is withdrawn from this one and the sentence stays — its subject is
+      what binds the pronoun;
+    * the replacement left the whitespace it opened, so a paragraph could
+      begin on a stray space. :func:`_join_across_cut` owns the separator now.
+
+    ``detector`` and ``number_free`` are injectable because Act I speaks the
+    other bound grammar — a coverage RANGE (#3159) — and owns it.
+    """
+    body = text or ""
+    withdrawn = removed = 0
+    for sentence in detector(body):
+        before, found, after = body.partition(sentence)
+        if not found:
+            continue
+        following = after.lstrip()
+        if following and _ANAPHORIC_OPENER.match(following):
+            rewritten = number_free(sentence)
+            tidied = _tidy_number_free(rewritten) if rewritten else None
+            if tidied:
+                body = before + tidied + after
+                withdrawn += 1
+                continue
+        body = _join_across_cut(before, after)
+        removed += 1
+    return BoundRemoval(text=body, withdrawn=withdrawn, removed=removed)
+
+
+def bound_removal_motif(removal: BoundRemoval) -> str:
+    """The state motive of a bound removal — counts, never the prose (#3249).
+
+    A code literal: an auditor reads WHAT the pipeline changed and HOW MANY
+    times, and never a fragment of the render.
+    """
+    if removal.withdrawn and removal.removed:
+        return (
+            f"{removal.withdrawn} borne(s) de lecture retirée(s) dans leur phrase "
+            "(la phrase suivante la reprenait par une anaphore), "
+            f"{removal.removed} phrase(s) restatant une borne retirée(s) du récit "
+            "— les bornes du lecteur sont celles de l'enregistrement."
+        )
+    if removal.withdrawn:
+        return (
+            f"{removal.withdrawn} borne(s) de lecture retirée(s) dans leur phrase "
+            "(la phrase suivante la reprenait par une anaphore) — les bornes du "
+            "lecteur sont celles de l'enregistrement."
+        )
+    if removal.removed:
+        return (
+            f"{removal.removed} phrase(s) restatant une borne retirée(s) du récit "
+            "— les bornes du lecteur sont celles de l'enregistrement."
+        )
+    return ""
 
 
 # The naming contract every grafting act carries, from this one constant.

@@ -69,8 +69,9 @@ from .speaker_record import (  # #3082: shared speaker record with act1/act2
 )
 from .reading_record import (  # #2850 lot 6: recorded reading bounds
     READING_BASIS_RULE,
+    bound_removal_motif,
     format_reader_bounds_passage,
-    restated_bound_sentences,
+    remove_restated_bounds,
     ReadingRecord,
     build_reading_record,
     format_reading_block,
@@ -4156,18 +4157,26 @@ async def build_act3_conclusion(
         )
     narrative = outcome.narrative
 
-    # #3134 — a woven sentence that restates a numeric bound is removed
+    # #3134 — a woven sentence that restates a numeric bound is withdrawn
     # before anything else touches the text: the reader's bounds are the
     # record's passage grafted below, where each number sits under its own
     # site label. The R1105b render fused three fallacy lines into one
     # "initial detection" carrying the descent's 500; which model paraphrases
     # the record cannot stay a bound the pipeline guarantees. Pipeline event:
     # logged, never a reader note (#2032).
-    for _restated in restated_bound_sentences(narrative):
-        narrative = narrative.replace(_restated, "").strip()
+    # #3310 — the enforcement lives in ``remove_restated_bounds``: deleting
+    # the whole sentence took the next one's antecedent with it (« Leur
+    # silence… » with nothing before it), so the NUMBER leaves a sentence the
+    # following anaphor needs, and the cut owns its separator.
+    _bound_removal = remove_restated_bounds(narrative)
+    narrative = _bound_removal.text
+    if _bound_removal.removed or _bound_removal.withdrawn:
         logger.info(
-            "act3 woven bound restatement removed (record passage carries it): %s",
-            _restated[:90],
+            "act3 woven bound restatement: %d sentence(s) removed, %d bound(s) "
+            "withdrawn in place (record passage carries the figures): %s",
+            _bound_removal.removed,
+            _bound_removal.withdrawn,
+            bound_removal_motif(_bound_removal),
         )
 
     # #1605 — the conclusion must carry what the run failed to evaluate. The
@@ -4176,6 +4185,13 @@ async def build_act3_conclusion(
     # to a lost axis. Deterministic on purpose: the guarantee cannot depend on
     # the LLM having complied with the prompt directive.
     degraded: Dict[str, str] = {}
+    # #3310 — the prose was CHANGED here, and an auditor must be able to find
+    # it: act, motive, count, never the sentence (#3249). Filed under the
+    # #2046 fabrication-note keys, so it is archived in the appendix and never
+    # reaches the reader as a repair note.
+    _bound_motif = bound_removal_motif(_bound_removal)
+    if _bound_motif:
+        degraded["act3_bound_restatement"] = _bound_motif
     if evidence.absent_dimensions:
         labels = ", ".join(d.label for d in evidence.absent_dimensions)
         degraded["act3_absent_dimensions"] = (

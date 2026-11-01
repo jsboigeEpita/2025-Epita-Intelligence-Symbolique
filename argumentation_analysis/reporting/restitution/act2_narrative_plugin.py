@@ -92,8 +92,9 @@ from .speaker_record import (
 )
 from .reading_record import (
     READING_BASIS_RULE,
+    bound_removal_motif,
     format_reader_bounds_passage,
-    restated_bound_sentences,
+    remove_restated_bounds,
     ReadingRecord,
     build_reading_record,
     format_reading_block,
@@ -2417,16 +2418,24 @@ async def build_act2_narrative(
         )
     narrative = outcome.narrative
 
-    # #3134 — a woven sentence that restates a numeric bound is removed
+    # #3134 — a woven sentence that restates a numeric bound is withdrawn
     # before anything else touches the text: the reader's bounds are the
     # record's passage grafted below, where each number sits under its own
     # site label. Same enforcement shape as Act III's (#1605): logged,
     # never a reader note (#2032).
-    for _restated in restated_bound_sentences(narrative):
-        narrative = narrative.replace(_restated, "").strip()
+    # #3310 — the enforcement lives in ``remove_restated_bounds``: deleting
+    # the whole sentence took the next one's antecedent with it (« Leur
+    # silence… » with nothing before it), so the NUMBER leaves a sentence the
+    # following anaphor needs, and the cut owns its separator.
+    _bound_removal = remove_restated_bounds(narrative)
+    narrative = _bound_removal.text
+    if _bound_removal.removed or _bound_removal.withdrawn:
         logger.info(
-            "act2 woven bound restatement removed (record passage carries it): %s",
-            _restated[:90],
+            "act2 woven bound restatement: %d sentence(s) removed, %d bound(s) "
+            "withdrawn in place (record passage carries the figures): %s",
+            _bound_removal.removed,
+            _bound_removal.withdrawn,
+            bound_removal_motif(_bound_removal),
         )
 
     # #3237 — a woven sentence that ties a formal contradiction to voices
@@ -2512,6 +2521,13 @@ async def build_act2_narrative(
     # is unbacked.
     if _superlative_note:
         degraded["act2_whole_scope_superlative"] = _superlative_note
+    # #3310 — the prose was CHANGED here, and an auditor must be able to find
+    # it: act, motive, count, never the sentence (#3249). Filed under the
+    # #2046 fabrication-note keys, so it is archived in the appendix and never
+    # reaches the reader as a repair note.
+    _bound_motif = bound_removal_motif(_bound_removal)
+    if _bound_motif:
+        degraded["act2_bound_restatement"] = _bound_motif
     vm = evidence.virtuous_mode
     # Positive outcome — reported by ``is_virtuous``, never filed under
     # ``degraded`` (see the note in ``act1_framing_plugin``): #1608 turned
