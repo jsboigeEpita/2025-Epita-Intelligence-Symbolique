@@ -763,6 +763,11 @@ _FABRICATION_NOTE_KEYS = frozenset(
         "act1_bound_restatement",
         "act2_bound_restatement",
         "act3_bound_restatement",
+        # #3343 — the bounded writer retry is a repair attempt of the prose,
+        # not a fact about the run: the reader receives the retained draft and
+        # needs no note telling them a draft was retried (#2032).
+        "act2_superlative_retry",
+        "act3_superlative_retry",
     }
 )
 

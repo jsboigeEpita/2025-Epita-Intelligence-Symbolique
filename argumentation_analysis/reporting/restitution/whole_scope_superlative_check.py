@@ -377,6 +377,44 @@ def check_whole_scope_superlative(
     return GateVerdict(band="FAIL", reasons=reasons)
 
 
+def superlative_retry_motif(
+    act_label: str,
+    flagged_before: int,
+    flagged_after: Optional[int] = None,
+    failure: str = "",
+) -> str:
+    """The motive of the bounded writer retry (#3343) — act, counts, outcome.
+
+    The retry CHANGED the act's prose (when it kept the rewrite) or tried to;
+    an auditor must be able to find that, the reader must not: the motive is a
+    code literal folded into the appendix with the other fabrication notes
+    (#2046), and it never quotes the act (#3249) — the sentences stay on the
+    trace log, where the neighbouring repairs already log their excerpts.
+
+    ``failure`` names a retry that produced nothing (the ``weave`` contract,
+    #1108/#2345): the first draft is kept, and the report says so rather than
+    silently pretending the rewrite happened.
+    """
+    plural = "s" if flagged_before > 1 else ""
+    head = (
+        f"{act_label} : relance bornée du rédacteur sur {flagged_before} "
+        f"superlatif{plural} de portée globale sans classement mesuré"
+    )
+    if failure:
+        return (
+            f"{head} — la relance n'a rien produit ({failure}) ; le premier "
+            "brouillon est conservé."
+        )
+    if flagged_after is None:
+        flagged_after = flagged_before
+    kept = (
+        "la réécriture"
+        if flagged_after < flagged_before
+        else "le premier brouillon"
+    )
+    return f"{head} — {flagged_after} après relance ; version conservée : {kept}."
+
+
 def whole_scope_superlative_note(
     body: str,
     ranking_line: str = "",
