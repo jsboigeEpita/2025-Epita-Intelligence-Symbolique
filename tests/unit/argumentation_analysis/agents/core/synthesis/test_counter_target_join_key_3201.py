@@ -193,13 +193,18 @@ class TestTheBriefingLicensesTheTarget:
     """
 
     def test_the_briefing_states_what_a_target_licenses(self):
+        # #3328 — the rule used to be written in English, with the word
+        # « rebuttal » in it three times; the French report copied that word
+        # onto the reader surface (49 states / 131 occurrences measured on
+        # this seat). The licence is stated in the report's own language now,
+        # so the pin follows the wording instead of freezing the leak.
         briefing = _briefing(_state(counter_arguments=_counters()))
         assert "READING RULES" in briefing
         assert (
-            "a counter is the rebuttal of a unit only when its line says "
-            "target=<that unit>" in briefing
+            "un contre-argument ne réfute une unité que si sa ligne porte "
+            "target=<cette unité>" in briefing
         )
-        assert "never as any unit's rebuttal" in briefing
+        assert "jamais comme la réfutation d'une unité" in briefing
 
     def test_the_briefing_states_that_a_score_is_raw(self):
         briefing = _briefing(_state(counter_arguments=_counters()))
@@ -209,7 +214,7 @@ class TestTheBriefingLicensesTheTarget:
 
     def test_the_rules_are_static_not_counter_dependent(self):
         """The licence is stated even when the run produced no counter."""
-        assert "target=<that unit>" in _briefing(_state())
+        assert "target=<cette unité>" in _briefing(_state())
 
 
 class TestTheArgumentMapJoinsOnTheRecordKey:

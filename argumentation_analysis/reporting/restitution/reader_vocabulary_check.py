@@ -156,6 +156,29 @@ _SPEC_REF_RE = re.compile(r"\bspec\s*§|§\s*\d")
 # French narrative prose matches this shape.
 _DICT_LITERAL_RE = re.compile(r"\{\s*[\"'][\w.\- ]+[\"']\s*:")
 
+# #3328 — the names the WRITER PROMPTS use for their own inputs, which the
+# writers copied onto the reader surface. Measured on this seat's stored
+# states before the class existed: « game-theoretic » 147 states / 147
+# occurrences (all of them in Act I — the prompt named the fourth beat in
+# English at `act1_framing_plugin.py` l.952 and again in the block header at
+# l.970, so the near-100 % rate is a producer fact, not a model quirk);
+# « rebuttal » 49 states / 131 occurrences, handed over by the English
+# grounding rules; « briefing » 4 states / 10 occurrences, the writer naming
+# the dossier it receives; « lot affiché » 0 here (the coordinator seat
+# carries 1/35), written from the population the issue documents.
+#
+# Bare « affiché » is deliberately NOT in this class: 35 states / 41
+# occurrences, mostly ordinary French (« le tableau affiché »). Only the
+# compound that names the pipeline's input is a defect. « inventaire » is
+# likewise legitimate French (64 occurrences) and stays out.
+_PIPELINE_NAME_RE = re.compile(
+    r"game[-\s]?theoretic\w*"
+    r"|\brebuttals?\b"
+    r"|\bbriefings?\b"
+    r"|\blot\s+affich\w+",
+    re.IGNORECASE,
+)
+
 # Gate self-diagnostic vocabulary. The verdict block itself is folded
 # (#2086); these tokens surviving in an ACT are the LLM echoing the
 # machinery it was told stays behind the curtain.
@@ -262,6 +285,19 @@ def check_reader_vocabulary(body: str) -> GateVerdict:
             f"{quoted_verdict_hits[0].group(0)[:80]}… »). Le verdict "
             f"pré-calculé se recopie mot pour mot, délimiteurs exclus : "
             f"les guillemets sont ceux du prompt, pas du récit."
+        )
+
+    pipeline_hits = list(_PIPELINE_NAME_RE.finditer(body))
+    if pipeline_hits:
+        worst = "FAIL"
+        reasons.append(
+            f"Vocabulaire interne (#3328) — "
+            f"{accord(len(pipeline_hits), 'nom du pipeline sur la surface lecteur', 'noms du pipeline sur la surface lecteur')} "
+            f"(ex : « {pipeline_hits[0].group(0)} »). Ces mots nomment les "
+            f"entrées du rédacteur, pas les objets du récit : le lecteur n'a "
+            f"ni dossier d'artefacts, ni lot affiché, et les règles de "
+            f"rédaction se lisent en français. Le récit désigne chaque objet "
+            f"par ce qu'il dit."
         )
 
     spec_hits = list(_SPEC_REF_RE.finditer(body))
