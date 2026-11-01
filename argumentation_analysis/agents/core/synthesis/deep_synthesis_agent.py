@@ -192,7 +192,7 @@ class DeepSynthesisAgent(BaseAgent):
     )
     GROUNDED_SYNTHESIS_PROMPT: ClassVar[str] = (
         "Tu es un analyste du renseignement rédigeant la synthèse "
-        "transversale ancrée d'une analyse rhétorique. Tu reçois un BRIEFING "
+        "transversale ancrée d'une analyse rhétorique. Tu reçois un DOSSIER "
         "D'ARTEFACTS : une liste d'artefacts d'analyse vérifiés, chacun "
         "préfixé par une clé de citation de la forme "
         "[artifact:<champ>.<clé>]. Tu ne vois jamais le discours brut — "
@@ -206,12 +206,12 @@ class DeepSynthesisAgent(BaseAgent):
         "RÈGLES DURES :\n"
         "1. CHAQUE proposition (toute phrase formulant un jugement "
         "analytique) DOIT citer au moins un artefact, avec la clé de "
-        "citation REPRISE MOT POUR MOT telle que donnée dans le briefing, "
+        "citation REPRISE MOT POUR MOT telle que donnée dans le dossier, "
         "p. ex. [artifact:identified_fallacies.f1].\n"
         "2. Au moins une proposition DOIT combiner des citations de deux ou "
         "plus champs d'artefacts DIFFÉRENTS dans la même phrase ou le même "
         "paragraphe (lecture transversale).\n"
-        "3. N'invente JAMAIS une clé de citation absente du briefing.\n"
+        "3. N'invente JAMAIS une clé de citation absente du dossier.\n"
         "4. Ne narre pas le pipeline et ne liste pas des comptes : "
         "interprète.\n"
         # #3307 — the clause used to read « Identifiants opaques uniquement
@@ -1753,7 +1753,7 @@ class DeepSynthesisAgent(BaseAgent):
         item keeps ``max_chars_per_item``, and every cut carries a visible
         marker — no silent slices.
         """
-        lines: List[str] = ["ARTIFACT BRIEFING (cite keys verbatim):"]
+        lines: List[str] = ["DOSSIER D'ARTEFACTS (cite keys verbatim):"]
 
         # #3107/#2352 — lazy on purpose: importing ``orchestration.fol_cause``
         # at module level drags the orchestration package ``__init__``, whose
@@ -2150,11 +2150,16 @@ class DeepSynthesisAgent(BaseAgent):
         # banded two raw scores (« moderate to high ») with no licence at all
         # — the absence of a licence did not stop it, so the licence is stated
         # here, next to the line it reads.
+        # #3328 — the rule was written in English with « rebuttal » three
+        # times, and the French report copied the word onto the reader
+        # surface (49 states / 131 occurrences on this seat). A rule the
+        # writer reads hands it its vocabulary: the French term is used, so
+        # there is no English word to carry over.
         lines.append(
-            "- counter_arguments target=<unit>: a counter is the rebuttal of a "
-            "unit only when its line says target=<that unit>. A line "
-            "target=unresolved is a real but unanchored rebuttal — cite it for "
-            "its own content, never as any unit's rebuttal."
+            "- counter_arguments target=<unit> : un contre-argument ne réfute "
+            "une unité que si sa ligne porte target=<cette unité>. Une ligne "
+            "target=unresolved est une réfutation réelle mais non ancrée — "
+            "cite-la pour son contenu, jamais comme la réfutation d'une unité."
         )
         lines.append(
             "- counter_arguments score= is the producer's raw score with no "
@@ -2169,6 +2174,16 @@ class DeepSynthesisAgent(BaseAgent):
             "- a « max … over all = X, tied: … » line means at least two items "
             "HOLD that maximum: no superlative may single one out — name every "
             "holder, or say « à égalité »."
+        )
+        # #3328 — the writer named its own production inputs in the prose
+        # (« le briefing signale », « le lot affiché »). The rule states the
+        # limit WITHOUT listing the words: naming a forbidden token here is
+        # what handed the writer its vocabulary in the first place (#3307
+        # measured the same mechanism with a machine key used as an example).
+        lines.append(
+            "- ne nomme jamais tes propres entrées de production : le lecteur "
+            "ne les a pas. Désigne chaque objet par ce qu'il dit, jamais par "
+            "le nom que le pipeline lui donne."
         )
         return "\n".join(lines)
 
