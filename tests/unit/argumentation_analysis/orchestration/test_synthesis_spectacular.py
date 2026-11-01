@@ -28,7 +28,10 @@ class TestSynthesisSpectacularPhase:
 
     def test_spectacular_deep_synthesis_depends_on_belief_revision_and_stakes(self):
         """#1625: L10 `deep_synthesis` lost its dependency on the removed L9
-        `synthesis`. It must now depend on `belief_revision` + `stakes` only.
+        `synthesis`. It must now depend on `belief_revision` + `stakes` — and,
+        since #3326, on `fallacy_winner_reading` (deep_synthesis levels beside
+        governance; without the edge its narrative would race the writer that
+        grows the fallacy coverage record).
         Anti-pendule: depend_on must not name a phase that no longer exists."""
         from argumentation_analysis.orchestration.workflows import (
             build_spectacular_workflow,
@@ -38,7 +41,7 @@ class TestSynthesisSpectacularPhase:
         phase = {p.name: p for p in wf.phases}
         assert "deep_synthesis" in phase
         deps = set(phase["deep_synthesis"].depends_on)
-        assert deps == {"belief_revision", "stakes"}
+        assert deps == {"belief_revision", "stakes", "fallacy_winner_reading"}
 
     def test_spectacular_phase_count_with_synthesis(self):
         from argumentation_analysis.orchestration.workflows import (

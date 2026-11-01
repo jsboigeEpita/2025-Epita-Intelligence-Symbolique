@@ -268,6 +268,17 @@ def build_standard_workflow() -> WorkflowDefinition:
             depends_on=["quality"],
             optional=True,
         )
+        # #3326 — the vote's winners get the per-argument fallacy walk AFTER
+        # the vote: the vote's options (quality, k=8) and the fallacy sample
+        # (k=10) share a constant 3 units, and the winner fell outside the
+        # sample on every measured pass. Runs one DAG level after governance
+        # (the selection is frozen before the vote — measured, #3326 step 1).
+        .add_phase(
+            "fallacy_winner_reading",
+            capability="fallacy_winner_reading",
+            depends_on=["governance"],
+            optional=True,
+        )
         .add_phase(
             "debate",
             capability="adversarial_debate",
@@ -276,6 +287,9 @@ def build_standard_workflow() -> WorkflowDefinition:
         )
         # Narrative synthesis (#981): produce a structured narrative from all
         # analysis results. Depends on phases that populate convergence signals.
+        # #3326: the declared edge on fallacy_winner_reading — the synthesis
+        # reads the coverage record the targeted reading grows (the #2969
+        # silent-empty-read class: declare the read, never trust the level).
         .add_phase(
             "narrative_synthesis",
             capability="narrative_synthesis",
@@ -285,6 +299,7 @@ def build_standard_workflow() -> WorkflowDefinition:
                 "counter",
                 "jtms",
                 "dung_extensions",
+                "fallacy_winner_reading",
             ],
             optional=True,
         )
@@ -343,6 +358,15 @@ def build_full_workflow() -> WorkflowDefinition:
             depends_on=["quality"],
             optional=True,
         )
+        # #3326 — see the standard builder: the cited winners get the walk
+        # after the vote (in this workflow the fallacy pass sits one level
+        # below governance already).
+        .add_phase(
+            "fallacy_winner_reading",
+            capability="fallacy_winner_reading",
+            depends_on=["governance"],
+            optional=True,
+        )
         .add_phase(
             "debate",
             capability="adversarial_debate",
@@ -394,6 +418,8 @@ def build_full_workflow() -> WorkflowDefinition:
         # populates a convergence signal: hierarchical_fallacy (sophisme),
         # quality (qualité faible), counter (contre-argument), jtms (JTMS
         # rétracté), dung_extensions (rejet Dung).
+        # #3326: fallacy_winner_reading declared — the synthesis reads the
+        # coverage record the targeted reading grows.
         .add_phase(
             "narrative_synthesis",
             capability="narrative_synthesis",
@@ -403,6 +429,7 @@ def build_full_workflow() -> WorkflowDefinition:
                 "counter",
                 "jtms",
                 "dung_extensions",
+                "fallacy_winner_reading",
             ],
             optional=True,
         )
@@ -1030,6 +1057,15 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             depends_on=["quality", "hierarchical_fallacy", "counter", "debate", "jtms"],
             optional=True,
         )
+        # #3326 — the cited winners get the walk after the vote (in this
+        # workflow the vote is the LAST aggregation, so the targeted reading
+        # lands after it and before the synthesis chain that renders it).
+        .add_phase(
+            "fallacy_winner_reading",
+            capability="fallacy_winner_reading",
+            depends_on=["governance"],
+            optional=True,
+        )
         .add_phase(
             "formal_synthesis",
             capability="formal_synthesis",
@@ -1084,9 +1120,13 @@ def build_spectacular_workflow() -> WorkflowDefinition:
         .add_phase(
             "deep_synthesis",
             capability="deep_synthesis",
+            # #3326: fallacy_winner_reading declared — the synthesis reads
+            # the coverage record the targeted reading grows (declared read,
+            # never a level-order accident — the #2969 class).
             depends_on=[
                 "belief_revision",
                 "stakes",
+                "fallacy_winner_reading",
             ],
             optional=False,
             timeout_seconds=180,

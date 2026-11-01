@@ -323,6 +323,9 @@ class TestSpectacularWorkflowGolden:
         "debate",
         "atms",
         "governance",
+        # #3326: post-vote reading of the cited winners outside the
+        # per-argument fallacy sample.
+        "fallacy_winner_reading",
         "formal_synthesis",
         "text_to_kb",
         "kb_to_tweety",
@@ -347,8 +350,10 @@ class TestSpectacularWorkflowGolden:
         # #1137, R4 act3_conclusion #1138) wired onto the spectacular DAG.
         # #1625 (R759): the L9 `analysis_synthesis` (#508 terminal aggregation)
         # was retired (zero prod reader). Phase count drops from 40 to 39.
+        # #3326: +1 fallacy_winner_reading — the post-vote reading of the
+        # winner the per-argument fallacy sample never examined. 39 → 40.
         wf = build_spectacular_workflow()
-        assert len(wf.phases) == 39
+        assert len(wf.phases) == 40
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -382,9 +387,12 @@ class TestSpectacularWorkflowGolden:
         # 0/8 units penalized), jtms for fol/pl, debate for jtms, dialogue
         # for counter, and governance aggregates counter/debate/jtms and
         # becomes the terminal L8 beside deep_synthesis. 9 → 10.
+        # #3326: fallacy_winner_reading lands after governance (L8), and
+        # deep_synthesis now READS it — one level later itself (L9), pushing
+        # act2_narrative and act3_conclusion down one each. 10 → 12.
         wf = build_spectacular_workflow()
         levels = wf.get_execution_order()
-        assert len(levels) == 10
+        assert len(levels) == 12
 
     def test_extract_is_sole_entry_point(self):
         wf = build_spectacular_workflow()
@@ -420,6 +428,9 @@ class TestSpectacularWorkflowGolden:
         # counter follows quality at L5; jtms waits for fol/pl at L6; debate
         # waits for jtms at L7 and governance aggregates its axes at L8,
         # terminal beside deep_synthesis.
+        # #3326: deep_synthesis left L7 — it now reads fallacy_winner_reading
+        # (L8, after governance), so it levels at L9 and governance stays
+        # alone at L7.
         assert {
             "hierarchical_fallacy",
             "nl_to_logic",
@@ -428,7 +439,9 @@ class TestSpectacularWorkflowGolden:
         assert "counter" in levels[4]
         assert "jtms" in levels[5]
         assert {"debate", "dialogue_reasoning"}.issubset(set(levels[6]))
-        assert {"deep_synthesis", "governance"}.issubset(set(levels[7]))
+        assert "governance" in levels[7]
+        assert "fallacy_winner_reading" in levels[8]
+        assert "deep_synthesis" in levels[9]
 
     def test_counter_depends_on_quality(self):
         wf = build_spectacular_workflow()
@@ -762,8 +775,9 @@ class TestWorkflowCatalogGolden:
         # #1115: spectacular grew to 31 phases (narrative_synthesis template
         # removed; DAG grew via #504/#506/#507/#508/#534 + 3 restitution
         # acts R2/R3/R4). #1625 (R759) retired L9 `analysis_synthesis`,
-        # dropping the count from 40 to 39.
-        assert len(catalog["spectacular"].phases) == 39
+        # dropping the count from 40 to 39. #3326 added the post-vote
+        # fallacy_winner_reading phase. 39 → 40.
+        assert len(catalog["spectacular"].phases) == 40
 
     def test_catalog_includes_sherlock_modern(self):
         catalog = get_workflow_catalog()

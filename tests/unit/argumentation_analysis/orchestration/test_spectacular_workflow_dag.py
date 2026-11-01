@@ -37,11 +37,14 @@ class TestSpectacularWorkflowDAG:
         # — the 3-act narrative.
         # #1625 (R759): the L9 `analysis_synthesis` (#508 terminal aggregation)
         # was retired (zero prod reader). Phase count drops from 40 to 39.
+        # #3326: +1 fallacy_winner_reading — the post-vote reading of the
+        # winner the per-argument fallacy sample never examined. 39 → 40.
         wf = build_spectacular_workflow()
-        # 39 = 31 (E1b base, was 30 post-#1625) + 5 W1 reasoners (#1169:
+        # 40 = 31 (E1b base, was 30 post-#1625) + 5 W1 reasoners (#1169:
         # setaf/aba/delp/dl/dialogue) + 4 #1178 reasoners (weighted/social/
-        # qbf/cl). -1 vs pre-#1625 because the L9 `synthesis` phase is gone.
-        assert len(wf.phases) == 39
+        # qbf/cl). -1 vs pre-#1625 because the L9 `synthesis` phase is gone,
+        # +1 fallacy_winner_reading (#3326).
+        assert len(wf.phases) == 40
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -73,6 +76,9 @@ class TestSpectacularWorkflowDAG:
             "debate",
             "atms",
             "governance",
+            # #3326: post-vote reading of the cited winners outside the
+            # per-argument fallacy sample.
+            "fallacy_winner_reading",
             "formal_synthesis",
             "text_to_kb",
             "kb_to_tweety",
@@ -156,13 +162,9 @@ class TestSpectacularWorkflowDAG:
         assert "quality" in phase.depends_on
         # And the producer runs strictly after all its real inputs.
         levels = wf.get_execution_order()
-        atms_level = next(
-            i for i, lvl in enumerate(levels) if "atms" in lvl
-        )
+        atms_level = next(i for i, lvl in enumerate(levels) if "atms" in lvl)
         for upstream in ("extract", "hierarchical_fallacy", "quality"):
-            up_level = next(
-                i for i, lvl in enumerate(levels) if upstream in lvl
-            )
+            up_level = next(i for i, lvl in enumerate(levels) if upstream in lvl)
             assert up_level < atms_level, (
                 f"atms (level {atms_level}) must run after '{upstream}' "
                 f"(level {up_level})"

@@ -107,15 +107,20 @@ KNOWN_CROSS_ORPHANS = {
         "consumed by reporting/restitution/act3_conclusion_plugin.py:1171 "
         "(Acte III) — spectacular only.",
     ),
-    ("standard", "governance"): (
-        frozenset({"governance_decisions"}),
-        "consumed by reporting/restitution/act2_narrative_plugin.py:842 — "
-        "spectacular only.",
+    # #3326 retired the ("standard"/"full", "governance") entries:
+    # fallacy_winner_reading reads governance_decisions on those voies (the
+    # cited winners), so the producer is no longer a cross-voie orphan.
+    ("standard", "fallacy_winner_reading"): (
+        frozenset({"analysis_trace"}),
+        "the phase's trace row feeds the render surfaces that read "
+        "analysis_trace (deep-synthesis sections, text_sequence restitution) "
+        "— spectacular only; the standard narrative template does not (#3326).",
     ),
-    ("full", "governance"): (
-        frozenset({"governance_decisions"}),
-        "consumed by reporting/restitution/act2_narrative_plugin.py:842 — "
-        "spectacular only.",
+    ("full", "fallacy_winner_reading"): (
+        frozenset({"analysis_trace"}),
+        "the phase's trace row feeds the render surfaces that read "
+        "analysis_trace (deep-synthesis sections, text_sequence restitution) "
+        "— spectacular only; the full narrative template does not (#3326).",
     ),
     ("standard", "debate"): (
         frozenset({"debate_transcripts"}),
