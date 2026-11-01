@@ -127,9 +127,11 @@ class TestTheLineIsTheOldLinePlusTheTarget:
     def test_the_linked_line_is_the_old_line_plus_the_target(self):
         line = _counter_lines(_briefing(_state(counter_arguments=_counters())))[0]
 
+        # #3328 leg 2: an enum strategy prints its French name, not the raw
+        # value — free text would print no strategy segment at all.
         assert line == (
             "[artifact:counter_arguments.ca_x] "
-            "strategy=direct_refutation score=0.42 target=arg_a "
+            "strategy=réfutation directe score=0.42 target=arg_a "
             "— invented filler alpha"
         )
 
@@ -138,7 +140,7 @@ class TestTheLineIsTheOldLinePlusTheTarget:
 
         assert line == (
             "[artifact:counter_arguments.ca_y] "
-            "strategy=counter_example score=0.31 "
+            "strategy=contre-exemple score=0.31 "
             f"target=unresolved ({_UNRESOLVED_REASON}) "
             "— invented filler beta"
         )

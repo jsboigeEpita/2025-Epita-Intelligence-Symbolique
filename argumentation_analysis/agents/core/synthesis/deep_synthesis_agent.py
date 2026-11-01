@@ -24,6 +24,9 @@ from pydantic import PrivateAttr
 from ..abc.agent_bases import BaseAgent
 from ..semantic_setup import prompt_settings
 from argumentation_analysis.core.logic_types import canonical_logic_type  # #2970
+from argumentation_analysis.agents.core.counter_argument.definitions import (
+    strategy_label_fr,
+)
 from argumentation_analysis.core.fallacy_attribution import (  # #3180
     is_reported_move,
     is_speaker_move,
@@ -2010,10 +2013,17 @@ class DeepSynthesisAgent(BaseAgent):
                 _target_text = f"target=unresolved ({_reason})"
             else:
                 _target_text = "target=unresolved"
+            # #3328 leg 2 — the record's ``strategy`` is free agent text
+            # (3739 labels on this seat's stored states, 1 enum-mapped).
+            # A known enum value prints its French name; anything else
+            # prints NO segment at all — free English (« Burden of rebuttal »)
+            # never reaches the writer's input.
+            _label = strategy_label_fr(ca.get("strategy", ""))
+            _strategy_seg = f"strategy={_label} " if _label else ""
             _add(
                 "counter_arguments",
                 ca_id,
-                f"strategy={ca.get('strategy', '?')} "
+                f"{_strategy_seg}"
                 f"score={ca.get('score', 0.0)} "
                 f"{_target_text}"
                 f" — {ca.get('counter_content', '')}",

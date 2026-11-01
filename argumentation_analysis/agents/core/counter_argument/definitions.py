@@ -54,6 +54,36 @@ class RhetoricalStrategy(Enum):
     STATISTICAL_EVIDENCE = "statistical_evidence"
 
 
+#: #3328 leg 2 — French display names for the values of the two strategy
+#: enums. The record's ``strategy`` field is free agent text (measured on
+#: this seat's stored states: 3739 labels, 1 carrying an enum value), and a
+#: reader surface may print the French name of a KNOWN value — nothing else.
+#: ``reductio_ad_absurdum`` lives in both enums under the same value and one
+#: label.
+STRATEGY_LABELS_FR: dict = {
+    CounterArgumentType.DIRECT_REFUTATION.value: "réfutation directe",
+    CounterArgumentType.COUNTER_EXAMPLE.value: "contre-exemple",
+    CounterArgumentType.ALTERNATIVE_EXPLANATION.value: "explication alternative",
+    CounterArgumentType.PREMISE_CHALLENGE.value: "contestation des prémisses",
+    CounterArgumentType.REDUCTIO_AD_ABSURDUM.value: "raisonnement par l'absurde",
+    RhetoricalStrategy.SOCRATIC_QUESTIONING.value: "questionnement socratique",
+    RhetoricalStrategy.ANALOGICAL_COUNTER.value: "contre-analogie",
+    RhetoricalStrategy.AUTHORITY_APPEAL.value: "appel à l'autorité",
+    RhetoricalStrategy.STATISTICAL_EVIDENCE.value: "preuve statistique",
+}
+
+
+def strategy_label_fr(raw: str) -> str:
+    """The French display name of a known strategy enum value, else ``""``.
+
+    Free text returns the empty string — never the raw label, never a guessed
+    translation: the caller renders the absence (no parenthetical, no
+    ``strategy=`` segment). Free English on a French reader surface is the
+    #3328 leg 2 defect this function exists to prevent.
+    """
+    return STRATEGY_LABELS_FR.get((raw or "").strip(), "")
+
+
 @dataclass
 class Argument:
     """Parsed argument structure."""

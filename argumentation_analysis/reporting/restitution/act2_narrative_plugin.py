@@ -49,6 +49,9 @@ from .unit_labels import (  # #3296 — per-act label table + legend
     RAW_UNIT_ID_RE,
     label_writer_prompt,
 )
+from argumentation_analysis.agents.core.counter_argument.definitions import (
+    strategy_label_fr,  # #3328 leg 2: enum value -> FR name, free text -> ""
+)
 from argumentation_analysis.core.fallacy_attribution import (  # #3180
     confidence_of,  # #3231
     detector_confidence_note,  # #3231
@@ -1768,9 +1771,11 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                     f"Justification : {fl.justification}"
                 )
             for ca in a.counter_args:
-                # #1668: strategy is free text; surface in parens only when
-                # present — an empty strategy renders as an absence, not ().
-                _strat = (ca.strategy or "").strip()
+                # #1668/#3328 leg 2: strategy is free text; only a KNOWN enum
+                # value prints (its French name), anything else renders as an
+                # absence — never (), never free English on this French
+                # surface (« Burden of rebuttal », 89 of 3739 measured labels).
+                _strat = strategy_label_fr(ca.strategy or "")
                 _slot = f" ({_strat})" if _strat else ""
                 # #3158 — EVERY counter line carries its provenance, not only
                 # the ones a vocabulary calls "factual". A counter is an
