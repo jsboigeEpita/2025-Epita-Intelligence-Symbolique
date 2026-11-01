@@ -1597,7 +1597,17 @@ class DeepSynthesisAgent(BaseAgent):
             return ""
         best = max(score for score, _ in scored)
         holders = sorted(unit_id for score, unit_id in scored if score == best)
-        return f"max {label} over all = {best} ({', '.join(holders[:4])})"
+        shown = ", ".join(holders[:4])
+        if len(holders) > 1:
+            # #3329 — naming every holder is not saying that the top is
+            # SHARED. The writer read « = 0.565 (ca_14, ca_29) », kept one
+            # id and wrote « le contre-argument le mieux noté » (R1130a).
+            more = f", and {len(holders) - 4} more" if len(holders) > 4 else ""
+            return (
+                f"max {label} over all = {best}, tied: {shown}{more} — a "
+                "superlative names every holder or says « à égalité »"
+            )
+        return f"max {label} over all = {best} ({shown})"
 
     @staticmethod
     def _population_notes(
@@ -2155,6 +2165,15 @@ class DeepSynthesisAgent(BaseAgent):
             "- counter_arguments score= is the producer's raw score with no "
             "scale attached: quote it as given or omit it, never as a strength "
             'band (« faible », « modérée », « forte », "moderate to high").'
+        )
+        # #3329 — the tie is stated on the line, and the rule says what a
+        # superlative may do with it. #3155 named both holders already; the
+        # R1130a writer still crowned one, because naming them does not say
+        # the top is shared.
+        lines.append(
+            "- a « max … over all = X, tied: … » line means at least two items "
+            "HOLD that maximum: no superlative may single one out — name every "
+            "holder, or say « à égalité »."
         )
         # #3328 — the writer named its own production inputs in the prose
         # (« le briefing signale », « le lot affiché »). The rule states the

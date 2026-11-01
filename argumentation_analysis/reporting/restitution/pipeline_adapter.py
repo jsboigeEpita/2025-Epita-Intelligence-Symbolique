@@ -117,6 +117,11 @@ _FABRICATION_NOTE_KEYS = frozenset(
         "act2_narrative_gate",
         "act3_conclusion_gate",
         "act3_scope_note_appended",
+        # #3310 — the bound withdrawal repairs the prose, it does not tell the
+        # reader anything about the run (twin of the appendix set, #2046).
+        "act1_bound_restatement",
+        "act2_bound_restatement",
+        "act3_bound_restatement",
     }
 )
 
