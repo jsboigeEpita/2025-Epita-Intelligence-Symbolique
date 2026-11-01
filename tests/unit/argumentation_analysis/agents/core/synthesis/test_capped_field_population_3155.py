@@ -79,7 +79,10 @@ class TestTheCappedFieldStatesItsPopulation:
 
         assert "POPULATIONS" in briefing
         assert "counter_arguments: 15 of 40 shown" in briefing
-        assert "max score over all = 0.59 (ca_22, ca_38)" in briefing
+        # #3329 — this fixture's top is TIED (ca_22 and ca_38 both at 0.59),
+        # so the line now says so. Pinning the pre-#3329 shape here would
+        # pin the very silence #3329 repairs.
+        assert "max score over all = 0.59, tied: ca_22, ca_38" in briefing
 
     def test_the_cap_still_applies(self):
         """The repair is the denominator, not showing everything."""
