@@ -1587,7 +1587,7 @@ def _aspic_finding(state: Any) -> Optional[StructuredArgFinding]:
         extensions = entry.get("extensions") or []
         if not isinstance(extensions, list):
             continue
-        distinct: List[frozenset] = []
+        distinct: List[frozenset[str]] = []
         for ext in extensions:
             if not isinstance(ext, (list, tuple)):
                 continue

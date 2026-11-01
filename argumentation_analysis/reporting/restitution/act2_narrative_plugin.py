@@ -720,7 +720,10 @@ def _collect_dung_trace(state: Any) -> DungSolverTrace:
     }
     credulous = {arg: lab for arg, lab in undecided.items() if arg in decoded}
 
-    sample_attacks: List[List[str]] = []
+    # #3325 — its own name: the early-return branch above binds
+    # ``sample_attacks`` too, and re-binding it here is what the strict
+    # check flagged. Same list, same order, same content at run time.
+    sampled_attacks: List[List[str]] = []
     for pair in fw_attacks:
         if (
             isinstance(pair, (list, tuple))
@@ -728,8 +731,8 @@ def _collect_dung_trace(state: Any) -> DungSolverTrace:
             and isinstance(pair[0], str)
             and isinstance(pair[1], str)
         ):
-            sample_attacks.append([pair[0], pair[1]])
-        if len(sample_attacks) >= _TRACE_ATTACK_SAMPLE:
+            sampled_attacks.append([pair[0], pair[1]])
+        if len(sampled_attacks) >= _TRACE_ATTACK_SAMPLE:
             break
 
     return DungSolverTrace(
@@ -741,7 +744,7 @@ def _collect_dung_trace(state: Any) -> DungSolverTrace:
         rejected_args=rejected,
         undecided_args=undecided,
         credulously_accepted=credulous,
-        sample_attacks=sample_attacks,
+        sample_attacks=sampled_attacks,
         population_total=fw_total,
     )
 
@@ -2036,11 +2039,11 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
     # be cited. Renders in both states so a silence is never read as a verdict.
     role_lines: List[str] = []
     for _role in ROLE_ORDER:
-        for a in evidence.role_assignments:
-            if a.role == _role:
+        for assignment in evidence.role_assignments:
+            if assignment.role == _role:
                 role_lines.append(
-                    f"  - {ROLE_LABELS[_role]} — {a.statement} "
-                    f"(ancres : {', '.join(a.cites)})"
+                    f"  - {ROLE_LABELS[_role]} — {assignment.statement} "
+                    f"(ancres : {', '.join(assignment.cites)})"
                 )
     roles_block = (
         "\n".join(role_lines)
