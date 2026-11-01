@@ -54,7 +54,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
 from .arena_record import (  # #3073: shared arena record with act1
     ArenaRecord,
@@ -1138,41 +1138,168 @@ VIRTUE_DISPLAY_FR = {
 }
 
 
+def _passed_strengths(strengths: List[QualityStrength]) -> List[QualityStrength]:
+    """The strengths that reach the discourse bar (#3159)."""
+    return [
+        s
+        for s in strengths
+        if s.args_evaluated and (s.args_at_top / s.args_evaluated) >= _DISCOURSE_BAR
+    ]
+
+
+def _named_passed_virtues(strengths: List[QualityStrength]) -> str:
+    """The virtues that reach the bar, each with its measured base (#3159).
+
+    Empty when none does — the caller then speaks the honest absence instead.
+    """
+    passed = _passed_strengths(strengths)
+    return " ; ".join(
+        f"{VIRTUE_DISPLAY_FR.get(s.virtue, s.virtue)} "
+        f"({s.args_at_top}/{s.args_evaluated} arguments évalués, "
+        f"{s.units_total} unités)"
+        for s in passed
+    )
+
+
 def discourse_virtue_sentence(strengths: List[QualityStrength]) -> str:
     """The discourse-level virtue statement, pre-composed (#3159).
 
     Names every virtue that reaches the bar with its measured base (k/m
     arguments evaluated, N units), and says plainly when none does — the
     honest absence replaces the rule, it does not soften it. Each virtue is
-    named by its reader-facing French (#3244, ``VIRTUE_DISPLAY_FR``) — the
-    writer copies the sentence verbatim, so the identifier must not ride it,
-    and printed bare (#3319): a model line handed over between « » comes
-    back between « » in the render, so the instruction says the delimiters
-    are not part of the sentence. The verdict itself stays pre-composed and
-    verbatim — only the quoting changes.
+    named by its reader-facing French (#3244, ``VIRTUE_DISPLAY_FR``), so no
+    identifier rides it.
+
+    #3335 (#3182 shape) — the sentence is no longer handed over for the
+    writer to copy. Three paid passes out of three paraphrased it and dropped
+    its base (« Le discours a de vraies qualités : il réfute… »), the last of
+    them adding « surtout » and « souvent », which nothing measures: an
+    instruction with no post-generation check is not a guarantee (#3134
+    lesson). The passing branch now returns the READER sentence, and the
+    pipeline grafts it under :data:`VERDICT_HEADING` after the prose. The
+    absent branch keeps its instruction — there is nothing to print when no
+    virtue reaches the bar, and the writer still has to attribute each virtue
+    to the arguments that carry it, with its base.
     """
-    passed = [
-        s
-        for s in strengths
-        if s.args_evaluated and (s.args_at_top / s.args_evaluated) >= _DISCOURSE_BAR
-    ]
-    if not passed:
+    named = _named_passed_virtues(strengths)
+    if not named:
         return (
             "VERDICT PRÉ-CALCULÉ : aucune vertu n'atteint 3/4 des arguments "
             "évalués — aucune ne se dit DU DISCOURS. Attribue chaque vertu aux "
             "arguments qui la portent, avec sa base."
         )
-    named = " ; ".join(
-        f"{VIRTUE_DISPLAY_FR.get(s.virtue, s.virtue)} "
-        f"({s.args_at_top}/{s.args_evaluated} arguments évalués, "
-        f"{s.units_total} unités)"
-        for s in passed
-    )
-    return (
-        "VERDICT PRÉ-CALCULÉ (reprends-le tel quel, sans guillemets) : "
-        f"Le discours tient sur {named}. "
-        "Aucune autre vertu ne se dit du discours."
-    )
+    return f"Le discours tient sur {named}. Aucune autre vertu ne se dit du discours."
+
+
+def discourse_virtue_reader_sentence(strengths: List[QualityStrength]) -> str:
+    """The verdict sentence the pipeline prints itself, or ``""`` (#3335).
+
+    Empty when no virtue reaches the bar: the absent case has no reader
+    sentence — its prompt keeps the coding instruction, and no passage is
+    grafted (the DoD's positive control).
+    """
+    named = _named_passed_virtues(strengths)
+    if not named:
+        return ""
+    return f"Le discours tient sur {named}. Aucune autre vertu ne se dit du discours."
+
+
+#: Reader-facing heading of the grafted verdict, #3335 — same shape as the
+#: coverage passage's (#3159): the provenance is part of the heading, so the
+#: reader knows the figures are the pipeline's, not the prose's. No issue
+#: number on a reader surface (#3225).
+VERDICT_HEADING = "Verdict sur les vertus (chiffres du pipeline)"
+
+#: The pipeline sentence's closing clause, AS PROSE REPRODUCES IT (#3335).
+#: All three paid passes kept a variant of it — « Aucune autre vertu ne s'en
+#: dit. », « pas d'autre vertu établie. » — because it is the one part of the
+#: handed-over sentence the writer could restate without inventing anything.
+#: It anchors the woven verdict: the sentences just before it, in the same
+#: paragraph, are what the grafted sentence replaces.
+_VERDICT_RESTRICTION_RE = re.compile(
+    r"\baucune\s+autre\s+vertu\b|\bpas\s+d['’]autre\s+vertu\b"
+    r"|\baucune\s+vertu\s+d['’]autre\b",
+    re.IGNORECASE,
+)
+
+
+#: How prose writes each virtue the quality pass measures (#3335). Only the
+#: virtues that actually reached the bar are looked up, so an act discussing
+#: « les sources » when no source virtue passed is never touched. The forms
+#: are the ones the three paid renders used (« il réfute », « se répète
+#: guère », « reste pertinent »), not the display labels.
+_VIRTUE_PROSE_RE: Dict[str, Any] = {
+    "clarte": re.compile(r"\bclair\w*|\bclart[ée]\b", re.IGNORECASE),
+    "pertinence": re.compile(r"\bpertinen\w*", re.IGNORECASE),
+    "presence_sources": re.compile(r"\bsources?\b", re.IGNORECASE),
+    "refutation_constructive": re.compile(r"\br[ée]fut\w*", re.IGNORECASE),
+    "structure_logique": re.compile(
+        r"\bstructure\s+logique|\bstructurel\w*", re.IGNORECASE
+    ),
+    "analogie_pertinente": re.compile(r"\banalog\w*", re.IGNORECASE),
+    "fiabilite_sources": re.compile(r"\bfiabilit\w*", re.IGNORECASE),
+    "exhaustivite": re.compile(r"\bexhausti\w*", re.IGNORECASE),
+    "redondance_faible": re.compile(r"\bredondan\w*|\br[ée]p[ée]t\w*", re.IGNORECASE),
+}
+
+#: The measured base the pipeline owns (#3335): « (7/8 arguments évalués,
+#: 89 unités) ». A woven sentence carrying it verbatim is the writer copying
+#: the handed sentence — removed like the paraphrase, the graft carries it.
+_VERDICT_BASE_RE = re.compile(
+    r"\d+\s*/\s*\d+\s+arguments?\s+[ée]valu[ée]s?", re.IGNORECASE
+)
+
+
+def restated_verdict_sentences(text: str, passed_virtues: Iterable[str]) -> List[str]:
+    """The woven sentences that restate the virtue verdict (#3335).
+
+    Anchored on the pipeline sentence's closing clause, then extended
+    BACKWARDS over the sentences of the same paragraph that name a virtue
+    which reached the bar or reproduce the measured base. Bounded on purpose:
+    the verdict is one contiguous statement, and a sentence of the « que
+    faire » beat — which may name the same virtues — is never adjacent to
+    that clause, so it is never touched. A false positive here would delete
+    content, which is the unsafe side of the trade; the anchor is what keeps
+    it off.
+
+    ``passed_virtues`` is the set of virtue keys that crossed the bar: the
+    vocabulary looked for is bounded by what the verdict actually names.
+    """
+    wanted = [_VIRTUE_PROSE_RE[v] for v in passed_virtues if v in _VIRTUE_PROSE_RE]
+    if not wanted:
+        return []
+    caught: List[str] = []
+    for paragraph in re.split(r"\n\s*\n", text or ""):
+        sentences = [s.strip() for s in _SENTENCE_RE.findall(paragraph) if s.strip()]
+        for index in range(len(sentences) - 1, -1, -1):
+            sentence = sentences[index]
+            if not _VERDICT_RESTRICTION_RE.search(sentence):
+                continue
+            caught.append(sentence)
+            back = index - 1
+            while back >= 0:
+                candidate = sentences[back]
+                if candidate.lstrip().startswith("#"):
+                    break
+                names_virtue = any(rx.search(candidate) for rx in wanted)
+                states_base = bool(_VERDICT_BASE_RE.search(candidate))
+                if not (names_virtue or states_base):
+                    break
+                caught.append(candidate)
+                back -= 1
+            break
+    return caught
+
+
+def format_verdict_passage(sentence: str) -> str:
+    """The verdict passage the act grafts after its prose (#3335).
+
+    Empty when the state names no virtue above the bar: no measured verdict →
+    no sentence, never a fabricated one.
+    """
+    if not (sentence or "").strip():
+        return ""
+    return f"**{VERDICT_HEADING}**\n{sentence.strip()}"
 
 
 def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
@@ -3195,13 +3322,26 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
             for s in evidence.quality_strengths[:6]
         )
         # #3159 — the generalisation was a RULE aimed at the writer (#3137) and
-        # the first post-#3143 render broke it. The rule is gone: the producer
-        # now writes the discourse-level sentence, base included, and the
-        # writer copies it. Removing the breakable rule is the fix; no
-        # stronger-worded rule is added in its place.
-        strengths_lines += "\n  " + discourse_virtue_sentence(
-            evidence.quality_strengths
-        )
+        # the first post-#3143 render broke it. The rule is gone.
+        # #3335 (#3182 shape) — nor does the writer COPY the verdict any more:
+        # three paid passes out of three paraphrased it and lost its base, the
+        # last adding quantifiers nothing measures. The pipeline grafts the
+        # sentence under ``VERDICT_HEADING`` after the prose, and the prompt
+        # says so — the note names the heading, the writer restates none of
+        # it. The absent branch keeps its coding instruction: when no virtue
+        # reaches the bar there is no reader sentence to print.
+        _verdict_sentence = discourse_virtue_reader_sentence(evidence.quality_strengths)
+        if _verdict_sentence:
+            strengths_lines += (
+                "\n  "
+                + _verdict_sentence
+                + f" (chiffres du pipeline — rendu sous « {VERDICT_HEADING} » "
+                "après ta prose : ne le reformule pas.)"
+            )
+        else:
+            strengths_lines += "\n  " + discourse_virtue_sentence(
+                evidence.quality_strengths
+            )
     else:
         strengths_lines = (
             "  (axe qualité non concluable — aucune vertu caractérisée à "
@@ -4184,6 +4324,42 @@ async def build_act3_conclusion(
             bound_removal_motif(_bound_removal),
         )
 
+    # #3335 (#3182 shape) — the virtue verdict is the pipeline's sentence, not
+    # the prose's. Three paid passes out of three paraphrased the sentence the
+    # prompt handed over and dropped its measured base; the last added « de
+    # vraies qualités », « surtout », « souvent ». An instruction with no
+    # post-generation check is not a guarantee, so a woven restatement — the
+    # paraphrase or the verbatim copy — is removed and the pipeline's passage
+    # is grafted after the prose. Nothing happens on the absent branch: no
+    # virtue reached the bar, so there is no reader sentence to print and the
+    # prose keeps the writer's per-argument attribution (the DoD's control).
+    _verdict_sentence = discourse_virtue_reader_sentence(evidence.quality_strengths)
+    _verdict_removed = 0
+    if _verdict_sentence:
+        _passed_keys = [s.virtue for s in _passed_strengths(evidence.quality_strengths)]
+        _verdict_removal = remove_restated_bounds(
+            narrative,
+            detector=lambda body: restated_verdict_sentences(body, _passed_keys),
+            number_free=lambda _sentence: None,
+        )
+        narrative = _verdict_removal.text
+        _verdict_removed = _verdict_removal.removed
+        if _verdict_removal.removed:
+            logger.info(
+                "act3 woven virtue-verdict restatement: %d sentence(s) removed "
+                "(the pipeline's verdict carries the base)",
+                _verdict_removal.removed,
+            )
+            # A beat whose whole prose WAS the verdict would otherwise keep a
+            # heading over nothing. Only on this branch: an untouched
+            # narrative keeps whatever structure the writer gave it.
+            narrative = _drop_empty_headings(narrative)
+        # NB: the passage itself is grafted much later — see the #3335 note
+        # before the bounds passage. Grafting it here would make the narrative
+        # non-empty for the claim gate, and the gate's « aucune conclusion
+        # soutenable » branch (which tells the reader every conducted claim
+        # was withdrawn) is decided on the writer's prose alone.
+
     # #1605 — the conclusion must carry what the run failed to evaluate. The
     # ledger is recorded unconditionally (it is a fact about the run), and the
     # scope paragraph is appended when the woven prose did not tie a limitation
@@ -4197,6 +4373,12 @@ async def build_act3_conclusion(
     _bound_motif = bound_removal_motif(_bound_removal)
     if _bound_motif:
         degraded["act3_bound_restatement"] = _bound_motif
+    if _verdict_removed:
+        degraded["act3_verdict_restatement"] = (
+            f"{_verdict_removed} phrase(s) restatant le verdict de vertus "
+            "retirée(s) du récit — le verdict du lecteur est celui du pipeline, "
+            "avec sa base mesurée."
+        )
     if evidence.absent_dimensions:
         labels = ", ".join(d.label for d in evidence.absent_dimensions)
         degraded["act3_absent_dimensions"] = (
@@ -4284,6 +4466,19 @@ async def build_act3_conclusion(
             "; ".join(s[:90] for s in _flagged[:3]),
         )
         degraded["act3_whole_scope_superlative"] = _superlative_note
+
+    # #3335 — the pipeline's verdict is grafted HERE, not where it was
+    # computed: the claim gate above judges the WRITER's prose, and a passage
+    # appended before it would make the narrative non-empty, silencing the
+    # « aucune conclusion soutenable » branch that tells the reader every
+    # conducted claim was withdrawn (measured: the gate went mute). The
+    # sentence is code-written, carries its own measured base, and states no
+    # claim about an absent axis, so no gate applies to it — it is rendered
+    # after the ones that judge the prose.
+    if _verdict_sentence:
+        narrative = (
+            narrative.rstrip() + "\n\n" + format_verdict_passage(_verdict_sentence)
+        )
 
     # #3134 — the record's own bounds close the act, after the prose: the
     # numbers the reader receives come from the record, not from the model.

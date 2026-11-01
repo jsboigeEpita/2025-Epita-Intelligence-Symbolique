@@ -154,17 +154,24 @@ class TestTheVerdictSentenceSpeaksTheReadersFrench:
         assert not _virtue_id_re().search(sentence)
 
     def test_the_bar_the_counts_and_the_exclusivity_clause_stay(self) -> None:
-        """Anti-pendulum: the display change softens nothing — the
-        pre-calculated verdict keeps its instruction, its measured base and
-        its exclusivity clause verbatim."""
+        """Anti-pendulum: the display change softens nothing — the verdict
+        keeps its measured base and its exclusivity clause.
+
+        Rewritten for #3335: this pin used to require the copy instruction
+        (« VERDICT PRÉ-CALCULÉ (reprends-le tel quel, sans guillemets) ») in
+        front of the sentence. That instruction is gone — three paid passes
+        paraphrased the sentence and lost its base, so the pipeline now
+        renders it and there is nothing left to copy. The substance the
+        display change was meant to preserve is unchanged, and is what this
+        test holds."""
         sentence = discourse_virtue_sentence(
             [_strength("redondance_faible", at_top=6, evaluated=7, units=35)]
         )
-        # #3319: the directive still demands verbatim, and now names the
-        # delimiters it must not copy.
-        assert "VERDICT PRÉ-CALCULÉ (reprends-le tel quel, sans guillemets)" in sentence
-        assert "(6/7 arguments évalués, 35 unités)" in sentence
-        assert "Aucune autre vertu ne se dit du discours." in sentence
+        assert sentence == (
+            "Le discours tient sur faible redondance "
+            "(6/7 arguments évalués, 35 unités). "
+            "Aucune autre vertu ne se dit du discours."
+        )
 
     def test_the_mapping_is_total_over_the_canonical_virtues(self) -> None:
         """The mapping reads the producer's own ``VERTUES`` list: a tenth

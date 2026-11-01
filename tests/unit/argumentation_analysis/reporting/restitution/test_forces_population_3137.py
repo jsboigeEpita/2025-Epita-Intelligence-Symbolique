@@ -120,7 +120,12 @@ class TestGeneralizationRule:
             build_act3_evidence(_state(_QUALITY_1_OF_8, _ARGS_15_UNITS))
         )
         slot = _forces_slot(prompt)
-        assert "VERDICT PRÉ-CALCULÉ" in slot
+        # #3335 — the slot no longer opens on the « VERDICT PRÉ-CALCULÉ »
+        # instruction: the sentence is not copied any more, it is rendered by
+        # the pipeline after the prose, and the slot says so. The verdict
+        # itself, with its basis, still travels in the prompt.
+        assert "Verdict sur les vertus (chiffres du pipeline)" in slot
+        assert "ne le reformule pas" in slot
         assert "Le discours tient sur" in slot
         assert "6/8 arguments évalués" in slot, (
             "the measured base travels with the claim — a virtue said of the "

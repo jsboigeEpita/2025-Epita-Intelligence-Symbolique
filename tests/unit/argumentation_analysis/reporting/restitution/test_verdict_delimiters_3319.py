@@ -16,9 +16,17 @@ is pinned to the builder's own lead plus its machine figures — a corpus
 sentence cannot carry them, so nothing a speaker said can match.
 
 The fix is the quoting only (anti-pendulum): the verdict stays
-pre-composed, verbatim-demanded, display-named (#3244), figure-based
-(#3159) and exclusive. Only the « » go, and the instruction says so in
-words.
+pre-composed, display-named (#3244), figure-based (#3159) and exclusive.
+Only the « » go, and the instruction said so in words.
+
+#3335 supersedes the DELIVERY, not the substance. Asking the writer to copy
+the sentence had no post-generation check, and three paid passes lost the
+measured base while paraphrasing it — so what #3319 answered with an
+instruction is now answered by the pipeline rendering the sentence itself
+(the #3182 shape). The two pins that demanded the copy instruction are
+rewritten here with that reason: the delimiters cannot come back through an
+instruction because there is no instruction left, and « verbatim-demanded »
+becomes « byte-identical to what the reader is handed ».
 """
 
 from __future__ import annotations
@@ -79,13 +87,18 @@ class TestTheVerdictPrintsBare:
         assert "«" not in sentence, sentence
         assert "»" not in sentence, sentence
 
-    def test_the_instruction_names_the_delimiters(self) -> None:
-        """« tel quel » alone was read as « delimiters included » — the
-        instruction now excludes them in words."""
+    def test_the_instruction_prefix_is_gone_with_the_copy(self) -> None:
+        """Rewritten for #3335. #3319 answered the « » by telling the writer
+        to copy the sentence without them; three paid passes then lost the
+        measured base while paraphrasing it, so the sentence is no longer
+        copied at all — the pipeline renders it. There is no instruction left
+        for the delimiter question to hang on, and the « » cannot come back
+        through one."""
         sentence = discourse_virtue_sentence(
             [_strength("redondance_faible", at_top=6, evaluated=7, units=35)]
         )
-        assert "sans guillemets" in sentence
+        assert "sans guillemets" not in sentence
+        assert sentence.startswith("Le discours tient sur")
 
     def test_the_multi_virtue_verdict_is_bare_too(self) -> None:
         sentence = discourse_virtue_sentence(
@@ -99,14 +112,24 @@ class TestTheVerdictPrintsBare:
 
 class TestTheVerdictSubstanceIsUntouched:
     """Anti-pendulum: the quoting change softens nothing — the verdict
-    keeps its instruction, its measured base, its display names and its
-    exclusivity clause (all green on both sides)."""
+    keeps its measured base, its display names and its exclusivity clause.
+    The instruction is the one thing #3335 removes (#3319's own reasoning:
+    an instruction the writer can ignore is not a guarantee)."""
 
-    def test_verbatim_still_demanded(self) -> None:
+    def test_the_sentence_is_exactly_what_the_reader_is_handed(self) -> None:
+        """Rewritten for #3335 — this pin used to demand « reprends-le tel
+        quel ». The copy instruction is what failed (R1130a/R1131a/R1132a all
+        dropped the base), so what is pinned now is the reader surface: the
+        sentence, byte for byte, with its base, its display name and its
+        exclusivity clause — and no instruction riding it."""
         sentence = discourse_virtue_sentence(
             [_strength("redondance_faible", at_top=6, evaluated=7, units=35)]
         )
-        assert "reprends-le tel quel" in sentence
+        assert sentence == (
+            "Le discours tient sur faible redondance "
+            "(6/7 arguments évalués, 35 unités). "
+            "Aucune autre vertu ne se dit du discours."
+        )
 
     def test_the_lead_the_figures_and_the_exclusivity_stay(self) -> None:
         sentence = discourse_virtue_sentence(
