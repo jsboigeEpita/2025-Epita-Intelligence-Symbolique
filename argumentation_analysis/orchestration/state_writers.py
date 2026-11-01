@@ -1092,6 +1092,96 @@ def _write_hierarchical_fallacy_to_state(
         )
 
 
+def _write_fallacy_winner_reading_to_state(
+    output: Any, state: Any, ctx: dict[str, Any]
+) -> None:
+    """#3326 — record the winner-targeted fallacy reading.
+
+    Three surfaces, each with its honesty rule:
+
+    * **Findings** merge through the SAME writer as the descent
+      (``_write_hierarchical_fallacy_to_state``): one merge
+      implementation, the walked winners' fallacies reach
+      ``identified_fallacies`` with ``detection_paths`` tagging the
+      per-argument site (#3105 vocabulary — this IS the per-argument
+      walk, targeted after the vote).
+    * **Coverage** grows, never replaces-with-less: ``unit_ids`` is the
+      union, ``k`` counts it, and the geometry (bands/span/stretch) is
+      recomputed over the union's offsets through ``coverage_figure`` —
+      the record keeps describing the set actually examined. The reason
+      each id was added rides in ``added_by``, a closed vocabulary
+      (``vote_winner_reading``), never prose (#3249).
+    * **Only answered walks count**: the invoker puts a winner in
+      ``examined_ids`` iff its walk got an answer — a failed walk never
+      lands here, so the record can only tell the truth (#1019).
+
+    No new ids (everything already examined, or nothing walked) ⇒ no
+    coverage write at all: the record stays byte-identical.
+    """
+    if not output or not isinstance(output, dict):
+        return
+
+    fallacies = output.get("fallacies")
+    if isinstance(fallacies, list) and fallacies:
+        # The same merge, justification fallback and target resolution as
+        # the descent's findings — shape the payload it reads.
+        _write_hierarchical_fallacy_to_state({"fallacies": fallacies}, state, ctx)
+
+    examined_ids = [str(i) for i in output.get("examined_ids") or [] if str(i).strip()]
+    if not examined_ids:
+        return
+
+    from argumentation_analysis.orchestration.selection import (
+        coverage_figure,
+        merged_population_units,
+        state_text_length,
+    )
+
+    record = state.analysis_coverage.get("fallacy_per_argument")
+    record = record if isinstance(record, dict) else {}
+    old_ids = [str(u) for u in record.get("unit_ids") or []]
+    fresh = [i for i in examined_ids if i not in old_ids]
+    if not fresh:
+        return
+    merged_ids = old_ids + fresh
+
+    units = merged_population_units(state)
+    by_id = {u.unit_id: u for u in units}
+    selected = [by_id[i] for i in merged_ids if i in by_id]
+    bands_covered, bands_total, span, stretch = coverage_figure(
+        selected, text_length=state_text_length(state)
+    )
+    n_total = record.get("N")
+    n_total = n_total if isinstance(n_total, int) else len(units)
+
+    added_by = dict(record.get("added_by") or {})
+    for i in fresh:
+        added_by[i] = "vote_winner_reading"
+
+    state.record_analysis_coverage(
+        "fallacy_per_argument",
+        len(merged_ids),
+        n_total,
+        bands_covered,
+        bands_total,
+        span=span,
+        largest_uncovered_stretch=stretch,
+        unit_ids=merged_ids,
+        extra_fields={"added_by": added_by},
+    )
+    state.add_trace_entry(
+        phase="fallacy_winner_reading",
+        agent="FallacyDetector",
+        reacts_to=["governance", "hierarchical_fallacy"],
+        summary=(
+            f"Lecture ciblée des gagnants du vote : {len(examined_ids)} unité(s) "
+            f"examinée(s) après le vote ({len(fallacies) if isinstance(fallacies, list) else 0} "
+            f"constat(s)), {len(output.get('already_examined') or [])} déjà dans "
+            "l'échantillon sophismes. (#3326)"
+        ),
+    )
+
+
 def _write_semantic_index_to_state(
     output: Any, state: Any, ctx: dict[str, Any]
 ) -> None:
@@ -3138,6 +3228,7 @@ CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "dung_arbitration": _write_dung_arbitration_to_state,
     "formal_synthesis": _write_formal_synthesis_to_state,
     "hierarchical_fallacy_detection": _write_hierarchical_fallacy_to_state,
+    "fallacy_winner_reading": _write_fallacy_winner_reading_to_state,
     "description_logic": _write_dl_to_state,
     "conditional_logic": _write_cl_to_state,
     "sat_solving": _write_sat_to_state,

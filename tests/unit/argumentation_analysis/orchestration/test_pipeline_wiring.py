@@ -102,11 +102,13 @@ class TestWorkflowFormalPhases:
         wf = build_standard_workflow()
         # extract, neural_detect, hierarchical_fallacy, nl_to_logic, pl, fol,
         # text_to_kb, kb_to_tweety, dung_extensions, aspic_analysis, quality,
-        # counter, jtms, governance, debate, narrative_synthesis, local_llm
-        # = 17 phases (#2296 added the kb belief-set chain standard was
+        # counter, jtms, governance, fallacy_winner_reading, debate,
+        # narrative_synthesis, local_llm
+        # = 18 phases (#2296 added the kb belief-set chain standard was
         # missing — the golden min_belief_sets threshold tested a production
-        # the workflow never ordered).
-        assert len(wf.phases) == 17
+        # the workflow never ordered; #3326 added the post-vote winner
+        # reading after governance).
+        assert len(wf.phases) == 18
 
 
 # ============================================================
