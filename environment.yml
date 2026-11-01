@@ -123,6 +123,12 @@ dependencies:
 
   # La section pip est pour les paquets non disponibles ou problématiques sur Conda
   - pip:
+    # #3325 residual — the last `mypy --strict` error in the restitution
+    # package is the missing stub for `yaml` (act1_framing_plugin reads the
+    # taxonomy YAML). Declared here rather than silenced with
+    # `ignore_missing_imports`: the setting would hide every future missing
+    # stub on that module, the stub package hides exactly one gap.
+    - types-PyYAML
     - textstat  # FB-23 #1088: readability (Flesch) for the quality-radar clarte detector
     - spacy==3.8.14  # #2320 (with the pins below): the quality heuristic's virtue scores feed LLM-cache KEYS, so CI must compute the recording env's scores. The whole spacy stack is pip-managed — see the conda section note.
     - thinc==8.3.13  # #2320: the working pair with spacy 3.8.14 (the dev boxes' proven stack — 79/79 replay keys match the recording env)
