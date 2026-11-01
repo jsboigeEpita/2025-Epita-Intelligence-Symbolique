@@ -95,6 +95,78 @@ class TestTheRankingSaysTheVoteRank:
             quality, 90
         )
 
+    def test_a_tie_at_the_top_is_the_same_fact_in_both_id_orders(self):
+        """#3341: a shared maximum is ONE fact. Comparing the winner's id with
+        ``scored[0][0]`` made the sentence depend on how that id sorts against
+        the other holder — « 1ᵉ à égalité » for one ordering, silence for the
+        other. Same fact, same sentence, whatever the ids."""
+        quality_14 = {
+            "arg_14": {"overall": 5.0},
+            "arg_69": {"overall": 5.0},
+            "arg_28": {"overall": 4.5},
+        }
+        quality_69 = {
+            "arg_69": {"overall": 5.0},
+            "arg_14": {"overall": 5.0},
+            "arg_28": {"overall": 4.5},
+        }
+        base_14 = quality_ranking_line(quality_14, 3)
+        base_69 = quality_ranking_line(quality_69, 3)
+        # The ranking base is deterministic whatever the dict order; only the
+        # sentence AFTER it is the fact under test.
+        assert base_14 == base_69
+        fact_14 = quality_ranking_line(quality_14, 3, "arg_14")[len(base_14) :]
+        fact_69 = quality_ranking_line(quality_69, 3, "arg_69")[len(base_69) :]
+        normalised_14 = fact_14.replace("arg_14", "<W>").replace("arg_69", "<C>")
+        normalised_69 = fact_69.replace("arg_69", "<W>").replace("arg_14", "<C>")
+        assert normalised_14 == normalised_69, (fact_14, fact_69)
+
+    def test_a_tie_at_the_top_says_the_head_is_shared(self):
+        """The #3329 shape: no « 1ᵉ » (not a French ordinal), no « en tête »
+        for a holder at the SAME score, and no « le vote ne dit pas qu'il est
+        le mieux tenu » — it shares the top, that tail would be false."""
+        quality = {
+            "arg_14": {"overall": 5.0},
+            "arg_69": {"overall": 5.0},
+            "arg_28": {"overall": 4.5},
+        }
+        line = quality_ranking_line(quality, 3, "arg_14")
+        assert "partage la tête de ce classement (5.0) avec arg_69" in line, line
+        assert "1ᵉ" not in line, line
+        assert "en tête" not in line, line
+        assert "le vote ne dit pas" not in line, line
+
+    def test_a_three_way_tie_names_every_holder(self):
+        """A shared head is named by every co-holder, in the same id order the
+        line's own listing uses — never one of them « en tête »."""
+        quality = {
+            "arg_14": {"overall": 5.0},
+            "arg_69": {"overall": 5.0},
+            "arg_3": {"overall": 5.0},
+            "arg_28": {"overall": 4.5},
+        }
+        line = quality_ranking_line(quality, 4, "arg_69")
+        assert (
+            "partage la tête de ce classement (5.0) avec arg_14 et arg_3" in line
+        ), line
+        assert "en tête" not in line, line
+
+    def test_the_tie_fact_survives_relabeling_in_the_prompt(self):
+        """#3296 holds for the new branch too: the sentence rides the per-act
+        letter table, the prompt carries no raw id."""
+        state = _state(
+            identified_arguments=_args(90),
+            argument_quality_scores={
+                "arg_14": {"overall": 5.0},
+                "arg_69": {"overall": 5.0},
+                "arg_28": {"overall": 4.5},
+            },
+            governance_decisions=_vote("arg_14"),
+        )
+        prompt = build_act2_prompt(build_act2_evidence(state))
+        assert "partage la tête" in prompt
+        assert not re.search(r"arg_\d+", prompt)
+
     def test_no_vote_keeps_the_line_unchanged(self):
         quality = _doc_a_quality()
         state = _state(argument_quality_scores=quality)

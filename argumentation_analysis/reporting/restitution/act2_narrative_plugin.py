@@ -803,6 +803,15 @@ def quality_ranking_line(
     not say. When the winner IS the top-1 (or there is no vote, or the
     ``winner`` is a strategy the caller never passes), the line is
     byte-identical to what #3159 wrote.
+
+    #3341 — "is the winner the top-1" is a question about SCORES, not about
+    ids. Comparing the winner's id with ``scored[0][0]`` read the lexical
+    order of the sort: with ``{arg_14: 5.0, arg_69: 5.0}`` the winner
+    ``arg_14`` got the #3159 line while ``arg_69`` — the same fact — got
+    « est 1ᵉ à égalité … ; arg_14 (5.0) est en tête », which is not an
+    ordinal, calls an equal-score holder « en tête », and denies a crown the
+    measurement does not deny. A shared maximum is one fact: the winner
+    SHARES the head, said the #3329 way, and the co-holders are named.
     """
     if not isinstance(quality, dict):
         return ""
@@ -822,7 +831,7 @@ def quality_ranking_line(
         f"{units_total}) : {listed}. C'est le SEUL classement mesuré — aucun "
         "superlatif portant sur « tout le discours » n'a de base ici."
     )
-    if not governance_winner or governance_winner == scored[0][0]:
+    if not governance_winner:
         return line
     winner_score = next(
         (score for arg_id, score in scored if arg_id == governance_winner), None
@@ -833,6 +842,35 @@ def quality_ranking_line(
         return (
             f"{line} Le gagnant du vote, {governance_winner}, n'est pas dans "
             "ce classement mesuré : le vote ne dit pas qu'il est le mieux tenu."
+        )
+    top_score = scored[0][1]
+    if winner_score == top_score:
+        # #3341 — the winner is AT the maximum. Naming the other holders is
+        # saying the crown is shared; the vote does not make it unique, and
+        # the measurement does not deny it. Same ids order as the listing
+        # above (`scored` is sorted by score then id).
+        co_holders = sorted(
+            arg_id
+            for arg_id, score in scored
+            if score == top_score and arg_id != governance_winner
+        )
+        if not co_holders:
+            # Sole top-1 — the #3159 line, byte-identical.
+            return line
+        if len(co_holders) <= 4:
+            shared_with = (
+                co_holders[0]
+                if len(co_holders) == 1
+                else ", ".join(co_holders[:-1]) + " et " + co_holders[-1]
+            )
+        else:
+            # #3329's cap: name four, count the rest rather than trail off.
+            shared_with = (
+                ", ".join(co_holders[:4]) + f" et {len(co_holders) - 4} autres"
+            )
+        return (
+            f"{line} Le gagnant du vote, {governance_winner}, partage la tête "
+            f"de ce classement ({winner_score:.1f}) avec {shared_with}."
         )
     # Rank of the winner's SCORE (first holder of it), and how many share it.
     rank = 1 + next(
