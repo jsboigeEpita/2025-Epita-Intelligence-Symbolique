@@ -69,6 +69,7 @@ from .speaker_record import (  # #3082: shared speaker record with act1/act2
 )
 from .reading_record import (  # #2850 lot 6: recorded reading bounds
     READING_BASIS_RULE,
+    BoundRemoval,
     bound_removal_motif,
     format_reader_bounds_passage,
     remove_restated_bounds,
@@ -4223,7 +4224,196 @@ async def weave_act3_conclusion(
     return await weave(build_act3_prompt(evidence), llm_callable, "Acte III")
 
 
+def build_act3_retry_prompt(evidence: Act3Evidence, flagged: List[str]) -> str:
+    """The bounded ONE writer retry (#3343) — the writer rewrites its own prose.
+
+    Same shape as Act II's: the base prompt is the one the writer already
+    received (same data blocks, same rules, same relabelling #3296), and the
+    correction block only NAMES what the #3297 check found and what a
+    superlative must carry to stand.
+
+    Act III's licence is different — its measured ranking is the salience
+    hierarchy, so a sentence naming a P1 unit legitimately rests on it
+    (criterion 4 of the reader contract REQUIRES a ranking marker here, so
+    « le plus » backed by P1 is licensed, never banned). The correction says
+    that too: the point is to stand on the ranking, not to stop ranking.
+    """
+    quoted = "\n".join(f"- {sentence}" for sentence in flagged[:5])
+    correction = (
+        f"\n\nCORRECTION DEMANDÉE — ta conclusion ci-dessus contient "
+        f"{len(flagged)} phrase(s) qui portent un superlatif sur TOUT le "
+        "rapport (« le plus… du dispositif », « … du discours », « … du run ») "
+        "sans classement mesuré pour l'adosser. Le classement mesuré de cet "
+        "acte est la hiérarchie de saillance fournie plus haut : seules les "
+        "unités qu'elle classe en tête peuvent porter un « le plus ». Phrases "
+        f"repérées :\n{quoted}\n\n"
+        "Réécris la conclusion EN ENTIER — même structure, mêmes beats, mêmes "
+        "données, même longueur. Pour chaque superlatif, choisis : soit il "
+        "nomme l'unité que la hiérarchie classe en tête et son rang, soit il "
+        "porte sur la population réellement évaluée et la nomme, soit il cite "
+        "la base du classement. Sinon, ne l'écris pas : dis la même chose sans "
+        "superlatif. Ne commente pas cette consigne et ne cite pas les phrases "
+        "repérées : rends la conclusion complète, prête à lire.\n"
+    )
+    return build_act3_prompt(evidence) + correction
+
+
+async def weave_act3_conclusion_retry(
+    evidence: Act3Evidence, llm_callable: LlmCallable, flagged: List[str]
+) -> WeaveOutcome:
+    """The bounded ONE retry (#3343), under the same fail-loud contract."""
+    return await weave(
+        build_act3_retry_prompt(evidence, flagged),
+        llm_callable,
+        "Acte III (relance)",
+    )
+
+
 # --- orchestrator ------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _DressedAct3:
+    """One Act III draft after every deterministic pass + the #3297 read.
+
+    The bounded retry (#3343) dresses a second draft EXACTLY like the first —
+    comparing two texts is only honest when both went through the same passes,
+    and the check must judge the text the reader would receive (post claim
+    gate, pre bounds passage).
+    """
+
+    text: str
+    bound_removal: BoundRemoval
+    verdict_removed: int
+    absent_scope_appended: bool
+    blocked: List[Any]
+    nothing_survived: bool
+    superlative_note: str
+    superlative_sentences: List[str]
+
+
+def _dress_act3_prose(
+    narrative: str, state: Any, evidence: Act3Evidence
+) -> _DressedAct3:
+    """Launder one Act III draft: bounds, verdict, scope note, claim gate, #3297.
+
+    Silent by design — the caller logs the retained draft, so a discarded
+    first draft leaves no repair trace claiming work the reader never got.
+    """
+    # #3134/#3310 — a woven sentence that restates a numeric bound is
+    # withdrawn before anything else touches the text: the reader's bounds are
+    # the record's passage grafted below, where each number sits under its own
+    # site label. The R1105b render fused three fallacy lines into one
+    # "initial detection" carrying the descent's 500; which model paraphrases
+    # the record cannot stay a bound the pipeline guarantees. Pipeline event:
+    # logged, never a reader note (#2032).
+    _bound_removal = remove_restated_bounds(narrative)
+    narrative = _bound_removal.text
+
+    # #3335 (#3182 shape) — the virtue verdict is the pipeline's sentence, not
+    # the prose's. Three paid passes out of three paraphrased the sentence the
+    # prompt handed over and dropped its measured base; the last added « de
+    # vraies qualités », « surtout », « souvent ». An instruction with no
+    # post-generation check is not a guarantee, so a woven restatement — the
+    # paraphrase or the verbatim copy — is removed here, BEFORE the claim gate
+    # (the gate's « aucune conclusion soutenable » branch is decided on the
+    # writer's prose, never on a passage or a paraphrase the pipeline owns) and
+    # inside the dress, so the retry's second draft is laundered exactly like
+    # the first. The pipeline's passage itself is grafted by the caller, after
+    # every gate that judges prose. Nothing happens on the absent branch: no
+    # virtue reached the bar, so there is no reader sentence (the DoD's
+    # control).
+    _verdict_removed = 0
+    _verdict_sentence = discourse_virtue_reader_sentence(evidence.quality_strengths)
+    if _verdict_sentence:
+        _passed_keys = [s.virtue for s in _passed_strengths(evidence.quality_strengths)]
+        _verdict_removal = remove_restated_bounds(
+            narrative,
+            detector=lambda body: restated_verdict_sentences(body, _passed_keys),
+            number_free=lambda _sentence: None,
+        )
+        narrative = _verdict_removal.text
+        _verdict_removed = _verdict_removal.removed
+        if _verdict_removal.removed:
+            # A beat whose whole prose WAS the verdict would otherwise keep a
+            # heading over nothing. Only on this branch: an untouched
+            # narrative keeps whatever structure the writer gave it.
+            narrative = _drop_empty_headings(narrative)
+
+    # #1605 — the conclusion must carry what the run failed to evaluate. The
+    # scope paragraph is appended when the woven prose did not tie a
+    # limitation to a lost axis. Deterministic on purpose: the guarantee
+    # cannot depend on the LLM having complied with the prompt directive.
+    absent_scope_appended = False
+    if evidence.absent_dimensions and not _narrative_states_scope_limit(
+        narrative, evidence.absent_dimensions
+    ):
+        narrative = (
+            narrative.rstrip() + "\n\n" + _scope_note(evidence.absent_dimensions)
+        )
+        absent_scope_appended = True
+
+    # #1605 — the blocking half. Runs BEFORE the §4 self-check so the gate
+    # reads the text the reader will actually receive. The band's claim
+    # ceiling is a prompt instruction; this is the enforcement.
+    blocked: List[Any] = []
+    nothing_survived = False
+    if evidence.verdict is not None:
+        narrative, blocked = _gate_unsupported_claims(
+            narrative, evidence.verdict.nontrivial_axes
+        )
+        if blocked:
+            survivor = narrative.rstrip()
+            # When nothing survives, the note IS the whole deliverable and must
+            # say so in the prose: the structured ``degraded`` dict below is
+            # dropped by the state round-trip, so it cannot carry that fact.
+            nothing_survived = not survivor
+            narrative = (survivor + "\n\n" if survivor else "") + _blocked_claim_note(
+                blocked, nothing_survived=nothing_survived
+            )
+
+    # #3297 — a whole-scope superlative needs a measured ranking to stand on,
+    # and Act III's own ranking is the salience hierarchy. A sentence naming
+    # a unit the assessment ranks first (P1, weight 1) rests on it; everything
+    # else whole-scope is unbacked. The check runs POST claim-gate (a removed
+    # claim cannot be flagged) and PRE bounds-passage (the record's numbers
+    # are code, not the writer's claim) — same placement logic as Act II.
+    # Criterion 4 of the reader contract REQUIRES a ranking marker in Act III,
+    # so « le plus » backed by P1 is licensed, never banned (anti-pendulum).
+    from .whole_scope_superlative_check import (
+        whole_scope_superlative_note,
+        whole_scope_superlative_sentences,
+    )
+
+    _p1_ids = (
+        [
+            cite
+            for item in evidence.salience.ranked
+            if item.weight == 1
+            for cite in item.cites
+            if re.fullmatch(r"arg_\d+", cite)
+        ]
+        if evidence.salience is not None
+        else []
+    )
+    _superlative_note = whole_scope_superlative_note(
+        narrative, licensed_ids=_p1_ids, act_label="Acte III"
+    )
+    _flagged = (
+        whole_scope_superlative_sentences(narrative, licensed_ids=_p1_ids)
+        if _superlative_note
+        else []
+    )
+    return _DressedAct3(
+        text=narrative,
+        bound_removal=_bound_removal,
+        verdict_removed=_verdict_removed,
+        absent_scope_appended=absent_scope_appended,
+        blocked=list(blocked),
+        nothing_survived=nothing_survived,
+        superlative_note=_superlative_note,
+        superlative_sentences=_flagged,
+    )
 
 
 async def build_act3_conclusion(
@@ -4300,21 +4490,43 @@ async def build_act3_conclusion(
                 )
             },
         )
-    narrative = outcome.narrative
+    _dressed = _dress_act3_prose(outcome.narrative, state, evidence)
 
-    # #3134 — a woven sentence that restates a numeric bound is withdrawn
-    # before anything else touches the text: the reader's bounds are the
-    # record's passage grafted below, where each number sits under its own
-    # site label. The R1105b render fused three fallacy lines into one
-    # "initial detection" carrying the descent's 500; which model paraphrases
-    # the record cannot stay a bound the pipeline guarantees. Pipeline event:
-    # logged, never a reader note (#2032).
-    # #3310 — the enforcement lives in ``remove_restated_bounds``: deleting
-    # the whole sentence took the next one's antecedent with it (« Leur
-    # silence… » with nothing before it), so the NUMBER leaves a sentence the
-    # following anaphor needs, and the cut owns its separator.
-    _bound_removal = remove_restated_bounds(narrative)
-    narrative = _bound_removal.text
+    # #3343 — the bounded ONE retry (#3159's rule was not enough: nothing read
+    # the act, so the writer could break it in silence). Asked ONCE, with its
+    # own flagged sentences and the measured hierarchy; the check still only
+    # records, and if the rewrite is not better the first draft is kept. The
+    # gesture is measured here, not assumed: on the stored states Act III
+    # fires 16 of 48 and its P1 licence suppresses none of them — the act
+    # needs the retry at least as much as Act II does.
+    _retry_motif = ""
+    if _dressed.superlative_note:
+        from .whole_scope_superlative_check import superlative_retry_motif
+
+        _first_flagged = _dressed.superlative_sentences
+        _retry = await weave_act3_conclusion_retry(
+            evidence, llm_callable, _first_flagged
+        )
+        if _retry.narrative:
+            _second = _dress_act3_prose(_retry.narrative, state, evidence)
+            _after = len(_second.superlative_sentences)
+            if _after < len(_first_flagged):
+                _dressed = _second
+            _retry_motif = superlative_retry_motif(
+                "Acte III", len(_first_flagged), _after
+            )
+        else:
+            _retry_motif = superlative_retry_motif(
+                "Acte III", len(_first_flagged), failure=_retry.failure
+            )
+        logger.info(
+            "Acte III bounded writer retry (#3343): %s | first draft: %s",
+            _retry_motif,
+            "; ".join(s[:90] for s in _first_flagged[:3]),
+        )
+
+    narrative = _dressed.text
+    _bound_removal = _dressed.bound_removal
     if _bound_removal.removed or _bound_removal.withdrawn:
         logger.info(
             "act3 woven bound restatement: %d sentence(s) removed, %d bound(s) "
@@ -4324,41 +4536,17 @@ async def build_act3_conclusion(
             bound_removal_motif(_bound_removal),
         )
 
-    # #3335 (#3182 shape) — the virtue verdict is the pipeline's sentence, not
-    # the prose's. Three paid passes out of three paraphrased the sentence the
-    # prompt handed over and dropped its measured base; the last added « de
-    # vraies qualités », « surtout », « souvent ». An instruction with no
-    # post-generation check is not a guarantee, so a woven restatement — the
-    # paraphrase or the verbatim copy — is removed and the pipeline's passage
-    # is grafted after the prose. Nothing happens on the absent branch: no
-    # virtue reached the bar, so there is no reader sentence to print and the
-    # prose keeps the writer's per-argument attribution (the DoD's control).
+    # #3335 — the verdict restatement removal happened inside the dress (both
+    # drafts are laundered the same way); the retained draft's count is the
+    # one the auditor reads.
     _verdict_sentence = discourse_virtue_reader_sentence(evidence.quality_strengths)
-    _verdict_removed = 0
-    if _verdict_sentence:
-        _passed_keys = [s.virtue for s in _passed_strengths(evidence.quality_strengths)]
-        _verdict_removal = remove_restated_bounds(
-            narrative,
-            detector=lambda body: restated_verdict_sentences(body, _passed_keys),
-            number_free=lambda _sentence: None,
+    _verdict_removed = _dressed.verdict_removed
+    if _verdict_removed:
+        logger.info(
+            "act3 woven virtue-verdict restatement: %d sentence(s) removed "
+            "(the pipeline's verdict carries the base)",
+            _verdict_removed,
         )
-        narrative = _verdict_removal.text
-        _verdict_removed = _verdict_removal.removed
-        if _verdict_removal.removed:
-            logger.info(
-                "act3 woven virtue-verdict restatement: %d sentence(s) removed "
-                "(the pipeline's verdict carries the base)",
-                _verdict_removal.removed,
-            )
-            # A beat whose whole prose WAS the verdict would otherwise keep a
-            # heading over nothing. Only on this branch: an untouched
-            # narrative keeps whatever structure the writer gave it.
-            narrative = _drop_empty_headings(narrative)
-        # NB: the passage itself is grafted much later — see the #3335 note
-        # before the bounds passage. Grafting it here would make the narrative
-        # non-empty for the claim gate, and the gate's « aucune conclusion
-        # soutenable » branch (which tells the reader every conducted claim
-        # was withdrawn) is decided on the writer's prose alone.
 
     # #1605 — the conclusion must carry what the run failed to evaluate. The
     # ledger is recorded unconditionally (it is a fact about the run), and the
@@ -4385,10 +4573,7 @@ async def build_act3_conclusion(
             f"{accord(len(evidence.absent_dimensions), 'dimension non évaluée', 'dimensions non évaluées')} sur "
             f"ce corpus : {labels}."
         )
-        if not _narrative_states_scope_limit(narrative, evidence.absent_dimensions):
-            narrative = (
-                narrative.rstrip() + "\n\n" + _scope_note(evidence.absent_dimensions)
-            )
+        if _dressed.absent_scope_appended:
             # #2032: this is a pipeline event, not reader information — every
             # key of ``degraded`` reaches the reader as a blockquote note, and
             # a repair note telling the reader the renderer repaired something
@@ -4399,73 +4584,42 @@ async def build_act3_conclusion(
                 labels,
             )
 
-    # #1605 — the blocking half. Runs BEFORE the §4 self-check so the gate reads
-    # the text the reader will actually receive. The band's claim ceiling is a
-    # prompt instruction; this is the enforcement.
-    if evidence.verdict is not None:
-        narrative, blocked = _gate_unsupported_claims(
-            narrative, evidence.verdict.nontrivial_axes
+    # #1605 — the blocking half, applied inside the dress so the §4 self-check
+    # reads the text the reader will actually receive. The band's claim
+    # ceiling is a prompt instruction; this is the enforcement. The motive is
+    # rebuilt from the retained draft's own blocked set.
+    if _dressed.blocked:
+        degraded["act3_claim_blocked"] = (
+            f"{accord(len(_dressed.blocked), 'affirmation retirée', 'affirmations retirées')}, "
+            "sans support dans l'état : "
+            + "; ".join(
+                f"{b.label} — « {_truncate(b.sentence, 90)} »" for b in _dressed.blocked
+            )
         )
-        if blocked:
-            survivor = narrative.rstrip()
-            # When nothing survives, the note IS the whole deliverable and must
-            # say so in the prose: the structured `degraded` dict below is
-            # dropped by the state round-trip, so it cannot carry that fact.
-            narrative = (survivor + "\n\n" if survivor else "") + _blocked_claim_note(
-                blocked, nothing_survived=not survivor
+        if _dressed.nothing_survived:
+            degraded["act3_claim_blocked_all"] = (
+                "Aucune phrase de la conclusion n'a survécu au gate : toutes "
+                "reposaient sur des dimensions sans résultat dans l'état. "
+                "Le livrable ne porte que l'avis de retrait."
             )
-            degraded["act3_claim_blocked"] = (
-                f"{accord(len(blocked), 'affirmation retirée', 'affirmations retirées')}, "
-                "sans support dans l'état : "
-                + "; ".join(
-                    f"{b.label} — « {_truncate(b.sentence, 90)} »" for b in blocked
-                )
-            )
-            if not survivor:
-                degraded["act3_claim_blocked_all"] = (
-                    "Aucune phrase de la conclusion n'a survécu au gate : toutes "
-                    "reposaient sur des dimensions sans résultat dans l'état. "
-                    "Le livrable ne porte que l'avis de retrait."
-                )
 
-    # #3297 — a whole-scope superlative needs a measured ranking to stand on,
-    # and Act III's own ranking is the salience hierarchy. A sentence naming
-    # a unit the assessment ranks first (P1, weight 1) rests on it; everything
-    # else whole-scope is unbacked. The check runs POST claim-gate (a removed
-    # claim cannot be flagged) and PRE bounds-passage (the record's numbers
-    # are code, not the writer's claim) — same placement logic as Act II.
-    # Criterion 4 of the reader contract REQUIRES a ranking marker in Act III,
-    # so « le plus » backed by P1 is licensed, never banned (anti-pendulum).
-    # The prose is NOT rewritten: the degraded motif is a code literal
-    # (``restitution_acts_degraded`` is a closed producer vocabulary as far
-    # as the sanitizer is concerned, #3249), the excerpt goes to the trace.
-    from .whole_scope_superlative_check import (
-        whole_scope_superlative_note,
-        whole_scope_superlative_sentences,
-    )
-
-    _p1_ids = (
-        [
-            cite
-            for item in evidence.salience.ranked
-            if item.weight == 1
-            for cite in item.cites
-            if re.fullmatch(r"arg_\d+", cite)
-        ]
-        if evidence.salience is not None
-        else []
-    )
-    _superlative_note = whole_scope_superlative_note(
-        narrative, licensed_ids=_p1_ids, act_label="Acte III"
-    )
+    # #3297 — the motive of the whole-scope superlative, on the retained
+    # draft. The degraded motif is a code literal (``restitution_acts_degraded``
+    # is a closed producer vocabulary as far as the sanitizer is concerned,
+    # #3249); the excerpt goes to the trace.
+    _superlative_note = _dressed.superlative_note
     if _superlative_note:
-        _flagged = whole_scope_superlative_sentences(narrative, licensed_ids=_p1_ids)
         logger.warning(
-            "Acte III whole-scope superlative: %s | %s",
+            "Acte III whole-scope superlative (retained draft): %s | %s",
             _superlative_note,
-            "; ".join(s[:90] for s in _flagged[:3]),
+            "; ".join(s[:90] for s in _dressed.superlative_sentences[:3]),
         )
         degraded["act3_whole_scope_superlative"] = _superlative_note
+    # #3343 — the retry rewrote (or tried to rewrite) the act: act, counts and
+    # which draft was kept, never a sentence (#3249). Archived with the other
+    # fabrication notes (#2046), never a reader note.
+    if _retry_motif:
+        degraded["act3_superlative_retry"] = _retry_motif
 
     # #3335 — the pipeline's verdict is grafted HERE, not where it was
     # computed: the claim gate above judges the WRITER's prose, and a passage
