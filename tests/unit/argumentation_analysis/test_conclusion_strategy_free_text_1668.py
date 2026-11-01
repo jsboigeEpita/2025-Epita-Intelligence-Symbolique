@@ -106,6 +106,11 @@ class TestAct3EmptyStrategyNoEmptyParens:
     conclusion line must not render dangling empty parentheses ``()`` — an
     absence renders as an absence, not as a labelled-but-empty slot.
 
+    #3328 leg 2 supersedes the old no-regression here: a non-empty FREE-TEXT
+    strategy no longer renders at all (free English never reaches a French
+    reader surface). What stays in the line is a KNOWN enum value, printed as
+    its French name — the observed move survives only in that closed form.
+
     Drives the prompt renderer (``build_act3_prompt``) with a minimal
     ``Act3Evidence`` whose counter carries an empty strategy. The reader-level
     fixture is legitimate here: this is a presentation test, not a writer test.
@@ -137,9 +142,32 @@ class TestAct3EmptyStrategyNoEmptyParens:
             "strategy must not produce an empty labelled slot (#1668 conclusion-side)."
         )
 
-    def test_nonempty_strategy_kept_as_observed_move(self):
-        """No-regression: a non-empty free-text strategy stays in the line (as an
-        observed rhetorical move), only the empty-parens slot disappears."""
+    def test_a_known_enum_strategy_stays_in_the_line(self):
+        """What survives #3328 leg 2: a KNOWN enum value stays in the line, as
+        its French name — the observed move in the only form allowed."""
+        from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
+            Act3Evidence,
+            CounterStrategy,
+            build_act3_prompt,
+        )
+
+        evidence = Act3Evidence(
+            counters_total=1,
+            counter_strategies=[
+                CounterStrategy(
+                    strategy="authority_appeal",
+                    target_arg_id="arg_1",
+                    snippet="a counter",
+                )
+            ],
+        )
+        prompt = build_act3_prompt(evidence)
+        assert "appel à l'autorité" in prompt
+        assert "a counter" in prompt  # the counter itself is still surfaced
+
+    def test_free_text_strategy_renders_no_parenthetical(self):
+        """#3328 leg 2: a free-text strategy renders nothing — the old
+        "kept as observed move" contract is superseded; the snippet stays."""
         from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
             Act3Evidence,
             CounterStrategy,
@@ -154,4 +182,7 @@ class TestAct3EmptyStrategyNoEmptyParens:
             ],
         )
         prompt = build_act3_prompt(evidence)
-        assert move in prompt  # the observed move is still surfaced, honestly
+        assert move not in prompt, (
+            "Free agent text reached the Act III line — #3328 leg 2 forbids it"
+        )
+        assert "a counter" in prompt  # anti-drop: the counter keeps its evidence

@@ -99,6 +99,9 @@ from .unit_labels import (  # #3296 — per-act label table + legend
     LEGEND_REFERENT_CAP,
     label_writer_prompt,
 )
+from argumentation_analysis.agents.core.counter_argument.definitions import (
+    strategy_label_fr,  # #3328 leg 2: enum value -> FR name, free text -> ""
+)
 from argumentation_analysis.core.fallacy_attribution import (  # #3180
     MOVE_AUTHOR_REPORTED,  # #3162 item 2 — whose position a unit carries
     confidence_of,  # #3231
@@ -3123,11 +3126,13 @@ def _band_claim_ceiling(band: str) -> str:
 def _strategy_suffix(strategy: str) -> str:
     """Render a counter-argument's observed strategy as a parenthetical suffix.
 
-    #1668 conclusion-side: ``strategy`` is free text. Surface it in parentheses
-    only when non-empty — an empty strategy renders as nothing, not as dangling
-    empty parens (which read as a labelled-but-empty slot, the #1019 shape).
+    #1668 conclusion-side: ``strategy`` is free text. #3328 leg 2: only a
+    KNOWN enum value renders (its French name, :func:`strategy_label_fr`) —
+    free text renders as nothing, like an empty strategy, never as dangling
+    empty parens (which read as a labelled-but-empty slot, the #1019 shape)
+    and never as free English on this French surface.
     """
-    s = (strategy or "").strip()
+    s = strategy_label_fr(strategy)
     return f" ({s})" if s else ""
 
 
