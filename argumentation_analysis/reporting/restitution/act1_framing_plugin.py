@@ -55,6 +55,7 @@ from .speaker_record import (
 )
 from .llm_weaving import LlmCallable, WeaveOutcome, weave
 from .readability_gate import GateVerdict, ReadabilityGate
+from .reading_record import bound_removal_motif, remove_restated_bounds
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
 
 logger = logging.getLogger(__name__)
@@ -635,6 +636,30 @@ _COVERAGE_RANGE_RE = re.compile(
 _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+|\n+")
 
 
+#: The same range AS PROSE WRITES IT, « de 6 à 10 unités » included: withdrawing
+#: the figures must not leave the preposition that introduced them (#3310).
+_COVERAGE_RANGE_WITH_DE_RE = re.compile(
+    r"\bde\s+\d+\s*(?:à|et|–|-)\s*\d+\s+unités?\b", re.IGNORECASE
+)
+
+#: The number-free form of a coverage range. « une partie des unités » keeps
+#: the direction of the woven claim without restating a figure the pipeline
+#: owns (#3310).
+_COVERAGE_FREE_PHRASE = "une partie des unités"
+
+
+def _number_free_coverage_range(sentence: str) -> Optional[str]:
+    """The range withdrawn from a sentence, its preposition with it (#3310).
+
+    ``None`` when the sentence carries no range this module knows — the caller
+    then falls back to removing the sentence whole.
+    """
+    rewritten = _COVERAGE_RANGE_WITH_DE_RE.sub(_COVERAGE_FREE_PHRASE, sentence)
+    if rewritten == sentence:
+        rewritten = _COVERAGE_RANGE_RE.sub(_COVERAGE_FREE_PHRASE, sentence)
+    return None if rewritten == sentence else rewritten
+
+
 def restated_coverage_range_sentences(text: str) -> List[str]:
     """The woven sentences that restate the coverage range (#3159, R1108).
 
@@ -1081,12 +1106,24 @@ async def build_act1_framing(
     coverage_sentence = coverage_range_sentence(
         evidence.analysis_coverage, evidence.stakes_count
     )
-    for _restated in restated_coverage_range_sentences(narrative):
-        narrative = narrative.replace(_restated, "").strip()
+    # #3310 — same enforcement, same repair as the other two acts: the NUMBER
+    # leaves a sentence the next one needs as its antecedent, and the cut owns
+    # its separator. Act I speaks the range grammar, so it hands the helper
+    # both its own detector and its own number-free form.
+    _bound_removal = remove_restated_bounds(
+        narrative,
+        detector=restated_coverage_range_sentences,
+        number_free=_number_free_coverage_range,
+    )
+    narrative = _bound_removal.text
+    if _bound_removal.removed or _bound_removal.withdrawn:
         logger.info(
-            "act1 woven coverage-range restatement removed (the pipeline's "
-            "sentence carries the figures): %s",
-            _restated[:90],
+            "act1 woven coverage-range restatement: %d sentence(s) removed, "
+            "%d bound(s) withdrawn in place (the pipeline's sentence carries "
+            "the figures): %s",
+            _bound_removal.removed,
+            _bound_removal.withdrawn,
+            bound_removal_motif(_bound_removal),
         )
     narrative = insert_coverage_passage(
         narrative, format_coverage_passage(coverage_sentence)
@@ -1095,6 +1132,13 @@ async def build_act1_framing(
     gate = ReadabilityGate()
     verdict = gate.check_body(narrative)
     degraded: Dict[str, str] = {}
+    # #3310 — the prose was CHANGED here, and an auditor must be able to find
+    # it: act, motive, count, never the sentence (#3249). Filed under the
+    # #2046 fabrication-note keys, so it is archived in the appendix and never
+    # reaches the reader as a repair note.
+    _bound_motif = bound_removal_motif(_bound_removal)
+    if _bound_motif:
+        degraded["act1_bound_restatement"] = _bound_motif
     if verdict.band != "PASS":
         degraded["act1_framing_gate"] = (
             f"Autocontrôle de lisibilité = {verdict.band}: "

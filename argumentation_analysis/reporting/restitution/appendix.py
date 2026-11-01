@@ -757,6 +757,12 @@ _FABRICATION_NOTE_KEYS = frozenset(
         "act2_narrative_gate",
         "act3_conclusion_gate",
         "act3_scope_note_appended",
+        # #3310 — the bound withdrawal is a repair of the prose (#3134's rule,
+        # applied), not a fact about the run: it is archived here and stays out
+        # of the reader blockquote, as #2046 decided for this whole family.
+        "act1_bound_restatement",
+        "act2_bound_restatement",
+        "act3_bound_restatement",
     }
 )
 
