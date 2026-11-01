@@ -799,8 +799,8 @@ def _units_named_through_anchors(sentence: str, state: Any) -> "set[str]":
 
 
 def _name_backed_by_anchor(sentence: str, match: "re.Match[str]", records: Any) -> bool:
-    """#3316 — True when the name ``match`` is followed, within its clause,
-    by an ``identified_fallacies`` anchor whose record exists.
+    """#3316 — True when the name ``match`` is backed by an
+    ``identified_fallacies`` anchor whose record exists.
 
     The name is then backed by that record, and the check does not look for
     other units in the sentence — the false positive this rule kills is a
@@ -811,6 +811,17 @@ def _name_backed_by_anchor(sentence: str, match: "re.Match[str]", records: Any) 
     vocabulary instead removed nothing — the binding tokens are ordinary
     words, not label vocabulary). A clause boundary never sits inside an
     anchor: the anchor's own dots are not punctuation.
+
+    Two readings qualify, both measured (#3316 leg 2):
+
+    - the anchor sits **within the name's clause** — the shape of leg 1;
+    - the anchors **close the sentence** and the name is the last name of
+      that sentence — the residual R1129a ``arg_52`` shape, where a comma
+      separates the name from the anchors that cite its records. The
+      qualifier in between (who the name is attributed to) is exactly what
+      the clause stop cannot cross, and widening the shared
+      ``_ATTRIBUTION_MARKERS`` instead would license eight restatements on
+      #3158's surface — it was measured and not kept.
     """
     if not isinstance(records, dict):
         return False
@@ -826,7 +837,70 @@ def _name_backed_by_anchor(sentence: str, match: "re.Match[str]", records: Any) 
         data = records.get(key)
         if isinstance(data, dict) and data.get("target_argument_id"):
             return True
-    return False
+    return _backed_by_closing_anchors(sentence, match, records)
+
+
+#: #3316 leg 2 — the run of anchors that CLOSES a sentence: whitespace
+#: between them allowed, the sentence's own final punctuation (and a closing
+#: bracket) after them, nothing else. A run, not a single anchor: the writer
+#: cites one record per name.
+_CLOSING_ANCHOR_RUN = re.compile(r"(?:\s*\[artifact:[^\]]+\])+\s*[.)\]]*\s*$")
+
+
+def _backed_by_closing_anchors(
+    sentence: str, match: "re.Match[str]", records: Any
+) -> bool:
+    """#3316 leg 2 — the anchors that CLOSE the sentence back a name whose
+    own clause carries none.
+
+    The residual shape: « une métaphore et une fausse analogie, mais
+    attribuées à la parole rapportée de l'adversaire, non à Speaker_A
+    [ancre] [ancre] ». The comma after the name ends the clause, the
+    qualifier in between is an attribution, and the two anchors that cite
+    the name's records close the sentence — outside the clause stop.
+
+    Four conditions, all required, so the widening cannot reopen the
+    borrowing the clause stop prevents:
+
+    - the sentence ends on a run of anchors;
+    - EVERY anchor of that run is an ``identified_fallacies`` anchor whose
+      record exists — a mixed run (a unit anchor among them) is ambiguous
+      and says nothing;
+    - the prose outside the anchors names no explicit ``arg_N`` — the
+      sentence already points at its units, so the anchors are not what
+      identifies them;
+    - no other fallacy name follows the matched one: when a later name is
+      present, the closing anchors may belong to it, and backing this name
+      with them would lend a neighbour's record. That is the borrowing
+      fence, and it is measured: the control « name with its anchor, then a
+      name without » must still flag.
+
+    Measured on 187 stored states / 496 texts: this reading removes **0**
+    flags locally — the residual lives on the coordinator's saved paid
+    states, not on this seat — and moves nothing else. Widening
+    ``_ATTRIBUTION_MARKERS`` removed nothing on this seat's fallacy surface
+    either, but moved 8 flags on #3158's shared surface, so it was dropped.
+    """
+    if not isinstance(records, dict):
+        return False
+    tail = sentence[match.end() :]
+    closing = _CLOSING_ANCHOR_RUN.search(tail)
+    if closing is None:
+        return False
+    run = closing.group(0)
+    keys = _FALLACY_ANCHOR_RE.findall(run)
+    anchors = _ANCHOR_RE.findall(run)
+    if not keys or len(keys) != len(anchors):
+        return False
+    for key in keys:
+        data = records.get(key)
+        if not (isinstance(data, dict) and data.get("target_argument_id")):
+            return False
+    if _UNIT_ID_RE.search(_ANCHOR_RE.sub(" ", sentence)):
+        return False
+    if _FALLACY_NAME_RE.search(tail) is not None:
+        return False
+    return True
 
 
 def _unbacked_fallacy_name_flags(
