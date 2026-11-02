@@ -9523,6 +9523,35 @@ def _normalize_fallacies_with_quotes(items: list[Any]) -> list[Dict[str, Any]]:
     return result
 
 
+def _cross_window_unique(
+    items: List[Dict[str, Any]],
+    seen: Set[Tuple[str, str]],
+    text_field: str,
+) -> List[Dict[str, Any]]:
+    """The items an EARLIER window had not already read (#2850 lot 8 R1135).
+
+    Two properties, both load-bearing:
+
+    * ``seen`` is the caller's own set — one per category — so a claim keyed
+      exactly like an argument is not swallowed by the arguments' merge;
+    * the window's keys join ``seen`` only AFTER its items are returned, so a
+      duplicate INSIDE one answer survives. The stratified windows overlap by
+      construction (they tile below 3 × window): a unit read twice is the
+      plan's duplication and collapses, while a double report inside a single
+      answer is the model's own output and is kept as reported.
+    """
+
+    def _key_of(item: Dict[str, Any]) -> Tuple[str, str]:
+        return (
+            str(item.get(text_field, "")),
+            str(item.get("source_quote", "")),
+        )
+
+    kept = [item for item in items if _key_of(item) not in seen]
+    seen.update(_key_of(item) for item in kept)
+    return kept
+
+
 # #1745 — pole-coverage instruction, appended VERBATIM to the extraction
 # system prompt. Measured against hand-annotated real-prose ground truth
 # (issue #1745): without it the model folds cited/adversarial positions
@@ -9795,7 +9824,18 @@ async def _invoke_fact_extraction(
         arguments: List[Dict[str, Any]] = []
         claims: List[Dict[str, Any]] = []
         fallacies: List[Dict[str, Any]] = []
-        _seen: Set[Tuple[str, str]] = set()
+        # #2850 lot 8 R1135 — the merge sets are PER CATEGORY and the dedup
+        # runs ACROSS windows only. One set shared by the three categories
+        # made a claim worded like an argument vanish (arguments merge first,
+        # the claim's identical (text, quote) pair was read as a repeat), and
+        # keying each item the moment it was read also collapsed two
+        # identical units of the SAME answer. The windows overlap by
+        # construction — a unit read twice is the plan's duplication and
+        # collapses; a double report inside one answer is the model's own
+        # output and is kept as reported.
+        _seen_arguments: Set[Tuple[str, str]] = set()
+        _seen_claims: Set[Tuple[str, str]] = set()
+        _seen_fallacies: Set[Tuple[str, str]] = set()
         _summary = ""
         _windows_ok = 0
         # #2850 lot 8 — the spans of the windows that ACTUALLY answered. A
@@ -9830,24 +9870,27 @@ async def _invoke_fact_extraction(
                         min(_window_offset + LLM_EXTRACTION_WINDOW, len(input_text)),
                     )
                 )
-            for _item in _normalize_items_with_quotes(_data.get("arguments", [])):
-                _key = (str(_item.get("text", "")), str(_item.get("source_quote", "")))
-                if _key in _seen:
-                    continue
-                _seen.add(_key)
-                arguments.append(_item)
-            for _item in _normalize_items_with_quotes(_data.get("claims", [])):
-                _key = (str(_item.get("text", "")), str(_item.get("source_quote", "")))
-                if _key in _seen:
-                    continue
-                _seen.add(_key)
-                claims.append(_item)
-            for _item in _normalize_fallacies_with_quotes(_data.get("fallacies", [])):
-                _key = (str(_item.get("type", "")), str(_item.get("source_quote", "")))
-                if _key in _seen:
-                    continue
-                _seen.add(_key)
-                fallacies.append(_item)
+            arguments.extend(
+                _cross_window_unique(
+                    _normalize_items_with_quotes(_data.get("arguments", [])),
+                    _seen_arguments,
+                    "text",
+                )
+            )
+            claims.extend(
+                _cross_window_unique(
+                    _normalize_items_with_quotes(_data.get("claims", [])),
+                    _seen_claims,
+                    "text",
+                )
+            )
+            fallacies.extend(
+                _cross_window_unique(
+                    _normalize_fallacies_with_quotes(_data.get("fallacies", [])),
+                    _seen_fallacies,
+                    "type",
+                )
+            )
             if not _summary and _data.get("summary"):
                 _summary = str(_data.get("summary"))
         if _windows_ok:
