@@ -26,28 +26,43 @@ and one true class localising clarté onto « le passage central » by
 description. The recorded shape lives on the coordinator's seat. The class
 is rare (~1/103 locally) — and the recorded case is a **mixed bundle**:
 one passage holds the virtues, the other never read them. A clause drop
-would kill the true half with the false one, and localising a virtue on a
-unit that holds it is the GOOD behavior (anti-pendulum). The gesture is
+would kill the true half with the false one, and localising a virtue on
+a unit that holds it is the GOOD behavior (anti-pendulum). The gesture is
 therefore the #3343 bounded retry, with the per-unit table in the
 correction — the data the base prompt never had.
 
 ## The rule
 
-A sentence is flagged when it carries BOTH:
+A sentence is read when it carries BOTH:
 
 - vocabulary of a virtue that **passed the discourse bar** — the #3335
   ``_VIRTUE_PROSE_RE`` mapping, bounded by the passed set exactly as
   ``restated_verdict_sentences`` bounds it (injected by the caller, never
   duplicated — one mapping, one place); and
-- a unit designation: a named unit id (``arg_N``) or a localising
-  locative (« c'est là que », « dans le/ce passage »).
+- a unit designation trigger: a named unit id (``arg_N``) or a
+  localising locative (« c'est là que », « dans le/ce passage »).
 
-It stands only when every named id is among the evaluated units AND holds
-every carried virtue at the instrument's top band (``>= 1.0``, the
-``_STRENGTH_MIN_SCORE`` of ``_collect_quality_strengths``). A locative
-naming no id is unverifiable by construction — flagged (the recorded
-shape: passages designated by description, never by a name the state can
-resolve).
+The units the sentence designates are then resolved **the way production
+prose can actually designate** (measured: the stored acts carry 0 ``arg_N``
+— the readability gate forbids printing one, #2980 — and 0 of the census
+sentences resolve by content, so nothing measured is silently cleared):
+
+- a named ``arg_N`` (the synthetic path — robustness, prose never carries
+  it), or
+- a **content designation**: a run of ``>= 4`` consecutive letter tokens
+  from an evaluated-unit's text, verbatim in the sentence. Deterministic
+  and bounded — no model call; the retry's legend hands the writer each
+  unit's text, so a rewrite CAN reach this path, and the reader can see
+  the designation it rests on.
+
+The sentence stands only when every designated unit is among the evaluated
+units AND holds every carried virtue at the instrument's top band
+(``>= 1.0``, the ``_STRENGTH_MIN_SCORE`` of ``_collect_quality_strengths``).
+A locative that designates nothing resolvable is unbacked by construction
+— flagged (the recorded shape: passages designated by description, « le
+passage central »). A Greek letter is deliberately NOT a designation path:
+the legend lives in the prompt only (#3317), a printed letter is a leak
+the draft comparison counts, never a referent the check resolves.
 
 ## What is licensed, and what is not
 
@@ -62,16 +77,23 @@ resolve).
   passed set — #3335's calibration: an act discussing « les sources » when
   no source virtue passed is never touched);
 - localising a virtue on a unit that **holds** it is the good behavior —
-  the positive control, untouched.
+  the positive control, untouched, and reachable in the production shape
+  (content designation, no id in the prose).
 
 ## Honesty contract (#1019, #3249)
 
 The check only ever reports; it never rewrites. The motive is a code
 literal with counts, never a quote of the prose; the sentences themselves
 go to the trace log, where the neighbouring repairs already log their
-excerpts. The repair is the #3343 bounded ONE retry: the correction
-carries the flagged sentences AND the per-unit table; the rewrite is kept
-only when the summed flag count (this check + #3297's) drops.
+excerpts. The note names exactly what was judged — a localisation with no
+measured unit behind it — so it never fires on a sentence the check could
+not read: every flagged sentence either names/designates a unit the table
+contradicts, or designates nothing the state can resolve at all. The
+repair is the #3343 bounded ONE retry: the correction carries the flagged
+sentences AND the per-unit table, routed through the writer's relabel seam
+so no raw id ever reaches the writer; the rewrite is kept only when the
+summed flag count (this check + #3297's) AND the readability leak count
+(#2980 ids + #3317 letters) drop together.
 """
 
 from __future__ import annotations
@@ -89,8 +111,20 @@ _LOCATIVE = re.compile(
 )
 
 #: A named unit, as Act III prose names ids (weak points, counters, claims
-#: blocks all key by it).
+#: blocks all key by it). Production prose never prints one (#2980) — the
+#: path stays for robustness and for the synthetic witnesses.
 _UNIT_ID = re.compile(r"\barg_\d+\b")
+
+#: A French letter token — the content-designation vocabulary. Accents and
+#: ligatures included; digits and punctuation are noise on both sides.
+_TOKEN = re.compile(r"[a-zà-öø-ÿœæ]+")
+
+#: How many consecutive unit-text tokens a sentence must carry verbatim to
+#: designate that unit. Four: short enough that a quoted clause reaches it,
+#: long enough that ordinary French does not collide with it (measured: 0
+#: of the census sentences resolve at 4 — the rule clears nothing it did
+#: not measure).
+_DESIGNATION_RUN = 4
 
 #: Sentence split, the plugin's own idiom.
 _SENTENCE = re.compile(r"\s*[^.!?\n]+[.!?]*")
@@ -178,18 +212,47 @@ def _carried_virtues(
     return carried
 
 
-def misattributed_virtue_sentences(
+def content_designated_units(
+    sentence: str, unit_texts: Mapping[str, str]
+) -> List[str]:
+    """Unit ids whose text the sentence designates by content.
+
+    A unit is designated when a run of ``>= _DESIGNATION_RUN`` consecutive
+    letter tokens of its text appears verbatim in the sentence
+    (case-insensitive, punctuation-free on both sides). Deterministic and
+    bounded: one pass per unit, no model call — the acceptance path the
+    retry's legend makes reachable (« désigne l'unité par ce qu'elle dit »).
+    """
+    normalised = " " + " ".join(_TOKEN.findall(sentence.lower())) + " "
+    designated: List[str] = []
+    for unit_id, text in unit_texts.items():
+        tokens = _TOKEN.findall(str(text).lower())
+        for i in range(max(0, len(tokens) - _DESIGNATION_RUN + 1)):
+            run = " ".join(tokens[i : i + _DESIGNATION_RUN])
+            if f" {run} " in normalised:
+                designated.append(unit_id)
+                break
+    return designated
+
+
+def unbacked_localisation_sentences(
     body: str,
     virtue_res: Mapping[str, "re.Pattern[str]"],
     passed_virtues: Sequence[str],
     unit_scores: Mapping[str, Mapping[str, float]],
+    unit_texts: Optional[Mapping[str, str]] = None,
 ) -> List[str]:
-    """Measured virtues attributed to units the table does not back.
+    """Measured virtues localised on units the table does not back.
 
     Returned as the flagged sentences, in order. Empty when there is
     nothing — the check is silent on everything else, including every
     discourse-level virtue claim (the pipeline verdict owns those) and
     every sentence a negation turns into a weakness statement.
+
+    Every returned sentence was READ: it designates units by id or by
+    content, and the table contradicts the localisation — or its locative
+    designates nothing the state can resolve, which is itself the finding
+    (the recorded shape).
     """
     passed = [v for v in passed_virtues if v in virtue_res]
     if not passed or not body:
@@ -204,46 +267,55 @@ def misattributed_virtue_sentences(
             if not carried:
                 continue
             named = list(dict.fromkeys(_UNIT_ID.findall(sentence)))
-            if not named and not _LOCATIVE.search(sentence):
+            content = (
+                content_designated_units(sentence, unit_texts)
+                if unit_texts
+                else []
+            )
+            designated = list(dict.fromkeys(named + content))
+            if not designated and not _LOCATIVE.search(sentence):
                 # Discourse-level claim — the verdict's ground, not food.
                 continue
-            if not named:
-                # A locative onto passages the sentence never names: the
-                # attribution is unverifiable by construction (the recorded
-                # shape — passages designated by description).
+            if not designated:
+                # A locative onto passages the sentence never designates by
+                # id or content: the localisation is unbacked by
+                # construction (the recorded shape — « le passage
+                # central », passages named by description).
                 hits.append(sentence)
                 continue
-            if any(unit not in unit_scores for unit in named):
-                # The measure never read this unit.
+            if any(unit not in unit_scores for unit in designated):
+                # The measure never read a designated unit.
                 hits.append(sentence)
                 continue
             if any(
                 float(unit_scores[unit].get(virtue, 0.0)) < _TOP_BAND
-                for unit in named
+                for unit in designated
                 for virtue in carried
             ):
-                # The unit was scored but does not hold the virtue.
+                # A designated unit was scored but does not hold the virtue.
                 hits.append(sentence)
     return hits
 
 
-def virtue_attribution_note(count: int, act_label: str = "Acte III") -> str:
+def virtue_localisation_note(count: int, act_label: str = "Acte III") -> str:
     """The motive recorded in the act's ``degraded`` map — empty when clean.
 
     The render is NOT rewritten behind the reader's back: the reader sees
-    the sentence, and the report carries the reason the localisation is
-    unbacked. Counts only, never a quote (#3249).
+    the sentence, and the report carries the reason the localisation has no
+    measured unit behind it. Counts only, never a quote (#3249). The
+    wording is what the check actually judged — no unit at the back of the
+    localisation — never a claim that the passage lacks the virtue.
     """
     if count <= 0:
         return ""
     plural = "s" if count > 1 else ""
     return (
-        f"{act_label} porte {count} attribution{plural} d'une vertu mesurée "
-        "à des passages sans unité du tableau mesuré pour la porter (#3358)"
+        f"{act_label} porte {count} localisation{plural} d'une vertu mesurée "
+        "sur des passages sans unité mesurée à l'appui (#3358)"
     )
 
 
-def virtue_attribution_retry_motif(
+def virtue_localisation_retry_motif(
     act_label: str,
     flagged_before: int,
     flagged_after: Optional[int] = None,
@@ -259,8 +331,8 @@ def virtue_attribution_retry_motif(
     plural = "s" if flagged_before > 1 else ""
     head = (
         f"{act_label} : relance bornée du rédacteur sur {flagged_before} "
-        f"attribution{plural} de vertu mesurée sans unité mesurée qui la "
-        "tienne"
+        f"localisation{plural} de vertu mesurée sans unité mesurée à "
+        "l'appui"
     )
     if failure:
         return (
@@ -283,9 +355,12 @@ def held_virtues_table(
 
     One line per evaluated unit that holds at least one passed virtue at
     the top band: « ``- arg_13 : clarté 1.0, réfutation constructive 1.0`` ».
-    Capped, and the cap is stated — never a silent truncation (#1622
-    idiom). Empty when no unit holds a passed virtue (the correction then
-    says so by its emptiness: there is nothing to localise on).
+    The ids are the WRITER-side keys only until the caller routes the table
+    through the relabel seam (#3296) — the writer reads letters with a
+    legend, never a raw id. Capped, and the cap is stated — never a silent
+    truncation (#1622 idiom). Empty when no unit holds a passed virtue (the
+    correction then says so by its emptiness: there is nothing to localise
+    on).
     """
     rows: List[str] = []
     for arg_id in sorted(unit_scores):
