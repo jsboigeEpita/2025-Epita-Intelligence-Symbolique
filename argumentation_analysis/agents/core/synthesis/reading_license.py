@@ -507,6 +507,18 @@ _SUPERLATIVE_MARKERS = re.compile(
 )
 _COUNTER_WORD = re.compile(r"contre[- ]arguments?|counter[- ]arguments?", re.IGNORECASE)
 
+#: The spellings of an ACKNOWLEDGED tie (#3359). A superlative over a tied
+#: maximum is a false maximum only when the sentence does not itself say the
+#: maximum is shared: « le plus fort, à égalité avec un autre contre-argument »
+#: states the tie the flag would accuse it of hiding (R1134a flagged a
+#: CONFORME sentence). Narrow phrases, one pattern per idiom — never a bag of
+#: tokens.
+_EQUALITY_MARKERS = re.compile(
+    r"\b(?:à\s+égalité|a\s+egalite|ex\s*[æa]quo|au\s+même\s+niveau|"
+    r"tied|tie|jointly|equally)\b",
+    re.IGNORECASE,
+)
+
 #: The natural French/English spellings of the nine quality virtues, so a
 #: « seuls » sentence can be read against the unit's measured scores. Narrow
 #: phrases, one pattern per virtue — never a bag of tokens.
@@ -1213,6 +1225,7 @@ def _weave_flags(
                 tied
                 and _SUPERLATIVE_MARKERS.search(sentence)
                 and _COUNTER_WORD.search(sentence)
+                and not _acknowledges_the_tie(sentence, tied)
             ):
                 flags.append(
                     {
@@ -1226,6 +1239,27 @@ def _weave_flags(
 
 def _sentences(text: str) -> List[str]:
     return [s.strip() for s in _SENTENCE_SPLIT.split(text or "") if s.strip()]
+
+
+def _acknowledges_the_tie(sentence: str, tied: List[str]) -> bool:
+    """True when the sentence itself states that the maximum is shared (#3359).
+
+    Two ways, both read off the sentence — the flag is a recorder, so the
+    exemption is a reading of the prose, never a rewrite of it:
+
+    * an equality idiom sits in the same sentence (« à égalité », « ex aequo »,
+      « tied » …) — R1134a's CONFORME sentence said « à égalité avec un autre
+      contre-argument » and still flagged;
+    * every holder of the maximum is named in it, which states the tie by
+      enumeration.
+
+    Neither condition loosens the flag on a sentence that picks one unit out of
+    a tied maximum: no equality word, and at least one holder missing.
+    """
+    if _EQUALITY_MARKERS.search(sentence or ""):
+        return True
+    text = sentence or ""
+    return bool(tied) and all(holder in text for holder in tied)
 
 
 def _english_negates(window: str) -> bool:
