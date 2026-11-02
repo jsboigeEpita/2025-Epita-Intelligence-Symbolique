@@ -590,7 +590,13 @@ class TestPerformanceComparison:
         solutions_2 = []
         solutions_3 = []
 
-        for i in range(5):  # 5 instances de chaque
+        # #3346 — 50 draws, not 5: the generator picks among 3×3×3 = 27
+        # outcomes with unseeded random.choice, and over 5 draws the old
+        # `>= 3 distinct` assertion failed by chance ~0.15 % of runs (it
+        # reddened an unrelated PR, run 41343120753). Over 50 draws,
+        # P(≤ 2 distinct of 27) ≈ 351 · (2/27)⁵⁰ ≈ 10⁻³¹: the same
+        # assertion stops being luck and starts measuring diversity.
+        for i in range(50):  # 50 instances de chaque (mesuré : ~0.003 s)
             # Workflow 2-agents
             state_2 = EnqueteCluedoState(
                 nom_enquete_cluedo=f"Quality Test 2-Agents {i}",
@@ -639,11 +645,13 @@ class TestPerformanceComparison:
         )
 
         # Toutes les solutions devraient être valides
-        assert valid_solutions_2 == 5
-        assert valid_solutions_3 == 5
+        assert valid_solutions_2 == 50
+        assert valid_solutions_3 == 50
 
-        # La diversité devrait être présente (génération aléatoire)
-        assert unique_solutions_2 >= 3  # Au moins 3 solutions différentes sur 5
+        # La diversité devrait être présente (génération aléatoire) —
+        # seuil inchangé (#3346 : pas d'abaissement), échantillon porté à 50
+        # pour que l'échec par hasard disparaisse.
+        assert unique_solutions_2 >= 3
         assert unique_solutions_3 >= 3
 
 
