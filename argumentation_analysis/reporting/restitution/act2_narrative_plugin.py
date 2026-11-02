@@ -788,9 +788,10 @@ def _quality_axis_usable(quality: Any) -> bool:
 def _tie_companions(ids: List[str]) -> str:
     """Name tied units the #3329 way: up to four names, then a count.
 
-    Shared by the two tie branches of ``quality_ranking_line`` (#3341 names
-    the co-holders of the head; #3347 names the co-holders of the winner's
-    rank). One spelling, so the two branches cannot drift apart.
+    Shared by every tie clause of ``quality_ranking_line`` (#3341 names the
+    co-holders of the head; #3347 the co-holders of the winner's rank; #3356
+    the holders of a tied head). One spelling, so the clauses cannot drift
+    apart.
     """
     if len(ids) == 1:
         return ids[0]
@@ -840,6 +841,12 @@ def quality_ranking_line(
     branch names its mates the same way the head branch does. No tie at
     the cut, untied off-top winners and sole top-1 winners keep the exact
     pre-#3347 line, byte for byte.
+
+    #3356 — the last tie slot of the same branch: with a TIED head the
+    closing clause read ``scored[0]``'s id and crowned one holder « en
+    tête » — the alphabetical accident #3347 removed from the listing, one
+    clause later. A shared head is named the one way the line names ties
+    (#3341's helper); a sole top-1 keeps the exact pre-#3356 clause.
     """
     if not isinstance(quality, dict):
         return ""
@@ -924,12 +931,28 @@ def quality_ranking_line(
         if score == winner_score and arg_id != governance_winner
     )
     top_id, top_score = scored[0]
+    # #3356 — the last tie slot of the line: « {top_id} est en tête » read the
+    # sort's first holder as THE head. With a shared maximum it crowned one
+    # holder by alphabetical accident — the same defect #3347 removed from the
+    # listing, one clause later. A tied head is named the one way the line
+    # already names ties (#3341's helper, its count/noun agreement inside); a
+    # sole top-1 keeps the exact pre-#3356 clause, byte-identical.
+    head_holders = sorted(
+        arg_id for arg_id, score in scored if score == top_score
+    )
+    if len(head_holders) == 1:
+        head_clause = f"{top_id} ({top_score:.1f}) est en tête"
+    else:
+        head_clause = (
+            f"{_tie_companions(head_holders)} ({top_score:.1f}) "
+            "partagent la tête"
+        )
     return (
         f"{line} Le gagnant du vote, {governance_winner}, est {rank}ᵉ"
         f"{' à égalité' if tie_mates else ''} de ce classement "
         f"({winner_score:.1f})"
         f"{' avec ' + _tie_companions(tie_mates) if tie_mates else ''}"
-        f" ; {top_id} ({top_score:.1f}) est en tête : "
+        f" ; {head_clause} : "
         "le vote ne dit pas qu'il est le mieux tenu."
     )
 
