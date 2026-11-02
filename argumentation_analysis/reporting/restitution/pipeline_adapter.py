@@ -130,6 +130,7 @@ _FABRICATION_NOTE_KEYS = frozenset(
         "act2_superlative_retry",
         "act2_dung_ref_placement",
         "act3_superlative_retry",
+        "act3_virtue_attribution_retry",
     }
 )
 
