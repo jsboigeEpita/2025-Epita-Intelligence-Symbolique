@@ -125,7 +125,10 @@ class TestAct3DiscourseVirtue:
             )
         )
         prompt = build_act3_prompt(evidence)
-        start = prompt.index("VERDICT PRÉ-CALCULÉ")
+        # #3335 — the anchor used to be the « VERDICT PRÉ-CALCULÉ » copy
+        # instruction, which no longer exists: the sentence is rendered by the
+        # pipeline (#3182 shape), so the sentence itself is the anchor.
+        start = prompt.index("Le discours tient sur")
         sentence = prompt[start : prompt.index("Aucune autre vertu", start)]
         # #3244 — re-pinned from the identifier: the verdict sentence names
         # each virtue by its reader-facing French (VIRTUE_DISPLAY_FR, act3).

@@ -122,6 +122,9 @@ _FABRICATION_NOTE_KEYS = frozenset(
         "act1_bound_restatement",
         "act2_bound_restatement",
         "act3_bound_restatement",
+        # #3335 — twin of the appendix set: the woven verdict restatement is a
+        # prose repair (#3182 shape), not a fact about the run.
+        "act3_verdict_restatement",
         # #3343 — the bounded writer retry repairs the prose; it tells the
         # reader nothing about the run, so it is archived with this family.
         "act2_superlative_retry",

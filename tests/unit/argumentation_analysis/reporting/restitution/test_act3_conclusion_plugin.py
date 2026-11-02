@@ -642,7 +642,12 @@ class TestBuildConclusion:
             )
         )
         assert result.status == "woven"
-        assert result.narrative == _WOVEN_CONCLUSION
+        # #3335 — the narrative is the woven prose plus the pipeline's verdict
+        # passage: the writer is no longer trusted to carry that sentence
+        # (three paid passes paraphrased it and dropped its base). The woven
+        # prose itself is untouched.
+        assert result.narrative.startswith(_WOVEN_CONCLUSION.rstrip())
+        assert "**Verdict sur les vertus (chiffres du pipeline)**" in result.narrative
         assert result.gate_verdict is not None
         assert result.gate_verdict.band == "PASS", result.gate_verdict.reasons
 

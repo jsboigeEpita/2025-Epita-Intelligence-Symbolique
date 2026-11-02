@@ -763,6 +763,10 @@ _FABRICATION_NOTE_KEYS = frozenset(
         "act1_bound_restatement",
         "act2_bound_restatement",
         "act3_bound_restatement",
+        # #3335 — same family: the woven virtue-verdict restatement is removed
+        # from the prose and the pipeline's sentence carries the base. The
+        # event is archived, never rendered as a repair note to the reader.
+        "act3_verdict_restatement",
         # #3343 — the bounded writer retry is a repair attempt of the prose,
         # not a fact about the run: the reader receives the retained draft and
         # needs no note telling them a draft was retried (#2032).
