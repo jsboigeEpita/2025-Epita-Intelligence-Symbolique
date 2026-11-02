@@ -127,7 +127,6 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
 follow_imports = "silent"
-ignore_missing_imports = true
 
 # Strict enforcement for core orchestration modules
 [[tool.mypy.overrides]]
@@ -146,3 +145,15 @@ disallow_untyped_defs = true
 disallow_any_generics = true
 warn_unused_ignores = true
 warn_return_any = true
+
+# #3342 — the global ``ignore_missing_imports`` hid every missing stub from
+# the gate: ``mypy --strict`` read 0 with or without the stubs installed
+# (#3325). The census over the 8 strict modules above + the restitution
+# package (issue #3342, negative control included) found exactly one untyped
+# import the gate must tolerate: ``jpype`` (lazy import in
+# ``orchestration/invoke_callables.py`` — the clingo bridge), for which no
+# stubs exist (``types-jpype`` is absent from PyPI). The exception is named
+# here, at module granularity, so a new missing stub elsewhere reddens again.
+[[tool.mypy.overrides]]
+module = ["jpype", "jpype.*"]
+ignore_missing_imports = true

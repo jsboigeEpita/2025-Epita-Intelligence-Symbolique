@@ -128,6 +128,7 @@ _FABRICATION_NOTE_KEYS = frozenset(
         # #3343 — the bounded writer retry repairs the prose; it tells the
         # reader nothing about the run, so it is archived with this family.
         "act2_superlative_retry",
+        "act2_dung_ref_placement",
         "act3_superlative_retry",
     }
 )
