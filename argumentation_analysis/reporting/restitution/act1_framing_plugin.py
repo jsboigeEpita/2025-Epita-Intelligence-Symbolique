@@ -55,7 +55,12 @@ from .speaker_record import (
 )
 from .llm_weaving import LlmCallable, WeaveOutcome, weave
 from .readability_gate import GateVerdict, ReadabilityGate
-from .reading_record import bound_removal_motif, remove_restated_bounds
+from .reading_record import (
+    _number_free_bound,
+    bound_removal_motif,
+    remove_restated_bounds,
+    restated_bound_sentences,
+)
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
 
 logger = logging.getLogger(__name__)
@@ -220,6 +225,11 @@ class Act1Evidence:
     # record contradicts by five. Zero = the record names none, and the
     # sentence says nothing about a count.
     stakes_count: int = 0
+    # #2850 lot 8 — the clause saying what the extraction's k stratified
+    # windows read (chars of the union, window count), from the reading
+    # record's ``fact_extraction`` entry. Empty when the read was one window
+    # or covered the document: the sentence then stays as it was.
+    extraction_reading: str = ""
     # DERIVED virtuous flag (spec §5.1) — when the state characterises the text
     # as virtuous, the spectrum framing shifts from "what to watch for" to
     # "what could derail but doesn't" (anticipation that did not materialise).
@@ -525,6 +535,9 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
         arg_count_heuristic=arg_count_heuristic,
         analysis_coverage=dict(getattr(state, "analysis_coverage", {}) or {}),
         stakes_count=stakes_count,
+        # #2850 lot 8 — pre-built clause: one producer, one sentence across
+        # the prompt, the graft and the assembly-time refresh.
+        extraction_reading=extraction_reading_clause(state),
         virtuous_mode=virtuous_mode,
         deanonymized=bool(getattr(state, "deanonymized", True)),
     )
@@ -565,7 +578,9 @@ _FAIL_LOUD_INSTRUCTION = (
 
 
 def coverage_range_sentence(
-    coverage_map: Dict[str, Dict[str, int]], stakes_count: int = 0
+    coverage_map: Dict[str, Dict[str, int]],
+    stakes_count: int = 0,
+    extraction_reading: str = "",
 ) -> str:
     """The coverage range, computed here so the writer only has to copy it (#3159).
 
@@ -619,6 +634,11 @@ def coverage_range_sentence(
                 f"{accord(stakes_count, 'enjeu', 'enjeux')}"
             )
         sentence += "."
+    # #2850 lot 8 — the extraction's own bound, pre-built by
+    # :func:`extraction_reading_clause` (counts from the reading record).
+    # Appended here so every caller — prompt, graft, assembly-time refresh —
+    # speaks the ONE sentence, never three variants a writer could diverge on.
+    sentence += extraction_reading
     return sentence
 
 
@@ -679,6 +699,31 @@ def restated_coverage_range_sentences(text: str) -> List[str]:
     return caught
 
 
+def act1_restated_sentences(text: str) -> List[str]:
+    """Act I's TWO bound grammars, caught together (#2850 lot 8).
+
+    The coverage range (#3159) is the act's own figure; since lot 8 the
+    coverage sentence also carries the extraction's char bound (« X des Y
+    caractères en N fenêtres »), so a woven restatement of THAT bound is
+    caught by the record's own detector — imported, not re-written locally:
+    two grammars caught, one mechanism.
+    """
+    caught = restated_coverage_range_sentences(text)
+    caught += [s for s in restated_bound_sentences(text) if s not in caught]
+    return caught
+
+
+def _number_free_act1(sentence: str) -> Optional[str]:
+    """Withdraw either grammar's figures, keeping the sentence (#3310 shape).
+
+    The coverage range first (the act's own form), then the record's
+    char-bound form — the same ``_number_free_bound`` the other two acts use
+    by default, so « 9000 des 56430 caractères » becomes « une partie du
+    texte » exactly as it would in Act II.
+    """
+    return _number_free_coverage_range(sentence) or _number_free_bound(sentence)
+
+
 #: Reader-facing heading of the grafted coverage line, #3159. Same shape as
 #: ``reading_record.READER_BOUNDS_HEADING``: the provenance is part of the
 #: heading, so the reader knows the figures are the pipeline's, not the prose's.
@@ -736,6 +781,33 @@ def record_stakes_count(state: Any) -> int:
     return len(records) if isinstance(records, list) else 0
 
 
+def extraction_reading_clause(state: Any) -> str:
+    """#2850 lot 8 — what the extraction's k stratified windows read, in counts.
+
+    Read from the record's own ``fact_extraction`` entry (the ``windows`` /
+    ``chars_read`` extras), never recomputed. The clause exists only when the
+    record says SEVERAL windows AND a partial union: a one-window read keeps
+    the sentence as it was, and a union that covered the document says whole,
+    never a partial bound. Empty clause → nothing appended — the absent case
+    forbids invention, same as every record-driven sentence here.
+    """
+    table = _state_field(state, "reading_window_status")
+    entry = table.get("fact_extraction") if isinstance(table, dict) else None
+    if not isinstance(entry, dict):
+        return ""
+    windows = int(entry.get("windows", 0) or 0)
+    chars_read = int(entry.get("chars_read", 0) or 0)
+    source_chars = len(_state_field(state, "raw_text") or "")
+    if windows <= 1 or chars_read <= 0 or source_chars <= 0:
+        return ""
+    if chars_read >= source_chars:
+        return ""
+    return (
+        f" L'extraction LLM a lu {chars_read} des {source_chars} caractères "
+        f"({accord(windows, 'fenêtre')})."
+    )
+
+
 def refresh_coverage_passage(narrative: str, state: Any) -> str:
     """Re-graft the coverage passage from the FINAL coverage map (#3200).
 
@@ -761,7 +833,11 @@ def refresh_coverage_passage(narrative: str, state: Any) -> str:
     coverage_map = _state_field(state, "analysis_coverage")
     if not isinstance(coverage_map, dict):
         return narrative
-    sentence = coverage_range_sentence(coverage_map, record_stakes_count(state))
+    sentence = coverage_range_sentence(
+        coverage_map,
+        record_stakes_count(state),
+        extraction_reading_clause(state),
+    )
     if not sentence:
         return narrative
     lines = narrative.split("\n")
@@ -955,7 +1031,7 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
             # now GRAFTED after the prose by the producer, and the woven range
             # is removed, so the writer is asked to restate none of it.
             range_sentence = coverage_range_sentence(
-                coverage_map, evidence.stakes_count
+                coverage_map, evidence.stakes_count, evidence.extraction_reading
             )
             if range_sentence:
                 gt_note += (
@@ -1104,16 +1180,17 @@ async def build_act1_framing(
     # removed, the pipeline's sentence is grafted after the prose, the removal
     # is logged — never a reader note.
     coverage_sentence = coverage_range_sentence(
-        evidence.analysis_coverage, evidence.stakes_count
+        evidence.analysis_coverage, evidence.stakes_count, evidence.extraction_reading
     )
     # #3310 — same enforcement, same repair as the other two acts: the NUMBER
     # leaves a sentence the next one needs as its antecedent, and the cut owns
-    # its separator. Act I speaks the range grammar, so it hands the helper
-    # both its own detector and its own number-free form.
+    # its separator. Act I speaks the range grammar AND, since #2850 lot 8,
+    # the extraction's char bound — so it hands the helper the union detector
+    # and a number-free form that covers both.
     _bound_removal = remove_restated_bounds(
         narrative,
-        detector=restated_coverage_range_sentences,
-        number_free=_number_free_coverage_range,
+        detector=act1_restated_sentences,
+        number_free=_number_free_act1,
     )
     narrative = _bound_removal.text
     if _bound_removal.removed or _bound_removal.withdrawn:
