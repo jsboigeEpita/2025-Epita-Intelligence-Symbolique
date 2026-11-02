@@ -866,8 +866,11 @@ def quality_ranking_line(
             )
         else:
             # #3329's cap: name four, count the rest rather than trail off.
+            # #3337 residual — at five co-holders the count is 1 and the
+            # noun disagreed (« 1 autres »); the count and the noun agree.
+            rest = len(co_holders) - 4
             shared_with = (
-                ", ".join(co_holders[:4]) + f" et {len(co_holders) - 4} autres"
+                ", ".join(co_holders[:4]) + f" et {rest} autre{'s' if rest > 1 else ''}"
             )
         return (
             f"{line} Le gagnant du vote, {governance_winner}, partage la tête "

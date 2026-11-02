@@ -227,3 +227,35 @@ class TestTheRankingSaysTheVoteRank:
         line = build_act2_evidence(state).quality_ranking
         assert "n'est pas dans ce classement mesuré" in line, line
         assert "le vote ne dit pas qu'il est le mieux tenu" in line, line
+
+    def test_five_co_holders_count_the_last_one_in_the_singular(self):
+        """#3337 residual (R1133): at exactly five co-holders the overflow
+        count is 1 and the line read « et 1 autres ». The noun agrees with
+        its count now; #3329's cap still names four."""
+        quality = {
+            "arg_14": {"overall": 5.0},
+            "arg_28": {"overall": 5.0},
+            "arg_3": {"overall": 5.0},
+            "arg_69": {"overall": 5.0},
+            "arg_7": {"overall": 5.0},
+            "arg_8": {"overall": 5.0},
+            "arg_9": {"overall": 4.0},
+        }
+        line = quality_ranking_line(quality, 7, "arg_14")
+        assert " et 1 autre." in line, line
+        assert "1 autres" not in line, line
+
+    def test_control_two_remaining_co_holders_keep_the_plural(self):
+        """Positive control for the residual: from six co-holders on, the
+        plural branch is what main already printed — unchanged."""
+        quality = {
+            "arg_14": {"overall": 5.0},
+            "arg_28": {"overall": 5.0},
+            "arg_3": {"overall": 5.0},
+            "arg_69": {"overall": 5.0},
+            "arg_7": {"overall": 5.0},
+            "arg_8": {"overall": 5.0},
+            "arg_9": {"overall": 5.0},
+        }
+        line = quality_ranking_line(quality, 8, "arg_14")
+        assert " et 2 autres." in line, line
