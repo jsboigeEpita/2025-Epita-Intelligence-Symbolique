@@ -2660,6 +2660,21 @@ async def build_act2_narrative(
         )
 
     narrative = _dressed.text
+    # #3349 — the Dung annex ref must ride the sentence it proves (#1914
+    # citation contract). The prompt carries the rule; this is the guarantee:
+    # a ref on a sentence that names another formal axis and no graph
+    # vocabulary moves to the paragraph's graph sentence, or is dropped.
+    from .dung_ref_placement import (
+        dung_ref_placement_motif,
+        move_misplaced_dung_refs,
+    )
+
+    narrative, _dung_moved, _dung_dropped = move_misplaced_dung_refs(narrative)
+    _dung_ref_motif = (
+        dung_ref_placement_motif("Acte II", _dung_moved, _dung_dropped)
+        if (_dung_moved or _dung_dropped)
+        else ""
+    )
     _bound_removal = _dressed.bound_removal
     if _bound_removal.removed or _bound_removal.withdrawn:
         logger.info(
@@ -2730,6 +2745,11 @@ async def build_act2_narrative(
     # reaches the reader as a repair note.
     if _retry_motif:
         degraded["act2_superlative_retry"] = _retry_motif
+    # #3349 — a Dung ref was moved (or dropped) here: act and counts, never a
+    # sentence (#3249). Filed under the #2046 fabrication-note keys, so it is
+    # archived in the appendix and never reaches the reader as a repair note.
+    if _dung_ref_motif:
+        degraded["act2_dung_ref_placement"] = _dung_ref_motif
     # #3310 — the prose was CHANGED here, and an auditor must be able to find
     # it: act, motive, count, never the sentence (#3249). Filed under the
     # #2046 fabrication-note keys, so it is archived in the appendix and never
