@@ -1241,6 +1241,35 @@ def _sentences(text: str) -> List[str]:
     return [s.strip() for s in _SENTENCE_SPLIT.split(text or "") if s.strip()]
 
 
+#: The characters an id is made of. A citation is bounded by their absence:
+#: `ca_1` sits inside the characters of `ca_10`, and a `\b` boundary cannot
+#: separate them because `_` is itself a word character.
+_IDENTIFIER_CHAR = re.compile(r"[0-9A-Za-z_]")
+
+
+def _cites_holder(text: str, holder: str) -> bool:
+    """Is ``holder`` written in ``text`` as a token, not as a substring (#3359)?
+
+    The ids the state hands the writer run `ca_1` … `ca_41`, so a raw
+    ``holder in text`` read a sentence citing `ca_10` as naming `ca_1` as
+    well: :func:`_acknowledges_the_tie` then reported the tie as enumerating,
+    which hid a false maximum on every render carrying ten or more counters.
+    """
+    if not holder:
+        return False
+    end = len(holder)
+    start = 0
+    while True:
+        index = text.find(holder, start)
+        if index < 0:
+            return False
+        before = text[index - 1] if index else ""
+        after = text[index + end] if index + end < len(text) else ""
+        if not _IDENTIFIER_CHAR.match(before) and not _IDENTIFIER_CHAR.match(after):
+            return True
+        start = index + 1
+
+
 def _acknowledges_the_tie(sentence: str, tied: List[str]) -> bool:
     """True when the sentence itself states that the maximum is shared (#3359).
 
@@ -1251,7 +1280,9 @@ def _acknowledges_the_tie(sentence: str, tied: List[str]) -> bool:
       « tied » …) — R1134a's CONFORME sentence said « à égalité avec un autre
       contre-argument » and still flagged;
     * every holder of the maximum is named in it, which states the tie by
-      enumeration.
+      enumeration. Naming is a citation by token (:func:`_cites_holder`), not
+      by substring: `ca_1` inside `ca_10` is not a mention of `ca_1` (#3359
+      R1135).
 
     Neither condition loosens the flag on a sentence that picks one unit out of
     a tied maximum: no equality word, and at least one holder missing.
@@ -1259,7 +1290,7 @@ def _acknowledges_the_tie(sentence: str, tied: List[str]) -> bool:
     if _EQUALITY_MARKERS.search(sentence or ""):
         return True
     text = sentence or ""
-    return bool(tied) and all(holder in text for holder in tied)
+    return bool(tied) and all(_cites_holder(text, holder) for holder in tied)
 
 
 def _english_negates(window: str) -> bool:
