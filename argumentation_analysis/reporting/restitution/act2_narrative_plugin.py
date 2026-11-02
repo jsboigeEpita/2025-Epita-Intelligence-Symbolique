@@ -785,6 +785,23 @@ def _quality_axis_usable(quality: Any) -> bool:
     return False
 
 
+def _tie_companions(ids: List[str]) -> str:
+    """Name tied units the #3329 way: up to four names, then a count.
+
+    Shared by the two tie branches of ``quality_ranking_line`` (#3341 names
+    the co-holders of the head; #3347 names the co-holders of the winner's
+    rank). One spelling, so the two branches cannot drift apart.
+    """
+    if len(ids) == 1:
+        return ids[0]
+    if len(ids) <= 4:
+        return ", ".join(ids[:-1]) + " et " + ids[-1]
+    # #3337 residual — at five co-holders the count is 1 and the noun
+    # disagreed (« 1 autres »); count and noun agree.
+    rest = len(ids) - 4
+    return ", ".join(ids[:4]) + f" et {rest} autre{'s' if rest > 1 else ''}"
+
+
 def quality_ranking_line(
     quality: Any, units_total: int, governance_winner: Optional[str] = None
 ) -> str:
@@ -813,6 +830,16 @@ def quality_ranking_line(
     ordinal, calls an equal-score holder « en tête », and denies a crown the
     measurement does not deny. A shared maximum is one fact: the winner
     SHARES the head, said the #3329 way, and the co-holders are named.
+
+    #3347 — both halves of the tie made visible. The listing cut at three
+    fell inside the 4.0 tie of the recorded pass (arg_28 dropped, arg_22
+    kept — an accident of alphabetical id order), and the off-top branch
+    said « à égalité » without naming the co-holders, so Act II wrote
+    « partage la deuxième place avec 1 co-détenteur sur 2 ». The cut now completes
+    the boundary tie (bounded, counting its left-outs) and the off-top
+    branch names its mates the same way the head branch does. No tie at
+    the cut, untied off-top winners and sole top-1 winners keep the exact
+    pre-#3347 line, byte for byte.
     """
     if not isinstance(quality, dict):
         return ""
@@ -826,7 +853,27 @@ def quality_ranking_line(
     if not scored:
         return ""
     scored.sort(key=lambda pair: (-pair[1], pair[0]))
-    listed = ", ".join(f"{arg_id} ({score:.1f})" for arg_id, score in scored[:3])
+    shown = scored[:3]
+    overflow = ""
+    if len(scored) > len(shown):
+        # #3347 — the cut at three must never fall inside a tie. Keeping one
+        # 4.0 and dropping another by alphabetical id order is an accident of
+        # the sort, not a ranking: Act II then wrote « partage la deuxième
+        # place avec [one of two co-holders] ». Every holder of the boundary
+        # score rides the listing (bounded: at most six shown), and beyond
+        # that the left-outs are counted, never silently dropped. A cut
+        # between two different scores keeps the #3159 line, byte-identical.
+        boundary_score = shown[-1][1]
+        tied_out = [pair for pair in scored[3:] if pair[1] == boundary_score]
+        if tied_out:
+            if len(tied_out) <= 3:
+                shown = shown + tied_out
+            else:
+                # Plural by construction: this path starts at 4 left-outs
+                # (fewer ride the listing above), so the count/noun
+                # agreement the #3337 residual demands cannot break here.
+                overflow = f" et {len(tied_out)} autres à {boundary_score:.1f}"
+    listed = ", ".join(f"{arg_id} ({score:.1f})" for arg_id, score in shown) + overflow
     line = (
         f"Classement qualité (base : {len(scored)} unités évaluées sur "
         f"{units_total}) : {listed}. C'est le SEUL classement mesuré — aucun "
@@ -858,31 +905,31 @@ def quality_ranking_line(
         if not co_holders:
             # Sole top-1 — the #3159 line, byte-identical.
             return line
-        if len(co_holders) <= 4:
-            shared_with = (
-                co_holders[0]
-                if len(co_holders) == 1
-                else ", ".join(co_holders[:-1]) + " et " + co_holders[-1]
-            )
-        else:
-            # #3329's cap: name four, count the rest rather than trail off.
-            shared_with = (
-                ", ".join(co_holders[:4]) + f" et {len(co_holders) - 4} autres"
-            )
         return (
             f"{line} Le gagnant du vote, {governance_winner}, partage la tête "
-            f"de ce classement ({winner_score:.1f}) avec {shared_with}."
+            f"de ce classement ({winner_score:.1f}) avec "
+            f"{_tie_companions(co_holders)}."
         )
-    # Rank of the winner's SCORE (first holder of it), and how many share it.
+    # Rank of the winner's SCORE (first holder of it), and who shares it.
     rank = 1 + next(
         i for i, (_arg_id, score) in enumerate(scored) if score == winner_score
     )
-    tie = sum(1 for _arg_id, score in scored if score == winner_score)
+    # #3347 — the off-top twin of the #3341 rule: saying « à égalité »
+    # without naming the co-holders left the writer to fill the gap from the
+    # only tie partner the truncated listing showed (1 of 2 on the recorded
+    # pass). The mates are named the same way the head branch names its own.
+    tie_mates = sorted(
+        arg_id
+        for arg_id, score in scored
+        if score == winner_score and arg_id != governance_winner
+    )
     top_id, top_score = scored[0]
     return (
         f"{line} Le gagnant du vote, {governance_winner}, est {rank}ᵉ"
-        f"{' à égalité' if tie > 1 else ''} de ce classement "
-        f"({winner_score:.1f}) ; {top_id} ({top_score:.1f}) est en tête : "
+        f"{' à égalité' if tie_mates else ''} de ce classement "
+        f"({winner_score:.1f})"
+        f"{' avec ' + _tie_companions(tie_mates) if tie_mates else ''}"
+        f" ; {top_id} ({top_score:.1f}) est en tête : "
         "le vote ne dit pas qu'il est le mieux tenu."
     )
 
