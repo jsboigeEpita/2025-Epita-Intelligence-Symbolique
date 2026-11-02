@@ -217,9 +217,12 @@ class TestTheAbsentBranchIsUntouched:
 
 class TestTheDetectionIsBounded:
     """The detector is anchored on the pipeline's closing clause and walks back
-    only over sentences that name a virtue above the bar. A sentence naming the
-    same virtues but never closed by that clause is prose the writer owes the
-    reader — removing it would be the repair eating the report."""
+    only over sentences that name a virtue above the bar. A sentence naming SOME
+    of the crowned virtues but never closed by that clause is prose the writer
+    owes the reader — removing it would be the repair eating the report.
+    (#3348 tightened the other edge: naming EVERY passed virtue and no rejected
+    one, discourse as subject, IS the verdict restated and is removed — the
+    clause-less cases live in test_woven_verdict_without_closing_3348.py.)"""
 
     def test_a_virtue_sentence_without_the_clause_survives(self):
         woven = (
