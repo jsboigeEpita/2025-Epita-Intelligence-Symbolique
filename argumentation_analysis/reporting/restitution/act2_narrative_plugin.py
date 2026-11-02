@@ -95,6 +95,7 @@ from .speaker_record import (
 )
 from .reading_record import (
     READING_BASIS_RULE,
+    BoundRemoval,
     bound_removal_motif,
     format_reader_bounds_passage,
     remove_restated_bounds,
@@ -2452,7 +2453,120 @@ async def weave_act2_narrative(
     return await weave(build_act2_prompt(evidence), llm_callable, "Acte II")
 
 
+def build_act2_retry_prompt(evidence: Act2Evidence, flagged: List[str]) -> str:
+    """The bounded ONE writer retry (#3343) — the writer rewrites its own prose.
+
+    The base prompt is the one the writer already received: same data blocks,
+    same rules, same relabelling (#3296). The correction block only NAMES what
+    the #3297 check found and what a superlative must carry to stand, because
+    the rule was already in the prompt and the writer broke it anyway (#3159
+    gave the licence, nothing read the act).
+
+    Bounded by construction: one call, never a loop. The check still only
+    records — a retry that changes nothing is a fact the report carries, not a
+    reason to keep asking.
+    """
+    quoted = "\n".join(f"- {sentence}" for sentence in flagged[:5])
+    correction = (
+        f"\n\nCORRECTION DEMANDÉE — ta rédaction ci-dessus contient "
+        f"{len(flagged)} phrase(s) qui portent un superlatif sur TOUT le "
+        "discours (« le plus… du dispositif », « … du discours », « … du run ») "
+        "sans classement mesuré pour l'adosser. Le classement fourni plus haut "
+        "est le SEUL mesuré : un superlatif ne peut pas le dépasser. Phrases "
+        f"repérées :\n{quoted}\n\n"
+        "Réécris le récit EN ENTIER — même structure, mêmes mouvements, mêmes "
+        "données, même longueur. Pour chaque superlatif, choisis : soit il "
+        "porte sur la population réellement évaluée et la nomme (« de "
+        "l'ensemble évalué »), soit il cite la base du classement (« N unités "
+        "évaluées sur M »), soit il porte sur un argument du classement avec "
+        "son rang. Sinon, ne l'écris pas : dis la même chose sans superlatif. "
+        "Ne commente pas cette consigne et ne cite pas les phrases repérées : "
+        "rends le récit complet, prêt à lire.\n"
+    )
+    return build_act2_prompt(evidence) + correction
+
+
+async def weave_act2_narrative_retry(
+    evidence: Act2Evidence, llm_callable: LlmCallable, flagged: List[str]
+) -> WeaveOutcome:
+    """The bounded ONE retry (#3343), under the same fail-loud contract."""
+    return await weave(
+        build_act2_retry_prompt(evidence, flagged),
+        llm_callable,
+        "Acte II (relance)",
+    )
+
+
 # --- orchestrator ------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _DressedAct2:
+    """One Act II draft after every deterministic pass + the #3297 read.
+
+    The bounded retry (#3343) dresses a second draft EXACTLY like the first —
+    comparing two texts is only honest when both went through the same passes,
+    and the check must judge the text the reader would receive.
+    """
+
+    text: str
+    bound_removal: BoundRemoval
+    clash_removed: List[str]
+    superlative_note: str
+    superlative_sentences: List[str]
+
+
+def _dress_act2_prose(
+    narrative: str, state: Any, evidence: Act2Evidence
+) -> _DressedAct2:
+    """Launder one draft: bounds withdrawal, voice-clash strip, #3297 read.
+
+    Silent by design — the caller logs the retained draft, so a discarded
+    first draft leaves no repair trace claiming work the reader never got.
+    """
+    # #3134/#3310 — a woven sentence that restates a numeric bound is
+    # withdrawn before anything else touches the text: the reader's bounds are
+    # the record's passage grafted below, where each number sits under its own
+    # site label. ``remove_restated_bounds`` keeps the following anaphor's
+    # antecedent — deleting the whole sentence took it away.
+    _bound_removal = remove_restated_bounds(narrative)
+
+    # #3237 — a woven sentence that ties a formal contradiction to voices
+    # clashing, when every recorded cause says otherwise, is removed the same
+    # way (#1605 shape): the act's evidence lines already carry the record's
+    # own cause phrase, so nothing true is lost.
+    from .formal_cause_check import strip_voice_clash_cause_sentences
+
+    text, _removed_clash = strip_voice_clash_cause_sentences(
+        _bound_removal.text, state
+    )
+
+    # #3297 — a whole-scope superlative needs a measured ranking to stand on.
+    # The check runs on the MODEL PROSE, before the record's own bounds are
+    # appended below: the bounds are the record's wording, not the writer's
+    # claim, and the act must not be degraded for them.
+    from .whole_scope_superlative_check import (
+        whole_scope_superlative_note,
+        whole_scope_superlative_sentences,
+    )
+
+    _superlative_note = whole_scope_superlative_note(
+        text, ranking_line=evidence.quality_ranking, act_label="Acte II"
+    )
+    _flagged = (
+        whole_scope_superlative_sentences(
+            text, ranking_line=evidence.quality_ranking
+        )
+        if _superlative_note
+        else []
+    )
+    return _DressedAct2(
+        text=text,
+        bound_removal=_bound_removal,
+        clash_removed=list(_removed_clash),
+        superlative_note=_superlative_note,
+        superlative_sentences=_flagged,
+    )
 
 
 async def build_act2_narrative(
@@ -2506,19 +2620,47 @@ async def build_act2_narrative(
                 )
             },
         )
-    narrative = outcome.narrative
+    _dressed = _dress_act2_prose(outcome.narrative, state, evidence)
 
-    # #3134 — a woven sentence that restates a numeric bound is withdrawn
-    # before anything else touches the text: the reader's bounds are the
-    # record's passage grafted below, where each number sits under its own
-    # site label. Same enforcement shape as Act III's (#1605): logged,
-    # never a reader note (#2032).
-    # #3310 — the enforcement lives in ``remove_restated_bounds``: deleting
-    # the whole sentence took the next one's antecedent with it (« Leur
-    # silence… » with nothing before it), so the NUMBER leaves a sentence the
-    # following anaphor needs, and the cut owns its separator.
-    _bound_removal = remove_restated_bounds(narrative)
-    narrative = _bound_removal.text
+    # #3343 — the bounded ONE retry. #3159 gave the writer the ranking and the
+    # rule; the #3297 check reads the act afterwards, and a rule the writer
+    # breaks is still broken prose on the reader's page. So when the check
+    # fires, the writer is asked ONCE — with its own flagged sentences and the
+    # measured ranking — to rewrite the act so every superlative rests on
+    # something. The check still only records: if the rewrite is not better,
+    # the first draft is kept, and either way the report says which draft the
+    # reader received. One call, never a loop.
+    _retry_motif = ""
+    if _dressed.superlative_note:
+        from .whole_scope_superlative_check import superlative_retry_motif
+
+        _first_flagged = _dressed.superlative_sentences
+        _retry = await weave_act2_narrative_retry(
+            evidence, llm_callable, _first_flagged
+        )
+        if _retry.narrative:
+            _second = _dress_act2_prose(_retry.narrative, state, evidence)
+            _after = len(_second.superlative_sentences)
+            if _after < len(_first_flagged):
+                _dressed = _second
+            _retry_motif = superlative_retry_motif(
+                "Acte II", len(_first_flagged), _after
+            )
+        else:
+            _retry_motif = superlative_retry_motif(
+                "Acte II", len(_first_flagged), failure=_retry.failure
+            )
+        # The excerpt of the FIRST draft stays on the trace: the retained
+        # draft's own flags are logged below, and the motive is a code literal
+        # with counts (#3249), never a quote.
+        logger.info(
+            "Acte II bounded writer retry (#3343): %s | first draft: %s",
+            _retry_motif,
+            "; ".join(s[:90] for s in _first_flagged[:3]),
+        )
+
+    narrative = _dressed.text
+    _bound_removal = _dressed.bound_removal
     if _bound_removal.removed or _bound_removal.withdrawn:
         logger.info(
             "act2 woven bound restatement: %d sentence(s) removed, %d bound(s) "
@@ -2528,47 +2670,18 @@ async def build_act2_narrative(
             bound_removal_motif(_bound_removal),
         )
 
-    # #3237 — a woven sentence that ties a formal contradiction to voices
-    # clashing, when every recorded cause says otherwise, is removed the same
-    # way (#1605 shape): the act's evidence lines already carry the record's
-    # own cause phrase, so nothing true is lost. The post-render check
-    # (formal_cause_check) stays as the guarantee — a rule the writer can
-    # break is not one (#3159).
-    from .formal_cause_check import strip_voice_clash_cause_sentences
-
-    narrative, _removed_clash = strip_voice_clash_cause_sentences(narrative, state)
-    for _clash in _removed_clash:
+    for _clash in _dressed.clash_removed:
         logger.info(
             "act2 woven voice-clash cause removed (record states otherwise): %s",
             _clash[:90],
         )
 
-    # #3297 — a whole-scope superlative needs a measured ranking to stand on.
-    # The check runs on the MODEL PROSE, before the record's own bounds are
-    # appended below: the bounds are the record's wording, not the writer's
-    # claim, and the act must not be degraded for them. #3159 gave the writer
-    # the ranking and the rule; nothing read the act afterwards, so the rule
-    # could be broken in silence (R1125a: « le plus fragile du dispositif »).
-    from .whole_scope_superlative_check import (
-        whole_scope_superlative_note,
-        whole_scope_superlative_sentences,
-    )
-
-    _superlative_note = whole_scope_superlative_note(
-        narrative,
-        ranking_line=evidence.quality_ranking,
-        act_label="Acte II",
-    )
+    _superlative_note = _dressed.superlative_note
     if _superlative_note:
-        # The excerpt stays on the trace (the degraded motif is a code
-        # literal, #3249) — same surface the voice-clash strip logs to.
-        _flagged = whole_scope_superlative_sentences(
-            narrative, ranking_line=evidence.quality_ranking
-        )
         logger.warning(
-            "Acte II whole-scope superlative: %s | %s",
+            "Acte II whole-scope superlative (retained draft): %s | %s",
             _superlative_note,
-            "; ".join(s[:90] for s in _flagged[:3]),
+            "; ".join(s[:90] for s in _dressed.superlative_sentences[:3]),
         )
 
     # #3134 — the record's own bounds close the act, after the prose, BEFORE
@@ -2611,6 +2724,12 @@ async def build_act2_narrative(
     # is unbacked.
     if _superlative_note:
         degraded["act2_whole_scope_superlative"] = _superlative_note
+    # #3343 — the retry rewrote (or tried to rewrite) the act: act, counts and
+    # which draft was kept, never a sentence (#3249). Filed under the #2046
+    # fabrication-note keys, so it is archived in the appendix and never
+    # reaches the reader as a repair note.
+    if _retry_motif:
+        degraded["act2_superlative_retry"] = _retry_motif
     # #3310 — the prose was CHANGED here, and an auditor must be able to find
     # it: act, motive, count, never the sentence (#3249). Filed under the
     # #2046 fabrication-note keys, so it is archived in the appendix and never
