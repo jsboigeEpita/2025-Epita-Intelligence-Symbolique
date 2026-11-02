@@ -1793,22 +1793,38 @@ class DeepSynthesisAgent(BaseAgent):
 
         quality = getattr(state, "argument_quality_scores", {}) or {}
         if isinstance(quality, dict):
+            # #3364 — a penalised ``overall`` (#289) and a plain one are not
+            # the same measure. When the population mixes them, the ranking
+            # reads the unpenalised value the #3133 record carries, so every
+            # unit competes on one quantity and the label names it; an
+            # applied penalty without a readable ``original_score`` falls
+            # back to the entry's own ``overall`` rather than dropping the
+            # unit — the maximum is over ALL items (#3155). A population
+            # with no applied penalty keeps the line byte-identical.
+            q_pairs: List[Any] = []
+            penalised = False
+            for arg_id, scores in quality.items():
+                if isinstance(scores, dict):
+                    penalty = scores.get("fallacy_penalty")
+                    if isinstance(penalty, dict) and penalty.get("applied"):
+                        penalised = True
+                        original = penalty.get("original_score")
+                        if isinstance(original, (int, float)) and not isinstance(
+                            original, bool
+                        ):
+                            q_pairs.append((arg_id, original))
+                        else:
+                            q_pairs.append((arg_id, scores.get("overall")))
+                    else:
+                        q_pairs.append((arg_id, scores.get("overall")))
+                else:
+                    q_pairs.append((arg_id, scores))
             _note(
                 "argument_quality_scores",
                 len(quality),
                 DeepSynthesisAgent._max_over_population(
-                    [
-                        (
-                            arg_id,
-                            (
-                                scores.get("overall")
-                                if isinstance(scores, dict)
-                                else scores
-                            ),
-                        )
-                        for arg_id, scores in quality.items()
-                    ],
-                    "overall",
+                    q_pairs,
+                    "mesure hors penalite" if penalised else "overall",
                 ),
             )
 
