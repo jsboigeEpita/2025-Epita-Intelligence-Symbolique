@@ -771,6 +771,7 @@ _FABRICATION_NOTE_KEYS = frozenset(
         # not a fact about the run: the reader receives the retained draft and
         # needs no note telling them a draft was retried (#2032).
         "act2_superlative_retry",
+        "act2_dung_ref_placement",
         "act3_superlative_retry",
     }
 )
