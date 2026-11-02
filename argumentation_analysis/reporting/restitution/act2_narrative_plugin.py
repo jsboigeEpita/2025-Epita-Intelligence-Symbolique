@@ -785,13 +785,34 @@ def _quality_axis_usable(quality: Any) -> bool:
     return False
 
 
-def quality_ranking_line(quality: Any, units_total: int) -> str:
+def quality_ranking_line(
+    quality: Any, units_total: int, governance_winner: Optional[str] = None
+) -> str:
     """The measured quality ranking, computed here so the writer copies it (#3159).
 
     R1107c's Act II called ``arg_14`` « le mieux tenu de tout le discours »
     while ``arg_69`` ranked above it and only 8 of 90 units were scored. The
     line carries the ranking AND its base, so a superlative over « the whole
     discourse » has nothing to stand on.
+
+    #3337 — the measured-scope residual of the same conflation: paid pass
+    R1131a crowned the vote winner « la mieux tenue du corpus mesuré » while
+    the ranking handed to the writer puts another unit first (the winner 2nd,
+    tied). The scope was licensed, the rank was never read. When the
+    governance winner is NOT the measured top-1, the line now says the fact —
+    the winner's rank, its score, the real leader — and what the vote does
+    not say. When the winner IS the top-1 (or there is no vote, or the
+    ``winner`` is a strategy the caller never passes), the line is
+    byte-identical to what #3159 wrote.
+
+    #3341 — "is the winner the top-1" is a question about SCORES, not about
+    ids. Comparing the winner's id with ``scored[0][0]`` read the lexical
+    order of the sort: with ``{arg_14: 5.0, arg_69: 5.0}`` the winner
+    ``arg_14`` got the #3159 line while ``arg_69`` — the same fact — got
+    « est 1ᵉ à égalité … ; arg_14 (5.0) est en tête », which is not an
+    ordinal, calls an equal-score holder « en tête », and denies a crown the
+    measurement does not deny. A shared maximum is one fact: the winner
+    SHARES the head, said the #3329 way, and the co-holders are named.
     """
     if not isinstance(quality, dict):
         return ""
@@ -806,10 +827,63 @@ def quality_ranking_line(quality: Any, units_total: int) -> str:
         return ""
     scored.sort(key=lambda pair: (-pair[1], pair[0]))
     listed = ", ".join(f"{arg_id} ({score:.1f})" for arg_id, score in scored[:3])
-    return (
+    line = (
         f"Classement qualité (base : {len(scored)} unités évaluées sur "
         f"{units_total}) : {listed}. C'est le SEUL classement mesuré — aucun "
         "superlatif portant sur « tout le discours » n'a de base ici."
+    )
+    if not governance_winner:
+        return line
+    winner_score = next(
+        (score for arg_id, score in scored if arg_id == governance_winner), None
+    )
+    if winner_score is None:
+        # #3326 shape — the vote winner is a unit the quality pass never
+        # scored: the vote ranks nothing in this measured set.
+        return (
+            f"{line} Le gagnant du vote, {governance_winner}, n'est pas dans "
+            "ce classement mesuré : le vote ne dit pas qu'il est le mieux tenu."
+        )
+    top_score = scored[0][1]
+    if winner_score == top_score:
+        # #3341 — the winner is AT the maximum. Naming the other holders is
+        # saying the crown is shared; the vote does not make it unique, and
+        # the measurement does not deny it. Same ids order as the listing
+        # above (`scored` is sorted by score then id).
+        co_holders = sorted(
+            arg_id
+            for arg_id, score in scored
+            if score == top_score and arg_id != governance_winner
+        )
+        if not co_holders:
+            # Sole top-1 — the #3159 line, byte-identical.
+            return line
+        if len(co_holders) <= 4:
+            shared_with = (
+                co_holders[0]
+                if len(co_holders) == 1
+                else ", ".join(co_holders[:-1]) + " et " + co_holders[-1]
+            )
+        else:
+            # #3329's cap: name four, count the rest rather than trail off.
+            shared_with = (
+                ", ".join(co_holders[:4]) + f" et {len(co_holders) - 4} autres"
+            )
+        return (
+            f"{line} Le gagnant du vote, {governance_winner}, partage la tête "
+            f"de ce classement ({winner_score:.1f}) avec {shared_with}."
+        )
+    # Rank of the winner's SCORE (first holder of it), and how many share it.
+    rank = 1 + next(
+        i for i, (_arg_id, score) in enumerate(scored) if score == winner_score
+    )
+    tie = sum(1 for _arg_id, score in scored if score == winner_score)
+    top_id, top_score = scored[0]
+    return (
+        f"{line} Le gagnant du vote, {governance_winner}, est {rank}ᵉ"
+        f"{' à égalité' if tie > 1 else ''} de ce classement "
+        f"({winner_score:.1f}) ; {top_id} ({top_score:.1f}) est en tête : "
+        "le vote ne dit pas qu'il est le mieux tenu."
     )
 
 
@@ -858,9 +932,9 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
     counters = getattr(state, "counter_arguments", []) or []
 
     quality_axis_available = _quality_axis_usable(quality)
-    quality_ranking = quality_ranking_line(
-        quality, len(args) if isinstance(args, dict) else 0
-    )
+    # #3337 — the ranking line is computed below, after the governance verdict
+    # is collected, so it can say the vote winner's rank when the winner is
+    # not the measured top-1.
     if not isinstance(args, dict):
         args = {}
     if not isinstance(fallacies, dict):
@@ -1062,6 +1136,17 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         if governance_verdict is not None
         else []
     )
+
+    # #3337 — the ranking says the vote winner's rank when it is not the
+    # measured top-1 (#3329: the fact on the line the writer copies). The
+    # winner is passed ONLY when it names a unit (the same gate the cited
+    # text uses) — a strategy "winner" is never ranked.
+    vote_winner_for_ranking = (
+        governance_verdict.winner
+        if governance_verdict is not None and governance_verdict.winner in args
+        else None
+    )
+    quality_ranking = quality_ranking_line(quality, len(args), vote_winner_for_ranking)
 
     return Act2Evidence(
         movements=ordered,
