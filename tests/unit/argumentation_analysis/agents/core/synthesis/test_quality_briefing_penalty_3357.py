@@ -8,6 +8,20 @@ score from a unit that simply scored 1.8.
 
 Born red on the parent commit: ``_quality_line`` did not exist, and the line
 carried the unpenalised arithmetic residue.
+
+R1135 rework — the fixtures are built with the PRODUCER's convention, not an
+invented one. ``invoke_callables.py``::
+
+    penalty = min(0.3 * len(fallacy_targets[i]), 0.6)
+    result["note_finale"] = max(0, original - original * penalty)
+    result["fallacy_penalty"] = {..., "penalty_factor": penalty, ...}
+
+so ``penalty_factor`` is the RATE REMOVED: one fallacy is 0.3, two are 0.6,
+and the cap holds at 0.6 beyond that. The first version of this file stored
+the remaining ratio (0.4 for 4.5 → 1.8), a shape the producer never writes —
+which is why the witness stayed green on a line that printed −40 % where the
+record means −60 %. ``test_the_fixture_follows_the_producer_relation`` pins
+the relation so a wrong-convention fixture fails instead of passing.
 """
 
 from types import SimpleNamespace
@@ -34,17 +48,41 @@ def _briefing_lines(quality):
     }
 
 
-def _penalised(overall=1.8000000000000003, original=4.5, factor=0.4, count=2):
+def _producer_rate(count: int) -> float:
+    """The rate the producer subtracts for ``count`` fallacies (#289)."""
+    return min(0.3 * count, 0.6)
+
+
+def _penalised(original=4.5, count=2):
+    """The record ``invoke_callables.py`` writes — formula included."""
+    rate = _producer_rate(count)
     return {
         "scores": {f"v{i}": 0.5 for i in range(9)},
-        "overall": overall,
+        # the producer's own arithmetic: note = original - original * rate
+        "overall": original - original * rate,
         "fallacy_penalty": {
             "applied": True,
             "fallacies": [f"fallacy_{i}" for i in range(count)],
-            "penalty_factor": factor,
+            "penalty_factor": rate,
             "original_score": original,
         },
     }
+
+
+class TestTheFixtureUsesTheProducerConvention:
+    def test_the_fixture_follows_the_producer_relation(self):
+        """Pin the relation the record satisfies: a fixture storing the
+        remaining ratio as ``penalty_factor`` cannot pass this."""
+        for count in (1, 2, 3, 4):
+            entry = _penalised(count=count)
+            penalty = entry["fallacy_penalty"]
+            assert penalty["penalty_factor"] == pytest.approx(min(0.3 * count, 0.6))
+            assert entry["overall"] == pytest.approx(
+                penalty["original_score"] * (1 - penalty["penalty_factor"])
+            )
+
+    def test_the_cap_holds_past_two_fallacies(self):
+        assert _penalised(count=4)["fallacy_penalty"]["penalty_factor"] == 0.6
 
 
 class TestPenalisedScoreIsPairedWithItsMeasure:
@@ -78,11 +116,34 @@ class TestPenalisedScoreIsPairedWithItsMeasure:
         )
 
 
+class TestTheReductionIsTheRateRemoved:
+    """R1135 — the printed reduction is ``penalty × 100``, the producer's rate.
+
+    The first version printed its complement (``(1 - penalty) × 100``): −40 %
+    for a real −60 %. These shapes are the producer's: 1 fallacy → 0.3,
+    2 → 0.6, and the cap holds at 0.6.
+    """
+
+    @pytest.mark.parametrize("count,expected", [(1, "-30%"), (2, "-60%"), (4, "-60%")])
+    def test_the_rate_removed_is_what_prints(self, count, expected):
+        lines = _briefing_lines({f"arg_{count}": _penalised(count=count)})
+        assert expected in lines[f"arg_{count}"]
+        # the complement the first version printed (40 % for a 60 % rate)
+        assert "-40%" not in lines[f"arg_{count}"]
+
+
 class TestUnpenalisedLineIsUntouched:
     """The issue's control: a unit with no applied penalty renders as before."""
 
     @pytest.mark.parametrize(
-        "overall,expected", [(4.5, "overall=4.5"), (3, "overall=3")]
+        "overall,expected",
+        [
+            (4.5, "overall=4.5"),
+            (3, "overall=3"),
+            # R1135 — rounding is confined to the penalised branch, so a
+            # value carrying more than two decimals keeps its spelling.
+            (4.567, "overall=4.567"),
+        ],
     )
     def test_the_line_is_byte_identical(self, overall, expected):
         lines = _briefing_lines({"arg_38": {"scores": {"a": 1.0}, "overall": overall}})

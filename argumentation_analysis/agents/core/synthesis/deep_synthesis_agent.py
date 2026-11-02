@@ -1761,24 +1761,35 @@ class DeepSynthesisAgent(BaseAgent):
         no way to tell that score from a unit that simply scored 1.8. Both
         judgements are already in the record, so the line states both when the
         record carries an applied penalty, plus the rule that pairs them: a
-        penalised score is not comparable with an unpenalised one. Without an
-        applied penalty the line is byte-for-byte what it always was.
+        penalised score is not comparable with an unpenalised one.
+
+        ``penalty_factor`` is the RATE the producer subtracted, not the ratio
+        it kept (``invoke_callables.py``: ``penalty = min(0.3 * n, 0.6)``,
+        ``note = original - original * penalty``), so the reduction is
+        ``penalty_factor × 100`` — the convention the producer already prints
+        at ``invoke_callables.py`` (``penalty={penalty_factor:.0%}``).
+
+        Without an applied penalty the line is byte-for-byte what it always
+        was: no rounding, no extra text (R1135 rework: rounding lives in the
+        penalised branch only).
         """
         if not isinstance(entry, dict):
-            return f"overall={DeepSynthesisAgent._rounded_quality(entry)}"
-        overall = DeepSynthesisAgent._rounded_quality(entry.get("overall", "?"))
+            return f"overall={entry}"
+        raw = entry.get("overall", "?")
         penalty = entry.get("fallacy_penalty")
         if not (isinstance(penalty, dict) and penalty.get("applied")):
-            return f"overall={overall}"
+            return f"overall={raw}"
+        overall = DeepSynthesisAgent._rounded_quality(raw)
         tail = "score penalise, non comparable aux scores sans penalite"
         detail: List[str] = []
         original = penalty.get("original_score")
         if isinstance(original, (int, float)) and not isinstance(original, bool):
             detail.append(f"mesure {DeepSynthesisAgent._rounded_quality(original)}")
         factor = penalty.get("penalty_factor")
-        reduction = ""
+        rate: Optional[int] = None
         if isinstance(factor, (int, float)) and not isinstance(factor, bool):
-            reduction = f"-{round((1 - float(factor)) * 100)}%"
+            rate = round(float(factor) * 100)
+        reduction = f"-{rate}%" if rate is not None else ""
         fallacies = penalty.get("fallacies")
         if isinstance(fallacies, list) and fallacies:
             count = len(fallacies)
@@ -2240,8 +2251,9 @@ class DeepSynthesisAgent(BaseAgent):
         quality = getattr(state, "argument_quality_scores", {}) or {}
         for arg_id, scores in list(quality.items())[:max_items_per_field]:
             # #3357 — the line states the penalty beside the score it lowered
-            # (see ``_quality_line``); an unpenalised entry renders exactly as
-            # before, and the float noise of the adjusted sum is rounded away.
+            # (see ``_quality_line``); an unpenalised entry renders byte for
+            # byte as before, and the rounding is confined to the penalised
+            # branch (R1135 rework).
             _add(
                 "argument_quality_scores",
                 arg_id,
