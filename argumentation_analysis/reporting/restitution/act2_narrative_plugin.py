@@ -796,7 +796,10 @@ def _tie_companions(ids: List[str]) -> str:
         return ids[0]
     if len(ids) <= 4:
         return ", ".join(ids[:-1]) + " et " + ids[-1]
-    return ", ".join(ids[:4]) + f" et {len(ids) - 4} autres"
+    # #3337 residual — at five co-holders the count is 1 and the noun
+    # disagreed (« 1 autres »); count and noun agree.
+    rest = len(ids) - 4
+    return ", ".join(ids[:4]) + f" et {rest} autre{'s' if rest > 1 else ''}"
 
 
 def quality_ranking_line(
@@ -866,6 +869,9 @@ def quality_ranking_line(
             if len(tied_out) <= 3:
                 shown = shown + tied_out
             else:
+                # Plural by construction: this path starts at 4 left-outs
+                # (fewer ride the listing above), so the count/noun
+                # agreement the #3337 residual demands cannot break here.
                 overflow = f" et {len(tied_out)} autres à {boundary_score:.1f}"
     listed = ", ".join(f"{arg_id} ({score:.1f})" for arg_id, score in shown) + overflow
     line = (

@@ -144,6 +144,17 @@ class TestTheOffTopBranchNamesItsCoHolders:
         line = quality_ranking_line(_quality(scores), 7, "arg_w")
         assert "avec arg_2, arg_3, arg_4, arg_5 et 2 autres" in line, line
 
+    def test_five_mates_count_the_last_one_in_the_singular(self):
+        """#3337 residual, off-top twin: the helper carries the count/noun
+        agreement the head branch gained — « et 1 autre », never « et 1
+        autres ». One helper, both branches agree."""
+        scores = {"arg_1": 5.0, "arg_w": 4.0}
+        for i in range(2, 7):
+            scores[f"arg_{i}"] = 4.0
+        line = quality_ranking_line(_quality(scores), 6, "arg_w")
+        assert "et 1 autre" in line, line
+        assert "1 autres" not in line, line
+
     def test_an_untied_off_top_winner_stays_byte_identical(self):
         """No tie → no « avec » clause: the pre-#3347 sentence, exactly."""
         line = quality_ranking_line(
