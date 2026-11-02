@@ -1250,27 +1250,49 @@ _VERDICT_BASE_RE = re.compile(
     r"\d+\s*/\s*\d+\s+arguments?\s+[ée]valu[ée]s?", re.IGNORECASE
 )
 
+#: #3348 — the discourse as grammatical subject, sentence-initial: « Le
+#: discours a un vrai caractère de clarté… ». The verdict speaks OF the
+#: discourse, and a restatement of it keeps that subject; « que faire »
+#: beats and per-argument sentences start differently by construction.
+_DISCOURSE_SUBJECT_RE = re.compile(r"^(?:le|ce)\s+discours\b", re.IGNORECASE)
+
 
 def restated_verdict_sentences(text: str, passed_virtues: Iterable[str]) -> List[str]:
-    """The woven sentences that restate the virtue verdict (#3335).
+    """The woven sentences that restate the virtue verdict (#3335, #3348).
 
-    Anchored on the pipeline sentence's closing clause, then extended
-    BACKWARDS over the sentences of the same paragraph that name a virtue
-    which reached the bar or reproduce the measured base. Bounded on purpose:
-    the verdict is one contiguous statement, and a sentence of the « que
-    faire » beat — which may name the same virtues — is never adjacent to
-    that clause, so it is never touched. A false positive here would delete
-    content, which is the unsafe side of the trade; the anchor is what keeps
-    it off.
+    Two independent anchors. The first is the pipeline sentence's closing
+    clause (« aucune autre vertu … »), extended BACKWARDS over the sentences
+    of the same paragraph that name a virtue which reached the bar or
+    reproduce the measured base. The second (#3348) is the clause-less
+    restatement R1133a wove: the discourse as grammatical subject, naming
+    every virtue that crossed the bar AND no virtue the bar rejected — a
+    restatement can only copy what the verdict names, and a sentence
+    asserting a rejected virtue commits the claim gate's defect, not this
+    one's, so the rest of its sentence is not this removal's to delete
+    (census on the stored states: the one literal-class match named « clair »
+    with clarté below the bar — out of class, kept).
+
+    Bounded on purpose in both anchors: the clause walk never leaves its
+    paragraph, the sentence-level anchor never walks at all, and a sentence
+    of the « que faire » beat — different subject, or fewer virtues — is
+    never touched. The pipeline's own grafted passage is not food either:
+    its paragraph is skipped, so the removal stays safe on a final render.
+    A false positive here would delete content, which is the unsafe side of
+    the trade; the anchors are what keep it off.
 
     ``passed_virtues`` is the set of virtue keys that crossed the bar: the
     vocabulary looked for is bounded by what the verdict actually names.
     """
-    wanted = [_VIRTUE_PROSE_RE[v] for v in passed_virtues if v in _VIRTUE_PROSE_RE]
+    passed = [v for v in passed_virtues if v in _VIRTUE_PROSE_RE]
+    wanted = [_VIRTUE_PROSE_RE[v] for v in passed]
     if not wanted:
         return []
+    rejected = [_VIRTUE_PROSE_RE[k] for k in _VIRTUE_PROSE_RE if k not in set(passed)]
     caught: List[str] = []
     for paragraph in re.split(r"\n\s*\n", text or ""):
+        if paragraph.lstrip().startswith(f"**{VERDICT_HEADING}**"):
+            # The pipeline's own grafted passage (#3335) — never food.
+            continue
         sentences = [s.strip() for s in _SENTENCE_RE.findall(paragraph) if s.strip()]
         for index in range(len(sentences) - 1, -1, -1):
             sentence = sentences[index]
@@ -1289,6 +1311,18 @@ def restated_verdict_sentences(text: str, passed_virtues: Iterable[str]) -> List
                 caught.append(candidate)
                 back -= 1
             break
+        for sentence in sentences:
+            # #3348 — the clause-less restatement: discourse subject, every
+            # passed virtue named, no rejected one.
+            if sentence in caught:
+                continue
+            if not _DISCOURSE_SUBJECT_RE.match(sentence):
+                continue
+            if not all(rx.search(sentence) for rx in wanted):
+                continue
+            if any(rx.search(sentence) for rx in rejected):
+                continue
+            caught.append(sentence)
     return caught
 
 
