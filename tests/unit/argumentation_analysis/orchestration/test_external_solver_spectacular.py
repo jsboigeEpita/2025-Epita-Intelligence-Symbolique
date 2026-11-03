@@ -45,7 +45,8 @@ class TestExternalSolverSpectacular:
         # external fol_solver + modal_solver phases + narrative_synthesis,
         # + 4 #1178 reasoners (weighted/social/qbf/cl), + 1
         # fallacy_winner_reading (#3326, post-vote winner reading).
-        assert len(wf.phases) == 40
+        # #3377 adds the two personas (historian, strategist). 40 → 42.
+        assert len(wf.phases) == 42
 
     def test_external_fol_solver_service_registered(self):
         from argumentation_analysis.orchestration.registry_setup import setup_registry

@@ -292,6 +292,7 @@ class NLToLogicTranslator:
         text: str,
         logic_type: Optional[str] = None,
         shared_atoms: Optional[List[str]] = None,
+        context_note: str = "",
     ) -> TranslationResult:
         """Translate a single NL argument to formal logic.
 
@@ -302,6 +303,12 @@ class NLToLogicTranslator:
                 #1396). When provided for ``logic_type='modal'``, the modal
                 translator constrains its atoms to this inventory for
                 inter-argument coherence. Ignored for PL/FOL.
+            context_note: Optional labelled block from a persona read (#3377) —
+                the historian's situation. Appended to the SYSTEM prompt when
+                non-empty, so the KB is built by a reader that knows what
+                period and place the argument belongs to. Empty by default:
+                a caller without the read gets the previous prompt, byte for
+                byte.
 
         Returns:
             TranslationResult with formula, validity, and metadata.
@@ -310,7 +317,9 @@ class NLToLogicTranslator:
 
         # Try LLM-based translation with retry loop
         try:
-            result = await self._translate_with_llm(text, lt, shared_atoms=shared_atoms)
+            result = await self._translate_with_llm(
+                text, lt, shared_atoms=shared_atoms, context_note=context_note
+            )
         except Exception as e:
             logger.warning(f"LLM translation failed, using heuristic: {e}")
             result = self._translate_heuristic(text, lt)
@@ -337,6 +346,7 @@ class NLToLogicTranslator:
         arguments: List[str],
         logic_type: Optional[str] = None,
         check_consistency: bool = True,
+        context_note: str = "",
     ) -> TranslationBatchResult:
         """Translate multiple arguments and optionally check consistency.
 
@@ -344,6 +354,9 @@ class NLToLogicTranslator:
             arguments: List of NL argument texts.
             logic_type: Logic type for all translations.
             check_consistency: Whether to check KB consistency.
+            context_note: Labelled persona block (#3377), forwarded verbatim to
+                every translation of the batch — one read, one wording, the
+                same for every formula the batch produces.
 
         Returns:
             TranslationBatchResult with all translations and consistency info.
@@ -354,7 +367,7 @@ class NLToLogicTranslator:
         for arg_text in arguments[:10]:  # Cap at 10
             if len(arg_text.strip()) < 10:
                 continue
-            result = await self.translate(arg_text, lt)
+            result = await self.translate(arg_text, lt, context_note=context_note)
             translations.append(result)
 
         batch = TranslationBatchResult(
@@ -385,6 +398,7 @@ class NLToLogicTranslator:
         text: str,
         logic_type: str,
         shared_atoms: Optional[List[str]] = None,
+        context_note: str = "",
     ) -> TranslationResult:
         """Translate via LLM with validate-retry loop."""
         from argumentation_analysis.core.utils.network_utils import (
@@ -425,6 +439,14 @@ class NLToLogicTranslator:
                 if logic_type == "propositional"
                 else FOL_SYSTEM_PROMPT if logic_type == "fol" else MODAL_SYSTEM_PROMPT
             )
+        # #3377 — the historian's situation rides on the SYSTEM prompt, after
+        # the logic-specific contract: the grammar and the output format keep
+        # priority, and the persona block only widens what the reader knows
+        # (period, actors, institutions). Empty note → no append at all, so a
+        # caller without the read sends the previous prompt byte for byte.
+        if context_note:
+            system_prompt = f"{system_prompt}\n\n{context_note}"
+
         retry_template = (
             PL_RETRY_PROMPT
             if logic_type == "propositional"

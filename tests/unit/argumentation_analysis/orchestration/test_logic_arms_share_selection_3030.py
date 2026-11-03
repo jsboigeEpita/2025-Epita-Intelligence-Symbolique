@@ -93,7 +93,7 @@ def _capturing_translator(captured: list):
     the arm whose inputs the coverage record must also describe.
     """
 
-    async def _capture(self, texts, logic_type=None, check_consistency=False):
+    async def _capture(self, texts, logic_type=None, check_consistency=False, context_note=""):
         captured.extend(texts)
         return SimpleNamespace(translations=[])
 
@@ -109,7 +109,7 @@ def _succeeding_translator(captured: list, n_valid: int = 3):
     to translate.
     """
 
-    async def _capture(self, texts, logic_type=None, check_consistency=False):
+    async def _capture(self, texts, logic_type=None, check_consistency=False, context_note=""):
         captured.extend(texts)
         translations = [
             SimpleNamespace(
@@ -268,7 +268,7 @@ class TestNLToLogicIsUnaffected:
         expected = _expected_selection_texts(state, 6)
         captured: list = []
 
-        async def _capture(self, texts, logic_type=None, check_consistency=False):
+        async def _capture(self, texts, logic_type=None, check_consistency=False, context_note=""):
             captured.extend(texts)
             return SimpleNamespace(
                 translations=[],
@@ -297,7 +297,7 @@ class TestNLToLogicIsUnaffected:
 
         captured: list = []
 
-        async def _capture(self, texts, logic_type=None, check_consistency=False):
+        async def _capture(self, texts, logic_type=None, check_consistency=False, context_note=""):
             captured.extend(texts)
             return SimpleNamespace(
                 translations=[],

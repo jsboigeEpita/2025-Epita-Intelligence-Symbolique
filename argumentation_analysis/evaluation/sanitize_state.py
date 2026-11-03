@@ -601,6 +601,12 @@ _NARRATIVE_FIELDS = {
 # Each value is (list_subkey_to_count, ...).
 _STRUCT_LIST_SCRUB = {
     "stakes_and_stakeholders": ("stakes", "stakeholders"),
+    # #3377 — the two persona reads are model prose (a situation, a strategic
+    # reading, players, a preference profile). They are not corpus text, but
+    # they are downstream analysis of it, and the export boundary treats both
+    # the same way: counts and presence flags cross, wording does not.
+    "historical_context": ("items",),
+    "strategic_read": ("players", "options"),
 }
 
 

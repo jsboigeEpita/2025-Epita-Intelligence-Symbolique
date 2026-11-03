@@ -258,6 +258,27 @@ def _canaried_state() -> UnifiedAnalysisState:
         "rhetorical_register": "deliberative",
         "discursive_arena": "assembly",
     }
+    # #3377 — the two persona reads: model prose about the situation and the
+    # game. Their wording must not cross the export boundary either, so they
+    # ride the same pass 8 (counts + presence flags). A canary that planted
+    # only structural values would exercise nothing.
+    s.historical_context = {
+        "situation": NL,
+        "items": [
+            {"claim": NL2, "confidence": 0.7, "supports": NL, "basis": "model_knowledge"}
+        ],
+        "status": "ok",
+        "basis": "model_knowledge",
+    }
+    s.strategic_read = {
+        "players": [{"name": NL, "role": NL2, "stance": "for"}],
+        "options": [NL2],
+        "preferences": {NL: [NL2]},
+        "reading": NL,
+        "game": {"status": "ok", "winner": NL2},
+        "status": "ok",
+        "basis": "model_knowledge",
+    }
 
     # --- dung_frameworks: covered paths (4b/4c) + the GAP sidecar -------------
     # The real ``extensions`` shape is heterogeneous (``extensions`` = list of
@@ -500,6 +521,10 @@ WRITTEN_TOP_LEVEL_FIELDS = frozenset(
         "act3_conclusion",
         "final_conclusion",
         "stakes_and_stakeholders",
+        # #3377 — the historian's and the strategist's reads, both canaried
+        # above and both scrubbed by pass 8.
+        "historical_context",
+        "strategic_read",
         "dung_frameworks",
         # #3242 — populated by the real ``_write_fact_extraction_to_state``
         # writer's ``record_anchor_census()`` (#2973): counts, per-producer

@@ -59,6 +59,8 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_narrative_synthesis,
     _invoke_act2_narrative,
     _invoke_act1_framing,
+    _invoke_historical_context,
+    _invoke_strategic_read,
     _invoke_act3_conclusion,
     _invoke_external_fol_solver,
     _invoke_external_modal_solver,
@@ -569,6 +571,47 @@ def setup_registry(
         registered.append("act2_narrative_service")
     except Exception as e:
         skipped.append(("act2_narrative_service", str(e)))
+
+    # --- Historian persona (#3377, Epic #3374) ---
+    try:
+        registry.register_service(
+            name="historical_context_service",
+            service_class=type("historical_context_service", (), {}),
+            capabilities=["historical_context"],
+            metadata={
+                "description": (
+                    "Historien : situe le document (date, lieu, acteurs, enjeux "
+                    "d'alors) AVANT l'analyse. Savoir du modèle, étiqueté comme "
+                    "tel dans l'état et dans le rendu. Lu par les traducteurs "
+                    "NL→KB (nl_to_logic)."
+                )
+            },
+            invoke=_invoke_historical_context,
+        )
+        registered.append("historical_context_service")
+    except Exception as e:
+        skipped.append(("historical_context_service", str(e)))
+
+    # --- Strategist persona (#3377, Epic #3374) ---
+    try:
+        registry.register_service(
+            name="strategic_read_service",
+            service_class=type("strategic_read_service", (), {}),
+            capabilities=["strategic_read"],
+            metadata={
+                "description": (
+                    "Stratège : joueurs, options, profil de préférences, et la "
+                    "manipulabilité que le moteur de gouvernance CALCULE "
+                    "(gagnant de Condorcet, pivot d'un joueur, coalition à deux). "
+                    "Consommé par act1_framing, qui ne produit plus sa propre "
+                    "lecture."
+                )
+            },
+            invoke=_invoke_strategic_read,
+        )
+        registered.append("strategic_read_service")
+    except Exception as e:
+        skipped.append(("strategic_read_service", str(e)))
 
     # --- Acte I framing narrative service (#1136, Epic #1134) ---
     try:

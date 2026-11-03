@@ -231,6 +231,15 @@ PROSE_BASELINE = frozenset(
         # intersection. The ``synthese_globale`` appendix row attests the
         # channel, while the bag itself keeps no count row of its own.
         "workflow_results",
+        # #3377 — the two persona reads. Acte I consumes them instead of
+        # producing its own strategic read: ``historical_context`` dates and
+        # situates the document, ``strategic_read`` carries the configuration
+        # and the outcome the governance engine computed from it. Both are
+        # read as MODEL KNOWLEDGE and labelled as such in the prompt — the
+        # prose surface reads them, so the baseline must say so (the point of
+        # this guard is that a new state read is never silent).
+        "historical_context",
+        "strategic_read",
     }
 )
 
@@ -303,6 +312,11 @@ PROSE_ONLY = frozenset(
         # absence-ledger entry. A rendering carrier of the tier's fate, not
         # an analytical dimension the appendix would attest.
         "local_llm_results",
+        # #3377 — the persona reads are Acte I's inputs, not dimensions the
+        # appendix attests: they carry no count row of their own, and their
+        # wording is model knowledge the export boundary scrubs (pass 8).
+        "historical_context",
+        "strategic_read",
     }
 )
 

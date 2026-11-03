@@ -341,9 +341,17 @@ class TestSpectacularWorkflowGolden:
         "social_reasoning",
         "qbf_reasoning",
         "cl_reasoning",
+        # #3377: the two personas — `historian` feeds nl_to_logic, `strategist`
+        # feeds act1_framing. A producer with no consumer is the act1_framing
+        # defect again, so their absence here is the guard, not a formality.
+        "historian",
+        "strategist",
     }
 
-    def test_phase_count_is_31(self):
+    def test_phase_count(self):
+        # Named `test_phase_count_is_31` until #3377: the name had been stale
+        # since the count left 31, and a pin whose name lies about its value
+        # is read as documentation by the next reader.
         # #1115: narrative_synthesis template phase removed from spectacular
         # (determinization residue #1109 §5); count reflects real phase set PLUS
         # the three restitution acts (R2 act1_framing #1136, R3 act2_narrative
@@ -352,8 +360,12 @@ class TestSpectacularWorkflowGolden:
         # was retired (zero prod reader). Phase count drops from 40 to 39.
         # #3326: +1 fallacy_winner_reading — the post-vote reading of the
         # winner the per-argument fallacy sample never examined. 39 → 40.
+        # #3377: +2 personas — `historian` (historical_context) and
+        # `strategist` (strategic_read), each with a production consumer.
+        # They write into the state before the analysis, so the DAG gains
+        # them, not the report. 40 → 42.
         wf = build_spectacular_workflow()
-        assert len(wf.phases) == 40
+        assert len(wf.phases) == 42
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -408,10 +420,15 @@ class TestSpectacularWorkflowGolden:
         # hierarchical_fallacy / nl_to_logic one level later — they select
         # from the population text_to_kb writes, and the executor applies
         # state writers only after the level.
+        # #3377: `historian` joins them — it dates and situates from the raw
+        # text and the metadata, and declaring `stakes` instead would push
+        # every downstream `nl_to_logic` reader one level later for an
+        # enrichment its prompt treats as best-effort.
         assert set(levels[1]) == {
             "neural_detect",
             "text_to_kb",
             "dl_reasoning",
+            "historian",
         }
 
     def test_l2_includes_formal_logic_and_counter(self):
@@ -447,6 +464,26 @@ class TestSpectacularWorkflowGolden:
         wf = build_spectacular_workflow()
         counter = wf.get_phase("counter")
         assert "quality" in counter.depends_on
+
+    def test_each_persona_precedes_its_consumer(self):
+        """#3377 — the DAG is the demand, and this pins the direction of it.
+
+        A capability registered without a phase demanding it reddens the #1842
+        census, but nothing there says the *ordering* realizes the read: a
+        `nl_to_logic` that ran beside `historian` would receive an empty note
+        and translate exactly as before, silently. Measured on the level lists,
+        not on the declaration.
+        """
+        wf = build_spectacular_workflow()
+        levels = wf.get_execution_order()
+        position = {name: i for i, level in enumerate(levels) for name in level}
+
+        assert position["historian"] < position["nl_to_logic"]
+        assert position["strategist"] < position["act1_framing"]
+        # The declarations say the same thing the levels do: a phase whose
+        # producer is in its own level reads the writer's previous value.
+        assert "historian" in wf.get_phase("nl_to_logic").depends_on
+        assert "strategist" in wf.get_phase("act1_framing").depends_on
 
     def test_atms_declares_the_inputs_its_producer_reads(self):
         # #1650: this golden used to assert ``"jtms" in atms.depends_on``. The
@@ -776,8 +813,9 @@ class TestWorkflowCatalogGolden:
         # removed; DAG grew via #504/#506/#507/#508/#534 + 3 restitution
         # acts R2/R3/R4). #1625 (R759) retired L9 `analysis_synthesis`,
         # dropping the count from 40 to 39. #3326 added the post-vote
-        # fallacy_winner_reading phase. 39 → 40.
-        assert len(catalog["spectacular"].phases) == 40
+        # fallacy_winner_reading phase. 39 → 40. #3377 added the two
+        # personas (historian, strategist). 40 → 42.
+        assert len(catalog["spectacular"].phases) == 42
 
     def test_catalog_includes_sherlock_modern(self):
         catalog = get_workflow_catalog()

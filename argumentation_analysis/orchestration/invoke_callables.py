@@ -11739,10 +11739,18 @@ async def _invoke_nl_to_logic(
             unit_ids=[u.unit_id for u in _ntl_selection.selected],
         )
     translator = NLToLogicTranslator(max_retries=3, logic_type=logic_type)
+    # #3377 — the KB is built by a reader that knows the situation. The note is
+    # produced by ONE function (the historian's wording lives with the persona),
+    # and it is empty when the historian did not run: the prompt then stays the
+    # one every earlier run sent.
+    from argumentation_analysis.agents.core.context.historian import context_note
+
+    _situation_note = context_note(_ntl_state) if _ntl_state is not None else ""
     batch_result = await translator.translate_batch(
         [u.text for u in _ntl_selection.selected],
         logic_type=logic_type,
         check_consistency=True,
+        context_note=_situation_note,
     )
 
     translations = []
@@ -13911,6 +13919,115 @@ async def _invoke_act2_narrative(
         # Flags only: nothing beside this key is rewritten from it.
         "read_license": dict(result.read_license or {}),
     }
+
+
+# --- #3377 (Epic #3374) — the two personas that read the situation first ---
+#
+# One seam, two producers. The invoke owns what the orchestrator owns — the
+# route, the #708 runaway guard, the discriminated degraded status — and the
+# persona module owns the prompt and the MODEL-KNOWLEDGE labelling. That split
+# is the one ``_invoke_stakes_extractor`` already uses; it is repeated here as a
+# named helper rather than a third inline copy so the two personas cannot drift
+# on sampling or on the guard.
+def _build_persona_callable(site: str):
+    """Resolve the route once; return ``(prompt -> str callable, reason)``.
+
+    ``reason`` is non-empty when no callable could be built (no route): the
+    personas then return their ``no_llm`` status, which is an honest empty — not
+    a degraded phase. The callable funnels through ``_guarded_chat_completion``
+    so a persona call counts against the per-run ceiling like every other.
+    """
+    try:
+        llm_client, model_id = _get_openai_client()
+    except Exception as e:  # pragma: no cover - defensive
+        return None, f"{type(e).__name__}: {e}"
+    if llm_client is None:
+        return None, "no LLM route resolved"
+
+    sampling = sampling_kwargs(_resolve_llm_route()[1], dict(_get_determinism_params()))
+
+    async def _call(prompt: str) -> str:
+        response = await _guarded_chat_completion(
+            llm_client,
+            model=model_id,
+            messages=[{"role": "user", "content": prompt}],
+            **sampling,
+        )
+        return response.choices[0].message.content or ""
+
+    logger.debug("%s persona: route resolved, model=%s", site, model_id)
+    return _call, ""
+
+
+async def _invoke_historical_context(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Produce ``state.historical_context`` — the historian's read (#3377).
+
+    Read downstream by the NL→KB translator (``nl_to_logic``), so the KB is
+    built by a reader that knows what period and what place the text belongs
+    to. Every item is stamped ``basis="model_knowledge"`` by the producer: the
+    render says so, and a historian sentence never reads as the text's own.
+    """
+    from argumentation_analysis.agents.core.context.historian import (
+        build_historical_context,
+    )
+
+    state = context.get("_state_object") or context.get("unified_state")
+    if state is None:
+        return {"error": "No shared state available for the historian"}
+
+    llm, reason = _build_persona_callable("historian")
+    if llm is None:
+        logger.info("Historian: %s — empty read.", reason)
+
+    result = await build_historical_context(state, llm)
+    payload = result.to_state()
+    if result.status in ("llm_error", "parse_error"):
+        detail = f"historian {result.status}: {result.error or 'unspecified error'}"
+        payload["degraded"] = True
+        payload["degraded_reason"] = detail
+        log_error = getattr(state, "log_error", None)
+        if callable(log_error):
+            log_error("Historian", detail)
+        logger.warning("Historian read failed loudly: %s", detail)
+    return payload
+
+
+async def _invoke_strategic_read(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Produce ``state.strategic_read`` — the strategist's read (#3377).
+
+    The model states the configuration (players, options, full rankings); the
+    governance engine computes the outcome and the manipulability
+    (``game``). Consumed by ``act1_framing``, which no longer derives a
+    game-theoretic read of its own: the read now exists before the act, and a
+    downstream phase orients on it.
+    """
+    from argumentation_analysis.agents.core.context.strategist import (
+        build_strategic_read,
+    )
+
+    state = context.get("_state_object") or context.get("unified_state")
+    if state is None:
+        return {"error": "No shared state available for the strategist"}
+
+    llm, reason = _build_persona_callable("strategist")
+    if llm is None:
+        logger.info("Strategist: %s — empty read, no computation.", reason)
+
+    result = await build_strategic_read(state, llm)
+    payload = result.to_state()
+    if result.status in ("llm_error", "parse_error"):
+        detail = f"strategist {result.status}: {result.error or 'unspecified error'}"
+        payload["degraded"] = True
+        payload["degraded_reason"] = detail
+        log_error = getattr(state, "log_error", None)
+        if callable(log_error):
+            log_error("Strategist", detail)
+        logger.warning("Strategist read failed loudly: %s", detail)
+    return payload
 
 
 async def _invoke_act1_framing(
