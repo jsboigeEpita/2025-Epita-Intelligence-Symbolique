@@ -99,6 +99,11 @@ class ReadingLine:
     unit_total: int = 0
     span_lo: int = 0
     span_hi: int = 0
+    # #2850 lot 8 — a stratified site reads k windows, not one: the record
+    # says the UNION of their spans (never a sum — tiled windows overlap) and
+    # how many windows carried it. Zero keeps the one-window forms below.
+    windows: int = 0
+    chars_read: int = 0
 
 
 @dataclass
@@ -396,6 +401,8 @@ def build_reading_record(state: Any) -> ReadingRecord:
                     unit_total=int(entry.get("unit_total", 0) or 0),
                     span_lo=int(entry.get("span_lo", 0) or 0),
                     span_hi=int(entry.get("span_hi", 0) or 0),
+                    windows=int(entry.get("windows", 0) or 0),
+                    chars_read=int(entry.get("chars_read", 0) or 0),
                 )
             )
     # #3131 — the local tier's own reading, from its ledger record (the
@@ -463,6 +470,22 @@ def format_reading_line(line: ReadingLine, source_chars: int) -> str:
         base = (
             f"« {label} » : {line.units} unités sur {line.unit_total} lues " f"({span})"
         )
+    elif line.windows > 1 and line.chars_read:
+        # #2850 lot 8 — a stratified read: the UNION of the k windows'
+        # spans, and how many windows carried it. The whole-document form
+        # still applies when the union covered everything — said in the
+        # same grammar the one-window sites use.
+        if 0 < source_chars and line.chars_read >= source_chars:
+            base = (
+                f"« {label} » : document lu en entier "
+                f"({line.chars_read} de {source_chars} caractères en "
+                f"{accord(line.windows, 'fenêtre')})"
+            )
+        else:
+            base = (
+                f"« {label} » : lecture de {line.chars_read} des "
+                f"{source_chars} caractères en {accord(line.windows, 'fenêtre')}"
+            )
     elif 0 < source_chars and line.window >= source_chars:
         base = (
             f"« {label} » : document lu en entier "

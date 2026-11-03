@@ -375,6 +375,20 @@ def _find_taxonomy_codes(markdown: str) -> List[str]:
     return _TAXONOMY_CODE_RE.findall(markdown)
 
 
+def designation_leak_count(body: str) -> int:
+    """How many raw ids and Greek-letter handles a draft prints (#3358).
+
+    The #2980 and #3317 counts, summed — the two reasons a writer draft
+    cannot hand the reader a designation they can resolve. Exposed for the
+    bounded-retry draft comparison (#3343/#3358): a rewrite that fixes its
+    own motive by printing ids or letters must never read as « better »,
+    so its leak count joins the flag count the comparison already sums.
+    Quoted spans (``« … »``, ``[artifact: …]``) are data, not leaks — the
+    same exemption each rule applies at the gate.
+    """
+    return len(_find_internal_ids(body)) + len(_find_greek_labels(body))
+
+
 def _line_has_framework(line: str) -> bool:
     low = line.lower()
     # solver / scheme family

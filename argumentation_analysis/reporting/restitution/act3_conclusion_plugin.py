@@ -3298,13 +3298,19 @@ def _strategy_suffix(strategy: str) -> str:
     return f" ({s})" if s else ""
 
 
-def build_act3_prompt(evidence: Act3Evidence) -> str:
+def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
     """Build the §4-compliant LLM-conducted prompt for the Acte III conclusion.
 
     The prompt varies with the evidence (hence with the corpus) — it is not a
     static template (#1108/#405). It hands the LLM the gated verdict ceiling,
     the real strengths/weaknesses, and the actionable material (counters +
     structuring weak points), and instructs it to weave the three beats.
+
+    Returns the prompt with its raw ``arg_N`` ids still in place — the
+    relabel seam (#3296) is applied by :func:`build_act3_prompt`, so the
+    bounded retry (#3343/#3358) can append its correction blocks to THIS
+    text and route everything through the same seam in one pass: one
+    letter table, one legend, no id the writer ever sees.
     """
     verdict = evidence.verdict
 
@@ -3971,12 +3977,26 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         "  perdue, n'invente aucune réserve.\n"
         "- Rédige en français, markdown léger. 300-600 mots selon la richesse.\n"
     )
-    # #3296 — the seam: every arg_N the data blocks supplied (claims, joined
-    # units, weaknesses/counters/targets, salience statements AND their
-    # cites — the id is built INTO the statement, conclusion_salience) leaves
-    # the writer's view here, relabelled by the per-act table with its
-    # legend. Method cites (FOL, qualite…) are not arg ids and stay.
-    return label_writer_prompt(prompt, evidence.unit_texts)
+    # #3296 — the ids stay in the assembled text: the seam
+    # (``build_act3_prompt``) relabels every arg_N the data blocks supplied
+    # (claims, joined units, weaknesses/counters/targets, salience
+    # statements AND their cites — the id is built INTO the statement,
+    # conclusion_salience) so the writer's view carries the per-act letter
+    # table with its legend. Method cites (FOL, qualite…) are not arg ids
+    # and stay.
+    return prompt
+
+
+def build_act3_prompt(evidence: Act3Evidence) -> str:
+    """The writer's view of the Acte III prompt — assembled, then relabelled.
+
+    The #3296 seam: one pass of ``label_writer_prompt`` over the assembled
+    text, so every ``arg_N`` from every block leaves the writer's view and
+    the legend carries each letter's referent. The retry builds on the
+    ASSEMBLED text and applies this same seam — never a correction block
+    that bypasses it.
+    """
+    return label_writer_prompt(_assemble_act3_prompt(evidence), evidence.unit_texts)
 
 
 # --- #1605: the scope limitation the narrative must carry --------------------
@@ -4258,7 +4278,12 @@ async def weave_act3_conclusion(
     return await weave(build_act3_prompt(evidence), llm_callable, "Acte III")
 
 
-def build_act3_retry_prompt(evidence: Act3Evidence, flagged: List[str]) -> str:
+def build_act3_retry_prompt(
+    evidence: Act3Evidence,
+    flagged: List[str],
+    virtue_flagged: Optional[List[str]] = None,
+    virtue_table: str = "",
+) -> str:
     """The bounded ONE writer retry (#3343) — the writer rewrites its own prose.
 
     Same shape as Act II's: the base prompt is the one the writer already
@@ -4271,33 +4296,75 @@ def build_act3_retry_prompt(evidence: Act3Evidence, flagged: List[str]) -> str:
     (criterion 4 of the reader contract REQUIRES a ranking marker here, so
     « le plus » backed by P1 is licensed, never banned). The correction says
     that too: the point is to stand on the ranking, not to stop ranking.
+
+    #3358 — a second motive rides the SAME bounded call: virtue
+    misattribution. The two correction blocks concatenate (each names what
+    its own check found), and the virtue block carries the per-unit table
+    the base prompt never had — the data gap that let the writer localise
+    the discourse's measured virtues on a passage the measure never read.
+    One call for both motives, never two.
+
+    Both blocks are appended to the ASSEMBLED text and the whole goes
+    through the #3296 relabel seam in ONE pass — the table's ids reach the
+    writer as the same per-act letters the rest of the prompt uses, with
+    the legend carrying each referent (#3303: never an order to print an
+    id; #3296: never a raw id in the writer's view). The correction speaks
+    the legend's own vocabulary — designate a unit by what it says, or
+    lift the claim to the discourse level — never « nomme-la ».
     """
-    quoted = "\n".join(f"- {sentence}" for sentence in flagged[:5])
-    correction = (
-        f"\n\nCORRECTION DEMANDÉE — ta conclusion ci-dessus contient "
-        f"{len(flagged)} phrase(s) qui portent un superlatif sur TOUT le "
-        "rapport (« le plus… du dispositif », « … du discours », « … du run ») "
-        "sans classement mesuré pour l'adosser. Le classement mesuré de cet "
-        "acte est la hiérarchie de saillance fournie plus haut : seules les "
-        "unités qu'elle classe en tête peuvent porter un « le plus ». Phrases "
-        f"repérées :\n{quoted}\n\n"
-        "Réécris la conclusion EN ENTIER — même structure, mêmes beats, mêmes "
-        "données, même longueur. Pour chaque superlatif, choisis : soit il "
-        "nomme l'unité que la hiérarchie classe en tête et son rang, soit il "
-        "porte sur la population réellement évaluée et la nomme, soit il cite "
-        "la base du classement. Sinon, ne l'écris pas : dis la même chose sans "
-        "superlatif. Ne commente pas cette consigne et ne cite pas les phrases "
-        "repérées : rends la conclusion complète, prête à lire.\n"
-    )
-    return build_act3_prompt(evidence) + correction
+    prompt = _assemble_act3_prompt(evidence)
+    if flagged:
+        quoted = "\n".join(f"- {sentence}" for sentence in flagged[:5])
+        prompt += (
+            f"\n\nCORRECTION DEMANDÉE — ta conclusion ci-dessus contient "
+            f"{len(flagged)} phrase(s) qui portent un superlatif sur TOUT le "
+            "rapport (« le plus… du dispositif », « … du discours », « … du run ») "
+            "sans classement mesuré pour l'adosser. Le classement mesuré de cet "
+            "acte est la hiérarchie de saillance fournie plus haut : seules les "
+            "unités qu'elle classe en tête peuvent porter un « le plus ». Phrases "
+            f"repérées :\n{quoted}\n\n"
+            "Réécris la conclusion EN ENTIER — même structure, mêmes beats, mêmes "
+            "données, même longueur. Pour chaque superlatif, choisis : soit il "
+            "nomme l'unité que la hiérarchie classe en tête et son rang, soit il "
+            "porte sur la population réellement évaluée et la nomme, soit il cite "
+            "la base du classement. Sinon, ne l'écris pas : dis la même chose sans "
+            "superlatif. Ne commente pas cette consigne et ne cite pas les phrases "
+            "repérées : rends la conclusion complète, prête à lire.\n"
+        )
+    if virtue_flagged:
+        virtue_quoted = "\n".join(f"- {sentence}" for sentence in virtue_flagged[:5])
+        prompt += (
+            f"\n\nCORRECTION DEMANDÉE — ta conclusion ci-dessus contient "
+            f"{len(virtue_flagged)} phrase(s) qui localisent une vertu mesurée "
+            "sur des passages. Une vertu mesurée ne peut être localisée que sur "
+            "une unité qui l'obtient au niveau maximal du tableau ci-dessous. "
+            f"Phrases repérées :\n{virtue_quoted}\n"
+            "Tableau mesuré (vertus retenues : unités qui les tiennent au niveau "
+            f"maximal) :\n{virtue_table}\n\n"
+            "Réécris la conclusion EN ENTIER — même structure, mêmes beats, mêmes "
+            "données, même longueur. Pour chaque phrase repérée, choisis : soit la "
+            "vertu est localisée sur une unité du tableau qui la tient, désignée "
+            "par ce qu'elle dit — comme le reste de ta prose ; la légende des "
+            "désignations en donne le texte —, soit dis la même chose au niveau "
+            "du discours, sans localiser la vertu mesurée : le conseil au "
+            "lecteur reste. Ne commente pas cette consigne et ne cite pas les "
+            "phrases repérées : rends la conclusion complète, prête à lire.\n"
+        )
+    return label_writer_prompt(prompt, evidence.unit_texts)
 
 
 async def weave_act3_conclusion_retry(
-    evidence: Act3Evidence, llm_callable: LlmCallable, flagged: List[str]
+    evidence: Act3Evidence,
+    llm_callable: LlmCallable,
+    flagged: List[str],
+    virtue_flagged: Optional[List[str]] = None,
+    virtue_table: str = "",
 ) -> WeaveOutcome:
     """The bounded ONE retry (#3343), under the same fail-loud contract."""
     return await weave(
-        build_act3_retry_prompt(evidence, flagged),
+        build_act3_retry_prompt(
+            evidence, flagged, virtue_flagged=virtue_flagged, virtue_table=virtue_table
+        ),
         llm_callable,
         "Acte III (relance)",
     )
@@ -4324,6 +4391,8 @@ class _DressedAct3:
     nothing_survived: bool
     superlative_note: str
     superlative_sentences: List[str]
+    virtue_note: str
+    virtue_sentences: List[str]
 
 
 def _dress_act3_prose(
@@ -4359,8 +4428,11 @@ def _dress_act3_prose(
     # control).
     _verdict_removed = 0
     _verdict_sentence = discourse_virtue_reader_sentence(evidence.quality_strengths)
+    # #3358 — the passed-virtue keys serve two readers of this dress: the
+    # verdict-restatement detector below and the virtue-attribution check
+    # that closes the dress.
+    _passed_keys = [s.virtue for s in _passed_strengths(evidence.quality_strengths)]
     if _verdict_sentence:
-        _passed_keys = [s.virtue for s in _passed_strengths(evidence.quality_strengths)]
         _verdict_removal = remove_restated_bounds(
             narrative,
             detector=lambda body: restated_verdict_sentences(body, _passed_keys),
@@ -4438,6 +4510,36 @@ def _dress_act3_prose(
         if _superlative_note
         else []
     )
+
+    # #3358 — a measured virtue is localised only on a unit the measure
+    # scored at the top band. The « que faire » beat advises passages; when
+    # it justifies the advice by the discourse's measured virtues (« car
+    # c'est là que le discours est clair »), the passages must hold them —
+    # the recorded pass credited them to two passages, one of which the
+    # quality pass never read. Same placement logic as #3297: post
+    # claim-gate (a removed claim cannot be flagged), pre grafts (the
+    # verdict passage and bounds are the pipeline's, not prose). The
+    # vocabulary is the #3335 mapping bounded by the passed set — injected
+    # by the caller's plugin, never duplicated. The units the sentence
+    # designates resolve by id (synthetic) or by CONTENT against the unit
+    # texts the act was handed — the acceptance path production prose can
+    # actually reach (measured: the stored acts carry 0 arg_N).
+    from .virtue_attribution_check import (
+        flatten_unit_scores,
+        unbacked_localisation_sentences,
+        virtue_localisation_note,
+    )
+
+    _unit_scores = flatten_unit_scores(
+        getattr(state, "argument_quality_scores", {}) or {}
+    )
+    _virtue_flagged = unbacked_localisation_sentences(
+        narrative,
+        _VIRTUE_PROSE_RE,
+        _passed_keys,
+        _unit_scores,
+        unit_texts=evidence.unit_texts,
+    )
     return _DressedAct3(
         text=narrative,
         bound_removal=_bound_removal,
@@ -4447,6 +4549,8 @@ def _dress_act3_prose(
         nothing_survived=nothing_survived,
         superlative_note=_superlative_note,
         superlative_sentences=_flagged,
+        virtue_note=virtue_localisation_note(len(_virtue_flagged), "Acte III"),
+        virtue_sentences=_virtue_flagged,
     )
 
 
@@ -4533,30 +4637,80 @@ async def build_act3_conclusion(
     # gesture is measured here, not assumed: on the stored states Act III
     # fires 16 of 48 and its P1 licence suppresses none of them — the act
     # needs the retry at least as much as Act II does.
+    # #3358 — the trigger now carries two motives: the whole-scope
+    # superlative (#3297) and the unbacked virtue localisation. Still ONE
+    # bounded call — the correction blocks concatenate — and the second
+    # draft is kept only when the SUMMED cost drops: flags of BOTH checks
+    # plus the readability designation leaks (#2980 ids + #3317 letters,
+    # ``designation_leak_count``). A rewrite that fixes its own motive
+    # while printing ids or letters — the very jargon the gate forbids —
+    # leaves the reader worse off, and the comparison has to see it. Each
+    # motive is recorded when its own check fired on the first draft, with
+    # the retained draft's counts.
     _retry_motif = ""
-    if _dressed.superlative_note:
+    _virtue_retry_motif = ""
+    _first_superlative = _dressed.superlative_sentences
+    _first_virtue = _dressed.virtue_sentences
+    if _dressed.superlative_note or _dressed.virtue_note:
+        from .readability_gate import designation_leak_count
+        from .virtue_attribution_check import (
+            flatten_unit_scores,
+            held_virtues_table,
+            virtue_localisation_retry_motif,
+        )
         from .whole_scope_superlative_check import superlative_retry_motif
 
-        _first_flagged = _dressed.superlative_sentences
+        _retry_keys = [s.virtue for s in _passed_strengths(evidence.quality_strengths)]
+        _retry_unit_scores = flatten_unit_scores(
+            getattr(state, "argument_quality_scores", {}) or {}
+        )
         _retry = await weave_act3_conclusion_retry(
-            evidence, llm_callable, _first_flagged
+            evidence,
+            llm_callable,
+            _first_superlative,
+            virtue_flagged=_first_virtue,
+            virtue_table=held_virtues_table(
+                _retry_keys, _retry_unit_scores, display=VIRTUE_DISPLAY_FR
+            ),
         )
         if _retry.narrative:
             _second = _dress_act3_prose(_retry.narrative, state, evidence)
-            _after = len(_second.superlative_sentences)
-            if _after < len(_first_flagged):
+            _before_total = (
+                len(_first_superlative)
+                + len(_first_virtue)
+                + designation_leak_count(_dressed.text)
+            )
+            _after_total = (
+                len(_second.superlative_sentences)
+                + len(_second.virtue_sentences)
+                + designation_leak_count(_second.text)
+            )
+            if _after_total < _before_total:
                 _dressed = _second
-            _retry_motif = superlative_retry_motif(
-                "Acte III", len(_first_flagged), _after
-            )
+            if _first_superlative:
+                _retry_motif = superlative_retry_motif(
+                    "Acte III",
+                    len(_first_superlative),
+                    len(_dressed.superlative_sentences),
+                )
+            if _first_virtue:
+                _virtue_retry_motif = virtue_localisation_retry_motif(
+                    "Acte III", len(_first_virtue), len(_dressed.virtue_sentences)
+                )
         else:
-            _retry_motif = superlative_retry_motif(
-                "Acte III", len(_first_flagged), failure=_retry.failure
-            )
+            if _first_superlative:
+                _retry_motif = superlative_retry_motif(
+                    "Acte III", len(_first_superlative), failure=_retry.failure
+                )
+            if _first_virtue:
+                _virtue_retry_motif = virtue_localisation_retry_motif(
+                    "Acte III", len(_first_virtue), failure=_retry.failure
+                )
         logger.info(
-            "Acte III bounded writer retry (#3343): %s | first draft: %s",
-            _retry_motif,
-            "; ".join(s[:90] for s in _first_flagged[:3]),
+            "Acte III bounded writer retry (#3343/#3358): %s | %s | first " "draft: %s",
+            _retry_motif or "(pas de superlatif)",
+            _virtue_retry_motif or "(pas de vertu mal localisée)",
+            "; ".join((s[:90] for s in (_first_superlative + _first_virtue)[:3])),
         )
 
     narrative = _dressed.text
@@ -4654,6 +4808,23 @@ async def build_act3_conclusion(
     # fabrication notes (#2046), never a reader note.
     if _retry_motif:
         degraded["act3_superlative_retry"] = _retry_motif
+    # #3358 — the unbacked-localisation read of the retained draft (the
+    # reader sees the sentence; the report says the localisation has no
+    # measured unit at its back — the same contract as the whole-scope
+    # superlative note). The note names exactly what was judged, so it can
+    # only ever fire on a sentence the check READ: a unit the table
+    # contradicts, or a designation nothing resolves. And the retry
+    # motive, archived with the fabrication notes (#2046 twins).
+    # Counts only, never a sentence (#3249); the excerpts go to the trace.
+    if _dressed.virtue_note:
+        logger.warning(
+            "Acte III unbacked virtue localisation (retained draft): %s | %s",
+            _dressed.virtue_note,
+            "; ".join(s[:90] for s in _dressed.virtue_sentences[:3]),
+        )
+        degraded["act3_virtue_localisation_unbacked"] = _dressed.virtue_note
+    if _virtue_retry_motif:
+        degraded["act3_virtue_localisation_retry"] = _virtue_retry_motif
 
     # #3335 — the pipeline's verdict is grafted HERE, not where it was
     # computed: the claim gate above judges the WRITER's prose, and a passage

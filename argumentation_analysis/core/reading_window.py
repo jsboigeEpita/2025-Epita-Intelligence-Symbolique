@@ -102,6 +102,37 @@ def _first_passing_run_start(passes: List[bool], needed: int) -> int:
     return -1
 
 
+def stratified_window_offsets(length: int, window: int, cap: int = 3) -> List[int]:
+    """#2850 lot 8 — the offsets of the k stratified reading windows.
+
+    Below one window this is today's single call: ``[0]`` and nothing else,
+    byte-identical. Above it, ``k = min(cap, ceil(length / window))`` windows
+    spread evenly over the document, the last ending at the document's end.
+    Two properties the extraction relies on, both by construction:
+
+    - while ``length <= k * window`` the windows TILE the document (spacing
+      ``(length - window) // (k - 1) <= window``), so nothing up to three
+      windows' worth of text is left unread;
+    - beyond that, the windows sample the head, the middle and the end —
+      the spread the audit demanded, never a wider single call.
+
+    Entry 0 is the RAW plan's head offset: the caller keeps its own
+    selector-chosen first window (#1737 — a TOC head is skipped by the
+    selector, not re-read raw); the tail offsets are read as they are.
+    Deterministic, pure — same text, same plan.
+    """
+    if window <= 0:
+        raise ValueError(f"window must be positive, got {window}")
+    if cap <= 0:
+        raise ValueError(f"cap must be positive, got {cap}")
+    if length <= window:
+        return [0]
+    k = min(cap, -(-length // window))
+    if k <= 1:
+        return [0]
+    return [i * (length - window) // (k - 1) for i in range(k)]
+
+
 def select_reading_head(
     text: str, window: int, stride: int = _STRIDE
 ) -> WindowSelection:

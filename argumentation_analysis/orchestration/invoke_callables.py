@@ -26,6 +26,7 @@ from typing import (
     Optional,
     List,
     Sequence,
+    Set,
     Tuple,
     TypeVar,
 )
@@ -39,6 +40,7 @@ from argumentation_analysis.core.reading_window import (
     reading_state_from_context,
     selected_text,
     selected_text_and_selection,
+    stratified_window_offsets,
 )
 from argumentation_analysis.plugins.identification_models import confidence_outranks
 
@@ -9521,6 +9523,35 @@ def _normalize_fallacies_with_quotes(items: list[Any]) -> list[Dict[str, Any]]:
     return result
 
 
+def _cross_window_unique(
+    items: List[Dict[str, Any]],
+    seen: Set[Tuple[str, str]],
+    text_field: str,
+) -> List[Dict[str, Any]]:
+    """The items an EARLIER window had not already read (#2850 lot 8 R1135).
+
+    Two properties, both load-bearing:
+
+    * ``seen`` is the caller's own set — one per category — so a claim keyed
+      exactly like an argument is not swallowed by the arguments' merge;
+    * the window's keys join ``seen`` only AFTER its items are returned, so a
+      duplicate INSIDE one answer survives. The stratified windows overlap by
+      construction (they tile below 3 × window): a unit read twice is the
+      plan's duplication and collapses, while a double report inside a single
+      answer is the model's own output and is kept as reported.
+    """
+
+    def _key_of(item: Dict[str, Any]) -> Tuple[str, str]:
+        return (
+            str(item.get(text_field, "")),
+            str(item.get("source_quote", "")),
+        )
+
+    kept = [item for item in items if _key_of(item) not in seen]
+    seen.update(_key_of(item) for item in kept)
+    return kept
+
+
 # #1745 — pole-coverage instruction, appended VERBATIM to the extraction
 # system prompt. Measured against hand-annotated real-prose ground truth
 # (issue #1745): without it the model folds cited/adversarial positions
@@ -9552,6 +9583,131 @@ _MOVE_AUTHOR_INSTRUCTION = (
 )
 
 
+async def _extraction_call_one_window(
+    client: Any,
+    model_id: str,
+    det_params: Dict[str, Any],
+    system_content: str,
+    extraction_fmt: Optional[Any],
+    reading: str,
+    flags: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    """One reading window through the #1290 retry loop.
+
+    #2850 lot 8 moved the loop here so every stratified window shares it
+    unchanged: same bounded retries, same parse-failure reasons, same
+    config-rejection drops. ``flags`` is the SHARED dict — ``use_json_mode``
+    / ``use_max_tokens`` a config rejection turned off stay off for the
+    later windows (one endpoint, one rejection), and ``last_reason`` always
+    names the most recent failure for the caller's fail-loud fallback.
+    Returns the parsed payload, or None when every attempt failed; a window
+    that fails never takes the others down (#2850 lot 8: the merge counts
+    what succeeded).
+    """
+    for attempt in range(1, _EXTRACTION_MAX_ATTEMPTS + 1):
+        try:
+            llm_kwargs: Dict[str, Any] = dict(det_params)
+            if flags["use_json_mode"]:
+                # #3096: the decision's format (``json_object`` on
+                # openai-compatible routes — unchanged, cassette keys
+                # stable), never a re-spelled literal here.
+                llm_kwargs["response_format"] = extraction_fmt
+            if flags["use_max_tokens"]:
+                # #1936 sampling policy: reasoning families (gpt-5*, o1*,
+                # o3*) reject the max_tokens spelling with a 400. Before
+                # this, every extraction call on gpt-5.6-luna died as
+                # BadRequestError and silently degraded through the #1290
+                # heuristic fallback (measured #1603: unrecordable in
+                # replay, and the degraded chain starves belief_sets).
+                if _is_reasoning_model(model_id):
+                    llm_kwargs["max_completion_tokens"] = _EXTRACTION_MAX_TOKENS
+                else:
+                    llm_kwargs["max_tokens"] = _EXTRACTION_MAX_TOKENS
+            response = await _guarded_chat_completion(
+                client,
+                model=model_id,
+                messages=[
+                    {"role": "system", "content": system_content},
+                    {
+                        "role": "user",
+                        "content": reading,
+                    },
+                ],
+                **llm_kwargs,
+            )
+            raw = response.choices[0].message.content or ""
+            data = _parse_json_from_llm(raw)
+            if data:
+                return data
+            # No parseable JSON — retry (the LLM is nondeterministic; a
+            # fresh call frequently parses cleanly). Distinguish the two
+            # silent-fallback paths so the fail-loud reason is
+            # diagnostically useful (po-2023 diagnostic, chemin B):
+            #   - no JSON braces at all → "no-json-object" (the model
+            #   ignored the JSON instruction entirely — latent hole)
+            #   - braces present but unparseable → "unparseable-json"
+            #   (truncation M1 when max_tokens is still too low, or a
+            #   malformed structure)
+            has_braces = "{" in raw and "}" in raw
+            flags["last_reason"] = (
+                f"llm_{'unparseable-json' if has_braces else 'no-json-object'}"
+                f"(attempt={attempt},len={len(raw)})"
+            )
+            logger.warning(
+                f"fact extraction: LLM returned no parseable JSON "
+                f"(attempt {attempt}/{_EXTRACTION_MAX_ATTEMPTS}, "
+                f"{flags['last_reason']})"
+            )
+        except LLMCacheMiss:
+            # Replay-only (#2320): a cache miss is DETERMINISTIC — the key
+            # derives from the request content, so retrying the identical
+            # request re-misses identically. Retrying burned
+            # _EXTRACTION_MAX_ATTEMPTS misses per extraction and the
+            # #1290 heuristic fallback then masked the broken lane
+            # (extraction_status=failed is loud, but the lane verdict said
+            # green — constat D, #1603). The miss traverses.
+            raise
+        except Exception as e:
+            msg = str(e)
+            low = msg.lower()
+            # Config-rejection handling: response_format / max_tokens are
+            # not supported by every endpoint/model. Drop the offending
+            # param(s) and continue the retry loop (config issue, not a
+            # transient LLM failure — the retry is still worthwhile). Each
+            # param is dropped at most once, so the budget is not spent on
+            # the same config rejection repeatedly.
+            dropped = False
+            if flags["use_json_mode"] and (
+                "response_format" in low or "json_object" in low
+            ):
+                logger.info(
+                    "fact extraction: response_format json_mode rejected by "
+                    "endpoint, retrying without it"
+                )
+                flags["use_json_mode"] = False
+                dropped = True
+            if flags["use_max_tokens"] and (
+                "max_tokens" in low or "max_completion_tokens" in low
+            ):
+                logger.info(
+                    "fact extraction: max_tokens rejected by endpoint, "
+                    "retrying without it"
+                )
+                flags["use_max_tokens"] = False
+                dropped = True
+            if dropped:
+                continue
+            flags["last_reason"] = (
+                f"llm_call_error(attempt={attempt},"
+                f"type={type(e).__name__},msg={msg[:120]})"
+            )
+            logger.warning(
+                f"fact extraction: LLM call failed "
+                f"(attempt {attempt}/{_EXTRACTION_MAX_ATTEMPTS}): {e}"
+            )
+    return None
+
+
 async def _invoke_fact_extraction(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -9570,7 +9726,11 @@ async def _invoke_fact_extraction(
     """
     import re
 
-    last_reason = "no-client"
+    # #2850 lot 8 — one flag dict shared by the k windows AND the fallback:
+    # a param the endpoint rejects stays dropped across windows (same
+    # endpoint), and ``last_reason`` names the last failure whatever the
+    # branch that reached the heuristic path.
+    _extraction_flags: Dict[str, Any] = {"last_reason": "no-client"}
     client, model_id = _get_openai_client()
 
     if client:
@@ -9626,166 +9786,195 @@ async def _invoke_fact_extraction(
         # discover what the decision table already knows. The adapt-retry
         # below stays for providers the table does not cover.
         _extraction_fmt, _extraction_base_url = resolved_json_response_format()
-        use_json_mode = _extraction_fmt is not None
         # #1290 M1 (po-2023 diagnostic) — explicit max_tokens so a dense
         # corpus's JSON output is not silently truncated by the default
         # completion ceiling (the root cause of ``Expecting value (char ~3033)``).
-        use_max_tokens = _EXTRACTION_MAX_TOKENS > 0
+        # #2850 lot 8 — the flags live in one dict SHARED by the k windows:
+        # a param the endpoint rejects stays dropped for the later windows
+        # (same endpoint, same rejection), and ``last_reason`` feeds the
+        # fail-loud fallback whatever the last window saw.
+        _extraction_flags.update(
+            {
+                "use_json_mode": _extraction_fmt is not None,
+                "use_max_tokens": _EXTRACTION_MAX_TOKENS > 0,
+            }
+        )
         # #2850 lot 4 — the window is selected ONCE per call (same site and
         # same selection as before: the retry loop re-computed an identical
         # slice) so the payload and the trace can name the k of N the reader
         # actually saw. Counts only downstream: no source text (#2908).
-        _extraction_reading = selected_text(
+        _extraction_state = reading_state_from_context(context)
+        _extraction_reading, _extraction_selection = selected_text_and_selection(
             input_text,
             LLM_EXTRACTION_WINDOW,
             "fact_extraction",
-            state=reading_state_from_context(context),
+            state=_extraction_state,
         )
-        for attempt in range(1, _EXTRACTION_MAX_ATTEMPTS + 1):
-            try:
-                llm_kwargs: Dict[str, Any] = dict(det_params)
-                if use_json_mode:
-                    # #3096: the decision's format (``json_object`` on
-                    # openai-compatible routes — unchanged, cassette keys
-                    # stable), never a re-spelled literal here.
-                    llm_kwargs["response_format"] = _extraction_fmt
-                if use_max_tokens:
-                    # #1936 sampling policy: reasoning families (gpt-5*, o1*,
-                    # o3*) reject the max_tokens spelling with a 400. Before
-                    # this, every extraction call on gpt-5.6-luna died as
-                    # BadRequestError and silently degraded through the #1290
-                    # heuristic fallback (measured #1603: unrecordable in
-                    # replay, and the degraded chain starves belief_sets).
-                    if _is_reasoning_model(model_id):
-                        llm_kwargs["max_completion_tokens"] = _EXTRACTION_MAX_TOKENS
-                    else:
-                        llm_kwargs["max_tokens"] = _EXTRACTION_MAX_TOKENS
-                response = await _guarded_chat_completion(
-                    client,
-                    model=model_id,
-                    messages=[
-                        {"role": "system", "content": system_content},
-                        {
-                            "role": "user",
-                            "content": _extraction_reading,
-                        },
-                    ],
-                    **llm_kwargs,
-                )
-                raw = response.choices[0].message.content or ""
-                data = _parse_json_from_llm(raw)
-                if data:
-                    # Normalize arguments/claims: accept both str and dict formats
-                    raw_args = data.get("arguments", [])
-                    raw_claims = data.get("claims", [])
-                    raw_fallacies = data.get("fallacies", [])
-                    arguments = _normalize_items_with_quotes(raw_args)
-                    claims = _normalize_items_with_quotes(raw_claims)
-                    fallacies = _normalize_fallacies_with_quotes(raw_fallacies)
-                    _extract_result = {
-                        "arguments": arguments,
-                        "claims": claims,
-                        "fallacies": fallacies,
-                        "summary": data.get("summary", ""),
-                        "claim_count": len(claims),
-                        "argument_count": len(arguments),
-                        "source_length": len(input_text),
-                        # #2850 lot 4 — the k of the k-of-N pair: how many
-                        # characters of the source the extraction read.
-                        "reading_window_chars": len(_extraction_reading),
-                        "extraction_method": "llm",
-                        "extraction_status": "ok",
-                    }
-                    # Trace entry for fact extraction specialist
-                    _state = context.get("_state_object")
-                    if _state is not None:
-                        _n_args = _extract_result.get("argument_count", 0)
-                        _n_claims = _extract_result.get("claim_count", 0)
-                        # #2850 lot 4 — a window that read less than the
-                        # document says so, in counts (no source text).
-                        _extract_window_note = (
-                            f" Lecture : {len(_extraction_reading)} des "
-                            f"{len(input_text)} caractères. (#2850)"
-                            if len(_extraction_reading) < len(input_text)
-                            else ""
-                        )
-                        _state.add_trace_entry(
-                            phase="extract",
-                            agent="FactExtractor",
-                            reacts_to=[],
-                            summary=f"{_n_args} arguments et {_n_claims} claims identifiés — extraction LLM. Phase fondatrice du pipeline.{_extract_window_note}",
-                        )
-                    return _extract_result
-                # No parseable JSON — retry (the LLM is nondeterministic; a
-                # fresh call frequently parses cleanly). Distinguish the two
-                # silent-fallback paths so the fail-loud reason is
-                # diagnostically useful (po-2023 diagnostic, chemin B):
-                #   - no JSON braces at all → "no-json-object" (the model
-                #     ignored the JSON instruction entirely — latent hole)
-                #   - braces present but unparseable → "unparseable-json"
-                #     (truncation M1 when max_tokens is still too low, or a
-                #     malformed structure)
-                has_braces = "{" in raw and "}" in raw
-                last_reason = (
-                    f"llm_{'unparseable-json' if has_braces else 'no-json-object'}"
-                    f"(attempt={attempt},len={len(raw)})"
-                )
-                logger.warning(
-                    f"fact extraction: LLM returned no parseable JSON "
-                    f"(attempt {attempt}/{_EXTRACTION_MAX_ATTEMPTS}, {last_reason})"
-                )
-            except LLMCacheMiss:
-                # Replay-only (#2320): a cache miss is DETERMINISTIC — the key
-                # derives from the request content, so retrying the identical
-                # request re-misses identically. Retrying burned
-                # _EXTRACTION_MAX_ATTEMPTS misses per extraction and the
-                # #1290 heuristic fallback then masked the broken lane
-                # (extraction_status=failed is loud, but the lane verdict said
-                # green — constat D, #1603). The miss traverses.
-                raise
-            except Exception as e:
-                msg = str(e)
-                low = msg.lower()
-                # Config-rejection handling: response_format / max_tokens are
-                # not supported by every endpoint/model. Drop the offending
-                # param(s) and continue the retry loop (config issue, not a
-                # transient LLM failure — the retry is still worthwhile). Each
-                # param is dropped at most once, so the budget is not spent on
-                # the same config rejection repeatedly.
-                dropped = False
-                if use_json_mode and ("response_format" in low or "json_object" in low):
-                    logger.info(
-                        "fact extraction: response_format json_mode rejected by "
-                        "endpoint, retrying without it"
+        # #2850 lot 8 — the opening window is no longer the whole read:
+        # above one window's worth of text, k = min(3, ceil(L/3000))
+        # stratified windows cover the document (tiled up to 9 000 chars,
+        # head/middle/end beyond), the FIRST staying the selector's (#1737
+        # head selection untouched). A document that fits one window keeps
+        # exactly today's single call, byte-identical. Never one wider call
+        # — #2912 is that defect, repaired.
+        _offsets = stratified_window_offsets(len(input_text), LLM_EXTRACTION_WINDOW)
+        _readings: List[str] = [_extraction_reading] + [
+            input_text[o : o + LLM_EXTRACTION_WINDOW] for o in _offsets[1:]
+        ]
+        arguments: List[Dict[str, Any]] = []
+        claims: List[Dict[str, Any]] = []
+        fallacies: List[Dict[str, Any]] = []
+        # #2850 lot 8 R1135 — the merge sets are PER CATEGORY and the dedup
+        # runs ACROSS windows only. One set shared by the three categories
+        # made a claim worded like an argument vanish (arguments merge first,
+        # the claim's identical (text, quote) pair was read as a repeat), and
+        # keying each item the moment it was read also collapsed two
+        # identical units of the SAME answer. The windows overlap by
+        # construction — a unit read twice is the plan's duplication and
+        # collapses; a double report inside one answer is the model's own
+        # output and is kept as reported.
+        _seen_arguments: Set[Tuple[str, str]] = set()
+        _seen_claims: Set[Tuple[str, str]] = set()
+        _seen_fallacies: Set[Tuple[str, str]] = set()
+        _summary = ""
+        _windows_ok = 0
+        # #2850 lot 8 — the spans of the windows that ACTUALLY answered. A
+        # window that failed read nothing: counting its span would state a
+        # figure stronger than its measurement (#3099/#1019).
+        _read_spans: List[Tuple[int, int]] = []
+        for _window_index, _window_reading in enumerate(_readings):
+            _data = await _extraction_call_one_window(
+                client=client,
+                model_id=model_id,
+                det_params=det_params,
+                system_content=system_content,
+                extraction_fmt=_extraction_fmt,
+                reading=_window_reading,
+                flags=_extraction_flags,
+            )
+            if not _data:
+                continue
+            _windows_ok += 1
+            if _window_index == 0:
+                _read_spans.append(
+                    (
+                        _extraction_selection.offset,
+                        _extraction_selection.offset + len(_extraction_reading),
                     )
-                    use_json_mode = False
-                    dropped = True
-                if use_max_tokens and (
-                    "max_tokens" in low or "max_completion_tokens" in low
-                ):
-                    logger.info(
-                        "fact extraction: max_tokens rejected by endpoint, "
-                        "retrying without it"
+                )
+            else:
+                _window_offset = _offsets[_window_index]
+                _read_spans.append(
+                    (
+                        _window_offset,
+                        min(_window_offset + LLM_EXTRACTION_WINDOW, len(input_text)),
                     )
-                    use_max_tokens = False
-                    dropped = True
-                if dropped:
+                )
+            arguments.extend(
+                _cross_window_unique(
+                    _normalize_items_with_quotes(_data.get("arguments", [])),
+                    _seen_arguments,
+                    "text",
+                )
+            )
+            claims.extend(
+                _cross_window_unique(
+                    _normalize_items_with_quotes(_data.get("claims", [])),
+                    _seen_claims,
+                    "text",
+                )
+            )
+            fallacies.extend(
+                _cross_window_unique(
+                    _normalize_fallacies_with_quotes(_data.get("fallacies", [])),
+                    _seen_fallacies,
+                    "type",
+                )
+            )
+            if not _summary and _data.get("summary"):
+                _summary = str(_data.get("summary"))
+        if _windows_ok:
+            # #2850 lot 8 — chars read is the UNION of the spans that
+            # ANSWERED: below 3×3000 chars the windows tile and overlap, so a
+            # sum of slice lengths would overcount what the reader saw, and a
+            # failed window's span would overcount what it never saw.
+            _chars_read = 0
+            _span_end = -1
+            for _lo, _hi in sorted(_read_spans):
+                if _hi <= _lo:
                     continue
-                last_reason = (
-                    f"llm_call_error(attempt={attempt},"
-                    f"type={type(e).__name__},msg={msg[:120]})"
+                _chars_read += max(0, _hi - max(_lo, _span_end))
+                _span_end = max(_span_end, _hi)
+            _chars_read = min(_chars_read, len(input_text))
+            if _windows_ok > 1 and _extraction_state is not None:
+                # The record says k windows and the union read — counts only
+                # (#2908), in the #3105 ``extra`` shape. One answered window
+                # keeps today's entry untouched: there is nothing to stratify
+                # that the single-window form does not already say. The
+                # recorder is reached through getattr like every other site:
+                # ``reading_state_from_context`` types as ``object``.
+                _recorder = getattr(_extraction_state, "record_reading_window", None)
+                if _recorder is not None:
+                    _recorder(
+                        "fact_extraction",
+                        _extraction_selection,
+                        extra={
+                            "windows": _windows_ok,
+                            "chars_read": _chars_read,
+                        },
+                    )
+            _extract_result = {
+                "arguments": arguments,
+                "claims": claims,
+                "fallacies": fallacies,
+                "summary": _summary,
+                "claim_count": len(claims),
+                "argument_count": len(arguments),
+                "source_length": len(input_text),
+                # #2850 lot 4 — the k of the k-of-N pair: how many
+                # characters of the source the extraction read. Lot 8 —
+                # the UNION of the k windows, never the first alone.
+                "reading_window_chars": _chars_read,
+                "extraction_method": "llm",
+                "extraction_status": "ok",
+            }
+            # Trace entry for fact extraction specialist
+            _state = context.get("_state_object")
+            if _state is not None:
+                _n_args = _extract_result.get("argument_count", 0)
+                _n_claims = _extract_result.get("claim_count", 0)
+                # #2850 lot 4 — a window that read less than the
+                # document says so, in counts (no source text). Lot 8 —
+                # the note names the k windows when there are several;
+                # a tiled read that covered everything says nothing, as
+                # before.
+                if _chars_read < len(input_text) and _windows_ok > 1:
+                    _extract_window_note = (
+                        f" Lecture : {_chars_read} des "
+                        f"{len(input_text)} caractères en "
+                        f"{_windows_ok} fenêtres. (#2850)"
+                    )
+                elif _chars_read < len(input_text):
+                    _extract_window_note = (
+                        f" Lecture : {_chars_read} des "
+                        f"{len(input_text)} caractères. (#2850)"
+                    )
+                else:
+                    _extract_window_note = ""
+                _state.add_trace_entry(
+                    phase="extract",
+                    agent="FactExtractor",
+                    reacts_to=[],
+                    summary=f"{_n_args} arguments et {_n_claims} claims identifiés — extraction LLM. Phase fondatrice du pipeline.{_extract_window_note}",
                 )
-                logger.warning(
-                    f"fact extraction: LLM call failed "
-                    f"(attempt {attempt}/{_EXTRACTION_MAX_ATTEMPTS}): {e}"
-                )
+            return _extract_result
         logger.error(
             f"LLM fact extraction FAILED after {_EXTRACTION_MAX_ATTEMPTS} attempts "
-            f"(last_reason={last_reason}) — falling back to heuristic claims with "
-            f"explicit extraction_status (#1290)"
+            f"(last_reason={_extraction_flags['last_reason']}) — falling back to "
+            f"heuristic claims with explicit extraction_status (#1290)"
         )
     else:
-        last_reason = "no-openai-client"
+        _extraction_flags["last_reason"] = "no-openai-client"
         logger.warning("fact extraction: no OpenAI client configured")
 
     # Heuristic fallback — supplies *claims* (sentence split) but NEVER
@@ -9794,22 +9983,22 @@ async def _invoke_fact_extraction(
     # corpus. Anti-pendule (#1019): reliability, not maquillage — we do NOT
     # invent arguments here.
     sentences = re.split(r"(?<=[.!?])\s+", input_text.strip())
-    claims = [s.strip() for s in sentences if len(s.strip()) > 20]  # type: ignore[misc]
+    _heuristic_claims = [s.strip() for s in sentences if len(s.strip()) > 20]
     _heuristic_result = {
         "arguments": [],
-        "claims": claims,
+        "claims": _heuristic_claims,
         "fallacies": [],
         "summary": "",
-        "claim_count": len(claims),
+        "claim_count": len(_heuristic_claims),
         "argument_count": 0,
         "source_length": len(input_text),
         "extraction_method": "heuristic",
-        "extraction_status": f"failed:{last_reason}",
+        "extraction_status": f"failed:{_extraction_flags['last_reason']}",
     }
     # Trace entry for heuristic fact extraction
     _state = context.get("_state_object")
-    if _state is not None and claims:
-        _n_claims = len(claims)
+    if _state is not None and _heuristic_claims:
+        _n_claims = len(_heuristic_claims)
         _state.add_trace_entry(
             phase="extract",
             agent="FactExtractor",
