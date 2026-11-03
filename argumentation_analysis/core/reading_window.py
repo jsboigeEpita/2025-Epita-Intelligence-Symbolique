@@ -133,6 +133,69 @@ def stratified_window_offsets(length: int, window: int, cap: int = 3) -> List[in
     return [i * (length - window) // (k - 1) for i in range(k)]
 
 
+# --- #2850 lot 9: what ONE extraction call can read, from measurement.
+
+#: Completion tokens one extraction unit costs — its text, its quote and its
+#: JSON scaffolding. Upper end of the shape lot 8 posted (≈0.8-1.2 k tokens
+#: for five units), because a capacity is a promise the model has to keep and
+#: the unfavourable end of the measurement is the one that keeps it.
+EXTRACTION_TOKENS_PER_UNIT = 240
+#: The fixed part of one extraction answer (summary + JSON envelope), tokens.
+EXTRACTION_FIXED_TOKENS = 400
+#: Characters one unit costs at the extraction's PEAK density, measured on the
+#: 48 local states that carry LLM units: 16 units in one 3 000-character read
+#: (5.33 units / 1 000 characters; the median state carries 2.67). The peak is
+#: the bound an integral read has to survive, not the median.
+EXTRACTION_PEAK_CHARS_PER_UNIT = 188  # ceil(3000 / 16)
+
+
+def one_call_extraction_capacity(
+    max_completion_tokens: int, window: int = LLM_EXTRACTION_WINDOW
+) -> int:
+    """#2850 lot 9 — the longest document ONE extraction call can read.
+
+    Two ceilings could bind, and only one of them is close: the prompt side of
+    a 6 000-character read is a couple of thousand tokens, far under any
+    context these models offer, while the ANSWER — one JSON object per unit,
+    each carrying the unit's text and its quote — meets the completion cap at
+    a document length that is measurable.
+
+    So the capacity is arithmetic over three numbers, none of them a taste:
+    the run's completion cap, the tokens one unit costs, and the peak density
+    of the units the local states actually produced. ``cap * unit⁻¹ * chars``
+    is how many units the cap buys; multiplying by the peak characters per
+    unit is how much text can be expected to fill them.
+
+    Below one window is today's window, never a shrink: a capacity that came
+    out smaller would otherwise make the reading worse than the rule it
+    replaces. A cap of 0 means the knob is off and the provider decides the
+    ceiling — nothing is known about it, so no integral read is promised.
+    """
+    if max_completion_tokens <= 0:
+        return window
+    units = (
+        max_completion_tokens - EXTRACTION_FIXED_TOKENS
+    ) // EXTRACTION_TOKENS_PER_UNIT
+    return max(window, units * EXTRACTION_PEAK_CHARS_PER_UNIT)
+
+
+def reads_whole_text_in_one_call(
+    length: int,
+    max_completion_tokens: int,
+    window: int = LLM_EXTRACTION_WINDOW,
+) -> bool:
+    """#2850 lot 9 — is this document read ONCE, whole?
+
+    Strictly above one window: at or below it the caller keeps the #1737
+    selector's single call byte-identical (lot 8's control — the replay band's
+    cassettes must not see a new request), and an integral read would only
+    relabel a call that already carries the whole document.
+    """
+    return (
+        window < length <= one_call_extraction_capacity(max_completion_tokens, window)
+    )
+
+
 def select_reading_head(
     text: str, window: int, stride: int = _STRIDE
 ) -> WindowSelection:
