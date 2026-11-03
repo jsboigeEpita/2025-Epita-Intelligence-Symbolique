@@ -1,0 +1,663 @@
+"""#3375 — the v1 panel's blind judge, witnessed without a paid call.
+
+The dispatch's DoD, one witness per clause:
+
+- a fake judge with a deterministic seed;
+- a same-family judge is refused;
+- an invented citation drops the item **and it is counted**;
+- the dry-run lists exactly the panel;
+- the verdict table is produced on synthetic arm outputs.
+
+Plus the shapes that would make the instrument lie quietly: an unparsed
+answer coerced into a verdict, an M1 unprovable by construction, a cost
+printed as 0.0000 $ because the model is not priced (#1019 tri-state), a
+table built on a subset of the panel and reported as the panel.
+
+No network, no dataset, no key: every call goes through the injected
+``judge_call``, and the endpoint resolver is replaced. **Zero paid call.**
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import random
+import sys
+from pathlib import Path
+
+import pytest
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.dataset import judge_panel as jp  # noqa: E402
+
+# --- synthetic arms -------------------------------------------------------
+# Deliberately unlike the corpus: no real name, no real excerpt. What matters
+# is that a quote can be found (or not) mechanically.
+PIPELINE_TEXT = (
+    "Acte I — cadrage. Le graphe rejette la these alpha dans la semantique "
+    "stable et l'accepte dans la semantique preferee ; aucun argument ne "
+    "survit aux deux."
+)
+ZEROSHOT_TEXT = (
+    "Le document defend la these beta en s'appuyant sur un exemple date, et "
+    "ne discute jamais la semantique preferee."
+)
+GAP_TEXT = "la semantique preferee"  # present in the reading, absent from the analysis
+
+PANEL = ["aaaa1111", "bbbb2222", "cccc3333"]
+SEED = 3375
+
+
+def _write_json(path: Path, payload: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+
+def make_world(tmp_path: Path, ids=PANEL, zeroshot_model="gpt-5.6-luna"):
+    """A tiny stand-in for the campaign: both arms, on synthetic text."""
+    states = tmp_path / "states"
+    signatures = tmp_path / "signatures"
+    zeroshots = tmp_path / "zeroshots"
+    for doc_id in ids:
+        _write_json(
+            states / f"state_full_{doc_id}.json",
+            {
+                "state": {
+                    "act1_framing": PIPELINE_TEXT,
+                    "interpretive_question": "Quelle premisse reste sans appui ?",
+                }
+            },
+        )
+        _write_json(
+            signatures / f"signature_{doc_id}.json",
+            {
+                "opaque_id": doc_id,
+                "llm_usage": {
+                    "phase_1": {"prompt_tokens": 1200, "completion_tokens": 300}
+                },
+            },
+        )
+        _write_json(
+            zeroshots / f"{doc_id}.json",
+            {
+                "opaque_id": doc_id,
+                "provenance": {"model": zeroshot_model, "git_head": "deadbeef"},
+                "usage": {"prompt_tokens": 900, "completion_tokens": 250},
+                "answer": ZEROSHOT_TEXT,
+            },
+        )
+    return {
+        "states": states,
+        "signatures": signatures,
+        "zeroshots": zeroshots,
+        "out": tmp_path / "out",
+    }
+
+
+def _answer(
+    state="PIPELINE_SUPPLIES",
+    items=None,
+    identification="1",
+    conclusion="Le surplus est formel.",
+):
+    return json.dumps(
+        {
+            "identification": identification,
+            "state": state,
+            "items": items or [],
+            "style_notes": ["l'analyse est plus longue"],
+            "conclusion": conclusion,
+        },
+        ensure_ascii=False,
+    )
+
+
+class FakeJudge:
+    """Counts its calls and answers from a fixed table — never the network."""
+
+    def __init__(self, answer=None):
+        self.calls = []
+        self._answer = answer or (lambda doc, prompt: _answer())
+
+    async def __call__(self, endpoint, prompt, timeout=600):
+        self.calls.append(prompt)
+        return {
+            "status_code": 200,
+            "answer": self._answer(None, prompt),
+            "prompt_tokens": 2000,
+            "completion_tokens": 400,
+            "usage": {},
+        }
+
+
+def _argv(world, judge_model="claude-sonnet-5-5", extra=()):
+    return [
+        "--judge-model",
+        judge_model,
+        "--panel-file",
+        str(world["panel_file"]),
+        "--seed",
+        str(SEED),
+        "--states-dir",
+        str(world["states"]),
+        "--signatures-dir",
+        str(world["signatures"]),
+        "--zeroshot-dir",
+        str(world["zeroshots"]),
+        "--out-dir",
+        str(world["out"]),
+        *extra,
+    ]
+
+
+def _with_panel_file(world, ids=PANEL):
+    panel_file = world["states"].parent / "panel.txt"
+    panel_file.write_text("\n".join(ids) + "\n", encoding="utf-8")
+    return {**world, "panel_file": panel_file}
+
+
+@pytest.fixture(autouse=True)
+def _no_named_route(monkeypatch):
+    """The judge's route is replaced: a witness must never need a real key."""
+    monkeypatch.setattr(
+        jp,
+        "resolve_judge_endpoint",
+        lambda model: {
+            "api_key": "not-a-key",
+            "base_url": "https://example.invalid/v1",
+            "model_id": model,
+            "family": "anthropic",
+            "host": "example.invalid",
+            "route": "test",
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# The draw
+# ---------------------------------------------------------------------------
+
+
+class TestTheDraw:
+    def test_same_seed_and_document_always_give_the_same_order(self):
+        first = [jp.draw_order(doc, SEED) for doc in PANEL]
+        second = [jp.draw_order(doc, SEED) for doc in PANEL]
+        assert first == second
+
+    def test_the_order_is_drawn_per_document_not_once_for_the_panel(self):
+        """A single global order lets a position bias dress up as an effect."""
+        draws = {jp.draw_order(f"doc{i:04d}", SEED) for i in range(64)}
+        assert draws == {
+            True,
+            False,
+        }, "every document fell on the same side: the draw is not per document"
+
+    def test_positions_are_a_permutation_of_one_and_two(self):
+        for doc in PANEL:
+            pos = jp.positions(doc, SEED)
+            assert pos["pipeline"] in (1, 2)
+            assert pos["zeroshot"] in (1, 2)
+            assert pos["pipeline"] != pos["zeroshot"]
+
+    def test_positions_match_the_draw(self):
+        """The permutation is the draw's, checked against the stdlib directly."""
+        for doc in PANEL:
+            expected = random.Random(f"{SEED}:{doc}").random() < 0.5
+            assert jp.draw_order(doc, SEED) is expected
+
+    def test_a_different_seed_can_change_the_order(self):
+        """A seed that changes nothing is a seed that is not read."""
+        for doc in PANEL:
+            other = jp.draw_order(doc, SEED + 1)
+            if other != jp.draw_order(doc, SEED):
+                return
+        pytest.fail("no document changed side across two seeds — the seed is not read")
+
+
+# ---------------------------------------------------------------------------
+# Why the judge must be another family
+# ---------------------------------------------------------------------------
+
+
+class TestTheJuryIsNotTheAuthor:
+    def test_same_family_is_refused_with_both_ids_named(self):
+        with pytest.raises(ValueError) as excinfo:
+            jp.assert_judge_differs("gpt-5.6-luna", "gpt-5.6-luna")
+        message = str(excinfo.value)
+        assert "gpt-5.6-luna" in message
+        assert "same" in message.lower() or "both" in message.lower()
+
+    def test_another_family_passes_and_returns_both_families(self):
+        assert jp.assert_judge_differs("claude-sonnet-5-5", "gpt-5.6-luna") == (
+            "anthropic",
+            "openai",
+        )
+
+    def test_an_unknown_family_raises_instead_of_being_guessed(self):
+        with pytest.raises(ValueError):
+            jp.model_family("a-model-nobody-priced")
+
+    def test_the_runner_refuses_before_any_call(self, tmp_path):
+        """The refusal is a stop, not a warning printed next to a running pass."""
+        world = _with_panel_file(make_world(tmp_path))
+        judge = FakeJudge()
+        with pytest.raises(ValueError):
+            asyncio.run(
+                jp.run(
+                    _argv(world, judge_model="gpt-5.6-luna", extra=("--dry-run",)),
+                    judge_call=judge,
+                )
+            )
+        assert judge.calls == []
+
+
+# ---------------------------------------------------------------------------
+# Citations: an item without a findable quote does not exist
+# ---------------------------------------------------------------------------
+
+
+class TestCitations:
+    def test_an_invented_citation_drops_the_item_and_is_counted(self):
+        kept, dropped = jp.validate_items(
+            [
+                {
+                    "code": "S2",
+                    "analysis_quote": "un argument que le document ne contient nulle part",
+                    "note": "inventé",
+                }
+            ],
+            PIPELINE_TEXT,
+            ZEROSHOT_TEXT,
+        )
+        assert kept == []
+        assert len(dropped) == 1
+        assert dropped[0]["code"] == "S2"
+        assert dropped[0]["reason"] == "quote_not_in_pipeline_text"
+
+    def test_a_real_citation_survives(self):
+        """The control: the same item with a true quote is KEPT.
+
+        Without it, the drop witness would pass on an instrument that drops
+        everything.
+        """
+        kept, dropped = jp.validate_items(
+            [
+                {
+                    "code": "S2",
+                    "analysis_quote": "l'accepte dans la semantique preferee",
+                }
+            ],
+            PIPELINE_TEXT,
+            ZEROSHOT_TEXT,
+        )
+        assert dropped == []
+        assert len(kept) == 1
+        assert kept[0]["code"] == "S2"
+
+    def test_whitespace_and_line_wrapping_do_not_break_a_citation(self):
+        wrapped = PIPELINE_TEXT.replace(" ", "\n   ", 3)
+        assert jp.is_cited(wrapped, "l'accepte dans la semantique preferee")
+
+    def test_a_paraphrase_is_not_a_citation(self):
+        assert not jp.is_cited(
+            PIPELINE_TEXT, "le graphe accepte la these alpha dans la semantique stable"
+        )
+
+    def test_a_bare_keyword_is_not_a_citation(self):
+        """It occurs in every text, so it proves nothing about this one."""
+        assert not jp.is_cited(PIPELINE_TEXT, "alpha")
+
+    def test_a_quote_from_the_wrong_side_drops_the_item(self):
+        kept, dropped = jp.validate_items(
+            [{"code": "S1", "analysis_quote": ZEROSHOT_TEXT}],
+            PIPELINE_TEXT,
+            ZEROSHOT_TEXT,
+        )
+        assert kept == []
+        assert dropped[0]["reason"] == "quote_not_in_pipeline_text"
+
+    def test_an_m1_needs_only_the_reading_quote(self):
+        """An M1 is an ABSENCE: demanding an analysis quote makes it unprovable."""
+        kept, dropped = jp.validate_items(
+            [
+                {
+                    "code": "M1",
+                    "reading_quote": "ne discute jamais la semantique preferee",
+                    "on_central_thesis": True,
+                }
+            ],
+            PIPELINE_TEXT,
+            ZEROSHOT_TEXT,
+        )
+        assert dropped == []
+        assert kept[0]["code"] == "M1"
+
+    def test_an_m1_with_no_reading_quote_is_dropped(self):
+        kept, dropped = jp.validate_items(
+            [{"code": "M1", "analysis_quote": "Le graphe rejette la these alpha"}],
+            PIPELINE_TEXT,
+            ZEROSHOT_TEXT,
+        )
+        assert kept == []
+        assert dropped[0]["reason"] == "missing_zeroshot_quote"
+
+    def test_an_m2_quotes_both_sides(self):
+        kept, dropped = jp.validate_items(
+            [
+                {
+                    "code": "M2",
+                    "analysis_quote": "Le graphe rejette la these alpha",
+                    "reading_quote": "Le document defend la these beta",
+                }
+            ],
+            PIPELINE_TEXT,
+            ZEROSHOT_TEXT,
+        )
+        assert dropped == []
+        assert kept[0]["code"] == "M2"
+
+    def test_an_unknown_code_is_dropped_not_kept_under_another_name(self):
+        kept, dropped = jp.validate_items(
+            [{"code": "S9", "analysis_quote": PIPELINE_TEXT}],
+            PIPELINE_TEXT,
+            ZEROSHOT_TEXT,
+        )
+        assert kept == []
+        assert dropped[0]["reason"] == "unknown_code"
+
+
+# ---------------------------------------------------------------------------
+# Severity is the runner's rule, not the judge's opinion
+# ---------------------------------------------------------------------------
+
+
+class TestSeverity:
+    def test_m2_is_always_severe(self):
+        assert jp.severity_of("M2") == "severe"
+        assert jp.severity_of("M2", on_central_thesis=False) == "severe"
+
+    def test_m1_on_the_central_thesis_is_severe(self):
+        assert jp.severity_of("M1", on_central_thesis=True) == "severe"
+
+    def test_m1_elsewhere_is_moderate(self):
+        assert jp.severity_of("M1", on_central_thesis=False) == "moderate"
+
+    def test_a_supply_has_no_severity(self):
+        for code in ("S1", "S2", "S3", "S4", "S5"):
+            assert jp.severity_of(code) is None
+
+
+# ---------------------------------------------------------------------------
+# The judge's answer
+# ---------------------------------------------------------------------------
+
+
+class TestTheAnswer:
+    def test_bare_json_parses(self):
+        assert jp.parse_judge_answer('{"state":"PARITY"}')["state"] == "PARITY"
+
+    def test_json_wrapped_in_prose_parses(self):
+        answer = 'Voici mon verdict.\n```json\n{"state":"PARITY"}\n```\nFin.'
+        assert jp.parse_judge_answer(answer)["state"] == "PARITY"
+
+    def test_nested_objects_do_not_truncate_the_parse(self):
+        answer = '{"state":"PARITY","items":[{"code":"S1"}]}'
+        parsed = jp.parse_judge_answer(answer)
+        assert parsed["items"] == [{"code": "S1"}]
+
+    def test_an_unreadable_answer_is_counted_not_coerced(self):
+        row = jp._judge_one(
+            "doc0", PIPELINE_TEXT, ZEROSHOT_TEXT, SEED, "je ne sais pas"
+        )
+        assert row["state"] == "UNPARSED"
+        assert row["kept"] == []
+        assert row["dropped"][0]["code"] is None
+
+    def test_an_unknown_state_is_not_silently_mapped_to_parity(self):
+        row = jp._judge_one(
+            "doc0", PIPELINE_TEXT, ZEROSHOT_TEXT, SEED, _answer(state="PROBABLY_FINE")
+        )
+        assert row["state"] == "UNPARSED"
+
+    def test_the_identification_is_compared_with_the_draw(self):
+        doc = PANEL[0]
+        drawn_first = jp.positions(doc, SEED)["pipeline"] == 1
+        row_one = jp._judge_one(
+            doc, PIPELINE_TEXT, ZEROSHOT_TEXT, SEED, _answer(identification="1")
+        )
+        row_two = jp._judge_one(
+            doc, PIPELINE_TEXT, ZEROSHOT_TEXT, SEED, _answer(identification="2")
+        )
+        assert row_one["identification_ok"] is drawn_first
+        assert row_two["identification_ok"] is (not drawn_first)
+
+
+# ---------------------------------------------------------------------------
+# The prompt
+# ---------------------------------------------------------------------------
+
+
+class TestThePrompt:
+    def test_no_arm_label_is_used(self):
+        prompt = jp.build_judge_prompt(ZEROSHOT_TEXT, PIPELINE_TEXT)
+        assert "zeroshot_2841" not in prompt
+        assert "zero-shot" not in prompt.lower()
+
+    def test_the_prompt_never_says_which_position_is_which(self):
+        prompt = jp.build_judge_prompt(ZEROSHOT_TEXT, PIPELINE_TEXT)
+        assert "Texte 1 est" not in prompt
+        assert "Texte 2 est" not in prompt
+        assert prompt.count("## Texte 1") == 1
+        assert prompt.count("## Texte 2") == 1
+
+    def test_both_texts_are_carried_verbatim(self):
+        prompt = jp.build_judge_prompt(ZEROSHOT_TEXT, PIPELINE_TEXT)
+        assert ZEROSHOT_TEXT in prompt
+        assert PIPELINE_TEXT in prompt
+
+    def test_the_roles_are_described_so_the_codes_are_answerable(self):
+        prompt = jp.build_judge_prompt(ZEROSHOT_TEXT, PIPELINE_TEXT)
+        assert "analyse multi-méthodes" in prompt
+        assert "lecture en un seul passage" in prompt
+
+    def test_the_citation_rule_is_stated(self):
+        prompt = jp.build_judge_prompt(ZEROSHOT_TEXT, PIPELINE_TEXT)
+        assert "mot pour mot" in prompt
+
+    def test_style_is_explicitly_not_a_gap(self):
+        prompt = jp.build_judge_prompt(ZEROSHOT_TEXT, PIPELINE_TEXT)
+        assert "forme" in prompt and "pas un M" in prompt
+
+    def test_the_texts_land_in_the_drawn_order(self):
+        doc = PANEL[0]
+        pos = jp.positions(doc, SEED)
+        prompt = jp.build_judge_prompt(
+            *(
+                (PIPELINE_TEXT, ZEROSHOT_TEXT)
+                if pos["pipeline"] == 1
+                else (ZEROSHOT_TEXT, PIPELINE_TEXT)
+            )
+        )
+        first_body = PIPELINE_TEXT if pos["pipeline"] == 1 else ZEROSHOT_TEXT
+        assert prompt.index(first_body) < prompt.index(
+            ZEROSHOT_TEXT if pos["pipeline"] == 1 else PIPELINE_TEXT
+        )
+
+
+# ---------------------------------------------------------------------------
+# The dry-run — the panel, the sizes, the cost, and no call
+# ---------------------------------------------------------------------------
+
+
+class TestDryRun:
+    def test_it_lists_exactly_the_panel(self, tmp_path, capsys):
+        world = _with_panel_file(make_world(tmp_path))
+        judge = FakeJudge()
+        assert (
+            asyncio.run(jp.run(_argv(world, extra=("--dry-run",)), judge_call=judge))
+            == 0
+        )
+        out = capsys.readouterr().out
+        for doc in PANEL:
+            assert doc in out
+        assert "not-in-the-panel" not in out
+        assert f"candidate documents: {len(PANEL)}" in out
+        assert judge.calls == [], "the dry-run made a call"
+        assert "no call made" in out
+
+    def test_it_prints_an_estimate_and_never_a_made_up_zero(self, tmp_path, capsys):
+        world = _with_panel_file(make_world(tmp_path))
+        asyncio.run(jp.run(_argv(world, extra=("--dry-run",)), judge_call=FakeJudge()))
+        out = capsys.readouterr().out
+        assert "estimated judge cost:" in out
+        assert "unpriced" in out or "$" in out
+
+    def test_an_unpriced_judge_says_unpriced(self, tmp_path, capsys):
+        world = _with_panel_file(make_world(tmp_path))
+        asyncio.run(
+            jp.run(
+                _argv(world, judge_model="claude-unpriced-9", extra=("--dry-run",)),
+                judge_call=FakeJudge(),
+            )
+        )
+        out = capsys.readouterr().out
+        assert "unpriced" in out
+        assert "0.0000 $" not in out
+
+    def test_a_panel_document_without_an_arm_stops_the_run(self, tmp_path):
+        world = _with_panel_file(
+            make_world(tmp_path, ids=PANEL[:2]), ids=PANEL + ["dddd4444"]
+        )
+        with pytest.raises(SystemExit) as excinfo:
+            asyncio.run(
+                jp.run(_argv(world, extra=("--dry-run",)), judge_call=FakeJudge())
+            )
+        assert "dddd4444" in str(excinfo.value)
+
+    def test_no_panel_at_all_is_refused(self, tmp_path):
+        world = make_world(tmp_path)
+        world["panel_file"] = None
+        argv = [
+            "--judge-model",
+            "claude-sonnet-5-5",
+            "--states-dir",
+            str(world["states"]),
+            "--signatures-dir",
+            str(world["signatures"]),
+            "--zeroshot-dir",
+            str(world["zeroshots"]),
+            "--out-dir",
+            str(world["out"]),
+            "--dry-run",
+        ]
+        with pytest.raises(SystemExit):
+            asyncio.run(jp.run(argv, judge_call=FakeJudge()))
+
+
+# ---------------------------------------------------------------------------
+# The table, on synthetic arms
+# ---------------------------------------------------------------------------
+
+
+class TestTheTable:
+    def _run(self, world, judge):
+        return asyncio.run(jp.run(_argv(world), judge_call=judge))
+
+    def test_the_table_is_written_and_names_the_facts_it_was_given(self, tmp_path):
+        world = _with_panel_file(make_world(tmp_path))
+
+        def answer(_doc, _prompt):
+            return _answer(
+                state="PIPELINE_SUPPLIES_WITH_GAP",
+                items=[
+                    {
+                        "code": "S2",
+                        "analysis_quote": "l'accepte dans la semantique preferee",
+                    },
+                    {
+                        "code": "M1",
+                        "reading_quote": "ne discute jamais la semantique preferee",
+                        "on_central_thesis": True,
+                    },
+                    {
+                        "code": "S1",
+                        "analysis_quote": "une phrase qui n'existe dans aucun des deux textes",
+                    },
+                ],
+            )
+
+        judge = FakeJudge(answer)
+        assert self._run(world, judge) == 0
+        assert len(judge.calls) == len(PANEL), "one call per document, no more"
+
+        table = (world["out"] / "TABLE.md").read_text(encoding="utf-8")
+        assert "PIPELINE_SUPPLIES_WITH_GAP" in table
+        assert "`claude-sonnet-5-5`" in table
+        assert "`gpt-5.6-luna`" in table
+        assert str(SEED) in table
+        assert "aveugle à l'ordre, pas au style" in table
+        # one invented item per document, and every one of them counted
+        assert f"**{len(PANEL)}** item(s) tombés" in table
+        assert "quote_not_in_pipeline_text" in table
+
+    def test_the_distribution_counts_every_document(self, tmp_path):
+        world = _with_panel_file(make_world(tmp_path))
+        judge = FakeJudge(lambda *_: _answer(state="PARITY"))
+        self._run(world, judge)
+        table = (world["out"] / "TABLE.md").read_text(encoding="utf-8")
+        assert f"`PARITY` : **{len(PANEL)}**" in table
+
+    def test_an_unparsed_answer_shows_up_as_unparsed(self, tmp_path):
+        world = _with_panel_file(make_world(tmp_path))
+        judge = FakeJudge(lambda *_: "je préfère ne pas répondre")
+        self._run(world, judge)
+        table = (world["out"] / "TABLE.md").read_text(encoding="utf-8")
+        assert f"`UNPARSED` : **{len(PANEL)}**" in table
+
+    def test_each_document_record_is_written_with_its_draw(self, tmp_path):
+        world = _with_panel_file(make_world(tmp_path))
+        self._run(world, FakeJudge())
+        for doc in PANEL:
+            record = json.loads(
+                (world["out"] / f"{doc}.json").read_text(encoding="utf-8")
+            )
+            assert record["opaque_id"] == doc
+            assert record["positions"] == jp.positions(doc, SEED)
+            assert record["status_code"] == 200
+
+    def test_costs_are_priced_per_arm(self, tmp_path):
+        world = _with_panel_file(make_world(tmp_path))
+        self._run(world, FakeJudge())
+        table = (world["out"] / "TABLE.md").read_text(encoding="utf-8")
+        assert "pipeline : **" in table
+        assert "zero-shot : **" in table
+        assert "unpriced" not in table.split("## Coût par arm")[1]
+
+    def test_an_unpriced_arm_prints_unpriced_never_zero(self, tmp_path):
+        # A known family, an id the price table does not carry: the honest
+        # case. An unknown FAMILY stops the run even earlier (#3375), which is
+        # its own witness above.
+        world = _with_panel_file(
+            make_world(tmp_path, zeroshot_model="gpt-9-unpriced-preview")
+        )
+        self._run(world, FakeJudge())
+        table = (world["out"] / "TABLE.md").read_text(encoding="utf-8")
+        assert "unpriced" in table
+
+    def test_a_zeroshot_record_without_a_provenance_model_exits_by_name(self, tmp_path):
+        world = _with_panel_file(make_world(tmp_path))
+        record = json.loads(
+            (world["zeroshots"] / f"{PANEL[0]}.json").read_text(encoding="utf-8")
+        )
+        record["provenance"] = {}
+        _write_json(world["zeroshots"] / f"{PANEL[0]}.json", record)
+        with pytest.raises(SystemExit) as excinfo:
+            asyncio.run(jp.run(_argv(world), judge_call=FakeJudge()))
+        assert PANEL[0] in str(excinfo.value)
+
+    def test_nothing_is_written_by_a_dry_run(self, tmp_path):
+        world = _with_panel_file(make_world(tmp_path))
+        asyncio.run(jp.run(_argv(world, extra=("--dry-run",)), judge_call=FakeJudge()))
+        assert not world["out"].exists()
