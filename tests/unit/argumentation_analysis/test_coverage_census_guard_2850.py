@@ -1276,30 +1276,12 @@ REGISTRY = {
         "200",
         2,
     ): ("display", "first 200 chars of an already-produced string", "display only"),
-    (
-        "argumentation_analysis/plugins/fallacy_workflow_plugin.py",
-        "argument_text",
-        "500",
-        1,
-    ): (
-        "window",
-        "first 500 chars of the argument text",
-        "recorded at _explore_single_branch entry (site fallacy_descent) on "
-        "the document path; per-arg instances bound a unit (≤ extract "
-        "window) — payload-side, not document-scoped — #2850 lot 7",
-    ),
-    (
-        "argumentation_analysis/plugins/fallacy_workflow_plugin.py",
-        "argument_text",
-        "500",
-        2,
-    ): (
-        "window",
-        "first 500 chars of the argument text",
-        "recorded at _explore_single_branch entry (site fallacy_descent) on "
-        "the document path; per-arg instances bound a unit (≤ extract "
-        "window) — payload-side, not document-scoped — #2850 lot 7",
-    ),
+    # The two ``argument_text[:500]`` descent rows left here (#2850 lot 7) when
+    # #3376 moved the slice: the descent now reads ONE window computed by
+    # ``reading_window.descent_text_and_selection`` (same 500-char bound,
+    # centred on the wide net's located quote, the head as signalled fallback)
+    # — the slice lives in the mechanism module, so the plugin carries no
+    # census site for it anymore. Stale rows deleted, per the gate's contract.
     (
         "argumentation_analysis/plugins/fallacy_workflow_plugin.py",
         "argument_text",

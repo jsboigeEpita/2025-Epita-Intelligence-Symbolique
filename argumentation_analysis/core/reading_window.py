@@ -44,6 +44,12 @@ STATUS_SELECTED = "selected"
 STATUS_NO_PUNCTUATED_SPAN = "no_punctuated_span_found"
 STATUS_EMPTY_INPUT = "empty_input"
 STATUS_SHORT_INPUT = "short_input"
+#: #3376 — the descent read a window centred on the evidence it was given.
+STATUS_CENTRED_ON_QUOTE = "centred_on_quote"
+#: #3376 — the descent fell back to the head because its quote could not be
+#: located in the text. The fallback is the old behaviour; what is new is
+#: that the record says it happened.
+STATUS_HEAD_FALLBACK = "head_fallback_quote_not_located"
 
 # --- #2915: window widths, one named constant per MEANING, not per
 # --- value. A meaning shared across modules lives here; a file-local
@@ -68,6 +74,10 @@ LOGIC_ARGUMENT_WINDOW = 2000
 #: The debate fallback window — debate material when no structured
 #: parts exist.
 DEBATE_FALLBACK_WINDOW = 1500
+#: The fallacy descent window — the excerpt every taxonomy-descent prompt
+#: reads (#3376). One bound for every branch, and the value is a quality
+#: decision: it moves on a panel A/B, never as a repair side effect.
+DESCENT_WINDOW = 500
 
 
 @dataclass(frozen=True)
@@ -258,6 +268,75 @@ def head_selection(text: str, window: int) -> WindowSelection:
     if len(text) < window:
         return WindowSelection(0, window, STATUS_SHORT_INPUT)
     return WindowSelection(0, window, STATUS_SELECTED)
+
+
+def locate_quote(text: str, quote: str) -> int:
+    """#3376 — the offset of a verbatim quote, or -1 when it is not there.
+
+    Exact match first. A model reproduces the wording but not always the line
+    breaks, so a second pass lets any whitespace run stand for any other.
+    Nothing else is normalised: a quote that merely resembles the text is not
+    evidence, and centring a window on an approximate match would put the
+    descent somewhere the candidate was not found.
+    """
+    if not text or not quote:
+        return -1
+    needle = quote.strip()
+    if not needle:
+        return -1
+    index = text.find(needle)
+    if index >= 0:
+        return index
+    tokens = [re.escape(token) for token in needle.split()]
+    if not tokens:
+        return -1
+    match = re.search(r"\s+".join(tokens), text)
+    return match.start() if match else -1
+
+
+def descent_selection(
+    text: str, quote: str, window: int = DESCENT_WINDOW
+) -> WindowSelection:
+    """#3376 — WHERE the taxonomy descent reads for one candidate.
+
+    A located quote centres the window on it, at the same size the descent
+    always used: the descent then judges the candidate against the text the
+    candidate was found in, instead of the document's opening. An unlocated
+    quote (or none at all) keeps the head — the old behaviour — and says so
+    through ``STATUS_HEAD_FALLBACK``, because a fallback nobody records is
+    the defect this repairs.
+
+    The offset is clamped so the window never runs past the end, and a text
+    shorter than the window is read whole (offset 0): the bound bounds the
+    prompt, it never pads it.
+    """
+    if window <= 0:
+        raise ValueError(f"window must be positive, got {window}")
+    if not text or not text.strip():
+        return WindowSelection(0, window, STATUS_EMPTY_INPUT)
+    index = locate_quote(text, quote)
+    if index < 0:
+        head = head_selection(text, window)
+        return WindowSelection(head.offset, head.window, STATUS_HEAD_FALLBACK)
+    length = len(text)
+    if length <= window:
+        return WindowSelection(0, window, STATUS_CENTRED_ON_QUOTE)
+    span = min(len((quote or "").strip()), window)
+    offset = index - max(0, (window - span) // 2)
+    offset = max(0, min(offset, length - window))
+    return WindowSelection(offset, window, STATUS_CENTRED_ON_QUOTE)
+
+
+def descent_text_and_selection(
+    text: str, quote: str, window: int = DESCENT_WINDOW
+) -> Tuple[str, WindowSelection]:
+    """#3376 — the slice a descent prompt carries, and the selection that made it.
+
+    Same contract as ``selected_text_and_selection``: one implementation of
+    the slice, so the prompt cannot read a window the record does not name.
+    """
+    selection = descent_selection(text, quote, window)
+    return text[selection.offset : selection.offset + selection.window], selection
 
 
 def selected_text_and_selection(
