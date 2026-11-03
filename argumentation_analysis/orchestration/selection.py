@@ -29,7 +29,9 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 __all__ = [
     "SelectableUnit",
     "SelectionResult",
+    "TargetSelection",
     "select_for_budget",
+    "select_across_targets",
     "coverage_figure",
     "stratified_position",
     "merged_population_units",
@@ -372,6 +374,96 @@ def select_for_budget(
             "implemented strategy is 'stratified_position'"
         )
     return stratified_position(units, n, band_count=band_count, text_length=text_length)
+
+
+@dataclass(frozen=True)
+class TargetSelection:
+    """One selected entry, with what its TARGET contributes to the reading.
+
+    ``rank`` is the entry's position in the producer's order within its target
+    (1-based) and ``population`` the number the RECORD holds for that target —
+    not the number shown. ``cut`` is true only when the target's population is
+    not fully briefed, so a population that fits the budget renders exactly as
+    before (#3373 control).
+    """
+
+    entry: Any
+    target: str = ""
+    rank: int = 0
+    population: int = 0
+    cut: bool = False
+
+
+def select_across_targets(
+    entries: Sequence[Any],
+    n: int,
+    target_key: str = "target_arg_id",
+) -> List[TargetSelection]:
+    """#3373 — take one entry per TARGET before any target takes a second.
+
+    The counter-argument phase writes its output target by target, so the
+    briefing's ``[:n]`` held the first targets' entries and nothing beyond
+    them: on the R1137a record, 15 counters over 4 units out of 43 over 10,
+    and the writer counted its briefing (« Cinq » for a unit carrying six).
+
+    Every target is served in rounds — the first entry of each target, then
+    the second of each, and so on — so no target is invisible while another
+    is doubled, as long as the targets fit the budget. Within a target the
+    producer's order holds. Entries that name no target are served after the
+    targeted ones: they carry no population to state (a real rebuttal, merely
+    unanchored — #3201), and they never crowd out a countered unit.
+
+    The budget is real and unchanged: never more than ``n``.
+    """
+    if n <= 0:
+        return []
+    groups: Dict[str, List[Any]] = {}
+    unanchored: List[Any] = []
+    for entry in entries:
+        target = ""
+        if isinstance(entry, dict):
+            value = entry.get(target_key)
+            if isinstance(value, str):
+                target = value.strip()
+        else:
+            value = getattr(entry, target_key, None)
+            if isinstance(value, str):
+                target = value.strip()
+        if target:
+            groups.setdefault(target, []).append(entry)
+        else:
+            unanchored.append(entry)
+
+    populations = {target: len(items) for target, items in groups.items()}
+    selected: List[TargetSelection] = []
+    round_index = 0
+    while len(selected) < n:
+        progressed = False
+        for target, items in groups.items():
+            if round_index < len(items):
+                progressed = True
+                rank = round_index + 1
+                selected.append(
+                    TargetSelection(
+                        entry=items[round_index],
+                        target=target,
+                        rank=rank,
+                        population=populations[target],
+                        cut=rank < populations[target],
+                    )
+                )
+                if len(selected) >= n:
+                    break
+        if not progressed:
+            break
+        round_index += 1
+
+    for entry in unanchored:
+        if len(selected) >= n:
+            break
+        selected.append(TargetSelection(entry=entry, target="", rank=0, population=0))
+
+    return selected
 
 
 def coverage_figure(

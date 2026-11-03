@@ -2260,7 +2260,23 @@ class DeepSynthesisAgent(BaseAgent):
             _line = _head + _complement + _tail
             _add("dung_frameworks", df_id, _line, cap=len(_line))
 
-        for ca in (getattr(state, "counter_arguments", []) or [])[:max_items_per_field]:
+        # #3373 — the cut used to walk the LIST's insertion order, and the
+        # producer writes target by target: the prefix held the first four
+        # units' counters and stopped (R1137a: 15 of 43, 4 of 10 units). The
+        # selection now walks the TARGETS — one counter per unit before any
+        # unit takes a second — and a line whose unit is cut states that
+        # unit's population, so a count the writer gives comes from the
+        # record and not from the cut. The cap is unchanged (anti-pendulum),
+        # and a population that fits renders byte for byte as before.
+        from argumentation_analysis.orchestration.selection import (
+            select_across_targets,
+        )
+
+        _counter_selections = select_across_targets(
+            getattr(state, "counter_arguments", []) or [], max_items_per_field
+        )
+        for _selection in _counter_selections:
+            ca = _selection.entry
             ca_id = ca.get("id", "ca")
             # #3201 — the join key. The record has carried target_arg_id (or
             # target_unresolved_reason, #2968) but the line did not, so the
@@ -2276,6 +2292,15 @@ class DeepSynthesisAgent(BaseAgent):
             _reason = ca.get("target_unresolved_reason") or ""
             if _target:
                 _target_text = f"target={_target}"
+                # #3373 — the target's own population, stated only when this
+                # brief does not show all of it: the writer then counts the
+                # record instead of the lines it happens to see. A population
+                # that fits keeps the line byte for byte (the control).
+                if _selection.cut:
+                    _target_text += (
+                        f" ({_selection.rank} of {_selection.population}"
+                        " on this target)"
+                    )
             elif _reason:
                 _target_text = f"target=unresolved ({_reason})"
             else:
