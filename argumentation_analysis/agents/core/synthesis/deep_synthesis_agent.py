@@ -41,6 +41,7 @@ from argumentation_analysis.reporting.restitution.speaker_record import (  # #33
 )
 from argumentation_analysis.reporting.restitution.cited_units import (  # #2967
     CITED_UNIT_TEXT_CAP,
+    CUT_MARKER,
     cited_unit_ids,
     truncate_at_boundary,
 )
@@ -66,6 +67,12 @@ logger = logging.getLogger("DeepSynthesisAgent")
 # returns at least the incoming belief, so ITS unmarked empty `revised` still
 # reads as not computed (the R1108 dumps).
 _ALWAYS_RUNS_REVISION_METHOD = "fallacy_contraction"
+
+# #3370 — room a Dung line must keep for its extension lists before printing
+# them; below this the cut is stated as a bare marker instead of a fragment
+# that names nothing. The complement (the arguments no extension contains)
+# is budgeted first, so it is never the side the budget cuts.
+_MIN_MEMBERS_ROOM = 20
 
 
 def _six_section_naming_line(deanonymized: bool) -> str:
@@ -2201,16 +2208,57 @@ class DeepSynthesisAgent(BaseAgent):
                 if isinstance(_submitted, int) or isinstance(_retained, int)
                 else ""
             )
-            _add(
-                "dung_frameworks",
-                df_id,
+            # #3370 — the line printed the extensions and let the per-item
+            # budget cut the MEMBERS, so the short side the reader needs
+            # never reached the writer: the arguments no listed extension
+            # contains. The synthesis then said the dossier « ne permet pas
+            # d'isoler les arguments exclus » while Act II named two of the
+            # six the run had isolated. The complement is stated first and
+            # budgeted first; the members get the remainder and are what
+            # gets cut (#2967's budget is unchanged — 34 members still do
+            # not print). A complement is a measure, so it prints only where
+            # an extension was actually computed (#2672).
+            _head = (
                 f"name={df.get('name', df_id)} "
                 f"args={len(_df_args)} "
-                f"attacks={len(_df_attacks)}"
-                + _density
-                + _retention
-                + "".join(f" {sem}_extensions={exts}" for sem, exts in lists.items()),
+                f"attacks={len(_df_attacks)}" + _density + _retention
             )
+            _members = "".join(
+                f" {sem}_extensions={exts}" for sem, exts in lists.items()
+            )
+            _complement = ""
+            if lists:
+                _covered = {
+                    str(member)
+                    for extensions in lists.values()
+                    for extension in extensions
+                    for member in extension
+                }
+                _outside = [str(a) for a in _df_args if str(a) not in _covered]
+                # The complement is the short side by construction, and the
+                # count above it is never cut; the label list still keeps a
+                # bound of its own (two items' worth) so an all-excluded set
+                # stays a measure instead of flooding the briefing.
+                _outside_text = truncate_at_boundary(
+                    str(_outside), 2 * max_chars_per_item
+                )
+                _complement = f" outside_all_extensions={len(_outside)} {_outside_text}"
+            _room = max_chars_per_item - len(_head) - len(_complement)
+            if not _members:
+                _tail = ""
+            elif _room >= _MIN_MEMBERS_ROOM:
+                # R1137 — the separator rides OUTSIDE the cut: the members are
+                # passed without their leading space because
+                # ``truncate_at_boundary`` opens with ``str(text).strip()``
+                # (its own contract, shared with every other caller), which
+                # ate that space and glued ``… 'arg_20']preferred_extensions=``.
+                _tail = " " + truncate_at_boundary(_members.lstrip(), _room - 1)
+            else:
+                # The complement spent the item's budget: the members are
+                # omitted, and the cut is stated — never a silent omission.
+                _tail = CUT_MARKER
+            _line = _head + _complement + _tail
+            _add("dung_frameworks", df_id, _line, cap=len(_line))
 
         for ca in (getattr(state, "counter_arguments", []) or [])[:max_items_per_field]:
             ca_id = ca.get("id", "ca")
