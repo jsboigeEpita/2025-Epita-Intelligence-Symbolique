@@ -313,6 +313,58 @@ def _find_greek_labels(text: str) -> List[str]:
     return _GREEK_LABEL_RE.findall(_QUOTED_SPAN_RE.sub(" ", text or ""))
 
 
+#: Sentence split for the letter-carrying sentences — the same idiom the
+#: restitution checks carry (``virtue_attribution_check._SENTENCE``).
+_LABEL_SENTENCE = re.compile(r"\s*[^.!?\n]+[.!?]*")
+
+
+def greek_label_sentences(body: str) -> List[str]:
+    """The sentences of ``body`` that print a Greek-letter designation (#3367).
+
+    Same reading as the gate's own letter count (#3317): a letter inside a
+    « … » quotation or an ``[artifact: …]`` anchor is quoted data and never
+    counts. Returned as the flagged sentences, in order — the bounded retry
+    (#3343/#3367) quotes them back to the writer, who is the only reader who
+    ever held the legend (#3296). Empty when nothing prints a letter.
+    """
+    if not body:
+        return []
+    hits: List[str] = []
+    for raw in _LABEL_SENTENCE.findall(body):
+        if _find_greek_labels(raw):
+            hits.append(raw.strip())
+    return hits
+
+
+def designation_letter_retry_motif(
+    act_label: str,
+    flagged_before: int,
+    flagged_after: Optional[int] = None,
+    failure: str = "",
+) -> str:
+    """The motive of the bounded letter retry (#3367) — the #3343 shape.
+
+    Act, counts and which draft was kept, never a sentence (#3249): the
+    flagged sentences stay on the trace log. ``failure`` names a retry that
+    produced nothing (the ``weave`` contract, #1108/#2345) — the first draft
+    is kept and the report says so.
+    """
+    plural = "s" if flagged_before > 1 else ""
+    head = (
+        f"{act_label} : relance bornée du rédacteur sur {flagged_before} "
+        f"phrase{plural} imprimant une lettre de désignation (#3367)"
+    )
+    if failure:
+        return (
+            f"{head} — la relance n'a rien produit ({failure}) ; le premier "
+            "brouillon est conservé."
+        )
+    if flagged_after is None:
+        flagged_after = flagged_before
+    kept = "la réécriture" if flagged_after < flagged_before else "le premier brouillon"
+    return f"{head} — {flagged_after} après relance ; version conservée : {kept}."
+
+
 def _find_internal_ids(body: str) -> List[str]:
     """Raw internal-id tokens present in a rendered text, in order."""
     return _RAW_INTERNAL_ID_RE.findall(body)

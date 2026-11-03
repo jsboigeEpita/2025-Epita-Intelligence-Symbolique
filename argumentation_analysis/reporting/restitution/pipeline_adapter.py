@@ -131,6 +131,9 @@ _FABRICATION_NOTE_KEYS = frozenset(
         "act2_dung_ref_placement",
         "act3_superlative_retry",
         "act3_virtue_localisation_retry",
+        # #3367 — same family: the letter retry is a prose repair, never a
+        # fact about the run (twin of the appendix set, #2046).
+        "act2_designation_letter_retry",
     }
 )
 

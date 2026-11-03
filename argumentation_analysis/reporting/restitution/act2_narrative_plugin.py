@@ -937,15 +937,12 @@ def quality_ranking_line(
     # listing, one clause later. A tied head is named the one way the line
     # already names ties (#3341's helper, its count/noun agreement inside); a
     # sole top-1 keeps the exact pre-#3356 clause, byte-identical.
-    head_holders = sorted(
-        arg_id for arg_id, score in scored if score == top_score
-    )
+    head_holders = sorted(arg_id for arg_id, score in scored if score == top_score)
     if len(head_holders) == 1:
         head_clause = f"{top_id} ({top_score:.1f}) est en tête"
     else:
         head_clause = (
-            f"{_tie_companions(head_holders)} ({top_score:.1f}) "
-            "partagent la tête"
+            f"{_tie_companions(head_holders)} ({top_score:.1f}) " "partagent la tête"
         )
     return (
         f"{line} Le gagnant du vote, {governance_winner}, est {rank}ᵉ"
@@ -2523,45 +2520,78 @@ async def weave_act2_narrative(
     return await weave(build_act2_prompt(evidence), llm_callable, "Acte II")
 
 
-def build_act2_retry_prompt(evidence: Act2Evidence, flagged: List[str]) -> str:
+def build_act2_retry_prompt(
+    evidence: Act2Evidence,
+    flagged: List[str],
+    letter_flagged: Optional[List[str]] = None,
+) -> str:
     """The bounded ONE writer retry (#3343) — the writer rewrites its own prose.
 
     The base prompt is the one the writer already received: same data blocks,
-    same rules, same relabelling (#3296). The correction block only NAMES what
-    the #3297 check found and what a superlative must carry to stand, because
-    the rule was already in the prompt and the writer broke it anyway (#3159
-    gave the licence, nothing read the act).
+    same rules, same relabelling (#3296). The correction blocks only NAME what
+    the checks found — the #3297 superlative read, and since #3367 the #3317
+    letter read — because the rules were already in the prompt and the writer
+    broke them anyway (#3159 gave the licence, nothing read the act).
 
-    Bounded by construction: one call, never a loop. The check still only
-    records — a retry that changes nothing is a fact the report carries, not a
+    Each correction block is self-contained and carries its own quoted
+    sentences, capped at 5: a writer told what it did and nothing to stand on
+    is a dice roll. The letter block never orders a designation by id or
+    letter (#3303/#3296) — it restates the designation rule the legend
+    already carries: the unit is designated by what it says, like the rest of
+    the prose, or the same thing is said at discourse level.
+
+    Bounded by construction: one call, never a loop. The checks still only
+    record — a retry that changes nothing is a fact the report carries, not a
     reason to keep asking.
     """
-    quoted = "\n".join(f"- {sentence}" for sentence in flagged[:5])
-    correction = (
-        f"\n\nCORRECTION DEMANDÉE — ta rédaction ci-dessus contient "
-        f"{len(flagged)} phrase(s) qui portent un superlatif sur TOUT le "
-        "discours (« le plus… du dispositif », « … du discours », « … du run ») "
-        "sans classement mesuré pour l'adosser. Le classement fourni plus haut "
-        "est le SEUL mesuré : un superlatif ne peut pas le dépasser. Phrases "
-        f"repérées :\n{quoted}\n\n"
-        "Réécris le récit EN ENTIER — même structure, mêmes mouvements, mêmes "
-        "données, même longueur. Pour chaque superlatif, choisis : soit il "
-        "porte sur la population réellement évaluée et la nomme (« de "
-        "l'ensemble évalué »), soit il cite la base du classement (« N unités "
-        "évaluées sur M »), soit il porte sur un argument du classement avec "
-        "son rang. Sinon, ne l'écris pas : dis la même chose sans superlatif. "
-        "Ne commente pas cette consigne et ne cite pas les phrases repérées : "
-        "rends le récit complet, prêt à lire.\n"
-    )
-    return build_act2_prompt(evidence) + correction
+    blocks: List[str] = []
+    if flagged:
+        quoted = "\n".join(f"- {sentence}" for sentence in flagged[:5])
+        blocks.append(
+            f"\n\nCORRECTION DEMANDÉE — ta rédaction ci-dessus contient "
+            f"{len(flagged)} phrase(s) qui portent un superlatif sur TOUT le "
+            "discours (« le plus… du dispositif », « … du discours », « … du "
+            "run ») sans classement mesuré pour l'adosser. Le classement fourni "
+            "plus haut est le SEUL mesuré : un superlatif ne peut pas le "
+            f"dépasser. Phrases repérées :\n{quoted}\n\n"
+            "Réécris le récit EN ENTIER — même structure, mêmes mouvements, "
+            "mêmes données, même longueur. Pour chaque superlatif, choisis : "
+            "soit il porte sur la population réellement évaluée et la nomme "
+            "(« de l'ensemble évalué »), soit il cite la base du classement "
+            "(« N unités évaluées sur M »), soit il porte sur un argument du "
+            "classement avec son rang. Sinon, ne l'écris pas : dis la même "
+            "chose sans superlatif. Ne commente pas cette consigne et ne cite "
+            "pas les phrases repérées : rends le récit complet, prêt à lire.\n"
+        )
+    if letter_flagged:
+        letter_quoted = "\n".join(f"- {sentence}" for sentence in letter_flagged[:5])
+        header = "CORRECTION DEMANDÉE" if not flagged else "AUTRE CORRECTION DEMANDÉE"
+        blocks.append(
+            f"\n\n{header} — ta rédaction ci-dessus imprime {len(letter_flagged)} "
+            "phrase(s) où une lettre de désignation (α, β, …) paraît dans le "
+            "récit. Une lettre est un raccourci d'atelier : le lecteur n'a pas "
+            "la légende des désignations et ne peut rien en résoudre. Phrases "
+            f"repérées :\n{letter_quoted}\n\n"
+            "Réécris le récit EN ENTIER — même structure, mêmes mouvements, "
+            "mêmes données, même longueur. Pour chaque lettre imprimée, "
+            "désigne l'unité par ce qu'elle dit — comme le reste de ta prose ; "
+            "la légende des désignations en donne le texte —, ou dis la même "
+            "chose au niveau du discours. N'imprime jamais la lettre seule ni "
+            "un identifiant interne. Ne commente pas cette consigne et ne cite "
+            "pas les phrases repérées : rends le récit complet, prêt à lire.\n"
+        )
+    return build_act2_prompt(evidence) + "".join(blocks)
 
 
 async def weave_act2_narrative_retry(
-    evidence: Act2Evidence, llm_callable: LlmCallable, flagged: List[str]
+    evidence: Act2Evidence,
+    llm_callable: LlmCallable,
+    flagged: List[str],
+    letter_flagged: Optional[List[str]] = None,
 ) -> WeaveOutcome:
-    """The bounded ONE retry (#3343), under the same fail-loud contract."""
+    """The bounded ONE retry (#3343/#3367), under the same fail-loud contract."""
     return await weave(
-        build_act2_retry_prompt(evidence, flagged),
+        build_act2_retry_prompt(evidence, flagged, letter_flagged),
         llm_callable,
         "Acte II (relance)",
     )
@@ -2572,11 +2602,11 @@ async def weave_act2_narrative_retry(
 
 @dataclass(frozen=True)
 class _DressedAct2:
-    """One Act II draft after every deterministic pass + the #3297 read.
+    """One Act II draft after every deterministic pass + the #3297/#3317 reads.
 
-    The bounded retry (#3343) dresses a second draft EXACTLY like the first —
-    comparing two texts is only honest when both went through the same passes,
-    and the check must judge the text the reader would receive.
+    The bounded retry (#3343/#3367) dresses a second draft EXACTLY like the
+    first — comparing two texts is only honest when both went through the same
+    passes, and the checks must judge the text the reader would receive.
     """
 
     text: str
@@ -2584,6 +2614,7 @@ class _DressedAct2:
     clash_removed: List[str]
     superlative_note: str
     superlative_sentences: List[str]
+    letter_sentences: List[str]
 
 
 def _dress_act2_prose(
@@ -2607,9 +2638,7 @@ def _dress_act2_prose(
     # own cause phrase, so nothing true is lost.
     from .formal_cause_check import strip_voice_clash_cause_sentences
 
-    text, _removed_clash = strip_voice_clash_cause_sentences(
-        _bound_removal.text, state
-    )
+    text, _removed_clash = strip_voice_clash_cause_sentences(_bound_removal.text, state)
 
     # #3297 — a whole-scope superlative needs a measured ranking to stand on.
     # The check runs on the MODEL PROSE, before the record's own bounds are
@@ -2624,18 +2653,26 @@ def _dress_act2_prose(
         text, ranking_line=evidence.quality_ranking, act_label="Acte II"
     )
     _flagged = (
-        whole_scope_superlative_sentences(
-            text, ranking_line=evidence.quality_ranking
-        )
+        whole_scope_superlative_sentences(text, ranking_line=evidence.quality_ranking)
         if _superlative_note
         else []
     )
+
+    # #3367 — the writer's own handles must stay in the prompt: a printed
+    # letter is a designation the reader cannot resolve (#3317). The sentences
+    # feed the bounded retry's correction; the gate (unchanged, after) still
+    # carries the verdict. No deterministic strip — the fix is the writer's
+    # rewrite, not a behind-the-reader edit (#3317's own calibration).
+    from .readability_gate import greek_label_sentences
+
+    _letters = greek_label_sentences(text)
     return _DressedAct2(
         text=text,
         bound_removal=_bound_removal,
         clash_removed=list(_removed_clash),
         superlative_note=_superlative_note,
         superlative_sentences=_flagged,
+        letter_sentences=_letters,
     )
 
 
@@ -2692,41 +2729,59 @@ async def build_act2_narrative(
         )
     _dressed = _dress_act2_prose(outcome.narrative, state, evidence)
 
-    # #3343 — the bounded ONE retry. #3159 gave the writer the ranking and the
-    # rule; the #3297 check reads the act afterwards, and a rule the writer
-    # breaks is still broken prose on the reader's page. So when the check
-    # fires, the writer is asked ONCE — with its own flagged sentences and the
-    # measured ranking — to rewrite the act so every superlative rests on
-    # something. The check still only records: if the rewrite is not better,
-    # the first draft is kept, and either way the report says which draft the
-    # reader received. One call, never a loop.
+    # #3343/#3367 — the bounded ONE retry. #3159 gave the writer the ranking
+    # and the rule, #3296 the legend and the designation rule; the #3297 and
+    # #3317 checks read the act afterwards, and a rule the writer breaks is
+    # still broken prose on the reader's page. So when either check fires, the
+    # writer is asked ONCE — with its own flagged sentences — to rewrite the
+    # act. The checks still only record: if the rewrite is not better on the
+    # SUMMED count, the first draft is kept, and either way the report says
+    # which draft the reader received. One call, never a loop — the letter
+    # motive joins the same single retry, it does not open a second one.
     _retry_motif = ""
-    if _dressed.superlative_note:
+    _letter_retry_motif = ""
+    _first_flagged = _dressed.superlative_sentences
+    _first_letters = _dressed.letter_sentences
+    if _dressed.superlative_note or _first_letters:
+        from .readability_gate import designation_letter_retry_motif
         from .whole_scope_superlative_check import superlative_retry_motif
 
-        _first_flagged = _dressed.superlative_sentences
         _retry = await weave_act2_narrative_retry(
-            evidence, llm_callable, _first_flagged
+            evidence, llm_callable, _first_flagged, _first_letters
         )
         if _retry.narrative:
             _second = _dress_act2_prose(_retry.narrative, state, evidence)
-            _after = len(_second.superlative_sentences)
-            if _after < len(_first_flagged):
+            _before_total = len(_first_flagged) + len(_first_letters)
+            _after_total = len(_second.superlative_sentences) + len(
+                _second.letter_sentences
+            )
+            if _after_total < _before_total:
                 _dressed = _second
-            _retry_motif = superlative_retry_motif(
-                "Acte II", len(_first_flagged), _after
-            )
+            if _first_flagged:
+                _retry_motif = superlative_retry_motif(
+                    "Acte II", len(_first_flagged), len(_dressed.superlative_sentences)
+                )
+            if _first_letters:
+                _letter_retry_motif = designation_letter_retry_motif(
+                    "Acte II", len(_first_letters), len(_dressed.letter_sentences)
+                )
         else:
-            _retry_motif = superlative_retry_motif(
-                "Acte II", len(_first_flagged), failure=_retry.failure
-            )
+            if _first_flagged:
+                _retry_motif = superlative_retry_motif(
+                    "Acte II", len(_first_flagged), failure=_retry.failure
+                )
+            if _first_letters:
+                _letter_retry_motif = designation_letter_retry_motif(
+                    "Acte II", len(_first_letters), failure=_retry.failure
+                )
         # The excerpt of the FIRST draft stays on the trace: the retained
         # draft's own flags are logged below, and the motive is a code literal
         # with counts (#3249), never a quote.
         logger.info(
-            "Acte II bounded writer retry (#3343): %s | first draft: %s",
-            _retry_motif,
-            "; ".join(s[:90] for s in _first_flagged[:3]),
+            "Acte II bounded writer retry (#3343/#3367): %s | %s | first " "draft: %s",
+            _retry_motif or "(pas de superlatif)",
+            _letter_retry_motif or "(pas de lettre imprimée)",
+            "; ".join(s[:90] for s in (_first_flagged + _first_letters)[:3]),
         )
 
     narrative = _dressed.text
@@ -2815,6 +2870,11 @@ async def build_act2_narrative(
     # reaches the reader as a repair note.
     if _retry_motif:
         degraded["act2_superlative_retry"] = _retry_motif
+    # #3367 — same family, same contract: the letter retry repaired (or tried
+    # to repair) the prose; it tells the reader nothing about the run, so it
+    # is archived with the #2046 fabrication notes, never rendered.
+    if _letter_retry_motif:
+        degraded["act2_designation_letter_retry"] = _letter_retry_motif
     # #3349 — a Dung ref was moved (or dropped) here: act and counts, never a
     # sentence (#3249). Filed under the #2046 fabrication-note keys, so it is
     # archived in the appendix and never reaches the reader as a repair note.

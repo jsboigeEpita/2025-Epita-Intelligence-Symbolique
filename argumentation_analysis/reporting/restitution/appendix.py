@@ -774,6 +774,9 @@ _FABRICATION_NOTE_KEYS = frozenset(
         "act2_dung_ref_placement",
         "act3_superlative_retry",
         "act3_virtue_localisation_retry",
+        # #3367 — same family: the letter retry repairs the prose, the reader
+        # receives the retained draft and needs no note about it.
+        "act2_designation_letter_retry",
     }
 )
 
