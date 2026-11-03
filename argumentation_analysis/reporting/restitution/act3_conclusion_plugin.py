@@ -3897,8 +3897,9 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
         "  prêtes aucun — même quand une réplique de débat l'affirme. Et le\n"
         # #3231 — même contrat de standing qu'Acte II : la force d'une détection
         # est celle que son détecteur lui a donnée (confiance imprimée sur la
-        # ligne, réserve écrite en fin de justification) — aucun seuil numérique
-        # ne la remplace.
+        # ligne, réserve écrite en fin de justification). #3369 : l'échelle
+        # existe, mais elle est imprimée — le mot à côté de la décimale, le
+        # rédacteur le reprend, il ne le retrace pas.
         "  standing du nommé suit son détecteur : une détection à confiance\n"
         "  basse, ou que sa justification tient pour provisoire, se cite comme\n"
         "  une lecture provisoire — jamais comme une faute établie. "

@@ -52,10 +52,21 @@ class TestConfidenceOf:
 
 class TestDetectorConfidenceNote:
     def test_a_measured_confidence_prints_as_itself(self):
-        assert detector_confidence_note(0.4) == "confiance du détecteur : 0,4"
-        assert detector_confidence_note(0.35) == "confiance du détecteur : 0,35"
-        assert detector_confidence_note(0.9) == "confiance du détecteur : 0,9"
-        assert detector_confidence_note(1.0) == "confiance du détecteur : 1"
+        # #3369 : la note porte désormais le mot du standing à côté de la
+        # décimale — les pins exacts sont réécrits pour le porter (la décimale
+        # reste telle que le producteur l'a écrite, #3231 tient).
+        assert detector_confidence_note(0.4) == (
+            "confiance du détecteur : 0,4 — lecture provisoire"
+        )
+        assert detector_confidence_note(0.35) == (
+            "confiance du détecteur : 0,35 — lecture provisoire"
+        )
+        assert detector_confidence_note(0.9) == (
+            "confiance du détecteur : 0,9 — lecture ferme"
+        )
+        assert detector_confidence_note(1.0) == (
+            "confiance du détecteur : 1 — lecture ferme"
+        )
 
     def test_an_unmeasured_confidence_prints_as_unmeasured(self):
         assert detector_confidence_note(None) == (

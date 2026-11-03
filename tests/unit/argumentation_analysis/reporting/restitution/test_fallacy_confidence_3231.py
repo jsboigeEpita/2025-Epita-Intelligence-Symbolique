@@ -159,9 +159,13 @@ class TestAct2CarriesTheStanding:
         prompt = _act2({"fallacy_1": _fallacy()})
         procede = _lines(prompt, "Procédé :")
         assert procede, "no Procédé line"
+        # #3369 : la ligne imprime désormais le mot du standing à côté de la
+        # décimale — le pin exact est réécrit pour le porter (la décimale
+        # garde sa place, #3231 tient).
         assert any(
             "« Effet cigogne » (Erreur de raisonnement > Causalité douteuse) "
-            "— confiance du détecteur : 0,4. Justification :" in ln
+            "— confiance du détecteur : 0,4 — lecture provisoire. "
+            "Justification :" in ln
             for ln in procede
         )
 
