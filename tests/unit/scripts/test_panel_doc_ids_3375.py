@@ -18,20 +18,41 @@ What the witnesses kill, one shape each:
 
 No network, no dataset: the definitions are synthetic and every arm call is
 either a dry-run or a spy on the seam.
+
+The witnesses carry their OWN salt (an autouse fixture sets a synthetic
+``OPAQUE_ID_SALT``): a seat's ``.env`` lending the real one made the module
+green at home and red on the gate, which has no secret (#3383 CI run
+41662307353 — 5 failed, one cause). The expected ids are derived from
+``opaque_id(name, salt=…)`` rather than read back from ``expand_corpus``,
+and one witness proves in a child process that production refuses — loudly —
+when no salt exists anywhere (a public default would turn every opaque id
+into a confirmation oracle, #1973).
 """
 
 from __future__ import annotations
 
 import asyncio
+import os
+import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+REPO_ROOT = Path(__file__).resolve().parents[3]
+SALT = "synthetic-test-salt-3375"
 
+sys.path.insert(0, str(REPO_ROOT))
+
+from argumentation_analysis.evaluation.opaque_id import opaque_id
 from scripts.dataset import run_corpus_batch as batch
 from scripts.dataset import run_zeroshot_arm as arm
+
+
+@pytest.fixture(autouse=True)
+def _synthetic_salt(monkeypatch):
+    """The witnesses never borrow the seat's real salt — that is the CI red."""
+    monkeypatch.setenv("OPAQUE_ID_SALT", SALT)
 
 
 def _definitions():
@@ -50,8 +71,17 @@ def _definitions():
 
 
 def _ids():
-    docs, _, _ = batch.expand_corpus(_definitions())
-    return [d["opaque_id"] for d in docs]
+    """Expected ids, derived independently of the code under test.
+
+    Reading them back from ``expand_corpus`` would make every panel witness
+    tautological: both sides of the assert would be the same call. The ids
+    come from ``opaque_id(salt)`` plus the ``_extN`` suffix multi-extract
+    sources carry.
+    """
+    one = opaque_id("src_one", salt=SALT)
+    two = opaque_id("src_two", salt=SALT)
+    three = opaque_id("src_three", salt=SALT)
+    return [one, two, f"{three}_ext0", f"{three}_ext1"]
 
 
 class TestParsing:
@@ -154,3 +184,50 @@ class TestBothArmsTakeTheSelection:
             f"order — got {listed}"
         )
         assert "candidate documents: 2" in printed
+
+
+class TestTheWitnessCarriesItsOwnSalt:
+    """The CI red: my seat's ``.env`` lent ``OPAQUE_ID_SALT`` and the gate
+    had none — the witnesses were green here and red there. They now run on
+    a synthetic salt (autouse), and this class pins BOTH sides of that
+    contract: hermetic here, loud in production without a secret."""
+
+    def test_no_witness_borrows_the_seats_real_salt(self, monkeypatch):
+        """The autouse salt is synthetic — a seat leaking the real one into
+        the environment cannot change what the ids above are derived from."""
+        monkeypatch.setenv("OPAQUE_ID_SALT", "real-seat-secret-that-must-not-win")
+        assert opaque_id("src_one", salt=SALT) == _ids()[0]
+
+    def test_the_salt_contract_refuses_loudly_when_no_salt_exists(self):
+        """A child process with ``OPAQUE_ID_SALT`` stripped (the gate's
+        condition) must see the salt contract REFUSE, not fall back to a
+        public default (#1973).
+
+        The child imports ``opaque_id`` **directly**, not by way of
+        ``run_corpus_batch``: that module's import chain reaches a
+        ``load_dotenv``, which on a seat re-borrows the very ``.env`` whose
+        absence this witness is about — measured: a child running
+        ``expand_corpus`` with the variable stripped exits 0 here, because
+        the chain refills it. Isolating the function under contract is what
+        makes the absence observable.
+        """
+        code = (
+            "import sys; sys.path.insert(0, r'{root}'); "
+            "from argumentation_analysis.evaluation.opaque_id import opaque_id; "
+            "opaque_id('src_one')"
+        ).format(root=REPO_ROOT)
+        env = {k: v for k, v in os.environ.items() if k != "OPAQUE_ID_SALT"}
+        assert "OPAQUE_ID_SALT" not in env, "the child must start saltless"
+        proc = subprocess.run(
+            [sys.executable, "-I", "-c", code],
+            capture_output=True,
+            text=True,
+            env=env,
+            cwd=str(REPO_ROOT),
+            timeout=120,
+        )
+        assert proc.returncode != 0, (
+            "opaque_id must not succeed without a salt — it would mean a "
+            "public default crept back in"
+        )
+        assert "OPAQUE_ID_SALT is required" in proc.stderr
