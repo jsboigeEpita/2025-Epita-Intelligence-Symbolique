@@ -330,14 +330,33 @@ User mandate 2026-09-17 (verbatim): « Il faut réparer tout ce qui est défectu
 - **A workaround discovered is a defect to open and repair, never a documentation item.** Carried env pins (`JVM_TWEETY_VERSION` per-process), mandatory secret flags, manual steps that "everyone knows", tolerated "baselined" failures — each masks a repairable root. Measured instance: the fleet-wide `JVM_TWEETY_VERSION=1.28` pin masked "`initialize_jvm()` returns False despite a complete local classpath" — repaired in #2278 as the common root of #2277's ×40 WARN motif and #2276's 11 failed phases.
 - **Burial requires proof of non-utility.** The Cleanup Gate bar applies equally to `pytest.ini` ignores, `PENDING_TRIAGE` entries and `_archives/`/`docs/archives/` moves: burying useful code is the same failure as deleting it, and a workaround must not outlive its repair. Instance: `test_analysis_service_mock.py` stayed ignored in `addopts` for months after the root conflict was fixed in conftest (un-buried in #2279).
 
-## When the Tunnel Is Done — Stopping Criterion
+## The Cap
 
-User decision 2026-10-19 (option « b »). Reading the rendered report keeps finding defects, so "done" is a stopping criterion, not a date. The tunnel is done when **both** hold:
+User, 2026-11-03 (Epic #3374). The project's outcome is **the final differential with the same-model zero-shot**, in a report a non-specialist can read. The report gives a *neutralising* light on the manipulations a debate carries: the same map for every side, never a partisan verdict. In its ultimate form, it synthesises the next debate.
 
-1. **Two consecutive paid one-document passes** on the same document find **no new defect readable in the render**, and the tracker holds **no open defect on what the report says**.
-2. **The full-corpus campaign (#2841)** has run and **the user has read it**.
+The formal and informal instruments are what zero-shot cannot easily reach once complexity is not trivial:
 
-Native failures and revival epics are not part of the tunnel. They continue as ordinary improvement work. The coordinator's DONE entries report the count of clean consecutive passes for item 1 (it resets to 0 whenever a pass finds a new defect).
+- the calibrated Argumentum taxonomy descent;
+- Dung, ASPIC+ and bipolar argumentation;
+- JTMS;
+- FOL entailment queries;
+- Tweety's argumentative extensions.
+
+They are **lenses**: each is worth only what the agentic harness points it at, meaning the KB it is given and the question it is asked. Orchestration counts as much as individual capability, so the 5 engines of `scripts/compare_orchestration_modes.py` are compared on the same bar (#3378). Restitution is part of the outcome, not decoration: clear metaphors, aphorisms, and analogies that are not abusive.
+
+## When v1 Is Done — the Panel Bar
+
+User decision 2026-11-03, superseding the 19/10 one-document tunnel. Measured: 21 paid passes on one document, the counter still 0/2. That criterion measured the reader's resolution, not the analysis, so it could not converge.
+
+- **Bar.** On a 10-document panel taken from #2841 (#3375), the pipeline is compared with the same-model zero-shot. The judging is blind, done by a model of another family and by the coordinator.
+- **Exhaustion**, declared by the coordinator. On the panel, all three must hold:
+  1. no severe defect remains;
+  2. two consecutive cycles pass without the pipeline-vs-zero-shot verdict progressing;
+  3. every remaining gap is named and classed, either as fixable (so v1 is not done) or as out of the architecture's reach, with the reason.
+- **The user reads last.** The user's reading is the final validation, not a tuning instrument. A dossier is submitted only with an exhaustion declaration that holds.
+- **Batches.** Each paid run covers the whole panel. Defects are sorted by class and severity, with one issue per class. Workers take several fixes per cycle. Paid spends and merges stay with the coordinator.
+
+Native failures and revival epics continue as ordinary improvement work. The coordinator's DONE entries report the panel verdict table and the cycle count for condition 2.
 
 ## Dataset Privacy Discipline
 
