@@ -94,13 +94,53 @@ def _confidence_fr(value: float) -> str:
 def detector_confidence_note(confidence: Optional[float]) -> str:
     """The standing every fallacy line prints next to its verdict (#3231).
 
-    « confiance du détecteur : 0,4 » — or « non mesurée » when the producer
-    stated no number. Unmeasured is PRINTED as unmeasured, never filled in
-    with a default (#3029's contract, on the surfaces the acts read).
+    « confiance du détecteur : 0,4 — lecture provisoire » — the decimal
+    keeps its place (evidence is where the figure belongs, #3231) and the
+    ladder word stands BESIDE it (#3369): one scale printed once, so the
+    writer copies the word instead of tracing its own bands. Or « non
+    mesurée » when the producer stated no number — unmeasured is PRINTED as
+    unmeasured, never filled in with a default (#3029's contract, on the
+    surfaces the acts read), and carries no word: a scale needs a number.
     """
     if confidence is None:
         return "confiance du détecteur : non mesurée"
-    return f"confiance du détecteur : {_confidence_fr(confidence)}"
+    note = f"confiance du détecteur : {_confidence_fr(confidence)}"
+    word = detection_standing_word(confidence)
+    return f"{note} — {word}" if word else note
+
+
+#: #3369 — the scale under the ladder words. #3248 wrote the WORDS
+#: (« provisoire, moyenne, ferme ») and the ban on the figure, but never
+#: the line between the words: each act re-derived its own bands, and the
+#: R1136a render read the same 0.70-0.72 detections « fermes » in Act II
+#: and « confiance moyenne » in Act III. The boundaries are calibrated on
+#: the measured confidences (the PR census): « ferme » from 0.70 — the top
+#: band of what the detector actually emits (18 % of the stored values, all
+#: of the R1136a highs); « moyenne » from 0.50 — the measured median of the
+#: stored distribution; below 0.50 the reading is not yet posed, it is
+#: « provisoire ».
+_STANDING_FERME_MIN = 0.70
+_STANDING_MOYENNE_MIN = 0.50
+
+
+def detection_standing_word(confidence: Optional[float]) -> str:
+    """The ONE ladder word for a detector confidence (#3369).
+
+    « lecture ferme » from 0.70, « lecture moyenne » from 0.50 to below
+    0.70, « lecture provisoire » below 0.50 — the same number gives the
+    same word on every surface that prints it. An UNMEASURED confidence
+    has no word (empty string): the evidence line says « non mesurée » and
+    nothing is filled in (#3029). The justification's written reserve can
+    only LOWER the word, never raise it (#3231) — that reserve stays the
+    writer's judgement; this function is only the scale.
+    """
+    if confidence is None:
+        return ""
+    if confidence >= _STANDING_FERME_MIN:
+        return "lecture ferme"
+    if confidence >= _STANDING_MOYENNE_MIN:
+        return "lecture moyenne"
+    return "lecture provisoire"
 
 
 # #3248 — the ONE reader-facing ladder for a detection's standing, and the
@@ -111,8 +151,14 @@ def detector_confidence_note(confidence: Optional[float]) -> str:
 # earlier — both vocabularies live in one render and the reader cannot
 # weigh a « 0,6 ». One constant, grafted into BOTH acts' consignes (the
 # #3237 gesture); the check-side class lives in reader_vocabulary_check.
+# #3369 — the rule now also points at the printed word: the evidence line
+# carries the ladder word beside the measure, the writer takes THAT word
+# and does not trace its own scale; a written reserve lowers it only.
 DETECTION_STANDING_RULE = (
     "Le standing d'une détection se dit en mots — lecture provisoire, "
     "moyenne ou ferme — jamais en chiffre : la confiance chiffrée du "
-    "détecteur ne paraît jamais dans le récit ; dis le en mots."
+    "détecteur ne paraît jamais dans le récit. La ligne de preuve imprime "
+    "le mot du standing à côté de sa mesure : reprends CE mot, ne trace pas "
+    "ta propre échelle. Une réserve écrite dans la justification peut "
+    "abaisser le mot d'un cran, jamais l'élever."
 )
