@@ -38,6 +38,7 @@ from argumentation_analysis.core.reading_window import (
     STATUS_SELECTED,
     WindowSelection,
     reading_state_from_context,
+    reads_whole_text_in_one_call,
     selected_text,
     selected_text_and_selection,
     stratified_window_offsets,
@@ -9804,20 +9805,44 @@ async def _invoke_fact_extraction(
         # slice) so the payload and the trace can name the k of N the reader
         # actually saw. Counts only downstream: no source text (#2908).
         _extraction_state = reading_state_from_context(context)
-        _extraction_reading, _extraction_selection = selected_text_and_selection(
-            input_text,
-            LLM_EXTRACTION_WINDOW,
-            "fact_extraction",
-            state=_extraction_state,
+        # #2850 lot 9 — above one window and within one call's measured
+        # capacity, the extraction reads the DOCUMENT, once. Lot 8 stitched
+        # k = ceil(L/3000) windows to produce the same text in two or three
+        # calls, and recorded a k-of-N read for a document it had not lost a
+        # character of. The two paths below are untouched: the selector's
+        # single call at or below one window (byte-identical, #1737), and the
+        # lot-8 sample beyond the capacity — which is where the dispatch
+        # keeps it, as the fallback.
+        _integral_read = reads_whole_text_in_one_call(
+            len(input_text), _EXTRACTION_MAX_TOKENS
         )
-        # #2850 lot 8 — the opening window is no longer the whole read:
-        # above one window's worth of text, k = min(3, ceil(L/3000))
-        # stratified windows cover the document (tiled up to 9 000 chars,
-        # head/middle/end beyond), the FIRST staying the selector's (#1737
-        # head selection untouched). A document that fits one window keeps
-        # exactly today's single call, byte-identical. Never one wider call
-        # — #2912 is that defect, repaired.
-        _offsets = stratified_window_offsets(len(input_text), LLM_EXTRACTION_WINDOW)
+        if _integral_read:
+            _extraction_reading = input_text
+            # Nothing was selected: the window IS the text. Recorded through
+            # the same seam every site uses, so the acts read it the same way.
+            _extraction_selection = WindowSelection(0, len(input_text), STATUS_SELECTED)
+            _extraction_recorder = getattr(
+                _extraction_state, "record_reading_window", None
+            )
+            if _extraction_recorder is not None:
+                _extraction_recorder("fact_extraction", _extraction_selection)
+            _offsets = [0]
+        else:
+            _extraction_reading, _extraction_selection = selected_text_and_selection(
+                input_text,
+                LLM_EXTRACTION_WINDOW,
+                "fact_extraction",
+                state=_extraction_state,
+            )
+            _offsets = stratified_window_offsets(len(input_text), LLM_EXTRACTION_WINDOW)
+        # #2850 lot 8 — between one window and one call's capacity the read is
+        # the document itself (lot 9 above); BEYOND the capacity,
+        # k = min(3, ceil(L/3000)) stratified windows cover what they can
+        # (tiled up to 9 000 chars, head/middle/end beyond), the FIRST staying
+        # the selector's (#1737 head selection untouched). A document that fits
+        # one window keeps exactly today's single call, byte-identical. No
+        # call ever reads wider than the measured capacity — #2912 is the
+        # defect of a call that did.
         _readings: List[str] = [_extraction_reading] + [
             input_text[o : o + LLM_EXTRACTION_WINDOW] for o in _offsets[1:]
         ]
