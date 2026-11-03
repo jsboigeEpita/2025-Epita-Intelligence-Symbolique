@@ -1862,7 +1862,11 @@ class TestFillRateExcludesConstructionBaseline:
         sum_base = mod._construction_baseline_keys(True)
         assert raw_base != sum_base
         # Measured firsthand (R729 / coord R730): 3 raw, 2 summarized.
-        assert len(raw_base) == 3
+        # #3377: +2 raw — `historical_context` and `strategic_read` are filled
+        # at CONSTRUCTION (their honest `no_llm` status dict), so they are
+        # construction like `stakes_and_stakeholders`, not analysis; the
+        # summarized shape does not carry them. 3 → 5 raw, 2 summarized.
+        assert len(raw_base) == 5
         assert len(sum_base) == 2
 
     def test_dict_form_agrees_with_object_form(self) -> None:

@@ -13929,7 +13929,10 @@ async def _invoke_act2_narrative(
 # is the one ``_invoke_stakes_extractor`` already uses; it is repeated here as a
 # named helper rather than a third inline copy so the two personas cannot drift
 # on sampling or on the guard.
-def _build_persona_callable(site: str):
+_PersonaCallable = Callable[[str], Awaitable[str]]
+
+
+def _build_persona_callable(site: str) -> Tuple[Optional[_PersonaCallable], str]:
     """Resolve the route once; return ``(prompt -> str callable, reason)``.
 
     ``reason`` is non-empty when no callable could be built (no route): the
