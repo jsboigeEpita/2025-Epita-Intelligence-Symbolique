@@ -54,6 +54,9 @@ LONG = " ".join(
     for i in range(140)
 )
 assert len(LONG) > LOGIC_READING_WINDOW * 2, len(LONG)
+# #2850 lot 8 — the extraction witnesses need k = 3 with a PARTIAL union
+# (len > 3 × 3000): a tiled whole-read says nothing in the trace.
+assert len(LONG) > LLM_EXTRACTION_WINDOW * 3, len(LONG)
 
 # A unit longer than the per-argument window (2000) but not absurd.
 LONG_UNIT = " ".join(f"Mot{i} de l'unité longue et détaillée." for i in range(220))
@@ -131,7 +134,9 @@ def _capturing_success(captured: list, n_valid: int = 3):
 
 
 class TestExtractionWindowDisclosed:
-    """Row ``selected_text[LLM_EXTRACTION_WINDOW]#1`` (:8565)."""
+    """Row ``selected_text[LLM_EXTRACTION_WINDOW]#1`` (:8565) — #2850 lot 8:
+    the extraction reads k stratified windows, so the disclosure carries the
+    UNION of their spans, never the first window alone."""
 
     @staticmethod
     def _run(text: str, state: Any) -> Dict[str, Any]:
@@ -153,21 +158,32 @@ class TestExtractionWindowDisclosed:
         ):
             return asyncio.run(_invoke_fact_extraction(text, {"_state_object": state}))
 
-    def test_payload_pairs_the_window_with_the_source(self) -> None:
-        out = self._run(LONG, _Recorder())
-        assert out["source_length"] == len(LONG)
-        assert out["reading_window_chars"] == LLM_EXTRACTION_WINDOW, (
-            "the payload must carry the k of the k-of-N pair — source_length "
-            "alone tells the reader how long the document was, never how much "
-            "of it the extraction actually read"
+    def test_payload_pairs_the_union_with_the_source(self) -> None:
+        """#2850 lot 8 — re-pinned from ``== LLM_EXTRACTION_WINDOW`` (lot 4,
+        one window): above one window's worth of text the payload must carry
+        the UNION of the k windows' spans. A text of exactly 10 000 chars
+        reads k = 3 windows at offsets 0/3 500/7 000 — the union is
+        hand-derived 9 000 (three disjoint windows, two 500-char gaps), not
+        a mirror of the implementation's arithmetic."""
+        exact = "mot " * 2500  # 10 000 chars, no punctuation → offset 0
+        assert len(exact) == 10000
+        out = self._run(exact, _Recorder())
+        assert out["source_length"] == len(exact)
+        assert out["reading_window_chars"] == 3 * LLM_EXTRACTION_WINDOW, (
+            "the payload must carry the k of the k-of-N pair — the union of "
+            "the windows actually read, never the first window alone"
         )
 
-    def test_trace_names_the_window_and_the_source(self) -> None:
+    def test_trace_names_the_windows_and_the_source(self) -> None:
+        """#2850 lot 8 — re-pinned from asserting the bare window number: the
+        trace now names the union AND the window count, because « X des Y
+        caractères » alone no longer distinguishes one window from three."""
         state = _Recorder()
-        self._run(LONG, state)
+        out = self._run(LONG, state)
         summary = state.entry_for("extract")["summary"]
-        assert str(LLM_EXTRACTION_WINDOW) in summary, summary
+        assert str(out["reading_window_chars"]) in summary, summary
         assert str(len(LONG)) in summary, summary
+        assert "fenêtre" in summary, summary
 
 
 class TestPropositionalLogicWindowsDisclosed:
