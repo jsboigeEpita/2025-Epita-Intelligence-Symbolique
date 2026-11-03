@@ -23,7 +23,8 @@ band and only fill leftover budget after positioned units, in stable order.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections import Counter
+from dataclasses import dataclass, replace
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 __all__ = [
@@ -449,7 +450,6 @@ def select_across_targets(
                         target=target,
                         rank=rank,
                         population=populations[target],
-                        cut=rank < populations[target],
                     )
                 )
                 if len(selected) >= n:
@@ -462,6 +462,18 @@ def select_across_targets(
         if len(selected) >= n:
             break
         selected.append(TargetSelection(entry=entry, target="", rank=0, population=0))
+
+    # #3373 rework (R1139) — ``cut`` is decided on WHAT IS SHOWN, never on the
+    # rank. Comparing the rank against the population marked every line of a
+    # target but its last, even when the target was briefed whole: 12 counters
+    # over 5 targets under a cap of 15 produced 7 lines flagged onto a cut that
+    # never happened. A target is cut exactly when the briefing shows fewer of
+    # its entries than the record holds.
+    shown = Counter(item.target for item in selected if item.target)
+    selected = [
+        replace(item, cut=shown[item.target] < item.population) if item.target else item
+        for item in selected
+    ]
 
     return selected
 
