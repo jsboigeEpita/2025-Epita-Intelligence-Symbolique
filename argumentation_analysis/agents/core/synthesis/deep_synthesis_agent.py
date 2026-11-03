@@ -2247,7 +2247,12 @@ class DeepSynthesisAgent(BaseAgent):
             if not _members:
                 _tail = ""
             elif _room >= _MIN_MEMBERS_ROOM:
-                _tail = truncate_at_boundary(_members, _room)
+                # R1137 — the separator rides OUTSIDE the cut: the members are
+                # passed without their leading space because
+                # ``truncate_at_boundary`` opens with ``str(text).strip()``
+                # (its own contract, shared with every other caller), which
+                # ate that space and glued ``… 'arg_20']preferred_extensions=``.
+                _tail = " " + truncate_at_boundary(_members.lstrip(), _room - 1)
             else:
                 # The complement spent the item's budget: the members are
                 # omitted, and the cut is stated — never a silent omission.

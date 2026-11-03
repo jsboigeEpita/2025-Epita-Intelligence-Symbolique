@@ -183,3 +183,35 @@ class TestNoCutWhenNothingNeedsCutting:
         )
         assert CUT_MARKER not in line
         assert "outside_all_extensions=1 ['arg_3']" in line
+
+
+class TestTheComplementAndTheMembersAreSeparated:
+    """R1137 — the separator lives OUTSIDE the cut.
+
+    ``truncate_at_boundary`` opens with ``str(text).strip()`` (its own
+    contract, relied on by every other caller), so the leading space of
+    ``_members`` was dropped and the line read
+    ``… 'arg_20']preferred_extensions=…``. The first version of these
+    witnesses checked order and containment only — a glued line passed all
+    thirteen of them.
+    """
+
+    def test_the_ids_case_keeps_its_separator(self):
+        line = _dung_line(_verification("preferred", LABELS, [INSIDE]))
+        assert "] preferred_extensions=" in line
+        assert "]preferred_extensions=" not in line
+
+    def test_the_covering_case_keeps_its_separator(self):
+        line = _dung_line(
+            _verification(
+                "preferred", ["arg_1", "arg_2", "arg_3"], [["arg_1", "arg_2", "arg_3"]]
+            )
+        )
+        assert "0 [] preferred_extensions=" in line
+        assert "0 []preferred_extensions=" not in line
+
+    def test_the_omitted_members_keep_the_marker_separated(self):
+        """Control: the marker branch already starts with its own space — a
+        future ``lstrip`` on the tail must not take it."""
+        line = _dung_line(_verification("preferred", SENTENCE_LABELS, [SENT_INSIDE]))
+        assert line.endswith("]" + CUT_MARKER)
