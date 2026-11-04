@@ -59,6 +59,8 @@ class _FakeState:
         # #3180 — the author of the fallacious move, when the detection said.
         move_author=None,
         move_author_label=None,
+        # #3391 — the register test a family detection applied, when it did.
+        register_test="",
     ) -> str:
         self._counter += 1
         fid = f"fallacy_{self._counter}"
@@ -79,6 +81,9 @@ class _FakeState:
             entry["move_author"] = str(move_author)
             if move_author_label:
                 entry["move_author_label"] = str(move_author_label)
+        # #3391 — stored only in the closed vocabulary, like the real door.
+        if register_test in ("proportionate", "disproportionate"):
+            entry["register_test"] = str(register_test)
         if target_arg_id:
             entry["target_argument_id"] = target_arg_id
         self.identified_fallacies[fid] = entry

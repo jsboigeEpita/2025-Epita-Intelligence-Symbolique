@@ -8,7 +8,7 @@ import logging
 # #3390 — the closed ``move_author`` vocabulary lives in ONE place; both
 # gates below (arguments, fallacies) read it, so extending it (#3390 adds
 # ``character`` and ``audience``) cannot drift between the two.
-from .fallacy_attribution import MOVE_AUTHORS
+from .fallacy_attribution import MOVE_AUTHORS, normalize_register_test
 
 # Logger spécifique pour l'état
 state_logger = logging.getLogger("RhetoricalAnalysisState")
@@ -431,6 +431,7 @@ class RhetoricalAnalysisState:
         detection_paths: Optional[List[str]] = None,
         move_author: Optional[str] = None,
         move_author_label: Optional[str] = None,
+        register_test: str = "",
     ) -> str:
         """Ajoute un sophisme identifié et retourne son ID.
 
@@ -460,6 +461,15 @@ class RhetoricalAnalysisState:
 
         #3275 — la justification EST un fragment du texte : un nom de champ de
         l'état y est refusé par la porte partagée de #3268.
+
+        #3391 — ``register_test`` est le test de proportionnalité que la
+        famille émotion / loyauté / drapeau porte : ``disproportionate`` (l'appel
+        dépasse ce que le texte énonce, le drapeau tient) ou ``proportionate``
+        (légitime dans son registre — la descente ne le confirme alors PAS comme
+        sophisme, et enregistre ce verdict sur l'issue de branche). Seul le
+        vocabulaire fermé est stocké, via la même porte que ``move_author`` : une
+        valeur inconnue est une absence, jamais une mesure (#3029), et les
+        lecteurs impriment l'absence de test au lieu de supposer qu'il a eu lieu.
         """
         self._refuse_field_name_as_content("add_fallacy", justification)
         fallacy_id = self._generate_id("fallacy", self.identified_fallacies)
@@ -487,6 +497,11 @@ class RhetoricalAnalysisState:
             entry["move_author"] = str(move_author)
             if move_author_label:
                 entry["move_author_label"] = str(move_author_label)
+        # #3391 — the register test, through the closed vocabulary's own gate:
+        # an unknown value is absence, never a measurement (#3029).
+        _register_test = normalize_register_test(register_test)
+        if _register_test:
+            entry["register_test"] = _register_test
         log_target_info = ""
         if target_arg_id:
             if target_arg_id not in self.identified_arguments:

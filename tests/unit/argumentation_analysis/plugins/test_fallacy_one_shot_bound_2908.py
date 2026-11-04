@@ -136,15 +136,31 @@ def test_texts_at_or_under_the_bound_produce_a_byte_identical_prompt():
             # reported party); the JSON contract gained the two fields. The
             # re-pin keeps the property this test exists for: the template is
             # a single constant, byte-identical between runs.
-            "Also say WHOSE move it is: \"move_author\" is \"speaker\" when the "
-            "text's own speaker commits the fallacy, or \"reported\" when the "
+            'Also say WHOSE move it is: "move_author" is "speaker" when the '
+            'text\'s own speaker commits the fallacy, or "reported" when the '
             "text reports/denounces a move made by another party — then "
-            "\"move_author_label\" names that party as the text names it "
-            "(e.g. \"opponent\"). Omit both when the text does not let you tell.\n"
+            '"move_author_label" names that party as the text names it '
+            '(e.g. "opponent"). Omit both when the text does not let you tell.\n'
+            # #3391 — the template also carries the register test and the
+            # self-correction reading, and the JSON contract gained
+            # "register_test". Same re-pin as #3180 above: the property is the
+            # single constant template, not a frozen vintage of it.
+            "When the fallacy you chose is an appeal to emotion, loyalty, the "
+            "flag, pride, pity or fear, apply that node's own conditions as a "
+            'proportionality test and say the result in "register_test": '
+            '"disproportionate" when the appeal drives past what the text '
+            'itself states (its facts and its stakes), "proportionate" when it '
+            "stays within them — then it is legitimate in its register and "
+            "NOT a fallacy. The cap is the same for every side: a "
+            "disproportionate appeal stays flagged, whoever the speaker.\n"
+            "When the text revises or restricts its own preceding wording, "
+            "that revision is not a false implication of the wording it "
+            "corrects: do not flag it.\n"
             "Respond with ONLY a JSON object: "
             '{"fallacy_name": "...", "taxonomy_pk": "...", "explanation": "...", '
             '"confidence": 0.0-1.0, "move_author": "speaker|reported", '
-            '"move_author_label": "..."}\n\n'
+            '"move_author_label": "...", '
+            '"register_test": "proportionate|disproportionate"}\n\n'
             f"--- TAXONOMY ---\n{plugin._build_compact_taxonomy(max_depth=6)}\n--- END ---"
         )
         assert prompt == legacy, (

@@ -40,6 +40,8 @@ from semantic_kernel.contents import (
 from argumentation_analysis.agents.utils.taxonomy_navigator import TaxonomyNavigator
 from argumentation_analysis.core.fallacy_attribution import (  # #3390
     MOVE_AUTHORS,
+    REGISTER_TEST_PROPORTIONATE,
+    register_test_of,
 )
 from argumentation_analysis.core.plaintext_destination import (
     PlaintextDestinationError,
@@ -1157,13 +1159,23 @@ class FallacyWorkflowPlugin:
                     "Choose ONE action:\n"
                     f"- confirm_fallacy(node_pk='{current_pk}', matches=true, "
                     "justification='...', confidence=0.0-1.0, "
-                    "move_author='speaker|reported', move_author_label='...') "
+                    "move_author='speaker|reported', move_author_label='...', "
+                    "register_test='proportionate|disproportionate') "
                     "if this leaf GENUINELY names the fallacy the text exhibits. "
                     "move_author is 'speaker' when the text's own speaker "
                     "commits the move, 'reported' when the text reports or "
                     "denounces another party's move (move_author_label then names "
                     "that party as the text names it); omit both when the text "
                     "does not let you tell.\n"
+                    # #3391 — the register family's own negative answer, as a
+                    # call shape: no fallacy, and the test recorded.
+                    f"- confirm_fallacy(node_pk='{current_pk}', matches=false, "
+                    "register_test='proportionate', justification='...') when "
+                    "this node is an appeal to emotion, loyalty, the flag, "
+                    "pride, pity or fear AND the node's own conditions hold as "
+                    "a proportionality test: the emotion and the call stay "
+                    "proportionate to what the text itself states. That is "
+                    "legitimate in its register — not a fallacy.\n"
                     "- conclude_no_fallacy(reason='...') if no match. If the "
                     "text is not genuinely fallacious here, this is the honest "
                     "exit — do not confirm to avoid an empty result."
@@ -1176,7 +1188,30 @@ class FallacyWorkflowPlugin:
                         "When evaluating circular reasoning: accept paraphrased/implicit forms "
                         "where the premise presupposes the conclusion.\n"
                         "When evaluating appeal to emotion: confirm only if emotion is the "
-                        "primary persuasive operator, not merely illustrative."
+                        "primary persuasive operator, not merely illustrative.\n"
+                        # #3391 — the register test, straight from the taxonomy
+                        # node's own conditions (no new rule is invented), and
+                        # the anti-pendulum in the same breath: the test can
+                        # not be passed by lowering the flag on every side.
+                        "REGISTER TEST — the emotion, loyalty and flag family "
+                        "carries its own test, and the node's own conditions "
+                        "state it: is the emotion, and the call it drives, "
+                        "proportionate to what the text ITSELF states — its "
+                        "facts and its stakes? A mobilisation address whose "
+                        "call matches what the text states is LEGITIMATE IN ITS "
+                        "REGISTER: confirm no fallacy there, and pass "
+                        "register_test='proportionate' (the verdict is recorded "
+                        "as its own outcome, not dropped). A fear or loyalty "
+                        "appeal that drives PAST the stated facts is "
+                        "disproportionate: confirm it with "
+                        "register_test='disproportionate'. The cap is the same "
+                        "for every side — a disproportionate appeal stays "
+                        "flagged, whoever the speaker.\n"
+                        "SELF-CORRECTION — when the text revises or restricts "
+                        "its own preceding wording, that revision is not a "
+                        "false implication of the wording it corrects: a false "
+                        "implication needs the misleading reading to be left "
+                        "standing."
                     )
                 )
                 leaf_history.add_user_message(leaf_prompt)
@@ -1234,6 +1269,24 @@ class FallacyWorkflowPlugin:
                     if func_name == "confirm_fallacy":
                         if "confirmed" not in lr:
                             continue  # tool failure, not a verdict
+                        # #3391 — the register verdict is a FIELD, and it wins
+                        # over the boolean: a proportionate appeal is the
+                        # family's own negative answer. It is recorded as its
+                        # OWN outcome (never as a bare refusal, never as a
+                        # confirmed fallacy) — "legitimate in its register" is
+                        # an answer this descent can now give.
+                        _register_test = register_test_of(lr)
+                        if _register_test == REGISTER_TEST_PROPORTIONATE:
+                            self.logger.info(
+                                "  Legitimate in its register at "
+                                f"{current_pk}: {lr.get('justification', '')}"
+                            )
+                            outcome["action"] = "legitimate_in_register"
+                            outcome["reason"] = str(
+                                lr.get("justification", lr.get("reason", ""))
+                            )
+                            outcome["register_test"] = _register_test
+                            return None
                         if not lr.get("confirmed"):
                             self.logger.info(
                                 "  Leaf refused by the model's verdict: "
@@ -1275,6 +1328,10 @@ class FallacyWorkflowPlugin:
                             confidence_note=lr.get("confidence_note") or "",
                             move_author=move_author,
                             move_author_label=move_author_label,
+                            # #3391 — the test that stands the flag, when the
+                            # model applied one (disproportionate at this
+                            # point: proportionate returned above).
+                            register_test=_register_test,
                             navigation_trace=navigation_trace,
                             family=current_node.get("Famille", ""),
                             depth=leaf_depth,
@@ -1351,16 +1408,25 @@ class FallacyWorkflowPlugin:
                 f"{reasoning_context}"
                 f"{options_text}\n"
                 "Choose ONE action:\n"
-                "- Call explore_branch(node_pk='<any_listed_pk>') to explore a node — "
+                "- Call confirm_fallacy(node_pk='<any_listed_pk>') to explore a node — "
                 "you may jump several levels deep by picking a grandchild/great-grandchild PK directly\n"
                 f"- Call confirm_fallacy(node_pk='{current_pk}', matches=true, "
                 "justification='...', move_author='speaker|reported', "
-                "move_author_label='...') when this level GENUINELY names the "
-                "fallacy the text exhibits, and you want to stop here. "
+                "move_author_label='...', "
+                "register_test='proportionate|disproportionate') when this level "
+                "GENUINELY names the fallacy the text exhibits, and you want to "
+                "stop here. "
                 "move_author is 'speaker' when the text's own speaker commits "
                 "the move, 'reported' when the text reports or denounces "
                 "another party's move (move_author_label then names that "
                 "party); omit both when the text does not let you tell.\n"
+                # #3391 — the register family's negative answer, as a shape.
+                "- Call confirm_fallacy(matches=false, "
+                "register_test='proportionate', justification='...') when the "
+                "fallacy here is an appeal to emotion, loyalty, the flag, "
+                "pride, pity or fear AND that node's own conditions hold as a "
+                "proportionality test against what the text itself states: "
+                "legitimate in its register, not a fallacy.\n"
                 "- Call conclude_no_fallacy(reason='...') if no match in this branch\n"
                 "You MUST call exactly one function."
             )
@@ -1391,6 +1457,27 @@ class FallacyWorkflowPlugin:
                     "4. Do NOT call conclude_no_fallacy prematurely. The text likely contains "
                     "   fallacies in multiple branches. Abandon a branch only if you are CERTAIN "
                     "   there is no match at ANY descendant.\n\n"
+                    # #3391 — the register test (the taxonomy node's own
+                    # conditions, not a new rule) and the self-correction
+                    # reading, with the anti-pendulum stated in the same
+                    # breath: the test can not be passed by lowering every flag.
+                    "REGISTER TEST — the emotion, loyalty and flag family "
+                    "carries its own test, and the node's own conditions state "
+                    "it: is the emotion, and the call it drives, proportionate "
+                    "to what the text ITSELF states — its facts and its stakes? "
+                    "A mobilisation address whose call matches what the text "
+                    "states is LEGITIMATE IN ITS REGISTER: pass matches=false "
+                    "with register_test='proportionate' (recorded as its own "
+                    "outcome, not dropped). An appeal that drives PAST the "
+                    "stated facts is disproportionate: confirm it with "
+                    "register_test='disproportionate'. The cap is the same for "
+                    "every side — a disproportionate appeal stays flagged, "
+                    "whoever the speaker.\n"
+                    "SELF-CORRECTION — when the text revises or restricts its "
+                    "own preceding wording, that revision is not a false "
+                    "implication of the wording it corrects: a false "
+                    "implication needs the misleading reading to be left "
+                    "standing.\n\n"
                     "IMPORTANT: Only confirm a fallacy if the reasoning in the text is "
                     "genuinely fallacious. Legitimate uses of authority, emotion, "
                     "tradition are NOT fallacies.\n\n"
@@ -1542,6 +1629,19 @@ class FallacyWorkflowPlugin:
                 # #3180 — same rule as the leaf site: the confirm verdict
                 # carries the author pair when the model stated it.
                 move_author, move_author_label = _move_author_pair(confirm_result)
+                # #3391 — same rule as the leaf site: the register verdict is
+                # a field, and a proportionate one is the family's own negative
+                # answer — recorded as its own outcome, never as a fallacy.
+                _register_test = register_test_of(confirm_result)
+                if _register_test == REGISTER_TEST_PROPORTIONATE:
+                    self.logger.info(
+                        f"  Legitimate in its register at {confirmed_pk}: "
+                        f"{justification}"
+                    )
+                    outcome["action"] = "legitimate_in_register"
+                    outcome["reason"] = str(justification)
+                    outcome["register_test"] = _register_test
+                    return None
                 outcome["action"] = "confirmed"
                 outcome["reason"] = str(justification)
                 return IdentifiedFallacy(
@@ -1557,6 +1657,9 @@ class FallacyWorkflowPlugin:
                     confidence_note=confirm_result.get("confidence_note") or "",
                     move_author=move_author,
                     move_author_label=move_author_label,
+                    # #3391 — the test that stands the flag (the proportionate
+                    # case returned above).
+                    register_test=_register_test,
                     navigation_trace=navigation_trace,
                     family=current_node.get("Famille", ""),
                     depth=confirmed_depth,
@@ -1577,7 +1680,13 @@ class FallacyWorkflowPlugin:
                 )
                 reasoning_history.append(reasoning_summary)
                 self.logger.info(f"  Branch refused by the model's verdict: {reason}")
-                outcome["action"] = "refused"
+                # #3391 — a refusal that carries the register verdict is the
+                # family's own answer, named apart from a plain refusal.
+                if register_test_of(refused_result) == REGISTER_TEST_PROPORTIONATE:
+                    outcome["action"] = "legitimate_in_register"
+                    outcome["register_test"] = REGISTER_TEST_PROPORTIONATE
+                else:
+                    outcome["action"] = "refused"
                 outcome["reason"] = str(reason)
                 return None
 
@@ -1877,6 +1986,13 @@ class FallacyWorkflowPlugin:
                     exploration_method=method,
                     branches_explored=len(candidate_pks),
                     total_iterations=total_iterations,
+                    # #3391 — the branch record rides the MODEL result too: a
+                    # named outcome ('legitimate_in_register', 'refused',
+                    # 'concluded_no_fallacy'...) is an answer the descent gave,
+                    # and dropping it here made every one of them look like
+                    # silence (#3376's point, on the shape that actually
+                    # reaches the phase output).
+                    branch_outcomes=branch_outcomes,
                 )
                 self.logger.info(
                     f"--- Analysis complete: {len(identified)} fallacies identified "
@@ -2133,10 +2249,25 @@ class FallacyWorkflowPlugin:
             "text reports/denounces a move made by another party — then "
             '"move_author_label" names that party as the text names it '
             '(e.g. "opponent"). Omit both when the text does not let you tell.\n'
+            # #3391 — the register test and the self-correction reading,
+            # stated for the fallback path too: the same document must not
+            # get a different contract because the descent timed out.
+            "When the fallacy you chose is an appeal to emotion, loyalty, the "
+            "flag, pride, pity or fear, apply that node's own conditions as a "
+            'proportionality test and say the result in "register_test": '
+            '"disproportionate" when the appeal drives past what the text '
+            'itself states (its facts and its stakes), "proportionate" when it '
+            "stays within them — then it is legitimate in its register and "
+            "NOT a fallacy. The cap is the same for every side: a "
+            "disproportionate appeal stays flagged, whoever the speaker.\n"
+            "When the text revises or restricts its own preceding wording, "
+            "that revision is not a false implication of the wording it "
+            "corrects: do not flag it.\n"
             "Respond with ONLY a JSON object: "
             '{"fallacy_name": "...", "taxonomy_pk": "...", "explanation": "...", '
             '"confidence": 0.0-1.0, "move_author": "speaker|reported", '
-            '"move_author_label": "..."}\n\n'
+            '"move_author_label": "...", '
+            '"register_test": "proportionate|disproportionate"}\n\n'
             f"--- TAXONOMY ---\n{compact_taxonomy}\n--- END ---"
         )
 
@@ -2179,6 +2310,29 @@ class FallacyWorkflowPlugin:
                         confidence, _quote = fallacy_measured_fields(parsed)
                         # #3180 — the move's author, when the reply stated it.
                         move_author, move_author_label = _move_author_pair(parsed)
+                        # #3391 — the register verdict is a field here too, and
+                        # a proportionate one is a VERDICT, not a truncation:
+                        # the reply is recorded as legitimate in its register
+                        # instead of being turned into a fallacy or dropped
+                        # into a "no usable fallacy" warning.
+                        _register_test = register_test_of(parsed)
+                        if _register_test == REGISTER_TEST_PROPORTIONATE:
+                            self.logger.info(
+                                "One-shot: legitimate in its register — "
+                                f"{parsed.get('explanation', '')}"
+                            )
+                            return json.dumps(
+                                {
+                                    "fallacies": [],
+                                    "exploration_method": (
+                                        "one_shot_legitimate_in_register"
+                                    ),
+                                    "register_test": REGISTER_TEST_PROPORTIONATE,
+                                    "register_reason": parsed.get("explanation", ""),
+                                    "fallacy_name_considered": fallacy_name,
+                                },
+                                ensure_ascii=False,
+                            )
                         fallacy = IdentifiedFallacy(
                             fallacy_type=fallacy_name,
                             taxonomy_pk=parsed.get("taxonomy_pk", ""),
@@ -2187,6 +2341,10 @@ class FallacyWorkflowPlugin:
                             navigation_trace=[],
                             move_author=move_author,
                             move_author_label=move_author_label,
+                            # #3391 — disagreement stands here: the test that
+                            # stands the flag rides the detection (the
+                            # proportionate case returned above).
+                            register_test=_register_test,
                         )
                         result = FallacyAnalysisResult(
                             fallacies=[fallacy],
