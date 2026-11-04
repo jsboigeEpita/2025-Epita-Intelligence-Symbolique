@@ -96,3 +96,32 @@ def vote_count_phrase(
     if not support or not n_methods or n_methods <= 0 or support <= 0:
         return None
     return f"{support} des {n_methods} méthodes"
+
+
+def penalised_sum_on_its_maximum(
+    value_after: Optional[float],
+    value_before: Optional[float],
+    n_terms: Optional[int],
+) -> str:
+    """A penalised sum on its own ceiling, saying the penalty: « 4,25 sur 6
+    après pénalité (6,00 avant) ».
+
+    #3394 follow-up (R1142): on the cycle-0 states 38 of 67 quality entries
+    are ``original_score × (1 − penalty_factor)`` while the ranking's base
+    clause called every figure a plain sum — the same class as ask 5, on the
+    render's side. The adjusted sum rides its own ceiling; the pre-penalty
+    sum rides beside it so the reader sees WHICH figure the penalty moved.
+    Falls back to the marker without the parenthetical when the record
+    carries no readable ``original_score`` — the penalty is a fact of the
+    record (``applied``), only the before-VALUE needs a number.
+    """
+    base = sum_on_its_maximum(value_after, n_terms)
+    if not base:
+        return ""
+    try:
+        before = float(value_before)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return f"{base} après pénalité"
+    if before != before:  # NaN
+        return f"{base} après pénalité"
+    return f"{base} après pénalité ({_fr_number(before, 2)} avant)"

@@ -308,19 +308,25 @@ class TestTheRankingCarriesItsScale:
         assert "plus haut = meilleur" in line, line
 
     def test_the_winner_clause_carries_its_scale(self):
+        # R1142 — the rank compares PARTS: 4-on-2 (part 2,00) outranks
+        # 5-on-6 (part 0,83), the order the cycle-0 measurement table shows
+        # on 9/10 documents. The scale clause rides each figure as before.
         line = quality_ranking_line(
             _quality(("arg_1", 5.0, 6), ("arg_2", 4.0, 2), ("arg_3", 3.0, 6)),
             9,
-            "arg_2",
+            "arg_1",
         )
-        assert "est 2ᵉ de ce classement (4,00 sur 2)" in line, line
-        assert "arg_1 (5,00 sur 6) est en tête" in line, line
+        assert "est 2ᵉ de ce classement (5,00 sur 6)" in line, line
+        assert "arg_2 (4,00 sur 2) est en tête" in line, line
 
     def test_the_overflow_group_carries_a_scale(self):
+        # Under the part order the six 3.0-on-2 units (part 1,50) all
+        # outrank 5.0-on-6 (part 0,83) and 4.0-on-2 (part 2,00) heads them:
+        # three ride the listing, the boundary tie counts the other four.
         entries = [("arg_1", 5.0, 6), ("arg_2", 4.0, 2)]
         entries += [(f"arg_{i}", 3.0, 2) for i in range(3, 9)]
         line = quality_ranking_line(_quality(*entries), 9)
-        assert "et 5 autres à 3,00 sur 2" in line, line
+        assert "et 4 autres à 3,00 sur 2" in line, line
 
     def test_an_entry_without_a_ceiling_prints_no_number(self):
         # ``add_quality_score`` pairs the two; a state holding a bare sum has
@@ -353,6 +359,6 @@ class TestSeverityCarriesItsScale:
             "the severity weight reaches the writer on its [0, 1] scale, "
             "with the direction a non-specialist can read (#3394 ask 1)"
         )
-        assert not re.search(r"sévérité \d\.\d\)", prompt), (
-            "the bare dot-decimal severity shape is gone"
-        )
+        assert not re.search(
+            r"sévérité \d\.\d\)", prompt
+        ), "the bare dot-decimal severity shape is gone"
