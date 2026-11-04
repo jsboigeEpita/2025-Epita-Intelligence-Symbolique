@@ -8817,7 +8817,6 @@ async def _invoke_full_fallacy(
 
 
 def _record_per_argument_reading(
-    input_text: str,
     context: Dict[str, Any],
     arguments: List[Tuple[str, str]],
 ) -> None:
@@ -8830,37 +8829,47 @@ def _record_per_argument_reading(
     the read units cover — so the reading record credits these detections to
     this path instead of the descent line absorbing the union.
 
+    #3393 — the span is computed in DOCUMENT coordinates, from the offsets
+    the state's own locate rule recorded. It used to ``find`` each needle in
+    the phase's ``input_text``, which is a WINDOW of the document: the
+    offsets were window-relative, and the record rendered « 0.00–0.03 »
+    next to the other sites' 0.00–1.00 for the same units (measured on the
+    panel). A unit without a recorded offset claims no position (#3099) —
+    no fallback to a search, the state's offsets are the only truth here.
+
     Silent when no state is reachable, the same rule as every reading site
     (``_record_window`` no-ops without a state).
     """
     state: Any = reading_state_from_context(context)
     if state is None:
         return
-    offsets: List[int] = []
-    span_hi = 0
-    for _arg_id, arg_text in arguments:
-        needle = (arg_text or "").strip()
-        if not needle:
-            continue
-        off = input_text.find(needle)
-        if off >= 0:
-            offsets.append(off)
-            span_hi = max(span_hi, off + len(needle))
     prov = getattr(state, "argument_provenance", None)
     unit_total = len(prov) if isinstance(prov, dict) and prov else len(arguments)
-    span_lo = min(offsets) if offsets else 0
+    source_total = len(getattr(state, "raw_text", "") or "")
+    spans: List[Tuple[int, int]] = []
+    for arg_id, arg_text in arguments:
+        entry = prov.get(arg_id) if isinstance(prov, dict) else None
+        if not isinstance(entry, dict):
+            continue
+        off = entry.get("offset")
+        if isinstance(off, int) and not isinstance(off, bool) and off >= 0:
+            end = off + len((arg_text or "").strip())
+            if source_total:
+                end = min(end, source_total)
+            spans.append((off, end))
     extra: Dict[str, Any] = {
         "units": len(arguments),
         "unit_total": unit_total,
     }
-    if offsets:
-        extra["span_lo"] = span_lo
-        extra["span_hi"] = min(span_hi, len(input_text))
+    if spans:
+        extra["span_lo"] = min(s for s, _ in spans)
+        extra["span_hi"] = max(e for _, e in spans)
+    span_lo = int(extra.get("span_lo", 0) or 0)
     state.record_reading_window(
         "fallacy_per_argument",
         WindowSelection(
             offset=span_lo,
-            window=max(extra.get("span_hi", 0) - span_lo, 0),
+            window=max(int(extra.get("span_hi", 0) or 0) - span_lo, 0),
             status=STATUS_SELECTED,
         ),
         extra=extra,
@@ -9391,7 +9400,7 @@ async def _invoke_hierarchical_fallacy_per_argument(
                 f"runs got no answer: {run_failures[0]}"
             )
         # #3105 — the reading this pass actually did, on its own site.
-        _record_per_argument_reading(input_text, context, arguments)
+        _record_per_argument_reading(context, arguments)
         return per_arg_output
 
     except FallacyDetectionFailed:

@@ -4284,6 +4284,7 @@ def build_act3_retry_prompt(
     flagged: List[str],
     virtue_flagged: Optional[List[str]] = None,
     virtue_table: str = "",
+    letter_flagged: Optional[List[str]] = None,
 ) -> str:
     """The bounded ONE writer retry (#3343) — the writer rewrites its own prose.
 
@@ -4351,6 +4352,32 @@ def build_act3_retry_prompt(
             "lecteur reste. Ne commente pas cette consigne et ne cite pas les "
             "phrases repérées : rends la conclusion complète, prête à lire.\n"
         )
+    if letter_flagged:
+        # #3393 (item 7) — Act III's own #3367 block: the wording is Act II's,
+        # the surface is the conclusion. The block never orders a designation
+        # by id or letter (#3303/#3296) — it restates the designation rule the
+        # legend already carries.
+        letter_quoted = "\n".join(f"- {sentence}" for sentence in letter_flagged[:5])
+        header = (
+            "CORRECTION DEMANDÉE"
+            if not (flagged or virtue_flagged)
+            else "AUTRE CORRECTION DEMANDÉE"
+        )
+        prompt += (
+            f"\n\n{header} — ta conclusion ci-dessus imprime {len(letter_flagged)} "
+            "phrase(s) où une lettre de désignation (α, β, …) paraît dans la "
+            "conclusion. Une lettre est un raccourci d'atelier : le lecteur n'a "
+            "pas la légende des désignations et ne peut rien en résoudre. "
+            f"Phrases repérées :\n{letter_quoted}\n\n"
+            "Réécris la conclusion EN ENTIER — même structure, mêmes beats, "
+            "mêmes données, même longueur. Pour chaque lettre imprimée, "
+            "désigne l'unité par ce qu'elle dit — comme le reste de ta prose ; "
+            "la légende des désignations en donne le texte —, ou dis la même "
+            "chose au niveau du discours. N'imprime jamais la lettre seule ni "
+            "un identifiant interne. Ne commente pas cette consigne et ne cite "
+            "pas les phrases repérées : rends la conclusion complète, prête à "
+            "lire.\n"
+        )
     return label_writer_prompt(prompt, evidence.unit_texts)
 
 
@@ -4360,11 +4387,16 @@ async def weave_act3_conclusion_retry(
     flagged: List[str],
     virtue_flagged: Optional[List[str]] = None,
     virtue_table: str = "",
+    letter_flagged: Optional[List[str]] = None,
 ) -> WeaveOutcome:
     """The bounded ONE retry (#3343), under the same fail-loud contract."""
     return await weave(
         build_act3_retry_prompt(
-            evidence, flagged, virtue_flagged=virtue_flagged, virtue_table=virtue_table
+            evidence,
+            flagged,
+            virtue_flagged=virtue_flagged,
+            virtue_table=virtue_table,
+            letter_flagged=letter_flagged,
         ),
         llm_callable,
         "Acte III (relance)",
@@ -4394,6 +4426,10 @@ class _DressedAct3:
     superlative_sentences: List[str]
     virtue_note: str
     virtue_sentences: List[str]
+    # #3393 (item 7) — Act III joins Act II's #3367 read: a printed Greek
+    # letter is a workshop handle the reader cannot resolve (#3317), and the
+    # panel's conclusion printed « Pour γ, … » with no legend in sight.
+    letter_sentences: List[str]
 
 
 def _dress_act3_prose(
@@ -4541,6 +4577,15 @@ def _dress_act3_prose(
         _unit_scores,
         unit_texts=evidence.unit_texts,
     )
+    # #3393 (item 7) — the writer's own Greek handles must leave the prose:
+    # a printed letter is a designation the reader cannot resolve (#3317 —
+    # fixed for Act II by #3367, this is the same read for the conclusion).
+    # The sentences feed the bounded retry's correction; no deterministic
+    # strip — the fix is the writer's rewrite, not a behind-the-reader edit
+    # (#3317's own calibration).
+    from .readability_gate import greek_label_sentences
+
+    _letters = greek_label_sentences(narrative)
     return _DressedAct3(
         text=narrative,
         bound_removal=_bound_removal,
@@ -4552,6 +4597,7 @@ def _dress_act3_prose(
         superlative_sentences=_flagged,
         virtue_note=virtue_localisation_note(len(_virtue_flagged), "Acte III"),
         virtue_sentences=_virtue_flagged,
+        letter_sentences=_letters,
     )
 
 
@@ -4652,7 +4698,12 @@ async def build_act3_conclusion(
     _virtue_retry_motif = ""
     _first_superlative = _dressed.superlative_sentences
     _first_virtue = _dressed.virtue_sentences
-    if _dressed.superlative_note or _dressed.virtue_note:
+    # #3393 (item 7) — the letters ride the SAME bounded call as the two
+    # existing motives: one call, three correction blocks, and the summed
+    # cost comparison already sees a printed letter (a designation leak,
+    # #2980/#3317) through ``designation_leak_count``.
+    _first_letters = _dressed.letter_sentences
+    if _dressed.superlative_note or _dressed.virtue_note or _first_letters:
         from .readability_gate import designation_leak_count
         from .virtue_attribution_check import (
             flatten_unit_scores,
@@ -4673,17 +4724,20 @@ async def build_act3_conclusion(
             virtue_table=held_virtues_table(
                 _retry_keys, _retry_unit_scores, display=VIRTUE_DISPLAY_FR
             ),
+            letter_flagged=_first_letters,
         )
         if _retry.narrative:
             _second = _dress_act3_prose(_retry.narrative, state, evidence)
             _before_total = (
                 len(_first_superlative)
                 + len(_first_virtue)
+                + len(_first_letters)
                 + designation_leak_count(_dressed.text)
             )
             _after_total = (
                 len(_second.superlative_sentences)
                 + len(_second.virtue_sentences)
+                + len(_second.letter_sentences)
                 + designation_leak_count(_second.text)
             )
             if _after_total < _before_total:
@@ -4708,10 +4762,15 @@ async def build_act3_conclusion(
                     "Acte III", len(_first_virtue), failure=_retry.failure
                 )
         logger.info(
-            "Acte III bounded writer retry (#3343/#3358): %s | %s | first " "draft: %s",
+            "Acte III bounded writer retry (#3343/#3358): %s | %s | lettres: %d | "
+            "first draft: %s",
             _retry_motif or "(pas de superlatif)",
             _virtue_retry_motif or "(pas de vertu mal localisée)",
-            "; ".join((s[:90] for s in (_first_superlative + _first_virtue)[:3])),
+            len(_first_letters),
+            "; ".join(
+                s[:90]
+                for s in (_first_superlative + _first_virtue + _first_letters)[:3]
+            ),
         )
 
     narrative = _dressed.text

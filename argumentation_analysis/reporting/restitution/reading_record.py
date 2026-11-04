@@ -53,6 +53,14 @@ SITE_LABELS_FR = {
     # are reading statuses here — the record the phase kept since #3113,
     # finally read.
     "local_llm": "palier local d'analyse",
+    # #3393 — the coverage phases share this reader-label table: Act I's
+    # coverage parenthesis names each module, and a state key there
+    # (`fol_reasoning`, `counter`…) is internal vocabulary on the reader
+    # surface — the same class #3311 closed for the metadata keys.
+    "atms": "maintenance des hypothèses (ATMS)",
+    "jtms": "maintenance des justifications (JTMS)",
+    "nl_to_logic": "traduction en formules logiques",
+    "counter": "contre-argumentation",
 }
 
 # The French label a reader understands, per producer of the run's units —
@@ -358,7 +366,9 @@ def _whole_text_basis(state: Any, source_chars: int) -> str:
         )
     by_prod: Dict[str, int] = {}
     offsets: List[int] = []
-    for p in prov.values():
+    ends: List[int] = []
+    identified = getattr(state, "identified_arguments", None) or {}
+    for arg_id, p in prov.items():
         if not isinstance(p, dict):
             continue
         prod = str(p.get("producer", "inconnu"))
@@ -366,6 +376,14 @@ def _whole_text_basis(state: Any, source_chars: int) -> str:
         off = p.get("offset")
         if isinstance(off, int) and not isinstance(off, bool) and off >= 0:
             offsets.append(off)
+            # #3393 — the extent ends where the last unit ENDS, the sites'
+            # own convention (``offset + len(text)``, #3136): the basis line
+            # took the last unit's START for the end and said 0.00–0.75
+            # next to site lines saying 0.00–1.00 for the same units. The
+            # key is the one the offset writer located (shared_state's
+            # locate rule): the source quote when it exists, the text else.
+            key = str(p.get("source_quote") or identified.get(arg_id) or "")
+            ends.append(min(off + len(key), source_chars))
     parts = " + ".join(
         f"{v} {PRODUCER_LABELS_FR.get(k, k)}" for k, v in sorted(by_prod.items())
     )
@@ -376,7 +394,7 @@ def _whole_text_basis(state: Any, source_chars: int) -> str:
         return f"{head} (aucune unité ancrée : étendue non dite)"
     bands = len({min(off * 3 // source_chars, 2) for off in offsets})
     span_lo = min(offsets) / source_chars
-    span_hi = max(offsets) / source_chars
+    span_hi = max(ends if ends else offsets) / source_chars
     if bands >= 3:
         # The whole-text claim is earned by the measurement alone: 3/3 bands.
         return (
@@ -491,9 +509,13 @@ def format_reading_line(line: ReadingLine, source_chars: int) -> str:
                 f"{source_chars} caractères en {accord(line.windows, 'fenêtre')}"
             )
     elif 0 < source_chars and line.window >= source_chars:
+        # #3393 — the window is the REQUESTED size (it carries its cap), not
+        # a read size: « 8000 de 921 » says the reader asked for more than
+        # the document holds. What was actually read is the document — the
+        # count the line names, never the window.
         base = (
             f"« {label} » : document lu en entier "
-            f"({line.window} de {source_chars} caractères)"
+            f"({line.chars_read or source_chars} caractères)"
         )
     elif line.offset:
         base = (

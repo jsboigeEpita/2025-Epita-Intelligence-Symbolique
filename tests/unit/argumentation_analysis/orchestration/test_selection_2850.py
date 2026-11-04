@@ -212,7 +212,10 @@ class TestTextBandsAndSpan2887:
             SelectableUnit(unit_id="b", text="tb", offset=50000),
         ]
         sel = select_for_budget(units, 2, text_length=60000)
-        assert sel.span == (1200 / 60000, 50000 / 60000)
+        # #3393 — the extent ends where the last unit ENDS (offset + text
+        # length), never at its start: the panel measured Act I saying
+        # 0.00–0.73 next to the bounds' own 0.00–1.00 for the same units.
+        assert sel.span == (1200 / 60000, 50002 / 60000)
 
     def test_return_is_text_order_even_when_bands_interleave(self):
         """The review nit: round-robin interleaves bands, the returned
@@ -244,5 +247,6 @@ class TestTextBandsAndSpan2887:
         ]
         sel = select_for_budget(units, 5, text_length=40000)
         assert sel.k == 2
-        assert sel.span == (100 / 40000, 20000 / 40000)
+        # #3393 — end of the extent = end of the last unit (20000 + len("tb")).
+        assert sel.span == (100 / 40000, 20002 / 40000)
         assert sel.bands_covered == 2 and sel.bands_total == 3
