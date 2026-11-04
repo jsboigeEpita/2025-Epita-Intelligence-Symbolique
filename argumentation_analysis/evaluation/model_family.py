@@ -61,7 +61,12 @@ def model_family(model_id: str) -> str:
             "verdict from a model that cannot be shown to differ from the "
             "pipeline is not a blind judgement (#3375)"
         )
-    for prefix, family in _FAMILY_PREFIXES:
+    # Longest prefix first — sorted HERE, not trusted from the table's
+    # declaration order, so adding ``x-`` above ``x-long-`` cannot silently
+    # shadow the longer row.
+    for prefix, family in sorted(
+        _FAMILY_PREFIXES, key=lambda row: len(row[0]), reverse=True
+    ):
         if normalised.startswith(prefix):
             return family
     from argumentation_analysis.services.model_prices import PRICE_TABLE
