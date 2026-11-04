@@ -421,23 +421,39 @@ def render_non_argumentative_reader_paragraph(state: Dict[str, Any], chars: int)
 
     ``chars`` is the length ``document_chars`` measured — passed in, never
     recomputed here (R1141).
+
+    #3389's rule rides every recorded value (#3408 rework): a value goes
+    between « » ONLY if the in-memory document carries it
+    (``normalised_quote_in``) — « » is a verbatim claim, and the recorded
+    event or participants of a header are often the record's own words
+    about the document, not the document's. An uncarried value prints as
+    what it is, a recorded description, with no quotes around it.
     """
     st = state.get("state") or state
     from argumentation_analysis.reporting.restitution.act1_framing_plugin import (
         reader_metadata_view,
     )
+    from argumentation_analysis.reporting.restitution.quote_fidelity import (
+        normalised_quote_in,
+    )
 
     metadata = reader_metadata_view(st.get("source_metadata") or {})
-    subject = (
-        f"Ce document de {chars} caractères" if chars else "Ce document"
-    )
+    text = st.get("raw_text") or ""
+    subject = f"Ce document de {chars} caractères" if chars else "Ce document"
     parts = [
         f"{subject} n'a pas été lu comme une "
         "argumentation : l'extraction n'y a identifié aucun argument — "
         "aucune thèse à examiner, aucun raisonnement à suivre."
     ]
     if metadata:
-        elements = [f"{label} : « {value} »" for label, value in metadata.items()]
+        elements = [
+            (
+                f"{label} : « {value} »"
+                if normalised_quote_in(text, value)
+                else f"{label} : {value}"
+            )
+            for label, value in metadata.items()
+        ]
         parts.append(
             "Le matériel enregistré le décrit ainsi — " + " ; ".join(elements) + "."
         )
