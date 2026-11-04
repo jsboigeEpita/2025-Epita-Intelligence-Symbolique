@@ -1,0 +1,48 @@
+{
+  "key": "ee6e313772bdf5764a9edb443d665f33d825dbefba1e565a21ec90dfd8debe29",
+  "value": {
+    "id": "chatcmpl-EgIsmsSikiliagUFO8jfRj5F8hsee",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Obstacles localisés : jargon argumentatif non défini (« argument d'autorité » et « appel à la peur classique »). Les références pronominales sont résolvables et les phrases ne sont pas excessivement emboîtées. Verdict : obstacle résolvable par le contexte, donc clarté partielle.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793751068,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 113,
+      "prompt_tokens": 270,
+      "total_tokens": 383,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 28,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

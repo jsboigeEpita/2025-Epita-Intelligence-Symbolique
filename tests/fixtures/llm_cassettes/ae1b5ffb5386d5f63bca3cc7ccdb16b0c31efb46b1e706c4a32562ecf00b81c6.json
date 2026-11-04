@@ -1,0 +1,48 @@
+{
+  "key": "ae1b5ffb5386d5f63bca3cc7ccdb16b0c31efb46b1e706c4a32562ecf00b81c6",
+  "value": {
+    "id": "chatcmpl-EgJ6TL11JbJ0vSKNWvi1HuYKFFARF",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Anaphore non résolvable : « Elle sert de dissuasion » — le pronom « Elle » n’a pas d’antécédent clair dans le texte. Il pourrait renvoyer aux avancées dans les analyses ADN, mais celles-ci ne sont pas mentionnées comme une mesure de dissuasion.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793751917,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 175,
+      "prompt_tokens": 282,
+      "total_tokens": 457,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 90,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

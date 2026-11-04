@@ -1,0 +1,48 @@
+{
+  "key": "ca39dcc29b9a5319cdf7c5a4b57aa3cad39bddff08e8dc054731249f4cc1f20a",
+  "value": {
+    "id": "chatcmpl-EgIsneylDAGV3Uwtsw7MJptD5RsaK",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"La justification du gouvernement en faveur du travail plus long est fallacieuse et peu fiable : elle présente cette mesure comme inévitable, recourt à un appel à la peur et s’appuie sur des projections financières fondées sur des hypothèses optimistes.\",\"digressions\":\"\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793751069,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 177,
+      "prompt_tokens": 321,
+      "total_tokens": 498,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 100,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

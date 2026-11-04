@@ -1,0 +1,40 @@
+{
+  "key": "42990474becd9c448d31b51c3e37d5408cf8ccb578ab8dcb2288372bdab34508",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_aDAQyWGSP7tLeItKwptQvuqL",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"79\",\"matches\":false,\"justification\":\"L’énoncé affirme directement que la politique économique est un succès, mais ne fonde pas la validité d’une proposition sur les succès de son auteur. Il ne correspond donc pas à l’argument d’accomplissement ni à ses spécialisations.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EgIva8NYULzCvt0L1BEJyz46AS3XY",
+        "created": 1793751242,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1656,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 558,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 90,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

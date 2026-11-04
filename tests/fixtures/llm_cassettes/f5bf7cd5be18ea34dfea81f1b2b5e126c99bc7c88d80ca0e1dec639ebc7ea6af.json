@@ -1,0 +1,48 @@
+{
+  "key": "f5bf7cd5be18ea34dfea81f1b2b5e126c99bc7c88d80ca0e1dec639ebc7ea6af",
+  "value": {
+    "id": "chatcmpl-EgJ4wy4dkiqLfH585AaMFBHrKnOpq",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Les entreprises pharmaceutiques cachent les effets secondaires et les vaccins sont dangereux.\",\"main_thesis\":\"L'idée que les entreprises pharmaceutiques cachent les effets secondaires est une théorie du complot sans fondement, et les taux de vaccination élevés protègent aussi les personnes qui ne peuvent pas être vaccinées grâce à l'immunité collective.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793751822,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 137,
+      "prompt_tokens": 293,
+      "total_tokens": 430,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 44,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

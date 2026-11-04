@@ -1,0 +1,48 @@
+{
+  "key": "f5e28cd787ad6caa9e811326b87f2a51a3b2d7fcdc4d1e72b7afd7fe892affeb",
+  "value": {
+    "id": "chatcmpl-EgJ6a2HZy0eTglYjXODsWr5ToNcbN",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"Les avancées dans les analyses ADN réduisent considérablement le risque d’erreur judiciaire.\",\"digressions\":\"« Elle sert de dissuasion contre les crimes les plus graves comme le meurtre de masse » et « certains criminels sont irrécupérables et représentent un danger permanent pour la société » s’écartent de la thèse sur l’impact des analyses ADN.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793751924,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 311,
+      "prompt_tokens": 263,
+      "total_tokens": 574,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 214,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

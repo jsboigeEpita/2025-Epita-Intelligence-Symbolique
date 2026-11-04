@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"start_marker\": \"La déclaration cruciale sur l'économie verte est enfouie ici.\",\n  \"end_marker\": \"La déclaration cruciale sur l'économie verte est enfouie ici.\",\n  \"template_start\": null,\n  \"explanation\": \"Le texte source ne contient pas de section explicitement intitulée « Le point sur l'économie verte ». La seule occurrence thématique pertinente est la phrase « La déclaration cruciale sur l'économie verte est enfouie ici. ». Les deux bornes sont donc fixées sur cette phrase exacte, qui constitue à elle seule l'extrait correspondant.\"\n}",
+      "content": "{\n  \"start_marker\": \"La déclaration cruciale sur l'économie verte est enfouie ici.\",\n  \"end_marker\": \"La déclaration cruciale sur l'économie verte est enfouie ici.\",\n  \"explanation\": \"Le texte ne contient pas de titre explicite « Le point sur l'économie verte ». L'unique passage thématiquement pertinent est la phrase « La déclaration cruciale sur l'économie verte est enfouie ici. », qui constitue donc à la fois le début et la fin de l'extrait ciblé. Cette chaîne apparaît exactement dans le texte source.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EeCmsCCpi5KKeXXm7no72AOOAUpsf",
-        "created": 1793250982,
+        "id": "chatcmpl-EgJ3DCEUNn7y7X1bLffwYzIcHaWt0",
+        "created": 1793751715,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 6801,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 644,
+          "completion_tokens": 542,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 512,
+            "reasoning_tokens": 414,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

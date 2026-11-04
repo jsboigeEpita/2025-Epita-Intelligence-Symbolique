@@ -1,0 +1,33 @@
+{
+  "key": "b2fd628b79e59b54bdc089fbf179b5a27b32832440730d283545e89c034d92a6",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "[\n  {\n    \"fallacy_name\": \"Assertion gratuite\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.99,\n    \"quote\": \"Le president affirme que la politique economique est un succes incontestable.\"\n  },\n  {\n    \"fallacy_name\": \"Argument d'autorité\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.92,\n    \"quote\": \"Le president affirme que la politique economique est un succes incontestable.\"\n  },\n  {\n    \"fallacy_name\": \"Appel à l'incontestabilité\",\n    \"root_category\": \"Obstruction\",\n    \"confidence\": 0.95,\n    \"quote\": \"Le president affirme que la politique economique est un succes incontestable.\"\n  },\n  {\n    \"fallacy_name\": \"Renversement de la charge de la preuve\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.9,\n    \"quote\": \"Le president affirme que la politique economique est un succes incontestable.\"\n  },\n  {\n    \"fallacy_name\": \"Généralisation hâtive\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.78,\n    \"quote\": \"Le president affirme que la politique economique est un succes incontestable.\"\n  },\n  {\n    \"fallacy_name\": \"Affirmation catégorique non étayée\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.96,\n    \"quote\": \"Le president affirme que la politique economique est un succes incontestable.\"\n  },\n  {\n    \"fallacy_name\": \"Ambiguïté sur le terme « succès »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.88,\n    \"quote\": \"Le president affirme que la politique economique est un succes incontestable.\"\n  },\n  {\n    \"fallacy_name\": \"Absence de critères de vérification\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.93,\n    \"quote\": \"Le president affirme que la politique economique est un succes incontestable.\"\n  },\n  {\n    \"fallacy_name\": \"Prétention à l'infaillibilité\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.84,\n    \"quote\": \"Le president affirme que la politique economique est un succes incontestable.\"\n  },\n  {\n    \"fallacy_name\": \"Immunisation contre la réfutation\",\n    \"root_category\": \"Obstruction\",\n    \"confidence\": 0.89,\n    \"quote\": \"Le president affirme que la politique economique est un succes incontestable.\"\n  },\n  {\n    \"fallacy_name\": \"Appel implicite au prestige institutionnel\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.86,\n    \"quote\": \"Le president affirme que la politique economique est un succes incontestable.\"\n  },\n  {\n    \"fallacy_name\": \"Langage persuasif chargé\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.82,\n    \"quote\": \"Le president affirme que la politique economique est un succes incontestable.\"\n  }\n]",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EgIvI1o140HChppvcbd4hyW62qIvZ",
+        "created": 1793751224,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 268,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 1038,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 340,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

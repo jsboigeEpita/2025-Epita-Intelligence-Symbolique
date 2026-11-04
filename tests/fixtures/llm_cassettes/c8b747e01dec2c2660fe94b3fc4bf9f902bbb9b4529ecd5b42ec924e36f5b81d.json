@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_s3gXXkhK2OwO8MlTd16JYmMQ",
+          "id": "call_xc8BmUWg3eKow4Ccf9ojtvky",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"326\",\"matches\":false,\"justification\":\"Le texte invoque l'autorité des experts et disqualifie l'avis des non-experts, mais il ne tente pas de discréditer l'adversaire en suscitant la honte ou l'embarras. Cette feuille ne correspond donc pas à la fallacie présente.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"326\",\"matches\":false,\"justification\":\"Le texte invoque l’unanimité des experts et exclut l’avis des non-experts, mais il ne cherche pas à discréditer l’adversaire en provoquant la honte ou l’embarras. L’appel à la honte n’est donc pas la fallacie pertinente.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EeCfz540C4mipxBqS3URYaYFjlkZL",
-        "created": 1793250555,
+        "id": "chatcmpl-EgIwULthBFMyCtvBzalPrpkJ3sCwz",
+        "created": 1793751298,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 927,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 94,
+          "completion_tokens": 97,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

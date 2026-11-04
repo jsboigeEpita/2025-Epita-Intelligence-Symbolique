@@ -1,0 +1,48 @@
+{
+  "key": "208640cb646f375c83232ddb31756823d20b62374e70c850ecb408ef85327734",
+  "value": {
+    "id": "chatcmpl-EgIuOhvOFP3ofqRws3O8Jnj62v9pv",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "[{\"counter_argument\":\"Affirmer qu'il s'agit d'une réforme différente plutôt que d'une suppression ne répond pas aux critiques de fond : il faut encore démontrer que cette autre approche garantit la pérennité, l'équité et le niveau des pensions.\",\"strategy_used\":\"déplacement vers les critères de fond\",\"target_argument\":\"[arg_6]\",\"strength\":\"strong\",\"reasoning\":\"La précision sémantique sur l'objectif ne suffit pas à établir que la réforme proposée est préférable ou viable.\"},{\"counter_argument\":\"Les différences structurelles entre les pays n'empêchent pas toute comparaison : elles peuvent être identifiées et intégrées dans l'analyse, tandis que les expériences étrangères fournissent des éléments utiles sur les effets des différentes mesures.\",\"strategy_used\":\"concession et réfutation\",\"target_argument\":\"[arg_2]\",\"strength\":\"strong\",\"reasoning\":\"L'objection relève justement la nécessité d'une comparaison nuancée, mais elle ne suffit pas à écarter les données internationales.\"},{\"counter_argument\":\"L'annonce d'un effondrement dans cinq ans ne constitue pas une preuve sans données précises sur les déficits, les réserves, les scénarios envisagés et les possibilités d'ajustement progressif.\",\"strategy_used\":\"demande de justification\",\"target_argument\":\"[arg_3]\",\"strength\":\"strong\",\"reasoning\":\"Une échéance catastrophique peut créer une urgence artificielle si elle repose sur une projection non démontrée ou sur l'absence supposée de solutions intermédiaires.\"},{\"counter_argument\":\"Une hypothèse de croissance de 1,8 % peut être discutée, mais son caractère optimiste ne suffit pas à invalider la projection : il faut examiner plusieurs scénarios et la sensibilité du résultat à cette hypothèse.\",\"strategy_used\":\"distinction entre hypothèse et invalidation\",\"target_argument\":\"[arg_5]\",\"strength\":\"moderate\",\"reasoning\":\"La critique identifie une fragilité possible, mais elle ne montre pas que la conclusion financière est nécessairement fausse.\"},{\"counter_argument\":\"L'impact sur les générations futures n'est pas un simple appel à l'émotion : il renvoie à une question concrète de répartition de la dette, des cotisations et des prestations entre générations, qui doit néanmoins être étayée par des données financières.\",\"strategy_used\":\"requalification de l'argument\",\"target_argument\":\"[arg_7]\",\"strength\":\"strong\",\"reasoning\":\"La dimension morale peut être pertinente pour une politique publique et ne détourne pas forcément le débat technique, même si elle ne remplace pas l'analyse du financement.\"},{\"counter_argument\":\"Le fait que de nombreux pays européens aient réformé leurs retraites ne suffit pas à établir que la même réforme est nécessaire ici : une mesure peut être largement adoptée tout en étant inadaptée à un contexte national donné.\",\"strategy_used\":\"réfutation de l'appel à la majorité\",\"target_argument\":\"[arg_1]\",\"strength\":\"strong\",\"reasoning\":\"La popularité ou la généralisation d'une politique ne démontre ni sa nécessité ni son efficacité dans le cas particulier concerné.\"},{\"counter_argument\":\"Travailler plus longtemps n'est pas une conséquence inévitable : d'autres leviers existent, comme l'évolution des cotisations, les recettes fiscales, l'emploi des seniors, la productivité ou une modification du niveau des prestations.\",\"strategy_used\":\"présentation d'alternatives\",\"target_argument\":\"[arg_4]\",\"strength\":\"strong\",\"reasoning\":\"L'existence de plusieurs leviers de financement montre que l'allongement de la durée de travail relève d'un choix politique plutôt que d'une nécessité naturelle.\"}]",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793751168,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 947,
+      "prompt_tokens": 615,
+      "total_tokens": 1562,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 197,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

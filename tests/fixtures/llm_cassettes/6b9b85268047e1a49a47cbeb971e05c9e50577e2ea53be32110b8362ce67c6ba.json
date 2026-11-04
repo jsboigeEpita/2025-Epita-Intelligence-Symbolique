@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"exists X: (Idee(X) && Incolore(X) && Verte(X) && Dort(X) && Furieusement(X))\"\n  ],\n  \"predicates\": {\n    \"Idee\": \"est une idée\",\n    \"Incolore\": \"est incolore\",\n    \"Verte\": \"est verte\",\n    \"Dort\": \"dort\",\n    \"Furieusement\": \"dort furieusement\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La phrase affirme l'existence d'au moins une idée. Cette idée est décrite comme incolore et verte, et elle dort furieusement. Ces propriétés sont donc regroupées dans une formule existentielle.\"\n}",
+      "content": "{\n  \"formulas\": [\n    \"exists X: (Idee(X) && Incolore(X) && Verte(X) && DortFurieusement(X))\"\n  ],\n  \"predicates\": {\n    \"Idee\": \"est une idée\",\n    \"Incolore\": \"est incolore\",\n    \"Verte\": \"est verte\",\n    \"DortFurieusement\": \"dort furieusement\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La phrase affirme l'existence d'au moins une idée qui est à la fois incolore et verte, et qui dort furieusement. L'expression « d'incolores idées vertes » est représentée par une quantification existentielle, car elle introduit des idées sans affirmer que toutes les idées possèdent ces propriétés.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EeCk3Zq3d9pPgGmxbLvpHx43if8eK",
-        "created": 1793250807,
+        "id": "chatcmpl-EgJ0O0UDzl8auETueAQLMIDMW1v1k",
+        "created": 1793751540,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 286,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 448,
+          "completion_tokens": 468,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 274,
+            "reasoning_tokens": 278,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

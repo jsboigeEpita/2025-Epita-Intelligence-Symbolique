@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_uUJs4jyggz1T489jdfxoQLqv",
+          "id": "call_ddGcmjS8wJOPpX1RssLskZtK",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"846\",\"matches\":false,\"justification\":\"La phrase affirme un succès sans ambiguïté sémantique ni structurelle notable; elle n'exploite pas plusieurs sens.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"846\",\"matches\":false,\"justification\":\"La phrase affirme un succès mais ne présente pas d’ambiguïté sémantique ou structurelle identifiable; «succès incontestable» est évaluatif, sans double sens exploité.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EeCfBfNR6JWg69YIfZCKPoI0YIBuA",
-        "created": 1793250505,
+        "id": "chatcmpl-EgIvTuMYDo97c9awTOdX1KoPG9cPz",
+        "created": 1793751235,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2015,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 66,
+          "completion_tokens": 74,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

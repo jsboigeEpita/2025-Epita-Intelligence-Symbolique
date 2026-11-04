@@ -1,0 +1,40 @@
+{
+  "key": "1ad890ad72cc5697cce9a44bdc277eb212eb4fb7bd6a6e3a7b7853d700f06b26",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_ohNTWTaQizuIXrXnmm45OJTq",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"325\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L'argument 2 écarte l'avis d'une personne au seul motif qu'elle n'est pas experte, en affirmant qu'il ne compte pas, plutôt que d'examiner sa pertinence. Cela correspond à l'appel au dédain. L'argument 1 relève par ailleurs d'un appel à l'autorité, mais l'argument 2 suffit à caractériser ce nœud.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EgIwYjcY4CQQs1ECxpNg2aJvjIfLF",
+        "created": 1793751302,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 937,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 122,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}
