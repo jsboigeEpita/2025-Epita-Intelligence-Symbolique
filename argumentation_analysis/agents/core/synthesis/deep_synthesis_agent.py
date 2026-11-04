@@ -311,17 +311,11 @@ class DeepSynthesisAgent(BaseAgent):
         f"{_RULE5_OPAQUE}"
         "6. 6 à 10 paragraphes au total, registre analytique, sans "
         "précaution oratoire.\n"
-        # #3390 — attribution is carried by the artifact lines (RAPPORTÉ /
-        # PERSONNAGE / PUBLIC, one wording from move_author_note) and this
-        # rule teaches the writer what they license. Without it the cycle-0
-        # synthesis listed a RAPPORTÉ detection among the speaker's
-        # structural vulnerabilities, and aggregated a play's characters
-        # into « le discours attribué à » the author.
-        "7. ATTRIBUTION : une ligne d'artefact qui porte RAPPORTÉ, PERSONNAGE "
-        "ou PUBLIC n'est PAS le geste du locuteur — ne l'inscris jamais dans "
-        "ses vulnérabilités ; quand le dossier porte ARÈNE DE FICTION, les "
-        "sophismes sont ceux des PERSONNAGES : n'agrège jamais leurs gestes "
-        "dans « le discours de » l'auteur."
+        # #3390/R1141 — no rule 7. Attribution is carried by the artifact
+        # lines themselves (RAPPORTÉ / PERSONNAGE / PUBLIC, one wording from
+        # move_author_note, and the ARÈNE DE FICTION line): data the writer
+        # reads, not prose asking the writer to be careful — #3390's own
+        # anti-pendulum forbade the sentence the first delivery added.
     )
     del _sections_block
 
