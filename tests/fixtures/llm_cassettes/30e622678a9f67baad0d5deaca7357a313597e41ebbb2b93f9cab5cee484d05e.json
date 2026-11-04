@@ -1,0 +1,48 @@
+{
+  "key": "30e622678a9f67baad0d5deaca7357a313597e41ebbb2b93f9cab5cee484d05e",
+  "value": {
+    "id": "chatcmpl-EgUBRxFhWfam03XHaOhe3UVngaBl3",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"L'affirmation selon laquelle, sans action immédiate, le système s'effondrera dans cinq ans relève d'un appel à la peur. L'affirmation selon laquelle travailler plus longtemps est « dans l'ordre des choses » relève d'un sophisme naturaliste. La projection d'un déficit de 2,3 % du PIB en 2030 repose sur des hypothèses de croissance optimistes de 1,8 % par an.\",\"conclusion\":\"Travailler plus longtemps ne devrait pas être présenté comme une conséquence naturelle ou nécessaire de la situation.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793794509,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 521,
+      "prompt_tokens": 338,
+      "total_tokens": 859,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 389,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

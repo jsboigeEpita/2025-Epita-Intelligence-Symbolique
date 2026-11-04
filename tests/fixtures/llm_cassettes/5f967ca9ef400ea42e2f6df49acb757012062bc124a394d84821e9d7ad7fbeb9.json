@@ -1,0 +1,48 @@
+{
+  "key": "5f967ca9ef400ea42e2f6df49acb757012062bc124a394d84821e9d7ad7fbeb9",
+  "value": {
+    "id": "chatcmpl-EgUBCWYN0e2xGIcGkaR0IJQXyRXc9",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"La projection d’un déficit de 2,3 % du PIB en 2030 ne suffit pas à justifier l’existence d’un problème financier, car elle repose sur des hypothèses de croissance optimistes de 1,8 % par an.\",\"digressions\":\"Les accusations des syndicats concernant le sophisme naturaliste (« travailler plus longtemps est dans l’ordre des choses ») et de l’opposition concernant un homme de paille (personne n’ayant proposé de supprimer les retraites) sont des digressions par rapport à la fiabilité de la projection du déficit.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793794494,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 431,
+      "prompt_tokens": 337,
+      "total_tokens": 768,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 293,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

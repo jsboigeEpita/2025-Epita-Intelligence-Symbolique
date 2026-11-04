@@ -1,0 +1,48 @@
+{
+  "key": "54fe7d40b3209a95b6a3eb3e514c4f9d5afa90593444e2505b542eed86e65fd4",
+  "value": {
+    "id": "chatcmpl-EgUCNZEpC9JmMgLASA7EWMNWFkSJp",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne avance que l’opposition veut seulement réformer les retraites et que les projections de déficit reposent sur une base contestable, puis conclut que le débat public déforme sa position et recourt à un homme de paille et à des arguments émotionnels. Le verdict est un saut logique net.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793794567,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 118,
+      "prompt_tokens": 300,
+      "total_tokens": 418,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 35,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

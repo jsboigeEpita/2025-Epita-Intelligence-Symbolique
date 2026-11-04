@@ -1,0 +1,40 @@
+{
+  "key": "387ae5d33529402b691298b4ce336d9c373d114c5b50af2055b9d678fa138937",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_42qm0YieBywJeF1tXW1AClgY",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"43\",\"matches\":false,\"justification\":\"L'énoncé rapporte une affirmation de succès, mais ne justifie aucun comportement par le fait qu'il serait communément adopté; la fallacie de la pratique courante n'est donc pas présente.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EgUEReq6jW654lH0tHi6EYNfiLJGQ",
+        "created": 1793794695,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2146,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 774,
+            "cached_tokens": 1369,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 82,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

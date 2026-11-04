@@ -1,0 +1,48 @@
+{
+  "key": "4819c2ae92167016861e8f4d4beb6f3626cdd7c7b971ea0b9ee09770024b245e",
+  "value": {
+    "id": "chatcmpl-EgUBzdaMGk2pW6JltVmsn2rFgfVUe",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"L'opposition proposerait de supprimer les retraites.\",\"main_thesis\":\"L'opposition ne propose pas de supprimer les retraites, mais de les réformer selon une autre approche ; en outre, les arguments financiers du gouvernement reposent sur des hypothèses de croissance optimistes et son appel à penser aux enfants détourne le débat technique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793794543,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 241,
+      "prompt_tokens": 355,
+      "total_tokens": 596,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 151,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

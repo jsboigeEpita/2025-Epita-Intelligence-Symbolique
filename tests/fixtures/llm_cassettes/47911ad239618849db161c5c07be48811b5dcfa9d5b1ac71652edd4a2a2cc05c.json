@@ -1,0 +1,48 @@
+{
+  "key": "47911ad239618849db161c5c07be48811b5dcfa9d5b1ac71652edd4a2a2cc05c",
+  "value": {
+    "id": "chatcmpl-EgUBDw8LukWZS9eADxj10teyJjEhU",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"La projection est peu robuste, car elle repose sur des hypothèses de croissance optimistes de 1,8 % par an.\",\"digressions\":\"L’accusation des syndicats selon laquelle le gouvernement commet un sophisme naturaliste en affirmant que travailler plus longtemps est « dans l’ordre des choses », ainsi que la dénonciation par l’opposition d’un homme de paille concernant la prétendue suppression des retraites, sont hors sujet par rapport à la robustesse de la projection. La mention du déficit atteignant 2,3 % du PIB d’ici 2030 est également secondaire, sauf en tant qu’illustration de la projection contestée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793794495,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 242,
+      "prompt_tokens": 327,
+      "total_tokens": 569,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 86,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

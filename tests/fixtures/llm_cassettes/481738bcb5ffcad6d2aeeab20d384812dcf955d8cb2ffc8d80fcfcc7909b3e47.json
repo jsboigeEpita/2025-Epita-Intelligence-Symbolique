@@ -1,0 +1,48 @@
+{
+  "key": "481738bcb5ffcad6d2aeeab20d384812dcf955d8cb2ffc8d80fcfcc7909b3e47",
+  "value": {
+    "id": "chatcmpl-EgUHUWoLeYEXucoleixy6YL2UwD5X",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points portent sur des idées distinctes : le premier invoque l’unanimité des experts comme garantie de vérité, tandis que le second écarte l’avis des non-experts. Ils concernent tous deux le poids de l’expertise, mais ne répètent pas la même proposition.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793794884,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 192,
+      "prompt_tokens": 274,
+      "total_tokens": 466,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 111,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

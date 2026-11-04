@@ -1,14 +1,14 @@
 {
   "key": "fad4c0b8213ebef7ea1ccf2fbbf76cc0428351667826fc941208e01a24f9143f",
   "value": {
-    "id": "chatcmpl-EgIyS5Gp7idpV8glHJgjESwlCkoJo",
+    "id": "chatcmpl-EgUHvqpaTJraubryy7NQrxe1pt6C0",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"distinct_points\":\"1. L’option C propose un compromis sous la forme d’un format hybride combinant un tournoi réduit et l’achat de matériel.\\n2. Dans l’option C, le budget de 2000 euros est réparti également : 1000 euros pour le tournoi réduit et 1000 euros pour le matériel.\\n3. L’option B consiste à investir les 2000 euros dans du matériel pédagogique et de nouveaux échiquiers.\"}",
+          "content": "{\"distinct_points\":\"1. L’option C propose un compromis combinant un tournoi réduit et l’achat de matériel, avec une répartition égale du budget : 1000 euros pour le tournoi et 1000 euros pour le matériel.\\n2. L’option B consiste à investir les 2000 euros dans du matériel pédagogique et des échiquiers neufs.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793751420,
+    "created": 1793794911,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 160,
+      "completion_tokens": 146,
       "prompt_tokens": 230,
-      "total_tokens": 390,
+      "total_tokens": 376,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 55,
+        "reasoning_tokens": 60,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

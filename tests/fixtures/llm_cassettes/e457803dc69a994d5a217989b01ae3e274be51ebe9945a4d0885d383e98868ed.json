@@ -1,14 +1,14 @@
 {
   "key": "e457803dc69a994d5a217989b01ae3e274be51ebe9945a4d0885d383e98868ed",
   "value": {
-    "id": "chatcmpl-EgIzILcYDT5LBGOSwEDGTk9lmVSMo",
+    "id": "chatcmpl-EgUItj5ovsF4ruVmrYFezxz8vpoFF",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[{\"text\":\"Affecter la subvention à l’élargissement du fonds de livres jeunesse.\",\"source_quote\":\"Option A : elargir le fonds de livres jeunesse.\",\"move_author\":\"speaker\"},{\"text\":\"Affecter la subvention à la création d’un espace numérique équipé d’ordinateurs en libre accès.\",\"source_quote\":\"Option B : creer un espace numerique avec des ordinateurs en libre acces.\",\"move_author\":\"speaker\"},{\"text\":\"Répartir la subvention à parts égales entre le fonds de livres et l’espace numérique.\",\"source_quote\":\"Option C : repartir la somme, moitie fonds livre, moitie espace numerique.\",\"move_author\":\"speaker\"}],\"claims\":[{\"text\":\"La bibliothèque de quartier bénéficie d’une subvention exceptionnelle de 3 000 euros.\",\"source_quote\":\"La bibliotheque de quartier beneficie d'une subvention exceptionnelle de 3000 euros.\"},{\"text\":\"Trois usages différents de la subvention sont en concurrence.\",\"source_quote\":\"Trois usages sont en concurrence.\"}],\"summary\":\"Le texte présente une subvention exceptionnelle de 3 000 euros et trois options concurrentes : financer exclusivement les livres jeunesse, financer exclusivement un espace numérique ou répartir également la somme entre les deux.\"}",
+          "content": "{\"arguments\":[{\"text\":\"L'option A consiste à utiliser la subvention pour élargir le fonds de livres jeunesse.\",\"source_quote\":\"Option A : elargir le fonds de livres jeunesse.\",\"move_author\":\"reported\"},{\"text\":\"L'option B consiste à utiliser la subvention pour créer un espace numérique avec des ordinateurs en libre accès.\",\"source_quote\":\"Option B : creer un espace numerique avec des ordinateurs en libre acces.\",\"move_author\":\"reported\"},{\"text\":\"L'option C consiste à répartir la subvention à parts égales entre le fonds de livres et l'espace numérique.\",\"source_quote\":\"Option C : repartir la somme, moitie fonds livre, moitie espace numerique.\",\"move_author\":\"reported\"}],\"claims\":[{\"text\":\"La bibliothèque de quartier bénéficie d'une subvention exceptionnelle d'un montant de 3 000 euros.\",\"source_quote\":\"La bibliotheque de quartier beneficie d'une subvention exceptionnelle de 3000 euros.\"},{\"text\":\"Trois usages de la subvention sont en concurrence.\",\"source_quote\":\"Trois usages sont en concurrence.\"}],\"summary\":\"Le texte présente une subvention exceptionnelle de 3 000 euros et trois options concurrentes pour son utilisation : développer le fonds jeunesse, créer un espace numérique ou répartir la somme entre ces deux usages.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793751472,
+    "created": 1793794971,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 458,
+      "completion_tokens": 380,
       "prompt_tokens": 448,
-      "total_tokens": 906,
+      "total_tokens": 828,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 192,
+        "reasoning_tokens": 102,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

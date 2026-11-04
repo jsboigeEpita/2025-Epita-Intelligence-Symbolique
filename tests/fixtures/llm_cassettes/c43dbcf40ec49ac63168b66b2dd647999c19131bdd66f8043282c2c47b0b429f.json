@@ -1,0 +1,48 @@
+{
+  "key": "c43dbcf40ec49ac63168b66b2dd647999c19131bdd66f8043282c2c47b0b429f",
+  "value": {
+    "id": "chatcmpl-EgUB5qWSVzBqpq6hEWwLiCSXgT8Iy",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"obstacle_genuinely_opaque\":false,\"clarity_verdict\":\"résolvable_contexte\",\"reasoning\":\"Les exemples et les formulations environnantes permettent d’inférer que ces termes désignent respectivement un recours à une autorité, une menace alarmiste et une justification du devoir par ce qui serait naturel, même sans définition explicite.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793794487,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 193,
+      "prompt_tokens": 377,
+      "total_tokens": 570,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 111,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

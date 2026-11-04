@@ -1,0 +1,48 @@
+{
+  "key": "b9bc9dead982016717509049b8d1c999e18da201f3c74442bc21b9a997b7eab6",
+  "value": {
+    "id": "chatcmpl-EgUJBTSaJzlBS0E9x5Bowhzwk6mTa",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. L’option C consiste à répartir la subvention à parts égales entre le fonds de livres et l’espace numérique.\\n2. L’option B consiste à créer un espace numérique avec des ordinateurs en libre accès.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793794989,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 104,
+      "prompt_tokens": 214,
+      "total_tokens": 318,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 42,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

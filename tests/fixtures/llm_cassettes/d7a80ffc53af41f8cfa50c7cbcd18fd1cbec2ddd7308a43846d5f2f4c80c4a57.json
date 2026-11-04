@@ -1,0 +1,40 @@
+{
+  "key": "d7a80ffc53af41f8cfa50c7cbcd18fd1cbec2ddd7308a43846d5f2f4c80c4a57",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_VoQfhwP60L9ItqybBXAYYlKs",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"361\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"Le texte ne commence pas par des affirmations largement acceptées pour glisser ensuite vers une conclusion contestable. Il présente plutôt un appel à l'autorité dans l'Argument 1 et une disqualification de l'avis des non-experts dans l'Argument 2.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EgUFmyrEQmVSg9bRByUgVytiY8AnJ",
+        "created": 1793794778,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1976,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 604,
+            "cached_tokens": 1369,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 94,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

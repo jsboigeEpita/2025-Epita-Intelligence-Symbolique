@@ -1,0 +1,48 @@
+{
+  "key": "5cd3d9b8016a9a5f09a4e890281128e693f0ec205f9163f050f6ac52e839fcc7",
+  "value": {
+    "id": "chatcmpl-EgUQZ9XbJKw9L9jdfGd9GJi7dTA0O",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "[\n  {\n    \"counter_argument\": \"Des taux de vaccination élevés peuvent réduire la circulation de certains agents infectieux, mais cette protection dépend du vaccin, de la couverture réelle et de la transmissibilité ; elle ne protège pas nécessairement toutes les personnes qui ne peuvent pas être vaccinées.\",\n    \"strategy_used\": \"nuance causale\",\n    \"target_argument\": \"[arg_7]\",\n    \"strength\": \"moderate\",\n    \"reasoning\": \"L’affirmation présente l’immunité collective comme une conséquence générale, alors que son efficacité varie selon la maladie et les conditions épidémiologiques.\"\n  },\n  {\n    \"counter_argument\": \"Qualifier cette affirmation de théorie du complot ne suffit pas à la réfuter : les effets indésirables sont surveillés et certains peuvent être identifiés après la mise sur le marché, ce qui justifie d’examiner la transparence des entreprises au cas par cas.\",\n    \"strategy_used\": \"réfutation de la disqualification\",\n    \"target_argument\": \"[arg_6]\",\n    \"strength\": \"moderate\",\n    \"reasoning\": \"La critique de la transparence ne prouve pas une dissimulation systématique, mais elle ne peut pas être écartée uniquement par une étiquette rhétorique.\"\n  },\n  {\n    \"counter_argument\": \"L’éradication de la variole et la forte réduction de la polio démontrent l’efficacité de vaccins et de campagnes précises, mais elles ne prouvent pas que tous les vaccins ont la même efficacité ni qu’ils sont dépourvus de risques.\",\n    \"strategy_used\": \"limitation de la portée de la preuve\",\n    \"target_argument\": \"[arg_2]\",\n    \"strength\": \"strong\",\n    \"reasoning\": \"Les exemples historiques soutiennent une conclusion ciblée, mais ne suffisent pas à généraliser à l’ensemble des vaccins et des situations.\"\n  },\n  {\n    \"counter_argument\": \"Les vaccins sont un outil majeur de santé publique, mais ils ne sont pas l’unique moyen indispensable : l’hygiène, la surveillance épidémiologique, les traitements et l’accès aux soins contribuent également à protéger la population.\",\n    \"strategy_used\": \"contre-exemple institutionnel\",\n    \"target_argument\": \"[arg_1]\",\n    \"strength\": \"moderate\",\n    \"reasoning\": \"Le terme « indispensables » est trop absolu, car la santé publique repose sur plusieurs interventions complémentaires.\"\n  },\n  {\n    \"counter_argument\": \"Il n’est pas établi que les entreprises pharmaceutiques dissimulent systématiquement les effets secondaires ; les essais cliniques, la pharmacovigilance et les obligations de déclaration rendent toutefois nécessaire une vérification indépendante de leur transparence.\",\n    \"strategy_used\": \"demande de preuve\",\n    \"target_argument\": \"[arg_5]\",\n    \"strength\": \"strong\",\n    \"reasoning\": \"L’affirmation générale exige des preuves précises et ne peut être déduite de l’existence de controverses ou d’incidents isolés.\"\n  },\n  {\n    \"counter_argument\": \"Les vaccins peuvent provoquer des effets indésirables, parfois graves mais généralement rares ; leur dangerosité doit donc être évaluée en fonction du vaccin, du profil de la personne et du risque de la maladie plutôt que formulée comme une propriété générale.\",\n    \"strategy_used\": \"distinction risque-bénéfice\",\n    \"target_argument\": \"[arg_3]\",\n    \"strength\": \"strong\",\n    \"reasoning\": \"La formulation globale confond l’existence de risques réels avec l’idée que tous les vaccins seraient globalement dangereux.\"\n  },\n  {\n    \"counter_argument\": \"Reconnaître que certains vaccins présentent des risques rares ne revient pas à ignorer des décennies de recherche clinique ; cette recherche sert précisément à mesurer leurs bénéfices, leurs limites et leurs effets indésirables.\",\n    \"strategy_used\": \"reformulation corrective\",\n    \"target_argument\": \"[arg_4]\",\n    \"strength\": \"strong\",\n    \"reasoning\": \"L’argument attaque une prétendue ignorance qui n’est pas nécessaire : on peut s’appuyer sur la recherche clinique tout en contestant une sécurité absolue.\"\n  }\n]",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793795447,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 1066,
+      "prompt_tokens": 526,
+      "total_tokens": 1592,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 181,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

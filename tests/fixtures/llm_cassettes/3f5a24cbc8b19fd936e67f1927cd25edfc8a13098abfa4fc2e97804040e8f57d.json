@@ -1,0 +1,48 @@
+{
+  "key": "3f5a24cbc8b19fd936e67f1927cd25edfc8a13098abfa4fc2e97804040e8f57d",
+  "value": {
+    "id": "chatcmpl-EgUBk83Y77GTb1RUv5ONqqpcN5lit",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points sont distincts : le premier expose l’affirmation d’une urgence fondée sur un risque d’effondrement à cinq ans ; le second critique la présentation de cette affirmation comme un argument d’autorité et son manque de prise en compte des différences structurelles. Aucune redondance substantielle n’est démontrée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793794528,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 178,
+      "prompt_tokens": 291,
+      "total_tokens": 469,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 89,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

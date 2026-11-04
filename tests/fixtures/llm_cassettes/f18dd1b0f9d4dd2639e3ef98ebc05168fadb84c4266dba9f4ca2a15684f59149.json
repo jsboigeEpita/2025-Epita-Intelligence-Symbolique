@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"start_marker\": \"La déclaration cruciale sur l'économie verte est enfouie ici.\",\n  \"end_marker\": \"La déclaration cruciale sur l'économie verte est enfouie ici.\",\n  \"explanation\": \"Le texte ne contient pas de titre explicite « Le point sur l'économie verte ». L'unique passage thématiquement pertinent est la phrase « La déclaration cruciale sur l'économie verte est enfouie ici. », qui constitue donc à la fois le début et la fin de l'extrait ciblé. Cette chaîne apparaît exactement dans le texte source.\"\n}",
+      "content": "{\n  \"start_marker\": \"La déclaration cruciale sur l'économie verte\",\n  \"end_marker\": \"ici.\",\n  \"explanation\": \"Le texte source est presque entièrement constitué de texte factice (« Lorem ipsum »). Le seul passage explicitement consacré à l'économie verte est la phrase « La déclaration cruciale sur l'économie verte est enfouie ici. ». Les marqueurs proposés délimitent précisément cette phrase.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EgJ3DCEUNn7y7X1bLffwYzIcHaWt0",
-        "created": 1793751715,
+        "id": "chatcmpl-EgUNKZ3jJPl8YJy6QpDo5tLW2BfWM",
+        "created": 1793795246,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 6801,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 542,
+          "completion_tokens": 353,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 414,
+            "reasoning_tokens": 257,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

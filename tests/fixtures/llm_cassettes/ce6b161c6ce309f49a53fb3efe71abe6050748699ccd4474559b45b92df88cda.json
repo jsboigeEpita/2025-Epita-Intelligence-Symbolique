@@ -1,0 +1,40 @@
+{
+  "key": "ce6b161c6ce309f49a53fb3efe71abe6050748699ccd4474559b45b92df88cda",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_0tRZ1uJQCjOngFs4VXdhdbrk",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"2\",\"matches\":true,\"confidence\":\"medium\",\"justification\":\"L’affirmation catégorique de succès incontestable ne fournit aucun élément probant ni données permettant de l’étayer; elle présente une conclusion générale comme auto-évidente.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EgUENE8qtZXIE8zujNlVb9b38NdS1",
+        "created": 1793794691,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2434,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1062,
+            "cached_tokens": 1369,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 81,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

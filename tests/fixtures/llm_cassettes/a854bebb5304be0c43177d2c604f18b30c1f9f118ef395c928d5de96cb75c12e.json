@@ -1,0 +1,48 @@
+{
+  "key": "a854bebb5304be0c43177d2c604f18b30c1f9f118ef395c928d5de96cb75c12e",
+  "value": {
+    "id": "chatcmpl-EgUBOe4zcel8BkyxQ24Gq937SifIg",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\":false,\"engagement_verdict\":\"homme_de_paille\",\"reasoning\":\"La réfutation déforme la position en la présentant comme un simple argument d’autorité, un appel à la peur et une défense naturaliste du travail prolongé, alors que l’argument identifié repose sur une prédiction conditionnelle d’effondrement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793794506,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 259,
+      "prompt_tokens": 389,
+      "total_tokens": 648,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 176,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

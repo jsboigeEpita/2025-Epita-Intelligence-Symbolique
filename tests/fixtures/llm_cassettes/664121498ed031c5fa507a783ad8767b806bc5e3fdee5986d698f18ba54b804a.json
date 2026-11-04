@@ -1,0 +1,48 @@
+{
+  "key": "664121498ed031c5fa507a783ad8767b806bc5e3fdee5986d698f18ba54b804a",
+  "value": {
+    "id": "chatcmpl-EgUPXc879hTttmVzNPRbSbOSRGcRC",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les trois points sont distincts : le premier affirme l’importance générale des vaccins pour la santé publique, tandis que les deux suivants apportent des exemples historiques spécifiques concernant la variole et la polio. Aucune redondance sémantique notable.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793795383,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 127,
+      "prompt_tokens": 288,
+      "total_tokens": 415,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 55,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

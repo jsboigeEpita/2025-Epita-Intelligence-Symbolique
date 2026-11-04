@@ -1,0 +1,48 @@
+{
+  "key": "707244403e43f9e8f1f2efabf042a14f847de81f8c073b136157c1444e968052",
+  "value": {
+    "id": "chatcmpl-EgUJsoEqzkwhp8QleEx0dJ1OAGybt",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.55,\"fairness_assessment\":\"A preference-based collective vote is appropriate because the three options represent competing but legitimate community priorities; fairness improves if funding needs, expected usage, and recurring costs are explicitly evaluated rather than relying on an equal split.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"agent_1\",\"position\":\"Supports Option A: expanding the youth book collection, while facing concerns about whether purchases will match users' needs and be sufficiently used.\",\"influence\":0.33},{\"agent\":\"agent_2\",\"position\":\"Supports Option B: creating an open-access digital space, while needing to account for maintenance, replacement, security, and user-support costs.\",\"influence\":0.33},{\"agent\":\"agent_3\",\"position\":\"Supports Option C: dividing the grant equally between books and digital access, though an equal division may underfund both projects and lacks a needs-based rationale.\",\"influence\":0.34}],\"recommended_resolution\":\"collaborative\",\"governance_reasoning\":\"Use a ranked-choice or scored social-choice process after jointly assessing demand, accessibility, implementation feasibility, and total long-term costs. The result should permit a tailored allocation or phased pilot rather than imposing an arbitrary 50/50 split, with a review point to adjust funding based on actual usage.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793795032,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 402,
+      "prompt_tokens": 525,
+      "total_tokens": 927,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 118,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

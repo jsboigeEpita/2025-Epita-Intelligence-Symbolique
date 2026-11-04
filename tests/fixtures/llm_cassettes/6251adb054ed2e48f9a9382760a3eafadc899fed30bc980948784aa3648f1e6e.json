@@ -1,0 +1,48 @@
+{
+  "key": "6251adb054ed2e48f9a9382760a3eafadc899fed30bc980948784aa3648f1e6e",
+  "value": {
+    "id": "chatcmpl-EgULY7mG9eKJpsk8gCfh8VJWC3l4y",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La chaîne relie la répartition équitable du budget entre un tournoi et du matériel pédagogique à l’idée d’un compromis entre visibilité et pédagogie. L’inférence est présente, mais elle reste partielle et imprécise en raison de la prémisse tronquée et du lien non explicité entre le tournoi, la visibilité et le matériel pédagogique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793795136,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 163,
+      "prompt_tokens": 295,
+      "total_tokens": 458,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 73,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

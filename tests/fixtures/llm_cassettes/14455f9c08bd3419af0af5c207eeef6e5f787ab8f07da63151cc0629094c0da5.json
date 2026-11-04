@@ -1,0 +1,40 @@
+{
+  "key": "14455f9c08bd3419af0af5c207eeef6e5f787ab8f07da63151cc0629094c0da5",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_2JXemGTmxtAq4532imsetsFS",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"329\",\"matches\":false,\"justification\":\"Le texte ne mobilise ni colère ni indignation : il invoque l’unanimité des experts et exclut l’avis des non-experts. Cette branche ne correspond donc pas.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EgUF9pr37ZUwwOUkhzhnPVmj6xUV7",
+        "created": 1793794739,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1975,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 603,
+            "cached_tokens": 1369,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 73,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

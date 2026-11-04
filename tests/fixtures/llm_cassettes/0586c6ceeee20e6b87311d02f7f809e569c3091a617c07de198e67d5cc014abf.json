@@ -1,0 +1,40 @@
+{
+  "key": "0586c6ceeee20e6b87311d02f7f809e569c3091a617c07de198e67d5cc014abf",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_5mIfeKzAIlBHhckzBnZtw0qL",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"501\",\"matches\":false,\"justification\":\"Le texte ne désigne personne ou aucun groupe comme bouc émissaire pour lui attribuer la responsabilité d'un problème. Il invoque plutôt l'unanimité des experts comme autorité et disqualifie les non-experts, ce qui relève d'autres erreurs éventuelles, pas du bouc émissaire.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EgUFZNw52GYknYNqty5R1RnADi3Sb",
+        "created": 1793794765,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1331,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1328,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 103,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

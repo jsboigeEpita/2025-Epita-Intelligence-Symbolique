@@ -1,14 +1,14 @@
 {
   "key": "5e78b554c614acf4825fb97701a0d48adb025d0cac46d998e3e2b4e6a4f0daf9",
   "value": {
-    "id": "chatcmpl-EgJ52YjoXY6sjjuqsd3JnQp76zntt",
+    "id": "chatcmpl-EgUPRE0OPiflB9KLrJGCyhpQBfAvE",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":1.0,\"exhibit\":\"La position adverse « les vaccins sont dangereux » est explicitement identifiée et fait l’objet d’un engagement réel.\"}",
+          "content": "{\"score\":1.0,\"exhibit\":\"La position adverse (« les vaccins sont dangereux ») est identifiée et fait l’objet d’un engagement réel, ce qui démontre une réfutation constructive pleinement engagée.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793751828,
+    "created": 1793795377,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 72,
+      "completion_tokens": 116,
       "prompt_tokens": 250,
-      "total_tokens": 322,
+      "total_tokens": 366,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 28,
+        "reasoning_tokens": 61,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

@@ -1,0 +1,40 @@
+{
+  "key": "4f88a7db59efcf876dcdbd44bed1756d7e539b56ad06c2d2e1a0227b0209a692",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_cytGmSFml6q90DhW61H4DfOP",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"856\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L'énoncé « succès incontestable » est une expression vague et non étayée : il ne précise ni les critères de réussite ni les éléments permettant de juger l'affirmation.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EgUEOxjDEhbboUG0Hr4tB8m9gC0gh",
+        "created": 1793794692,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2372,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 2369,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 85,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}
