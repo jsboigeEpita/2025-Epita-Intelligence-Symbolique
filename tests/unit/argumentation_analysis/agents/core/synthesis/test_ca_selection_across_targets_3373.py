@@ -8,13 +8,16 @@ record carried 43 counters over 10 countered units; the writer saw 15 counters
 over 4 units, and it counted its briefing: it wrote « Cinq contre-arguments »
 for arg_29, which carries six.
 
-The repair is two halves at one seam:
+The repair is three halves at one seam:
 - the selection walks the TARGETS, not the list — every countered unit gets one
-  counter before any unit gets a second, while the units fit the cap; within a
-  target the producer's order holds;
+  counter before any unit gets a second, while the units fit the cap;
 - a line whose target is cut states that target's population (``(1 of 6 on this
   target)``), so a count the writer gives comes from the record, not from the
-  cut.
+  cut;
+- the rounds decide WHAT is briefed, the producer's order decides WHERE it
+  prints (R1140): the returned selection is re-sorted by each entry's original
+  index, so a population that fits renders block for block as on main and a
+  cut population keeps each target's lines contiguous.
 
 Anti-pendulum, pinned below: the cap stays 15 (#2967/#3155 line untouched), and
 a population that fits the cap renders byte for byte as on main — the count
@@ -269,24 +272,24 @@ class TestCutIsDecidedOnWhatIsShown:
         assert [ln for ln in lines if "on this target" in ln] == []
 
     def test_every_line_of_a_fitting_population_is_the_old_line(self):
-        """The same fact, read on the rendered text: byte for byte, main's line.
+        """R1140, restored: the whole BLOCK is main's block, same lines, same
+        order.
 
-        The briefing follows the SELECTION order (round-robin), so the ids do
-        not come out in sequence — each line is looked up by its id.
+        The first version of this witness relaxed to a per-id lookup ("the ids
+        do not come out in sequence") — which hid the defect it existed to
+        catch: the round-robin printed ``ca_1, ca_4, ca_7, ca_9, ca_11, ca_2,
+        …`` where main prints ``ca_1 … ca_12``. The rounds decide WHAT is
+        briefed; the producer's order decides WHERE. Red on the R1293 head
+        ``5f75c5238``.
         """
-        lines = _briefed(_state(counter_arguments=_multi_per_target()))
-        by_id = {
-            ln.split("]")[0][len("[artifact:counter_arguments.") :]: ln for ln in lines
-        }
+        counters = _multi_per_target()
+        expected = [
+            f"[artifact:counter_arguments.{ca['id']}] score=0.5 "
+            f"target={ca['target_arg_id']} — {ca['counter_content']}"
+            for ca in counters
+        ]
 
-        assert by_id["ca_1"] == (
-            "[artifact:counter_arguments.ca_1] score=0.5 target=arg_1 "
-            "— invented filler 1"
-        )
-        assert by_id["ca_12"] == (
-            "[artifact:counter_arguments.ca_12] score=0.5 target=arg_5 "
-            "— invented filler 12"
-        )
+        assert _briefed(_state(counter_arguments=counters)) == expected
 
 
 class TestACutTargetStatesTheCountOnEachShownLine:
@@ -321,3 +324,55 @@ class TestACutTargetStatesTheCountOnEachShownLine:
         )
         assert "arg_1 (1 of 6 on this target)" in arg_1[0]
         assert "arg_1 (2 of 6 on this target)" in arg_1[1]
+
+
+# ============================================================================
+# R1140 rework — the rounds decide WHAT, the producer's order decides WHERE
+# ============================================================================
+
+
+class TestACutPopulationPrintsInProducersOrder:
+    def test_each_targets_lines_are_contiguous_and_in_producer_order(self):
+        """43 counters over 10 targets, cap 15 (the R1137a shape): the
+        briefing shows two lines of each of the first five targets and one of
+        the rest. The writer counts a RUN of lines, not a scatter — each
+        target's lines stand next to each other, start at that target's FIRST
+        counter, and follow the producer's order within the run.
+
+        Red on the R1293 head: the round-robin interleaved the runs.
+        """
+        lines = _briefed(_state(counter_arguments=_population()))
+
+        positions: dict = {}
+        for pos, line in enumerate(lines):
+            positions.setdefault(_target_of(line), []).append(pos)
+
+        # One contiguous run per target.
+        for target, pos_list in positions.items():
+            assert pos_list == list(
+                range(pos_list[0], pos_list[0] + len(pos_list))
+            ), f"{target}'s lines are scattered: {pos_list}"
+
+        # The runs appear in the producer's target order (the phase writes
+        # target by target, so the document reads arg_1's run, then arg_2's).
+        run_order = sorted(positions, key=lambda t: positions[t][0])
+        assert run_order == _TARGETS
+
+        # Within a run: the target's first counters, in the producer's order.
+        producer = _population()
+        first_id = {}
+        for counter in producer:  # dict of first occurrence = producer's first
+            first_id.setdefault(counter["target_arg_id"], counter["id"])
+        for target, pos_list in positions.items():
+            ids = [
+                lines[p].split("]")[0][len("[artifact:counter_arguments.") :]
+                for p in pos_list
+            ]
+            assert ids[0] == first_id[target], (
+                f"{target}'s run starts at {ids[0]}, not its first counter "
+                f"{first_id[target]}"
+            )
+            numbers = [int(i.split("_")[1]) for i in ids]
+            assert numbers == sorted(numbers), (
+                f"{target}'s run is not in producer order: {ids}"
+            )

@@ -414,13 +414,21 @@ def select_across_targets(
     targeted ones: they carry no population to state (a real rebuttal, merely
     unanchored — #3201), and they never crowd out a countered unit.
 
+    The rounds decide WHAT is briefed; the producer's order decides WHERE it
+    prints (R1140 rework). The round-robin interleaves targets; the returned
+    list re-sorts the targeted picks by each entry's original index in
+    ``entries``, and the unanchored follow in producer order. A population
+    that fits therefore renders block for block as before, and under a cut
+    each target's lines stay contiguous — the writer counts a run of lines,
+    not a scatter.
+
     The budget is real and unchanged: never more than ``n``.
     """
     if n <= 0:
         return []
-    groups: Dict[str, List[Any]] = {}
-    unanchored: List[Any] = []
-    for entry in entries:
+    groups: Dict[str, List[Tuple[int, Any]]] = {}
+    unanchored: List[Tuple[int, Any]] = []
+    for index, entry in enumerate(entries):
         target = ""
         if isinstance(entry, dict):
             value = entry.get(target_key)
@@ -431,37 +439,49 @@ def select_across_targets(
             if isinstance(value, str):
                 target = value.strip()
         if target:
-            groups.setdefault(target, []).append(entry)
+            groups.setdefault(target, []).append((index, entry))
         else:
-            unanchored.append(entry)
+            unanchored.append((index, entry))
 
     populations = {target: len(items) for target, items in groups.items()}
-    selected: List[TargetSelection] = []
+    targeted: List[Tuple[int, TargetSelection]] = []
     round_index = 0
-    while len(selected) < n:
+    while len(targeted) < n:
         progressed = False
         for target, items in groups.items():
             if round_index < len(items):
                 progressed = True
                 rank = round_index + 1
-                selected.append(
-                    TargetSelection(
-                        entry=items[round_index],
-                        target=target,
-                        rank=rank,
-                        population=populations[target],
+                origin, entry = items[round_index]
+                targeted.append(
+                    (
+                        origin,
+                        TargetSelection(
+                            entry=entry,
+                            target=target,
+                            rank=rank,
+                            population=populations[target],
+                        ),
                     )
                 )
-                if len(selected) >= n:
+                if len(targeted) >= n:
                     break
         if not progressed:
             break
         round_index += 1
 
-    for entry in unanchored:
-        if len(selected) >= n:
-            break
-        selected.append(TargetSelection(entry=entry, target="", rank=0, population=0))
+    unanchored_picks = [
+        TargetSelection(entry=entry, target="", rank=0, population=0)
+        for _, entry in unanchored[: max(0, n - len(targeted))]
+    ]
+
+    # R1140 — the producer's order decides WHERE: the round-robin's picks
+    # re-sorted by their original index in ``entries`` (stable for entries a
+    # target serves in order, since ``items`` itself is index-ascending), the
+    # unanchored already in producer order.
+    selected: List[TargetSelection] = [
+        item for _, item in sorted(targeted, key=lambda pair: pair[0])
+    ] + unanchored_picks
 
     # #3373 rework (R1139) — ``cut`` is decided on WHAT IS SHOWN, never on the
     # rank. Comparing the rank against the population marked every line of a
