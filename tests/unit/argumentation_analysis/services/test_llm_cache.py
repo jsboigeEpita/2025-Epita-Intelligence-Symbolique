@@ -813,3 +813,50 @@ class TestGetRawCache:
         with patch.dict(os.environ, {"LLM_CACHE_MODE": "record"}):
             reset_raw_cache()
             assert get_raw_cache() is get_raw_cache()
+
+
+class TestAReplayMissNamesTheModel3411:
+    """#3411 — the replay-miss message carries the model id that was hashed.
+
+    A seat whose ``.env`` routes via OpenRouter resolves the model to the
+    provider-prefixed slug (``openai/gpt-5.6-luna``) while CI, with no
+    ``.env``, resolves the bare id. The cache key hashes the model verbatim,
+    so every raw key diverges and the miss is indistinguishable from a
+    cassette drift. Naming the resolved model where the failure prints makes
+    the two causes readable; the prefix contract below is the measured cause.
+    """
+
+    @pytest.mark.asyncio
+    async def test_the_raw_miss_message_names_the_model_it_hashed(
+        self, isolated_raw_cache
+    ):
+        with patch.dict(os.environ, {"LLM_CACHE_MODE": "replay"}):
+            reset_raw_cache()
+            client = FakeRawClient()
+            with pytest.raises(LLMCacheMiss, match="openai/gpt-5.6-luna"):
+                await cached_raw_chat_completion(
+                    client,
+                    model="openai/gpt-5.6-luna",
+                    messages=[{"role": "user", "content": "never seen"}],
+                )
+            assert client.calls == 0  # fail-loud unchanged
+
+    @pytest.mark.asyncio
+    async def test_the_sk_miss_message_names_the_model_it_hashed(self, cache_tmpdir):
+        inner = FakeInner()
+        inner.ai_model_id = "openai/gpt-5.6-luna"
+        cached = CachedChatCompletion(inner, cache_dir=cache_tmpdir, mode=REPLAY)
+        with pytest.raises(LLMCacheMiss, match="openai/gpt-5.6-luna"):
+            await cached.get_chat_message_contents(
+                chat_history=make_history(("user", "never seen"))
+            )
+        cached.close()
+
+    def test_the_provider_prefix_changes_the_key(self):
+        # The root cause as a contract: the same request under the routed
+        # slug is a different key from the bare id — a store recorded on one
+        # form can never serve the other.
+        kw = {"messages": [{"role": "user", "content": "same request"}]}
+        bare = compute_raw_cache_key(model="gpt-5.6-luna", **kw)
+        routed = compute_raw_cache_key(model="openai/gpt-5.6-luna", **kw)
+        assert bare != routed
