@@ -536,7 +536,14 @@ def arm_costs(
 # Rough chars-per-token for the estimate. It is an ESTIMATE and the table
 # says so; the real figure comes from the provider's usage block afterwards.
 CHARS_PER_TOKEN_ESTIMATE = 4
-JUDGE_MAX_TOKENS = 4096
+# The judge's answer quotes three sides per item (analysis, reading, document)
+# and the long documents carry many items. At 4096 the cycle-0 pass (R1141)
+# lost 7 of 10 answers; 16384 bounds the cost, it does not ask for length.
+JUDGE_MAX_TOKENS = 16384
+
+
+# The two wires' names for "the answer was cut at max_tokens".
+TRUNCATION_STOP_REASONS = ("max_tokens", "length")
 
 
 def estimate_judge_cost(
@@ -680,12 +687,14 @@ async def call_judge(
         usage = body.get("usage") or {}
         prompt_tokens = usage.get("input_tokens", 0)
         completion_tokens = usage.get("output_tokens", 0)
+        stop_reason = body.get("stop_reason")
     else:
         choice = (body.get("choices") or [{}])[0]
         answer = choice.get("message", {}).get("content", "")
         usage = body.get("usage") or {}
         prompt_tokens = usage.get("prompt_tokens", 0)
         completion_tokens = usage.get("completion_tokens", 0)
+        stop_reason = choice.get("finish_reason")
     return {
         "status_code": 200,
         "answer": answer,
@@ -696,6 +705,7 @@ async def call_judge(
         # serve another model under the requested name; the family claim of
         # the table rests on this field, not on the id the request carried.
         "answered_model": body.get("model"),
+        "stop_reason": stop_reason,
     }
 
 
@@ -760,6 +770,10 @@ def render_table(rows: Sequence[Dict[str, Any]], meta: Dict[str, Any]) -> str:
         severity = _count_severities(row.get("kept") or [])
         ident = "ok" if row.get("identification_ok") else "**inversée**"
         state_cell = f"`{row.get('state')}`"
+        if row.get("stop_reason") in TRUNCATION_STOP_REASONS:
+            state_cell += " **(tronquée à la limite de sortie)**"
+        elif row.get("state") == "UNPARSED" and row.get("reported_state"):
+            state_cell += f" (état hors grille : `{row['reported_state']}`)"
         if row.get("status_code") not in (200, None):
             # A document whose call failed (a prompt over the judge's context
             # answers 400, a network fault 0) is UNPARSED — and the reader
@@ -782,10 +796,21 @@ def render_table(rows: Sequence[Dict[str, Any]], meta: Dict[str, Any]) -> str:
             lines.append(f"- `{state}` : **{distribution[state]}**")
     if distribution.get("UNPARSED"):
         failed = sum(1 for row in rows if row.get("status_code") not in (200, None))
-        unreadable = distribution["UNPARSED"] - failed
+        truncated = sum(
+            1
+            for row in rows
+            if row.get("state") == "UNPARSED"
+            and row.get("stop_reason") in TRUNCATION_STOP_REASONS
+        )
+        unreadable = distribution["UNPARSED"] - failed - truncated
         detail = []
         if failed:
             detail.append(f"{failed} appel(s) échoué(s), sans réponse du juge")
+        if truncated:
+            detail.append(
+                f"{truncated} réponse(s) tronquée(s) à la limite de sortie "
+                f"({JUDGE_MAX_TOKENS} tokens)"
+            )
         if unreadable:
             detail.append(f"{unreadable} réponse(s) illisible(s)")
         lines.append(
@@ -939,6 +964,7 @@ def _judge_one(
     # The judge names a POSITION as "the analysis"; compare it with the draw.
     identification_ok = reported in ("1", "2") and int(reported) == pos["pipeline"]
     state = str(parsed.get("state") or "").strip()
+    reported_state = state
     if state not in STATES:
         state = "UNPARSED"
     kept, dropped = validate_items(
@@ -950,6 +976,9 @@ def _judge_one(
         "reported_identification": reported,
         "identification_ok": identification_ok,
         "state": state,
+        # What the judge wrote in ``state``, kept when it is not one of the
+        # grid's five: an UNPARSED row must say which word it refused.
+        "reported_state": reported_state,
         "kept": kept,
         "dropped": dropped,
         "style_notes": [str(note) for note in (parsed.get("style_notes") or [])],
@@ -1110,6 +1139,13 @@ async def run(
         row["status_code"] = record.get("status_code")
         row["error_body_head"] = record.get("error_body_head")
         row["answered_model"] = record.get("answered_model")
+        row["stop_reason"] = record.get("stop_reason")
+        row["prompt_tokens"] = record.get("prompt_tokens")
+        row["completion_tokens"] = record.get("completion_tokens")
+        # The raw answer, as the module docstring promises: an UNPARSED row
+        # with no answer kept cannot be diagnosed, only paid for again.
+        # The output folder is gitignored (results/), like every judgement.
+        row["answer"] = record.get("answer")
         from argumentation_analysis.services.model_prices import price_tokens
 
         observed = price_tokens(
@@ -1151,15 +1187,30 @@ async def run(
     (args.out_dir / "TABLE.md").write_text(table, encoding="utf-8")
     print(f"table written: {args.out_dir / 'TABLE.md'}", flush=True)
     failed = [row["opaque_id"] for row in rows if row.get("status_code") != 200]
-    if failed:
+    truncated = [
+        row["opaque_id"]
+        for row in rows
+        if row.get("status_code") == 200
+        and row.get("state") == "UNPARSED"
+        and row.get("stop_reason") in TRUNCATION_STOP_REASONS
+    ]
+    if failed or truncated:
         # The table is kept (it names each failure), but a pass that did not
         # judge the whole panel is not a measurement of the panel: the exit
         # code says so, so no caller reads a 10/10 HTTP failure as a run.
-        print(
-            f"{len(failed)}/{len(rows)} judging call(s) failed: "
-            f"{', '.join(failed)} — the panel was NOT judged",
-            flush=True,
-        )
+        if failed:
+            print(
+                f"{len(failed)}/{len(rows)} judging call(s) failed: "
+                f"{', '.join(failed)}",
+                flush=True,
+            )
+        if truncated:
+            print(
+                f"{len(truncated)}/{len(rows)} answer(s) cut at "
+                f"{JUDGE_MAX_TOKENS} output tokens: {', '.join(truncated)}",
+                flush=True,
+            )
+        print("the panel was NOT judged in full", flush=True)
         return 2
     return 0
 
