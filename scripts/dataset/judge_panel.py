@@ -592,9 +592,12 @@ def resolve_judge_endpoint(judge_model: str) -> Dict[str, Any]:
                 f"judge has its own route — never fall back to the pipeline's"
             )
         api_key = key
+        # The SDK's convention: ANTHROPIC_BASE_URL names the host WITHOUT the
+        # ``/v1`` segment (``https://api.anthropic.com``), and the client adds
+        # ``/v1/messages``. ``anthropic_messages_url`` accepts both forms.
         base_url = (
             os.environ.get("ANTHROPIC_BASE_URL") or ""
-        ).strip() or "https://api.anthropic.com/v1"
+        ).strip() or ANTHROPIC_DEFAULT_BASE_URL
         route = "named-anthropic"
     else:
         raise SystemExit(
@@ -610,6 +613,23 @@ def resolve_judge_endpoint(judge_model: str) -> Dict[str, Any]:
         "host": urlparse(base_url).hostname or "",
         "route": route,
     }
+
+
+ANTHROPIC_DEFAULT_BASE_URL = "https://api.anthropic.com"
+
+
+def anthropic_messages_url(base_url: str) -> str:
+    """``<base>/v1/messages`` whether or not ``base_url`` already ends in ``/v1``.
+
+    The variable the SDK reads (``ANTHROPIC_BASE_URL``) carries no ``/v1``; an
+    agent harness exports it that way. Appending ``/messages`` to it alone
+    posted every judging call to ``<host>/messages`` and got 404 on the whole
+    cycle-0 panel (R1141), so the segment is added here when it is missing.
+    """
+    base = (base_url or "").strip().rstrip("/")
+    if not base.endswith("/v1"):
+        base += "/v1"
+    return f"{base}/messages"
 
 
 async def call_judge(
@@ -634,7 +654,7 @@ async def call_judge(
             "anthropic-version": "2023-06-01",
             "content-type": "application/json",
         }
-        url = f"{endpoint['base_url'].rstrip('/')}/messages"
+        url = anthropic_messages_url(endpoint["base_url"])
     else:
         payload = {
             "model": endpoint["model_id"],
@@ -672,6 +692,10 @@ async def call_judge(
         "prompt_tokens": prompt_tokens,
         "completion_tokens": completion_tokens,
         "usage": usage,
+        # The model the provider says answered. A route through a proxy can
+        # serve another model under the requested name; the family claim of
+        # the table rests on this field, not on the id the request carried.
+        "answered_model": body.get("model"),
     }
 
 
@@ -695,6 +719,17 @@ def render_table(rows: Sequence[Dict[str, Any]], meta: Dict[str, Any]) -> str:
     lines.append("# Table de verdicts — juge à l'aveugle (#3375)")
     lines.append("")
     lines.append(f"- Juge : `{meta['judge_model']}` (famille `{meta['judge_family']}`)")
+    if meta.get("judge_host"):
+        lines.append(
+            f"- Route du juge : `{meta.get('judge_route')}` → hôte "
+            f"`{meta['judge_host']}`"
+        )
+    answered = sorted({row["answered_model"] for row in rows if row.get("answered_model")})
+    if answered:
+        lines.append(
+            "- Modèle(s) ayant répondu, selon le fournisseur : "
+            + ", ".join(f"`{model}`" for model in answered)
+        )
     lines.append(
         f"- Pipeline : `{meta['pipeline_model']}` (famille "
         f"`{meta['pipeline_family']}`) — la différence de famille est vérifiée"
@@ -746,9 +781,17 @@ def render_table(rows: Sequence[Dict[str, Any]], meta: Dict[str, Any]) -> str:
         if distribution.get(state):
             lines.append(f"- `{state}` : **{distribution[state]}**")
     if distribution.get("UNPARSED"):
+        failed = sum(1 for row in rows if row.get("status_code") not in (200, None))
+        unreadable = distribution["UNPARSED"] - failed
+        detail = []
+        if failed:
+            detail.append(f"{failed} appel(s) échoué(s), sans réponse du juge")
+        if unreadable:
+            detail.append(f"{unreadable} réponse(s) illisible(s)")
         lines.append(
-            f"- `UNPARSED` : **{distribution['UNPARSED']}** — réponses illisibles, "
-            "comptées comme telles et jamais converties en verdict"
+            f"- `UNPARSED` : **{distribution['UNPARSED']}** — "
+            + " ; ".join(detail)
+            + ", comptés comme tels et jamais convertis en verdict"
         )
     lines.append("")
 
@@ -1066,6 +1109,7 @@ async def run(
         row["elapsed_seconds"] = elapsed
         row["status_code"] = record.get("status_code")
         row["error_body_head"] = record.get("error_body_head")
+        row["answered_model"] = record.get("answered_model")
         from argumentation_analysis.services.model_prices import price_tokens
 
         observed = price_tokens(
@@ -1091,6 +1135,8 @@ async def run(
         "pipeline_family": pipeline_family,
         "seed": args.seed,
         "run_head": run_head,
+        "judge_host": endpoint.get("host"),
+        "judge_route": endpoint.get("route"),
         # Replayable as typed (#2353): the panel selectors ride in the
         # command, so the recorded line re-runs the same ten documents.
         "command": (
@@ -1104,6 +1150,17 @@ async def run(
     table = render_table(rows, meta)
     (args.out_dir / "TABLE.md").write_text(table, encoding="utf-8")
     print(f"table written: {args.out_dir / 'TABLE.md'}", flush=True)
+    failed = [row["opaque_id"] for row in rows if row.get("status_code") != 200]
+    if failed:
+        # The table is kept (it names each failure), but a pass that did not
+        # judge the whole panel is not a measurement of the panel: the exit
+        # code says so, so no caller reads a 10/10 HTTP failure as a run.
+        print(
+            f"{len(failed)}/{len(rows)} judging call(s) failed: "
+            f"{', '.join(failed)} — the panel was NOT judged",
+            flush=True,
+        )
+        return 2
     return 0
 
 
