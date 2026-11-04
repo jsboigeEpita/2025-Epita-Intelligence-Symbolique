@@ -103,13 +103,13 @@ _MACHINERY = tuple(v for v in _DISPLAY if v != "pertinence")
 # body lives on the coordinator's seat; the quoted sentence is the witness
 # (the #3238 precedent). Writer-produced French, no corpus text.
 _R1111A_SENTENCE = (
-    "Le discours tient sur pertinence (6/8 arguments évalués, 90 unités) ; "
-    "refutation_constructive (7/8 arguments évalués, 90 unités) ; "
-    "redondance_faible (6/8 arguments évalués, 90 unités)."
+    "Le discours tient sur pertinence (6/8 arguments évalués — barre : 3/4 des arguments évalués, 90 unités) ; "
+    "refutation_constructive (7/8 arguments évalués — barre : 3/4 des arguments évalués, 90 unités) ; "
+    "redondance_faible (6/8 arguments évalués — barre : 3/4 des arguments évalués, 90 unités)."
 )
 
 # The R1110b form: the identifier without its accent.
-_R1110B_SENTENCE = "Le discours tient sur clarte (7/8 arguments évalués, 12 unités)."
+_R1110B_SENTENCE = "Le discours tient sur clarte (7/8 arguments évalués — barre : 3/4 des arguments évalués, 12 unités)."
 
 
 def _strength(
@@ -169,7 +169,7 @@ class TestTheVerdictSentenceSpeaksTheReadersFrench:
         )
         assert sentence == (
             "Le discours tient sur faible redondance "
-            "(6/7 arguments évalués, 35 unités). "
+            "(6/7 arguments évalués — barre : 3/4 des arguments évalués, 35 unités). "
             "Aucune autre vertu ne se dit du discours."
         )
 
@@ -203,7 +203,7 @@ class TestTheCheckKnowsTheTokenClass:
     @pytest.mark.parametrize("virtue", _MACHINERY)
     def test_each_machinery_identifier_flags_alone(self, virtue: str) -> None:
         verdict = check_reader_vocabulary(
-            f"Le discours tient sur {virtue} (6/8 arguments évalués, 90 unités)."
+            f"Le discours tient sur {virtue} (6/8 arguments évalués — barre : 3/4 des arguments évalués, 90 unités)."
         )
         assert verdict.band == "FAIL", virtue
 
@@ -211,9 +211,9 @@ class TestTheCheckKnowsTheTokenClass:
         """The repaired surface reads clean — the verdict keeps speaking,
         in the reader's French."""
         verdict = check_reader_vocabulary(
-            "Le discours tient sur pertinence (6/8 arguments évalués, 90 "
-            "unités) ; réfutation constructive (7/8 arguments évalués, 90 "
-            "unités) ; faible redondance (6/8 arguments évalués, 90 unités)."
+            "Le discours tient sur pertinence (6/8 arguments évalués — barre : 3/4 des arguments évalués, 90 "
+            "unités) ; réfutation constructive (7/8 arguments évalués — barre : 3/4 des arguments évalués, 90 "
+            "unités) ; faible redondance (6/8 arguments évalués — barre : 3/4 des arguments évalués, 90 unités)."
         )
         assert verdict.band == "PASS"
 
@@ -232,7 +232,7 @@ class TestTheCheckKnowsTheTokenClass:
     def test_pertinence_the_word_does_not_flag(self) -> None:
         """Excluded by construction — its display IS the French word."""
         verdict = check_reader_vocabulary(
-            "Le discours tient sur pertinence (6/8 arguments évalués, 90 unités)."
+            "Le discours tient sur pertinence (6/8 arguments évalués — barre : 3/4 des arguments évalués, 90 unités)."
         )
         assert verdict.band == "PASS"
 

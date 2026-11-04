@@ -76,8 +76,8 @@ _QUE_FAIRE = (
 
 _VERDICT_HEADING_LINE = "**Verdict sur les vertus (chiffres du pipeline)**"
 _VERDICT_RENDER = (
-    "Le discours tient sur clarté (7/8 arguments évalués, 2 unités) ; "
-    "réfutation constructive (7/8 arguments évalués, 2 unités). "
+    "Le discours tient sur clarté (7/8 arguments évalués — barre : 3/4 des arguments évalués, 2 unités) ; "
+    "réfutation constructive (7/8 arguments évalués — barre : 3/4 des arguments évalués, 2 unités). "
     "Aucune autre vertu ne se dit du discours."
 )
 

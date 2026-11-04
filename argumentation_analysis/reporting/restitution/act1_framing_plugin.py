@@ -46,6 +46,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import yaml
 
 from .arena_record import ArenaRecord, build_arena_record, format_arena_line
+from .figure_scales import score_with_scale  # #3394 — scales ride the figures
 from .fr_accord import accord
 from .speaker_record import (
     SPEAKER_NAMING_RULE,
@@ -98,6 +99,12 @@ _META_LABELS: Dict[str, str] = {
     "context": "contexte",
     "original_source": "source d'origine",
     "extraction_date": "date d'extraction",
+    # #3392 ask 2 — the elements a document's own header lists (the event,
+    # the participants, the report's title): extract-level metadata fields,
+    # read through the same reader-label view.
+    "event": "événement",
+    "participants": "participants",
+    "report_title": "titre du rapport",
 }
 _META_PLACEHOLDER = "non renseigné"
 _META_PLACEHOLDER_VALUES = frozenset({"unknown", "none", "null", "n/a"})
@@ -1071,7 +1078,11 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         spectrum_note = "Spectre : INDISPONIBLE (taxonomie non chargée)."
     elif evidence.spectrum_general:
         spectrum_block = "\n".join(
-            f"  - {f.name_fr} (sévérité {f.severity_weight:.1f})"
+            # #3394 — the severity weight arrives on its [0, 1] scale with
+            # its direction: « 0,8 sur 1,0 — plus haut = plus grave ». The
+            # general spectrum's own note already names the ordering; the
+            # number now says what it is an ordering BY.
+            f"  - {f.name_fr} (sévérité {score_with_scale(f.severity_weight, 1.0, decimals=1, direction='plus haut = plus grave')})"
             for f in evidence.expected_spectrum
         )
         spectrum_note = (

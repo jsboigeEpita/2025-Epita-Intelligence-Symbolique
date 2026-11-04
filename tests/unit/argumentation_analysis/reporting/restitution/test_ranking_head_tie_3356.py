@@ -24,7 +24,16 @@ from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
 
 
 def _quality(scores: dict) -> dict:
-    return {arg_id: {"overall": score} for arg_id, score in scores.items()}
+    # #3394 — production shape: ``overall`` rides with its ``scores`` map
+    # (``add_quality_score`` writes the pair), so each printed score carries
+    # its ceiling (« 4,50 sur 6 »).
+    return {
+        arg_id: {
+            "overall": score,
+            "scores": {f"v{i}": 1.0 for i in range(6)},
+        }
+        for arg_id, score in scores.items()
+    }
 
 
 #: The dispatch's probe: a tied head at 4.5, the vote winner below it.
@@ -37,9 +46,11 @@ class TestATiedHeadIsShared:
         arg_1 alone (« arg_1 (4.5) est en tête ») while arg_2 holds the
         same maximum."""
         line = quality_ranking_line(_quality(_PROBE), 4, "arg_3")
-        assert "arg_1 et arg_2 (4.5) partagent la tête" in line, line
+        assert "arg_1 et arg_2 (4,50 sur 6) partagent la tête" in line, line
         assert "est en tête" not in line, line
-        assert "Le gagnant du vote, arg_3, est 3ᵉ de ce classement (4.0)" in line, line
+        assert (
+            "Le gagnant du vote, arg_3, est 3ᵉ de ce classement (4,00 sur 6)" in line
+        ), line
 
     def test_a_sole_top_one_keeps_the_exact_clause(self):
         """Positive control: no tie at the head — the pre-#3356 clause,
@@ -48,7 +59,7 @@ class TestATiedHeadIsShared:
             _quality({"arg_1": 5.0, "arg_2": 4.7, "arg_3": 4.0}), 3, "arg_3"
         )
         assert line.endswith(
-            "est 3ᵉ de ce classement (4.0) ; arg_1 (5.0) est en tête : "
+            "est 3ᵉ de ce classement (4,00 sur 6) ; arg_1 (5,00 sur 6) est en tête : "
             "le vote ne dit pas qu'il est le mieux tenu."
         ), line
 
@@ -59,7 +70,8 @@ class TestATiedHeadIsShared:
         scores["arg_w"] = 4.0
         line = quality_ranking_line(_quality(scores), 6, "arg_w")
         assert (
-            "arg_1, arg_2, arg_3, arg_4 et 1 autre (5.0) partagent la tête" in line
+            "arg_1, arg_2, arg_3, arg_4 et 1 autre (5,00 sur 6) partagent la tête"
+            in line
         ), line
         assert "1 autres" not in line, line
 
@@ -75,5 +87,5 @@ class TestATiedHeadIsShared:
         }
         line = quality_ranking_line(_quality(scores), 5, "arg_4")
         # Two 5.0 holders hold ranks 1-2, so the 4.0 pair is 3rd.
-        assert "est 3ᵉ à égalité de ce classement (4.0) avec arg_3" in line, line
-        assert "arg_1 et arg_2 (5.0) partagent la tête" in line, line
+        assert "est 3ᵉ à égalité de ce classement (4,00 sur 6) avec arg_3" in line, line
+        assert "arg_1 et arg_2 (5,00 sur 6) partagent la tête" in line, line

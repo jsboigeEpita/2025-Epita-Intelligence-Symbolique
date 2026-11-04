@@ -30,14 +30,19 @@ from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
 )
 
 
+#: #3394 — production shape: ``overall`` rides with its ``scores`` map
+#: (``add_quality_score`` writes the pair); six evaluated virtues here.
+_N6 = {f"v{i}": 1.0 for i in range(6)}
+
+
 def _doc_a_quality() -> dict:
     quality = {
-        "arg_69": {"overall": 5.0},
-        "arg_14": {"overall": 4.5},
-        "arg_28": {"overall": 4.5},
+        "arg_69": {"overall": 5.0, "scores": dict(_N6)},
+        "arg_14": {"overall": 4.5, "scores": dict(_N6)},
+        "arg_28": {"overall": 4.5, "scores": dict(_N6)},
     }
     for i in range(5):
-        quality[f"arg_{100 + i}"] = {"overall": 2.0}
+        quality[f"arg_{100 + i}"] = {"overall": 2.0, "scores": dict(_N6)}
     return quality
 
 
@@ -81,7 +86,7 @@ class TestTheRankingSaysTheVoteRank:
         )
         line = build_act2_evidence(state).quality_ranking
         assert "est 2ᵉ à égalité" in line, line
-        assert "arg_69 (5.0) est en tête" in line, line
+        assert "arg_69 (5,00 sur 6) est en tête" in line, line
         assert "le vote ne dit pas qu'il est le mieux tenu" in line, line
 
     def test_control_winner_is_the_top1_keeps_the_line_byte_identical(self):
@@ -101,14 +106,14 @@ class TestTheRankingSaysTheVoteRank:
         the other holder — « 1ᵉ à égalité » for one ordering, silence for the
         other. Same fact, same sentence, whatever the ids."""
         quality_14 = {
-            "arg_14": {"overall": 5.0},
-            "arg_69": {"overall": 5.0},
-            "arg_28": {"overall": 4.5},
+            "arg_14": {"overall": 5.0, "scores": dict(_N6)},
+            "arg_69": {"overall": 5.0, "scores": dict(_N6)},
+            "arg_28": {"overall": 4.5, "scores": dict(_N6)},
         }
         quality_69 = {
-            "arg_69": {"overall": 5.0},
-            "arg_14": {"overall": 5.0},
-            "arg_28": {"overall": 4.5},
+            "arg_69": {"overall": 5.0, "scores": dict(_N6)},
+            "arg_14": {"overall": 5.0, "scores": dict(_N6)},
+            "arg_28": {"overall": 4.5, "scores": dict(_N6)},
         }
         base_14 = quality_ranking_line(quality_14, 3)
         base_69 = quality_ranking_line(quality_69, 3)
@@ -126,12 +131,14 @@ class TestTheRankingSaysTheVoteRank:
         for a holder at the SAME score, and no « le vote ne dit pas qu'il est
         le mieux tenu » — it shares the top, that tail would be false."""
         quality = {
-            "arg_14": {"overall": 5.0},
-            "arg_69": {"overall": 5.0},
-            "arg_28": {"overall": 4.5},
+            "arg_14": {"overall": 5.0, "scores": dict(_N6)},
+            "arg_69": {"overall": 5.0, "scores": dict(_N6)},
+            "arg_28": {"overall": 4.5, "scores": dict(_N6)},
         }
         line = quality_ranking_line(quality, 3, "arg_14")
-        assert "partage la tête de ce classement (5.0) avec arg_69" in line, line
+        assert (
+            "partage la tête de ce classement (5,00 sur 6) avec arg_69" in line
+        ), line
         assert "1ᵉ" not in line, line
         assert "en tête" not in line, line
         assert "le vote ne dit pas" not in line, line
@@ -140,14 +147,15 @@ class TestTheRankingSaysTheVoteRank:
         """A shared head is named by every co-holder, in the same id order the
         line's own listing uses — never one of them « en tête »."""
         quality = {
-            "arg_14": {"overall": 5.0},
-            "arg_69": {"overall": 5.0},
-            "arg_3": {"overall": 5.0},
-            "arg_28": {"overall": 4.5},
+            "arg_14": {"overall": 5.0, "scores": dict(_N6)},
+            "arg_69": {"overall": 5.0, "scores": dict(_N6)},
+            "arg_3": {"overall": 5.0, "scores": dict(_N6)},
+            "arg_28": {"overall": 4.5, "scores": dict(_N6)},
         }
         line = quality_ranking_line(quality, 4, "arg_69")
         assert (
-            "partage la tête de ce classement (5.0) avec arg_14 et arg_3" in line
+            "partage la tête de ce classement (5,00 sur 6) avec arg_14 et arg_3"
+            in line
         ), line
         assert "en tête" not in line, line
 
@@ -157,9 +165,9 @@ class TestTheRankingSaysTheVoteRank:
         state = _state(
             identified_arguments=_args(90),
             argument_quality_scores={
-                "arg_14": {"overall": 5.0},
-                "arg_69": {"overall": 5.0},
-                "arg_28": {"overall": 4.5},
+                "arg_14": {"overall": 5.0, "scores": dict(_N6)},
+                "arg_69": {"overall": 5.0, "scores": dict(_N6)},
+                "arg_28": {"overall": 4.5, "scores": dict(_N6)},
             },
             governance_decisions=_vote("arg_14"),
         )
@@ -188,9 +196,9 @@ class TestTheRankingSaysTheVoteRank:
 
     def test_a_unique_rank_carries_no_tie_clause(self):
         quality = {
-            "arg_7": {"overall": 5.0},
-            "arg_8": {"overall": 4.7},
-            "arg_9": {"overall": 4.0},
+            "arg_7": {"overall": 5.0, "scores": dict(_N6)},
+            "arg_8": {"overall": 4.7, "scores": dict(_N6)},
+            "arg_9": {"overall": 4.0, "scores": dict(_N6)},
         }
         state = _state(
             identified_arguments={
@@ -201,7 +209,7 @@ class TestTheRankingSaysTheVoteRank:
             governance_decisions=_vote("arg_9"),
         )
         line = build_act2_evidence(state).quality_ranking
-        assert "est 3ᵉ de ce classement (4.0)" in line, line
+        assert "est 3ᵉ de ce classement (4,00 sur 6)" in line, line
         assert "à égalité" not in line.split("Classement qualité")[1], line
 
     def test_the_fact_survives_relabeling_in_the_prompt(self):
@@ -213,7 +221,7 @@ class TestTheRankingSaysTheVoteRank:
         )
         prompt = build_act2_prompt(build_act2_evidence(state))
         assert "est 2ᵉ à égalité" in prompt
-        assert re.search(r"[α-ω]+ \(5\.0\) est en tête", prompt), prompt
+        assert re.search(r"[α-ω]+ \(5,00 sur 6\) est en tête", prompt), prompt
         assert not re.search(r"arg_\d+", prompt)
 
     def test_an_unscored_winner_says_it_is_not_in_the_ranking(self):

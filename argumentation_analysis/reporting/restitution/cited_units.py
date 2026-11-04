@@ -27,6 +27,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple
 
 from .native_dung import is_native_dung_framework  # #3214 — light decoder, no cycle
+from .figure_scales import vote_count_phrase  # #3394 — stdlib-only, stays light
 
 # Budget for a CITED unit's text — see the module docstring for the
 # calibration and what remains pending.
@@ -292,14 +293,20 @@ def qualitative_support_band(
     n_methods_decided: Optional[int],
     winner_basis: Optional[str] = None,
 ) -> Optional[str]:
-    """The QUALITATIVE band of a vote's support (#3001 a′ — never a counter).
+    """The band of a vote's support, carrying its count (#3001 a′, #3394).
 
     The R1077 census found the support population was dropped before the
     record: "11 methods out of 12" and "the plurality fallback tier only"
     are two different verdicts the Acts rendered with the same sentence.
-    This band is the bounded rendering the coordinator's arbitration asks
-    for: three bands, no digits (#1914 — a raw counter or a badge would hand
-    the writer a number to copy instead of a fact to phrase).
+
+    #3394 — the band now carries the COUNT (« 9 des 12 méthodes »), measured
+    from the same record. Cycle 0's renders read « une large majorité des
+    méthodes de vote » with no number behind it, and the panel's reader — a
+    non-specialist — could not tell 9 of 12 from 5 of 11. The word stays (it
+    is the honest characterisation); the count rides it. #1914's no-digits
+    clause is superseded ON THIS LINE for the counted form: what it banned
+    was a bare counter without its population, and ``vote_count_phrase``
+    prints both sides of the fraction or nothing.
 
     The bands derive from the DEFINITION (R1080 rework): "majorité" is
     spoken only when 2s > n — strictly more than half of the deciding
@@ -326,23 +333,25 @@ def qualitative_support_band(
         return None
     n = n_methods_decided
     s = support
+    count = vote_count_phrase(s, n)
+    counted = f" ({count})" if count else ""
     if s >= n:
-        return "à l'unanimité des méthodes qui ont décidé"
+        return f"à l'unanimité des méthodes qui ont décidé{counted}"
     if 3 * s >= 2 * n:
-        return "par une large majorité des méthodes"
+        return f"par une large majorité des méthodes{counted}"
     if winner_basis == "plurality":
         if 2 * s > n:
             return (
                 "de justesse, par une majorité étroite des méthodes, au "
-                "palier de repli"
+                f"palier de repli{counted}"
             )
         return (
             "de justesse, au palier de repli — aucune option ne s'était "
-            "clairement imposée parmi les méthodes"
+            f"clairement imposée parmi les méthodes{counted}"
         )
     if 2 * s > n:
-        return "de justesse, par une majorité étroite des méthodes"
-    return "par une partie seulement des méthodes"
+        return f"de justesse, par une majorité étroite des méthodes{counted}"
+    return f"par une partie seulement des méthodes{counted}"
 
 
 def render_governance_lead(
@@ -434,11 +443,13 @@ def render_governance_lead(
             winner_basis,
         )
         if band:
-            lead += (
-                f"Le soutien de ce verdict : {band}. Rends ce soutien de "
-                "façon QUALITATIVE (comme cette phrase le fait) — jamais "
-                "sous forme de compteur ni de badge."
-            )
+            # #3394 — the band itself now carries the counted support
+            # (« 9 des 12 méthodes »), measured from the record. The old
+            # instruction to render the support « jamais sous forme de
+            # compteur » is removed with it: it existed to stop the writer
+            # inventing a number; the number is now given, and a rule that
+            # contradicts the given fact would only breed drift.
+            lead += f"Le soutien de ce verdict : {band}."
     # #3308 — what the fallacy pass established about THIS unit's defects.
     # R1127a: Act III told the reader a divergent winner's units carried
     # « pas de défaut net » where the pass had never examined them — an

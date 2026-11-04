@@ -197,7 +197,7 @@ class TestTheWriterRecordsTheSupportPopulation:
 
 @pytest.mark.parametrize("act", ["act2", "act3"])
 class TestTheSupportBandReachesTheActs:
-    """Record → both Acts: a QUALITATIVE band, never a counter (#1914)."""
+    """Record → both Acts: a QUALITATIVE band carrying its COUNT (#1914, #3394)."""
 
     def test_a_unanimous_vote_reads_as_unanimous(self, act: str) -> None:
         state = _written_state(_unanimous_output())
@@ -218,13 +218,19 @@ class TestTheSupportBandReachesTheActs:
         # not a majority, and the GOUVERNANCE line must not say one
         assert "majorit" not in line
 
-    def test_the_band_is_never_a_raw_counter(self, act: str) -> None:
-        """#1914: qualitative only — no "6/12", no "11 méthodes sur 12"."""
-        for output in (_unanimous_output(), _narrow_output()):
-            state = _written_state(output)
-            line = _gov_line(_PROMPTS[act](state))
-            assert "/12" not in line
-            assert "12 méthodes" not in line
+    def test_the_band_carries_its_count_with_its_word(self, act: str) -> None:
+        """#1914 → #3394: the band keeps its qualitative word AND carries the
+        counted support from the record. #1914 banned a BARE counter (a number
+        with no population behind it); #3394 bans the opposite defect — the
+        word with no count (« une large majorité des méthodes de vote » on 4
+        of 10 cycle-0 renders). The counted phrase rides the band: both sides
+        of the fraction, or nothing."""
+        state = _written_state(_unanimous_output())
+        line = _gov_line(_PROMPTS[act](state))
+        assert "unanimité des méthodes qui ont décidé (12 des 12 méthodes)" in line
+        state = _written_state(_narrow_output())
+        line = _gov_line(_PROMPTS[act](state))
+        assert "partie seulement des méthodes (6 des 12 méthodes)" in line
 
     def test_a_divergent_vote_carries_each_winners_band_next_to_its_text(
         self, act: str

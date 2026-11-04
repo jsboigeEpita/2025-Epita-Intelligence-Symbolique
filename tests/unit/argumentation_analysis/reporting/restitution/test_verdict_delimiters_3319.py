@@ -67,12 +67,12 @@ def _quoted_verdict_re():
 # produced French, no corpus text.
 _R1129_QUOTED = (
     "Le verdict tombe : « Le discours tient sur faible redondance "
-    "(6/7 arguments évalués, 35 unités). »"
+    "(6/7 arguments évalués — barre : 3/4 des arguments évalués, 35 unités). »"
 )
 
 _R1129_BARE = (
     "Le verdict tombe : Le discours tient sur faible redondance "
-    "(6/7 arguments évalués, 35 unités)."
+    "(6/7 arguments évalués — barre : 3/4 des arguments évalués, 35 unités)."
 )
 
 
@@ -127,7 +127,7 @@ class TestTheVerdictSubstanceIsUntouched:
         )
         assert sentence == (
             "Le discours tient sur faible redondance "
-            "(6/7 arguments évalués, 35 unités). "
+            "(6/7 arguments évalués — barre : 3/4 des arguments évalués, 35 unités). "
             "Aucune autre vertu ne se dit du discours."
         )
 
@@ -136,7 +136,7 @@ class TestTheVerdictSubstanceIsUntouched:
             [_strength("redondance_faible", at_top=6, evaluated=7, units=35)]
         )
         assert "Le discours tient sur" in sentence
-        assert "(6/7 arguments évalués, 35 unités)" in sentence
+        assert "(6/7 arguments évalués — barre : 3/4 des arguments évalués, 35 unités)" in sentence
         assert "Aucune autre vertu ne se dit du discours." in sentence
 
     def test_the_display_name_not_the_identifier(self) -> None:
@@ -182,6 +182,6 @@ class TestTheCheckKnowsTheQuotedVerdict:
         without the lead (a bare enumeration) both stay out — the shape is
         the pair, and the pair is code-written."""
         lead_only = "« Le discours tient sur la faible redondance. »"
-        figures_only = "« Forte (6/7 arguments évalués, 35 unités). »"
+        figures_only = "« Forte (6/7 arguments évalués — barre : 3/4 des arguments évalués, 35 unités). »"
         assert _quoted_verdict_re().search(lead_only) is None
         assert _quoted_verdict_re().search(figures_only) is None
