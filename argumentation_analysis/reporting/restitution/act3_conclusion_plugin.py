@@ -133,6 +133,7 @@ from .llm_weaving import LlmCallable, WeaveOutcome, weave
 from .quote_fidelity import sanitize_act_quotes
 from .readability_gate import GateVerdict, ReadabilityGate
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
+from argumentation_analysis.agents.core.reading import first_reading_note  # #3395
 
 logger = logging.getLogger(__name__)
 
@@ -732,6 +733,13 @@ class Act3Evidence:
     # basis the Acts never spoke, quoted here beside the speaker so the
     # reader learns the bounds of the readings the verdicts rest on.
     readings: ReadingRecord = field(default_factory=ReadingRecord)
+    # #3395 (acts slice) — the first reading's labelled block, rendered by its
+    # ONE producer (``first_reading_note``): the text's defining moves with
+    # their verbatim quotes, or the stated absence — the conclusion may neither
+    # invent a centre nor read a failed read as a silence. Empty when the state
+    # carries no record at all (bare doubles): the prompt then omits the
+    # section instead of putting a producer's vocabulary where none ran.
+    first_reading: str = ""
     # #3296 — every unit's capped text, keyed by opaque id: the referent
     # source for the per-act label table's legend. The ids stay in the
     # evidence layer; the writer's prompt alone reads them as letters.
@@ -3203,6 +3211,9 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         arena=build_arena_record(state),
         speaker=build_speaker_record(state),
         readings=build_reading_record(state),
+        # #3395 (acts slice) — the one producer renders the block; the act
+        # never re-words the moves in its own vocabulary.
+        first_reading=first_reading_note(state),
     )
 
 
@@ -3815,6 +3826,13 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
     if reading_block:
         reading_block += "\n\n"
 
+    # #3395 (acts slice) — the first reading's block, beside the reading
+    # bounds: what the one whole-document read found the TEXT doing, before
+    # any lens ran. Empty on a state that carries no record (omitted whole).
+    first_reading_block = (
+        f"{evidence.first_reading}\n\n" if evidence.first_reading else ""
+    )
+
     prompt = (
         "Tu es l'auteur de l'ACTE III d'un rapport de restitution argumentative\n"
         "— la CONCLUSION ORIENTÉE LECTEUR : un lecteur qui a vu ou lu le discours\n"
@@ -3854,6 +3872,7 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
         # sait aussi dire « inféré du texte ».
         f"[LOCUTEUR — provenance de la valeur]\n"
         f"  {format_speaker_line(evidence.speaker)}\n\n"
+        f"{first_reading_block}"
         f"{reading_block}"
         # #3073 — l'arène vient du MÊME enregistrement que celui de l'Acte I
         # (valeur + provenance) : deux actes, une valeur, une étiquette. Elle
