@@ -68,11 +68,21 @@ from argumentation_analysis.evaluation.model_family import (  # noqa: E402
     model_family,
 )
 
+from scripts.dataset.render_campaign_reading_folder import (  # noqa: E402
+    SIGNATURES_DIR as _FICHE_SIGNATURES_DIR,
+    STATES_DIR as _FICHE_STATES_DIR,
+    ZEROSHOT_DIR as _FICHE_ZEROSHOT_DIR,
+)
+
 RESULTS_ROOT = REPO_ROOT / "argumentation_analysis" / "evaluation" / "results"
 DEFAULT_OUT = RESULTS_ROOT / "judge_panel_3375"
-DEFAULT_STATES_DIR = REPO_ROOT / ".analysis_kb" / "state_dumps"
-DEFAULT_SIGNATURES_DIR = REPO_ROOT / ".analysis_kb" / "signatures"
-DEFAULT_ZEROSHOT_DIR = RESULTS_ROOT / "zeroshot_2841"
+# The judge reads the folders the fiche reads: the judged text is what the
+# fiche prints (``pipeline_full_text``), so its inputs keep no copy of the
+# path. A copy here pointed at ``.analysis_kb/``, which the campaign never
+# writes, and the judge found no arm at all on the real cycle-0 run.
+DEFAULT_STATES_DIR = _FICHE_STATES_DIR
+DEFAULT_SIGNATURES_DIR = _FICHE_SIGNATURES_DIR
+DEFAULT_ZEROSHOT_DIR = _FICHE_ZEROSHOT_DIR
 GRID_PATH = REPO_ROOT / "docs" / "guides" / "GRILLE_JUGE_2841.md"
 
 # The grid's five states (§3) — a verdict is an état, never a score.

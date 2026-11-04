@@ -25,7 +25,7 @@ for the same population:
 Usage (from the checkout root, env ``projet-is-roo-new``)::
 
     python scripts/dataset/rederive_surplus_aggregate.py \\
-        --signatures-dir .analysis_kb/signatures
+        --signatures-dir analysis_kb/signatures
 
 Privacy: reads only the sanitized state a signature already carries and prints
 counts, never a statement and never a document identifier beyond the opaque id
@@ -170,7 +170,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--signatures-dir",
-        default=".analysis_kb/signatures",
+        default=str(_ROOT / "analysis_kb" / "signatures"),
         help="directory holding signature_<opaque_id>.json files",
     )
     parser.add_argument(

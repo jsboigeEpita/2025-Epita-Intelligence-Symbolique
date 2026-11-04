@@ -20,6 +20,8 @@ from __future__ import annotations
 
 from typing import Tuple
 
+from argumentation_analysis.services.model_prices import bare_model_id
+
 # id prefixes, longest first at match time so ``gpt-`` never swallows
 # ``gpt-oss`` and a vendor rename cannot silently fall through.
 _FAMILY_PREFIXES: Tuple[Tuple[str, str], ...] = (
@@ -53,8 +55,11 @@ def model_family(model_id: str) -> str:
 
     The id is lowercased and stripped, so a provider that echoes its own
     casing (``GPT-5.6-LUNA``) resolves to the same row as the lowercase form.
+    A routed id (``openai/gpt-5.6-luna``, the form OpenRouter records) is read
+    through the price table's own ``bare_model_id``, so the family and the
+    price of one call are read from one key and cannot disagree.
     """
-    normalised = (model_id or "").strip().lower()
+    normalised = bare_model_id(model_id)
     if not normalised:
         raise UnknownModelFamily(
             "empty model id: the judge's family cannot be established, and a "
