@@ -735,8 +735,13 @@ class TestTheJudgedTextIsTheFiche:
         self, tmp_path
     ):
         """#3278: the terminal classification is a READER-facing sentence —
-        the judge that does not see it cannot even see why there is nothing."""
-        state = {"state": {"act1_framing": ""}}
+        the judge that does not see it cannot even see why there is nothing.
+
+        #3392: the reader's sentence is the French paragraph built from the
+        recorded material. The batch runner's English line left the reader's
+        surface (and with it the judge's text); it stays in the log.
+        """
+        state = {"state": {"act1_framing": "", "raw_text": "x" * 300}}
         signature = {
             "opaque_id": "aaaa1111",
             "document_classification": "non_argumentative",
@@ -747,10 +752,11 @@ class TestTheJudgedTextIsTheFiche:
             judged.strip()
         ), "the judged text of a non-argumentative document is EMPTY"
         assert "non-argumentatif" in judged
-        assert "Document aaaa1111: classified non-argumentative" in judged
+        assert "n'a pas été lu comme une argumentation" in judged
+        assert "classified non-argumentative" not in judged
 
     def test_the_non_argumentative_fiche_section_is_the_judged_text(self, tmp_path):
-        state = {"state": {"act1_framing": ""}}
+        state = {"state": {"act1_framing": "", "raw_text": "x" * 300}}
         signature = {
             "opaque_id": "aaaa1111",
             "document_classification": "non_argumentative",

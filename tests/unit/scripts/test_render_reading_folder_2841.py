@@ -464,10 +464,13 @@ class TestNonArgumentativeRender:
     an absence.
 
     The fiche of a ``non_argumentative`` document must name the
-    classification and carry the batch runner's own phrase (one source, two
-    callers — a second wording is the divergence #3123 caught), and must not
-    show four "absent de l'état" acts: the reader of the ONE document with no
-    analysis is the one who most needs to know why."""
+    classification and must not show four "absent de l'état" acts: the
+    reader of the ONE document with no analysis is the one who most needs
+    to know why. #3392 supersedes the earlier "one phrase, two callers"
+    pin: the batch runner's ENGLISH line is the LOG's (it stays there,
+    unchanged), and the reader gets a French paragraph built from the
+    recorded material — carrying the English log line into the fiche was
+    the panel's only ZEROSHOT_WINS."""
 
     def test_fiche_names_the_classification_not_empty_acts(self, tmp_path, monkeypatch):
         root = _plant_campaign(tmp_path)
@@ -478,12 +481,17 @@ class TestNonArgumentativeRender:
         fiche = (out / "02_rendus" / "01_a53fc485_ext0_Titre-Alpha.md").read_text(
             encoding="utf-8"
         )
-        assert "non_argumentative" in fiche
+        # #3392 — the header's status is reader vocabulary now; the raw
+        # classification id does not reach the surface.
+        assert "document non-argumentatif" in fiche
+        assert "statut `non_argumentative`" not in fiche
         assert (
             "absent de l'état — acte i" not in fiche
         ), "the terminal classification still renders as an absence"
 
-    def test_the_phrase_is_the_batch_runners_single_source(self, tmp_path, monkeypatch):
+    def test_the_reader_gets_the_paragraph_the_log_keeps_its_line(
+        self, tmp_path, monkeypatch
+    ):
         root = _plant_campaign(tmp_path)
         _mark_non_argumentative(tmp_path)
         out = root / "campaign_2841_lecture"
@@ -496,12 +504,14 @@ class TestNonArgumentativeRender:
             render_non_argumentative_restitution,
         )
 
-        expected = render_non_argumentative_restitution(
+        log_line = render_non_argumentative_restitution(
             "a53fc485_ext0", {"status": "non_argumentative", "phase": "extract"}
         )
         assert (
-            expected in fiche
-        ), "the fiche carries its own wording instead of the runner's phrase"
+            log_line not in fiche
+        ), "the batch runner's English log line reached the reader's text"
+        assert "n'a pas été lu comme une argumentation" in fiche
+        assert "ce n'est pas un échec" in fiche
 
     def test_a_failed_document_keeps_its_failure_render(self, tmp_path, monkeypatch):
         """The #1909 guard: an extraction failure stays a failure — the
