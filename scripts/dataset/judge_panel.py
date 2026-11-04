@@ -54,7 +54,6 @@ import asyncio
 import json
 import os
 import random
-import re
 import sys
 import time
 from pathlib import Path
@@ -66,6 +65,10 @@ sys.path.insert(0, str(REPO_ROOT))
 from argumentation_analysis.evaluation.model_family import (  # noqa: E402
     assert_judge_differs,
     model_family,
+)
+from argumentation_analysis.reporting.restitution.quote_fidelity import (  # noqa: E402
+    normalise_for_citation,
+    normalised_quote_in,
 )
 
 from scripts.dataset.render_campaign_reading_folder import (  # noqa: E402
@@ -159,28 +162,30 @@ def positions(opaque_id: str, seed: int) -> Dict[str, int]:
 # ---------------------------------------------------------------------------
 # Citations — mechanical, normalised, falsifiable
 # ---------------------------------------------------------------------------
+#
+# #3389 — ONE rule, one producer. The judge's ``document_quote`` and the
+# render's « … » spans are located by the same implementation
+# (``reporting/restitution/quote_fidelity``): case, whitespace and typographic
+# apostrophes folded, ``[…]`` read as an elision gap. This file used to carry
+# its own whitespace-only copy, so the two surfaces could disagree on what
+# "the document says this" means.
 
-_WS = re.compile(r"\s+")
 
-
-def normalise(text: str) -> str:
-    """Collapse whitespace runs so a line-wrapped quote still matches."""
-    return _WS.sub(" ", (text or "")).strip()
+def normalise(text: Any) -> str:
+    """The comparison form of ``text`` — the shared citation rule (#3389)."""
+    return normalise_for_citation(text)
 
 
 def is_cited(text: str, quote: str) -> bool:
-    """True when ``quote`` occurs in ``text`` after whitespace normalisation.
+    """True when ``quote`` occurs in ``text`` under the shared citation rule.
 
-    Substring, case-SENSITIVE: a paraphrase is not a citation, and a judge
-    that has to copy the exact words cannot invent one whole.
+    Kept as the judge's name for it: a judge that has to copy the words
+    cannot invent one whole, and the length floor stays here because it is
+    the JUDGE's rule — a word or two is a keyword, not a citation, and it
+    occurs in every text. Grading the quality of a quote is the reader's job,
+    not the verifier's.
     """
-    needle = normalise(quote)
-    if len(needle) < 8:
-        # A word or two is a keyword, not a citation: it occurs in every text
-        # and would pass by accident. This is a LENGTH floor only — grading
-        # the quality of a quote is the reader's job, not the verifier's.
-        return False
-    return needle in normalise(text)
+    return normalised_quote_in(text, quote)
 
 
 def validate_items(
@@ -536,7 +541,14 @@ def arm_costs(
 # Rough chars-per-token for the estimate. It is an ESTIMATE and the table
 # says so; the real figure comes from the provider's usage block afterwards.
 CHARS_PER_TOKEN_ESTIMATE = 4
-JUDGE_MAX_TOKENS = 4096
+# The judge's answer quotes three sides per item (analysis, reading, document)
+# and the long documents carry many items. At 4096 the cycle-0 pass (R1141)
+# lost 7 of 10 answers; 16384 bounds the cost, it does not ask for length.
+JUDGE_MAX_TOKENS = 16384
+
+
+# The two wires' names for "the answer was cut at max_tokens".
+TRUNCATION_STOP_REASONS = ("max_tokens", "length")
 
 
 def estimate_judge_cost(
@@ -592,9 +604,12 @@ def resolve_judge_endpoint(judge_model: str) -> Dict[str, Any]:
                 f"judge has its own route — never fall back to the pipeline's"
             )
         api_key = key
+        # The SDK's convention: ANTHROPIC_BASE_URL names the host WITHOUT the
+        # ``/v1`` segment (``https://api.anthropic.com``), and the client adds
+        # ``/v1/messages``. ``anthropic_messages_url`` accepts both forms.
         base_url = (
             os.environ.get("ANTHROPIC_BASE_URL") or ""
-        ).strip() or "https://api.anthropic.com/v1"
+        ).strip() or ANTHROPIC_DEFAULT_BASE_URL
         route = "named-anthropic"
     else:
         raise SystemExit(
@@ -610,6 +625,23 @@ def resolve_judge_endpoint(judge_model: str) -> Dict[str, Any]:
         "host": urlparse(base_url).hostname or "",
         "route": route,
     }
+
+
+ANTHROPIC_DEFAULT_BASE_URL = "https://api.anthropic.com"
+
+
+def anthropic_messages_url(base_url: str) -> str:
+    """``<base>/v1/messages`` whether or not ``base_url`` already ends in ``/v1``.
+
+    The variable the SDK reads (``ANTHROPIC_BASE_URL``) carries no ``/v1``; an
+    agent harness exports it that way. Appending ``/messages`` to it alone
+    posted every judging call to ``<host>/messages`` and got 404 on the whole
+    cycle-0 panel (R1141), so the segment is added here when it is missing.
+    """
+    base = (base_url or "").strip().rstrip("/")
+    if not base.endswith("/v1"):
+        base += "/v1"
+    return f"{base}/messages"
 
 
 async def call_judge(
@@ -634,7 +666,7 @@ async def call_judge(
             "anthropic-version": "2023-06-01",
             "content-type": "application/json",
         }
-        url = f"{endpoint['base_url'].rstrip('/')}/messages"
+        url = anthropic_messages_url(endpoint["base_url"])
     else:
         payload = {
             "model": endpoint["model_id"],
@@ -660,18 +692,25 @@ async def call_judge(
         usage = body.get("usage") or {}
         prompt_tokens = usage.get("input_tokens", 0)
         completion_tokens = usage.get("output_tokens", 0)
+        stop_reason = body.get("stop_reason")
     else:
         choice = (body.get("choices") or [{}])[0]
         answer = choice.get("message", {}).get("content", "")
         usage = body.get("usage") or {}
         prompt_tokens = usage.get("prompt_tokens", 0)
         completion_tokens = usage.get("completion_tokens", 0)
+        stop_reason = choice.get("finish_reason")
     return {
         "status_code": 200,
         "answer": answer,
         "prompt_tokens": prompt_tokens,
         "completion_tokens": completion_tokens,
         "usage": usage,
+        # The model the provider says answered. A route through a proxy can
+        # serve another model under the requested name; the family claim of
+        # the table rests on this field, not on the id the request carried.
+        "answered_model": body.get("model"),
+        "stop_reason": stop_reason,
     }
 
 
@@ -695,6 +734,17 @@ def render_table(rows: Sequence[Dict[str, Any]], meta: Dict[str, Any]) -> str:
     lines.append("# Table de verdicts — juge à l'aveugle (#3375)")
     lines.append("")
     lines.append(f"- Juge : `{meta['judge_model']}` (famille `{meta['judge_family']}`)")
+    if meta.get("judge_host"):
+        lines.append(
+            f"- Route du juge : `{meta.get('judge_route')}` → hôte "
+            f"`{meta['judge_host']}`"
+        )
+    answered = sorted({row["answered_model"] for row in rows if row.get("answered_model")})
+    if answered:
+        lines.append(
+            "- Modèle(s) ayant répondu, selon le fournisseur : "
+            + ", ".join(f"`{model}`" for model in answered)
+        )
     lines.append(
         f"- Pipeline : `{meta['pipeline_model']}` (famille "
         f"`{meta['pipeline_family']}`) — la différence de famille est vérifiée"
@@ -725,6 +775,10 @@ def render_table(rows: Sequence[Dict[str, Any]], meta: Dict[str, Any]) -> str:
         severity = _count_severities(row.get("kept") or [])
         ident = "ok" if row.get("identification_ok") else "**inversée**"
         state_cell = f"`{row.get('state')}`"
+        if row.get("stop_reason") in TRUNCATION_STOP_REASONS:
+            state_cell += " **(tronquée à la limite de sortie)**"
+        elif row.get("state") == "UNPARSED" and row.get("reported_state"):
+            state_cell += f" (état hors grille : `{row['reported_state']}`)"
         if row.get("status_code") not in (200, None):
             # A document whose call failed (a prompt over the judge's context
             # answers 400, a network fault 0) is UNPARSED — and the reader
@@ -746,9 +800,28 @@ def render_table(rows: Sequence[Dict[str, Any]], meta: Dict[str, Any]) -> str:
         if distribution.get(state):
             lines.append(f"- `{state}` : **{distribution[state]}**")
     if distribution.get("UNPARSED"):
+        failed = sum(1 for row in rows if row.get("status_code") not in (200, None))
+        truncated = sum(
+            1
+            for row in rows
+            if row.get("state") == "UNPARSED"
+            and row.get("stop_reason") in TRUNCATION_STOP_REASONS
+        )
+        unreadable = distribution["UNPARSED"] - failed - truncated
+        detail = []
+        if failed:
+            detail.append(f"{failed} appel(s) échoué(s), sans réponse du juge")
+        if truncated:
+            detail.append(
+                f"{truncated} réponse(s) tronquée(s) à la limite de sortie "
+                f"({JUDGE_MAX_TOKENS} tokens)"
+            )
+        if unreadable:
+            detail.append(f"{unreadable} réponse(s) illisible(s)")
         lines.append(
-            f"- `UNPARSED` : **{distribution['UNPARSED']}** — réponses illisibles, "
-            "comptées comme telles et jamais converties en verdict"
+            f"- `UNPARSED` : **{distribution['UNPARSED']}** — "
+            + " ; ".join(detail)
+            + ", comptés comme tels et jamais convertis en verdict"
         )
     lines.append("")
 
@@ -896,6 +969,7 @@ def _judge_one(
     # The judge names a POSITION as "the analysis"; compare it with the draw.
     identification_ok = reported in ("1", "2") and int(reported) == pos["pipeline"]
     state = str(parsed.get("state") or "").strip()
+    reported_state = state
     if state not in STATES:
         state = "UNPARSED"
     kept, dropped = validate_items(
@@ -907,6 +981,9 @@ def _judge_one(
         "reported_identification": reported,
         "identification_ok": identification_ok,
         "state": state,
+        # What the judge wrote in ``state``, kept when it is not one of the
+        # grid's five: an UNPARSED row must say which word it refused.
+        "reported_state": reported_state,
         "kept": kept,
         "dropped": dropped,
         "style_notes": [str(note) for note in (parsed.get("style_notes") or [])],
@@ -1066,6 +1143,14 @@ async def run(
         row["elapsed_seconds"] = elapsed
         row["status_code"] = record.get("status_code")
         row["error_body_head"] = record.get("error_body_head")
+        row["answered_model"] = record.get("answered_model")
+        row["stop_reason"] = record.get("stop_reason")
+        row["prompt_tokens"] = record.get("prompt_tokens")
+        row["completion_tokens"] = record.get("completion_tokens")
+        # The raw answer, as the module docstring promises: an UNPARSED row
+        # with no answer kept cannot be diagnosed, only paid for again.
+        # The output folder is gitignored (results/), like every judgement.
+        row["answer"] = record.get("answer")
         from argumentation_analysis.services.model_prices import price_tokens
 
         observed = price_tokens(
@@ -1091,6 +1176,8 @@ async def run(
         "pipeline_family": pipeline_family,
         "seed": args.seed,
         "run_head": run_head,
+        "judge_host": endpoint.get("host"),
+        "judge_route": endpoint.get("route"),
         # Replayable as typed (#2353): the panel selectors ride in the
         # command, so the recorded line re-runs the same ten documents.
         "command": (
@@ -1104,6 +1191,32 @@ async def run(
     table = render_table(rows, meta)
     (args.out_dir / "TABLE.md").write_text(table, encoding="utf-8")
     print(f"table written: {args.out_dir / 'TABLE.md'}", flush=True)
+    failed = [row["opaque_id"] for row in rows if row.get("status_code") != 200]
+    truncated = [
+        row["opaque_id"]
+        for row in rows
+        if row.get("status_code") == 200
+        and row.get("state") == "UNPARSED"
+        and row.get("stop_reason") in TRUNCATION_STOP_REASONS
+    ]
+    if failed or truncated:
+        # The table is kept (it names each failure), but a pass that did not
+        # judge the whole panel is not a measurement of the panel: the exit
+        # code says so, so no caller reads a 10/10 HTTP failure as a run.
+        if failed:
+            print(
+                f"{len(failed)}/{len(rows)} judging call(s) failed: "
+                f"{', '.join(failed)}",
+                flush=True,
+            )
+        if truncated:
+            print(
+                f"{len(truncated)}/{len(rows)} answer(s) cut at "
+                f"{JUDGE_MAX_TOKENS} output tokens: {', '.join(truncated)}",
+                flush=True,
+            )
+        print("the panel was NOT judged in full", flush=True)
+        return 2
     return 0
 
 

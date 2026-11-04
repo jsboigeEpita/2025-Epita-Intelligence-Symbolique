@@ -127,6 +127,7 @@ from .global_projection import (
     project_global_findings,
 )
 from .llm_weaving import LlmCallable, WeaveOutcome, weave
+from .quote_fidelity import sanitize_act_quotes
 from .readability_gate import GateVerdict, ReadabilityGate
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
 
@@ -4774,6 +4775,14 @@ async def build_act3_conclusion(
         )
 
     narrative = _dressed.text
+    # #3389 — the retained draft's « … » spans are compared with the document
+    # while it is still in memory, on the WRITER'S prose: the absent-axis
+    # paragraph and the record's bounds are grafted below, and their wording is
+    # the pipeline's, not a citation claim (#3310's rule for the same seam). An
+    # exact quote passes byte-identical; an altered quote or a translation
+    # printed as the document's words loses its guillemets and reads as the
+    # paraphrase it is.
+    narrative, _quote_motif = sanitize_act_quotes(narrative, state, "Acte III")
     _bound_removal = _dressed.bound_removal
     if _bound_removal.removed or _bound_removal.withdrawn:
         logger.info(
@@ -4809,6 +4818,11 @@ async def build_act3_conclusion(
     _bound_motif = bound_removal_motif(_bound_removal)
     if _bound_motif:
         degraded["act3_bound_restatement"] = _bound_motif
+    # #3389 — a « … » span was not the document's words: label, counts, never
+    # a span (#3249). Filed under the #2046 fabrication-note keys with the
+    # other acts' seam, so it is archived in the appendix.
+    if _quote_motif:
+        degraded["act3_quote_fidelity"] = _quote_motif
     if _verdict_removed:
         degraded["act3_verdict_restatement"] = (
             f"{_verdict_removed} phrase(s) restatant le verdict de vertus "

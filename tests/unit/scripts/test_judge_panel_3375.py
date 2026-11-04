@@ -1026,3 +1026,162 @@ class TestTheTable:
         table = (world["out"] / "TABLE.md").read_text(encoding="utf-8")
         assert "HTTP 400" in table
         assert f"`UNPARSED` : **{len(PANEL)}**" in table
+
+    def test_a_pass_with_failed_calls_exits_non_zero(self, tmp_path):
+        """R1141: ten 404s wrote a table and exited 0. A pass that did not
+        judge the panel is not a run of the panel, and the exit code says so."""
+
+        class NotFound:
+            async def __call__(self, endpoint, prompt, timeout=600):
+                return {"status_code": 404, "error_body_head": "not found"}
+
+        world = _with_panel_file(make_world(tmp_path))
+        assert self._run(world, NotFound()) == 2
+        table = (world["out"] / "TABLE.md").read_text(encoding="utf-8")
+        assert f"{len(PANEL)} appel(s) échoué(s), sans réponse du juge" in table
+        assert "réponse(s) illisible(s)" not in table
+
+    def test_an_unreadable_answer_is_not_called_a_failed_call(self, tmp_path):
+        world = _with_panel_file(make_world(tmp_path))
+        assert self._run(world, FakeJudge(lambda *_: "pas de JSON")) == 0
+        table = (world["out"] / "TABLE.md").read_text(encoding="utf-8")
+        assert f"{len(PANEL)} réponse(s) illisible(s)" in table
+        assert "appel(s) échoué(s)" not in table
+
+    def test_the_table_names_the_route_and_the_model_that_answered(self, tmp_path):
+        class Answered(FakeJudge):
+            async def __call__(self, endpoint, prompt, timeout=600):
+                record = await super().__call__(endpoint, prompt, timeout)
+                return {**record, "answered_model": "claude-sonnet-5-5-20261001"}
+
+        world = _with_panel_file(make_world(tmp_path))
+        self._run(world, Answered())
+        table = (world["out"] / "TABLE.md").read_text(encoding="utf-8")
+        assert "Route du juge : `test` → hôte `example.invalid`" in table
+        assert "`claude-sonnet-5-5-20261001`" in table
+        record = json.loads(
+            (world["out"] / f"{PANEL[0]}.json").read_text(encoding="utf-8")
+        )
+        assert record["answered_model"] == "claude-sonnet-5-5-20261001"
+
+
+class TestAnUnparsedRowCanBeDiagnosed:
+    """R1141: 7 of 10 paid answers came back UNPARSED with nothing kept to
+    say why — no answer, no stop reason, no refused word."""
+
+    def _run(self, world, judge):
+        return asyncio.run(jp.run(_argv(world), judge_call=judge))
+
+    def test_the_answer_and_the_call_facts_are_kept(self, tmp_path):
+        class Answering(FakeJudge):
+            async def __call__(self, endpoint, prompt, timeout=600):
+                record = await super().__call__(endpoint, prompt, timeout)
+                return {**record, "stop_reason": "end_turn"}
+
+        world = _with_panel_file(make_world(tmp_path))
+        assert self._run(world, Answering()) == 0
+        record = json.loads(
+            (world["out"] / f"{PANEL[0]}.json").read_text(encoding="utf-8")
+        )
+        assert record["answer"] == _answer()
+        assert record["stop_reason"] == "end_turn"
+        assert record["prompt_tokens"] == 2000
+        assert record["completion_tokens"] == 400
+
+    def test_a_truncated_answer_is_named_and_the_pass_exits_2(self, tmp_path):
+        class CutShort:
+            async def __call__(self, endpoint, prompt, timeout=600):
+                return {
+                    "status_code": 200,
+                    "answer": '{"identification": "1", "state": "PIPELINE_SUP',
+                    "prompt_tokens": 2000,
+                    "completion_tokens": jp.JUDGE_MAX_TOKENS,
+                    "usage": {},
+                    "stop_reason": "max_tokens",
+                }
+
+        world = _with_panel_file(make_world(tmp_path))
+        assert self._run(world, CutShort()) == 2
+        table = (world["out"] / "TABLE.md").read_text(encoding="utf-8")
+        assert "tronquée à la limite de sortie" in table
+        assert f"{len(PANEL)} réponse(s) tronquée(s)" in table
+        assert "réponse(s) illisible(s)" not in table
+
+    def test_a_state_outside_the_grid_is_kept_by_name(self, tmp_path):
+        world = _with_panel_file(make_world(tmp_path))
+        judge = FakeJudge(lambda *_: _answer(state="PIPELINE_WINS"))
+        assert self._run(world, judge) == 0
+        record = json.loads(
+            (world["out"] / f"{PANEL[0]}.json").read_text(encoding="utf-8")
+        )
+        assert record["state"] == "UNPARSED"
+        assert record["reported_state"] == "PIPELINE_WINS"
+        table = (world["out"] / "TABLE.md").read_text(encoding="utf-8")
+        assert "état hors grille : `PIPELINE_WINS`" in table
+
+    def test_the_output_cap_is_not_the_one_that_cut_cycle_0(self):
+        assert jp.JUDGE_MAX_TOKENS > 4096
+
+
+class TestTheAnthropicRoute:
+    """R1141: the SDK's ANTHROPIC_BASE_URL has no ``/v1``; the judge posted
+    to ``<host>/messages`` and every call of the cycle-0 panel answered 404."""
+
+    def test_the_sdk_form_gets_its_v1_segment(self):
+        assert (
+            jp.anthropic_messages_url("http://127.0.0.1:3002")
+            == "http://127.0.0.1:3002/v1/messages"
+        )
+
+    def test_a_base_that_already_ends_in_v1_is_not_doubled(self):
+        assert (
+            jp.anthropic_messages_url("https://api.anthropic.com/v1/")
+            == "https://api.anthropic.com/v1/messages"
+        )
+
+    def test_the_default_is_the_vendors_host(self):
+        assert (
+            jp.anthropic_messages_url(jp.ANTHROPIC_DEFAULT_BASE_URL)
+            == "https://api.anthropic.com/v1/messages"
+        )
+
+    def test_the_call_posts_to_the_v1_messages_url(self, monkeypatch):
+        import httpx
+
+        seen = {}
+
+        class FakeResponse:
+            status_code = 200
+            text = ""
+
+            def json(self):
+                return {
+                    "model": "claude-sonnet-5-5",
+                    "content": [{"type": "text", "text": "{}"}],
+                    "usage": {"input_tokens": 3, "output_tokens": 1},
+                }
+
+        class FakeClient:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *exc):
+                return False
+
+            async def post(self, url, json=None, headers=None):
+                seen["url"] = url
+                return FakeResponse()
+
+        monkeypatch.setattr(httpx, "AsyncClient", FakeClient)
+        endpoint = {
+            "api_key": "not-a-key",
+            "base_url": "http://127.0.0.1:3002",
+            "model_id": "claude-sonnet-5-5",
+            "family": "anthropic",
+        }
+        record = asyncio.run(jp.call_judge(endpoint, "prompt"))
+        assert seen["url"] == "http://127.0.0.1:3002/v1/messages"
+        assert record["answered_model"] == "claude-sonnet-5-5"
