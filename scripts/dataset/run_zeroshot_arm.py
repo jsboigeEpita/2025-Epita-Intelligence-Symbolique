@@ -54,7 +54,10 @@ DATASET_PATH = (
 # #2841 retouche it lives in a side-effect-free module, so importing it no
 # longer triggers run_capstone_c1's sys.path/chdir/load_dotenv at import time.
 from scripts.dataset.zeroshot_prompt import ZEROSHOT_PROMPT  # noqa: E402
-from scripts.dataset.run_corpus_batch import expand_corpus  # noqa: E402
+from scripts.dataset.run_corpus_batch import (  # noqa: E402
+    expand_corpus,
+    parse_doc_ids,
+)
 
 
 def load_definitions() -> List[Dict[str, Any]]:
@@ -180,6 +183,18 @@ async def run_arm(argv: Optional[List[str]] = None) -> int:
     parser.add_argument(
         "--timeout", type=int, default=600, help="Per-doc timeout seconds"
     )
+    # #3375 — the v1 panel: the same selection as the pipeline arm, parsed by
+    # the same helper, so the two populations cannot drift (#2841 rule 4).
+    parser.add_argument(
+        "--doc-ids",
+        default=None,
+        help="Comma/whitespace separated document ids — the panel, in order",
+    )
+    parser.add_argument(
+        "--panel-file",
+        default=None,
+        help="File with one document id per line ('#' comments, blanks ignored)",
+    )
     parser.add_argument(
         "--skip-existing",
         action="store_true",
@@ -193,7 +208,9 @@ async def run_arm(argv: Optional[List[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     definitions = load_definitions()
-    docs, omitted_sources, skipped_too_long = expand_corpus(definitions, args.max_chars)
+    docs, omitted_sources, skipped_too_long = expand_corpus(
+        definitions, args.max_chars, parse_doc_ids(args.doc_ids, args.panel_file)
+    )
 
     # The honest denominator, before any call (#1903/#1919 discipline).
     print(f"source definitions: {len(definitions)}", flush=True)
