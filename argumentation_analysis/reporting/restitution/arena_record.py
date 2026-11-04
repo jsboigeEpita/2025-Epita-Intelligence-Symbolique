@@ -90,6 +90,39 @@ def _documents(value: Any) -> bool:
     return bool(text) and text.lower() not in _NOT_DOCUMENTED
 
 
+#: #3390 — arena values that name a play or fiction. The fiction arena is the
+#: one case where aggregating the detected moves under "the author's
+#: discourse" is structurally wrong: the characters argue, the author does not
+#: assert. The markers are kept narrow on purpose — "dialogue" alone also
+#: names a debate, and a false fiction line would exempt a real speaker's
+#: moves from their author.
+_FICTION_ARENA_MARKERS = (
+    "pièce",
+    "théât",
+    "theatr",
+    "fiction",
+    "fictif",
+    "fictive",
+    "roman",
+    "nouvelle",
+    "novel",
+    "play",
+    "drama",
+)
+
+
+def is_fiction_arena(record: ArenaRecord) -> bool:
+    """#3390 — True when the arena value names a play or a work of fiction.
+
+    Matched on the arena VALUE (metadata or inference alike — either way the
+    run read the document as fiction), case-insensitively, on the markers
+    above. The consumer states the consequence once: the analysis concludes
+    on the characters' reasoning, never on the author's assertions.
+    """
+    value = record.value.lower()
+    return any(marker in value for marker in _FICTION_ARENA_MARKERS)
+
+
 def build_arena_record(state: Any) -> ArenaRecord:
     """Resolve the state's two arena producers into one record (no LLM).
 

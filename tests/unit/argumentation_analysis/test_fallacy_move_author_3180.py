@@ -80,9 +80,9 @@ class TestTheReportedMoveIsNotTheSpeakers_:
     def test_it_is_carried_apart_from_the_speaker_fallacies(self):
         evidence = build_act2_evidence(_state(self._reported()))
         assert [f.fallacy_id for f in evidence.reported_fallacies] == ["fallacy_29"]
-        assert evidence.fallacies_total == 0, (
-            "a reported fallacy must not enter the speaker's fallacy count"
-        )
+        assert (
+            evidence.fallacies_total == 0
+        ), "a reported fallacy must not enter the speaker's fallacy count"
 
     def test_it_builds_no_movement(self):
         """The Procédé line is where the report makes the speaker commit it."""
@@ -168,8 +168,14 @@ class TestTheSynthesisBriefingCarriesTheAuthor:
                 )
             }
         )
-        assert "move_author=reported" in briefing
-        assert "move_author_label=l'opposant" in briefing
+        # #3390 — le jeton brut (``move_author=reported``) est remplacé par
+        # la PHRASE que chaque rédacteur lit (``move_author_note``) : un
+        # jeton n'est pas une phrase, et la synthèse du cycle 0 l'a lu comme
+        # une vulnérabilité du locuteur.
+        assert (
+            "RAPPORTÉ : le locuteur rapporte ce geste, il ne le commet pas "
+            "(tiers : l'opposant)" in briefing
+        )
 
     def test_a_silent_record_says_nothing_about_an_author(self):
         briefing = self._briefing({"fallacy_29": _fallacy_record()})
@@ -185,13 +191,9 @@ class TestTheVirtuousVerdictCountsTheSpeakersOwnMoves:
     def _virtuous_state(self, **fallacy_overrides):
         return SimpleNamespace(
             identified_arguments={_TARGET: {"id": _TARGET}},
-            identified_fallacies={
-                "fallacy_29": _fallacy_record(**fallacy_overrides)
-            },
+            identified_fallacies={"fallacy_29": _fallacy_record(**fallacy_overrides)},
             argument_quality_scores={_TARGET: {"scores": {"clarte": 0.8}}},
-            analysis_coverage={
-                "fallacy_per_argument": {"unit_ids": [_TARGET]}
-            },
+            analysis_coverage={"fallacy_per_argument": {"unit_ids": [_TARGET]}},
             propositional_analysis_results=None,
             fol_analysis_results=None,
         )

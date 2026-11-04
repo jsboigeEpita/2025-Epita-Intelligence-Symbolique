@@ -17,6 +17,7 @@ from typing import List, Dict, Optional
 from semantic_kernel.functions import kernel_function
 
 from .logic_types import STATE_LABELS, canonical_logic_type
+from .fallacy_attribution import MOVE_AUTHORS  # #3390 — one closed vocabulary
 from .shared_state import RhetoricalAnalysisState
 
 sm_logger = logging.getLogger("Orchestration.PhaseState")
@@ -40,7 +41,9 @@ class _SharedStateBase:
         try:
             snapshot_dict = self._state.get_state_snapshot(summarize=summarize)
             indent = 2 if not summarize else None
-            return json.dumps(snapshot_dict, indent=indent, ensure_ascii=False, default=str)
+            return json.dumps(
+                snapshot_dict, indent=indent, ensure_ascii=False, default=str
+            )
         except Exception as e:
             self._logger.error(f"Snapshot error: {e}", exc_info=True)
             return json.dumps({"error": str(e)})
@@ -71,7 +74,9 @@ class _SharedStateBase:
         description="Ajoute une réponse d'un agent à une tâche d'analyse.",
         name="add_answer",
     )
-    def add_answer(self, task_id: str, author_agent: str, answer_text: str, source_ids: List[str]) -> str:
+    def add_answer(
+        self, task_id: str, author_agent: str, answer_text: str, source_ids: List[str]
+    ) -> str:
         try:
             self._state.add_answer(task_id, author_agent, answer_text, source_ids)
             return f"OK: Réponse pour {task_id} ajoutée."
@@ -93,6 +98,7 @@ class _SharedStateBase:
 # ---------------------------------------------------------------------------
 # Phase 1: Extraction & Detection
 # ---------------------------------------------------------------------------
+
 
 class ExtractionPhaseState(_SharedStateBase):
     """State plugin scoped for Phase 1 — Extraction & Detection.
@@ -144,7 +150,7 @@ class ExtractionPhaseState(_SharedStateBase):
             # #3180 — même contrat que StateManagerPlugin : seules les deux
             # valeurs connues voyagent, l'absence reste l'absence.
             author = (move_author or "").strip()
-            if author in ("speaker", "reported"):
+            if author in MOVE_AUTHORS:
                 fallacy_id = self._state.add_fallacy(
                     fallacy_type,
                     justification,
@@ -186,9 +192,13 @@ class ExtractionPhaseState(_SharedStateBase):
         description="Ajoute un score de détection neurale de sophisme.",
         name="add_neural_fallacy_score",
     )
-    def add_neural_fallacy_score(self, text_segment: str, label: str, confidence: str = "0.5") -> str:
+    def add_neural_fallacy_score(
+        self, text_segment: str, label: str, confidence: str = "0.5"
+    ) -> str:
         try:
-            nf_id = self._state.add_neural_fallacy_score(text_segment, label, float(confidence))
+            nf_id = self._state.add_neural_fallacy_score(
+                text_segment, label, float(confidence)
+            )
             return nf_id
         except Exception as e:
             return f"FUNC_ERROR: {e}"
@@ -197,6 +207,7 @@ class ExtractionPhaseState(_SharedStateBase):
 # ---------------------------------------------------------------------------
 # Phase 2: Formal Analysis & Quality
 # ---------------------------------------------------------------------------
+
 
 class FormalPhaseState(_SharedStateBase):
     """State plugin scoped for Phase 2 — Formal Analysis & Quality.
@@ -250,11 +261,16 @@ class FormalPhaseState(_SharedStateBase):
         confidence: str = "0.7",
     ) -> str:
         try:
-            parsed_vars = json.loads(variables) if isinstance(variables, str) else variables
+            parsed_vars = (
+                json.loads(variables) if isinstance(variables, str) else variables
+            )
             tr_id = self._state.add_nl_to_logic_translation(
-                original_text=original_text[:200], formula=formula, logic_type=logic_type,
+                original_text=original_text[:200],
+                formula=formula,
+                logic_type=logic_type,
                 is_valid=is_valid.lower() in ("true", "1", "yes"),
-                variables=parsed_vars, confidence=float(confidence),
+                variables=parsed_vars,
+                confidence=float(confidence),
             )
             return tr_id
         except Exception as e:
@@ -267,9 +283,13 @@ class FormalPhaseState(_SharedStateBase):
         ),
         name="add_quality_score",
     )
-    def add_quality_score(self, arg_id: str, scores_json: str, overall: str = "0.5") -> str:
+    def add_quality_score(
+        self, arg_id: str, scores_json: str, overall: str = "0.5"
+    ) -> str:
         try:
-            scores = json.loads(scores_json) if isinstance(scores_json, str) else scores_json
+            scores = (
+                json.loads(scores_json) if isinstance(scores_json, str) else scores_json
+            )
             self._state.add_quality_score(arg_id, scores, float(overall))
             return f"OK: Quality scores added for {arg_id}"
         except Exception as e:
@@ -280,12 +300,18 @@ class FormalPhaseState(_SharedStateBase):
         name="add_dung_framework",
     )
     def add_dung_framework(
-        self, name: str, arguments_json: str, attacks_json: str, extensions_json: str = "{}",
+        self,
+        name: str,
+        arguments_json: str,
+        attacks_json: str,
+        extensions_json: str = "{}",
     ) -> str:
         try:
             arguments = json.loads(arguments_json)
             attacks = json.loads(attacks_json)
-            extensions = json.loads(extensions_json) if extensions_json != "{}" else None
+            extensions = (
+                json.loads(extensions_json) if extensions_json != "{}" else None
+            )
             df_id = self._state.add_dung_framework(name, arguments, attacks, extensions)
             return df_id
         except Exception as e:
@@ -295,7 +321,9 @@ class FormalPhaseState(_SharedStateBase):
         description="Ajoute un résultat d'analyse ASPIC+.",
         name="add_aspic_result",
     )
-    def add_aspic_result(self, reasoner_type: str, extensions_json: str, statistics_json: str) -> str:
+    def add_aspic_result(
+        self, reasoner_type: str, extensions_json: str, statistics_json: str
+    ) -> str:
         try:
             extensions = json.loads(extensions_json)
             statistics = json.loads(statistics_json)
@@ -308,7 +336,9 @@ class FormalPhaseState(_SharedStateBase):
         description="Ajoute un résultat de révision de croyances.",
         name="add_belief_revision_result",
     )
-    def add_belief_revision_result(self, method: str, original_json: str, revised_json: str) -> str:
+    def add_belief_revision_result(
+        self, method: str, original_json: str, revised_json: str
+    ) -> str:
         try:
             original = json.loads(original_json)
             revised = json.loads(revised_json)
@@ -321,7 +351,9 @@ class FormalPhaseState(_SharedStateBase):
         description="Ajoute un résultat de ranking sémantique.",
         name="add_ranking_result",
     )
-    def add_ranking_result(self, method: str, arguments_json: str, comparisons_json: str) -> str:
+    def add_ranking_result(
+        self, method: str, arguments_json: str, comparisons_json: str
+    ) -> str:
         try:
             arguments = json.loads(arguments_json)
             comparisons = json.loads(comparisons_json)
@@ -337,14 +369,20 @@ class FormalPhaseState(_SharedStateBase):
         name="jtms_create_belief",
     )
     def jtms_create_belief(
-        self, belief_name: str, agent_source: str = "unknown",
-        confidence: float = 0.5, context: Optional[str] = None,
+        self,
+        belief_name: str,
+        agent_source: str = "unknown",
+        confidence: float = 0.5,
+        context: Optional[str] = None,
     ) -> str:
         self._logger.info(f"jtms_create_belief: '{belief_name}', source={agent_source}")
         try:
             from argumentation_analysis.services.jtms.extended_belief import JTMSSession
+
             if not hasattr(self._state, "_jtms_session"):
-                self._state._jtms_session = JTMSSession(session_id="shared_jtms", owner_agent="phase_state")
+                self._state._jtms_session = JTMSSession(
+                    session_id="shared_jtms", owner_agent="phase_state"
+                )
             session = self._state._jtms_session
             context_dict = {}
             if context:
@@ -352,9 +390,16 @@ class FormalPhaseState(_SharedStateBase):
                     context_dict = json.loads(context)
                 except (json.JSONDecodeError, TypeError):
                     context_dict = {"raw": context}
-            session.add_belief(belief_name, agent_source=agent_source, context=context_dict, confidence=confidence)
+            session.add_belief(
+                belief_name,
+                agent_source=agent_source,
+                context=context_dict,
+                confidence=confidence,
+            )
             if hasattr(self._state, "add_jtms_belief"):
-                self._state.add_jtms_belief(name=belief_name, valid=True, justifications=[])
+                self._state.add_jtms_belief(
+                    name=belief_name, valid=True, justifications=[]
+                )
             return f"OK: Belief '{belief_name}' created by {agent_source}"
         except Exception as e:
             return f"FUNC_ERROR: {e}"
@@ -364,13 +409,22 @@ class FormalPhaseState(_SharedStateBase):
         name="jtms_add_justification",
     )
     def jtms_add_justification(
-        self, in_list: List[str], out_list: List[str], conclusion: str, agent_source: str = "unknown",
+        self,
+        in_list: List[str],
+        out_list: List[str],
+        conclusion: str,
+        agent_source: str = "unknown",
     ) -> str:
         try:
             from argumentation_analysis.services.jtms.extended_belief import JTMSSession
+
             if not hasattr(self._state, "_jtms_session"):
-                self._state._jtms_session = JTMSSession(session_id="shared_jtms", owner_agent="phase_state")
-            self._state._jtms_session.add_justification(in_list, out_list, conclusion, agent_source=agent_source)
+                self._state._jtms_session = JTMSSession(
+                    session_id="shared_jtms", owner_agent="phase_state"
+                )
+            self._state._jtms_session.add_justification(
+                in_list, out_list, conclusion, agent_source=agent_source
+            )
             return f"OK: Justification for '{conclusion}' added by {agent_source}"
         except Exception as e:
             return f"FUNC_ERROR: {e}"
@@ -382,6 +436,7 @@ class FormalPhaseState(_SharedStateBase):
     def jtms_query_beliefs(self, agent_filter: Optional[str] = None) -> str:
         try:
             from argumentation_analysis.services.jtms.extended_belief import JTMSSession
+
             if not hasattr(self._state, "_jtms_session"):
                 return "FUNC_ERROR: No JTMS session initialized."
             session = self._state._jtms_session
@@ -389,10 +444,14 @@ class FormalPhaseState(_SharedStateBase):
             for name, ext_belief in session.extended_beliefs.items():
                 if agent_filter and ext_belief.agent_source != agent_filter:
                     continue
-                results.append({
-                    "name": name, "valid": ext_belief.valid,
-                    "agent_source": ext_belief.agent_source, "confidence": ext_belief.confidence,
-                })
+                results.append(
+                    {
+                        "name": name,
+                        "valid": ext_belief.valid,
+                        "agent_source": ext_belief.agent_source,
+                        "confidence": ext_belief.confidence,
+                    }
+                )
             return json.dumps(results, ensure_ascii=False, indent=2)
         except Exception as e:
             return f"FUNC_ERROR: {e}"
@@ -404,15 +463,20 @@ class FormalPhaseState(_SharedStateBase):
     def jtms_check_consistency(self) -> str:
         try:
             from argumentation_analysis.services.jtms.extended_belief import JTMSSession
+
             if not hasattr(self._state, "_jtms_session"):
                 return "FUNC_ERROR: No JTMS session initialized."
             session = self._state._jtms_session
             result = session.check_consistency()
-            return json.dumps({
-                "is_consistent": result.get("is_consistent", True),
-                "conflicts_detected": result.get("conflicts", []),
-                "total_beliefs": len(session.extended_beliefs),
-            }, ensure_ascii=False, indent=2)
+            return json.dumps(
+                {
+                    "is_consistent": result.get("is_consistent", True),
+                    "conflicts_detected": result.get("conflicts", []),
+                    "total_beliefs": len(session.extended_beliefs),
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
         except Exception as e:
             return f"FUNC_ERROR: {e}"
 
@@ -421,14 +485,21 @@ class FormalPhaseState(_SharedStateBase):
         name="jtms_retract_belief",
     )
     def jtms_retract_belief(self, belief_name: str, reason: str = "") -> str:
-        self._logger.info(f"jtms_retract_belief: '{belief_name}', reason='{reason[:60]}'")
+        self._logger.info(
+            f"jtms_retract_belief: '{belief_name}', reason='{reason[:60]}'"
+        )
         try:
             from argumentation_analysis.services.jtms.extended_belief import JTMSSession
+
             if not hasattr(self._state, "_jtms_session"):
                 return "FUNC_ERROR: No JTMS session initialized."
             session = self._state._jtms_session
             if belief_name not in session.extended_beliefs:
-                candidates = [n for n in session.extended_beliefs if belief_name.lower() in n.lower()]
+                candidates = [
+                    n
+                    for n in session.extended_beliefs
+                    if belief_name.lower() in n.lower()
+                ]
                 if candidates:
                     belief_name = candidates[0]
                 else:
@@ -437,7 +508,11 @@ class FormalPhaseState(_SharedStateBase):
             was_valid = ext_belief.valid
             session.jtms.set_belief_validity(belief_name, None)
             import datetime as _dt
-            ext_belief.record_modification("retract", {"reason": reason, "timestamp": _dt.datetime.now().isoformat()})
+
+            ext_belief.record_modification(
+                "retract",
+                {"reason": reason, "timestamp": _dt.datetime.now().isoformat()},
+            )
             ext_belief.context["retracted"] = True
             ext_belief.context["retraction_reason"] = reason
             if hasattr(self._state, "jtms_beliefs"):
@@ -447,8 +522,19 @@ class FormalPhaseState(_SharedStateBase):
                         bdata["retracted"] = True
                         bdata["retraction_reason"] = reason
                         break
-            affected = [n for n, b in session.extended_beliefs.items() if n != belief_name and not b.valid]
-            return json.dumps({"retracted_belief": belief_name, "was_valid": was_valid, "affected_count": len(affected)}, ensure_ascii=False)
+            affected = [
+                n
+                for n, b in session.extended_beliefs.items()
+                if n != belief_name and not b.valid
+            ]
+            return json.dumps(
+                {
+                    "retracted_belief": belief_name,
+                    "was_valid": was_valid,
+                    "affected_count": len(affected),
+                },
+                ensure_ascii=False,
+            )
         except Exception as e:
             return f"FUNC_ERROR: {e}"
 
@@ -456,6 +542,7 @@ class FormalPhaseState(_SharedStateBase):
 # ---------------------------------------------------------------------------
 # Phase 3: Synthesis & Debate
 # ---------------------------------------------------------------------------
+
 
 class SynthesisPhaseState(_SharedStateBase):
     """State plugin scoped for Phase 3 — Synthesis & Debate.
@@ -468,12 +555,19 @@ class SynthesisPhaseState(_SharedStateBase):
         name="add_counter_argument",
     )
     def add_counter_argument(
-        self, original_arg: str, counter_content: str, strategy: str,
-        score: str = "0.5", target_arg_id: str = "",
+        self,
+        original_arg: str,
+        counter_content: str,
+        strategy: str,
+        score: str = "0.5",
+        target_arg_id: str = "",
     ) -> str:
         try:
             ca_id = self._state.add_counter_argument(
-                original_arg, counter_content, strategy, float(score),
+                original_arg,
+                counter_content,
+                strategy,
+                float(score),
                 target_arg_id=target_arg_id or None,
             )
             return ca_id
@@ -484,7 +578,9 @@ class SynthesisPhaseState(_SharedStateBase):
         description="Ajoute une décision de gouvernance/vote.",
         name="add_governance_decision",
     )
-    def add_governance_decision(self, method: str, winner: str, scores_json: str) -> str:
+    def add_governance_decision(
+        self, method: str, winner: str, scores_json: str
+    ) -> str:
         try:
             scores = json.loads(scores_json)
             gd_id = self._state.add_governance_decision(method, winner, scores)
@@ -496,10 +592,14 @@ class SynthesisPhaseState(_SharedStateBase):
         description="Ajoute une transcription de débat.",
         name="add_debate_transcript",
     )
-    def add_debate_transcript(self, topic: str, exchanges_json: str, winner: str = "") -> str:
+    def add_debate_transcript(
+        self, topic: str, exchanges_json: str, winner: str = ""
+    ) -> str:
         try:
             exchanges = json.loads(exchanges_json)
-            dt_id = self._state.add_debate_transcript(topic, exchanges, winner if winner else None)
+            dt_id = self._state.add_debate_transcript(
+                topic, exchanges, winner if winner else None
+            )
             return dt_id
         except Exception as e:
             return f"FUNC_ERROR: {e}"

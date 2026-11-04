@@ -33,11 +33,16 @@ from argumentation_analysis.core.fallacy_attribution import (  # #3180
     is_reported_move,
     is_speaker_move,
     move_author_label_of,
+    move_author_note,
     move_author_of,
 )
 from argumentation_analysis.reporting.restitution.speaker_record import (  # #3336
     build_speaker_record,
     format_speaker_line,
+)
+from argumentation_analysis.reporting.restitution.arena_record import (  # #3390
+    build_arena_record,
+    is_fiction_arena,
 )
 from argumentation_analysis.reporting.restitution.cited_units import (  # #2967
     CITED_UNIT_TEXT_CAP,
@@ -305,7 +310,18 @@ class DeepSynthesisAgent(BaseAgent):
         # here (byte-identical), ``_RULE5_SPEAKER_LINE`` via the classmethod.
         f"{_RULE5_OPAQUE}"
         "6. 6 à 10 paragraphes au total, registre analytique, sans "
-        "précaution oratoire."
+        "précaution oratoire.\n"
+        # #3390 — attribution is carried by the artifact lines (RAPPORTÉ /
+        # PERSONNAGE / PUBLIC, one wording from move_author_note) and this
+        # rule teaches the writer what they license. Without it the cycle-0
+        # synthesis listed a RAPPORTÉ detection among the speaker's
+        # structural vulnerabilities, and aggregated a play's characters
+        # into « le discours attribué à » the author.
+        "7. ATTRIBUTION : une ligne d'artefact qui porte RAPPORTÉ, PERSONNAGE "
+        "ou PUBLIC n'est PAS le geste du locuteur — ne l'inscris jamais dans "
+        "ses vulnérabilités ; quand le dossier porte ARÈNE DE FICTION, les "
+        "sophismes sont ceux des PERSONNAGES : n'agrège jamais leurs gestes "
+        "dans « le discours de » l'auteur."
     )
     del _sections_block
 
@@ -1983,6 +1999,18 @@ class DeepSynthesisAgent(BaseAgent):
                 "fait, provenance comprise) : "
                 f"{format_speaker_line(build_speaker_record(state))}"
             )
+        # #3390 — the fiction arena travels to the writer as a stated frame,
+        # once: the characters argue, the author does not assert. Without
+        # this line the cycle-0 synthesis aggregated a play's characters into
+        # « le discours attribué à <auteur> ».
+        _arena = build_arena_record(state)
+        if is_fiction_arena(_arena):
+            lines.append(
+                "ARÈNE DE FICTION : les sophismes et arguments listés sont "
+                "ceux des PERSONNAGES — l'auteur ne les asserte pas ; "
+                "n'agrège jamais leurs gestes dans « le discours de » "
+                "l'auteur."
+            )
 
         # #3107/#2352 — lazy on purpose: importing ``orchestration.fol_cause``
         # at module level drags the orchestration package ``__init__``, whose
@@ -1992,16 +2020,24 @@ class DeepSynthesisAgent(BaseAgent):
         from argumentation_analysis.orchestration.fol_cause import cause_phrase
 
         def _add(
-            field_name: str, key: Any, summary: str, cap: Optional[int] = None
+            field_name: str,
+            key: Any,
+            summary: str,
+            cap: Optional[int] = None,
+            note: str = "",
         ) -> None:
             # #2967 Expected 3: the briefing's cut was a bare silent slice;
             # it now cuts at a boundary with the same visible marker as the
             # Act II plugin, and a cited item may carry a wider budget.
             budget = max_chars_per_item if cap is None else cap
             text = " ".join(str(summary).split())
+            # #3390 — the attribution note rides AFTER the cut, never through
+            # it: the budget bounds the document text, and a note truncated
+            # by it would lose the very attribution the line exists to carry.
+            clause = f" — {note}" if note else ""
             lines.append(
                 f"[artifact:{field_name}.{key}] "
-                f"{truncate_at_boundary(text, budget)}"
+                f"{truncate_at_boundary(text, budget)}{clause}"
             )
 
         # #2850 §3.3: the per-field budget spends STRATIFIED over the text
@@ -2019,6 +2055,12 @@ class DeepSynthesisAgent(BaseAgent):
         )
 
         _syn_units = merged_population_units(state)
+        # #3390 — the units' provenance is read by the argument lines below
+        # (whose position the unit carries) and by the fallacy lines after
+        # (which inherit their target's provenance): one read, two consumers.
+        _prov = getattr(state, "argument_provenance", {}) or {}
+        if not isinstance(_prov, dict):
+            _prov = {}
         if _syn_units:
             _syn_args_selection = select_for_budget(
                 _syn_units, max_items_per_field, text_length=state_text_length(state)
@@ -2028,11 +2070,17 @@ class DeepSynthesisAgent(BaseAgent):
             # whole up to the cited budget; the others keep the short cap.
             _cited = cited_unit_ids(state)
             for u in _syn_args_selection.selected:
+                # #3390 — whose position the unit carries, when the
+                # extraction stated it: the writer cannot aggregate a
+                # reported position into the speaker's own moves. Absent =
+                # not stated, and prints nothing (#1019).
+                _unit_note = move_author_note(_prov.get(u.unit_id) or {})
                 _add(
                     "identified_arguments",
                     u.unit_id,
                     u.text,
                     cap=CITED_UNIT_TEXT_CAP if u.unit_id in _cited else None,
+                    note=_unit_note,
                 )
             if hasattr(state, "record_analysis_coverage"):
                 state.record_analysis_coverage(
@@ -2047,9 +2095,6 @@ class DeepSynthesisAgent(BaseAgent):
 
         fallacies = getattr(state, "identified_fallacies", {}) or {}
         if fallacies:
-            _prov = getattr(state, "argument_provenance", {}) or {}
-            if not isinstance(_prov, dict):
-                _prov = {}
             _f_units = []
             for fid, fdata in fallacies.items():
                 _target = (
@@ -2088,21 +2133,19 @@ class DeepSynthesisAgent(BaseAgent):
                     ftype
                 )
                 target = fdata.get("target_argument_id", "")
-                # #3180 — whose move it is, when the detector said. Absent from
-                # the line when the record is silent: the briefing must not
-                # invent an author any more than the report may.
-                _move = fdata.get("move_author")
-                _move_note = ""
-                if _move in ("speaker", "reported"):
-                    _move_note = f" move_author={_move}"
-                    _label = str(fdata.get("move_author_label") or "")
-                    if _label:
-                        _move_note += f" move_author_label={_label}"
+                # #3390 — whose move it is, in the ONE wording every writer
+                # reads (``move_author_note``), replacing the raw
+                # ``move_author=`` token: a token is not a sentence, and the
+                # cycle-0 synthesis read a RAPPORTÉ detection as the
+                # speaker's own vulnerability. Absent from the line when the
+                # record is silent: the briefing invents no author (#1019).
+                _move_note = move_author_note(fdata)
+                _move_clause = f" — {_move_note}" if _move_note else ""
                 _add(
                     "identified_fallacies",
                     u.unit_id,
                     f"type={ftype} family={family} target={target or 'n/a'}"
-                    f"{_move_note} — {fdata.get('justification', '')}",
+                    f"{_move_clause} — {fdata.get('justification', '')}",
                 )
             if hasattr(state, "record_analysis_coverage"):
                 state.record_analysis_coverage(

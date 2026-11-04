@@ -15,6 +15,7 @@ from typing import Annotated, Optional, Tuple
 from semantic_kernel.functions.kernel_function_decorator import kernel_function
 
 from argumentation_analysis.agents.utils.taxonomy_navigator import TaxonomyNavigator
+from argumentation_analysis.core.fallacy_attribution import MOVE_AUTHORS  # #3390
 
 logger = logging.getLogger(__name__)
 
@@ -242,7 +243,7 @@ class ExplorationPlugin:
         # silence (the descent stores what the verdict says, and no transport
         # has to carry it beside the tool call).
         _author = str(move_author or "").strip()
-        if _author in ("speaker", "reported"):
+        if _author in MOVE_AUTHORS:
             result["move_author"] = _author
             _label = str(move_author_label or "").strip()
             if _label:
