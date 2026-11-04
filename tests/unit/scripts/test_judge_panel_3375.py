@@ -1059,6 +1059,64 @@ class TestTheTable:
         assert record["answered_model"] == "claude-sonnet-5-5-20261001"
 
 
+class TestAnUnparsedRowCanBeDiagnosed:
+    """R1141: 7 of 10 paid answers came back UNPARSED with nothing kept to
+    say why — no answer, no stop reason, no refused word."""
+
+    def _run(self, world, judge):
+        return asyncio.run(jp.run(_argv(world), judge_call=judge))
+
+    def test_the_answer_and_the_call_facts_are_kept(self, tmp_path):
+        class Answering(FakeJudge):
+            async def __call__(self, endpoint, prompt, timeout=600):
+                record = await super().__call__(endpoint, prompt, timeout)
+                return {**record, "stop_reason": "end_turn"}
+
+        world = _with_panel_file(make_world(tmp_path))
+        assert self._run(world, Answering()) == 0
+        record = json.loads(
+            (world["out"] / f"{PANEL[0]}.json").read_text(encoding="utf-8")
+        )
+        assert record["answer"] == _answer()
+        assert record["stop_reason"] == "end_turn"
+        assert record["prompt_tokens"] == 2000
+        assert record["completion_tokens"] == 400
+
+    def test_a_truncated_answer_is_named_and_the_pass_exits_2(self, tmp_path):
+        class CutShort:
+            async def __call__(self, endpoint, prompt, timeout=600):
+                return {
+                    "status_code": 200,
+                    "answer": '{"identification": "1", "state": "PIPELINE_SUP',
+                    "prompt_tokens": 2000,
+                    "completion_tokens": jp.JUDGE_MAX_TOKENS,
+                    "usage": {},
+                    "stop_reason": "max_tokens",
+                }
+
+        world = _with_panel_file(make_world(tmp_path))
+        assert self._run(world, CutShort()) == 2
+        table = (world["out"] / "TABLE.md").read_text(encoding="utf-8")
+        assert "tronquée à la limite de sortie" in table
+        assert f"{len(PANEL)} réponse(s) tronquée(s)" in table
+        assert "réponse(s) illisible(s)" not in table
+
+    def test_a_state_outside_the_grid_is_kept_by_name(self, tmp_path):
+        world = _with_panel_file(make_world(tmp_path))
+        judge = FakeJudge(lambda *_: _answer(state="PIPELINE_WINS"))
+        assert self._run(world, judge) == 0
+        record = json.loads(
+            (world["out"] / f"{PANEL[0]}.json").read_text(encoding="utf-8")
+        )
+        assert record["state"] == "UNPARSED"
+        assert record["reported_state"] == "PIPELINE_WINS"
+        table = (world["out"] / "TABLE.md").read_text(encoding="utf-8")
+        assert "état hors grille : `PIPELINE_WINS`" in table
+
+    def test_the_output_cap_is_not_the_one_that_cut_cycle_0(self):
+        assert jp.JUDGE_MAX_TOKENS > 4096
+
+
 class TestTheAnthropicRoute:
     """R1141: the SDK's ANTHROPIC_BASE_URL has no ``/v1``; the judge posted
     to ``<host>/messages`` and every call of the cycle-0 panel answered 404."""
