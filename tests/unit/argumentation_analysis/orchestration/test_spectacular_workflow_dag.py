@@ -45,13 +45,17 @@ class TestSpectacularWorkflowDAG:
         # qbf/cl). -1 vs pre-#1625 because the L9 `synthesis` phase is gone,
         # +1 fallacy_winner_reading (#3326). #3377 adds the two personas
         # (historian, strategist). 40 → 42.
-        assert len(wf.phases) == 42
+        # #3395 (R1142) adds the first_reading root phase: the panel runs
+        # THIS workflow, so the producer lives here too. 42 → 43.
+        assert len(wf.phases) == 43
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
         phase_names = {p.name for p in wf.phases}
         expected = {
             "extract",
+            # #3395 (R1142): the panel's workflow carries the first reading.
+            "first_reading",
             "quality",
             "nl_to_logic",
             "neural_detect",
@@ -134,7 +138,9 @@ class TestSpectacularWorkflowDAG:
         wf = build_spectacular_workflow()
         levels = wf.get_execution_order()
         assert "extract" in levels[0]
-        assert len(levels[0]) == 1  # extract is sole entry point
+        # #3395 (R1142): first_reading joins the entry level — a root phase
+        # over the text alone, beside extract (like its standard twin).
+        assert set(levels[0]) == {"extract", "first_reading"}
 
     def test_formal_logic_depends_on_nl_to_logic(self):
         wf = build_spectacular_workflow()

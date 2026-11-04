@@ -607,6 +607,13 @@ _STRUCT_LIST_SCRUB = {
     # the same way: counts and presence flags cross, wording does not.
     "historical_context": ("items",),
     "strategic_read": ("players", "options"),
+    # #3395 — the first reading's moves carry a one-line reading AND a verbatim
+    # span of the document; the quote is the document's own words, so the
+    # export boundary treats it exactly like ``problematic_quote`` (#3235):
+    # counts and presence cross, wording does not. ``status``, ``basis``,
+    # ``dropped_quotes`` and ``read_scope`` (ints/bools) survive — the record
+    # of whether the document was read whole is not corpus text.
+    "defining_moves": ("moves",),
 }
 
 

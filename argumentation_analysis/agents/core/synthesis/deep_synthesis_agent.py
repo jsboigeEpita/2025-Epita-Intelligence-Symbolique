@@ -2161,6 +2161,57 @@ class DeepSynthesisAgent(BaseAgent):
                     unit_ids=[u.unit_id for u in _syn_fall_selection.selected],
                 )
 
+        # #3395 — the first reading reaches the writer as its own labelled
+        # section. The moves are what the TEXT does (kind, one-line reading,
+        # verbatim quote, position), never an instrument's verdict, and the
+        # quote is on the line so the synthesis cannot describe the document's
+        # centre through bare flags. One absent-reading line when there is
+        # none: the writer must know the difference between "no defining move"
+        # and "nobody read the whole document" (#1019).
+        from argumentation_analysis.agents.core.reading import (
+            defining_moves as _defining_moves,
+            first_reading_note as _first_reading_note,
+        )
+
+        _reading_moves = _defining_moves(state)
+        _reading_record = (
+            state.get("defining_moves")
+            if isinstance(state, dict)
+            else getattr(state, "defining_moves", None)
+        )
+        if _reading_moves:
+            for _move_index, _move in enumerate(_reading_moves[:max_items_per_field]):
+                _offset = _move.get("offset")
+                _add(
+                    "defining_moves",
+                    _move_index,
+                    f"kind={_move.get('kind') or 'other'} "
+                    f"reading={_move.get('reading')} "
+                    f"quote=\"{_move.get('quote')}\" "
+                    + (
+                        f"offset={_offset}"
+                        if isinstance(_offset, int)
+                        else "offset=absent"
+                    ),
+                    note=(
+                        "LECTURE PREMIÈRE — geste du texte, pas un verdict "
+                        "d'instrument"
+                    ),
+                )
+        elif _reading_record is not None:
+            # The field exists (every production state carries it), so the
+            # absence is the producer's own answer — stated, never silent. A
+            # state without the field is a caller that ran no first reading
+            # path at all (bare test doubles), and inventing a line there
+            # would put a producer's vocabulary in a context that has none.
+            _add(
+                "defining_moves",
+                "status",
+                _first_reading_note(state)
+                or "lecture première non enregistrée — aucun lecteur n'a lu le "
+                "document en entier",
+            )
+
         for i, r in enumerate(
             (getattr(state, "propositional_analysis_results", []) or [])[
                 :max_items_per_field

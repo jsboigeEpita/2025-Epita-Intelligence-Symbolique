@@ -170,6 +170,18 @@ def build_standard_workflow() -> WorkflowDefinition:
     """
     return (
         WorkflowBuilder("standard_analysis")
+        # #3395 — the first reading: ONE call over the whole document, before
+        # anything is looked at through a window. Root phase on purpose (it
+        # needs the text alone, so it costs no DAG level), and declared as a
+        # dependency of the per-argument fallacy pass below: that pass reads
+        # ``state.defining_moves`` to prefer the units overlapping a defining
+        # move, so it must run after this phase wrote them, not beside it.
+        .add_phase(
+            "first_reading",
+            capability="first_reading",
+            optional=True,
+            timeout_seconds=180,
+        )
         .add_phase("extract", capability="fact_extraction")
         .add_phase(
             "neural_detect",
@@ -189,7 +201,11 @@ def build_standard_workflow() -> WorkflowDefinition:
         .add_phase(
             "hierarchical_fallacy",
             capability="hierarchical_fallacy_detection",
-            depends_on=["extract", "text_to_kb"],
+            # #3395 — the per-argument pass reads state.defining_moves to
+            # examine the units that overlap a defining move first, so it must
+            # run AFTER the first reading wrote them. Optional on both sides: a
+            # missing reading leaves the selection exactly as it was.
+            depends_on=["extract", "text_to_kb", "first_reading"],
             optional=True,
         )
         .add_phase(
@@ -757,7 +773,7 @@ def build_spectacular_workflow() -> WorkflowDefinition:
     results from earlier stages.
 
     DAG levels (approximate):
-        L0  extract
+        L0  first_reading | extract
         L1  quality | nl_to_logic | neural_detect | hierarchical_fallacy
         L2  pl | fol | modal                     (from nl_to_logic)
         L3  dung_extensions                       (from fallacy + pl)
@@ -774,6 +790,20 @@ def build_spectacular_workflow() -> WorkflowDefinition:
     """
     return (
         WorkflowBuilder("spectacular_analysis")
+        # L0 — the first reading (#3395, R1142): ONE whole-document call
+        # before any lens. The panel runs THIS workflow
+        # (``run_corpus_batch.py``'s default, and every cycle-0 fiche says
+        # so), so the producer lives here or cycle 1 measures nothing: every
+        # spectacular state carries the field, and without the phase the
+        # synthesis briefing would print the ``no_llm`` absence note — the
+        # exact inverse of the M1 gap this producer repairs. Root phase like
+        # its standard-workflow twin (the text alone, no DAG level paid).
+        .add_phase(
+            "first_reading",
+            capability="first_reading",
+            optional=True,
+            timeout_seconds=180,
+        )
         # L0 — extraction
         .add_phase("extract", capability="fact_extraction")
         # L1 — parallel after extraction
@@ -816,7 +846,12 @@ def build_spectacular_workflow() -> WorkflowDefinition:
         .add_phase(
             "hierarchical_fallacy",
             capability="hierarchical_fallacy_detection",
-            depends_on=["extract", "text_to_kb"],
+            # #3395 (R1142) — the per-argument pass reads
+            # ``state.defining_moves`` to examine the units overlapping a
+            # defining move first, so it must run AFTER the first reading
+            # wrote them. Optional on both sides: a missing reading leaves
+            # the selection exactly as it was.
+            depends_on=["extract", "text_to_kb", "first_reading"],
             optional=True,
         )
         # L2 — formal logic (parallel, from nl_to_logic)

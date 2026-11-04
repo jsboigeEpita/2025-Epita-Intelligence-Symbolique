@@ -9455,8 +9455,20 @@ def _extract_arguments_for_parallel(
                 for u in merged_population_units(state_obj)
                 if len(u.text.strip()) > 20
             ]
+            # #3395 — the units that overlap a defining move from the first
+            # reading are examined first: the report has already named them, so
+            # the 10 the descent reads should be the ones that matter. No
+            # reading (no LLM, or a document with no defining move) leaves the
+            # selection byte-identical.
+            from argumentation_analysis.agents.core.reading import (
+                defining_move_spans,
+            )
+
             selection = select_for_budget(
-                population, 10, text_length=state_text_length(state_obj)
+                population,
+                10,
+                text_length=state_text_length(state_obj),
+                priority_spans=defining_move_spans(state_obj),
             )
             if hasattr(state_obj, "record_analysis_coverage"):
                 state_obj.record_analysis_coverage(
@@ -14003,6 +14015,46 @@ async def _invoke_historical_context(
         if callable(log_error):
             log_error("Historian", detail)
         logger.warning("Historian read failed loudly: %s", detail)
+    return payload
+
+
+async def _invoke_first_reading(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Produce ``state.defining_moves`` — the document read once, whole (#3395).
+
+    One call, on the same model, over the whole text when it fits: the reader
+    the panel's M1 gap asked for, made a producer instead of an adversary.
+    Every move's quote is verified against the text in memory by the producer;
+    a quote the document does not carry is dropped and counted, so the payload
+    can state what it lost.
+
+    Consumed by (1) the per-argument unit selection, which prefers the units
+    overlapping a move (``defining_move_spans``), and (2) the writers, which
+    print the moves or state that the reading is missing
+    (``first_reading_note``). Nothing here is a verdict: the lenses still
+    decide.
+    """
+    from argumentation_analysis.agents.core.reading import build_first_reading
+
+    state = context.get("_state_object") or context.get("unified_state")
+    if state is None:
+        return {"error": "No shared state available for the first reading"}
+
+    llm, reason = _build_persona_callable("first_reading")
+    if llm is None:
+        logger.info("FirstReading: %s — empty read.", reason)
+
+    result = await build_first_reading(state, llm)
+    payload = result.to_state()
+    if result.status in ("llm_error", "parse_error"):
+        detail = f"first_reading {result.status}: {result.error or 'unspecified error'}"
+        payload["degraded"] = True
+        payload["degraded_reason"] = detail
+        log_error = getattr(state, "log_error", None)
+        if callable(log_error):
+            log_error("FirstReading", detail)
+        logger.warning("First reading failed loudly: %s", detail)
     return payload
 
 

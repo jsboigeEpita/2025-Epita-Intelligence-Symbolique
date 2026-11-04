@@ -957,9 +957,27 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "status": "no_llm",
             "basis": "model_knowledge",
         }
+        # #3395 — the FIRST READING: one whole-document read before the lenses,
+        # writing the moves the text itself makes (kind, one-line reading,
+        # verbatim quote, offset), labelled ``first_reading`` — never a verdict.
+        # Two consumers: the per-argument unit selection prefers the units that
+        # overlap a move (``defining_move_spans``), and the writers receive the
+        # moves or are told the reading is missing (``first_reading_note``).
+        # Distinct from ``historical_context`` (#3377), which carries what the
+        # MODEL knows; this carries what the TEXT does. Empty defaults are
+        # honest absence (no LLM, or a document with no defining move).
+        self.defining_moves: Dict[str, Any] = {
+            "moves": [],
+            "dropped_quotes": 0,
+            "status": "no_llm",
+            "error": "",
+            "read_scope": {},
+            "basis": "first_reading",
+        }
         # Track UU #724: specialist commentary + analysis trace
-        self.analysis_trace: List[Dict[str, Any]] = []
-        # AI Shield results — adversarial protection (#841)
+        self.analysis_trace: List[Dict[str, Any]] = (
+            []
+        )  # AI Shield results — adversarial protection (#841)
         self.ai_shield_results: List[Dict[str, Any]] = []
         # Local LLM results — offline LLM analysis (#834)
         self.local_llm_results: List[Dict[str, Any]] = []

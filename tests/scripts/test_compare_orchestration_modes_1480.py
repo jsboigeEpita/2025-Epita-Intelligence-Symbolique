@@ -1866,7 +1866,11 @@ class TestFillRateExcludesConstructionBaseline:
         # at CONSTRUCTION (their honest `no_llm` status dict), so they are
         # construction like `stakes_and_stakeholders`, not analysis; the
         # summarized shape does not carry them. 3 → 5 raw, 2 summarized.
-        assert len(raw_base) == 5
+        # #3395: +1 raw — `defining_moves` follows the same rule: its honest
+        # `no_llm` default (moves empty, status recorded) is written at
+        # construction, so it is construction, not analysis; the summarized
+        # shape does not carry it either. 5 → 6 raw, 2 summarized.
+        assert len(raw_base) == 6
         assert len(sum_base) == 2
 
     def test_dict_form_agrees_with_object_form(self) -> None:

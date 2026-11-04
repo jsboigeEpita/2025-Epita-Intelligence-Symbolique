@@ -231,6 +231,26 @@ REGISTRY = {
         "strategist prompt reads the selected 3000, not the whole text",
         "reading record, FR label (stratège) — debt #2850, added #3377",
     ),
+    # --- #3395: the first reading is the one reader whose window is the
+    # WHOLE document whenever it fits — FIRST_READING_WINDOW (30 000) is a
+    # document-scale backstop, not a sample. The selection is recorded (site
+    # first_reading), read_scope.whole_document states the coverage truth,
+    # and the synthesis briefing prints the scope it actually had
+    # (first_reading_note). A quote the document does not carry is dropped
+    # and counted (dropped_quotes).
+    (
+        "argumentation_analysis/agents/core/reading/first_reading.py",
+        "selected_text",
+        "FIRST_READING_WINDOW",
+        1,
+    ): (
+        "window",
+        "no cut — the whole document, the zero-shot arm's own read "
+        "(max_chars=0, #2841 rule 4, R1142)",
+        "recorded (site first_reading) + read_scope.whole_document; the "
+        "briefing prints the scope (first_reading_note) — census #2850, "
+        "added #3395",
+    ),
     (
         "argumentation_analysis/orchestration/analysis_runner_v2.py",
         "selected_text",

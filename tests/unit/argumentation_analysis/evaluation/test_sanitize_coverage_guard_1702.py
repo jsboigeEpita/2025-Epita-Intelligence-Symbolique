@@ -265,7 +265,12 @@ def _canaried_state() -> UnifiedAnalysisState:
     s.historical_context = {
         "situation": NL,
         "items": [
-            {"claim": NL2, "confidence": 0.7, "supports": NL, "basis": "model_knowledge"}
+            {
+                "claim": NL2,
+                "confidence": 0.7,
+                "supports": NL,
+                "basis": "model_knowledge",
+            }
         ],
         "status": "ok",
         "basis": "model_knowledge",
@@ -278,6 +283,33 @@ def _canaried_state() -> UnifiedAnalysisState:
         "game": {"status": "ok", "winner": NL2},
         "status": "ok",
         "basis": "model_knowledge",
+    }
+    # #3395 — the first reading's moves: model prose ABOUT the document, with
+    # verbatim quotes inside. The quotes are document spans and the readings
+    # are model wording, so the whole record is reduced to counts by
+    # _STRUCT_LIST_SCRUB — the canary plants NL in every prose leaf to
+    # exercise exactly that reduction.
+    s.defining_moves = {
+        "moves": [
+            {
+                "kind": "thesis",
+                "reading": NL,
+                "quote": NL2,
+                "offset": 0,
+                "basis": "first_reading",
+            }
+        ],
+        "dropped_quotes": 1,
+        "status": "ok",
+        "error": "",
+        "read_scope": {
+            "offset": 0,
+            "window": 30000,
+            "status": "ok",
+            "text_length": 5000,
+            "whole_document": True,
+        },
+        "basis": "first_reading",
     }
 
     # --- dung_frameworks: covered paths (4b/4c) + the GAP sidecar -------------
@@ -525,6 +557,10 @@ WRITTEN_TOP_LEVEL_FIELDS = frozenset(
         # above and both scrubbed by pass 8.
         "historical_context",
         "strategic_read",
+        # #3395 — the first reading's moves (kind/reading/quote/offset),
+        # canaried above and reduced to counts by _STRUCT_LIST_SCRUB: the
+        # quotes are verbatim document spans, the readings model prose.
+        "defining_moves",
         "dung_frameworks",
         # #3242 — populated by the real ``_write_fact_extraction_to_state``
         # writer's ``record_anchor_census()`` (#2973): counts, per-producer

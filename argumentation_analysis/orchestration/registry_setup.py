@@ -61,6 +61,7 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_act1_framing,
     _invoke_historical_context,
     _invoke_strategic_read,
+    _invoke_first_reading,
     _invoke_act3_conclusion,
     _invoke_external_fol_solver,
     _invoke_external_modal_solver,
@@ -571,6 +572,29 @@ def setup_registry(
         registered.append("act2_narrative_service")
     except Exception as e:
         skipped.append(("act2_narrative_service", str(e)))
+
+    # --- First reading (#3395, Epic #3374) ---
+    try:
+        registry.register_service(
+            name="first_reading_service",
+            service_class=type("first_reading_service", (), {}),
+            capabilities=["first_reading"],
+            metadata={
+                "description": (
+                    "Première lecture : UN appel sur le document entier, avant "
+                    "toute prose, qui écrit les gestes que le texte fait "
+                    "(nature, lecture d'une ligne, citation verbatim vérifiée, "
+                    "position) dans state.defining_moves. Étiqueté "
+                    "first_reading, jamais un verdict d'instrument. Consommé "
+                    "par la sélection des unités par argument et par les "
+                    "rédacteurs."
+                )
+            },
+            invoke=_invoke_first_reading,
+        )
+        registered.append("first_reading_service")
+    except Exception as e:
+        skipped.append(("first_reading_service", str(e)))
 
     # --- Historian persona (#3377, Epic #3374) ---
     try:

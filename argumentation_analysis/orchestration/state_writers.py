@@ -3234,6 +3234,23 @@ def _write_stakes_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None
         }
 
 
+def _persisted_status(output: dict[str, Any]) -> str:
+    """R1142 (#3395) — the status a persona/reading writer persists.
+
+    The old shared guard skipped every payload carrying ``error``, which made
+    the failure branch unreachable: a read that ran and failed left the
+    ``no_llm`` default on the state, and the render said "nobody read" about
+    a read that did. A payload the producer discriminated carries its own
+    ``status``; the invoke's own error dict (its one failure shape, e.g. no
+    shared state) carries none and is coerced to ``llm_error`` — the only
+    honest discrimination of "ran and failed". Callers skip only what is not
+    a dict at all.
+    """
+    if "error" in output:
+        return str(output.get("status") or "llm_error")
+    return str(output.get("status") or "")
+
+
 def _write_historical_context_to_state(
     output: Any, state: Any, ctx: dict[str, Any]
 ) -> None:
@@ -3242,16 +3259,18 @@ def _write_historical_context_to_state(
     The write keeps the discriminated ``status`` so a render can say "no read"
     instead of showing an empty situation as a finding, and re-stamps ``basis``
     from the constant rather than trusting the payload: the one guarantee this
-    producer exists for is that its output is model knowledge.
+    producer exists for is that its output is model knowledge. R1142: a
+    payload the invoke flagged as failed is PERSISTED (status ``llm_error``),
+    not skipped — the state must not keep claiming nobody ran.
     """
-    if not output or not isinstance(output, dict) or "error" in output:
+    if not output or not isinstance(output, dict):
         return
     from argumentation_analysis.agents.core.context import MODEL_KNOWLEDGE_BASIS
 
     payload = {
         "situation": output.get("situation", ""),
         "items": output.get("items", []),
-        "status": output.get("status", ""),
+        "status": _persisted_status(output),
         "basis": MODEL_KNOWLEDGE_BASIS,
     }
     if isinstance(state, dict):
@@ -3267,9 +3286,11 @@ def _write_strategic_read_to_state(
 
     ``game`` travels with its computed content untouched — it is the engine's
     output, not the model's prose, and rewriting it here would break the
-    provenance the render relies on to tell the two apart.
+    provenance the render relies on to tell the two apart. R1142: a payload
+    the invoke flagged as failed is PERSISTED (status ``llm_error``), not
+    skipped — same father as the historian and first-reading writers.
     """
-    if not output or not isinstance(output, dict) or "error" in output:
+    if not output or not isinstance(output, dict):
         return
     from argumentation_analysis.agents.core.context import MODEL_KNOWLEDGE_BASIS
 
@@ -3279,7 +3300,7 @@ def _write_strategic_read_to_state(
         "preferences": output.get("preferences", {}),
         "reading": output.get("reading", ""),
         "game": output.get("game", {}),
-        "status": output.get("status", ""),
+        "status": _persisted_status(output),
         "basis": MODEL_KNOWLEDGE_BASIS,
     }
     if isinstance(state, dict):
@@ -3288,9 +3309,43 @@ def _write_strategic_read_to_state(
         state.strategic_read = payload
 
 
+def _write_first_reading_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
+    """Persist the first reading on ``state.defining_moves`` (#3395).
+
+    The moves are kept as the producer wrote them — each already verified
+    against the document's text in memory, with its offset — and the payload is
+    rebuilt here so the label and the empty default never depend on the model.
+    The read scope travels untouched: ``whole_document`` is a measured claim the
+    writers print, and recomputing it here would make it a second opinion.
+    R1142: a failed read is PERSISTED with its discriminated status — the old
+    ``"error" in output`` skip left the ``no_llm`` default, so the note's
+    « lecture en échec » branch never fired in production.
+    """
+    if not output or not isinstance(output, dict):
+        return
+    from argumentation_analysis.agents.core.reading import FIRST_READING_BASIS
+
+    moves = [m for m in (output.get("moves") or []) if isinstance(m, dict)]
+    payload = {
+        "moves": moves,
+        "dropped_quotes": int(output.get("dropped_quotes") or 0),
+        "status": _persisted_status(output),
+        # Only when there IS one: the presence of the key is the failure
+        # signal elsewhere (the #3377 convention this writer used to share).
+        **({"error": output["error"]} if output.get("error") else {}),
+        "read_scope": output.get("read_scope") or {},
+        "basis": FIRST_READING_BASIS,
+    }
+    if isinstance(state, dict):
+        state["defining_moves"] = payload
+    elif hasattr(state, "defining_moves"):
+        state.defining_moves = payload
+
+
 CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "historical_context": _write_historical_context_to_state,
     "strategic_read": _write_strategic_read_to_state,
+    "first_reading": _write_first_reading_to_state,
     "argument_quality": _write_quality_to_state,
     "counter_argument_generation": _write_counter_argument_to_state,
     "belief_maintenance": _write_jtms_to_state,

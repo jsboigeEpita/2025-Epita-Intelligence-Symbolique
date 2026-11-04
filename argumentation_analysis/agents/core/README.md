@@ -45,4 +45,5 @@ Ils peuvent être utilisés individuellement pour des tâches spécifiques ou or
 - [`pm/`](./pm/README.md)
 - [`political/`](./political/README.md)
 - [`quality/`](./quality/README.md)
+- [`reading/`](./reading/README.md)
 - [`synthesis/`](./synthesis/README.md)
