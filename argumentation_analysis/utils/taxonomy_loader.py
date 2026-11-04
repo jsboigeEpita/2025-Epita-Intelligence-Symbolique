@@ -26,6 +26,7 @@ from pathlib import Path
 from urllib.parse import quote
 from typing import Dict, List, Optional
 from argumentation_analysis.paths import DATA_DIR
+from argumentation_analysis.utils.taxonomy_local_overrides import REGISTER_FIXES
 
 logger = logging.getLogger(__name__)
 
@@ -258,6 +259,19 @@ def taxonomy_chain(taxonomy_path: str) -> Optional[List[str]]:
 _DEFINITION_CAP = 240
 
 
+def _register_fixed_desc_fr(row: Dict[str, str]) -> str:
+    """The row's ``desc_fr`` with the #3394 register fixes applied.
+
+    The vendored CSV is a byte-faithful mirror of upstream (integrity guard
+    #1956) — the 5 cells that do not address the arguer are fixed at load,
+    addressed by PK, the same discipline as the #2036 editorial purges.
+    """
+    pk = (row.get("PK") or "").strip()
+    if pk.isdigit() and int(pk) in REGISTER_FIXES:
+        return REGISTER_FIXES[int(pk)]
+    return (row.get("desc_fr") or "").strip()
+
+
 @lru_cache(maxsize=4)
 def _taxonomy_node_definitions(csv_path: str) -> Dict[str, str]:
     """``path`` -> the node's one-line French definition (``desc_fr``).
@@ -272,7 +286,7 @@ def _taxonomy_node_definitions(csv_path: str) -> Dict[str, str]:
         with open(csv_path, "r", encoding="utf-8-sig", newline="") as f:
             for row in csv.DictReader(f):
                 path = (row.get("path") or "").strip()
-                desc = (row.get("desc_fr") or "").strip()
+                desc = _register_fixed_desc_fr(row)
                 if path and desc:
                     index[path] = desc
     except OSError as exc:
@@ -295,7 +309,7 @@ def _taxonomy_name_definitions(csv_path: str) -> Dict[str, str]:
     try:
         with open(csv_path, "r", encoding="utf-8-sig", newline="") as f:
             for row in csv.DictReader(f):
-                desc = (row.get("desc_fr") or "").strip()
+                desc = _register_fixed_desc_fr(row)
                 if not desc:
                     continue
                 for column in ("text_fr", "nom_vulgarisé"):
