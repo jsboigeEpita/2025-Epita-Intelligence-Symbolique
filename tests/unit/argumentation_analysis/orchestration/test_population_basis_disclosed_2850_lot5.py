@@ -174,7 +174,7 @@ class _LogicDriver:
 
     @staticmethod
     def _capturing(captured: list):
-        async def _capture(texts, logic_type=None, check_consistency=False):
+        async def _capture(texts, logic_type=None, check_consistency=False, context_note=""):
             captured.extend(texts)
             return SimpleNamespace(
                 translations=[
@@ -317,7 +317,7 @@ class TestNlToLogicPhaseBasis:
 
         captured: list = []
 
-        async def _capture(self, texts, logic_type=None, check_consistency=False):
+        async def _capture(self, texts, logic_type=None, check_consistency=False, context_note=""):
             captured.extend(texts)
             return SimpleNamespace(
                 overall_consistency=True,

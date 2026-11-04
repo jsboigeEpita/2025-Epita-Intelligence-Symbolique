@@ -38,6 +38,10 @@ SITE_LABELS_FR = {
     "fallacy_widenet": "détection de sophismes — large filet",
     "fallacy_descent": "détection de sophismes — descente",
     "fallacy_one_shot": "détection de sophismes — repli en un appel",
+    # #3377 — the two personas read the document too; a site with no label
+    # renders its raw key, which is not a sentence a reader can use.
+    "historian": "historien — situation du document",
+    "strategist": "stratège — lecture stratégique",
     # #3105 — the per-argument pass reads UNITS, not the document head.
     "fallacy_per_argument": "détection de sophismes — lecture par argument",
     # #3136 — the logic arms read a head for the vocabulary (pass 1) and

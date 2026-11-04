@@ -73,7 +73,9 @@ class TestSpectacularWorkflowPhases:
         # no LLM call). Phase count drops from 40 to 39.
         # #3326: +1 fallacy_winner_reading (post-vote reading of the winner
         # the fallacy sample missed). 39 → 40.
-        assert len(wf.phases) == 40
+        # #3377: +2 personas (historian, strategist), each consumed by a
+        # production phase. 40 → 42.
+        assert len(wf.phases) == 42
 
 
 class TestInvokeCallables:

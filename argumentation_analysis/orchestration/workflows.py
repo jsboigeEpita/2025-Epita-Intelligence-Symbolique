@@ -799,7 +799,12 @@ def build_spectacular_workflow() -> WorkflowDefinition:
         .add_phase(
             "nl_to_logic",
             capability="nl_to_logic_translation",
-            depends_on=["extract", "text_to_kb"],
+            # #3377: the translator reads the historian's situation, so the KB
+            # is built by a reader that knows what period and what place the
+            # text belongs to — not by one that reads it as if it were written
+            # nowhere. Declared, or the note is read before it is written (the
+            # #2969 silent-empty-read class).
+            depends_on=["extract", "text_to_kb", "historian"],
             optional=True,
         )
         .add_phase(
@@ -1013,6 +1018,32 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             optional=True,
             timeout_seconds=120,
         )
+        # L5c — the two personas that read the SITUATION before the microscope
+        # (#3377, Epic #3374). Both are model knowledge, labelled as such, and
+        # both have a production consumer downstream: the historian feeds the
+        # NL→KB translator (declared on ``nl_to_logic`` below), the strategist
+        # feeds Acte I (declared on ``act1_framing``). A producer nobody reads
+        # is the ``act1_framing`` defect this issue repairs, so the two
+        # ``depends_on`` below are the point of the phases, not bookkeeping.
+        .add_phase(
+            "historian",
+            capability="historical_context",
+            # #3377 — extract only: dating and situating needs the metadata and
+            # the text, not the extracted arguments. Declaring `stakes` here
+            # would push the whole formal branch (nl_to_logic depends on the
+            # historian) one level later for an enrichment the prompt treats as
+            # best-effort — the DAG pays for what it can use.
+            depends_on=["extract"],
+            optional=True,
+            timeout_seconds=120,
+        )
+        .add_phase(
+            "strategist",
+            capability="strategic_read",
+            depends_on=["quality", "stakes"],
+            optional=True,
+            timeout_seconds=180,
+        )
         # L6 — JTMS belief tracking + adversarial debate
         .add_phase(
             "jtms",
@@ -1140,7 +1171,12 @@ def build_spectacular_workflow() -> WorkflowDefinition:
         .add_phase(
             "act1_framing",
             capability="act1_framing",
-            depends_on=["extract", "stakes"],
+            # #3377 (item 4 of the mandate): the act CONSUMES the strategist's
+            # read instead of producing its own. Before this, the game-theoretic
+            # read was born inside the act and died there — no phase depended on
+            # it, so it oriented nothing. Declared, or the act reads an
+            # ``strategic_read`` that has not been written yet.
+            depends_on=["extract", "stakes", "strategist"],
             optional=False,
             timeout_seconds=180,
         )

@@ -907,6 +907,35 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "rhetorical_register": "",
             "discursive_arena": "",
         }
+        # #3377 (Epic #3374) — the historian persona's read: date, place,
+        # actors, and what was at stake THEN. MODEL KNOWLEDGE, never the
+        # document's content: every item carries ``basis="model_knowledge"``
+        # and the restitution renders the label. Written by the
+        # ``historical_context`` phase; read by the NL→KB translators. Empty
+        # defaults are honest absence (no LLM, or nothing to say) — a persona
+        # that invents a situation is the defect this field exists to prevent.
+        self.historical_context: Dict[str, Any] = {
+            "situation": "",
+            "items": [],
+            "status": "no_llm",
+            "basis": "model_knowledge",
+        }
+        # #3377 — the strategist persona's read: players, options, preference
+        # profile, and the manipulability the governance engine COMPUTES from
+        # it (``game``: winner, single-player pivots, two-player coalitions).
+        # Model knowledge for the configuration, ours for the computation —
+        # ``game`` carries its own ``engine`` provenance so a reader can tell
+        # a computed verdict from a stated one. Consumed by ``act1_framing``,
+        # which no longer produces a game-theoretic read of its own.
+        self.strategic_read: Dict[str, Any] = {
+            "players": [],
+            "options": [],
+            "preferences": {},
+            "reading": "",
+            "game": {},
+            "status": "no_llm",
+            "basis": "model_knowledge",
+        }
         # Track UU #724: specialist commentary + analysis trace
         self.analysis_trace: List[Dict[str, Any]] = []
         # AI Shield results — adversarial protection (#841)

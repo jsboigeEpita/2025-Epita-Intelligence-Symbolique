@@ -30,7 +30,8 @@ class TestBeliefRevisionSpectacularPhase:
         # belief_revision phase wired here, + 4 #1178 reasoners
         # (weighted/social/qbf/cl), + 1 fallacy_winner_reading (#3326, the
         # post-vote reading of the winner the fallacy sample missed).
-        assert len(wf.phases) == 40
+        # #3377 adds the two personas (historian, strategist). 40 → 42.
+        assert len(wf.phases) == 42
 
     def test_belief_revision_state_writer_exists(self):
         from argumentation_analysis.orchestration.state_writers import (

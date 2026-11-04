@@ -207,6 +207,30 @@ REGISTRY = {
         "concrete agent's prompt reads the selected 8000 of its input",
         "silent — debt #2850 (was census debt #2908, bounded #2912)",
     ),
+    # --- #3377: the two personas read through the #1737 selector, and their
+    # windows are RECORDED — the reading record says them with a French label
+    # (reading_record.SITE_LABELS_FR), so the render's disclosure is the
+    # record, not the Acts.
+    (
+        "argumentation_analysis/agents/core/context/historian.py",
+        "selected_text",
+        "LLM_EXTRACTION_WINDOW",
+        1,
+    ): (
+        "window",
+        "historian prompt reads the selected 3000, not the whole text",
+        "reading record, FR label (historien) — debt #2850, added #3377",
+    ),
+    (
+        "argumentation_analysis/agents/core/context/strategist.py",
+        "selected_text",
+        "LLM_EXTRACTION_WINDOW",
+        1,
+    ): (
+        "window",
+        "strategist prompt reads the selected 3000, not the whole text",
+        "reading record, FR label (stratège) — debt #2850, added #3377",
+    ),
     (
         "argumentation_analysis/orchestration/analysis_runner_v2.py",
         "selected_text",

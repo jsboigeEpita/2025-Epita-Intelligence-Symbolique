@@ -43,8 +43,9 @@ class TestSpectacularWorkflowDAG:
         # 40 = 31 (E1b base, was 30 post-#1625) + 5 W1 reasoners (#1169:
         # setaf/aba/delp/dl/dialogue) + 4 #1178 reasoners (weighted/social/
         # qbf/cl). -1 vs pre-#1625 because the L9 `synthesis` phase is gone,
-        # +1 fallacy_winner_reading (#3326).
-        assert len(wf.phases) == 40
+        # +1 fallacy_winner_reading (#3326). #3377 adds the two personas
+        # (historian, strategist). 40 → 42.
+        assert len(wf.phases) == 42
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -94,6 +95,10 @@ class TestSpectacularWorkflowDAG:
             "social_reasoning",
             "qbf_reasoning",
             "cl_reasoning",
+            # #3377: the two personas — `historian` feeds nl_to_logic,
+            # `strategist` feeds act1_framing.
+            "historian",
+            "strategist",
         }
         assert expected == phase_names
 

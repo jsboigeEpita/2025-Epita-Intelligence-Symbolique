@@ -3201,7 +3201,63 @@ def _write_stakes_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None
         }
 
 
+def _write_historical_context_to_state(
+    output: Any, state: Any, ctx: dict[str, Any]
+) -> None:
+    """Persist the historian persona's read on ``state.historical_context`` (#3377).
+
+    The write keeps the discriminated ``status`` so a render can say "no read"
+    instead of showing an empty situation as a finding, and re-stamps ``basis``
+    from the constant rather than trusting the payload: the one guarantee this
+    producer exists for is that its output is model knowledge.
+    """
+    if not output or not isinstance(output, dict) or "error" in output:
+        return
+    from argumentation_analysis.agents.core.context import MODEL_KNOWLEDGE_BASIS
+
+    payload = {
+        "situation": output.get("situation", ""),
+        "items": output.get("items", []),
+        "status": output.get("status", ""),
+        "basis": MODEL_KNOWLEDGE_BASIS,
+    }
+    if isinstance(state, dict):
+        state["historical_context"] = payload
+    elif hasattr(state, "historical_context"):
+        state.historical_context = payload
+
+
+def _write_strategic_read_to_state(
+    output: Any, state: Any, ctx: dict[str, Any]
+) -> None:
+    """Persist the strategist persona's read on ``state.strategic_read`` (#3377).
+
+    ``game`` travels with its computed content untouched — it is the engine's
+    output, not the model's prose, and rewriting it here would break the
+    provenance the render relies on to tell the two apart.
+    """
+    if not output or not isinstance(output, dict) or "error" in output:
+        return
+    from argumentation_analysis.agents.core.context import MODEL_KNOWLEDGE_BASIS
+
+    payload = {
+        "players": output.get("players", []),
+        "options": output.get("options", []),
+        "preferences": output.get("preferences", {}),
+        "reading": output.get("reading", ""),
+        "game": output.get("game", {}),
+        "status": output.get("status", ""),
+        "basis": MODEL_KNOWLEDGE_BASIS,
+    }
+    if isinstance(state, dict):
+        state["strategic_read"] = payload
+    elif hasattr(state, "strategic_read"):
+        state.strategic_read = payload
+
+
 CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
+    "historical_context": _write_historical_context_to_state,
+    "strategic_read": _write_strategic_read_to_state,
     "argument_quality": _write_quality_to_state,
     "counter_argument_generation": _write_counter_argument_to_state,
     "belief_maintenance": _write_jtms_to_state,

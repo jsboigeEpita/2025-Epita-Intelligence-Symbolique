@@ -237,6 +237,15 @@ class Act1Evidence:
     # Epic #1258 / Track 1 #1259 — when True, build_act1_prompt DROPS the
     # opaque-ID directive so the readable restitution names the real speaker/arena.
     deanonymized: bool = True
+    # #3377 (Epic #3374) — the TWO persona reads, consumed here instead of
+    # being produced by the act. Both are MODEL KNOWLEDGE and the prompt says
+    # so block by block: ``historical_context`` dates and situates the document
+    # (the M1 gap of #2841, where the zero-shot wins), ``strategic_read``
+    # carries the configuration AND the outcome the governance engine computed
+    # from it. Empty dicts = the producer did not run or returned nothing; the
+    # prompt then says the read is absent rather than inventing one.
+    historical_context: Dict[str, Any] = field(default_factory=dict)
+    strategic_read: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -341,6 +350,128 @@ def _format_stakeholder_line(sh: "StakeholderInfo") -> str:
     if label and sh.detail:
         return f"  - {label} : {sh.detail}"
     return f"  - {label or sh.detail}"
+
+
+#: Caps on the persona reads in the Act I prompt. The reads are an ORIENTATION
+#: for the writer, not a source document: past these lengths the block would
+#: crowd the framing it is supposed to sharpen.
+_MODEL_READ_CAP = 240
+_STRATEGIC_READ_CAP = 400
+_PIVOT_LINES = 3
+_COALITION_LINES = 2
+
+
+def _format_historical_block(context: Dict[str, Any]) -> str:
+    """Render the historian's situation — MODEL KNOWLEDGE, never the text's (#3377).
+
+    The block is titled by the caller, so the label lives in one place; here we
+    only render what the producer wrote, confidence included. An absent read
+    says it is absent: the act may not fill the gap with its own history.
+    """
+    context = context or {}
+    lines: List[str] = []
+    situation = _truncate(context.get("situation", ""), _STRATEGIC_READ_CAP)
+    if situation:
+        lines.append(f"  Situation : {situation}")
+    for item in context.get("items") or []:
+        if not isinstance(item, dict):
+            continue
+        claim = _truncate(item.get("claim", ""), _MODEL_READ_CAP)
+        if not claim:
+            continue
+        try:
+            confidence = float(item.get("confidence"))
+        except (TypeError, ValueError):
+            confidence = 0.0
+        line = f"  - {claim} (confiance {confidence:.2f})"
+        supports = _truncate(item.get("supports", ""), _MODEL_READ_CAP)
+        if supports:
+            line += f" — explique : {supports}"
+        lines.append(line)
+    if not lines:
+        return (
+            "  (aucune situation historique — l'historien n'a rien rendu sur ce "
+            "run ; ne comble pas ce vide par une histoire)"
+        )
+    return "\n".join(lines)
+
+
+def _format_strategic_block(read: Dict[str, Any]) -> str:
+    """Render the strategist's read AND what the engine computed from it (#3377).
+
+    The computed lines are labelled as computed: a winner the engine derived
+    carries a different authority from a sentence the model wrote, and the
+    writer is told which is which. A non-``ok`` computation is stated, never
+    papered over with an invented winner — and a winner computed on a
+    COMPLETED profile (#3385) is named as such, next to the winner itself.
+    """
+    read = read or {}
+    lines: List[str] = []
+    reading = _truncate(read.get("reading", ""), _STRATEGIC_READ_CAP)
+    if reading:
+        lines.append(f"  Lecture : {reading}")
+
+    players = []
+    for player in read.get("players") or []:
+        if not isinstance(player, dict):
+            continue
+        name = _truncate(player.get("name", ""), _MODEL_READ_CAP)
+        if not name:
+            continue
+        qualifiers = ", ".join(
+            str(player.get(key) or "").strip()
+            for key in ("role", "stance")
+            if str(player.get(key) or "").strip()
+        )
+        players.append(f"{name} ({qualifiers})" if qualifiers else name)
+    if players:
+        lines.append("  Joueurs : " + " ; ".join(players))
+
+    options = [str(option) for option in (read.get("options") or []) if str(option)]
+    if options:
+        lines.append("  Options : " + " | ".join(options))
+
+    game = read.get("game") or {}
+    status = game.get("status")
+    if status in ("ok", "ok_completed"):
+        winner_line = f"  Gagnant CALCULÉ (Condorcet) : {game.get('winner')}"
+        completed = game.get("completed") or {}
+        if status == "ok_completed":
+            # #3385 — the profile was completed (options the players never
+            # ranked, appended in declaration order): the winner is computed
+            # on ballots partly built by us, and the writer must not present
+            # it as a clean computation.
+            who = ", ".join(sorted(completed))
+            winner_line += f" — profil complété pour {who}"
+        lines.append(winner_line)
+        for pivot in (game.get("single_player") or [])[:_PIVOT_LINES]:
+            lines.append(
+                f"  Pivot d'un joueur : {pivot.get('player')} peut porter "
+                f"« {pivot.get('reports')} » en tête et faire gagner "
+                f"« {pivot.get('winner')} »"
+            )
+        for coalition in (game.get("coalitions") or [])[:_COALITION_LINES]:
+            pair = " + ".join(str(p) for p in coalition.get("players") or [])
+            lines.append(
+                f"  Coalition : {pair} portent « {coalition.get('report')} » en "
+                f"tête → « {coalition.get('winner')} »"
+            )
+        if not game.get("single_player") and not game.get("coalitions"):
+            lines.append(
+                "  Aucun pivot CALCULÉ : sur ce profil, ni un joueur seul ni une "
+                "paire ne déplace le gagnant."
+            )
+    elif status:
+        lines.append(
+            f"  Calcul : non concluant ({status}) — ne présente AUCUN gagnant."
+        )
+
+    if not lines:
+        return (
+            "  (aucune lecture stratégique — le stratège n'a rien rendu sur ce "
+            "run ; ne produis pas la tienne)"
+        )
+    return "\n".join(lines)
 
 
 def _derive_genre(
@@ -540,6 +671,11 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
         extraction_reading=extraction_reading_clause(state),
         virtuous_mode=virtuous_mode,
         deanonymized=bool(getattr(state, "deanonymized", True)),
+        # #3377 — the two persona reads, taken as they are. Never merged into
+        # the text-derived fields above: a model's deduction and the record's
+        # reading keep separate containers, and the prompt labels them apart.
+        historical_context=dict(getattr(state, "historical_context", {}) or {}),
+        strategic_read=dict(getattr(state, "strategic_read", {}) or {}),
     )
 
 
@@ -1043,6 +1179,12 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
 
     opaque_block = f"{_OPAQUE_ID_DIRECTIVE}\n\n" if not evidence.deanonymized else ""
 
+    # #3377 — the two persona reads. Titled as MODEL KNOWLEDGE at the point of
+    # use: a reader of the prompt (and, through the render, of the report) must
+    # never mistake them for what the text says.
+    historical_block = _format_historical_block(evidence.historical_context)
+    strategic_block = _format_strategic_block(evidence.strategic_read)
+
     return (
         "Tu es l'auteur de l'ACTE I d'un rapport de restitution argumentative —\n"
         "la MISE EN SITUATION, tout le cadrage AVANT d'entrer dans le texte pour\n"
@@ -1050,7 +1192,9 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         "1. Le texte (genre, locuteur, canal, contexte) ; 2. Les enjeux (ce qui\n"
         "se joue, pour qui, quelle asymétrie) ; 3. Le spectre des sophismes\n"
         "attendus pour ce genre (anticipation dérivée de la taxonomie) ;\n"
-        "4. La lecture stratégique (acteurs, intérêts, coups attendus).\n\n"
+        "4. La lecture stratégique — DÉJÀ DONNÉE ci-dessous : le profil vient du\n"
+        "stratège, le gagnant et les pivots du moteur de gouvernance. Tu la\n"
+        "REPRENDS et la rends lisible ; tu n'en produis pas une autre.\n\n"
         f"{opaque_block}"
         f"{_WEAVING_RULE}\n\n"
         f"{_FAIL_LOUD_INSTRUCTION}\n\n"
@@ -1065,10 +1209,13 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         "« inférée du texte » = lecture de modèle, jamais une donnée "
         "vérifiée) :\n\n"
         f"[LE TEXTE — métadonnées enregistrées]\n{meta_block}\n\n"
+        f"[SITUATION HISTORIQUE — SAVOIR DU MODÈLE, jamais le contenu du texte "
+        f"(#3377)]\n{historical_block}\n\n"
         f"[LES ENJEUX — inférés du texte par l'extracteur (jamais « vérifiés »)]\n{stakes_block}\n\n"
         f"[SPECTRE ATTENDU — dérivation taxonomie]\n{spectrum_note}{spectrum_coda}\n"
         f"{spectrum_block}\n\n"
-        f"[LECTURE STRATÉGIQUE — parties inférées du texte ; inventaire = état]\n{gt_block}\n{gt_note}\n\n"
+        f"[LECTURE STRATÉGIQUE — parties inférées du texte ; profil et calcul = "
+        f"état (#3377)]\n{gt_block}\n{gt_note}\n{strategic_block}\n\n"
         "CONSIGNE DE RÉDACTION :\n"
         "- Rédige 4 paragraphes thématiques (un par battement), en prose lisible,\n"
         "  pas une liste de champs.\n"
