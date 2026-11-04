@@ -1,0 +1,40 @@
+{
+  "key": "83331818475c0a3edbc8e950cf5da2fc0292097ca1e2af83ac01365dfc7a9087",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_8V9DmgdQNu3tS4aybxm9rcWe",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"3\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"L'affirmation selon laquelle la politique économique est un « succès incontestable » est assertée sans fournir de faits, de données ni de raisonnement permettant de la soutenir. Elle constitue donc un argument vide.\",\"move_author\":\"reported\",\"move_author_label\":\"le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EgUEVchkezyUK9nAvPutmdnIXoVtU",
+        "created": 1793794699,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2685,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1313,
+            "cached_tokens": 1369,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 88,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

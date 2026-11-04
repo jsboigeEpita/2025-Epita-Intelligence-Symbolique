@@ -1,14 +1,14 @@
 {
   "key": "91192b9890d3b0ce29a24efa0b5177e88d42d1be3bdf1ecffbb432c285dcf8b6",
   "value": {
-    "id": "chatcmpl-EgJ4dpm4Q4EfwpoVbsvEqCWn3FLao",
+    "id": "chatcmpl-EgUP2jnhnJwxeOX5hhusFsAE4Z5Xp",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[{\"text\":\"Les vaccins sont indispensables à la protection de la santé publique.\",\"source_quote\":\"Les vaccins sont indispensables pour la sante publique.\",\"move_author\":\"speaker\"},{\"text\":\"La vaccination est justifiée par ses résultats historiques contre des maladies graves, notamment la variole et la polio.\",\"source_quote\":\"Les etudes scientifiques montrent que la vaccination a eradique la variole et reduit considerablement la polio.\",\"move_author\":\"speaker\"},{\"text\":\"Les vaccins sont dangereux.\",\"source_quote\":\"Ceux qui affirment que les vaccins sont dangereux\",\"move_author\":\"reported\"},{\"text\":\"Les personnes qui affirment que les vaccins sont dangereux ne tiennent pas compte de plusieurs décennies de recherche clinique.\",\"source_quote\":\"ignorent les decades de recherche clinique.\",\"move_author\":\"speaker\"},{\"text\":\"Les entreprises pharmaceutiques cachent les effets secondaires des vaccins.\",\"source_quote\":\"Les produits pharmaceutiques cachent les effets secondaires\",\"move_author\":\"reported\"},{\"text\":\"L'idée que les entreprises pharmaceutiques cachent les effets secondaires est présentée comme une théorie du complot dépourvue de fondement.\",\"source_quote\":\"est une theorie du complot sans fondement.\",\"move_author\":\"speaker\"},{\"text\":\"Des taux de vaccination élevés protègent également les personnes qui ne peuvent pas être vaccinées grâce à l'immunité collective.\",\"source_quote\":\"Les taux de vaccination eleves protegent aussi ceux qui ne peuvent pas etre vaccines grace a l'immunite collective.\",\"move_author\":\"speaker\"}],\"claims\":[{\"text\":\"Des études scientifiques concluent que la vaccination a éradiqué la variole.\",\"source_quote\":\"Les etudes scientifiques montrent que la vaccination a eradique la variole.\"},{\"text\":\"Des études scientifiques concluent que la vaccination a considérablement réduit la polio.\",\"source_quote\":\"et reduit considerablement la polio.\"},{\"text\":\"La vaccination fait l'objet de plusieurs décennies de recherche clinique.\",\"source_quote\":\"les decades de recherche clinique.\"},{\"text\":\"Des taux de vaccination élevés peuvent protéger les personnes qui ne peuvent pas être vaccinées par le mécanisme de l'immunité collective.\",\"source_quote\":\"Les taux de vaccination eleves protegent aussi ceux qui ne peuvent pas etre vaccines grace a l'immunite collective.\"}],\"summary\":\"Le texte défend la vaccination en invoquant ses résultats historiques, la recherche clinique et l'immunité collective. Il rapporte deux positions opposées — la dangerosité des vaccins et la dissimulation d'effets secondaires par les entreprises pharmaceutiques — puis les réfute, notamment par une caractérisation de la seconde comme théorie du complot sans fondement.\"}",
+          "content": "{\"arguments\":[{\"text\":\"Les vaccins sont indispensables à la santé publique.\",\"source_quote\":\"Les vaccins sont indispensables pour la sante publique.\",\"move_author\":\"speaker\"},{\"text\":\"L’éradication de la variole et la forte réduction de la polio constituent des preuves de l’efficacité de la vaccination.\",\"source_quote\":\"Les etudes scientifiques montrent que la vaccination a eradique la variole et reduit considerablement la polio.\",\"move_author\":\"speaker\"},{\"text\":\"Les vaccins sont dangereux.\",\"source_quote\":\"Ceux qui affirment que les vaccins sont dangereux\",\"move_author\":\"reported\"},{\"text\":\"Affirmer que les vaccins sont dangereux revient à ignorer plusieurs décennies de recherche clinique.\",\"source_quote\":\"les vaccins sont dangereux ignorent les decades de recherche clinique.\",\"move_author\":\"speaker\"},{\"text\":\"Les entreprises pharmaceutiques dissimulent les effets secondaires des vaccins.\",\"source_quote\":\"Les produits pharmaceutiques cachent les effets secondaires\",\"move_author\":\"reported\"},{\"text\":\"L’affirmation selon laquelle les entreprises pharmaceutiques dissimulent les effets secondaires est présentée comme une théorie du complot dépourvue de fondement.\",\"source_quote\":\"L'argument selon lequel les produits pharmaceutiques cachent les effets secondaires est une theorie du complot sans fondement.\",\"move_author\":\"speaker\"},{\"text\":\"Des taux de vaccination élevés protègent les personnes qui ne peuvent pas être vaccinées grâce à l’immunité collective.\",\"source_quote\":\"Les taux de vaccination eleves protegent aussi ceux qui ne peuvent pas etre vaccines grace a l'immunite collective.\",\"move_author\":\"speaker\"}],\"claims\":[{\"text\":\"La vaccination a éradiqué la variole.\",\"source_quote\":\"la vaccination a eradique la variole\"},{\"text\":\"La vaccination a considérablement réduit la polio.\",\"source_quote\":\"reduit considerablement la polio\"},{\"text\":\"Des décennies de recherche clinique existent sur les vaccins.\",\"source_quote\":\"les decades de recherche clinique\"},{\"text\":\"Les taux de vaccination élevés peuvent protéger les personnes qui ne peuvent pas être vaccinées par l’immunité collective.\",\"source_quote\":\"Les taux de vaccination eleves protegent aussi ceux qui ne peuvent pas etre vaccines grace a l'immunite collective.\"},{\"text\":\"L’affirmation selon laquelle les produits pharmaceutiques cachent les effets secondaires est dépourvue de fondement.\",\"source_quote\":\"est une theorie du complot sans fondement\"}],\"summary\":\"Le texte défend la vaccination en s’appuyant sur les résultats historiques de la vaccination, la recherche clinique et le mécanisme de l’immunité collective. Il rapporte puis rejette deux positions adverses : la dangerosité des vaccins et la dissimulation des effets secondaires par les entreprises pharmaceutiques. Les stratégies rhétoriques principales sont l’appel aux études scientifiques, l’invocation de l’histoire médicale et la disqualification d’une explication concurrente.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793751803,
+    "created": 1793795352,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,9 +26,9 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 802,
+      "completion_tokens": 855,
       "prompt_tokens": 479,
-      "total_tokens": 1281,
+      "total_tokens": 1334,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,

@@ -6,8 +6,8 @@
       "content": "{\n  \"formulas\": [\n    \"forall X: (Homme(X) => Mortel(X))\",\n    \"Homme(socrate)\"\n  ],\n  \"predicates\": {\n    \"Homme\": \"est un homme\",\n    \"Mortel\": \"est mortel\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La première phrase affirme que tout individu qui est un homme est mortel. La seconde affirme que Socrate est un homme.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EgJ0MI1hVtEPuV0IyQgngmF30F1de",
-        "created": 1793751538,
+        "id": "chatcmpl-EgUK3ubRMOA3q8vLzFZphTlmiuPic",
+        "created": 1793795043,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 286,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 110,
+          "completion_tokens": 131,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 0,
+            "reasoning_tokens": 15,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

@@ -1,0 +1,48 @@
+{
+  "key": "6e9586bd2e5143c459fa99826fd1376081e669cff36c7240f5f3205b1fb47cd0",
+  "value": {
+    "id": "chatcmpl-EgURWlRCgalTHJqi8wcbWtSQSmGok",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points 1 et 2 développent deux idées distinctes : le risque d’erreur judiciaire irréversible et le danger permanent de certains criminels. Le point 3, tronqué (« coût des appel… »), semble introduire un argument différent sur les coûts et ne répète pas les précédents.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793795506,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 160,
+      "prompt_tokens": 296,
+      "total_tokens": 456,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 77,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

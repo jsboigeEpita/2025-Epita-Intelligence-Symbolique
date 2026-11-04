@@ -1,0 +1,48 @@
+{
+  "key": "abf6cadc659f6a8f8bfaaaee2e27b912621d2f24c34940956f0d1f0a629366e9",
+  "value": {
+    "id": "chatcmpl-EgUB7Hp0jVfYz9ZoUO3fhzVgiPN5Q",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"obstacle_genuinely_opaque\":false,\"clarity_verdict\":\"résolvable_contexte\",\"reasoning\":\"Le référent de « cet appui sur l’exemple européen » se déduit de la phrase suivante, tandis que « argument d’autorité » et « appel à la peur » sont explicités par le contexte.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793794489,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 172,
+      "prompt_tokens": 384,
+      "total_tokens": 556,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 94,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

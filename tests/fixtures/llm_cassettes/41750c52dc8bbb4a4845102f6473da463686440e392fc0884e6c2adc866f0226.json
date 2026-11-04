@@ -1,0 +1,40 @@
+{
+  "key": "41750c52dc8bbb4a4845102f6473da463686440e392fc0884e6c2adc866f0226",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_6n0IWeHjPGPLjKZfIMGcJ3CC",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1378\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"Le second argument écarte l'avis d'une personne uniquement parce qu'elle n'appartient pas à la communauté des experts, au lieu d'examiner ses raisons. Le premier invoque l'unanimité des experts comme autorité, mais le second constitue bien un appel à l'identité.\",\"move_author\":\"speaker\",\"register_test\":\"\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EgUGFeKEgxO9UiHUotwZLnwFlzTch",
+        "created": 1793794807,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1339,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1336,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 106,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

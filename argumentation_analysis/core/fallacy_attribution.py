@@ -22,6 +22,7 @@ bool — is UNMEASURED, never a default value), and
 
 from __future__ import annotations
 
+import re
 from typing import Any, Optional
 
 MOVE_AUTHOR_SPEAKER = "speaker"
@@ -106,6 +107,131 @@ def move_author_note(entry: Any) -> str:
         )
     if author == MOVE_AUTHOR_AUDIENCE:
         return "PUBLIC : interjection du public, pas le fait du locuteur"
+    return ""
+
+
+# --- #3391 — the register test (proportionality of an emotional appeal) ------
+
+#: The two outcomes of the test the emotion / loyalty / flag family carries.
+#: The taxonomy's own conditions for these nodes ARE the test: is the emotion,
+#: and the call it drives, proportionate to what the text itself states — its
+#: facts and its stakes? ``proportionate`` = legitimate in its register (the
+#: move is NOT a fallacy; the verdict is recorded, not dropped);
+#: ``disproportionate`` = the appeal drives past what the text states, and the
+#: flag stands (anti-pendulum: the same map for every side).
+REGISTER_TEST_PROPORTIONATE = "proportionate"
+REGISTER_TEST_DISPROPORTIONATE = "disproportionate"
+REGISTER_TESTS = (REGISTER_TEST_PROPORTIONATE, REGISTER_TEST_DISPROPORTIONATE)
+
+#: #3391 — the marker vocabulary of the register family, matched on a
+#: detection's NAME (the taxonomy splits the register across ``Influence`` and
+#: ``Insuffisance``, so the CSV ``Famille`` cannot carry the predicate: the
+#: twenty-seven nodes measured on the shipped taxonomy — appeals to emotion,
+#: loyalty, the flag, pride, pity, fear, terror, moral panic, pathos and the
+#: emotional-reasoning biases). Word boundaries on both sides, ``_`` and ``-``
+#: in the word class: "peur" must not fire inside another word, and the
+#: apostrophe forms (``l'émotion`` / ``l’émotion``) are reached because the
+#: marker is the noun itself (#3390/R1141's boundary lesson).
+_REGISTER_FAMILY_MARKERS = (
+    "émotion",
+    "émotionnel",
+    "affectif",
+    "pathétique",
+    "pathos",
+    "loyauté",
+    "drapeau",
+    "fierté",
+    "pitié",
+    "peur",
+    "terreur",
+    "crainte",
+    "panique",
+    "emotion",
+    "emotional",
+    "affective",
+    "pathetic",
+    "loyalty",
+    "flag",
+    "pride",
+    "pity",
+    "fear",
+    "terror",
+)
+
+_REGISTER_FAMILY_PATTERNS = tuple(
+    re.compile(r"(?<![\w-])" + re.escape(marker) + r"(?![\w-])")
+    for marker in _REGISTER_FAMILY_MARKERS
+)
+
+
+def is_register_family_detection(name: str) -> bool:
+    """#3391 — True when a detection's name belongs to the register family.
+
+    The predicate reads the NAME, never the CSV ``Famille``: the register is
+    split across ``Influence`` (appeal to emotion, pride, pity, fear) and
+    ``Insuffisance`` (loyalty, the flag, pathetic fallacy), and matching the
+    whole ``Influence`` family would sweep in four hundred nodes that carry no
+    such test.
+    """
+    value = str(name or "").lower()
+    if not value:
+        return False
+    return any(pattern.search(value) for pattern in _REGISTER_FAMILY_PATTERNS)
+
+
+def normalize_register_test(value: Any) -> str:
+    """The closed-vocabulary verdict from a raw value, ``""`` when unknown.
+
+    The tool receives the value from the model (free text until this gate);
+    the state door receives it from a writer. Both normalize HERE, so a
+    stray ``"Disproportionate"`` reaches the record the same way and a
+    non-vocabulary string is absence, never a measurement (#3029).
+    """
+    if isinstance(value, str):
+        candidate = value.strip().lower()
+        if candidate in REGISTER_TESTS:
+            return candidate
+    return ""
+
+
+def register_test_of(entry: Any) -> str:
+    """The register test the detector recorded, or ``""`` when unstated.
+
+    Only the closed vocabulary travels: anything else is not a measurement
+    (#3029's rule, applied to this field).
+    """
+    return normalize_register_test(_field(entry, "register_test"))
+
+
+def register_test_note(entry: Any) -> str:
+    """The ONE French clause a briefing prints for a register-family detection.
+
+    Three states, each printed as what it is (#1019/#3029):
+
+    * ``disproportionate`` — the flag stands, and the line carries the reason
+      it stands: the appeal was tested against what the text itself states.
+    * in the family, no test recorded — the line says the test is ABSENT, so
+      no writer reads a bare flag as a strategy anchor (#3391 ask 3).
+    * not in the family, or not a detection name at all — nothing is printed;
+      the test is not owed there.
+    """
+    test = register_test_of(entry)
+    name = str(_field(entry, "type") or _field(entry, "fallacy_type") or "")
+    if test == REGISTER_TEST_DISPROPORTIONATE:
+        return (
+            "REGISTRE : l'appel dépasse ce que le texte énonce (faits et "
+            "enjeux) — test de proportionnalité enregistré"
+        )
+    if test == REGISTER_TEST_PROPORTIONATE:
+        # Defensive: a proportionate verdict is not a fallacy, and the descent
+        # never confirms one. If a record ever carries it, the line says what
+        # it measured rather than hiding it.
+        return (
+            "REGISTRE : appel proportionné à ce que le texte énonce — "
+            "cas légitime, enregistré"
+        )
+    if is_register_family_detection(name):
+        return "REGISTRE : test de proportionnalité non enregistré"
     return ""
 
 

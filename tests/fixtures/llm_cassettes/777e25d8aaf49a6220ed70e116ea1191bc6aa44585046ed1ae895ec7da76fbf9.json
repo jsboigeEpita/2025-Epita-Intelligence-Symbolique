@@ -1,0 +1,48 @@
+{
+  "key": "777e25d8aaf49a6220ed70e116ea1191bc6aa44585046ed1ae895ec7da76fbf9",
+  "value": {
+    "id": "chatcmpl-EgUBAghWBSufKCqXYnKtDbAKQOOrY",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"Une intervention immédiate est nécessaire pour éviter l’effondrement du système dans cinq ans.\",\"digressions\":\"Les remarques selon lesquelles il s’agit d’un argument d’autorité, qu’il ne tient pas compte des différences structurelles entre les systèmes et qu’il constitue un appel à la peur sont des commentaires critiques hors de la défense directe de cette thèse. La réplique des syndicats sur le sophisme naturaliste et le fait de travailler plus longtemps est également une digression.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793794492,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 409,
+      "prompt_tokens": 299,
+      "total_tokens": 708,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 291,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

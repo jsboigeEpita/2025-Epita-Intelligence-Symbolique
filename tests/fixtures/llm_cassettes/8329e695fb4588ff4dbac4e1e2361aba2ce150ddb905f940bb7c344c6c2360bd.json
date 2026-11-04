@@ -1,0 +1,48 @@
+{
+  "key": "8329e695fb4588ff4dbac4e1e2361aba2ce150ddb905f940bb7c344c6c2360bd",
+  "value": {
+    "id": "chatcmpl-EgUBpLK4sERCz4iefJMYPFQgYdiTu",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Le point 1 porte sur la présentation du travail prolongé comme nécessaire ou naturelle et sur l’accusation de sophisme naturaliste. Le point 2 semble introduire une affirmation distincte concernant l’effondrement du système ; aucun recouvrement substantiel n’est observable dans l’extrait fourni.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793794533,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 226,
+      "prompt_tokens": 292,
+      "total_tokens": 518,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 144,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

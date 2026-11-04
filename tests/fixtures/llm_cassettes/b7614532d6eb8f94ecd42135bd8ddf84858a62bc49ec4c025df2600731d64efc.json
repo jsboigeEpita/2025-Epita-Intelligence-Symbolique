@@ -1,0 +1,40 @@
+{
+  "key": "b7614532d6eb8f94ecd42135bd8ddf84858a62bc49ec4c025df2600731d64efc",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_xVLolDj2OmniXWOtjCs1I51V",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"313\",\"matches\":false,\"justification\":\"Le texte ne flatte pas l’auditoire et ne cherche pas à le rallier par des éloges ; il invoque plutôt l’unanimité des experts et exclut les non-experts.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EgUFQ3jkhjE5uaajD5GsIWoEqFpCR",
+        "created": 1793794756,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2036,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 664,
+            "cached_tokens": 1369,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 78,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

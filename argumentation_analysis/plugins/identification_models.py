@@ -148,6 +148,23 @@ class IdentifiedFallacy(BaseModel):
             "(e.g. 'opponent', 'Speaker_B'); empty otherwise"
         ),
     )
+    # #3391 — the proportionality test the emotion / loyalty / flag family
+    # carries. 'disproportionate' = the appeal drives past what the text
+    # itself states, and the flag stands; 'proportionate' = legitimate in its
+    # register, which the descent records as its own outcome instead of a
+    # fallacy (so the value never rides a confirmed detection there — it is
+    # documented here because the one-shot path returns it the same way).
+    # Empty = not in the register family, or not tested: readers print the
+    # ABSENCE rather than assume a test happened.
+    register_test: str = Field(
+        default="",
+        description=(
+            "'disproportionate' when the appeal outruns what the text states "
+            "(the flag stands); 'proportionate' when it stays within (the "
+            "register verdict, recorded on the branch outcome, not as a "
+            "fallacy); empty when not in the register family or not tested"
+        ),
+    )
 
 
 class FallacyAnalysisResult(BaseModel):
@@ -163,4 +180,17 @@ class FallacyAnalysisResult(BaseModel):
     )
     total_iterations: int = Field(
         default=0, description="Total iterations across all branches"
+    )
+    # #3391 — one entry per branch: start PK, terminal action, the model's
+    # reason. Carried on the MODEL result too, not only on the dict-shaped
+    # early returns: the descent's named outcomes (including
+    # 'legitimate_in_register') are the record that a branch was answered, and
+    # a result that drops them makes every such answer indistinguishable from
+    # silence.
+    branch_outcomes: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description=(
+            "Per-branch terminal action and reason, when the descent ran "
+            "(empty on the one-shot path, which explores no branch)"
+        ),
     )

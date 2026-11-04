@@ -1,0 +1,40 @@
+{
+  "key": "fb932f5ef008d96d3a7d7f1d146f7d2f3d3ba5ace60d53e7bb8e9b2e02b86fc8",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_CNeFxNWBacJwqXisehJ3ffj2",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"699\",\"confidence\":\"high\",\"matches\":false,\"justification\":\"Les arguments présentent plutôt un appel à l'autorité et une disqualification de l'avis des non-experts, sans circularité : la conclusion n'est pas présupposée dans ses prémisses.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EgUG1hMb1YbIV62YPVNLund5Rb68X",
+        "created": 1793794793,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1960,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 588,
+            "cached_tokens": 1369,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 79,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

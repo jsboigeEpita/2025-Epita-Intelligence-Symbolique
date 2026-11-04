@@ -591,6 +591,10 @@ def resolve_fallacy_target_arg_id(state: Any, fallacy: Dict[str, Any]) -> Option
 # keyed by the ``ArgumentStrength`` values the LLM prompt offers (#2344).
 _COUNTER_STRENGTH_SCORE = {"weak": 0.3, "moderate": 0.6, "strong": 0.9, "decisive": 1.0}
 
+# #3391 — the model's register reason is capped before it enters a trace line:
+# the same bounded-render rule every other writer applies to free text.
+_REGISTER_REASON_CAP = 160
+
 
 def _write_counter_argument_to_state(
     output: Any, state: Any, ctx: dict[str, Any]
@@ -1072,6 +1076,35 @@ def _write_hierarchical_fallacy_to_state(
             # attribution and invent no reported party.
             move_author=f.get("move_author"),
             move_author_label=f.get("move_author_label"),
+            # #3391 — the proportionality test a register-family detection
+            # applied. Absent stays absent: the briefing then prints the test
+            # as unrecorded (#1019), never as passed.
+            register_test=f.get("register_test") or "",
+        )
+
+    # #3391 — a branch that answered "legitimate in its register" is an
+    # ANSWER, not a silence. The outcome travels on the phase output
+    # (``branch_outcomes``); without this entry it would die there, and the
+    # judgement "the appeal is proportionate to what the text states" would be
+    # indistinguishable from a branch nobody explored. One trace line per such
+    # branch, the model's reason capped like every other rendered string.
+    for outcome in output.get("branch_outcomes") or []:
+        if not isinstance(outcome, dict):
+            continue
+        if outcome.get("action") != "legitimate_in_register":
+            continue
+        reason = str(outcome.get("reason", "")).strip()
+        if len(reason) > _REGISTER_REASON_CAP:
+            reason = reason[: _REGISTER_REASON_CAP - 4].rstrip() + " […]"
+        state.add_trace_entry(
+            phase="hierarchical_fallacy",
+            agent="FallacyDetector",
+            reacts_to=["extract"],
+            summary=(
+                "REGISTRE LÉGITIME : l'appel reste proportionné à ce que le "
+                "texte énonce — pas un sophisme (branche "
+                f"{outcome.get('start_pk', '?')})" + (f" : {reason}" if reason else "")
+            ),
         )
 
     # FB-35 (#1121): state-level fail-loud marker when the agentic descent was

@@ -1,0 +1,48 @@
+{
+  "key": "5fa172460700582a4cad78833c0ecef0f3a03f03792029e5d891f73e5f03f1f4",
+  "value": {
+    "id": "chatcmpl-EgUT5SsXu7jIE50I0Xyar7vOMOE4E",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La chaîne relie l’unanimité des modèles sur l’impact des activités humaines et la rapidité du changement climatique à la conclusion d’effets importants, avec une inférence réelle mais partiellement imprécise, notamment parce que la seconde prémisse est tronquée et que l’importance des effets n’est pas explicitement établie.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793795603,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 205,
+      "prompt_tokens": 282,
+      "total_tokens": 487,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 117,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

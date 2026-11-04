@@ -1,0 +1,48 @@
+{
+  "key": "6ba6329abb39496ce37d683025b54f3fe8ffc23fa7b97598b13aa1ac5ba95607",
+  "value": {
+    "id": "chatcmpl-EgUBe7L1u6tQWJjVNIy0oRondm9Mw",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. La projection prévoit que le déficit atteindra 2,3 % du PIB d’ici 2030.\\n2. La robustesse de cette projection est contestée, car elle repose sur une hypothèse de croissance jugée optimiste de 1,8 % par an.\\n3. Les syndicats accusent le gouvernement de commettre un sophisme naturaliste en affirmant que travailler plus longtemps est « dans l’ordre des choses ».\\n4. L’opposition accuse le gouvernement de construire un homme de paille, puisque personne ne propose de supprimer les retraites, mais seulement de les réformer différemment.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793794522,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 360,
+      "prompt_tokens": 300,
+      "total_tokens": 660,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 215,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

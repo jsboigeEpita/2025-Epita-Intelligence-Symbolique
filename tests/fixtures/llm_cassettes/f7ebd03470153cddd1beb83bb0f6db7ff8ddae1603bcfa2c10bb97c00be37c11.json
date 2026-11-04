@@ -1,14 +1,14 @@
 {
   "key": "f7ebd03470153cddd1beb83bb0f6db7ff8ddae1603bcfa2c10bb97c00be37c11",
   "value": {
-    "id": "chatcmpl-EgIyKmfDI3rqMhUua5ATiVOqt5Lw4",
+    "id": "chatcmpl-EgUHpgX24cTeUij5m1Lz78gsqBncQ",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"L’option B consiste à investir les 2000 euros uniquement dans du matériel pédagogique et des échiquiers neufs.\",\"main_thesis\":\"L’option C défend un compromis combinant un tournoi réduit et l’achat de matériel, avec une répartition égale du budget : 1000 euros pour le tournoi et 1000 euros pour le matériel.\"}",
+          "content": "{\"has_opposing_claim\":false,\"opposing_claim\":\"\",\"main_thesis\":\"L’option C défend un compromis combinant un tournoi réduit et l’achat de matériel, avec une répartition égale du budget.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793751412,
+    "created": 1793794905,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 125,
+      "completion_tokens": 260,
       "prompt_tokens": 278,
-      "total_tokens": 403,
+      "total_tokens": 538,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 30,
+        "reasoning_tokens": 206,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

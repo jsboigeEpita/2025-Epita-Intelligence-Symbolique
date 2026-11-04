@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "## 🕯️ Cluedo — Le meurtre du Manoir Tudor\n\nLa pluie fouette les hautes fenêtres du manoir. À **22 h 17**, un cri déchire la maison.\n\nDans la bibliothèque, le corps de **Sir Alistair Tudor**, propriétaire des lieux, est découvert près du bureau. La porte était verrouillée de l’intérieur, mais une fenêtre est entrouverte malgré l’orage.\n\n### Les suspects présents au manoir\n\n- **Lady Victoria Tudor**, l’épouse de la victime  \n- **Edmund Tudor**, son neveu  \n- **Clara Whitmore**, la gouvernante  \n- **Dr. Henry Blackwood**, médecin de famille  \n- **Margaret Doyle**, journaliste invitée  \n- **Le colonel Arthur Finch**, ancien compagnon d’armes de Sir Alistair  \n\n### Premiers éléments\n\n- La victime a été frappée à la tête.\n- L’arme du crime pourrait être un **chandelier**, un **presse-papiers** ou un objet encore introuvable.\n- Une tasse de thé intacte se trouve sur le bureau.\n- Une page du testament de Sir Alistair a disparu.\n- L’horloge de la bibliothèque est arrêtée à **22 h 05**.\n\nVous êtes chargé de l’enquête.\n\nQue faites-vous en premier ?\n\n1. Examiner le corps  \n2. Fouiller la bibliothèque  \n3. Interroger un suspect  \n4. Inspecter la fenêtre  \n5. Examiner l’horloge et le bureau",
+      "content": "## 🕵️ Enquête au Manoir Tudor\n\nUne pluie glaciale s’abat sur le manoir, isolé au sommet d’une colline. À **22 h 15**, un cri retentit dans l’aile ouest.\n\nLe propriétaire, **Sir Alistair Tudor**, est retrouvé mort dans la bibliothèque, près de son bureau. La porte était verrouillée de l’intérieur. Une fenêtre est entrouverte, mais la boue sous celle-ci ne porte aucune empreinte.\n\n### Premières constatations\n- Cause apparente du décès : **un coup violent à la tête**.\n- Arme possible : un lourd **chandelier en bronze**, retrouvé au sol.\n- Sur le bureau : une coupe de champagne à moitié pleine, un testament déchiré et une montre arrêtée à **21 h 50**.\n- Dans la cheminée : un fragment de lettre à demi consumé.\n- Aucun signe d’effraction.\n\n### Les suspects présents au manoir\n1. **Lady Victoria Tudor**, l’épouse de la victime — froide et très maîtresse d’elle-même.\n2. **Edward Tudor**, son fils — criblé de dettes.\n3. **Clara Bell**, la gouvernante — au service de la famille depuis trente ans.\n4. **Dr Samuel Reed**, le médecin de Sir Alistair — dernier à l’avoir examiné vivant.\n5. **Margaret Shaw**, l’avocate de la famille — venue discuter du testament.\n6. **Thomas Green**, le jardinier — affirme avoir été dans la serre toute la soirée.\n\nTous prétendent n’avoir rien à cacher.\n\nVous êtes chargé de l’enquête.  \n**Que souhaitez-vous examiner ou interroger en premier ?**",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EgJ2wxbsA079nq29Ysc2o39N5kDG1",
-        "created": 1793751698,
+        "id": "chatcmpl-EgUN4Ej6masbRvooAUmYqSGArdMzD",
+        "created": 1793795230,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 29,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 355,
+          "completion_tokens": 405,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 35,
+            "reasoning_tokens": 45,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

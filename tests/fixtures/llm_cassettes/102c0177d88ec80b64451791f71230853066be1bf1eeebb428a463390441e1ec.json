@@ -1,0 +1,40 @@
+{
+  "key": "102c0177d88ec80b64451791f71230853066be1bf1eeebb428a463390441e1ec",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_O3wCAIDD27HHmvClRRfalAUv",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"34\",\"matches\":false,\"justification\":\"L’énoncé ne fournit aucun événement isolé ni anecdote servant de preuve ; il rapporte seulement une affirmation générale du président. La preuve anecdotique n’est donc pas établie.\",\"move_author\":\"reported\",\"move_author_label\":\"le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EgUETRRCw9jRymuA9gXGGMpunVGjW",
+        "created": 1793794697,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2203,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 831,
+            "cached_tokens": 1369,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 82,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

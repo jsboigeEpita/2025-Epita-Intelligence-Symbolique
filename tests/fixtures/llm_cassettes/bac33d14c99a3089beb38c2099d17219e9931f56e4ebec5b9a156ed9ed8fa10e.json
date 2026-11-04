@@ -1,0 +1,48 @@
+{
+  "key": "bac33d14c99a3089beb38c2099d17219e9931f56e4ebec5b9a156ed9ed8fa10e",
+  "value": {
+    "id": "chatcmpl-EgUBoWQySCzHSfXuUrBlNWj2wcin8",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Obstacles localisés : jargon ou termes spécialisés non définis (« PIB », « homme de paille », « appel à l’émotion »). Aucune anaphore non résolvable ni phrase excessivement emboîtée. Verdict : obstacles résolvables par le contexte, sens globalement accessible.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793794532,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 74,
+      "prompt_tokens": 273,
+      "total_tokens": 347,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

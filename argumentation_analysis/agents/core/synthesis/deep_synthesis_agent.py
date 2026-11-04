@@ -35,6 +35,7 @@ from argumentation_analysis.core.fallacy_attribution import (  # #3180
     move_author_label_of,
     move_author_note,
     move_author_of,
+    register_test_note,  # #3391
 )
 from argumentation_analysis.reporting.restitution.speaker_record import (  # #3336
     build_speaker_record,
@@ -2135,11 +2136,19 @@ class DeepSynthesisAgent(BaseAgent):
                 # record is silent: the briefing invents no author (#1019).
                 _move_note = move_author_note(fdata)
                 _move_clause = f" — {_move_note}" if _move_note else ""
+                # #3391 — a register-family flag is not a bare anchor: the
+                # line carries the proportionality test that stands it, or
+                # says the test is unrecorded (so no writer builds the
+                # strategy out of an untested flag). Same data-only pattern
+                # as the attribution note above.
+                _register_note = register_test_note(fdata)
+                _register_clause = f" — {_register_note}" if _register_note else ""
                 _add(
                     "identified_fallacies",
                     u.unit_id,
                     f"type={ftype} family={family} target={target or 'n/a'}"
-                    f"{_move_clause} — {fdata.get('justification', '')}",
+                    f"{_move_clause}{_register_clause} — "
+                    f"{fdata.get('justification', '')}",
                 )
             if hasattr(state, "record_analysis_coverage"):
                 state.record_analysis_coverage(

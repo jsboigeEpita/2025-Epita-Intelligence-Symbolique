@@ -1,0 +1,48 @@
+{
+  "key": "6d6901c6776100d1ad5d5c2f581e587fa514e1ef1675f7e619a797da5f679ba6",
+  "value": {
+    "id": "chatcmpl-EgUB2CENBwk67aCLJ5zXwuxRF9AnG",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"« cet appui sur l’exemple européen » est une référence sans antécédent explicite immédiat, même si son référent peut être inféré de la phrase suivante. « argument d’autorité » et « appel à la peur » sont des termes d’analyse argumentative utilisés sans définition, ce qui peut gêner un lecteur non spécialiste. Aucune phrase n’est excessivement emboîtée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793794484,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 414,
+      "prompt_tokens": 309,
+      "total_tokens": 723,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 310,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

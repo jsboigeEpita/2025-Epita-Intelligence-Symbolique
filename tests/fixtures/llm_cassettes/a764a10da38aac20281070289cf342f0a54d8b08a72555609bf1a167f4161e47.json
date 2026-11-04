@@ -1,0 +1,40 @@
+{
+  "key": "a764a10da38aac20281070289cf342f0a54d8b08a72555609bf1a167f4161e47",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_9aEy7StLqhkmERkyPbJG6Rty",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"326\",\"matches\":false,\"justification\":\"Le texte invoque l'unanimité des experts et exclut l'avis des non-experts, ce qui peut relever d'un appel à l'autorité ou d'un argument ad hominem circonstanciel, mais il ne cherche pas à discréditer l'adversaire en lui faisant honte ni à susciter une réprobation générale. Le nœud « Appel à la honte » ne correspond donc pas.\",\"move_author\":\"speaker\",\"confidence\":\"high\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EgUFGRiLjKW8nWQgvJTSEJ7nlyNRL",
+        "created": 1793794746,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1304,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1301,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 124,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

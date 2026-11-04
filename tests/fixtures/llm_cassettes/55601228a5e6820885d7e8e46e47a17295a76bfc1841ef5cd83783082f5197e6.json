@@ -1,0 +1,48 @@
+{
+  "key": "55601228a5e6820885d7e8e46e47a17295a76bfc1841ef5cd83783082f5197e6",
+  "value": {
+    "id": "chatcmpl-EgUBKzKpoJSMZhZs1li3ZJzY2MJ8E",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse soutient que la projection d’un déficit de 2,3 % du PIB en 2030 ne suffit pas à établir l’existence d’un problème financier, car elle dépend d’hypothèses discutables. Deux digressions sont localisées : les accusations syndicales de sophisme naturaliste et celles de l’opposition concernant un homme de paille. L’argument reste globalement centré, malgré ces écarts secondaires.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793794502,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 192,
+      "prompt_tokens": 322,
+      "total_tokens": 514,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 80,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

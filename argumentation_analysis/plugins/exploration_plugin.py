@@ -16,6 +16,9 @@ from semantic_kernel.functions.kernel_function_decorator import kernel_function
 
 from argumentation_analysis.agents.utils.taxonomy_navigator import TaxonomyNavigator
 from argumentation_analysis.core.fallacy_attribution import MOVE_AUTHORS  # #3390
+from argumentation_analysis.core.fallacy_attribution import (  # #3391
+    normalize_register_test as _register_test_of,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -172,6 +175,16 @@ class ExplorationPlugin:
             "The reported party's label, as the text names it, when "
             "move_author is 'reported'",
         ] = "",
+        register_test: Annotated[
+            str,
+            "#3391 — for an appeal to emotion, loyalty, the flag, pride, "
+            "pity or fear: the proportionality test you applied. "
+            "'proportionate' when the emotion and the call it drives stay "
+            "proportionate to what the text itself states — its facts and "
+            "its stakes; 'disproportionate' when they drive past them. The "
+            "taxonomy node's own conditions ARE the test. Empty when the "
+            "node is not in that register family",
+        ] = "",
     ) -> Annotated[str, "Verdict result"]:
         """Record the verdict on a node, with the justification that supports it.
 
@@ -208,6 +221,11 @@ class ExplorationPlugin:
             return json.dumps({"error": f"Node {node_pk} not found"})
 
         confidence_score, confidence_note = _confidence_score(confidence)
+        # #3391 — the register test is a FIELD too: only the closed
+        # vocabulary travels, and it rides BOTH verdicts (a proportionate
+        # appeal is the family's own negative answer, and its test must
+        # still be readable on the refusal).
+        _register_test = _register_test_of(register_test)
 
         if not matches:
             refusal = {
@@ -221,6 +239,8 @@ class ExplorationPlugin:
             }
             if confidence_note:
                 refusal["confidence_note"] = confidence_note
+            if _register_test:
+                refusal["register_test"] = _register_test
             return json.dumps(refusal, ensure_ascii=False)
 
         lang = self.language
@@ -250,6 +270,8 @@ class ExplorationPlugin:
                 result["move_author_label"] = _label
         if confidence_note:
             result["confidence_note"] = confidence_note
+        if _register_test:
+            result["register_test"] = _register_test
         return json.dumps(result, ensure_ascii=False)
 
     @kernel_function(
