@@ -183,6 +183,25 @@ class TestTheBriefingLineCarriesTheAttributionSentence:
         assert "move_author=speaker" not in briefing
         assert "RAPPORTÉ" not in briefing
 
+    def test_an_endorsed_reported_claim_is_the_speakers(self):
+        """DoD #3390 : quand le locuteur ENDOSSÉ un geste rapporté, le geste
+        est le sien. La décision vit dans le CHAMP du détecteur
+        (``move_author``), jamais dans la prose de la justification — un
+        enregistrement « speaker » dont la prose évoque un tiers compte
+        pour le locuteur, à l'Acte II comme dans le dossier."""
+        record = _fallacy_record(
+            move_author="speaker",
+            justification="Le locuteur rapporte le geste d'un tiers puis "
+            "l'endosse explicitement : le geste devient le sien.",
+        )
+        evidence = build_act2_evidence(_state(fallacies={"fallacy_1": record}))
+        assert evidence.fallacies_total == 1
+        assert getattr(evidence, "reported_fallacies", []) == []
+        briefing = DeepSynthesisAgent.build_artifact_briefing(
+            _state(fallacies={"fallacy_1": record})
+        )
+        assert "RAPPORTÉ" not in briefing
+
 
 class TestTheClosedVocabularyLivesInOnePlace:
     """``MOVE_AUTHORS`` est LE vocabulaire fermé : les deux portes de l'état
@@ -248,6 +267,44 @@ class TestTheFictionArenaReachesEveryWriter:
         state = _state(arena="un débat télévisé entre deux candidats")
         assert not is_fiction_arena(build_arena_record(state))
 
+    def test_a_place_whose_name_contains_nouvelle_is_not_fiction(self):
+        """R1141 — frontières de mot : « nouvelle » dans un NOM DE LIEU
+        (composé à trait d'union) ne nomme pas le genre. La correspondance
+        par sous-chaîne levait le cadre fictionnel sur un meeting réel."""
+        from argumentation_analysis.reporting.restitution.arena_record import (
+            build_arena_record,
+            is_fiction_arena,
+        )
+
+        state = _state(arena="un meeting à Nouvelle-Orléans")
+        assert not is_fiction_arena(build_arena_record(state))
+        briefing = DeepSynthesisAgent.build_artifact_briefing(state)
+        assert "ARÈNE DE FICTION" not in briefing
+        act2 = build_act2_prompt(build_act2_evidence(state))
+        assert "ARÈNE DE FICTION" not in act2
+
+    def test_a_romantic_speech_is_not_a_novel(self):
+        """Frontières de mot : « roman » dans « romantique » ne nomme pas la
+        fiction — la sous-chaîne levait le cadre sur un discours réel."""
+        from argumentation_analysis.reporting.restitution.arena_record import (
+            build_arena_record,
+            is_fiction_arena,
+        )
+
+        state = _state(arena="un discours romantique en campagne")
+        assert not is_fiction_arena(build_arena_record(state))
+
+    def test_the_genre_nouvelle_still_fires(self):
+        """Contrôle : le mot « nouvelle » seul (le genre) lève toujours le
+        cadre — le bornage retire le bruit, pas le signal."""
+        from argumentation_analysis.reporting.restitution.arena_record import (
+            build_arena_record,
+            is_fiction_arena,
+        )
+
+        state = _state(arena="la lecture publique d'une nouvelle")
+        assert is_fiction_arena(build_arena_record(state))
+
     def test_a_debate_arena_raises_no_fiction_line(self):
         """Contrôle anti-pendule, vert des deux côtés : une ligne ARÈNE DE
         FICTION de trop exempterait les gestes d'un vrai locuteur."""
@@ -258,23 +315,36 @@ class TestTheFictionArenaReachesEveryWriter:
         assert "ARÈNE DE FICTION" not in act2
 
 
-class TestThePromptTeachesAttribution:
-    """La règle 7 dit au rédacteur ce que les mentions RAPPORTÉ /
-    PERSONNAGE / PUBLIC licencient : rien de tout cela n'est le geste du
-    locuteur. Elle vit dans la variante opaque ET dans la variante
-    désanonymisée (le swap ne touche que la règle 5)."""
+class TestThePromptCarriesNoAttributionRule:
+    """R1141 — pas de règle 7 : l'attribution est PORTÉE par les lignes
+    d'artefact (RAPPORTÉ / PERSONNAGE / PUBLIC, ARÈNE DE FICTION), données
+    que le rédacteur lit — pas une phrase de prose lui demandant d'être
+    prudent, que l'anti-pendule de #3390 interdisait en toutes lettres.
+    Cette garde pince le retrait : une restauration de la phrase rougit."""
 
-    def test_rule_7_names_the_markers_and_the_fiction_arena(self):
-        prompt = DeepSynthesisAgent.GROUNDED_SYNTHESIS_PROMPT
-        assert "7. ATTRIBUTION" in prompt
-        for marker in ("RAPPORTÉ", "PERSONNAGE", "PUBLIC"):
-            assert marker in prompt
-        assert "ne l'inscris jamais dans ses vulnérabilités" in prompt
-        assert "ARÈNE DE FICTION" in prompt
+    def test_no_attribution_rule_in_either_prompt_variant(self):
+        for prompt in (
+            DeepSynthesisAgent.GROUNDED_SYNTHESIS_PROMPT,
+            DeepSynthesisAgent.grounded_synthesis_prompt(deanonymized=True),
+        ):
+            assert "7. ATTRIBUTION" not in prompt
+            assert "n'inscris jamais dans ses vulnérabilités" not in prompt
 
-    def test_rule_7_travels_to_the_deanonymized_variant(self):
-        prompt = DeepSynthesisAgent.grounded_synthesis_prompt(deanonymized=True)
-        assert "7. ATTRIBUTION" in prompt
+    def test_the_data_lines_still_carry_the_attribution_without_the_rule(self):
+        """Le portage ne doit pas dépendre de la phrase retirée : le dossier
+        porte la phrase RAPPORTÉ et la ligne ARÈNE, règle ou pas règle."""
+        briefing = DeepSynthesisAgent.build_artifact_briefing(
+            _state(
+                arena="une pièce de théâtre",
+                fallacies={
+                    "fallacy_1": _fallacy_record(
+                        move_author="reported", move_author_label="l'opposant"
+                    )
+                },
+            )
+        )
+        assert _REPORTED_SENTENCE in briefing
+        assert "ARÈNE DE FICTION" in briefing
 
 
 class TestAnAudienceInterjectionIsNotASecondVoice:

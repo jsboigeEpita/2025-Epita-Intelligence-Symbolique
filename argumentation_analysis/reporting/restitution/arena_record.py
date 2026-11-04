@@ -21,6 +21,7 @@ said absent, never invented.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -90,24 +91,45 @@ def _documents(value: Any) -> bool:
     return bool(text) and text.lower() not in _NOT_DOCUMENTED
 
 
-#: #3390 — arena values that name a play or fiction. The fiction arena is the
-#: one case where aggregating the detected moves under "the author's
-#: discourse" is structurally wrong: the characters argue, the author does not
-#: assert. The markers are kept narrow on purpose — "dialogue" alone also
-#: names a debate, and a false fiction line would exempt a real speaker's
-#: moves from their author.
+#: #3390 — arena values that name a play or fiction, with their match kind:
+#: ``prefix`` markers name a family (théâtre/théâtral, theater/theatrical)
+#: and match a word START; every other marker is a full word. The markers are
+#: kept narrow on purpose — "dialogue" alone also names a debate, and a false
+#: fiction line would exempt a real speaker's moves from their author.
+#:
+#: #3390/R1141 — matching is on WORD boundaries, not substrings: "roman"
+#: must not fire on "romantique", nor "drama" on "dramatique". A hyphen
+#: counts as part of the word (French compounds): "Nouvelle-Orléans" is one
+#: word, so its "nouvelle" is a place name, not the genre.
 _FICTION_ARENA_MARKERS = (
-    "pièce",
-    "théât",
-    "theatr",
-    "fiction",
-    "fictif",
-    "fictive",
-    "roman",
-    "nouvelle",
-    "novel",
-    "play",
-    "drama",
+    ("pièce", "word"),
+    ("théât", "prefix"),
+    ("theatr", "prefix"),
+    ("fiction", "word"),
+    ("fictif", "word"),
+    ("fictive", "word"),
+    ("roman", "word"),
+    ("nouvelle", "word"),
+    ("novel", "word"),
+    ("play", "word"),
+    ("drama", "word"),
+)
+
+
+def _marker_pattern(marker: str, kind: str) -> "re.Pattern[str]":
+    """Compile one marker with its boundaries.
+
+    ``[\\w-]`` (letters, digits, underscore, hyphen) is the word class on
+    BOTH sides: a marker only matches as a word of its own — ``_``-joined
+    compounds included (#2012's letter-boundary lesson, applied here).
+    """
+    left = r"(?<![\w-])"
+    right = "" if kind == "prefix" else r"(?![\w-])"
+    return re.compile(f"{left}{re.escape(marker)}{right}")
+
+
+_FICTION_ARENA_PATTERNS = tuple(
+    _marker_pattern(marker, kind) for marker, kind in _FICTION_ARENA_MARKERS
 )
 
 
@@ -116,11 +138,12 @@ def is_fiction_arena(record: ArenaRecord) -> bool:
 
     Matched on the arena VALUE (metadata or inference alike — either way the
     run read the document as fiction), case-insensitively, on the markers
-    above. The consumer states the consequence once: the analysis concludes
-    on the characters' reasoning, never on the author's assertions.
+    above at word boundaries. The consumer states the consequence once: the
+    analysis concludes on the characters' reasoning, never on the author's
+    assertions.
     """
     value = record.value.lower()
-    return any(marker in value for marker in _FICTION_ARENA_MARKERS)
+    return any(pattern.search(value) for pattern in _FICTION_ARENA_PATTERNS)
 
 
 def build_arena_record(state: Any) -> ArenaRecord:
