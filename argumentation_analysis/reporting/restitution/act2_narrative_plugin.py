@@ -931,11 +931,7 @@ def quality_ranking_line(
     if not governance_winner:
         return line
     winner_score, winner_n = next(
-        (
-            (score, n)
-            for arg_id, score, n in scored
-            if arg_id == governance_winner
-        ),
+        ((score, n) for arg_id, score, n in scored if arg_id == governance_winner),
         (None, 0),
     )
     if winner_score is None:
@@ -986,9 +982,7 @@ def quality_ranking_line(
     # listing, one clause later. A tied head is named the one way the line
     # already names ties (#3341's helper, its count/noun agreement inside); a
     # sole top-1 keeps the exact pre-#3356 clause, byte-identical.
-    head_holders = sorted(
-        arg_id for arg_id, score, _n in scored if score == top_score
-    )
+    head_holders = sorted(arg_id for arg_id, score, _n in scored if score == top_score)
     top_scale = sum_on_its_maximum(top_score, top_n or None)
     top_scale_str = f" ({top_scale})" if top_scale else ""
     if len(head_holders) == 1:

@@ -54,13 +54,13 @@ def score_with_scale(
     if v != v or m != m:  # NaN — math.isnan without the import
         return ""
     if direction is None:
-        direction = "plus haut = meilleur" if higher_is_better else "plus bas = meilleur"
+        direction = (
+            "plus haut = meilleur" if higher_is_better else "plus bas = meilleur"
+        )
     return f"{_fr_number(v, decimals)} sur {_fr_number(m, decimals)} — {direction}"
 
 
-def sum_on_its_maximum(
-    value: Optional[float], n_terms: Optional[int]
-) -> str:
+def sum_on_its_maximum(value: Optional[float], n_terms: Optional[int]) -> str:
     """A sum with the number of terms it ran over: « 1,28 sur 5 ».
 
     A quality ``overall`` is a SUM of per-virtue [0, 1] scores whose ceiling
