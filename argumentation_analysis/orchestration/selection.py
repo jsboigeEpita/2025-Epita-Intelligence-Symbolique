@@ -23,13 +23,16 @@ band and only fill leftover budget after positioned units, in stable order.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections import Counter
+from dataclasses import dataclass, replace
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 __all__ = [
     "SelectableUnit",
     "SelectionResult",
+    "TargetSelection",
     "select_for_budget",
+    "select_across_targets",
     "coverage_figure",
     "stratified_position",
     "merged_population_units",
@@ -372,6 +375,127 @@ def select_for_budget(
             "implemented strategy is 'stratified_position'"
         )
     return stratified_position(units, n, band_count=band_count, text_length=text_length)
+
+
+@dataclass(frozen=True)
+class TargetSelection:
+    """One selected entry, with what its TARGET contributes to the reading.
+
+    ``rank`` is the entry's position in the producer's order within its target
+    (1-based) and ``population`` the number the RECORD holds for that target —
+    not the number shown. ``cut`` is true only when the target's population is
+    not fully briefed, so a population that fits the budget renders exactly as
+    before (#3373 control).
+    """
+
+    entry: Any
+    target: str = ""
+    rank: int = 0
+    population: int = 0
+    cut: bool = False
+
+
+def select_across_targets(
+    entries: Sequence[Any],
+    n: int,
+    target_key: str = "target_arg_id",
+) -> List[TargetSelection]:
+    """#3373 — take one entry per TARGET before any target takes a second.
+
+    The counter-argument phase writes its output target by target, so the
+    briefing's ``[:n]`` held the first targets' entries and nothing beyond
+    them: on the R1137a record, 15 counters over 4 units out of 43 over 10,
+    and the writer counted its briefing (« Cinq » for a unit carrying six).
+
+    Every target is served in rounds — the first entry of each target, then
+    the second of each, and so on — so no target is invisible while another
+    is doubled, as long as the targets fit the budget. Within a target the
+    producer's order holds. Entries that name no target are served after the
+    targeted ones: they carry no population to state (a real rebuttal, merely
+    unanchored — #3201), and they never crowd out a countered unit.
+
+    The rounds decide WHAT is briefed; the producer's order decides WHERE it
+    prints (R1140 rework). The round-robin interleaves targets; the returned
+    list re-sorts the targeted picks by each entry's original index in
+    ``entries``, and the unanchored follow in producer order. A population
+    that fits therefore renders block for block as before, and under a cut
+    each target's lines stay contiguous — the writer counts a run of lines,
+    not a scatter.
+
+    The budget is real and unchanged: never more than ``n``.
+    """
+    if n <= 0:
+        return []
+    groups: Dict[str, List[Tuple[int, Any]]] = {}
+    unanchored: List[Tuple[int, Any]] = []
+    for index, entry in enumerate(entries):
+        target = ""
+        if isinstance(entry, dict):
+            value = entry.get(target_key)
+            if isinstance(value, str):
+                target = value.strip()
+        else:
+            value = getattr(entry, target_key, None)
+            if isinstance(value, str):
+                target = value.strip()
+        if target:
+            groups.setdefault(target, []).append((index, entry))
+        else:
+            unanchored.append((index, entry))
+
+    populations = {target: len(items) for target, items in groups.items()}
+    targeted: List[Tuple[int, TargetSelection]] = []
+    round_index = 0
+    while len(targeted) < n:
+        progressed = False
+        for target, items in groups.items():
+            if round_index < len(items):
+                progressed = True
+                rank = round_index + 1
+                origin, entry = items[round_index]
+                targeted.append(
+                    (
+                        origin,
+                        TargetSelection(
+                            entry=entry,
+                            target=target,
+                            rank=rank,
+                            population=populations[target],
+                        ),
+                    )
+                )
+                if len(targeted) >= n:
+                    break
+        if not progressed:
+            break
+        round_index += 1
+
+    unanchored_picks = [
+        TargetSelection(entry=entry, target="", rank=0, population=0)
+        for _, entry in unanchored[: max(0, n - len(targeted))]
+    ]
+
+    # R1140 — the producer's order decides WHERE: the round-robin's picks
+    # re-sorted by their original index in ``entries`` (stable for entries a
+    # target serves in order, since ``items`` itself is index-ascending), the
+    # unanchored already in producer order.
+    selected: List[TargetSelection] = [
+        item for _, item in sorted(targeted, key=lambda pair: pair[0])
+    ] + unanchored_picks
+
+    # #3373 rework (R1139) — ``cut`` is decided on WHAT IS SHOWN, never on the
+    # rank. Comparing the rank against the population marked every line of a
+    # target but its last, even when the target was briefed whole: 12 counters
+    # over 5 targets under a cap of 15 produced 7 lines flagged onto a cut that
+    # never happened. A target is cut exactly when the briefing shows fewer of
+    # its entries than the record holds.
+    shown = Counter(item.target for item in selected if item.target)
+    selected = [
+        replace(item, cut=shown[item.target] < item.population) if item.target else item
+        for item in selected
+    ]
+
+    return selected
 
 
 def coverage_figure(
