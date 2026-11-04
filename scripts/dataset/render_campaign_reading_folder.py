@@ -80,6 +80,18 @@ WORKFLOW_LABELS_FR = {
     "full": "analyse complète",
 }
 
+#: The run's terminal status, under the reader's vocabulary (#3392). The
+#: classification id is machine grammar (`non_argumentative`); the reader
+#: of that fiche meets it in the very header. The raw id stays as the
+#: fallback — traceable, never dropped.
+STATUS_LABELS_FR = {
+    "ok": "analysé",
+    "non_argumentative": "document non-argumentatif",
+    "failed": "échec",
+    "blocked": "bloqué",
+    "skipped": "ignoré",
+}
+
 # The pricing key default for direct calls. main() never uses it as a
 # fallback: the run's model is resolved from the zero-shot provenance
 # before the first fact is built, and a provenance that names no model is
@@ -293,7 +305,7 @@ def doc_facts(
         "title": (sig.get("metadata") or {}).get("title", "titre inconnu"),
         "speaker": (sig.get("metadata") or {}).get("speaker", "locuteur inconnu"),
         "year": (sig.get("metadata") or {}).get("date_or_year", ""),
-        "chars": len(st.get("raw_text") or ""),
+        "chars": document_chars(st),
         "args": _count(st.get("identified_arguments")),
         "fallacies": _count(st.get("identified_fallacies")),
         "fol": _count(st.get("fol_analysis_results")),
@@ -380,11 +392,69 @@ def notes_section(notes: Dict[str, str]) -> str:
     return "\n".join(lines)
 
 
+def document_chars(state: Dict[str, Any]) -> int:
+    """The document's length, read from the state — ONE measure (#3392).
+
+    The fiche's ``chars`` fact and the reader paragraph both come from here,
+    so the reader cannot be told two lengths for the same document.
+    """
+    st = state.get("state") or state
+    return len(st.get("raw_text") or "")
+
+
+def render_non_argumentative_reader_paragraph(state: Dict[str, Any], chars: int) -> str:
+    """#3392 — the reader's paragraph for the valid no-analysis case.
+
+    A correct CLASSIFICATION with an English batch log is not an explained
+    refusal (GRILLE_JUGE_2841 §5): on the panel's one non-argumentative
+    document the zero-shot named what the document was and why no argument
+    could be analysed, and the render taught the reader less — the only
+    ZEROSHOT_WINS of cycle 0.
+
+    Everything here comes from what the extract and the corpus record put
+    on the state: the metadata it recorded (through the SAME reader-label
+    view the acts use, #3311), and the counts it measured. One clause per
+    recorded element, absent fields omitted — an element the extract did
+    not record is the gap the issue names, never something to invent.
+    No LLM call (the issue's ask 2). The batch log keeps its own English
+    line; this paragraph is the reader's, built beside it.
+
+    ``chars`` is the length ``document_chars`` measured — passed in, never
+    recomputed here (R1141).
+    """
+    st = state.get("state") or state
+    from argumentation_analysis.reporting.restitution.act1_framing_plugin import (
+        reader_metadata_view,
+    )
+
+    metadata = reader_metadata_view(st.get("source_metadata") or {})
+    subject = (
+        f"Ce document de {chars} caractères" if chars else "Ce document"
+    )
+    parts = [
+        f"{subject} n'a pas été lu comme une "
+        "argumentation : l'extraction n'y a identifié aucun argument — "
+        "aucune thèse à examiner, aucun raisonnement à suivre."
+    ]
+    if metadata:
+        elements = [f"{label} : « {value} »" for label, value in metadata.items()]
+        parts.append(
+            "Le matériel enregistré le décrit ainsi — " + " ; ".join(elements) + "."
+        )
+    parts.append(
+        "Les phases qui lisent des arguments, des sophismes ou des inférences "
+        "ont donc été écartées : la classification est terminale, et ce n'est "
+        "pas un échec."
+    )
+    return "\n\n".join(parts)
+
+
 def pipeline_full_text(
     st: Dict[str, Any],
     classification: Optional[str],
     opaque_id: str,
     outcome: Dict[str, Any],
+    chars: Optional[int] = None,
 ) -> str:
     """The pipeline's own words for one document — ONE producer, two callers.
 
@@ -398,6 +468,10 @@ def pipeline_full_text(
     #3393: the FB-18 anchors are numbered here, in the same string, so the
     judge reads prose with resolvable notes instead of raw ``[artifact:…]``
     markers the reader never sees.
+    #3392: the non-argumentative branch prints the reader's French paragraph,
+    built from the recorded material, instead of the batch runner's English
+    line (which stays in the log). ``chars`` is the length the caller already
+    measured; omitted, it is read from the state — the same measure.
     """
     notes: Dict[str, str] = {}
     body: List[str] = []
@@ -405,20 +479,19 @@ def pipeline_full_text(
         # #3278 — the empty acts of a non-argumentative document are a
         # terminal classification, not an absence: the reader of the one
         # document with no analysis is the one who most needs to know why.
-        # The phrase is the batch runner's own (one source, two callers —
-        # a second wording here is the divergence #3123 caught), imported
-        # lazily so the offline producer stays import-light.
-        from scripts.dataset.run_corpus_batch import (
-            render_non_argumentative_restitution,
-        )
-
+        # #3392 — the reader gets a French paragraph built from the recorded
+        # material; the batch runner's English line stays in the LOG
+        # (run_corpus_batch prints it there, untouched) and leaves the
+        # reader's surface entirely — a hidden copy here would still be
+        # text the judge reads.
+        length = document_chars(st) if chars is None else chars
         body.append(
             "**Classification terminale : document non-argumentatif.** "
             "Aucun acte n'est produit pour ce document, et c'est le "
-            "comportement attendu — même phrase que le batch runner :"
+            "comportement attendu."
         )
         body.append("")
-        body.append("> " + render_non_argumentative_restitution(opaque_id, outcome))
+        body.append(render_non_argumentative_reader_paragraph(st, length))
         body.append("")
     else:
         acts = [
@@ -474,7 +547,7 @@ def render_fiche(
     )
     lines.append("")
     lines.append(
-        f"*Document `{facts['opaque_id']}` — {WORKFLOW_LABELS_FR.get(facts['workflow'], facts['workflow'])}, statut `{facts['status']}`.*"
+        f"*Document `{facts['opaque_id']}` — {WORKFLOW_LABELS_FR.get(facts['workflow'], facts['workflow'])}, statut `{STATUS_LABELS_FR.get(facts['status'], facts['status'])}`.*"
     )
     lines.append("")
     lines.append("## Faits mesurés (lus dans l'état de la campagne)")
@@ -499,6 +572,7 @@ def render_fiche(
         facts.get("classification"),
         facts["opaque_id"],
         facts.get("outcome") or {},
+        chars=facts["chars"],
     )
     if full_text:
         lines.append(full_text)
