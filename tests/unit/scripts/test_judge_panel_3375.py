@@ -8,13 +8,20 @@ The dispatch's DoD, one witness per clause:
 - the dry-run lists exactly the panel;
 - the verdict table is produced on synthetic arm outputs.
 
+Tranche 3 (R1140): the judge reads the SOURCE DOCUMENT (third prompt block,
+decrypted in memory, never persisted) and verifies ``document_quote``
+mechanically against it; the judged pipeline text IS the fiche's full-text
+section — one producer, two callers — so a non-argumentative document shows
+the judge its terminal classification instead of an empty string.
+
 Plus the shapes that would make the instrument lie quietly: an unparsed
 answer coerced into a verdict, an M1 unprovable by construction, a cost
 printed as 0.0000 $ because the model is not priced (#1019 tri-state), a
 table built on a subset of the panel and reported as the panel.
 
 No network, no dataset, no key: every call goes through the injected
-``judge_call``, and the endpoint resolver is replaced. **Zero paid call.**
+``judge_call``, the endpoint resolver and the document loader are replaced.
+**Zero paid call, zero corpus read.**
 """
 
 from __future__ import annotations
@@ -44,6 +51,12 @@ ZEROSHOT_TEXT = (
     "Le document defend la these beta en s'appuyant sur un exemple date, et "
     "ne discute jamais la semantique preferee."
 )
+DOCUMENT_TEXT = (
+    "Discours synthetique de test. La these centrale affirme que la mesure "
+    "de 1998 a reduit le deficit de moitie, et le texte appuie cette "
+    "affirmation sur trois chiffres dates."
+)
+DOC_QUOTE = "la mesure de 1998 a reduit le deficit de moitie"
 GAP_TEXT = "la semantique preferee"  # present in the reading, absent from the analysis
 
 PANEL = ["aaaa1111", "bbbb2222", "cccc3333"]
@@ -175,6 +188,21 @@ def _no_named_route(monkeypatch):
     )
 
 
+@pytest.fixture(autouse=True)
+def _synthetic_documents(monkeypatch):
+    """The document loader is replaced: no witness ever reads the corpus.
+
+    The real loader decrypts the encrypted dataset in memory (privacy rule 5)
+    — a test touching it would put source text in test output. Every witness
+    judges a synthetic document instead.
+    """
+    monkeypatch.setattr(
+        jp,
+        "load_document_texts",
+        lambda panel: {doc_id: DOCUMENT_TEXT for doc_id in panel},
+    )
+
+
 # ---------------------------------------------------------------------------
 # The draw
 # ---------------------------------------------------------------------------
@@ -239,6 +267,22 @@ class TestTheJuryIsNotTheAuthor:
         with pytest.raises(ValueError):
             jp.model_family("a-model-nobody-priced")
 
+    def test_a_longer_prefix_wins_over_its_own_shorter_prefix(self, monkeypatch):
+        """Longest-first is the MATCH's rule, not the table's declaration order.
+
+        A vendor row added above its own extension (``x-`` before ``x-long-``)
+        must not shadow it — the comment said so before the code did (R1140).
+        """
+        import argumentation_analysis.evaluation.model_family as mf
+
+        monkeypatch.setattr(
+            mf,
+            "_FAMILY_PREFIXES",
+            (("x-", "family_a"), ("x-long-", "family_b")),
+        )
+        assert mf.model_family("x-long-1") == "family_b"
+        assert mf.model_family("x-other-1") == "family_a"
+
     def test_the_runner_refuses_before_any_call(self, tmp_path):
         """The refusal is a stop, not a warning printed next to a running pass."""
         world = _with_panel_file(make_world(tmp_path))
@@ -270,6 +314,7 @@ class TestCitations:
             ],
             PIPELINE_TEXT,
             ZEROSHOT_TEXT,
+            DOCUMENT_TEXT,
         )
         assert kept == []
         assert len(dropped) == 1
@@ -291,6 +336,7 @@ class TestCitations:
             ],
             PIPELINE_TEXT,
             ZEROSHOT_TEXT,
+            DOCUMENT_TEXT,
         )
         assert dropped == []
         assert len(kept) == 1
@@ -314,6 +360,7 @@ class TestCitations:
             [{"code": "S1", "analysis_quote": ZEROSHOT_TEXT}],
             PIPELINE_TEXT,
             ZEROSHOT_TEXT,
+            DOCUMENT_TEXT,
         )
         assert kept == []
         assert dropped[0]["reason"] == "quote_not_in_pipeline_text"
@@ -330,6 +377,7 @@ class TestCitations:
             ],
             PIPELINE_TEXT,
             ZEROSHOT_TEXT,
+            DOCUMENT_TEXT,
         )
         assert dropped == []
         assert kept[0]["code"] == "M1"
@@ -339,30 +387,35 @@ class TestCitations:
             [{"code": "M1", "analysis_quote": "Le graphe rejette la these alpha"}],
             PIPELINE_TEXT,
             ZEROSHOT_TEXT,
+            DOCUMENT_TEXT,
         )
         assert kept == []
         assert dropped[0]["reason"] == "missing_zeroshot_quote"
 
-    def test_an_m2_quotes_both_sides(self):
+    def test_an_m2_quotes_all_three_sides(self):
         kept, dropped = jp.validate_items(
             [
                 {
                     "code": "M2",
                     "analysis_quote": "Le graphe rejette la these alpha",
                     "reading_quote": "Le document defend la these beta",
+                    "document_quote": DOC_QUOTE,
                 }
             ],
             PIPELINE_TEXT,
             ZEROSHOT_TEXT,
+            DOCUMENT_TEXT,
         )
         assert dropped == []
         assert kept[0]["code"] == "M2"
+        assert kept[0]["document_quote"] == DOC_QUOTE
 
     def test_an_unknown_code_is_dropped_not_kept_under_another_name(self):
         kept, dropped = jp.validate_items(
             [{"code": "S9", "analysis_quote": PIPELINE_TEXT}],
             PIPELINE_TEXT,
             ZEROSHOT_TEXT,
+            DOCUMENT_TEXT,
         )
         assert kept == []
         assert dropped[0]["reason"] == "unknown_code"
@@ -409,7 +462,7 @@ class TestTheAnswer:
 
     def test_an_unreadable_answer_is_counted_not_coerced(self):
         row = jp._judge_one(
-            "doc0", PIPELINE_TEXT, ZEROSHOT_TEXT, SEED, "je ne sais pas"
+            "doc0", PIPELINE_TEXT, ZEROSHOT_TEXT, DOCUMENT_TEXT, SEED, "je ne sais pas"
         )
         assert row["state"] == "UNPARSED"
         assert row["kept"] == []
@@ -417,7 +470,12 @@ class TestTheAnswer:
 
     def test_an_unknown_state_is_not_silently_mapped_to_parity(self):
         row = jp._judge_one(
-            "doc0", PIPELINE_TEXT, ZEROSHOT_TEXT, SEED, _answer(state="PROBABLY_FINE")
+            "doc0",
+            PIPELINE_TEXT,
+            ZEROSHOT_TEXT,
+            DOCUMENT_TEXT,
+            SEED,
+            _answer(state="PROBABLY_FINE"),
         )
         assert row["state"] == "UNPARSED"
 
@@ -425,10 +483,20 @@ class TestTheAnswer:
         doc = PANEL[0]
         drawn_first = jp.positions(doc, SEED)["pipeline"] == 1
         row_one = jp._judge_one(
-            doc, PIPELINE_TEXT, ZEROSHOT_TEXT, SEED, _answer(identification="1")
+            doc,
+            PIPELINE_TEXT,
+            ZEROSHOT_TEXT,
+            DOCUMENT_TEXT,
+            SEED,
+            _answer(identification="1"),
         )
         row_two = jp._judge_one(
-            doc, PIPELINE_TEXT, ZEROSHOT_TEXT, SEED, _answer(identification="2")
+            doc,
+            PIPELINE_TEXT,
+            ZEROSHOT_TEXT,
+            DOCUMENT_TEXT,
+            SEED,
+            _answer(identification="2"),
         )
         assert row_one["identification_ok"] is drawn_first
         assert row_two["identification_ok"] is (not drawn_first)
@@ -441,33 +509,33 @@ class TestTheAnswer:
 
 class TestThePrompt:
     def test_no_arm_label_is_used(self):
-        prompt = jp.build_judge_prompt(ZEROSHOT_TEXT, PIPELINE_TEXT)
+        prompt = jp.build_judge_prompt(ZEROSHOT_TEXT, PIPELINE_TEXT, DOCUMENT_TEXT)
         assert "zeroshot_2841" not in prompt
         assert "zero-shot" not in prompt.lower()
 
     def test_the_prompt_never_says_which_position_is_which(self):
-        prompt = jp.build_judge_prompt(ZEROSHOT_TEXT, PIPELINE_TEXT)
+        prompt = jp.build_judge_prompt(ZEROSHOT_TEXT, PIPELINE_TEXT, DOCUMENT_TEXT)
         assert "Texte 1 est" not in prompt
         assert "Texte 2 est" not in prompt
         assert prompt.count("## Texte 1") == 1
         assert prompt.count("## Texte 2") == 1
 
     def test_both_texts_are_carried_verbatim(self):
-        prompt = jp.build_judge_prompt(ZEROSHOT_TEXT, PIPELINE_TEXT)
+        prompt = jp.build_judge_prompt(ZEROSHOT_TEXT, PIPELINE_TEXT, DOCUMENT_TEXT)
         assert ZEROSHOT_TEXT in prompt
         assert PIPELINE_TEXT in prompt
 
     def test_the_roles_are_described_so_the_codes_are_answerable(self):
-        prompt = jp.build_judge_prompt(ZEROSHOT_TEXT, PIPELINE_TEXT)
+        prompt = jp.build_judge_prompt(ZEROSHOT_TEXT, PIPELINE_TEXT, DOCUMENT_TEXT)
         assert "analyse multi-méthodes" in prompt
         assert "lecture en un seul passage" in prompt
 
     def test_the_citation_rule_is_stated(self):
-        prompt = jp.build_judge_prompt(ZEROSHOT_TEXT, PIPELINE_TEXT)
+        prompt = jp.build_judge_prompt(ZEROSHOT_TEXT, PIPELINE_TEXT, DOCUMENT_TEXT)
         assert "mot pour mot" in prompt
 
     def test_style_is_explicitly_not_a_gap(self):
-        prompt = jp.build_judge_prompt(ZEROSHOT_TEXT, PIPELINE_TEXT)
+        prompt = jp.build_judge_prompt(ZEROSHOT_TEXT, PIPELINE_TEXT, DOCUMENT_TEXT)
         assert "forme" in prompt and "pas un M" in prompt
 
     def test_the_texts_land_in_the_drawn_order(self):
@@ -478,12 +546,271 @@ class TestThePrompt:
                 (PIPELINE_TEXT, ZEROSHOT_TEXT)
                 if pos["pipeline"] == 1
                 else (ZEROSHOT_TEXT, PIPELINE_TEXT)
-            )
+            ),
+            DOCUMENT_TEXT,
         )
         first_body = PIPELINE_TEXT if pos["pipeline"] == 1 else ZEROSHOT_TEXT
         assert prompt.index(first_body) < prompt.index(
             ZEROSHOT_TEXT if pos["pipeline"] == 1 else PIPELINE_TEXT
         )
+
+
+# ---------------------------------------------------------------------------
+# The source document — a third block, quoted by its own field
+# ---------------------------------------------------------------------------
+
+
+class TestTheDocument:
+    def test_the_document_block_rides_in_the_prompt(self):
+        """Without the source, the single-pass reading is the oracle of the
+        M2s it itself produced — the judge must read what is contradicted."""
+        prompt = jp.build_judge_prompt(PIPELINE_TEXT, ZEROSHOT_TEXT, DOCUMENT_TEXT)
+        assert prompt.count("## Document") == 1
+        assert DOCUMENT_TEXT in prompt
+
+    def test_the_document_is_not_a_third_contender(self):
+        """The document is the source, not a third analysis: exactly two
+        numbered texts, and the M2 rule names the document line."""
+        prompt = jp.build_judge_prompt(PIPELINE_TEXT, ZEROSHOT_TEXT, DOCUMENT_TEXT)
+        assert prompt.count("## Texte 1") == 1
+        assert prompt.count("## Texte 2") == 1
+        assert "document_quote" in prompt
+
+    def test_a_fabricated_document_quote_drops_the_item(self):
+        kept, dropped = jp.validate_items(
+            [
+                {
+                    "code": "M2",
+                    "analysis_quote": "Le graphe rejette la these alpha",
+                    "reading_quote": "Le document defend la these beta",
+                    "document_quote": "une ligne que le document n'a jamais portee",
+                }
+            ],
+            PIPELINE_TEXT,
+            ZEROSHOT_TEXT,
+            DOCUMENT_TEXT,
+        )
+        assert kept == []
+        assert dropped[0]["reason"] == "quote_not_in_document_text"
+
+    def test_an_m2_without_a_document_quote_is_dropped(self):
+        """An M2 the source cannot be shown to contradict is an opinion."""
+        kept, dropped = jp.validate_items(
+            [
+                {
+                    "code": "M2",
+                    "analysis_quote": "Le graphe rejette la these alpha",
+                    "reading_quote": "Le document defend la these beta",
+                }
+            ],
+            PIPELINE_TEXT,
+            ZEROSHOT_TEXT,
+            DOCUMENT_TEXT,
+        )
+        assert kept == []
+        assert dropped[0]["reason"] == "missing_document_quote"
+
+    def test_a_true_m2_with_its_document_line_survives(self):
+        kept, dropped = jp.validate_items(
+            [
+                {
+                    "code": "M2",
+                    "analysis_quote": "Le graphe rejette la these alpha",
+                    "reading_quote": "Le document defend la these beta",
+                    "document_quote": DOC_QUOTE,
+                }
+            ],
+            PIPELINE_TEXT,
+            ZEROSHOT_TEXT,
+            DOCUMENT_TEXT,
+        )
+        assert dropped == []
+        assert kept[0]["code"] == "M2"
+        assert kept[0]["document_quote"] == DOC_QUOTE
+
+    def test_a_fabricated_document_quote_drops_even_a_code_that_does_not_require_one(
+        self,
+    ):
+        """Required only for M2, VERIFIED wherever present: an invented
+        citation is an invented citation, whatever code carries it."""
+        kept, dropped = jp.validate_items(
+            [
+                {
+                    "code": "S2",
+                    "analysis_quote": "l'accepte dans la semantique preferee",
+                    "document_quote": "le deficit a triple en 2004",
+                }
+            ],
+            PIPELINE_TEXT,
+            ZEROSHOT_TEXT,
+            DOCUMENT_TEXT,
+        )
+        assert kept == []
+        assert dropped[0]["reason"] == "quote_not_in_document_text"
+
+    def test_an_s_item_with_a_true_document_quote_keeps_it(self):
+        """Accepted for S*: the quote strengthens the item and is recorded."""
+        kept, dropped = jp.validate_items(
+            [
+                {
+                    "code": "S2",
+                    "analysis_quote": "l'accepte dans la semantique preferee",
+                    "document_quote": DOC_QUOTE,
+                }
+            ],
+            PIPELINE_TEXT,
+            ZEROSHOT_TEXT,
+            DOCUMENT_TEXT,
+        )
+        assert dropped == []
+        assert kept[0]["document_quote"] == DOC_QUOTE
+
+
+# ---------------------------------------------------------------------------
+# The judged text IS the fiche's text — one producer, two callers
+# ---------------------------------------------------------------------------
+
+
+def _facts(opaque_id, classification=None, outcome=None):
+    """The fiche's facts dict, minimal but complete for render_fiche."""
+    return {
+        "title": "Titre synthetique",
+        "speaker": "Orateur synthetique",
+        "year": "2001",
+        "opaque_id": opaque_id,
+        "workflow": "standard",
+        "status": "ok",
+        "chars": 300,
+        "args": 2,
+        "fallacies": 1,
+        "fol": 3,
+        "pl": 1,
+        "modal": 0,
+        "wall_s": 12.0,
+        "calls": 5,
+        "cost": 0.0123,
+        "reading_window_status": None,
+        "restitution_acts_degraded": None,
+        "classification": classification,
+        "outcome": outcome or {},
+    }
+
+
+class TestTheJudgedTextIsTheFiche:
+    def _fiche_section(self, tmp_path, state, signature, facts):
+        from scripts.dataset import render_campaign_reading_folder as rcr
+
+        zeroshot = {
+            "answer": ZEROSHOT_TEXT,
+            "elapsed_seconds": 4,
+            "usage": {"prompt_tokens": 10, "completion_tokens": 5},
+            "provenance": {"model": "gpt-5.6-luna", "git_head": "deadbeef"},
+        }
+        fiche = rcr.render_fiche(
+            facts, state, zeroshot, "deadbeef", "gpt-5.6-luna", "cmd"
+        )
+        head = "## Le pipeline, en texte intégral\n\n"
+        tail = "\n## La réponse zero-shot, intégrale"
+        start = fiche.index(head) + len(head)
+        return fiche[start : fiche.index(tail)]
+
+    def test_the_judged_text_is_what_the_fiche_prints(self, tmp_path):
+        """The judge reads the SAME string the reader reads — headings,
+        placeholders and all. A second copy diverges (that is how the
+        non-argumentative document reached the judge empty)."""
+        state = {
+            "state": {
+                "act1_framing": PIPELINE_TEXT,
+                "interpretive_question": "Quelle premisse reste sans appui ?",
+            }
+        }
+        signature = {"opaque_id": "aaaa1111"}
+        section = self._fiche_section(tmp_path, state, signature, _facts("aaaa1111"))
+        assert section == jp.pipeline_text_from_state(state, signature)
+        # and the section really carries the fiche's shapes, not bare blocks
+        assert "### Acte I — cadrage" in section
+        assert "*(absent de l'état" in section  # act II missing → placeholder
+
+    def test_a_non_argumentative_document_is_not_judged_as_an_empty_text(
+        self, tmp_path
+    ):
+        """#3278: the terminal classification is a READER-facing sentence —
+        the judge that does not see it cannot even see why there is nothing."""
+        state = {"state": {"act1_framing": ""}}
+        signature = {
+            "opaque_id": "aaaa1111",
+            "document_classification": "non_argumentative",
+            "outcome": {"status": "non_argumentative", "phase": "extraction"},
+        }
+        judged = jp.pipeline_text_from_state(state, signature)
+        assert (
+            judged.strip()
+        ), "the judged text of a non-argumentative document is EMPTY"
+        assert "non-argumentatif" in judged
+        assert "Document aaaa1111: classified non-argumentative" in judged
+
+    def test_the_non_argumentative_fiche_section_is_the_judged_text(self, tmp_path):
+        state = {"state": {"act1_framing": ""}}
+        signature = {
+            "opaque_id": "aaaa1111",
+            "document_classification": "non_argumentative",
+            "outcome": {"status": "non_argumentative", "phase": "extraction"},
+        }
+        section = self._fiche_section(
+            tmp_path,
+            state,
+            signature,
+            _facts("aaaa1111", "non_argumentative", signature["outcome"]),
+        )
+        assert section == jp.pipeline_text_from_state(state, signature)
+
+
+# ---------------------------------------------------------------------------
+# The document loader — decrypted in memory, never persisted, whole
+# ---------------------------------------------------------------------------
+
+
+class TestTheDocumentLoader:
+    def test_definitions_map_to_whole_texts_under_their_opaque_id(self, monkeypatch):
+        monkeypatch.setenv("OPAQUE_ID_SALT", "test-salt-3375")
+        from argumentation_analysis.evaluation.opaque_id import opaque_id as _oid
+
+        doc_id = _oid("Source synthetique")
+        definitions = [
+            {
+                "source_name": "Source synthetique",
+                "extracts": [{"extract_text": DOCUMENT_TEXT}],
+            }
+        ]
+        texts = jp.document_texts_from_definitions(definitions, [doc_id])
+        assert texts[doc_id] == DOCUMENT_TEXT
+
+    def test_the_run_stops_when_the_corpus_does_not_carry_a_panel_document(
+        self, tmp_path
+    ):
+        """The judge rules on documents it can read — a panel id with no
+        corpus text is a stop naming it, never a silent skip."""
+        world = _with_panel_file(make_world(tmp_path))
+        with pytest.raises(SystemExit) as excinfo:
+            asyncio.run(
+                jp.run(
+                    _argv(world, extra=("--dry-run",)),
+                    judge_call=FakeJudge(),
+                    document_loader=lambda panel: {
+                        doc_id: DOCUMENT_TEXT for doc_id in list(panel)[:-1]
+                    },
+                )
+            )
+        assert PANEL[-1] in str(excinfo.value)
+
+    def test_no_passphrase_stops_the_run_before_any_corpus_read(self, monkeypatch):
+        """Privacy rule 5 cuts both ways: no key, no document — and no
+        fallback to judging without the source."""
+        monkeypatch.delenv("TEXT_CONFIG_PASSPHRASE", raising=False)
+        monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **k: None)
+        with pytest.raises(SystemExit) as excinfo:
+            jp._passphrase_or_exit()
+        assert "TEXT_CONFIG_PASSPHRASE" in str(excinfo.value)
 
 
 # ---------------------------------------------------------------------------
@@ -525,6 +852,15 @@ class TestDryRun:
         out = capsys.readouterr().out
         assert "unpriced" in out
         assert "0.0000 $" not in out
+
+    def test_the_dry_run_prints_the_document_size_too(self, tmp_path, capsys):
+        """The document rides in every prompt: its size is the number that
+        decides whether the prompt fits the judge's context — printed BEFORE
+        any call, so an oversize document is visible without paying for it."""
+        world = _with_panel_file(make_world(tmp_path))
+        asyncio.run(jp.run(_argv(world, extra=("--dry-run",)), judge_call=FakeJudge()))
+        out = capsys.readouterr().out
+        assert "document=" in out
 
     def test_a_panel_document_without_an_arm_stops_the_run(self, tmp_path):
         world = _with_panel_file(
@@ -661,3 +997,26 @@ class TestTheTable:
         world = _with_panel_file(make_world(tmp_path))
         asyncio.run(jp.run(_argv(world, extra=("--dry-run",)), judge_call=FakeJudge()))
         assert not world["out"].exists()
+
+    def test_the_command_line_is_replayable(self, tmp_path):
+        """#2353: the recorded command carries the panel selectors — a line
+        without them re-runs whatever the directory holds, not the panel."""
+        world = _with_panel_file(make_world(tmp_path))
+        self._run(world, FakeJudge())
+        table = (world["out"] / "TABLE.md").read_text(encoding="utf-8")
+        assert "--panel-file" in table
+        assert str(world["panel_file"]) in table
+
+    def test_a_failed_call_shows_its_http_code_in_the_row(self, tmp_path):
+        """A prompt over the judge's context answers 400: the document is
+        UNPARSED and the reader sees WHY — loud, never silent truncation."""
+
+        class Refused:
+            async def __call__(self, endpoint, prompt, timeout=600):
+                return {"status_code": 400, "error_body_head": "prompt too long"}
+
+        world = _with_panel_file(make_world(tmp_path))
+        self._run(world, Refused())
+        table = (world["out"] / "TABLE.md").read_text(encoding="utf-8")
+        assert "HTTP 400" in table
+        assert f"`UNPARSED` : **{len(PANEL)}**" in table

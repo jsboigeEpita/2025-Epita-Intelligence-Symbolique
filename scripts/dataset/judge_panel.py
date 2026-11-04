@@ -20,6 +20,15 @@ What it refuses, and why (each refusal is a witness in
 - a silent fallback when a cost cannot be priced (``#1019`` tri-state: an
   unpriced arm prints ``unpriced``, never 0.0000 $).
 
+The judge sees the SOURCE DOCUMENT as a third prompt block: an M2 is a claim
+the document contradicts, and without the document the single-pass reading
+would be the oracle of its own correctness. The document is decrypted IN
+MEMORY (``load_extract_definitions`` with the derived key) and never
+persisted — no file, no log, no test output carries it (dataset privacy
+rule 5). The WHOLE document rides in the prompt or that document fails
+loudly: an excerpt would let the judge verify quotes against a slice the
+campaign itself never read.
+
 Blindness, stated honestly: the two texts are shown as ``Texte 1`` and
 ``Texte 2``, their side of the pairing drawn per document from a seed that
 is recorded. The pipeline's rendered form stays recognisable — so this is
@@ -84,8 +93,12 @@ ITEM_CODES: Tuple[str, ...] = ("S1", "S2", "S3", "S4", "S5", "M1", "M2")
 #  - M1 ("une observation qu'AUCUNE ligne du rendu ne porte") is an ABSENCE on
 #    the analysis side: demanding an analysis quote would make every M1
 #    unprovable, so only the zero-shot quote is required.
-#  - M2 ("une affirmation du rendu que le document démentit") quotes both: the
-#    wrong claim and the correct reading.
+#  - M2 ("une affirmation du rendu que le document démentit") quotes all
+#    three: the wrong claim, the correct reading, and the DOCUMENT line that
+#    contradicts it — an M2 the source cannot be shown to contradict is an
+#    opinion, not a contresens.
+# A document_quote on ANY code is verified when present (a fabricated
+# citation is a fabricated citation) and required only where stated.
 REQUIRED_SIDES: Dict[str, Tuple[str, ...]] = {
     "S1": ("pipeline",),
     "S2": ("pipeline",),
@@ -93,7 +106,7 @@ REQUIRED_SIDES: Dict[str, Tuple[str, ...]] = {
     "S4": ("pipeline",),
     "S5": ("pipeline",),
     "M1": ("zeroshot",),
-    "M2": ("pipeline", "zeroshot"),
+    "M2": ("pipeline", "zeroshot", "document"),
 }
 
 # §2's two M forms plus the coordinator's severity rule (R1139): severe = M2,
@@ -164,6 +177,7 @@ def validate_items(
     raw_items: Sequence[Any],
     pipeline_text: str,
     zeroshot_text: str,
+    document_text: str,
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """Split the judge's items into kept and DROPPED, with a reason each.
 
@@ -182,12 +196,19 @@ def validate_items(
             continue
         # The judge quotes by ROLE ("analysis" / "reading"), never by arm:
         # the position each role occupies is the draw's business, recorded
-        # separately, and the mapping to the arms stays in the runner.
+        # separately, and the mapping to the arms stays in the runner. The
+        # document is a third side — the source itself, quoted by its own
+        # field, verified against the decrypted-in-memory text.
         sides = {
             "pipeline": raw.get("analysis_quote") or "",
             "zeroshot": raw.get("reading_quote") or "",
+            "document": raw.get("document_quote") or "",
         }
-        texts = {"pipeline": pipeline_text, "zeroshot": zeroshot_text}
+        texts = {
+            "pipeline": pipeline_text,
+            "zeroshot": zeroshot_text,
+            "document": document_text,
+        }
         reason = None
         for side, quote in sides.items():
             if quote and not is_cited(texts[side], quote):
@@ -210,6 +231,7 @@ def validate_items(
                 "on_central_thesis": bool(raw.get("on_central_thesis")),
                 "pipeline_quote": normalise(sides["pipeline"]),
                 "zeroshot_quote": normalise(sides["zeroshot"]),
+                "document_quote": normalise(sides["document"]),
                 "note": str(raw.get("note") or "").strip(),
             }
         )
@@ -274,13 +296,15 @@ def parse_judge_answer(answer: str) -> Dict[str, Any]:
 
 _PROMPT_HEADER = """Tu es le lecteur-juge de la campagne d'analyse argumentative.
 
-Deux textes portent sur un même document :
+Un document source, et deux textes portent sur lui :
 - l'un est une **analyse multi-méthodes** (actes de cadrage, récit, conclusion,
   synthèse ; verdicts formels ; graphe d'argumentation ; détection de
   sophismes ; notes de qualité) ;
 - l'autre est une **lecture en un seul passage** du même document.
 
 Tu ne sais pas dans quel ordre ils sont présentés. Identifie-les toi-même.
+Le document source est là : c'est lui qui fait foi quand un texte affirme
+quelque chose qu'il dément.
 
 ## Ce que tu rends
 
@@ -294,6 +318,7 @@ Un objet JSON, et rien d'autre :
       "code": "S1".."S5" | "M1" | "M2",
       "analysis_quote": "extrait EXACT de l'analyse multi-méthodes",
       "reading_quote": "extrait EXACT de la lecture en un seul passage",
+      "document_quote": "extrait EXACT du document source",
       "on_central_thesis": true | false,
       "note": "une phrase"
     }
@@ -316,14 +341,16 @@ Un objet JSON, et rien d'autre :
 - **M1** : une observation sur le document qu'AUCUNE ligne de l'analyse ne
   porte. Mets `on_central_thesis` à true si elle porte sur la thèse centrale.
 - **M2** : une affirmation de l'analyse que le document démentit, et que la
-  lecture en un seul passage lit correctement.
+  lecture en un seul passage lit correctement. Cite dans `document_quote` la
+  ligne du document qui démentit — sans elle, l'item n'existe pas.
 
 ## Règles de citation — non négociables
 
-Chaque citation doit être **recopiée mot pour mot** du texte qu'elle cite. Une
-citation introuvable fait tomber l'item : c'est la vérification mécanique qui
-rend ce jugement falsifiable. Aucun item sans citation n'existe. Si tu n'as
-pas la citation exacte, n'émets pas l'item.
+Chaque citation doit être **recopiée mot pour mot** du texte qu'elle cite —
+l'analyse, la lecture, ou le document. Une citation introuvable fait tomber
+l'item : c'est la vérification mécanique qui rend ce jugement falsifiable.
+Aucun item sans citation n'existe. Si tu n'as pas la citation exacte,
+n'émets pas l'item.
 
 Une différence de **forme** (l'un écrit mieux) n'est pas un M : mets-la dans
 `style_notes`.
@@ -340,11 +367,14 @@ Une différence de **forme** (l'un écrit mieux) n'est pas un M : mets-la dans
 """
 
 
-def build_judge_prompt(text_1: str, text_2: str) -> str:
-    """The judge's prompt: the grid, then the two texts, positionally.
+def build_judge_prompt(text_1: str, text_2: str, document: str) -> str:
+    """The judge's prompt: the grid, the two texts positionally, the source.
 
     No arm name appears in it: the roles are the judge's to establish, and
-    the mapping back to the arms is the runner's, recorded in the table.
+    the mapping back to the arms is the runner's, recorded in the table. The
+    document rides WHOLE — the caller refuses to build this prompt on an
+    excerpt (#3375 tranche 3), and a prompt too large for the judge fails
+    that document loudly at call time, never by silent truncation here.
     """
     return (
         _PROMPT_HEADER
@@ -352,6 +382,8 @@ def build_judge_prompt(text_1: str, text_2: str) -> str:
         + (text_1 or "")
         + "\n>>>\n\n## Texte 2\n\n<<<\n"
         + (text_2 or "")
+        + "\n>>>\n\n## Document\n\n<<<\n"
+        + (document or "")
         + "\n>>>\n"
     )
 
@@ -360,32 +392,93 @@ def build_judge_prompt(text_1: str, text_2: str) -> str:
 # The arms' texts
 # ---------------------------------------------------------------------------
 
-_ACT_KEYS: Tuple[str, ...] = (
-    "act1_framing",
-    "act2_narrative",
-    "act3_conclusion",
-    "narrative_synthesis",
-)
 
+def pipeline_text_from_state(state: Dict[str, Any], signature: Dict[str, Any]) -> str:
+    """The pipeline's judged text IS the fiche's full-text section — verbatim.
 
-def pipeline_text_from_state(state: Dict[str, Any]) -> str:
-    """The pipeline's rendered words for a document, in the fiche's order.
-
-    Only what a reader of the render actually sees: the four acts and the
-    interpretive question. Counts (arguments, fallacies, verdict triplets) are
-    NOT in the judged text — the grid judges what the render says, and a
-    number the render does not print cannot be cited.
+    One producer, two callers (#3375 tranche 3): ``pipeline_full_text`` in the
+    reading-folder renderer builds it, the fiche prints it and the judge reads
+    it. The classification and outcome live at the SIGNATURE's root (#1909
+    slice 2) — that is why the signature rides along, and a document the
+    campaign classified non-argumentative shows the judge its terminal
+    classification instead of an empty string.
     """
+    from scripts.dataset.render_campaign_reading_folder import pipeline_full_text
+
     st = state.get("state") or state
-    blocks: List[str] = []
-    for key in _ACT_KEYS:
-        value = st.get(key)
-        if isinstance(value, str) and value.strip():
-            blocks.append(value.strip())
-    question = st.get("interpretive_question")
-    if isinstance(question, str) and question.strip():
-        blocks.append(question.strip())
-    return "\n\n".join(blocks)
+    return pipeline_full_text(
+        st,
+        signature.get("document_classification"),
+        str(signature.get("opaque_id") or ""),
+        signature.get("outcome") or {},
+    )
+
+
+def document_texts_from_definitions(
+    definitions: Sequence[Dict[str, Any]], panel: Sequence[str]
+) -> Dict[str, str]:
+    """Map each panel id to its WHOLE text, from in-memory definitions.
+
+    ``max_chars=0`` on purpose: the judge sees the source entire or the
+    document fails loudly — an excerpt would let a quote be verified against
+    a slice the campaign itself never read. A panel id the corpus does not
+    carry raises ``ValueError`` (via ``expand_corpus``), naming the id.
+    """
+    from scripts.dataset.run_corpus_batch import expand_corpus
+
+    docs, _omitted, _skipped = expand_corpus(list(definitions), 0, list(panel))
+    return {doc["opaque_id"]: doc["full_text"] for doc in docs}
+
+
+def _passphrase_or_exit() -> str:
+    """The dataset passphrase from the checkout ``.env``, or a loud stop.
+
+    No key, no document — and no fallback to judging without the source:
+    a judge that has not read the document cannot rule on what it
+    contradicts (#3375).
+    """
+    from dotenv import load_dotenv
+
+    from scripts.dataset.run_corpus_batch import REPO_ROOT
+
+    load_dotenv(REPO_ROOT / ".env")
+    passphrase = os.environ.get("TEXT_CONFIG_PASSPHRASE")
+    if not passphrase:
+        raise SystemExit(
+            "TEXT_CONFIG_PASSPHRASE is not set — the judge cannot see the "
+            "document, and a judge that has not read the source cannot rule "
+            "on what it contradicts (#3375)"
+        )
+    return passphrase
+
+
+def load_document_texts(panel: Sequence[str]) -> Dict[str, str]:
+    """Decrypt the corpus for the panel — in memory only, never persisted.
+
+    Dataset privacy rule 5: the definitions are consumed through
+    ``load_extract_definitions`` with the derived key and stay in this
+    process. No file, no log, no test output carries them; the only things
+    that leave are the prompt (to the judge) and short verified quotes (to
+    the gitignored results tree).
+    """
+    from argumentation_analysis.core.io_manager import load_extract_definitions
+    from argumentation_analysis.core.utils.crypto_utils import derive_encryption_key
+
+    from scripts.dataset.run_corpus_batch import ENCRYPTED_PATH
+
+    passphrase = _passphrase_or_exit()
+    key = derive_encryption_key(passphrase)
+    if not key:
+        raise SystemExit("failed to derive the dataset key from the passphrase")
+    definitions = load_extract_definitions(
+        config_file=ENCRYPTED_PATH,
+        b64_derived_key=key.decode("utf-8"),
+        raise_on_decrypt_error=True,
+    )
+    try:
+        return document_texts_from_definitions(definitions, panel)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
 
 
 def load_json(path: Path) -> Dict[str, Any]:
@@ -598,6 +691,10 @@ def render_table(rows: Sequence[Dict[str, Any]], meta: Dict[str, Any]) -> str:
     )
     lines.append(f"- Graine du tirage A/B : `{meta['seed']}` (par document)")
     lines.append(
+        "- Le juge a lu le **document source** (bloc `Document`, texte "
+        "entier) : un M2 est vérifié contre lui, `document_quote` à l'appui"
+    )
+    lines.append(
         "- Cécité : **aveugle à l'ordre, pas au style** — les deux textes sont "
         "présentés comme `Texte 1` / `Texte 2`, sans nom d'arm ; la forme du "
         "rendu du pipeline reste reconnaissable, et l'identification du juge "
@@ -617,8 +714,14 @@ def render_table(rows: Sequence[Dict[str, Any]], meta: Dict[str, Any]) -> str:
         counts = _count_codes(row.get("kept") or [])
         severity = _count_severities(row.get("kept") or [])
         ident = "ok" if row.get("identification_ok") else "**inversée**"
+        state_cell = f"`{row.get('state')}`"
+        if row.get("status_code") not in (200, None):
+            # A document whose call failed (a prompt over the judge's context
+            # answers 400, a network fault 0) is UNPARSED — and the reader
+            # must see WHY, not wonder (#3375 tranche 3: loud, never silent).
+            state_cell += f" **(HTTP {row['status_code']})**"
         lines.append(
-            f"| `{row['opaque_id']}` | `{row.get('state')}` | {ident} | "
+            f"| `{row['opaque_id']}` | {state_cell} | {ident} | "
             f"{counts['S']} | {counts['M']} | {severity['severe']} | "
             f"{severity['moderate']} | {len(row.get('dropped') or [])} | "
             f"{_money(row['costs'].get('pipeline'))} | "
@@ -760,6 +863,7 @@ def _judge_one(
     doc_id: str,
     pipeline_text: str,
     zeroshot_text: str,
+    document_text: str,
     seed: int,
     answer: str,
 ) -> Dict[str, Any]:
@@ -785,7 +889,7 @@ def _judge_one(
     if state not in STATES:
         state = "UNPARSED"
     kept, dropped = validate_items(
-        parsed.get("items") or [], pipeline_text, zeroshot_text
+        parsed.get("items") or [], pipeline_text, zeroshot_text, document_text
     )
     return {
         "opaque_id": doc_id,
@@ -803,6 +907,7 @@ def _judge_one(
 async def run(
     argv: Optional[List[str]] = None,
     judge_call: Callable[..., Any] = call_judge,
+    document_loader: Optional[Callable[[Sequence[str]], Dict[str, str]]] = None,
 ) -> int:
     parser = argparse.ArgumentParser(description="#3375 blind judge — v1 panel")
     parser.add_argument("--judge-model", required=True, help="judge model id")
@@ -837,6 +942,20 @@ async def run(
         args.judge_model, pipeline_model
     )
 
+    # The source document, decrypted in memory for the whole panel — the
+    # judge rules on what the DOCUMENT contradicts, so it reads the document.
+    # Resolved at call time (never a default-arg binding) so a test can
+    # replace the loader without touching the encrypted corpus.
+    loader = document_loader or load_document_texts
+    document_texts = loader(panel)
+    absent = [doc_id for doc_id in panel if doc_id not in document_texts]
+    if absent:
+        raise SystemExit(
+            f"{len(absent)} panel document(s) the corpus does not carry: "
+            f"{', '.join(absent)} — the judge cannot rule on a document it "
+            "cannot read (#3375)"
+        )
+
     documents: List[Dict[str, Any]] = []
     missing: List[str] = []
     for doc_id in panel:
@@ -854,8 +973,11 @@ async def run(
         documents.append(
             {
                 "opaque_id": doc_id,
-                "pipeline_text": pipeline_text_from_state(load_json(state_path)),
+                "pipeline_text": pipeline_text_from_state(
+                    load_json(state_path), signature
+                ),
                 "zeroshot_text": zeroshot.get("answer") or "",
+                "document_text": document_texts[doc_id],
                 "zeroshot": zeroshot,
                 "costs": arm_costs(signature, zeroshot, pipeline_model),
             }
@@ -873,7 +995,8 @@ async def run(
                 (doc["pipeline_text"], doc["zeroshot_text"])
                 if positions(doc["opaque_id"], args.seed)["pipeline"] == 1
                 else (doc["zeroshot_text"], doc["pipeline_text"])
-            )
+            ),
+            doc["document_text"],
         )
         for doc in documents
     }
@@ -895,6 +1018,7 @@ async def run(
             print(
                 f"  {doc_id}  pipeline={len(doc['pipeline_text'])}c  "
                 f"zeroshot={len(doc['zeroshot_text'])}c  "
+                f"document={len(doc['document_text'])}c  "
                 f"prompt={len(prompts[doc_id])}c  "
                 f"pipeline_is_texte_{pos['pipeline']}",
                 flush=True,
@@ -924,6 +1048,7 @@ async def run(
             doc_id,
             doc["pipeline_text"],
             doc["zeroshot_text"],
+            doc["document_text"],
             args.seed,
             record.get("answer") or "",
         )
@@ -956,9 +1081,14 @@ async def run(
         "pipeline_family": pipeline_family,
         "seed": args.seed,
         "run_head": run_head,
+        # Replayable as typed (#2353): the panel selectors ride in the
+        # command, so the recorded line re-runs the same ten documents.
         "command": (
             "PYTHONPATH=. python scripts/dataset/judge_panel.py "
-            f"--judge-model {args.judge_model} --seed {args.seed}"
+            f"--judge-model {args.judge_model}"
+            + (f" --doc-ids {args.doc_ids}" if args.doc_ids else "")
+            + (f" --panel-file {args.panel_file}" if args.panel_file else "")
+            + f" --seed {args.seed}"
         ),
     }
     table = render_table(rows, meta)

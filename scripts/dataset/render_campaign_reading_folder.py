@@ -327,6 +327,67 @@ def provenance_block(run_head: str, model: str, command: str) -> str:
     )
 
 
+def pipeline_full_text(
+    st: Dict[str, Any],
+    classification: Optional[str],
+    opaque_id: str,
+    outcome: Dict[str, Any],
+) -> str:
+    """The pipeline's own words for one document — ONE producer, two callers.
+
+    The fiche prints this verbatim under ``## Le pipeline, en texte intégral``
+    and the blind judge reads the very same string as an arm (#3375 tranche 3).
+    A second copy built for the judge had already diverged: it dropped the
+    terminal classification of a non-argumentative document (#3278), so the
+    judge stared at an EMPTY text where the reader saw the classification
+    sentence — the exact failure this single producer exists to close.
+    """
+    body: List[str] = []
+    if classification == "non_argumentative":
+        # #3278 — the empty acts of a non-argumentative document are a
+        # terminal classification, not an absence: the reader of the one
+        # document with no analysis is the one who most needs to know why.
+        # The phrase is the batch runner's own (one source, two callers —
+        # a second wording here is the divergence #3123 caught), imported
+        # lazily so the offline producer stays import-light.
+        from scripts.dataset.run_corpus_batch import (
+            render_non_argumentative_restitution,
+        )
+
+        body.append(
+            "**Classification terminale : document non-argumentatif.** "
+            "Aucun acte n'est produit pour ce document, et c'est le "
+            "comportement attendu — même phrase que le batch runner :"
+        )
+        body.append("")
+        body.append("> " + render_non_argumentative_restitution(opaque_id, outcome))
+        body.append("")
+    else:
+        acts = [
+            ("Acte I — cadrage", st.get("act1_framing")),
+            ("Acte II — récit", st.get("act2_narrative")),
+            ("Acte III — conclusion", st.get("act3_conclusion")),
+            ("Synthèse narrative", st.get("narrative_synthesis")),
+        ]
+        for heading, text in acts:
+            body.append(f"### {heading}")
+            body.append("")
+            if isinstance(text, str) and text:
+                body.append(text)
+            else:
+                body.append(
+                    f"*(absent de l'état — {heading.lower()} non produit pour ce document)*"
+                )
+            body.append("")
+    question = st.get("interpretive_question")
+    if isinstance(question, str) and question:
+        body.append("### Question interprétative")
+        body.append("")
+        body.append(question)
+        body.append("")
+    return "\n".join(body)
+
+
 def render_fiche(
     facts: Dict[str, Any],
     state: Dict[str, Any],
@@ -337,12 +398,6 @@ def render_fiche(
 ) -> str:
     """One readable fiche: the acts in full, the zero-shot beside, the facts."""
     st = state.get("state") or state
-    acts = [
-        ("Acte I — cadrage", st.get("act1_framing")),
-        ("Acte II — récit", st.get("act2_narrative")),
-        ("Acte III — conclusion", st.get("act3_conclusion")),
-        ("Synthèse narrative", st.get("narrative_synthesis")),
-    ]
     cost_txt = f"{facts['cost']:.4f} $" if facts["cost"] is not None else "non chiffré"
     zs_cost = (
         f"{zeroshot_cost_usd(zeroshot):.4f} $"
@@ -377,47 +432,14 @@ def render_fiche(
     lines.append("")
     lines.append("## Le pipeline, en texte intégral")
     lines.append("")
-    if facts.get("classification") == "non_argumentative":
-        # #3278 — the empty acts of a non-argumentative document are a
-        # terminal classification, not an absence: the reader of the one
-        # document with no analysis is the one who most needs to know why.
-        # The phrase is the batch runner's own (one source, two callers —
-        # a second wording here is the divergence #3123 caught), imported
-        # lazily so the offline producer stays import-light.
-        from scripts.dataset.run_corpus_batch import (
-            render_non_argumentative_restitution,
-        )
-
-        lines.append(
-            "**Classification terminale : document non-argumentatif.** "
-            "Aucun acte n'est produit pour ce document, et c'est le "
-            "comportement attendu — même phrase que le batch runner :"
-        )
-        lines.append("")
-        lines.append(
-            "> "
-            + render_non_argumentative_restitution(
-                facts["opaque_id"], facts.get("outcome") or {}
-            )
-        )
-        lines.append("")
-    else:
-        for heading, text in acts:
-            lines.append(f"### {heading}")
-            lines.append("")
-            if isinstance(text, str) and text:
-                lines.append(text)
-            else:
-                lines.append(
-                    f"*(absent de l'état — {heading.lower()} non produit pour ce document)*"
-                )
-            lines.append("")
-    question = st.get("interpretive_question")
-    if isinstance(question, str) and question:
-        lines.append("### Question interprétative")
-        lines.append("")
-        lines.append(question)
-        lines.append("")
+    full_text = pipeline_full_text(
+        st,
+        facts.get("classification"),
+        facts["opaque_id"],
+        facts.get("outcome") or {},
+    )
+    if full_text:
+        lines.append(full_text)
     lines.append("## La réponse zero-shot, intégrale")
     lines.append("")
     if zeroshot and zeroshot.get("answer"):
