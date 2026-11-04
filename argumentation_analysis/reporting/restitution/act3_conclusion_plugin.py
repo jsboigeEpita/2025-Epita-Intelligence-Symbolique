@@ -54,8 +54,10 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
+from fractions import Fraction
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
+from .figure_scales import score_with_scale  # #3394
 from .arena_record import (  # #3073: shared arena record with act1
     ArenaRecord,
     build_arena_record,
@@ -111,6 +113,7 @@ from argumentation_analysis.core.fallacy_attribution import (  # #3180
     is_reported_move,
     is_speaker_move,
     move_author_label_of,
+    taxonomy_definition_note,  # #3394
 )
 from argumentation_analysis.orchestration.fol_cause import (  # #3237
     FORMAL_CAUSE_NAMING_RULE,
@@ -436,6 +439,10 @@ class StructuringWeakPoint:
     # the detection, None when it measured none (#3029: unmeasured is None,
     # never a default). Printed on the line, weighed by the consigne.
     confidence: Optional[float] = None
+    # #3394 — the taxonomy's one-line definition for the label, "" when the
+    # node did not resolve (a definition is looked up, never borrowed). It
+    # rides the label's FIRST mention among the weaknesses lines.
+    definition: str = ""
 
 
 @dataclass
@@ -997,6 +1004,10 @@ def _collect_weak_points(
                 # #3231 — the detector's own standing travels with the point:
                 # the conclusion's consigne weighs it as Act II does.
                 confidence=confidence_of(fdata),
+                # #3394 — the label carries the taxonomy's own definition on
+                # its first mention: the reader is a non-specialist, and
+                # « sophisme métonymique » alone teaches nothing.
+                definition=taxonomy_definition_note(fdata),
             )
         )
     for arg_id, semantics in dung_rejected.items():
@@ -1155,10 +1166,17 @@ def _named_passed_virtues(strengths: List[QualityStrength]) -> str:
     Empty when none does — the caller then speaks the honest absence instead.
     """
     passed = _passed_strengths(strengths)
+    # #3394 — the count says what it counts: « 7/8 » alone never named its
+    # bar, and the reader could not tell a thin base from a strong one. The
+    # bar that admits a virtue to the discourse statement (3/4 of the
+    # arguments the quality pass evaluated) rides the clause itself.
+    # « k/m arguments évalués » stays contiguous — ``_VERDICT_BASE_RE``
+    # (the woven-restatement removal) is anchored on that exact shape.
+    bar = f"{Fraction(str(_DISCOURSE_BAR)).limit_denominator(4)}"
     return " ; ".join(
         f"{VIRTUE_DISPLAY_FR.get(s.virtue, s.virtue)} "
-        f"({s.args_at_top}/{s.args_evaluated} arguments évalués, "
-        f"{s.units_total} unités)"
+        f"({s.args_at_top}/{s.args_evaluated} arguments évalués "
+        f"— barre : {bar} des arguments évalués, {s.units_total} unités)"
         for s in passed
     )
 
@@ -3359,8 +3377,13 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
     # --- Appréciations (forces + faiblesses) ---
     if evidence.quality_strengths:
         strengths_lines = "\n".join(
-            f"  - {s.virtue} ({s.score:.1f} sur {s.args_at_top} des "
-            f"{s.args_evaluated} arguments évalués — {s.units_total} unités)"
+            # #3394 — the score arrives with its scale and direction
+            # (« 0,9 sur 1,0 — plus haut = meilleur »), never bare: the old
+            # line read « 1.0 sur 1 des 8 arguments évalués », where « sur »
+            # carried the scale and the count in one word.
+            f"  - {s.virtue} : score {score_with_scale(s.score, 1.0, decimals=1)} ; "
+            f"vertu atteinte sur {s.args_at_top} des {s.args_evaluated} "
+            f"arguments évalués — {s.units_total} unités"
             for s in evidence.quality_strengths[:6]
         )
         # #3159 — the generalisation was a RULE aimed at the writer (#3137) and
@@ -3390,20 +3413,30 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
             "acknowledger)"
         )
     if evidence.weak_points:
-        weaknesses_lines = "\n".join(
-            f"  - [{wp.source}] {wp.label} sur {wp.target_arg_id}"
-            + (f" : {wp.detail}" if wp.detail else "")
+        # #3394 — the definition rides the label's FIRST mention only: the
+        # reader learns what the label means once, and a repeated definition
+        # on every line would bury the document-grounded detail.
+        _defined_labels = set()
+        _weak_lines = []
+        for wp in evidence.weak_points[:8]:
             # #3231 — only a fallacy point carries a detector's confidence
             # (a Dung/PL/FOL verdict is a computation, not a measurement —
             # it has no confidence to print); among them, unmeasured is
             # printed as unmeasured, never filled in (#3029).
-            + (
-                f" — {detector_confidence_note(wp.confidence)}"
-                if wp.source == "fallacy"
-                else ""
+            line = (
+                f"  - [{wp.source}] {wp.label} sur {wp.target_arg_id}"
+                + (f" : {wp.detail}" if wp.detail else "")
+                + (
+                    f" — {detector_confidence_note(wp.confidence)}"
+                    if wp.source == "fallacy"
+                    else ""
+                )
             )
-            for wp in evidence.weak_points[:8]
-        )
+            if wp.definition and wp.label not in _defined_labels:
+                _defined_labels.add(wp.label)
+                line += f" ({wp.definition})"
+            _weak_lines.append(line)
+        weaknesses_lines = "\n".join(_weak_lines)
     else:
         weaknesses_lines = (
             "  (aucun point faible localisé — texte vertueux : titre sur la "

@@ -94,7 +94,8 @@ class TestStrengthsCarryTheirPopulation:
             "the label reads as a score OF the discourse — one top-band "
             "argument of 8 became 'le discours est bien structuré' (#3137)"
         )
-        assert "structure_logique (1.0 sur 1 des 8 arguments évalués" in slot
+        assert "structure_logique : score 1,0 sur 1,0 — plus haut = meilleur" in slot
+        assert "vertu atteinte sur 1 des 8 arguments évalués" in slot
         assert "15 unités" in slot
 
     def test_positive_control_a_virtue_on_all_evaluated_still_stands(self):
@@ -105,7 +106,10 @@ class TestStrengthsCarryTheirPopulation:
         prompt = build_act3_prompt(
             build_act3_evidence(_state(_QUALITY_8_OF_8, _ARGS_15_UNITS))
         )
-        assert "pertinence (1.0 sur 8 des 8 arguments évalués" in _forces_slot(prompt)
+        assert "pertinence : score 1,0 sur 1,0 — plus haut = meilleur" in _forces_slot(
+            prompt
+        )
+        assert "vertu atteinte sur 8 des 8 arguments évalués" in _forces_slot(prompt)
 
 
 class TestGeneralizationRule:

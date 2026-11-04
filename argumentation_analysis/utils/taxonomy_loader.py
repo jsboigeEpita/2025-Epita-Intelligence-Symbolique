@@ -248,6 +248,113 @@ def taxonomy_chain(taxonomy_path: str) -> Optional[List[str]]:
     return names
 
 
+# --- #3394 — the taxonomy's one-line definition for a detected label ----------
+
+
+#: The definition cell's render cap: one line, cut at a word boundary. The
+#: CSV's ``desc_fr`` is a sentence (« Votre discours vise à tromper votre
+#: auditoire. »); a multi-line cell or a runaway entry must not balloon a
+#: briefing line that carries it as a note.
+_DEFINITION_CAP = 240
+
+
+@lru_cache(maxsize=4)
+def _taxonomy_node_definitions(csv_path: str) -> Dict[str, str]:
+    """``path`` -> the node's one-line French definition (``desc_fr``).
+
+    Keyed by the resolved file path, same discipline as
+    :func:`_taxonomy_node_names` — a test swapping ``get_taxonomy_path`` reads
+    the swapped file, not a stale cache. The returned dict is shared through
+    the cache; callers must not mutate it.
+    """
+    index: Dict[str, str] = {}
+    try:
+        with open(csv_path, "r", encoding="utf-8-sig", newline="") as f:
+            for row in csv.DictReader(f):
+                path = (row.get("path") or "").strip()
+                desc = (row.get("desc_fr") or "").strip()
+                if path and desc:
+                    index[path] = desc
+    except OSError as exc:
+        logger.debug("taxonomy definitions unreadable at %s: %s", csv_path, exc)
+    return index
+
+
+@lru_cache(maxsize=4)
+def _taxonomy_name_definitions(csv_path: str) -> Dict[str, str]:
+    """Casefolded node NAME -> definition, for detections without a stored path.
+
+    Both name columns are indexed (``text_fr`` first, ``nom_vulgarisé``
+    second) so a label recorded under either spelling resolves. A name that
+    designates two nodes keeps the FIRST row's definition only when both rows
+    carry the same sentence — otherwise the name is dropped from the index:
+    a definition borrowed from a sibling node would be invention, not lookup
+    (anti-#1019).
+    """
+    index: Dict[str, str] = {}
+    try:
+        with open(csv_path, "r", encoding="utf-8-sig", newline="") as f:
+            for row in csv.DictReader(f):
+                desc = (row.get("desc_fr") or "").strip()
+                if not desc:
+                    continue
+                for column in ("text_fr", "nom_vulgarisé"):
+                    name = (row.get(column) or "").strip().casefold()
+                    if not name:
+                        continue
+                    if name in index and index[name] != desc:
+                        index.pop(name, None)
+                        continue
+                    index[name] = desc
+    except OSError as exc:
+        logger.debug("taxonomy name definitions unreadable at %s: %s", csv_path, exc)
+    return index
+
+
+def taxonomy_definition(fallacy_type: str, taxonomy_path: Optional[str]) -> str:
+    """The one-line definition of a detected fallacy's node (#3394).
+
+    Cycle 0 printed taxonomy labels bare — « sophisme métonymique » reached
+    the reader with nothing to read it against. The label now carries the
+    taxonomy's own ``desc_fr`` line on its first mention to the reader.
+
+    Resolution order, most exact first: the stored dotted ``taxonomy_path``
+    (the leaf node's own row), then the recorded type name matched EXACTLY
+    (casefolded) against the name columns. A substring match is deliberately
+    NOT tried: a partial name can designate a sibling node, and a definition
+    read off the wrong node is invention, not lookup. ``""`` when nothing
+    resolves — the label stays bare rather than borrowing a meaning
+    (anti-#1019). A label or reading check must never crash a render on
+    taxonomy I/O (a missing file triggers the loader's download path).
+    """
+    raw_path = (taxonomy_path or "").strip()
+    try:
+        csv_path = str(get_taxonomy_path())
+        if raw_path and _DOTTED_PATH_RE.fullmatch(raw_path):
+            by_path = _taxonomy_node_definitions(csv_path)
+            if by_path.get(raw_path):
+                return _capped(by_path[raw_path])
+        name = (fallacy_type or "").strip().casefold()
+        if name:
+            by_name = _taxonomy_name_definitions(csv_path)
+            if by_name.get(name):
+                return _capped(by_name[name])
+    except Exception:
+        logger.warning("taxonomy unavailable; the label stays without definition")
+    return ""
+
+
+def _capped(text: str) -> str:
+    """One line, at most :data:`_DEFINITION_CAP` chars, cut on a word boundary."""
+    line = " ".join(str(text).split())
+    if len(line) <= _DEFINITION_CAP:
+        return line
+    cut = line[:_DEFINITION_CAP]
+    if " " in cut:
+        cut = cut.rsplit(" ", 1)[0]
+    return cut + "…"
+
+
 #: #3224 — a node token NAMES a category only when it is distinctive within
 #: the taxonomy: at most this many of the vendored node names carry it.
 #: Measured over the 1 408 ``text_fr`` names (word extraction ``[A-Za-zÀ-ÿ]{4,}``

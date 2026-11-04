@@ -126,7 +126,10 @@ class TestCrossActContradictionClosed:
         slot = _forces_slot(prompt)
         # #3137: the label carries the population (k/m evaluated, N units),
         # never "meilleur score du discours".
-        assert "pertinence (1.0 sur 1 des 2 arguments évalués — 2 unités)" in slot
+        # #3394: the score arrives with its scale and direction; the
+        # population (k/m evaluated, N units) keeps its own clause.
+        assert "pertinence : score 1,0 sur 1,0 — plus haut = meilleur" in slot
+        assert "vertu atteinte sur 1 des 2 arguments évalués" in slot
         assert "clarte" not in slot
 
     def test_weak_but_present_axis_still_counts_as_measured(self):

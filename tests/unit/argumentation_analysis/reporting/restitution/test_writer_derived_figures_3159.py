@@ -175,21 +175,27 @@ class TestAct3DiscourseVirtue:
 
 
 def _doc_a_quality() -> dict:
+    # #3394 — production shape: ``overall`` travels with its ``scores`` map
+    # (``add_quality_score`` writes the pair), so each listed score prints on
+    # its own ceiling (« 5,00 sur 6 »), never bare.
     quality = {
-        "arg_69": {"overall": 5.0},
-        "arg_14": {"overall": 4.5},
-        "arg_28": {"overall": 4.5},
+        "arg_69": {"overall": 5.0, "scores": {f"v{i}": 1.0 for i in range(6)}},
+        "arg_14": {"overall": 4.5, "scores": {f"v{i}": 1.0 for i in range(6)}},
+        "arg_28": {"overall": 4.5, "scores": {f"v{i}": 1.0 for i in range(6)}},
     }
     for i in range(5):
-        quality[f"arg_{100 + i}"] = {"overall": 2.0}
+        quality[f"arg_{100 + i}"] = {
+            "overall": 2.0,
+            "scores": {f"v{j}": 1.0 for j in range(6)},
+        }
     return quality
 
 
 class TestAct2QualityRanking:
     def test_the_ranking_puts_the_top_unit_first_with_its_base(self):
         line = quality_ranking_line(_doc_a_quality(), 90)
-        assert line.startswith("Classement qualité (base : 8 unités évaluées sur 90)")
-        assert line.index("arg_69 (5.0)") < line.index("arg_14 (4.5)")
+        assert line.startswith("Classement qualité (base : 8 unités évaluées sur 90 ;")
+        assert line.index("arg_69 (5,00 sur 6)") < line.index("arg_14 (4,50 sur 6)")
 
     def test_the_prompt_carries_the_ranking(self):
         """#3296: the ranking line's keys are the per-act letters — the score
@@ -202,10 +208,11 @@ class TestAct2QualityRanking:
             argument_quality_scores=_doc_a_quality(),
         )
         prompt = build_act2_prompt(build_act2_evidence(state))
-        assert "Classement qualité (base : 8 unités évaluées sur 90)" in prompt
-        # the leader's score rides the ranking line, keyed by a letter
+        assert "Classement qualité (base : 8 unités évaluées sur 90 ;" in prompt
+        # the leader's score rides the ranking line, keyed by a letter — on
+        # its own ceiling since #3394, never bare
         rank_line = next(ln for ln in prompt.splitlines() if "Classement qualité" in ln)
-        assert re.search(r"[α-ω]+ \(5\.0\)", rank_line), rank_line
+        assert re.search(r"[α-ω]+ \(5,00 sur 6\)", rank_line), rank_line
         assert not re.search(r"arg_\d+", prompt)
 
     def test_no_scored_unit_means_no_line(self):

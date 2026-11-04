@@ -235,6 +235,35 @@ def register_test_note(entry: Any) -> str:
     return ""
 
 
+# --- #3394 — the taxonomy's own definition for a printed label ---------------
+
+
+def taxonomy_definition_note(entry: Any) -> str:
+    """The ONE French clause that carries a label's definition (#3394).
+
+    Cycle 0 printed taxonomy labels bare — « sophisme métonymique » reached
+    the reader with nothing to read it against, and the machinery words the
+    labels ride on (« test modal », « cardinalité minimale ») did the rest.
+    The note resolves the detection's node in the vendored taxonomy (stored
+    dotted path first, exact name second) and carries that node's one-line
+    ``desc_fr`` on the briefing line, so no writer has to know what the label
+    means for the reader to learn it.
+
+    The note is a definition, not a verdict: it prints in lowercase, it never
+    restates the detection, and an unresolvable label prints NOTHING — a
+    definition borrowed from a sibling node would be invention, not lookup
+    (anti-#1019, :func:`taxonomy_definition`'s contract).
+    """
+    from argumentation_analysis.utils.taxonomy_loader import taxonomy_definition
+
+    ftype = str(_field(entry, "type") or _field(entry, "fallacy_type") or "")
+    path = _field(entry, "taxonomy_path")
+    definition = taxonomy_definition(ftype, str(path) if path else None)
+    if not definition:
+        return ""
+    return f"définition : {definition}"
+
+
 # --- #3231 — how firmly the detector itself holds the detection --------------
 
 

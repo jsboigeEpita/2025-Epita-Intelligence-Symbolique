@@ -58,9 +58,9 @@ _VIRTUES = ("pertinence", "refutation_constructive", "redondance_faible")
 #: crowned virtues, each with its measured base. Spelled out, because this is
 #: what the DoD asks to find byte-for-byte in the render.
 _VERDICT = (
-    "Le discours tient sur pertinence (7/8 arguments évalués, 2 unités) ; "
-    "réfutation constructive (7/8 arguments évalués, 2 unités) ; "
-    "faible redondance (7/8 arguments évalués, 2 unités). "
+    "Le discours tient sur pertinence (7/8 arguments évalués — barre : 3/4 des arguments évalués, 2 unités) ; "
+    "réfutation constructive (7/8 arguments évalués — barre : 3/4 des arguments évalués, 2 unités) ; "
+    "faible redondance (7/8 arguments évalués — barre : 3/4 des arguments évalués, 2 unités). "
     "Aucune autre vertu ne se dit du discours."
 )
 
@@ -195,7 +195,7 @@ class TestThePromptStopsAskingForACopy:
         )
         assert "«" not in sentence and "»" not in sentence, sentence
         assert sentence.startswith("Le discours tient sur faible redondance ")
-        assert "(6/7 arguments évalués, 35 unités)" in sentence
+        assert "(6/7 arguments évalués — barre : 3/4 des arguments évalués, 35 unités)" in sentence
 
 
 class TestTheAbsentBranchIsUntouched:

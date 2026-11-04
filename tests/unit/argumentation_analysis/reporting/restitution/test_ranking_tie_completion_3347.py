@@ -52,7 +52,16 @@ _RECORDED = {
 
 
 def _quality(scores: dict) -> dict:
-    return {arg_id: {"overall": score} for arg_id, score in scores.items()}
+    # #3394 — production shape: ``overall`` rides with its ``scores`` map
+    # (``add_quality_score`` writes the pair), so every printed score carries
+    # its ceiling (« 4,00 sur 6 »), never a bare number.
+    return {
+        arg_id: {
+            "overall": score,
+            "scores": {f"v{i}": 1.0 for i in range(6)},
+        }
+        for arg_id, score in scores.items()
+    }
 
 
 def _state(**fields) -> SimpleNamespace:
@@ -89,13 +98,16 @@ class TestTheListingNeverCutsInsideATie:
         """Born red on main: ``scored[:3]`` dropped arg_28 while keeping
         arg_22 — same score, alphabetical accident."""
         line = quality_ranking_line(_quality(_RECORDED), 90, "arg_14")
-        assert "arg_69 (4.5), arg_14 (4.0), arg_22 (4.0), arg_28 (4.0)" in line, line
+        assert (
+            "arg_69 (4,50 sur 6), arg_14 (4,00 sur 6), arg_22 (4,00 sur 6), "
+            "arg_28 (4,00 sur 6)" in line
+        ), line
 
     def test_without_a_vote_the_cut_still_completes_the_tie(self):
         """The truncation defect is in the listing, not in the vote branch:
         no winner passed, arg_28 still rides the line."""
         line = quality_ranking_line(_quality(_RECORDED), 90)
-        assert "arg_28 (4.0)" in line, line
+        assert "arg_28 (4,00 sur 6)" in line, line
 
     def test_a_wide_boundary_tie_counts_its_left_outs(self):
         """Six holders at the boundary score: the listing stays bounded and
@@ -104,7 +116,7 @@ class TestTheListingNeverCutsInsideATie:
         for i in range(3, 9):
             scores[f"arg_{i}"] = 3.0
         line = quality_ranking_line(_quality(scores), 8)
-        assert "arg_3 (3.0) et 5 autres à 3.0" in line, line
+        assert "arg_3 (3,00 sur 6) et 5 autres à 3,00 sur 6" in line, line
 
     def test_no_tie_at_the_cut_keeps_today_three_names(self):
         """Positive control: a cut between two different scores is not a
@@ -117,9 +129,11 @@ class TestTheListingNeverCutsInsideATie:
             "arg_5": 1.0,
         }
         line = quality_ranking_line(_quality(scores), 5)
-        assert line.startswith(
-            "Classement qualité (base : 5 unités évaluées sur 5) : "
-            "arg_1 (5.0), arg_2 (4.0), arg_3 (3.0)."
+        # #3394 moved the scale convention into the base clause; the
+        # three-name cut itself is the control and stands.
+        assert line.startswith("Classement qualité (base : 5 unités évaluées sur 5 ;"), line
+        assert (
+            ": arg_1 (5,00 sur 6), arg_2 (4,00 sur 6), arg_3 (3,00 sur 6)." in line
         ), line
         assert "autres" not in line, line
 
@@ -131,9 +145,10 @@ class TestTheOffTopBranchNamesItsCoHolders:
         two-way tie from the truncated listing."""
         line = quality_ranking_line(_quality(_RECORDED), 90, "arg_14")
         assert (
-            "est 2ᵉ à égalité de ce classement (4.0) avec arg_22 et arg_28" in line
+            "est 2ᵉ à égalité de ce classement (4,00 sur 6) avec arg_22 et arg_28"
+            in line
         ), line
-        assert "arg_69 (4.5) est en tête" in line, line
+        assert "arg_69 (4,50 sur 6) est en tête" in line, line
         assert "le vote ne dit pas qu'il est le mieux tenu" in line, line
 
     def test_many_mates_are_capped_and_counted(self):
@@ -161,7 +176,7 @@ class TestTheOffTopBranchNamesItsCoHolders:
             _quality({"arg_1": 5.0, "arg_2": 4.7, "arg_9": 4.0}), 3, "arg_9"
         )
         assert line.endswith(
-            "est 3ᵉ de ce classement (4.0) ; arg_1 (5.0) est en tête : "
+            "est 3ᵉ de ce classement (4,00 sur 6) ; arg_1 (5,00 sur 6) est en tête : "
             "le vote ne dit pas qu'il est le mieux tenu."
         ), line
 
@@ -174,5 +189,7 @@ class TestTheOffTopBranchNamesItsCoHolders:
         )
         prompt = build_act2_prompt(build_act2_evidence(state))
         assert "est 2ᵉ à égalité" in prompt, prompt
-        assert re.search(r"à égalité de ce classement \(4\.0\) avec ", prompt), prompt
+        assert re.search(
+            r"à égalité de ce classement \(4,00 sur 6\) avec ", prompt
+        ), prompt
         assert not re.search(r"arg_\d+", prompt), prompt
