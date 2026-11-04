@@ -103,8 +103,19 @@ def test_all_three_acts_carry_the_inferred_speaker_with_the_same_provenance_tag(
 def test_the_inferred_line_carries_the_two_voice_caution():
     """#2845 travelling with the record: an inferred orator on a two-voice
     document (a reply) can be the wrong one — the caution is part of the
-    line every act quotes, not a footnote one act may drop."""
-    p1, p2, p3 = _prompts(_state(stakeholders=_STAKEHOLDER_SPEAKER))
+    line every act quotes, not a footnote one act may drop.
+
+    #3390 — the caution now names a REAL second voice: the fixture carries
+    the opponent the speaker answers. A lone inferred speaker (no other
+    party in the stakes) no longer draws it — the doubt would be unearned,
+    and the measured panel document (one speaker, audience interjections)
+    drew it twice on a correct attribution."""
+    p1, p2, p3 = _prompts(
+        _state(
+            stakeholders=_STAKEHOLDER_SPEAKER
+            + [{"name": "Opposant_B", "role": "opponent", "stance": "contre"}]
+        )
+    )
     for p in (p1, p2, p3):
         assert "deux voix" in p, "the #2845 two-voice caution left a prompt"
 

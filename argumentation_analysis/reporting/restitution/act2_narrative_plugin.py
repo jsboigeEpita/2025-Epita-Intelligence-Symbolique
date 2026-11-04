@@ -93,6 +93,12 @@ from .speaker_record import (
     build_speaker_record,
     format_speaker_line,
 )
+from .arena_record import (  # #3390 — the arena joins the speaker's record
+    ArenaRecord,
+    build_arena_record,
+    format_arena_line,
+    is_fiction_arena,
+)
 from .reading_record import (
     READING_BASIS_RULE,
     BoundRemoval,
@@ -597,6 +603,8 @@ class Act2Evidence:
     # producteurs (ni la métadonnée, ni le stakeholder « speaker ») — il
     # portait sa règle de nommage sans la donnée sur laquelle elle tranche.
     speaker: SpeakerRecord = field(default_factory=SpeakerRecord)
+    # #3390 — the arena, from the same single record Acts I and III read.
+    arena: ArenaRecord = field(default_factory=ArenaRecord)
     # #2850 lot 6 — the run's recorded bounded readings (#1737 table), the
     # basis the "Acts silent" family never spoke: the trace named each
     # window since lot 4, the acts quoted none of them.
@@ -1242,6 +1250,11 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         text_sequence=collect_text_sequence(state),
         source_length=len(getattr(state, "raw_text", "") or ""),
         speaker=build_speaker_record(state),
+        # #3390 — the arena record joins the speaker's: same single source
+        # as Acts I and III (the #3073 gesture, completed), so a fiction
+        # arena reaches Act II's writer instead of dying in the act that
+        # named it.
+        arena=build_arena_record(state),
         readings=build_reading_record(state),
     )
 
@@ -2373,8 +2386,18 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         # titre DONNÉES DU STATE ci-dessus (dont la parenthétique qualifie
         # ses blocs comme extraits et procédures détectées).
         f"[LOCUTEUR — provenance de la valeur]\n"
-        f"  {format_speaker_line(evidence.speaker)}\n\n"
-        f"{reading_block}"
+        f"  {format_speaker_line(evidence.speaker)}\n"
+        # #3390 — the arena line, same single formatter as Acts I and III;
+        # and when the arena is a fiction, the one consequence stated once:
+        # the characters argue, the author does not assert.
+        f"  {format_arena_line(evidence.arena)}\n"
+        + (
+            "  ARÈNE DE FICTION : les gestes détectés sont ceux des "
+            "PERSONNAGES — ne les attribue jamais à l'auteur.\n"
+            if is_fiction_arena(evidence.arena)
+            else ""
+        )
+        + f"\n{reading_block}"
         f"{coverage_note}"
         f"{unattributed_block}"
         f"{reported_block}"

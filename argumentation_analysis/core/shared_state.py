@@ -5,6 +5,11 @@ from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Any, Optional, Tuple, cast
 import logging
 
+# #3390 — the closed ``move_author`` vocabulary lives in ONE place; both
+# gates below (arguments, fallacies) read it, so extending it (#3390 adds
+# ``character`` and ``audience``) cannot drift between the two.
+from .fallacy_attribution import MOVE_AUTHORS
+
 # Logger spécifique pour l'état
 state_logger = logging.getLogger("RhetoricalAnalysisState")
 # Assurer qu'un handler de base est présent si non configuré globalement tôt
@@ -404,7 +409,7 @@ class RhetoricalAnalysisState:
                 entry["offset_basis"] = basis
             if source_quote:
                 entry["source_quote"] = str(source_quote)
-            if move_author in ("speaker", "reported"):
+            if move_author in MOVE_AUTHORS:
                 entry["move_author"] = str(move_author)
             self.argument_provenance[arg_id] = entry
         state_logger.info(f"Argument ajouté: {arg_id} - '{description[:60]}...'")
@@ -475,9 +480,10 @@ class RhetoricalAnalysisState:
         if detection_paths:
             entry["detection_paths"] = [str(p) for p in detection_paths]
         # #3180 — dont le geste est le sophisme, quand le détecteur l'a dit.
-        # Seules les deux valeurs connues sont stockées : une valeur inconnue
-        # n'est pas une mesure, et un lecteur ne doit pas la lire « locuteur ».
-        if move_author in ("speaker", "reported"):
+        # Seules les valeurs du vocabulaire fermé sont stockées : une valeur
+        # inconnue n'est pas une mesure, et un lecteur ne doit pas la lire
+        # « locuteur ».
+        if move_author in MOVE_AUTHORS:
             entry["move_author"] = str(move_author)
             if move_author_label:
                 entry["move_author_label"] = str(move_author_label)

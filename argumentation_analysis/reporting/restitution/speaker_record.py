@@ -44,6 +44,17 @@ _SPEAKER_METADATA_KEYS = ("speaker", "orateur", "locuteur")
 # authority/institution/group — everything else is another party).
 _SPEAKER_ROLES = frozenset({"speaker", "locuteur", "orateur", "narrator"})
 
+# #3390 — the roles that make a stakeholder a SECOND VOICE for the #2845
+# caution: someone who SPEAKS in the document (the opponent the speaker
+# answers, another narrator). ``audience`` is deliberately absent: an
+# interjection from the public is not the document's second voice, and the
+# measured panel document (one speaker, heckler lines) drew the caution
+# twice on an attribution that was correct — the doubt must name a real
+# second speaker or stay silent.
+_SECOND_VOICE_ROLES = frozenset(
+    {"speaker", "locuteur", "orateur", "narrator", "opponent", "interlocuteur"}
+)
+
 # #2845, travelling with the record: on a two-voice document (a reply), the
 # only person the text names can be the interlocutor the speaker answers —
 # an inferred orator can be the wrong one, and the reader must be told so
@@ -77,11 +88,39 @@ class SpeakerRecord:
 
     ``source_key`` names where the value came from (``source_metadata.speaker``,
     ``stakes_and_stakeholders.stakeholders``); empty on an absent record.
+    ``second_voice`` (#3390) is True when the stakeholders carry another
+    SPEAKING party (an opponent, a second narrator): the #2845 caution is
+    printed only then — an audience interjection is not a second voice.
     """
 
     value: str = ""
     provenance: str = ""  # PROVENANCE_METADATA | PROVENANCE_INFERRED | ""
     source_key: str = ""
+    second_voice: bool = False
+
+
+def _second_voice_in(stakes: Any, speaker_value: str) -> bool:
+    """#3390 — another stakeholder who SPEAKS (an opponent, a second narrator).
+
+    An ``audience`` entry never counts: an interjection from the public is
+    not the document's second voice, and the #2845 caution fired twice on a
+    correct attribution for exactly that reason (measured, v1 panel cycle 0).
+    The speaker's own entry does not count against itself (same name,
+    case-insensitive).
+    """
+    if not isinstance(stakes, dict):
+        return False
+    folded_speaker = speaker_value.strip().lower()
+    for sh in stakes.get("stakeholders", []) or []:
+        if not isinstance(sh, dict):
+            continue
+        role = str(sh.get("role", "") or "").strip().lower()
+        if role not in _SECOND_VOICE_ROLES:
+            continue
+        name = str(sh.get("name", "") or "").strip()
+        if _documents(name) and name.strip().lower() != folded_speaker:
+            return True
+    return False
 
 
 def build_speaker_record(state: Any) -> SpeakerRecord:
@@ -93,6 +132,7 @@ def build_speaker_record(state: Any) -> SpeakerRecord:
     it is. Neither producer documents anything → empty record, said absent.
     """
     metadata = getattr(state, "source_metadata", {}) or {}
+    stakes = getattr(state, "stakes_and_stakeholders", {}) or {}
     if isinstance(metadata, dict):
         for key in _SPEAKER_METADATA_KEYS:
             value = str(metadata.get(key, "") or "").strip()
@@ -101,8 +141,8 @@ def build_speaker_record(state: Any) -> SpeakerRecord:
                     value=_cap(value),
                     provenance=PROVENANCE_METADATA,
                     source_key=f"source_metadata.{key}",
+                    second_voice=_second_voice_in(stakes, value),
                 )
-    stakes = getattr(state, "stakes_and_stakeholders", {}) or {}
     if isinstance(stakes, dict):
         for sh in stakes.get("stakeholders", []) or []:
             if not isinstance(sh, dict):
@@ -116,6 +156,7 @@ def build_speaker_record(state: Any) -> SpeakerRecord:
                     value=_cap(name),
                     provenance=PROVENANCE_INFERRED,
                     source_key="stakes_and_stakeholders.stakeholders",
+                    second_voice=_second_voice_in(stakes, name),
                 )
     return SpeakerRecord()
 
@@ -132,8 +173,12 @@ def format_speaker_line(record: SpeakerRecord) -> str:
         # inférée), never the internal dotted path that carried it;
         # ``source_key`` stays on the record for tests and debugging.
         return f"Locuteur : {record.value} " f"(provenance : {_LABEL_METADATA})"
+    # #3390 — the #2845 caution names a real second voice or stays silent:
+    # an audience interjection is not one, and an unearned caution read as
+    # doubt on a correct attribution.
+    caution = f" ; {_TWO_VOICE_CAUTION}" if record.second_voice else ""
     return (
         f"Locuteur : {record.value} "
-        f"(provenance : {_LABEL_INFERRED} — jamais une donnée vérifiée ; "
-        f"{_TWO_VOICE_CAUTION})"
+        f"(provenance : {_LABEL_INFERRED} — jamais une donnée vérifiée"
+        f"{caution})"
     )

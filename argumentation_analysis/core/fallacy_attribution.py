@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-"""#3180 — whose move a fallacy detection is.
+"""#3180 — whose move a fallacy detection or an argument unit is.
 
-The record carries ``move_author`` on a detection: ``speaker`` (the analysed
-text's own speaker commits the move) or ``reported`` (the text reports or
-denounces a move made by another party, named by ``move_author_label``).
-Absent or invalid = not stated: every reader keeps the historical speaker
-attribution and invents no third party (#1019).
+The record carries ``move_author``: ``speaker`` (the analysed text's own
+speaker commits the move), ``reported`` (the text reports or denounces a move
+made by another party, named by ``move_author_label``), ``character`` (a
+fiction's character commits it — #3390) or ``audience`` (an audience
+interjection — #3390). Absent or invalid = not stated: every reader keeps the
+historical speaker attribution and invents no third party (#1019).
 
 ``is_speaker_move`` is the ONE predicate attribution count sites read. It
 accepts the stored dict record and the synthesised ``FallacyDiagnosis`` object
@@ -25,7 +26,19 @@ from typing import Any, Optional
 
 MOVE_AUTHOR_SPEAKER = "speaker"
 MOVE_AUTHOR_REPORTED = "reported"
-_MOVE_AUTHORS = (MOVE_AUTHOR_SPEAKER, MOVE_AUTHOR_REPORTED)
+MOVE_AUTHOR_CHARACTER = "character"
+MOVE_AUTHOR_AUDIENCE = "audience"
+#: The closed vocabulary, exported — the writers that gate a stored
+#: ``move_author`` (``add_argument``, ``add_fallacy``, the plugins) read THIS
+#: tuple, never a literal copy: #3390 extends it (``character``, ``audience``)
+#: and seven copies of the two-value tuple would have drifted into seven
+#: gates, five of them still dropping the new values (#1019's family).
+MOVE_AUTHORS = (
+    MOVE_AUTHOR_SPEAKER,
+    MOVE_AUTHOR_REPORTED,
+    MOVE_AUTHOR_CHARACTER,
+    MOVE_AUTHOR_AUDIENCE,
+)
 
 
 def _field(entry: Any, name: str) -> Any:
@@ -40,7 +53,7 @@ def move_author_of(entry: Any) -> str:
     value = _field(entry, "move_author")
     if isinstance(value, str):
         value = value.strip()
-        if value in _MOVE_AUTHORS:
+        if value in MOVE_AUTHORS:
             return value
     return MOVE_AUTHOR_SPEAKER
 
@@ -65,6 +78,34 @@ def move_author_label_of(entry: Any) -> str:
     value = _field(entry, "move_author_label")
     if isinstance(value, str):
         return value.strip()
+    return ""
+
+
+def move_author_note(entry: Any) -> str:
+    """The ONE French clause a briefing prints for a non-speaker move (#3390).
+
+    A fallacy or unit whose author is not the speaker carries this sentence
+    on its briefing line, so no writer can read it as the speaker's own move:
+    the Act II / synthesis contradiction of the v1 panel's cycle 0 (one act
+    attributed a passage to third parties, the synthesis listed the same
+    passage among the speaker's structural vulnerabilities) was two readers
+    with no shared wording. The speaker case prints nothing — it is the
+    historical default every line already carries, and a note on every line
+    would bury the ones that matter. An absent or invalid record prints
+    nothing either: not stated is not speaker-stated (#1019).
+    """
+    author = move_author_of(entry)
+    if author == MOVE_AUTHOR_REPORTED:
+        note = "RAPPORTÉ : le locuteur rapporte ce geste, il ne le commet pas"
+        label = move_author_label_of(entry)
+        return f"{note} (tiers : {label})" if label else note
+    if author == MOVE_AUTHOR_CHARACTER:
+        return (
+            "PERSONNAGE : geste commis par un personnage de la fiction — "
+            "pas une assertion de l'auteur"
+        )
+    if author == MOVE_AUTHOR_AUDIENCE:
+        return "PUBLIC : interjection du public, pas le fait du locuteur"
     return ""
 
 

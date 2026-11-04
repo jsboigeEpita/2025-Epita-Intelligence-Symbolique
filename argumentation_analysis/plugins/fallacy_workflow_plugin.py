@@ -38,6 +38,9 @@ from semantic_kernel.contents import (
 )
 
 from argumentation_analysis.agents.utils.taxonomy_navigator import TaxonomyNavigator
+from argumentation_analysis.core.fallacy_attribution import (  # #3390
+    MOVE_AUTHORS,
+)
 from argumentation_analysis.core.plaintext_destination import (
     PlaintextDestinationError,
     check_plaintext_destination,
@@ -62,14 +65,14 @@ logger = logging.getLogger(__name__)
 def _move_author_pair(payload: Dict[str, object]) -> Tuple[str, str]:
     """#3180 — whose move the fallacy is, read one way at every detection site.
 
-    ``speaker`` (the analyzed text's own speaker commits the move) and
-    ``reported`` (the text reports or denounces another party's move) are the
-    only measurements. Silence and any other value stay absent — ``("", "")``,
+    The closed vocabulary of ``fallacy_attribution.MOVE_AUTHORS`` (``speaker``,
+    ``reported``, and #3390's ``character`` / ``audience``) is the only
+    measurement. Silence and any other value stay absent — ``("", "")``,
     never a party invented on the fly, and never a label without an author
     (#1019). The state writer applies the same rule again.
     """
     author = str(payload.get("move_author") or "").strip()
-    if author not in ("speaker", "reported"):
+    if author not in MOVE_AUTHORS:
         return "", ""
     return author, str(payload.get("move_author_label") or "").strip()
 

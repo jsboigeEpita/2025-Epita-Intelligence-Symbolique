@@ -6,6 +6,7 @@ from semantic_kernel.functions import kernel_function
 
 # Importer la classe d'état depuis le même répertoire
 from .logic_types import LOGIC_TYPE_ALIASES, STATE_LABELS, canonical_logic_type
+from .fallacy_attribution import MOVE_AUTHORS  # #3390 — one closed vocabulary
 from .shared_state import RhetoricalAnalysisState
 
 # Logger spécifique pour le StateManager
@@ -195,7 +196,7 @@ class StateManagerPlugin:
             # inconnue ou absente n'est pas une mesure, et l'état ne doit pas
             # lire un tiers inventé. Le writer applique la même règle.
             author = (move_author or "").strip()
-            if author in ("speaker", "reported"):
+            if author in MOVE_AUTHORS:
                 fallacy_id = self._state.add_fallacy(
                     fallacy_type,
                     justification,
@@ -422,9 +423,7 @@ class StateManagerPlugin:
                     "(UnifiedAnalysisState requis pour CONV-C)."
                 )
             turn = record_method(agent, motivation, trigger)
-            self._logger.info(
-                f" -> Désignation tracée tour {turn} pour '{agent}'."
-            )
+            self._logger.info(f" -> Désignation tracée tour {turn} pour '{agent}'.")
             return (
                 f"OK. Désignation tracée (tour {turn}, agent '{agent}', "
                 f"trigger '{trigger}')."
@@ -779,7 +778,9 @@ class StateManagerPlugin:
         self, arg_id: str, scores_json: str, overall: str = "0.5"
     ) -> str:
         try:
-            scores = json.loads(scores_json) if isinstance(scores_json, str) else scores_json
+            scores = (
+                json.loads(scores_json) if isinstance(scores_json, str) else scores_json
+            )
             self._state.add_quality_score(arg_id, scores, float(overall))
             return f"OK: Quality scores added for {arg_id}"
         except Exception as e:
@@ -799,7 +800,9 @@ class StateManagerPlugin:
         try:
             arguments = json.loads(arguments_json)
             attacks = json.loads(attacks_json)
-            extensions = json.loads(extensions_json) if extensions_json != "{}" else None
+            extensions = (
+                json.loads(extensions_json) if extensions_json != "{}" else None
+            )
             df_id = self._state.add_dung_framework(name, arguments, attacks, extensions)
             return df_id
         except Exception as e:
