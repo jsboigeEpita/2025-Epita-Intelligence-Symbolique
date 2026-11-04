@@ -1,0 +1,48 @@
+{
+  "key": "3b3ca5fc8e5246caae425733065e6cc425a08f91eca5c25a9ab97007d9e83e75",
+  "value": {
+    "id": "chatcmpl-EgJ7xr6U8NxjaotG8xBvazRLaO1AL",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La thèse est clairement identifiée et aucune digression n’a été relevée : l’ensemble de l’argumentation porte sur le rôle majeur des activités humaines dans la crise climatique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793752009,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 92,
+      "prompt_tokens": 257,
+      "total_tokens": 349,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 35,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

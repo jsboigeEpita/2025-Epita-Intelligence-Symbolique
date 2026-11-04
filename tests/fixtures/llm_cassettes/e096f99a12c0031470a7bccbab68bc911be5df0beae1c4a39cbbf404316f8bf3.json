@@ -1,0 +1,48 @@
+{
+  "key": "e096f99a12c0031470a7bccbab68bc911be5df0beae1c4a39cbbf404316f8bf3",
+  "value": {
+    "id": "chatcmpl-EgJ1i7cdZp9b33DZtRvMsKZrFamEC",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points sont distincts : le premier décrit l’organisation du tournoi, les deuxième et troisième ses bénéfices respectifs en visibilité et en recrutement, et le quatrième une autre option d’investissement dans du matériel pédagogique. Aucune redondance substantielle n’est relevée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793751622,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 161,
+      "prompt_tokens": 301,
+      "total_tokens": 462,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 87,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

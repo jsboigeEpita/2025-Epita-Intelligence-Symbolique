@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_O1lVJpj0uu5GNbxY8ici5H8e",
+          "id": "call_eHY9qyQCyFVOvmFc7uFtupz1",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"175\",\"matches\":false,\"justification\":\"L'énoncé rapporte simplement l'affirmation du président selon laquelle la politique économique est un succès; il ne fournit pas assez de contexte pour établir une manipulation de l'auditoire ou une technique d'influence fallacieuse.\",\"confidence\":\"high\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+          "arguments": "{\"node_pk\":\"175\",\"matches\":false,\"justification\":\"La simple affirmation par le président que la politique économique est un succès incontestable ne suffit pas à établir une manipulation de l'auditoire ni une sous-catégorie précise de l'influence. Aucun procédé fallacieux identifiable n'est fourni.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EeCfAtJTDWWleYwn2DrRLq4zUgHWT",
-        "created": 1793250504,
+        "id": "chatcmpl-EgIvTkJpI5wUrEn3zItPd0gjKjW29",
+        "created": 1793751235,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1896,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 94,
+          "completion_tokens": 92,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

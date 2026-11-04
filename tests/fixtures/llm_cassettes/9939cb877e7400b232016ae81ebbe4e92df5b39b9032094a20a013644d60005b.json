@@ -1,0 +1,48 @@
+{
+  "key": "9939cb877e7400b232016ae81ebbe4e92df5b39b9032094a20a013644d60005b",
+  "value": {
+    "id": "chatcmpl-EgJ5Ix27TKc0mz3b16Hl8DEZ0qfxp",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La structure démontrée se limite à la thèse selon laquelle l’affirmation que les entreprises pharmaceutiques cachent les effets secondaires des vaccins est une théorie du complot sans fondement ; aucune digression n’est localisée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793751844,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 158,
+      "prompt_tokens": 273,
+      "total_tokens": 431,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 89,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

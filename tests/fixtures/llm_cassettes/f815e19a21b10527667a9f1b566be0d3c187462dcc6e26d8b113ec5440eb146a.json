@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_zyknlNMiEpwnKAamiRwjcNyg",
+          "id": "call_u3Q9zMsQ8721ACuM3jmmJKBO",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"342\",\"matches\":false,\"justification\":\"Le texte invoque l'unanimité des experts et disqualifie l'avis des non-experts, mais il ne cherche pas à persuader en criant, menaçant ou intimidant directement l'interlocuteur. Il relève plutôt d'un appel à l'autorité et d'une disqualification de l'opinion, pas de l'appel à la véhémence.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"342\",\"matches\":false,\"justification\":\"Le texte invoque l'unanimité des experts et disqualifie l'avis des non-experts, ce qui relève d'un appel à l'autorité et d'un argument d'ignorance, mais il ne tente pas de persuader en criant, menaçant ou intimidant. L'appel à la véhémence ne correspond donc pas.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EeCgGmQORjduyK6s9aJ7MwUzAqqBR",
-        "created": 1793250572,
+        "id": "chatcmpl-EgIwjgeblKOcNaS5WVC5m3E7JRUEC",
+        "created": 1793751313,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 940,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 114,
+          "completion_tokens": 110,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

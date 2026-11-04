@@ -1,0 +1,48 @@
+{
+  "key": "2318124b756f28e82965894a28cc76c136e0f954a058827db0a6f6eee6884bb0",
+  "value": {
+    "id": "chatcmpl-EgJ2GyESbpH6IWlahlXBTBdN4vKJm",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.68,\"fairness_assessment\":\"A ranked-choice or score vote treats the three budget strategies symmetrically and captures both primary preferences and support for a balanced option; fairness improves if the club first agrees on criteria such as educational need, recruitment impact, cost, and measurable outcomes.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"Agent A\",\"position\":\"Allocate the full 2000 euros to an inter-city tournament with food and prizes to increase visibility and recruit members.\",\"influence\":0.33},{\"agent\":\"Agent B\",\"position\":\"Allocate the full 2000 euros to durable educational equipment because the current boards and teaching resources are worn; this position won the debate.\",\"influence\":0.40},{\"agent\":\"Agent C\",\"position\":\"Split the budget equally between a smaller tournament and educational equipment to balance outreach and pedagogy.\",\"influence\":0.27}],\"recommended_resolution\":\"collaborative\",\"governance_reasoning\":\"Use a transparent social-choice process, preferably ranked-choice or score voting, after jointly defining success criteria. Agent B has the strongest evidenced immediate need, while A identifies a legitimate strategic objective and C offers a possible bridge. A conditional compromise—prioritizing essential equipment and funding a modest, measurable outreach event if resources permit—can preserve fairness and enable review after results are assessed.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793751656,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 392,
+      "prompt_tokens": 600,
+      "total_tokens": 992,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 101,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

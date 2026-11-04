@@ -1,0 +1,48 @@
+{
+  "key": "56ca29980090627c2d5057f5a7306fa2b3b7ebdfe5e7d3c226ff72be9f0a3d7f",
+  "value": {
+    "id": "chatcmpl-EgJ7svnqNTC1gIc8TNS8qMbWpiueb",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Deux termes techniques non définis (« ère préindustrielle » et « modèles prédictifs ») créent un obstacle, mais leur sens reste reconstructible grâce au contexte.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793752004,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 85,
+      "prompt_tokens": 254,
+      "total_tokens": 339,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 28,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

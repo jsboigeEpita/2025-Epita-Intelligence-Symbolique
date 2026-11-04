@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_MqExv6nK1mLKN67bPtibevt4",
+          "id": "call_qa5i04Psb4bTst4sciot07vV",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"1389\",\"matches\":true,\"justification\":\"L’argument 2 écarte l’avis d’une personne au seul motif qu’elle n’est pas experte, au lieu de répondre à son contenu. C’est précisément une réponse de courtier. L’argument 1 invoque en outre l’unanimité des experts comme preuve suffisante, mais cela ne retire pas la pertinence du diagnostic pour l’argument 2.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"1389\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L’argument 2 écarte l’avis d’une personne uniquement parce qu’elle n’est pas experte, au lieu de répondre à la critique ou d’examiner ses raisons. Cela correspond directement à la réponse de courtier. L’argument 1 contient aussi un appel à l’unanimité des experts, mais le nœud visé est bien illustré par l’argument 2.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EeCgpYLfix9dLck1zlA7YV1xz3kbA",
-        "created": 1793250607,
+        "id": "chatcmpl-EgIxPnKtQEihTPd4UY4rh4OYqcf1x",
+        "created": 1793751355,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 930,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 119,
+          "completion_tokens": 124,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

@@ -6,8 +6,8 @@
       "content": "{\"formulas\":[\"it_is_raining => street_is_wet\",\"it_is_raining\"]}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EeCoDUogVD1fZifZ1JnzgnDS4YzMa",
-        "created": 1793251065,
+        "id": "chatcmpl-EgJ4TLgsS4Q4CTeqaZDXqhtGiVP6T",
+        "created": 1793751793,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 385,

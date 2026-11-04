@@ -1,0 +1,48 @@
+{
+  "key": "d45cf4053e18aa8b94262d1cb6cda9af11d5ea840ec38f6da3b748eb907cddfd",
+  "value": {
+    "id": "chatcmpl-EgJ56gfhBA7QtcwtVmVx3fmCZ1v5q",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\":false,\"structure_verdict\":\"saut_logique\",\"reasoning\":\"Les résultats historiques et les décennies de recherche soutiennent la vaccination, mais ne suffisent pas à établir qu’elle est nécessairement « indispensable » ni à justifier sans réserve sa généralisation en santé publique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793751832,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 168,
+      "prompt_tokens": 393,
+      "total_tokens": 561,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 98,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

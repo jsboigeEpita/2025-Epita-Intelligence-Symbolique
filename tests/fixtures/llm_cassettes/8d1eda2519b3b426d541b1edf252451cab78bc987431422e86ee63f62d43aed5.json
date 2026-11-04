@@ -1,14 +1,14 @@
 {
   "key": "8d1eda2519b3b426d541b1edf252451cab78bc987431422e86ee63f62d43aed5",
   "value": {
-    "id": "chatcmpl-EeCr8ezLUuPNjOK3dgjh4nl4cCkil",
+    "id": "chatcmpl-EgJ7yDCHM5KYDZG0oJ4PAFIqPoVI3",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":1.0,\"exhibit\":\"La structure démontrée soutient directement la thèse selon laquelle le changement climatique actuel est exceptionnellement rapide et principalement dû aux activités humaines, sans digression identifiée.\"}",
+          "content": "{\"score\":1.0,\"exhibit\":\"La thèse affirme que le changement climatique actuel est exceptionnellement rapide et principalement dû aux activités humaines. Aucune digression n’est identifiée ; toutes les propositions sont donc considérées comme pertinentes.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793251246,
+    "created": 1793752010,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 89,
+      "completion_tokens": 53,
       "prompt_tokens": 260,
-      "total_tokens": 349,
+      "total_tokens": 313,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 35,
+        "reasoning_tokens": 0,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

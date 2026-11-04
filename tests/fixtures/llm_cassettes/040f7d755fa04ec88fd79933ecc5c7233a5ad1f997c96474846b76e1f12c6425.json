@@ -1,0 +1,48 @@
+{
+  "key": "040f7d755fa04ec88fd79933ecc5c7233a5ad1f997c96474846b76e1f12c6425",
+  "value": {
+    "id": "chatcmpl-EgIyJYjvcmzrZTuIp3P2NHxXbXzPw",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.2,\"exhibit\":\"La thèse défend l’affectation des 2000 euros de l’option B au matériel pédagogique et aux échiquiers neufs. L’argument comporte toutefois des digressions notables consacrées à l’option A (tournoi inter-villes avec buffet et prix) et à l’option C (format hybride avec budget partagé), qui diluent la focalisation sur l’option B.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793751411,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 173,
+      "prompt_tokens": 323,
+      "total_tokens": 496,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 68,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

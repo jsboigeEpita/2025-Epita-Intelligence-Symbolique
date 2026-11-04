@@ -1,0 +1,48 @@
+{
+  "key": "988643fa97522f858c51a77285c10cc81696a4f50eb20fa7e105cb8fc7ed405f",
+  "value": {
+    "id": "chatcmpl-EgIye6ZqiAxqtlmW5NosS9Hjtzt3N",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points sont distincts : le premier propose un tournoi avec buffet et prix pour utiliser le budget, le deuxième met en avant l’accroissement de la visibilité du club, et le troisième suggère un investissement dans du matériel pédagogique et de nouveaux équipements. Aucune redondance substantielle n’est identifiable.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793751432,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 156,
+      "prompt_tokens": 296,
+      "total_tokens": 452,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 74,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

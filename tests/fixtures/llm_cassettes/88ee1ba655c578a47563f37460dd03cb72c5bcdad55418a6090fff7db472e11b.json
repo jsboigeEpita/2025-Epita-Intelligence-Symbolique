@@ -1,0 +1,40 @@
+{
+  "key": "88ee1ba655c578a47563f37460dd03cb72c5bcdad55418a6090fff7db472e11b",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_R2wi0fy5KblSjZzAxtfwZt8E",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"203\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"L’affirmation « succès incontestable » emploie une formulation hyperbolique et connotée pour influencer l’auditoire, sans fournir de preuve ni d’éléments permettant d’établir ce succès.\",\"move_author\":\"speaker\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EgIvUkawjDcYpgTn8wFqUGfdS72h0",
+        "created": 1793751236,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1773,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 675,
+            "cached_tokens": 1095,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 92,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

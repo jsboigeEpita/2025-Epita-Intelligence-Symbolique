@@ -1,0 +1,48 @@
+{
+  "key": "3c0e1a215578a385a821a68b4d0233e34f4fca18720b4e7872b7e2f2e36bf236",
+  "value": {
+    "id": "chatcmpl-EgIssSFD0gE8K2R647lznjuTsbrAn",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse soutient que la comparaison avec d’autres pays ne suffit pas à justifier la réforme des retraites en raison de différences structurelles entre les systèmes. La digression localisée concerne l’affirmation d’un effondrement du système dans cinq ans et sa qualification d’appel à la peur, qui s’écartent de l’argument comparatif sans annuler sa pertinence globale.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793751074,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 158,
+      "prompt_tokens": 315,
+      "total_tokens": 473,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 57,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

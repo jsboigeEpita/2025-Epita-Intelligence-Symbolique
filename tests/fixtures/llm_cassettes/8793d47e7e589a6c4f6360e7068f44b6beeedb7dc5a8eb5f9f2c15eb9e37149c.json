@@ -1,0 +1,48 @@
+{
+  "key": "8793d47e7e589a6c4f6360e7068f44b6beeedb7dc5a8eb5f9f2c15eb9e37149c",
+  "value": {
+    "id": "chatcmpl-EgIt14wJOcRvxSTbY2H1wy1o8tsIB",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Le gouvernement présente le fait de travailler plus longtemps comme étant « dans l’ordre des choses » et affirme que, sans action immédiate, le système s’effondrera dans cinq ans. Sa projection d’un déficit de 2,3 % du PIB en 2030 repose en outre sur une hypothèse de croissance optimiste de 1,8 % par an.\",\"conclusion\":\"La justification gouvernementale de l’allongement de la durée du travail est fallacieuse et insuffisamment étayée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793751083,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 368,
+      "prompt_tokens": 334,
+      "total_tokens": 702,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 245,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

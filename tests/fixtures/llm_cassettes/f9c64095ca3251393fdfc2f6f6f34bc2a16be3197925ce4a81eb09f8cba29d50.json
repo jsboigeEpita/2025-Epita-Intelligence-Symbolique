@@ -1,0 +1,48 @@
+{
+  "key": "f9c64095ca3251393fdfc2f6f6f34bc2a16be3197925ce4a81eb09f8cba29d50",
+  "value": {
+    "id": "chatcmpl-EgJ6g3PbnTsxFzzkiSCRQ29v7xwkZ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Position adverse identifiée : le système judiciaire peut se tromper et l’irréversibilité de la peine de mort rend une erreur judiciaire fatale, ce qui constitue un argument contre cette peine. Verdict : engagement réel avec cette thèse adverse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793751930,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 149,
+      "prompt_tokens": 282,
+      "total_tokens": 431,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 80,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "key": "3988060969d8668fc8bfe1f33bf44d3862be2a9799437f9f7451c6adc911c10a",
+  "value": {
+    "id": "chatcmpl-EgIyWuE1lg1RRH1oL6EzvomASU7xk",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Prémisse : organiser un tournoi inter-villes avec buffet et prix pour 2000 euros permet d'utiliser l'intégralité du budget et d'accroître la visibilité du club. Conclusion : il faut retenir l'option A, c'est-à-dire organiser ce tournoi inter-villes. Verdict : saut logique, car les bénéfices énoncés ne suffisent pas à établir que cette option doit être retenue.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793751424,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 99,
+      "prompt_tokens": 296,
+      "total_tokens": 395,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,14 +1,14 @@
 {
   "key": "22c77d66a0d7797b6f456b7356520e84d35fd15ce8f45d916ca0e66d4128f14e",
   "value": {
-    "id": "chatcmpl-EeCpzjAoqWFDmZXCEETLDE7juihtd",
+    "id": "chatcmpl-EgJ6tWEFTuyQuXmSaDJGQ3MuV7UyD",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":1.0,\"exhibit\":\"Les trois points abordent des dimensions distinctes : le risque d’erreur irréparable (1), le danger permanent lié à certains criminels (2) et le coût des appels et procédures (3). Aucune redondance sémantique notable ; le point 3 est toutefois laissé incomplet.\"}",
+          "content": "{\"score\":1.0,\"exhibit\":\"Les trois points abordent des dimensions distinctes : le risque d'erreur judiciaire irréversible, la dangerosité persistante de certains criminels et l'argument économique lié au coût des appels et procédures. Aucune redondance sémantique notable n'est identifiable, même si le troisième point est incomplet.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793251175,
+    "created": 1793751943,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 152,
+      "completion_tokens": 144,
       "prompt_tokens": 295,
-      "total_tokens": 447,
+      "total_tokens": 439,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 70,
+        "reasoning_tokens": 59,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

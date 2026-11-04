@@ -1,0 +1,48 @@
+{
+  "key": "4c345f38f8ee65b566fce293dc1708c4df7b4c314c9b8647d135b834a259e071",
+  "value": {
+    "id": "chatcmpl-EgJ6o6DCSfUXIHWn8myhMMc4rPXhV",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Le caractère irréversible de la peine de mort rend toute erreur judiciaire fatale.\\n2. Certains criminels sont irrécupérables et représentent un danger permanent pour la société.\\n3. Le coût des appels et des procédures est souvent supérieur à celui de l’emprisonnement à vie.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793751938,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 137,
+      "prompt_tokens": 231,
+      "total_tokens": 368,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 60,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

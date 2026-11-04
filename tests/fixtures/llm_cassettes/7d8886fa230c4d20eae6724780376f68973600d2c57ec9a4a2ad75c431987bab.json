@@ -1,14 +1,14 @@
 {
   "key": "7d8886fa230c4d20eae6724780376f68973600d2c57ec9a4a2ad75c431987bab",
   "value": {
-    "id": "chatcmpl-EeCoYbgUUKfv8eNvEml7Lff2qNSIK",
+    "id": "chatcmpl-EgJ4oszefXqxSWsRAs1Zrvuf0g4JO",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":0.2,\"exhibit\":\"Obstacle localisé : le terme technique « immunité collective » n’est pas défini. Verdict : opaque réel, mais le sens global reste partiellement reconstructible.\"}",
+          "content": "{\"score\":0.2,\"exhibit\":\"Jargon technique non défini (« immunité collective ») identifié comme obstacle opaque réel ; le sens reste seulement partiellement reconstructible.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793251086,
+    "created": 1793751814,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 97,
+      "completion_tokens": 83,
       "prompt_tokens": 244,
-      "total_tokens": 341,
+      "total_tokens": 327,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 44,
+        "reasoning_tokens": 36,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

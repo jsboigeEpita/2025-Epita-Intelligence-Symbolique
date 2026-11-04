@@ -1,0 +1,48 @@
+{
+  "key": "4fa1a663701aa88bb5ae7eaf12585aba02f1ba1042973032e4cc281b89c2611d",
+  "value": {
+    "id": "chatcmpl-EgJ8AXrUj6PdlTccEjL4G6r9KLga4",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Chaîne reconstruite : « Les modèles prédictifs sont unanimes sur l’impact des activités humaines » → « Les activités humaines jouent un rôle majeur dans la crise climatique ». Verdict : saut logique net, car l’unanimité alléguée ne suffit pas à établir directement que le rôle est majeur.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1793752022,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 119,
+      "prompt_tokens": 270,
+      "total_tokens": 389,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 38,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

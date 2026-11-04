@@ -71,19 +71,22 @@ _TAXONOMY = [
 
 
 class _RecordingState:
-    """Mirrors ``UnifiedAnalysisState.record_reading_window`` verbatim
-    (shared_state.py:261) — same entry shape, so the assertions read the
-    real contract, not a convenient fake."""
+    """Mirrors ``UnifiedAnalysisState.record_reading_window`` (shared_state.py)
+    — same entry shape, including ``extra`` (#3105, widened by #3376's descent
+    entry), so the assertions read the real contract, not a convenient fake."""
 
     def __init__(self):
         self.reading_window_status = {}
 
-    def record_reading_window(self, site, selection):
-        self.reading_window_status[site] = {
+    def record_reading_window(self, site, selection, extra=None):
+        entry = {
             "status": getattr(selection, "status", str(selection)),
             "offset": getattr(selection, "offset", 0),
             "window": getattr(selection, "window", 0),
         }
+        if extra:
+            entry.update(extra)
+        self.reading_window_status[site] = entry
 
 
 def _long_doc(chars: int) -> str:
@@ -136,14 +139,18 @@ class TestWidenetHeadRecorded:
 class TestDescentWindowRecorded:
     async def test_descent_window_recorded_before_any_llm_call(self):
         """Both descent prompts (leaf L-confirm and navigation) carry the same
-        [:500] head; one site says it, recorded at method entry — the stub
-        answers plain text (no function call), the branch exhausts, and the
-        record is already there."""
+        window; one site says it, recorded at method entry — the stub answers
+        plain text (no function call), the branch exhausts, and the record is
+        already there.
+
+        #3376 — a branch without a quote falls back to the head, and the
+        entry now says so: same base keys as the #2850 lot 7 pin (selected,
+        0, 500 — the restitution sentence is unchanged), plus the per-branch
+        detail the issue asked the record to keep."""
         state = _RecordingState()
         plugin = _plugin(state)
-        plugin.llm_service.get_chat_message_content = AsyncMock(
-            return_value="pas d'appel d'outil — branche épuisée"
-        )
+        plugin.llm_service.get_chat_message_contents = AsyncMock(return_value=[])
+        plugin.llm_service.get_chat_message_content = AsyncMock(return_value="[]")
         slave_kernel, slave_settings = plugin._create_slave_kernel()
         await plugin._explore_single_branch(
             _long_doc(_DOC_CHARS),
@@ -151,11 +158,12 @@ class TestDescentWindowRecorded:
             slave_kernel,
             slave_settings,
         )
-        assert state.reading_window_status["fallacy_descent"] == {
-            "status": "selected",
-            "offset": 0,
-            "window": 500,
-        }
+        entry = state.reading_window_status["fallacy_descent"]
+        assert entry["status"] == "selected"
+        assert entry["offset"] == 0
+        assert entry["window"] == 500
+        assert entry["offsets"] == [0]
+        assert entry["head_fallback_branches"] == ["10"]
 
 
 class TestOneShotRecorded:

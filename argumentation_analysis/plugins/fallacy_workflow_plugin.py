@@ -17,7 +17,7 @@ import logging
 import os
 import time
 from pathlib import Path
-from typing import Annotated, Dict, List, Optional, Set, Tuple
+from typing import Annotated, Any, Dict, List, Optional, Set, Tuple
 
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.functions.kernel_function_decorator import kernel_function
@@ -43,7 +43,12 @@ from argumentation_analysis.core.plaintext_destination import (
     check_plaintext_destination,
 )
 from argumentation_analysis.core.reading_window import (
+    DESCENT_WINDOW,
+    STATUS_CENTRED_ON_QUOTE,
+    STATUS_HEAD_FALLBACK,
     WIDE_NET_WINDOW,
+    WindowSelection,
+    descent_text_and_selection,
     head_selection,
     selected_text,
 )
@@ -288,6 +293,16 @@ class FallacyWorkflowPlugin:
         # as a false document bound. Per-arg and other stateless callers keep
         # the default None — their basis stays payload-side.
         self._reading_state = reading_state
+        # #3376 — the evidence the wide net returned, per candidate PK. A
+        # side table, never the return value: ``_wide_net_candidates`` still
+        # returns PKs, because the descent's contract (and three tests'
+        # monkeypatched seam) is a list of PKs. Cleared on every wide-net call
+        # so a stale quote can never centre a later run's window.
+        self._wide_net_quotes: Dict[str, str] = {}
+        # #3376 — one entry per descent read of THIS run: {branch, offset,
+        # status}. The #1737 table renders one line per site, so the per-branch
+        # detail lives here and travels into the entry's ``extra``.
+        self._descent_reads: List[Dict[str, Any]] = []
 
         # #2324: marche déterministe de la descente. En mode parallèle
         # (défaut, production inchangée), l'entrelacement des branches dans le
@@ -352,12 +367,25 @@ class FallacyWorkflowPlugin:
                 "the navigator has no category and the wide-net funnel will resolve no candidate."
             )
 
-    def _record_window(self, text: str, window: int, site: str) -> None:
-        """#2850 lot 7 — mirror a fixed head read into the #1737 table.
+    def _record_window(
+        self,
+        text: str,
+        window: int,
+        site: str,
+        selection: Optional[WindowSelection] = None,
+        extra: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """#2850 lot 7 — mirror a bounded read into the #1737 table.
 
         The slices stay exactly where they are (prompts byte-identical); this
         only records WHAT they read. No-op on the stateless constructions
         (per-argument instances, agents, benchmarks) — see ``__init__``.
+
+        #3376 — ``selection`` names a read that is not a head (the descent's
+        window, computed once from the candidate's quote), and ``extra``
+        carries what the base keys cannot: the offsets actually read, one per
+        branch. The base keys keep their shape so a head read renders exactly
+        as before.
         """
         if self._reading_state is None:
             return
@@ -370,7 +398,65 @@ class FallacyWorkflowPlugin:
                 f"{type(self._reading_state).__name__} has no "
                 "record_reading_window — pass the shared state or None"
             )
-        recorder(site, head_selection(text, window))
+        recorder(
+            site,
+            selection if selection is not None else head_selection(text, window),
+            extra,
+        )
+
+    def _record_descent_read(self, selection: WindowSelection, branch_pk: str) -> None:
+        """#3376 — one descent branch's read, in the #1737 table.
+
+        A branch reads its own window, so the table entry cannot be one
+        (offset, window) pair: it lists the offsets actually read, one per
+        branch, and names the branches that fell back to the head. The base
+        keys keep the #1737 tri-state — a fallback read the head, which IS a
+        selected window, so the restitution sentence that quotes the
+        500-char bound changes only where the read actually moved: same
+        window everywhere renders as before, a centred read gains its
+        ``décalage``, several distinct windows render as their union in the
+        #2850 lot 8 grammar.
+        """
+        if self._reading_state is None:
+            return
+        self._descent_reads.append(
+            {
+                "branch": branch_pk,
+                "offset": selection.offset,
+                "status": selection.status,
+            }
+        )
+        offsets = [read["offset"] for read in self._descent_reads]
+        distinct = sorted(set(offsets))
+        merged: List[List[int]] = []
+        for offset in distinct:
+            span_end = offset + DESCENT_WINDOW
+            if merged and offset <= merged[-1][1]:
+                merged[-1][1] = max(merged[-1][1], span_end)
+            else:
+                merged.append([offset, span_end])
+        base_status = (
+            "selected"
+            if selection.status in (STATUS_CENTRED_ON_QUOTE, STATUS_HEAD_FALLBACK)
+            else selection.status
+        )
+        self._record_window(
+            "",
+            DESCENT_WINDOW,
+            "fallacy_descent",
+            selection=WindowSelection(distinct[0], DESCENT_WINDOW, base_status),
+            extra={
+                "offsets": offsets,
+                "branches": len(offsets),
+                "head_fallback_branches": [
+                    read["branch"]
+                    for read in self._descent_reads
+                    if read["status"] == STATUS_HEAD_FALLBACK
+                ],
+                "windows": len(distinct),
+                "chars_read": sum(hi - lo for lo, hi in merged),
+            },
+        )
 
     def _create_slave_kernel(self) -> Tuple[Kernel, OpenAIPromptExecutionSettings]:
         """Create a constrained kernel with only ExplorationPlugin available.
@@ -675,6 +761,8 @@ class FallacyWorkflowPlugin:
         # slice and the one-shot window — a third AST use would blind the
         # pin to a genuinely new read.
         wide_net_text = argument_text[:WIDE_NET_WINDOW]
+        # #3376 — a fresh call holds no evidence from a previous one.
+        self._wide_net_quotes = {}
         self._record_window(argument_text, len(wide_net_text), "fallacy_widenet")
         kernel, settings = self._create_one_shot_kernel()
         roots = self.taxonomy_navigator.get_root_nodes()
@@ -687,7 +775,15 @@ class FallacyWorkflowPlugin:
             f"Analyze this text exhaustively for logical fallacies:\n\n"
             f"--- TEXT ---\n{wide_net_text}\n--- END ---\n\n"
             "List EVERY fallacy you can find. For each, respond with a JSON object:\n"
-            '{"fallacy_name": "...", "root_category": "...", "confidence": 0.0-1.0}\n\n'
+            '{"fallacy_name": "...", "root_category": "...", "confidence": 0.0-1.0, '
+            '"quote": "..."}\n\n'
+            # #3376 — the quote is what the descent reads. It must be VERBATIM
+            # and short: the descent centres a same-size window on it, so an
+            # invented or paraphrased quote is worse than none (it falls back).
+            "The quote MUST be copied verbatim from the TEXT above, word for "
+            "word, 40 to 200 characters, with no ellipsis and no paraphrase — it "
+            "is where the descent will read. If you cannot quote it verbatim, "
+            'give an empty quote ("").\n\n'
             "Respond with a JSON array of objects. Be thorough — aim for 10-20 fallacies.\n"
             "Even borderline or arguable cases should be included.\n\n"
             f"Available root categories:\n{roots_text}"
@@ -759,6 +855,12 @@ class FallacyWorkflowPlugin:
                 pk = self._map_fallacy_to_root_pk(fallacy_name, roots_index)
             if pk and pk not in candidate_pks:
                 candidate_pks.append(pk)
+                # #3376 — the evidence, keyed by the candidate it belongs to.
+                # First quote wins: a later candidate mapping to the same PK
+                # must not overwrite where the first one was actually seen.
+                quote = c.get("quote", "")
+                if isinstance(quote, str) and quote.strip():
+                    self._wide_net_quotes[pk] = quote.strip()
 
         candidate_pks = candidate_pks[: self.MAX_CANDIDATES]
         self.logger.info(
@@ -873,6 +975,64 @@ class FallacyWorkflowPlugin:
         reasoning_history: Optional[List[str]] = None,
         supersession_tracker: Optional["_BranchSupersessionTracker"] = None,
         results_sink: Optional[List[IdentifiedFallacy]] = None,
+        quote: str = "",
+        outcomes: Optional[List[Dict[str, Any]]] = None,
+    ) -> Optional[IdentifiedFallacy]:
+        """#3376 — one document-level branch: WHERE it reads, then the descent.
+
+        The wide net found this candidate on a quote. That quote decides the
+        window the descent judges it against — centred on the evidence, at the
+        bound the descent always used — instead of the document's opening,
+        which on a long document need not contain the candidate at all. An
+        unlocated quote keeps the head (the old behaviour) and the record says
+        the fallback happened.
+
+        The branch's terminal action and the model's reason are recorded on
+        ``outcomes`` (a shared list, one entry per branch): six of seven
+        branches ending without a confirmed fallacy used to leave no trace of
+        why, so "refused because the evidence was outside the window" was a
+        hypothesis the record could not settle.
+        """
+        window_text, selection = descent_text_and_selection(argument_text, quote)
+        self._record_descent_read(selection, start_pk)
+        outcome: Dict[str, Any] = {
+            "start_pk": start_pk,
+            "action": "incomplete",
+            "reason": "",
+            "quote_located": selection.status == STATUS_CENTRED_ON_QUOTE,
+            "window_offset": selection.offset,
+        }
+        try:
+            return await self._descend_branch(
+                window_text,
+                start_pk,
+                slave_kernel,
+                slave_settings,
+                reasoning_history=reasoning_history,
+                supersession_tracker=supersession_tracker,
+                results_sink=results_sink,
+                outcome=outcome,
+                source_text=argument_text,
+                quote=quote,
+                outcomes=outcomes,
+            )
+        finally:
+            if outcomes is not None:
+                outcomes.append(outcome)
+
+    async def _descend_branch(
+        self,
+        window_text: str,
+        start_pk: str,
+        slave_kernel: Kernel,
+        slave_settings: OpenAIPromptExecutionSettings,
+        reasoning_history: Optional[List[str]] = None,
+        supersession_tracker: Optional["_BranchSupersessionTracker"] = None,
+        results_sink: Optional[List[IdentifiedFallacy]] = None,
+        outcome: Optional[Dict[str, Any]] = None,
+        source_text: str = "",
+        quote: str = "",
+        outcomes: Optional[List[Dict[str, Any]]] = None,
     ) -> Optional[IdentifiedFallacy]:
         """Explore a single taxonomy branch using iterative deepening.
 
@@ -894,11 +1054,12 @@ class FallacyWorkflowPlugin:
                 branch confirms a deeper, more specific fallacy, this branch
                 can abandon early if it is exploring an ancestor node.
         """
-        # #2850 lot 7: every prompt this descent emits (leaf confirmation and
-        # navigation alike) carries the same argument_text[:500] head — one
-        # site says it. Idempotent: branches and sub-branches re-record the
-        # same selection.
-        self._record_window(argument_text, 500, "fallacy_descent")
+        # #2850 lot 7 / #3376: every prompt this descent emits (leaf
+        # confirmation and navigation alike) carries the SAME window —
+        # computed once by the caller, centred on the wide net's quote when it
+        # was located, the head otherwise. One slice, so the prompt cannot
+        # read a window the record does not name.
+        outcome = outcome if outcome is not None else {}
         current_pk = start_pk
         navigation_trace = [start_pk]
         reasoning_history = reasoning_history or []
@@ -926,6 +1087,11 @@ class FallacyWorkflowPlugin:
                     start_pk,
                     supersession_tracker.descent_calls_made,
                 )
+                outcome["action"] = "budget"
+                outcome["reason"] = (
+                    f"global descent budget exceeded at call "
+                    f"#{supersession_tracker.descent_calls_made}"
+                )
                 break
             llm_call_count += 1
             # --- Supersession check (RA-3 #1048) ---
@@ -941,9 +1107,13 @@ class FallacyWorkflowPlugin:
                         f"  Branch SUPERSeded at {current_pk} (depth {current_depth}) "
                         f"by confirmed {superseding_pk}"
                     )
+                    outcome["action"] = "superseded"
+                    outcome["reason"] = f"superseded by confirmed {superseding_pk}"
                     return None
             current_node = self.taxonomy_navigator.get_node(current_pk)
             if not current_node:
+                outcome["action"] = "missing_node"
+                outcome["reason"] = f"node {current_pk} not in the taxonomy"
                 break
 
             children = self.taxonomy_navigator.get_children(current_pk)
@@ -972,7 +1142,7 @@ class FallacyWorkflowPlugin:
                     )
 
                 leaf_prompt = (
-                    f'Text to analyze: "{argument_text[:500]}"\n\n'
+                    f'Text to analyze: "{window_text}"\n\n'
                     f"You reached a LEAF node in the fallacy taxonomy.\n"
                     f"Node: {leaf_name} (PK: {current_pk})\n"
                     f"Description: {leaf_desc}\n"
@@ -1021,9 +1191,13 @@ class FallacyWorkflowPlugin:
                     self.logger.warning(
                         f"  Leaf confirmation timed out for {current_pk}"
                     )
+                    outcome["action"] = "timeout"
+                    outcome["reason"] = f"leaf confirmation timed out at {current_pk}"
                     break
                 except Exception as e:
                     self.logger.warning(f"  Leaf confirmation LLM call failed: {e}")
+                    outcome["action"] = "error"
+                    outcome["reason"] = f"leaf call failed: {type(e).__name__}: {e}"
                     break
 
                 leaf_items = []
@@ -1037,6 +1211,10 @@ class FallacyWorkflowPlugin:
                 ]
                 if not leaf_calls:
                     self.logger.info("  No function call at leaf — branch abandoned")
+                    outcome["action"] = "no_function_call"
+                    outcome["reason"] = (
+                        f"leaf reply carried no function call at {current_pk}"
+                    )
                     break
 
                 leaf_results = await self._execute_tool_calls(
@@ -1058,6 +1236,10 @@ class FallacyWorkflowPlugin:
                                 "  Leaf refused by the model's verdict: "
                                 f"{lr.get('reason', lr.get('justification', ''))}"
                             )
+                            outcome["action"] = "refused"
+                            outcome["reason"] = str(
+                                lr.get("reason", lr.get("justification", ""))
+                            )
                             return None
                         leaf_depth = int(current_node.get("depth", 0))
                         # Register leaf confirmation for supersession (RA-3 #1048).
@@ -1075,6 +1257,8 @@ class FallacyWorkflowPlugin:
                         # #3180 — the leaf verdict says whose move it is when
                         # the model can tell; silence stays silence.
                         move_author, move_author_label = _move_author_pair(lr)
+                        outcome["action"] = "confirmed"
+                        outcome["reason"] = str(lr.get("justification", ""))
                         return IdentifiedFallacy(
                             fallacy_type=lr.get("name", lr.get("name_fr", leaf_name)),
                             taxonomy_pk=current_pk,
@@ -1096,8 +1280,17 @@ class FallacyWorkflowPlugin:
                         self.logger.info(
                             f"  Leaf not confirmed: {lr.get('reason', '')}"
                         )
+                        outcome["action"] = "concluded_no_fallacy"
+                        outcome["reason"] = str(lr.get("reason", ""))
                         return None
 
+                # A leaf reply whose tool calls carried no verdict: neither a
+                # confirmation nor a refusal was read. #3376 — name it instead
+                # of letting the branch disappear without a reason.
+                outcome["action"] = "no_verdict"
+                outcome["reason"] = (
+                    f"leaf tool calls carried no verdict at {current_pk}"
+                )
                 break
 
             # Build double-selection prompt with memory of reasons
@@ -1150,7 +1343,7 @@ class FallacyWorkflowPlugin:
             )
 
             prompt = (
-                f'Text to analyze: "{argument_text[:500]}"\n\n'
+                f'Text to analyze: "{window_text}"\n\n'
                 f"You are navigating the fallacy taxonomy. Current position: {parent_name}\n"
                 f"{reasoning_context}"
                 f"{options_text}\n"
@@ -1229,9 +1422,13 @@ class FallacyWorkflowPlugin:
                 self.logger.warning(
                     f"  LLM call timed out during branch exploration at {current_pk}"
                 )
+                outcome["action"] = "timeout"
+                outcome["reason"] = f"navigation call timed out at {current_pk}"
                 break
             except Exception as e:
                 self.logger.warning(f"  LLM call failed during branch exploration: {e}")
+                outcome["action"] = "error"
+                outcome["reason"] = f"navigation call failed: {type(e).__name__}: {e}"
                 break
 
             # Extract function calls from response
@@ -1244,6 +1441,10 @@ class FallacyWorkflowPlugin:
             tool_calls = [i for i in all_items if isinstance(i, FunctionCallContent)]
             if not tool_calls:
                 self.logger.info("  No function calls in response — branch exhausted")
+                outcome["action"] = "no_function_call"
+                outcome["reason"] = (
+                    f"navigation reply carried no function call at {current_pk}"
+                )
                 break
 
             # Execute tool calls
@@ -1338,6 +1539,8 @@ class FallacyWorkflowPlugin:
                 # #3180 — same rule as the leaf site: the confirm verdict
                 # carries the author pair when the model stated it.
                 move_author, move_author_label = _move_author_pair(confirm_result)
+                outcome["action"] = "confirmed"
+                outcome["reason"] = str(justification)
                 return IdentifiedFallacy(
                     fallacy_type=confirm_result.get(
                         "name",
@@ -1371,6 +1574,8 @@ class FallacyWorkflowPlugin:
                 )
                 reasoning_history.append(reasoning_summary)
                 self.logger.info(f"  Branch refused by the model's verdict: {reason}")
+                outcome["action"] = "refused"
+                outcome["reason"] = str(reason)
                 return None
 
             if conclude_result is not None:
@@ -1379,10 +1584,14 @@ class FallacyWorkflowPlugin:
                 reasoning_summary = f"Abandoned {current_node.get(f'text_{self.language}', current_pk)}: {reason}"
                 reasoning_history.append(reasoning_summary)
                 self.logger.info(f"  Branch abandoned: {reason}")
+                outcome["action"] = "concluded_no_fallacy"
+                outcome["reason"] = str(reason)
                 return None
 
             if not explore_targets:
                 self.logger.info("  explore_branch returned same/empty node")
+                outcome["action"] = "no_target"
+                outcome["reason"] = "explore_branch returned the same or an empty node"
                 break
 
             # RA-3 #1048 item 2: the top child stays the primary path; extra
@@ -1398,12 +1607,14 @@ class FallacyWorkflowPlugin:
             ):
                 await self._fanout_subbranches(
                     extras,
-                    argument_text,
+                    source_text,
                     slave_kernel,
                     slave_settings,
                     reasoning_history,
                     supersession_tracker,
                     results_sink,
+                    quote=quote,
+                    outcomes=outcomes,
                 )
 
             # Capture reasoning for memory - why the primary branch was chosen
@@ -1421,6 +1632,14 @@ class FallacyWorkflowPlugin:
                 f"(reasoning history: {len(reasoning_history)} steps)"
             )
 
+        # The while loop ended without a terminal verdict: the per-branch call
+        # budget (MAX_NAVIGATION_LLM_CALLS) ran out. #3376 — say it, so a cut
+        # branch is never read as a judgment.
+        if not outcome.get("action") or outcome["action"] == "incomplete":
+            outcome["action"] = "budget"
+            outcome["reason"] = (
+                f"per-branch call budget ({self.MAX_NAVIGATION_LLM_CALLS}) exhausted"
+            )
         return None
 
     async def _fanout_subbranches(
@@ -1432,6 +1651,8 @@ class FallacyWorkflowPlugin:
         reasoning_history: List[str],
         supersession_tracker: "_BranchSupersessionTracker",
         results_sink: List[IdentifiedFallacy],
+        quote: str = "",
+        outcomes: Optional[List[Dict[str, Any]]] = None,
     ) -> None:
         """Explore extra promising children as bounded concurrent sub-branches.
 
@@ -1465,6 +1686,8 @@ class FallacyWorkflowPlugin:
                     reasoning_history=list(reasoning_history),
                     supersession_tracker=supersession_tracker,
                     results_sink=results_sink,
+                    quote=quote,
+                    outcomes=outcomes,
                 )
             )
         if not tasks:
@@ -1554,6 +1777,14 @@ class FallacyWorkflowPlugin:
             # Additive: top-level branch primaries return via the gather below;
             # any extra promising children explored as sub-branches land here.
             fanout_sink: List[IdentifiedFallacy] = []
+            # #3376 — one entry per branch (document-level and fan-out alike):
+            # start PK, terminal action, the model's reason, and where that
+            # branch's window sat. A branch that ends without a confirmed
+            # fallacy used to leave no trace of why it ended.
+            branch_outcomes: List[Dict[str, Any]] = []
+            # #3376 — the reading record's per-branch offsets describe THIS
+            # run: a plugin instance reused across runs must not append.
+            self._descent_reads = []
             exploration_tasks = [
                 self._explore_single_branch(
                     argument_text,
@@ -1563,6 +1794,8 @@ class FallacyWorkflowPlugin:
                     reasoning_history=None,
                     supersession_tracker=tracker,
                     results_sink=fanout_sink,
+                    quote=self._wide_net_quotes.get(pk, ""),
+                    outcomes=branch_outcomes,
                 )
                 for pk in candidate_pks
             ]
@@ -1655,6 +1888,10 @@ class FallacyWorkflowPlugin:
                 # phase degraded (anti-theater #1019).
                 result_obj = json.loads(result_json)
                 result_obj["descent_calls_made"] = tracker.descent_calls_made
+                # #3376 — how every branch ended, with its reason: the record
+                # the next paid run reads to tell "refused" from "the evidence
+                # never reached the window".
+                result_obj["branch_outcomes"] = branch_outcomes
                 if tracker.descent_budget_exceeded:
                     result_obj["descent_budget_exceeded"] = True
                     result_obj["exploration_method"] = "wide_net_parallel_budget_capped"
@@ -1679,6 +1916,9 @@ class FallacyWorkflowPlugin:
             try:
                 _os_obj = json.loads(one_shot_result)
                 _os_obj["descent_calls_made"] = tracker.descent_calls_made
+                # #3376 — the branches ran before the fallback; their ends are
+                # part of why the run fell back, so they travel with it.
+                _os_obj["branch_outcomes"] = branch_outcomes
                 if tracker.descent_budget_exceeded:
                     _os_obj["descent_budget_exceeded"] = True
                 one_shot_result = json.dumps(_os_obj, indent=2, ensure_ascii=False)

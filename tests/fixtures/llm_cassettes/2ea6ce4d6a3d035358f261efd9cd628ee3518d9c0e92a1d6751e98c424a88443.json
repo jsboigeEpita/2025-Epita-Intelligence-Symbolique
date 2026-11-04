@@ -1,14 +1,14 @@
 {
   "key": "2ea6ce4d6a3d035358f261efd9cd628ee3518d9c0e92a1d6751e98c424a88443",
   "value": {
-    "id": "chatcmpl-EeCofB7sfRnNahadAtxCCJvW4dF7w",
+    "id": "chatcmpl-EgJ4uVZQP8jyEfiPFXQ6hXk2ISJQ8",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Les vaccins sont dangereux, notamment parce que les produits pharmaceutiques cacheraient leurs effets secondaires.\",\"main_thesis\":\"Les vaccins sont efficaces et leur dangerosité est une affirmation infondée, car les études scientifiques montrent les bénéfices de la vaccination et réfutent les théories du complot sur la dissimulation d’effets secondaires.\"}",
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Les vaccins sont dangereux.\",\"main_thesis\":\"Les vaccins ne sont pas dangereux et leur innocuité est soutenue par des décennies de recherche clinique; les accusations de dissimulation des effets secondaires sont infondées.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793251093,
+    "created": 1793751820,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 141,
+      "completion_tokens": 176,
       "prompt_tokens": 271,
-      "total_tokens": 412,
+      "total_tokens": 447,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 47,
+        "reasoning_tokens": 110,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

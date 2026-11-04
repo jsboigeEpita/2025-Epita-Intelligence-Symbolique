@@ -1,0 +1,33 @@
+{
+  "key": "d5dd6f9b92dee2a141d3eedbf03c032b94a0e76c9018fa144f0549c2e1da0d30",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "[\n  {\n    \"fallacy_name\": \"Appel à l'autorité\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.99,\n    \"quote\": \"Argument 1 : Les experts sont unanimes, c'est donc vrai.\"\n  },\n  {\n    \"fallacy_name\": \"Appel au consensus (ad populum)\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.95,\n    \"quote\": \"Argument 1 : Les experts sont unanimes, c'est donc vrai.\"\n  },\n  {\n    \"fallacy_name\": \"Appel à l'unanimité\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.94,\n    \"quote\": \"Argument 1 : Les experts sont unanimes, c'est donc vrai.\"\n  },\n  {\n    \"fallacy_name\": \"Argument d'autorité vague ou anonyme\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.91,\n    \"quote\": \"Argument 1 : Les experts sont unanimes, c'est donc vrai.\"\n  },\n  {\n    \"fallacy_name\": \"Non sequitur\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.98,\n    \"quote\": \"Argument 1 : Les experts sont unanimes, c'est donc vrai.\"\n  },\n  {\n    \"fallacy_name\": \"Confusion entre consensus et vérité\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.98,\n    \"quote\": \"Argument 1 : Les experts sont unanimes, c'est donc vrai.\"\n  },\n  {\n    \"fallacy_name\": \"Généralisation hâtive\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.83,\n    \"quote\": \"Argument 1 : Les experts sont unanimes, c'est donc vrai.\"\n  },\n  {\n    \"fallacy_name\": \"Ad hominem circonstanciel\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.97,\n    \"quote\": \"Argument 2 : Si vous n'etes pas expert, votre avis ne compte pas.\"\n  },\n  {\n    \"fallacy_name\": \"Disqualification de l'opinion par le statut\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.98,\n    \"quote\": \"Argument 2 : Si vous n'etes pas expert, votre avis ne compte pas.\"\n  },\n  {\n    \"fallacy_name\": \"Appel à l'élitisme\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.96,\n    \"quote\": \"Argument 2 : Si vous n'etes pas expert, votre avis ne compte pas.\"\n  },\n  {\n    \"fallacy_name\": \"Faux dilemme implicite\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.86,\n    \"quote\": \"Argument 2 : Si vous n'etes pas expert, votre avis ne compte pas.\"\n  },\n  {\n    \"fallacy_name\": \"Sophisme génétique\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.91,\n    \"quote\": \"Argument 2 : Si vous n'etes pas expert, votre avis ne compte pas.\"\n  },\n  {\n    \"fallacy_name\": \"Empoisonnement du puits\",\n    \"root_category\": \"Obstruction\",\n    \"confidence\": 0.88,\n    \"quote\": \"Argument 2 : Si vous n'etes pas expert, votre avis ne compte pas.\"\n  },\n  {\n    \"fallacy_name\": \"Confusion entre compétence et validité d'un argument\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.98,\n    \"quote\": \"Argument 2 : Si vous n'etes pas expert, votre avis ne compte pas.\"\n  },\n  {\n    \"fallacy_name\": \"Exclusion indue des contre-arguments\",\n    \"root_category\": \"Obstruction\",\n    \"confidence\": 0.94,\n    \"quote\": \"Argument 2 : Si vous n'etes pas expert, votre avis ne compte pas.\"\n  }\n]",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EgIw2wTkirXcKd0tLQL4UkCxpStRG",
+        "created": 1793751270,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 287,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 1931,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 1024,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

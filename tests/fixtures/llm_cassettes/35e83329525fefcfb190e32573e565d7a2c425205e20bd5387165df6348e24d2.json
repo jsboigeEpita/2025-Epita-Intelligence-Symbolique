@@ -1,14 +1,14 @@
 {
   "key": "35e83329525fefcfb190e32573e565d7a2c425205e20bd5387165df6348e24d2",
   "value": {
-    "id": "chatcmpl-EeCrP13T0ppgsRt9UPYO8gHP9eGgl",
+    "id": "chatcmpl-EgJ88jX8Vl4uvmivi9J9PTSJmcODz",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":1.0,\"exhibit\":\"Les trois points sont distincts : nécessité de la transition énergétique, avantage économique à long terme, et critique du recours à des données sélectives par les minimisateurs de la crise climatique. Aucune redondance sémantique notable.\"}",
+          "content": "{\"score\":1.0,\"exhibit\":\"Les trois points sont distincts : nécessité de la transition énergétique, avantage économique à long terme, et critique de l’usage sélectif des données par les minimisateurs de la crise climatique. Aucune redondance sémantique notable.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793251263,
+    "created": 1793752020,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 120,
+      "completion_tokens": 111,
       "prompt_tokens": 285,
-      "total_tokens": 405,
+      "total_tokens": 396,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 51,
+        "reasoning_tokens": 42,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

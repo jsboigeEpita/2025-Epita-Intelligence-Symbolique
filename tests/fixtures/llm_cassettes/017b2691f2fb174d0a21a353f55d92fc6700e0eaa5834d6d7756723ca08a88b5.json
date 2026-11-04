@@ -1,0 +1,40 @@
+{
+  "key": "017b2691f2fb174d0a21a353f55d92fc6700e0eaa5834d6d7756723ca08a88b5",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_rVmQWGoTCBfZEbBuks5QfKeB",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"76\",\"matches\":true,\"justification\":\"La phrase présente l’affirmation du président comme un succès incontestable uniquement en raison de son statut d’autorité, sans fournir d’éléments indépendants pour l’étayer. Elle commet donc une autorité invincible.\",\"confidence\":\"high\",\"move_author\":\"speaker\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EgIvgDvBAeXOBXUw7bTMuaFVhhA3L",
+        "created": 1793751248,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 921,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 93,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}
