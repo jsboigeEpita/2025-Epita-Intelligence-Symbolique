@@ -402,7 +402,8 @@ def _format_strategic_block(read: Dict[str, Any]) -> str:
     The computed lines are labelled as computed: a winner the engine derived
     carries a different authority from a sentence the model wrote, and the
     writer is told which is which. A non-``ok`` computation is stated, never
-    papered over with an invented winner.
+    papered over with an invented winner — and a winner computed on a
+    COMPLETED profile (#3385) is named as such, next to the winner itself.
     """
     read = read or {}
     lines: List[str] = []
@@ -432,8 +433,17 @@ def _format_strategic_block(read: Dict[str, Any]) -> str:
 
     game = read.get("game") or {}
     status = game.get("status")
-    if status == "ok":
-        lines.append(f"  Gagnant CALCULÉ (Condorcet) : {game.get('winner')}")
+    if status in ("ok", "ok_completed"):
+        winner_line = f"  Gagnant CALCULÉ (Condorcet) : {game.get('winner')}"
+        completed = game.get("completed") or {}
+        if status == "ok_completed":
+            # #3385 — the profile was completed (options the players never
+            # ranked, appended in declaration order): the winner is computed
+            # on ballots partly built by us, and the writer must not present
+            # it as a clean computation.
+            who = ", ".join(sorted(completed))
+            winner_line += f" — profil complété pour {who}"
+        lines.append(winner_line)
         for pivot in (game.get("single_player") or [])[:_PIVOT_LINES]:
             lines.append(
                 f"  Pivot d'un joueur : {pivot.get('player')} peut porter "

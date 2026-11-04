@@ -27,7 +27,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 from argumentation_analysis.agents.core.context import (
     MODEL_KNOWLEDGE_BASIS,
@@ -112,23 +112,44 @@ class StrategicRead:
         }
 
 
-def _normalise_ballot(ranking: List[str], options: List[str]) -> List[str]:
-    """Complete a player's ranking over ``options``, deterministically.
+def _match_key(name: str) -> str:
+    """The normalised key an entry must SHARE with an option to match it.
 
-    ``condorcet_winner`` needs a total order over the declaration: an option the
-    player left out cannot be compared, and dropping it silently would make a
-    partial ranking look like an indifference. Missing options are appended in
-    the declaration order — the least-committal completion, and the same one on
-    every run.
+    Casefolded, whitespace-collapsed, with quotes and punctuation stripped at
+    the ends — so ``cadre c``, ``"Cadre C"`` and ``Cadre  C`` are the same
+    ballot entry as ``Cadre C``. The match on this key is EXACT, never
+    approximate: a near-match would be a guess dressed as a read (#3385).
     """
-    seen: List[str] = []
-    for name in ranking or []:
-        if name in options and name not in seen:
-            seen.append(name)
-    for name in options:
-        if name not in seen:
-            seen.append(name)
-    return seen
+    collapsed = " ".join(str(name or "").casefold().split())
+    return collapsed.strip(" \t\"'«»“”‘’`’.,;:!?()[]{}…-–—")
+
+
+def _normalise_ballot(
+    ranking: List[str], options: List[str]
+) -> Tuple[List[str], List[str], List[str]]:
+    """Match a player's ranking to the options, and report what did not match.
+
+    Returns ``(matched, unmatched, completed)``: the entries that matched an
+    option (the player's own order, deduplicated), the entries that matched
+    nothing (recorded — an unreadable entry is a fact about the read), and the
+    options the player left out. The caller completes the ballot by appending
+    ``completed`` in declaration order — a completion that IS a preference
+    (the first-declared option), which is why it is recorded in ``game`` and
+    said next to the winner, never presented as the player's own ranking
+    (#3385: appending silently flipped a computed Condorcet winner while
+    ``status`` stayed ``ok``).
+    """
+    key_to_option = {_match_key(option): option for option in options}
+    matched: List[str] = []
+    unmatched: List[str] = []
+    for entry in ranking or []:
+        option = key_to_option.get(_match_key(entry))
+        if option is None:
+            unmatched.append(str(entry))
+        elif option not in matched:
+            matched.append(option)
+    completed = [option for option in options if option not in matched]
+    return matched, unmatched, completed
 
 
 def _reports_first(ballot: List[str], target: str) -> List[str]:
@@ -156,15 +177,48 @@ def compute_manipulability(
 
     Pure and deterministic — same profile, same dict. Bounded by
     ``MAX_PLAYERS``; the output states when the bound bit.
+
+    Ballots are matched to the options on a normalised key (#3385), and what
+    the matching did is part of the record, never silent: a player none of
+    whose entries match is EXCLUDED from the profile (completing them would
+    score a ballot the player never gave), a player who matched some entries
+    gets the missing options appended in declaration order — recorded in
+    ``completed`` and stated by ``status`` — and every unreadable entry is
+    kept in ``unmatched``.
     """
     declared = [name for name, ranking in (preferences or {}).items() if ranking]
-    players = declared[:MAX_PLAYERS]
+    capped_players = declared[:MAX_PLAYERS]
     options = [name for name in (options or [])][:MAX_OPTIONS]
+
+    players: List[str] = []
+    ballots: List[List[str]] = []
+    excluded_players: List[Dict[str, Any]] = []
+    unmatched_by_player: Dict[str, List[str]] = {}
+    completed_by_player: Dict[str, List[str]] = {}
+    for name in capped_players:
+        matched, unmatched, completed = _normalise_ballot(preferences[name], options)
+        if not matched:
+            # Nothing this player wrote names an option: there is no ballot to
+            # score, and inventing one from the declaration order is exactly
+            # the fabrication #3385 closes. The player leaves the profile and
+            # the record says so.
+            excluded_players.append({"player": name, "entries": unmatched})
+            continue
+        players.append(name)
+        ballots.append(matched + completed)
+        if unmatched:
+            unmatched_by_player[name] = unmatched
+        if completed:
+            completed_by_player[name] = completed
 
     result: Dict[str, Any] = {
         "players": players,
         "options": options,
-        "capped": len(declared) > len(players) or len(options or []) > len(options),
+        "capped": len(declared) > len(capped_players)
+        or len(options or []) > len(options),
+        "excluded_players": excluded_players,
+        "unmatched": unmatched_by_player,
+        "completed": completed_by_player,
         "winner": None,
         "single_player": [],
         "coalitions": [],
@@ -176,7 +230,12 @@ def compute_manipulability(
         result["status"] = "insufficient_profile"
         return result
 
-    ballots = [_normalise_ballot(preferences[name], options) for name in players]
+    if completed_by_player:
+        # At least one scored ballot carries options the player never ranked:
+        # the winner is computed on a completed profile, and the status says
+        # so — the writer must not present it as a clean computation.
+        result["status"] = "ok_completed"
+
     baseline = condorcet_winner(ballots, options)
     result["winner"] = baseline
     if baseline is None:

@@ -38,9 +38,9 @@ logger = logging.getLogger("Historian")
 #: Act I prompt without adding a stake.
 MAX_ITEMS = 8
 
-#: Three decades either side of the document is the band in which a debate's
-#: vocabulary and its institutional frame stay legible. Named here because it
-#: is a prompt bound the reader can check, not a hidden truncation.
+#: How many extracted stakes the historian's prompt restates to the model —
+#: a bound on the prompt, not on the era it may situate. Named so the reader
+#: can check it against the rendered prompt instead of a hidden truncation.
 _PROMPT_MAX_STAKES = 6
 
 HISTORIAN_PROMPT = """You are a historian. Situate the document below before anyone

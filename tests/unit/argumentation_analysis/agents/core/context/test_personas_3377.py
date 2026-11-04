@@ -47,7 +47,9 @@ from argumentation_analysis.agents.core.context.strategist import (
 )
 from argumentation_analysis.services.nl_to_logic import NLToLogicTranslator
 
-_EXCERPT = ("une phrase de contexte, avec des virgules; et une autre clause. " * 80)[:4000]
+_EXCERPT = ("une phrase de contexte, avec des virgules; et une autre clause. " * 80)[
+    :4000
+]
 
 
 def _state(**fields):
@@ -72,8 +74,14 @@ def _llm(payload):
 _HISTORIAN_PAYLOAD = {
     "situation": "Le document appartient à une période de transition institutionnelle.",
     "items": [
-        {"claim": "Le cadre institutionnel est celui d'une assemblée.", "confidence": 0.8},
-        {"claim": "Le vocabulaire situe le propos après une réforme.", "confidence": 0.4},
+        {
+            "claim": "Le cadre institutionnel est celui d'une assemblée.",
+            "confidence": 0.8,
+        },
+        {
+            "claim": "Le vocabulaire situe le propos après une réforme.",
+            "confidence": 0.4,
+        },
     ],
 }
 
@@ -163,14 +171,21 @@ class TestTheNoteTheConsumerReads:
     async def test_no_read_means_no_note(self):
         """A consumer that appended an empty header would advertise a
         provenance it does not have."""
-        assert context_note(_state(historical_context={"items": [], "situation": ""})) == ""
+        assert (
+            context_note(_state(historical_context={"items": [], "situation": ""}))
+            == ""
+        )
 
     async def test_the_note_says_it_is_model_knowledge(self):
         state = _state(
             historical_context={
                 "situation": "Une période de transition.",
                 "items": [
-                    {"claim": "Une assemblée.", "confidence": 0.8, "basis": "model_knowledge"}
+                    {
+                        "claim": "Une assemblée.",
+                        "confidence": 0.8,
+                        "basis": "model_knowledge",
+                    }
                 ],
                 "status": "ok",
                 "basis": "model_knowledge",
@@ -260,21 +275,140 @@ class TestTheEngineComputesTheOutcome:
             "P4": ["B", "A", "C"],
         }
 
-        assert compute_manipulability(profile, ["A", "B", "C"]) == compute_manipulability(
+        assert compute_manipulability(
             profile, ["A", "B", "C"]
-        )
+        ) == compute_manipulability(profile, ["A", "B", "C"])
 
     def test_a_partial_ranking_is_completed_deterministically(self):
         """A player who named one option cannot be compared on the others
-        unless the ballot is completed; the completion is stated, not random."""
+        unless the ballot is completed; the completion is stated, not random.
+        #3385: the matcher now returns what matched, what did not, and what it
+        had to complete — three facts, not one flattened ballot."""
         from argumentation_analysis.agents.core.context.strategist import (
             _normalise_ballot,
         )
 
-        assert _normalise_ballot(["B"], ["A", "B", "C"]) == ["B", "A", "C"]
-        assert _normalise_ballot(["B", "C"], ["A", "B", "C"]) == ["B", "C", "A"]
+        assert _normalise_ballot(["B"], ["A", "B", "C"]) == (
+            ["B"],
+            [],
+            ["A", "C"],
+        )
+        assert _normalise_ballot(["B", "C"], ["A", "B", "C"]) == (
+            ["B", "C"],
+            [],
+            ["A"],
+        )
         # An option the player ranked twice keeps its first position only.
-        assert _normalise_ballot(["C", "B", "C"], ["A", "B", "C"]) == ["C", "B", "A"]
+        assert _normalise_ballot(["C", "B", "C"], ["A", "B", "C"]) == (
+            ["C", "B"],
+            [],
+            ["A"],
+        )
+        # #3385 — an entry that names no option is UNREADABLE, not silently
+        # dropped: it is recorded so the read can say what it could not use.
+        assert _normalise_ballot(["B", "option x"], ["A", "B", "C"]) == (
+            ["B"],
+            ["option x"],
+            ["A", "C"],
+        )
+
+
+# ============================================================================
+# #3385 — the ballot is matched on a normalised key, never invented
+# ============================================================================
+
+
+class TestTheBallotIsMatchedNotInvented:
+    """Red on the R1295 head ``7582f10e3``: ``_normalise_ballot`` kept only
+    EXACT matches and appended the missing options in declaration order, so a
+    model writing the option names in its own casing handed the engine a
+    ballot it never gave — one that favours the first-declared option — while
+    ``status`` stayed ``ok`` and nothing recorded the substitution."""
+
+    OPTIONS = ["Cadre A", "Cadre B", "Cadre C"]
+
+    def test_casing_alone_does_not_rewrite_the_ballot(self):
+        """The coordinator's probe. Two players write the options lowercase;
+        the third writes them exact. The engine must score the ballots AS
+        WRITTEN (winner Cadre C), not the declaration order (which made
+        Cadre A win on the old head) — and casing alone invents nothing to
+        record: no completion, no unmatched entry."""
+        profile = {
+            "P1": ["cadre c", "cadre b", "cadre a"],
+            "P2": ["cadre c", "cadre a", "cadre b"],
+            "P3": ["Cadre B", "Cadre C", "Cadre A"],
+        }
+        game = compute_manipulability(profile, self.OPTIONS)
+
+        assert game["winner"] == "Cadre C", (
+            "the ballots as written elect Cadre C; a winner of "
+            f"{game['winner']!r} means the engine scored a ballot the "
+            "players never gave"
+        )
+        assert game["status"] == "ok"
+        assert game["completed"] == {}
+        assert game["unmatched"] == {}
+
+    def test_whitespace_and_end_punctuation_do_not_rewrite_it_either(self):
+        profile = {
+            "P1": ['"Cadre   C"', "cadre b.", "Cadre A"],
+            "P2": ["Cadre C", "Cadre A", "Cadre B"],
+            "P3": ["Cadre B", "Cadre C", "Cadre A"],
+        }
+        game = compute_manipulability(profile, self.OPTIONS)
+
+        assert game["winner"] == "Cadre C"
+        assert game["completed"] == {}
+        assert game["unmatched"] == {}
+
+    def test_a_partial_ballot_is_completed_and_the_record_carries_it(self):
+        """A genuinely partial ballot is completed (declaration order for the
+        missing) — and the completion is RECORDED, with a status that says
+        so: the winner is computed on a profile partly built by us."""
+        profile = {
+            "P1": ["Cadre C"],
+            "P2": ["Cadre C", "Cadre A", "Cadre B"],
+            "P3": ["Cadre B", "Cadre C", "Cadre A"],
+        }
+        game = compute_manipulability(profile, self.OPTIONS)
+
+        assert game["winner"] == "Cadre C"
+        assert game["status"] == "ok_completed"
+        assert game["completed"] == {"P1": ["Cadre A", "Cadre B"]}
+        assert game["unmatched"] == {}
+
+    def test_a_player_whose_nothing_matches_is_excluded_not_completed(self):
+        """A player none of whose entries match is EXCLUDED from the profile:
+        completing them would score the declaration order — a strict
+        preference the player never stated. The exclusion is recorded with
+        the unreadable entries, and the rest of the profile is computed."""
+        profile = {
+            "P1": ["Cadre C", "Cadre B", "Cadre A"],
+            "P2": ["Cadre C", "Cadre A", "Cadre B"],
+            "P3": ["Cadre B", "Cadre C", "Cadre A"],
+            "P4": ["option x", "option y"],
+        }
+        game = compute_manipulability(profile, self.OPTIONS)
+
+        assert game["players"] == ["P1", "P2", "P3"]
+        assert game["excluded_players"] == [
+            {"player": "P4", "entries": ["option x", "option y"]}
+        ]
+        assert "P4" not in game["completed"]
+        assert game["winner"] == "Cadre C"
+
+    def test_exclusion_below_two_players_is_insufficient(self):
+        profile = {
+            "P1": ["Cadre A", "Cadre B", "Cadre C"],
+            "P2": ["option x", "option y"],
+        }
+        game = compute_manipulability(profile, self.OPTIONS)
+
+        assert game["status"] == "insufficient_profile"
+        assert game["winner"] is None
+        assert game["excluded_players"] == [
+            {"player": "P2", "entries": ["option x", "option y"]}
+        ]
 
 
 class TestTheStateSaysWhichPartIsWhose:
@@ -330,9 +464,7 @@ class TestActeIConsumesTheRead:
                 "game": {
                     "status": "ok",
                     "winner": "A",
-                    "single_player": [
-                        {"player": "P1", "reports": "B", "winner": "B"}
-                    ],
+                    "single_player": [{"player": "P1", "reports": "B", "winner": "B"}],
                     "coalitions": [],
                 },
                 "basis": MODEL_KNOWLEDGE_BASIS,
@@ -374,7 +506,9 @@ class TestActeIConsumesTheRead:
 
         prompt = build_act1_prompt(_evidence())
 
-        assert "La lecture stratégique (acteurs, intérêts, coups attendus)" not in prompt
+        assert (
+            "La lecture stratégique (acteurs, intérêts, coups attendus)" not in prompt
+        )
         assert "tu n'en produis pas une autre" in prompt
 
     def test_an_absent_read_is_said_absent(self):
@@ -399,6 +533,34 @@ class TestActeIConsumesTheRead:
 
         assert "non concluant (insufficient_profile)" in prompt
         assert "Gagnant CALCULÉ" not in prompt
+
+    def test_a_completed_profile_is_named_next_to_the_winner(self):
+        """#3385 — a winner computed on a completed profile is not a clean
+        computation: the block names whose ballots we completed, next to the
+        winner itself, so the writer does not print it as the engine's own
+        verdict on the players' ballots."""
+        from argumentation_analysis.reporting.restitution.act1_framing_plugin import (
+            build_act1_prompt,
+        )
+
+        evidence = _evidence(
+            strategic_read={
+                "players": [{"name": "P1", "role": "orateur", "stance": "for"}],
+                "options": ["A", "B"],
+                "reading": "Une lecture neutre.",
+                "game": {
+                    "status": "ok_completed",
+                    "winner": "A",
+                    "completed": {"P1": ["B"]},
+                    "single_player": [],
+                    "coalitions": [],
+                },
+                "basis": MODEL_KNOWLEDGE_BASIS,
+            }
+        )
+        prompt = build_act1_prompt(evidence)
+
+        assert "Gagnant CALCULÉ (Condorcet) : A — profil complété pour P1" in prompt
 
 
 # ============================================================================
