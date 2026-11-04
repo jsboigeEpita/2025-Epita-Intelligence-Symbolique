@@ -12,7 +12,7 @@ checkpoint instead of restarting the document.
 Usage:
     python scripts/dataset/run_corpus_batch.py \\
         --workflow spectacular \\
-        --output-dir .analysis_kb/signatures \\
+        --output-dir analysis_kb/signatures \\
         --max-docs 0 \\
         --skip-existing
 
@@ -31,7 +31,7 @@ Runbook B — pre-campaign canary (#2282, coord arbitration 2026-09-18):
        JVM next to green-looking buckets is a dead run regardless of ``ok``.
 
 Output layout (all gitignored):
-    .analysis_kb/
+    analysis_kb/
     ├── checkpoints/   <opaque_id>.checkpoint.json
     ├── state_dumps/   state_full_<opaque_id>.json
     └── signatures/    signature_<opaque_id>.json

@@ -2,7 +2,7 @@
 """Build discourse pattern report from signature files.
 
 Usage:
-    python scripts/dataset/build_pattern_report.py [--signatures-dir .analysis_kb/signatures]
+    python scripts/dataset/build_pattern_report.py [--signatures-dir analysis_kb/signatures]
 
 Reads ``signature_*.json`` files, runs pattern mining (C.3), and generates:
 - ``docs/reports/discourse_patterns.md``
@@ -345,7 +345,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Build discourse pattern report from signature files")
     parser.add_argument("--signatures-dir", type=pathlib.Path,
-                        default=pathlib.Path(".analysis_kb/signatures"))
+                        default=REPO_ROOT / "analysis_kb" / "signatures")
     args = parser.parse_args()
 
     signatures = load_signatures(args.signatures_dir)
