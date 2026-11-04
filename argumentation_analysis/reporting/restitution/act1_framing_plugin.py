@@ -61,6 +61,7 @@ from .reading_record import (
     bound_removal_motif,
     remove_restated_bounds,
     restated_bound_sentences,
+    SITE_LABELS_FR,
 )
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
 
@@ -978,13 +979,29 @@ def refresh_coverage_passage(narrative: str, state: Any) -> str:
     if not sentence:
         return narrative
     lines = narrative.split("\n")
-    for index, line in enumerate(lines):
-        if COVERAGE_HEADING in line:
+    # #3393 — the FIRST occurrence becomes the fresh sentence, and every
+    # LATER one is deleted with its paragraph. The writer sometimes copies
+    # the section the prompt names (:1040) into its own prose, truncated —
+    # on the panel the reader then read the section twice, the second copy
+    # cut short. One section, said once, at its first position: a render
+    # that carries a single occurrence renders exactly as before.
+    out: List[str] = []
+    replaced = False
+    index = 0
+    while index < len(lines):
+        if COVERAGE_HEADING in lines[index]:
             end = index + 1
             while end < len(lines) and lines[end].strip():
                 end += 1
-            lines[index:end] = [f"**{COVERAGE_HEADING}**", sentence.strip()]
-            return "\n".join(lines)
+            if not replaced:
+                out.extend([f"**{COVERAGE_HEADING}**", sentence.strip()])
+                replaced = True
+            index = end
+        else:
+            out.append(lines[index])
+            index += 1
+    if replaced:
+        return "\n".join(out)
     return insert_coverage_passage(narrative, format_coverage_passage(sentence))
 
 
@@ -1119,7 +1136,13 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         # what a thin spread cannot saturate. No span key = no selected unit
         # carried an offset: the sentence lends no extent it cannot ground.
         def _coverage_fig(phase: str, fig: Any) -> str:
-            part = f"{phase} : {fig['k']}/{fig['N']} unités"
+            # #3393 — the phase reaches the writer (and the render, which
+            # copies the prompt's parenthesis) under its READER label: a
+            # state key here is internal vocabulary on the reader surface
+            # (#3311's class, this block's instance — the gate WARNed about
+            # each of them on 9 of 9 renders). The table's fallback keeps an
+            # unmapped key traceable rather than dropping the module.
+            part = f"{SITE_LABELS_FR.get(phase, phase)} : {fig['k']}/{fig['N']} unités"
             # #2973 — une phase sans bandes (le recensement des ancres,
             # anchor_census) n'emprunte pas de tiers de texte : bands_total
             # à 0 dit « pas de concept de bandes ici », pas « 0 bandes

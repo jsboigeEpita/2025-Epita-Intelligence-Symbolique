@@ -69,6 +69,17 @@ DEFAULT_OUT = (
 # refuse to write to a path git would track).
 RESULTS_ROOT = REPO_ROOT / "argumentation_analysis" / "evaluation" / "results"
 
+# #3393 — the workflow name is an internal identifier (the runner's own
+# vocabulary); the fiche's header line says what the run DID, in reader
+# words. A name the table does not carry keeps the raw id — traceable,
+# never dropped.
+WORKFLOW_LABELS_FR = {
+    "spectacular": "restitution en quatre actes",
+    "light": "analyse allégée",
+    "standard": "analyse standard",
+    "full": "analyse complète",
+}
+
 # The pricing key default for direct calls. main() never uses it as a
 # fallback: the run's model is resolved from the zero-shot provenance
 # before the first fact is built, and a provenance that names no model is
@@ -327,6 +338,48 @@ def provenance_block(run_head: str, model: str, command: str) -> str:
     )
 
 
+# #3393 — the FB-18 anchors are the pipeline's grounding: they stay in the
+# STATE (what an auditor resolves against the run's artifacts), and the
+# READER surface prints prose — each anchor becomes a numbered note. The
+# numbering happens INSIDE `pipeline_full_text`, the one producer the fiche
+# prints and the judge reads (#3375 tranche 3): a caller that numbered on its
+# own would leave the judge reading raw `[artifact:…]` while the reader read
+# notes — the divergence that single producer exists to close.
+_ARTIFACT_ANCHOR_RE = re.compile(r"\[artifact:([^\]\s]+)\]")
+
+
+def anchors_to_notes(text: str, notes: Dict[str, str]) -> str:
+    """One FB-18 anchor becomes one numbered note (#3393).
+
+    ``notes`` is the fiche-wide registry, carried by the caller so every
+    act numbers into ONE list: the same anchor keeps the same number
+    wherever it appears, and the fiche's notes section (below) names what
+    each number stands for — the anchor stays checkable, the prose stays
+    readable.
+    """
+
+    def _sub(match: "re.Match[str]") -> str:
+        anchor = match.group(1)
+        if anchor not in notes:
+            notes[anchor] = f"[{len(notes) + 1}]"
+        return notes[anchor]
+
+    return _ARTIFACT_ANCHOR_RE.sub(_sub, text)
+
+
+def notes_section(notes: Dict[str, str]) -> str:
+    """The fiche's notes block — one line per anchor, numbered, checkable."""
+    if not notes:
+        return ""
+    ordered = sorted(notes.items(), key=lambda kv: int(kv[1][1:-1]))
+    lines = ["### Notes du pipeline (ancres du run)", ""]
+    lines += [
+        f"- {mark} fait ancré dans l'état du run : `{anchor}`"
+        for anchor, mark in ordered
+    ]
+    return "\n".join(lines)
+
+
 def pipeline_full_text(
     st: Dict[str, Any],
     classification: Optional[str],
@@ -341,7 +394,12 @@ def pipeline_full_text(
     terminal classification of a non-argumentative document (#3278), so the
     judge stared at an EMPTY text where the reader saw the classification
     sentence — the exact failure this single producer exists to close.
+
+    #3393: the FB-18 anchors are numbered here, in the same string, so the
+    judge reads prose with resolvable notes instead of raw ``[artifact:…]``
+    markers the reader never sees.
     """
+    notes: Dict[str, str] = {}
     body: List[str] = []
     if classification == "non_argumentative":
         # #3278 — the empty acts of a non-argumentative document are a
@@ -373,7 +431,7 @@ def pipeline_full_text(
             body.append(f"### {heading}")
             body.append("")
             if isinstance(text, str) and text:
-                body.append(text)
+                body.append(anchors_to_notes(text, notes))
             else:
                 body.append(
                     f"*(absent de l'état — {heading.lower()} non produit pour ce document)*"
@@ -383,7 +441,11 @@ def pipeline_full_text(
     if isinstance(question, str) and question:
         body.append("### Question interprétative")
         body.append("")
-        body.append(question)
+        body.append(anchors_to_notes(question, notes))
+        body.append("")
+    notes_block = notes_section(notes)
+    if notes_block:
+        body.append(notes_block)
         body.append("")
     return "\n".join(body)
 
@@ -412,7 +474,7 @@ def render_fiche(
     )
     lines.append("")
     lines.append(
-        f"*Document `{facts['opaque_id']}` — workflow `{facts['workflow']}`, statut `{facts['status']}`.*"
+        f"*Document `{facts['opaque_id']}` — {WORKFLOW_LABELS_FR.get(facts['workflow'], facts['workflow'])}, statut `{facts['status']}`.*"
     )
     lines.append("")
     lines.append("## Faits mesurés (lus dans l'état de la campagne)")
@@ -421,7 +483,7 @@ def render_fiche(
         f"- Longueur du document : **{facts['chars']} caractères** ; arguments extraits : **{facts['args']}** ; sophismes : **{facts['fallacies']}**"
     )
     lines.append(
-        f"- Verdicts formels : FOL **{facts['fol']}** / logique propositionnelle **{facts['pl']}** / modale **{facts['modal']}** (les « talons » non traduits #3123 s'y comptent comme résultats)"
+        f"- Verdicts formels : FOL **{facts['fol']}** / logique propositionnelle **{facts['pl']}** / modale **{facts['modal']}** (les « talons » non traduits s'y comptent comme résultats)"
     )
     lines.append(
         f"- Durée : **{facts['wall_s']} s** ; appels LLM : **{facts['calls']}** ; coût recalculé : pipeline **{cost_txt}**, zero-shot **{zs_cost}**"

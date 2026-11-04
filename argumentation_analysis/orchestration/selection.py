@@ -61,20 +61,22 @@ class SelectionResult:
     rendered sentence lends them no position.
 
     ``span`` is the (start, end) FRACTION of the source text covered by the
-    selected positioned units — ``None`` when the strategy has no text
-    length (population bands) or no selected unit carries an offset. It is
-    what makes a head-bound selection SAY head-bound: bands over text
-    positions can saturate on a thin spread, the span cannot (review of
-    #2887: a population anchored in the first 3,000 characters of a 56k text
-    rendered « 8/8 bandes » — bands built over the population itself recompute
-    the checked field from what it checks).
+    selected positioned units — the end being the last unit's END
+    (``offset + len(text)``, #3393), never its start. ``None`` when the
+    strategy has no text length (population bands) or no selected unit
+    carries an offset. It is what makes a head-bound selection SAY
+    head-bound: bands over text positions can saturate on a thin spread,
+    the span cannot (review of #2887: a population anchored in the first
+    3,000 characters of a 56k text rendered « 8/8 bandes » — bands built
+    over the population itself recompute the checked field from what it
+    checks).
 
     ``largest_uncovered_stretch`` (#2896 a) is the largest FRACTION of the
-    source text no selected unit covers — the gaps between consecutive
-    selected offsets, the text's start and end included. It is the number
-    that can FAIL: « 3/3 bands » stayed true on the paid run while a 0.41
-    stretch (0.01 → 0.42) held 15 located units nobody read. ``None`` under
-    the same conditions as ``span``.
+    source text no selected unit covers — measured on the units' coverage
+    intervals, merged (#3393), the text's start and end included. It is the
+    number that can FAIL: « 3/3 bands » stayed true on the paid run while a
+    0.41 stretch (0.01 → 0.42) held 15 located units nobody read. ``None``
+    under the same conditions as ``span``.
     """
 
     selected: Tuple[SelectableUnit, ...]
@@ -177,23 +179,68 @@ def _band_extent(
     return (start, end)
 
 
+def _positioned_spans(
+    positioned: Sequence[SelectableUnit], text_length: Optional[int]
+) -> List[Tuple[int, int]]:
+    """#3393 — each positioned unit COVERS ``[offset, offset + len(text))``.
+
+    A unit is not a point: the extent ends where its last unit ENDS,
+    clamped to the text. The old span took the last unit's START for the
+    extent's end, so the coverage side said 0.00–0.73 where the reading
+    record's own site lines — ``offset + len(unit.text)`` since #3136 —
+    said 0.00–1.00 for the same units: two producers, two truths, one
+    wrong. Empty list without a text length (the caller's span/uncovered
+    then render ``None``, the same honesty rule as before).
+    """
+    if not text_length:
+        return []
+    spans: List[Tuple[int, int]] = []
+    for u in positioned:
+        off = u.offset
+        if off is None:
+            continue
+        spans.append((int(off), min(int(off) + len(u.text or ""), text_length)))
+    return spans
+
+
+def _span_fraction(
+    spans: Sequence[Tuple[int, int]], text_length: Optional[int]
+) -> Optional[Tuple[float, float]]:
+    """The (start, end) fraction of the covered intervals — ``None`` when
+    nothing is positioned (no invented fraction, the #2887 rule)."""
+    if not text_length or not spans:
+        return None
+    return (
+        min(s for s, _ in spans) / text_length,
+        max(e for _, e in spans) / text_length,
+    )
+
+
 def _largest_uncovered_stretch(
-    selected_offsets: Sequence[int], text_length: Optional[int]
+    selected_spans: Sequence[Tuple[int, int]], text_length: Optional[int]
 ) -> Optional[float]:
     """#2896 (a) — the largest text fraction no selected unit covers.
 
-    Edges count: the gap from the text's start to the first selected
-    offset, the gaps between consecutive selected offsets, and the gap
-    from the last to the text's end. ``None`` without a text length or
-    without a positioned pick (the same honesty conditions as ``span`` —
-    an invented fraction would defeat the metric that exists to fail).
+    Measured on COVERAGE intervals (#3393): the spans are merged first, then
+    the edges count — the gap from the text's start to the first covered
+    character, the gaps between merged runs, and the gap from the last
+    covered character to the text's end. A tail unit running to the end
+    leaves no uncovered tail, which the point-based read overreported by
+    that unit's whole length. ``None`` without a text length or without a
+    positioned pick (the same honesty conditions as ``span`` — an invented
+    fraction would defeat the metric that exists to fail).
     """
-    if not text_length or not selected_offsets:
+    if not text_length or not selected_spans:
         return None
-    offsets = sorted(selected_offsets)
-    edges = [offsets[0]]
-    edges += [b - a for a, b in zip(offsets, offsets[1:])]
-    edges.append(text_length - offsets[-1])
+    ordered = sorted(selected_spans)
+    gaps: List[int] = []
+    first_s = ordered[0][0]
+    cur_e = ordered[0][1]
+    for s, e in ordered[1:]:
+        if s > cur_e:
+            gaps.append(s - cur_e)
+        cur_e = max(cur_e, e)
+    edges = [first_s] + gaps + [text_length - cur_e]
     return max(edges) / text_length
 
 
@@ -271,12 +318,8 @@ def stratified_position(
         # construction.
         all_ordered = tuple(u for u, _ in positioned) + tuple(u for u, _ in absent)
         covered = len({b for b, bl in enumerate(band_lists) if bl}) if bands else 0
-        sel_offsets = [off for u, _ in positioned if (off := u.offset) is not None]
-        span = (
-            (min(sel_offsets) / text_length, max(sel_offsets) / text_length)
-            if text_length and sel_offsets
-            else None
-        )
+        sel_spans = _positioned_spans([u for u, _ in positioned], text_length)
+        span = _span_fraction(sel_spans, text_length)
         return SelectionResult(
             all_ordered,
             len(units),
@@ -284,7 +327,7 @@ def stratified_position(
             covered,
             bands,
             span,
-            _largest_uncovered_stretch(sel_offsets, text_length),
+            _largest_uncovered_stretch(sel_spans, text_length),
         )
 
     # #2896 (b, R1053 retouch) — pass 1: the round-robin's grant
@@ -338,12 +381,8 @@ def stratified_position(
     # the document does not.
     selected_positioned.sort(key=lambda u: u.offset or 0)
     ordered = tuple(selected_positioned) + tuple(selected_absent)
-    sel_offsets = [off for u in selected_positioned if (off := u.offset) is not None]
-    span = (
-        (min(sel_offsets) / text_length, max(sel_offsets) / text_length)
-        if text_length and sel_offsets
-        else None
-    )
+    sel_spans = _positioned_spans(selected_positioned, text_length)
+    span = _span_fraction(sel_spans, text_length)
     return SelectionResult(
         ordered,
         len(ordered),
@@ -351,7 +390,7 @@ def stratified_position(
         covered,
         bands,
         span,
-        _largest_uncovered_stretch(sel_offsets, text_length),
+        _largest_uncovered_stretch(sel_spans, text_length),
     )
 
 
@@ -522,17 +561,17 @@ def coverage_figure(
     offsets = [int(u.offset or 0) for u in positioned]
     bands_total = 0
     bands_covered = 0
-    span: Optional[Tuple[float, float]] = None
+    spans = _positioned_spans(positioned, text_length)
+    span = _span_fraction(spans, text_length)
     if text_length and positioned:
         bands = band_count if band_count is not None else 3
         bands_total = bands
         bands_covered = len({_text_band(o, text_length, bands) for o in offsets})
-        span = (min(offsets) / text_length, max(offsets) / text_length)
     return (
         bands_covered,
         bands_total,
         span,
-        _largest_uncovered_stretch(offsets, text_length),
+        _largest_uncovered_stretch(spans, text_length),
     )
 
 

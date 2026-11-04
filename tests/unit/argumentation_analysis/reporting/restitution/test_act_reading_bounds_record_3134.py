@@ -145,7 +145,10 @@ class TestActTwo:
     def test_a_woven_misbound_sentence_does_not_reach_the_reader(self):
         result = _act2(_state(), _WOVEN_MISBOUND)
         assert "détection initiale de sophismes" not in result.narrative
-        assert "lecture de 8000 des 12000 caractères" in result.narrative
+        # #3393 — the passage is Act III's SINGLE print now: the removal
+        # still runs here, the record's numbers stay out of this act.
+        assert "Bornes de lecture du run" not in result.narrative
+        assert "lecture de 8000 des 12000 caractères" not in result.narrative
 
 
 class TestRestatedBoundSentences:

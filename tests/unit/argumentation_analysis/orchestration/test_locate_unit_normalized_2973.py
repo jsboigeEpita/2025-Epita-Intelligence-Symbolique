@@ -169,10 +169,16 @@ class TestTheCensusIsInTheRun:
         prompt = build_act1_prompt(build_act1_evidence(state))
         assert "Ancrage dans le texte : 1/1 unités localisées" in prompt
         # the census is OUT of the coverage parenthesis — a reader must not
-        # read « 1/1 » as analysis coverage
-        coverage = prompt.split("Couverture de l'analyse (", 1)[1].split(")", 1)[0]
+        # read « 1/1 » as analysis coverage. #3393: a phase label may itself
+        # carry parentheses (« … (ATMS) »), so the split closes on the
+        # producer's own «).», not on the first «)».
+        coverage = prompt.split("Couverture de l'analyse (", 1)[1].split(").", 1)[0]
         assert "anchor_census" not in coverage
-        assert "atms : 1/1 unités" in coverage
+        # #3393 — the phase reaches the writer under its READER label
+        # (SITE_LABELS_FR), never its state key: « atms » is internal
+        # vocabulary on the reader surface.
+        assert "maintenance des hypothèses (ATMS) : 1/1 unités" in coverage
+        assert "atms :" not in coverage
         assert "0/0 tiers" not in prompt
 
     def test_a_partial_census_says_what_is_missing(self) -> None:

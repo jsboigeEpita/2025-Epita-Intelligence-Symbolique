@@ -177,7 +177,11 @@ class TestTheRecordStatesAnIntegralRead:
         line = next(ln for ln in record.lines if ln.site == "fact_extraction")
         rendered = format_reading_line(line, record.source_chars)
         assert "document lu en entier" in rendered, rendered
-        assert f"({_BAND_LEN} de {_BAND_LEN} caractères)" in rendered, rendered
+        # #3393 — the count the line names is what was READ, in one
+        # convention (« N caractères »): « 5400 de 5400 » borrowed the
+        # window's grammar, which printed « 8000 de 921 » the day the
+        # request exceeded the document.
+        assert f"({_BAND_LEN} caractères)" in rendered, rendered
         assert "fenêtre" not in rendered, (
             "one call is not a window count — a plural 'fenêtres' would "
             f"describe a plan the run did not follow: {rendered}"

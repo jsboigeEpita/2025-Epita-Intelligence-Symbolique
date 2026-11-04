@@ -43,13 +43,24 @@ def _units():
 
 def _largest_gap(selected):
     """Largest uncovered stretch, start and end included (the #2896 (a)
-    definition, computed here independently of the fix)."""
-    offsets = sorted(u.offset for u in selected if u.offset is not None)
-    if not offsets:
+    definition, computed here independently of the fix — on the units'
+    COVERAGE intervals since #3393: a unit covers ``[offset, offset +
+    len(text))``, so the tail after the last unit's start is covered by
+    that unit and never counts as a gap)."""
+    spans = sorted(
+        (u.offset, u.offset + len(u.text or ""))
+        for u in selected
+        if u.offset is not None
+    )
+    if not spans:
         return None
-    edges = [offsets[0] - 0]
-    edges += [b - a for a, b in zip(offsets, offsets[1:])]
-    edges.append(_TEXT - offsets[-1])
+    edges = [spans[0][0]]
+    cur_end = spans[0][1]
+    for start, end in spans[1:]:
+        if start > cur_end:
+            edges.append(start - cur_end)
+        cur_end = max(cur_end, end)
+    edges.append(_TEXT - cur_end)
     return max(edges) / _TEXT
 
 

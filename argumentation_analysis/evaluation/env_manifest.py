@@ -109,6 +109,45 @@ def _probe_llm_endpoints() -> Dict[str, Any]:
     return result
 
 
+def _probe_llm_route() -> Dict[str, Any]:
+    """The route the run's own LLM calls actually take (#3393 item 9).
+
+    Not a re-derivation of the toggle: the canonical resolver
+    (:func:`resolve_chat_endpoint` — the ONE route source since #2352) is
+    called here, so the stamp cannot name a route the run never took while
+    the run answers on another. Imported lazily — that module pulls
+    semantic_kernel at import time and the manifest stays import-light.
+
+    The declared-route guards can refuse exactly as they refuse the run —
+    a named route without its key raises (``ValueError``, #2322's spirit),
+    a diverging route raises ``LLMRouteDivergenceError``. The probe then
+    NAMES the refusal instead of the route: a run in that state aborts,
+    and the abort stamp (#2282) is the one surface guaranteed to be read —
+    the probe must never be the thing that keeps it from rendering. No
+    key configured → ``none``: there is no route to name.
+    """
+    try:
+        from argumentation_analysis.core.llm_service import (
+            LLMRouteDivergenceError,
+            classify_route,
+            resolve_chat_endpoint,
+        )
+    except ImportError as exc:  # pragma: no cover — import-weight fallback
+        return {"probe": "unavailable", "note": f"llm_service not importable: {exc}"}
+    try:
+        api_key, base_url, model_id = resolve_chat_endpoint()
+    except (LLMRouteDivergenceError, ValueError) as exc:
+        return {"probe": "refused", "note": str(exc)}
+    if not api_key:
+        return {"probe": "resolved", "provider": "none", "note": "no key configured"}
+    return {
+        "probe": "resolved",
+        "provider": classify_route(base_url),
+        "endpoint": base_url,
+        "model": model_id,
+    }
+
+
 def _probe_torch() -> Dict[str, Any]:
     """Probe the torch / sentence-transformers axis (#1651 axis).
 
@@ -240,6 +279,10 @@ def environment_manifest() -> Dict[str, Any]:
     return {
         "jvm": _probe_jvm(),
         "llm_endpoints": _probe_llm_endpoints(),
+        # #3393 — the route the run takes, from the canonical resolver: the
+        # endpoints above are a CONFIG census (what is set), this names the
+        # one route the run's calls answer through.
+        "llm_route": _probe_llm_route(),
         "torch": _probe_torch(),
         "overrides": _probe_overrides(),
     }
@@ -294,11 +337,30 @@ def render_environment_stamp(env: Dict[str, Any]) -> str:
         )
         if llm.get(key)
     ]
+    # #3393 — the route line FIRST (the one route the run's calls take),
+    # then the config census labelled as probes: a self-hosted endpoint
+    # printed bare read as the run's route while the run answered through
+    # another. The probe suffix says what it is — a probe, not the route.
+    route = env.get("llm_route", {})
+    if route.get("probe") == "resolved" and route.get("provider") not in (None, "none"):
+        lines.append(
+            "llm: route={provider} endpoint={endpoint} model={model}".format(
+                provider=route.get("provider"),
+                endpoint=route.get("endpoint") or "(default)",
+                model=route.get("model") or "?",
+            )
+        )
+    elif route.get("probe") == "refused":
+        lines.append("llm: route=REFUSED — {note}".format(note=route.get("note", "?")))
+    else:
+        lines.append("llm: route=none — no key configured")
     lines.append(
-        "llm: configured=[{providers}]{self_hosted}".format(
+        "llm probes: configured=[{providers}]{self_hosted}".format(
             providers=", ".join(providers) if providers else "none",
             self_hosted=(
-                " endpoint={}".format(llm["self_hosted_endpoint"])
+                " probe: self_hosted endpoint={}".format(
+                    llm["self_hosted_endpoint"]
+                )
                 if llm.get("self_hosted_endpoint")
                 else ""
             ),

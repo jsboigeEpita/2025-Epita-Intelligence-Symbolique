@@ -103,7 +103,6 @@ from .reading_record import (
     READING_BASIS_RULE,
     BoundRemoval,
     bound_removal_motif,
-    format_reader_bounds_passage,
     remove_restated_bounds,
     ReadingRecord,
     build_reading_record,
@@ -2855,11 +2854,12 @@ async def build_act2_narrative(
             "; ".join(s[:90] for s in _dressed.superlative_sentences[:3]),
         )
 
-    # #3134 — the record's own bounds close the act, after the prose, BEFORE
-    # the §4 self-check so the gate reads the text the reader receives.
-    _bounds_passage = format_reader_bounds_passage(evidence.readings)
-    if _bounds_passage:
-        narrative = narrative.rstrip() + "\n\n" + _bounds_passage
+    # #3393 — the record's bounds passage is grafted by Act III ONLY, once,
+    # where it closes the whole report (same #3134 rationale, one print: a
+    # reserve is said once, #3374). #3134 grafted it in BOTH acts and the
+    # reader received it twice, word for word, on 9 of 9 panel renders.
+    # Nothing else here reads the passage: the license check below judges
+    # the WRITER's prose, and the bounds are code-written record lines.
 
     # #3123/R1105c — the reading-license check covers the act, not only the
     # synthesis: Act II receives the cause phrases and can charge a recorded
