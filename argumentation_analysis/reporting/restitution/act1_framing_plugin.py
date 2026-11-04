@@ -54,6 +54,7 @@ from .speaker_record import (
     format_speaker_line,
 )
 from .llm_weaving import LlmCallable, WeaveOutcome, weave
+from .quote_fidelity import sanitize_act_quotes
 from .readability_gate import GateVerdict, ReadabilityGate
 from .reading_record import (
     _number_free_bound,
@@ -1320,6 +1321,16 @@ async def build_act1_framing(
         )
     narrative = outcome.narrative
 
+    # #3389 — every « … » span is compared with the document while the text is
+    # still in memory. The check runs on the WRITER'S prose, before the
+    # pipeline grafts its own passages below: a reader label the code prints
+    # (« Couverture de l'analyse ») is not a citation claim, and the record's
+    # wording is not the writer's (#3310's rule for the same seam). An exact
+    # quote passes byte-identical; a span the document does not carry (an
+    # altered quote, a translation printed as the document's words) loses its
+    # guillemets and reads as the paraphrase it is.
+    narrative, _quote_motif = sanitize_act_quotes(narrative, state, "Acte I")
+
     # #3159 (R1108) — the coverage range is the pipeline's sentence, not the
     # writer's. #3175 had the producer write it and told the writer to copy it;
     # the very next render (Sonnet) said « de 6 à 10 unités » over a record at
@@ -1363,6 +1374,10 @@ async def build_act1_framing(
     _bound_motif = bound_removal_motif(_bound_removal)
     if _bound_motif:
         degraded["act1_bound_restatement"] = _bound_motif
+    # #3389 — the prose was CHANGED here too, and an auditor must find it:
+    # act, labels, counts, never a span (#3249, #3389's privacy paragraph).
+    if _quote_motif:
+        degraded["act1_quote_fidelity"] = _quote_motif
     if verdict.band != "PASS":
         degraded["act1_framing_gate"] = (
             f"Autocontrôle de lisibilité = {verdict.band}: "

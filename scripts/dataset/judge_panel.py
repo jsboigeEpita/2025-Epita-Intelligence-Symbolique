@@ -54,7 +54,6 @@ import asyncio
 import json
 import os
 import random
-import re
 import sys
 import time
 from pathlib import Path
@@ -66,6 +65,10 @@ sys.path.insert(0, str(REPO_ROOT))
 from argumentation_analysis.evaluation.model_family import (  # noqa: E402
     assert_judge_differs,
     model_family,
+)
+from argumentation_analysis.reporting.restitution.quote_fidelity import (  # noqa: E402
+    normalise_for_citation,
+    normalised_quote_in,
 )
 
 from scripts.dataset.render_campaign_reading_folder import (  # noqa: E402
@@ -159,28 +162,30 @@ def positions(opaque_id: str, seed: int) -> Dict[str, int]:
 # ---------------------------------------------------------------------------
 # Citations — mechanical, normalised, falsifiable
 # ---------------------------------------------------------------------------
+#
+# #3389 — ONE rule, one producer. The judge's ``document_quote`` and the
+# render's « … » spans are located by the same implementation
+# (``reporting/restitution/quote_fidelity``): case, whitespace and typographic
+# apostrophes folded, ``[…]`` read as an elision gap. This file used to carry
+# its own whitespace-only copy, so the two surfaces could disagree on what
+# "the document says this" means.
 
-_WS = re.compile(r"\s+")
 
-
-def normalise(text: str) -> str:
-    """Collapse whitespace runs so a line-wrapped quote still matches."""
-    return _WS.sub(" ", (text or "")).strip()
+def normalise(text: Any) -> str:
+    """The comparison form of ``text`` — the shared citation rule (#3389)."""
+    return normalise_for_citation(text)
 
 
 def is_cited(text: str, quote: str) -> bool:
-    """True when ``quote`` occurs in ``text`` after whitespace normalisation.
+    """True when ``quote`` occurs in ``text`` under the shared citation rule.
 
-    Substring, case-SENSITIVE: a paraphrase is not a citation, and a judge
-    that has to copy the exact words cannot invent one whole.
+    Kept as the judge's name for it: a judge that has to copy the words
+    cannot invent one whole, and the length floor stays here because it is
+    the JUDGE's rule — a word or two is a keyword, not a citation, and it
+    occurs in every text. Grading the quality of a quote is the reader's job,
+    not the verifier's.
     """
-    needle = normalise(quote)
-    if len(needle) < 8:
-        # A word or two is a keyword, not a citation: it occurs in every text
-        # and would pass by accident. This is a LENGTH floor only — grading
-        # the quality of a quote is the reader's job, not the verifier's.
-        return False
-    return needle in normalise(text)
+    return normalised_quote_in(text, quote)
 
 
 def validate_items(

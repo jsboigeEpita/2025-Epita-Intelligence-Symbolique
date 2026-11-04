@@ -111,6 +111,7 @@ from .reading_record import (
 )
 from .global_projection import GlobalFinding, project_global_findings
 from .llm_weaving import LlmCallable, WeaveOutcome, weave
+from .quote_fidelity import sanitize_act_quotes
 from .specialist_roles import (
     ROLE_LABELS,
     ROLE_ORDER,
@@ -2808,6 +2809,13 @@ async def build_act2_narrative(
         )
 
     narrative = _dressed.text
+    # #3389 — the retained draft's « … » spans are compared with the document
+    # here, on the WRITER'S prose and before the record's bounds are appended
+    # below (same seam as the checks inside ``_dress_act2_prose``: the record's
+    # wording is not the writer's). An exact quote passes byte-identical; an
+    # altered quote or a translation printed as the document's words loses its
+    # guillemets and reads as the paraphrase it is.
+    narrative, _quote_motif = sanitize_act_quotes(narrative, state, "Acte II")
     # #3349 — the Dung annex ref must ride the sentence it proves (#1914
     # citation contract). The prompt carries the rule; this is the guarantee:
     # a ref on a sentence that names another formal axis and no graph
@@ -2910,6 +2918,11 @@ async def build_act2_narrative(
     _bound_motif = bound_removal_motif(_bound_removal)
     if _bound_motif:
         degraded["act2_bound_restatement"] = _bound_motif
+    # #3389 — a « … » span was not the document's words: label, counts, never
+    # a span (#3249). Filed with the other acts' seam under the #2046
+    # fabrication-note keys, archived in the appendix.
+    if _quote_motif:
+        degraded["act2_quote_fidelity"] = _quote_motif
     vm = evidence.virtuous_mode
     # Positive outcome — reported by ``is_virtuous``, never filed under
     # ``degraded`` (see the note in ``act1_framing_plugin``): #1608 turned
