@@ -128,3 +128,85 @@ class TestTheBatchLogKeepsItsLine:
         )
         assert "classified non-argumentative" in line
         assert "#1909" in line
+
+
+class TestTheHeaderSElementsAreRecordedAndRead:
+    """#3392 ask 2 — the extract records what its own header lists.
+
+    The coordinator's ask: the gap closes by the EXTRACT recording the
+    event, the participants and the report's title — not by an LLM call in
+    the paragraph. Two producers carry it: ``expand_corpus`` reads
+    extract-level metadata (dead before — a source-9-shaped extract carried
+    fields nothing read), and the paragraph names the recorded elements
+    under reader labels. Synthetic words throughout.
+    """
+
+    _HEADER_META = {
+        "discourse_type": "compte rendu",
+        "event": "audition de la commission synthétique",
+        "participants": "deux rapporteures fictives",
+        "report_title": "Rapport sur un sujet inventé",
+    }
+
+    def test_the_paragraph_names_the_three_elements(self):
+        state = dict(_STATE)
+        state["source_metadata"] = dict(self._HEADER_META)
+        out = _fiche(state=state)
+        assert "événement : « audition de la commission synthétique »" in out
+        assert "participants : « deux rapporteures fictives »" in out
+        assert "titre du rapport : « Rapport sur un sujet inventé »" in out
+        # raw keys never reach the reader
+        assert "report_title" not in out
+        assert "event :" not in out
+
+    def test_expand_corpus_reads_extract_level_metadata(self):
+        """Born red on main: the per-document record carried only the
+        source-level classification — an extract recording its own event
+        handed the reader nothing."""
+        from scripts.dataset.run_corpus_batch import expand_corpus
+
+        defs = [
+            {
+                "source_name": "Source synthétique",
+                "extracts": [
+                    {
+                        "extract_id": "hdr",
+                        "extract_name": "En-tête",
+                        "extract_text": "Un en-tête synthétique sans argument.",
+                        "metadata": {
+                            "event": "audition de la commission synthétique",
+                            "participants": "deux rapporteures fictives",
+                            "report_title": "Rapport sur un sujet inventé",
+                        },
+                    }
+                ],
+            }
+        ]
+        docs, _omitted, _skipped = expand_corpus(defs)
+        assert len(docs) == 1
+        meta = docs[0]["metadata"]
+        assert meta["event"] == "audition de la commission synthétique"
+        assert meta["participants"] == "deux rapporteures fictives"
+        assert meta["report_title"] == "Rapport sur un sujet inventé"
+
+    def test_extract_metadata_does_not_erase_source_classification(self):
+        """#1906 precedence, extract layer: an explicit value wins, but the
+        source-level fields the extract does not mention survive."""
+        from scripts.dataset.run_corpus_batch import expand_corpus
+
+        defs = [
+            {
+                "source_name": "Discourspolitiquefr",
+                "metadata": {"era": "2020-2029"},
+                "extracts": [
+                    {
+                        "extract_text": "Un extrait synthétique.",
+                        "metadata": {"event": "un événement enregistré"},
+                    }
+                ],
+            }
+        ]
+        docs, _omitted, _skipped = expand_corpus(defs)
+        meta = docs[0]["metadata"]
+        assert meta["event"] == "un événement enregistré"
+        assert meta["era"] == "2020-2029"
