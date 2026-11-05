@@ -35,6 +35,27 @@ logger = logging.getLogger(__name__)
 
 SUPPORTED_LANGUAGES = frozenset({"en", "fr", "de"})
 
+#: #3425 — the two answers for "not one of the three", which are different
+#: facts and must not be conflated by a consumer:
+#:
+#: * ``UNKNOWN_LANGUAGE`` — the probe carries too little signal to name
+#:   anything. It proves NOTHING about the document's language, so it never
+#:   licenses a ``translation`` label (anti-#1019) and never licenses a
+#:   French/German instrument either.
+#: * ``UNLISTED_LANGUAGE`` — a long enough probe that no list this heuristic
+#:   carries covers. It proves the document is NOT in a listed language, so
+#:   it licenses ``translation`` when the render is in the report's language
+#:   (#3389), and no language-bound instrument (#2588).
+#:
+#: Defined here, in the light module, so producer and consumers read ONE
+#: pair of literals.
+UNKNOWN_LANGUAGE = "unknown"
+UNLISTED_LANGUAGE = "unlisted"
+
+#: The languages ``detect_language`` may NAME. ``unknown``/``unlisted`` are
+#: answers, not languages — they are deliberately outside this set.
+DETECTABLE_LANGUAGES = SUPPORTED_LANGUAGES
+
 _LOCK = threading.Lock()
 _FLESCH_BY_LANG: Dict[str, Any] = {}
 _WARMED = False
@@ -78,7 +99,13 @@ def degraded_reason(lang: str) -> Optional[str]:
 
 
 def detect_language(text: str) -> str:
-    """'de' / 'fr' / 'en' / 'unknown', via the orchestrator heuristic."""
+    """``'de'``/``'fr'``/``'en'``, or one of the two no-language answers (#3425).
+
+    ``UNKNOWN_LANGUAGE`` when the probe is too thin to say anything,
+    ``UNLISTED_LANGUAGE`` when it is long enough and no listed language
+    covers it. Consumers switch on those explicitly — see the constants above
+    for what each one licenses.
+    """
     from argumentation_analysis.orchestration.conversational_orchestrator import (
         _detect_language,
     )

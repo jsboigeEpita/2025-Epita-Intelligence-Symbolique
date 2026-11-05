@@ -155,7 +155,11 @@ def normalised_quote_in(text: Any, quote: Any) -> bool:
 
 
 def document_language(document: Any) -> str:
-    """``"fr"``/``"en"``/``"de"``/``"unknown"`` — the one detector the repo has.
+    """``"fr"``/``"en"``/``"de"``/``"unknown"``/``"unlisted"`` — the one detector.
+
+    #3425 — ``unlisted`` is a real answer, not a fourth language: the probe is
+    long enough and no list the heuristic carries covers it. It is the answer
+    that licenses :data:`TRANSLATION` below; ``unknown`` never does.
 
     Lazy on purpose: the import pulls the conversational orchestrator, and
     the common case (a French document, every span verbatim) never asks this
@@ -192,6 +196,12 @@ def classify_span(
     if occurs_in_document(span, document):
         return VERBATIM
     doc_lang = document_language(document) if lang is None else lang
+    # #3425 — the two "no listed language" answers are NOT interchangeable:
+    # ``unknown`` (too thin a probe) proves nothing about the document, so the
+    # span stays ``unverified`` (anti-#1019); ``unlisted`` (a long probe that
+    # no listed language covers) proves the document is NOT in the report's
+    # language, which is exactly what licenses a ``translation``. Both are
+    # excluded from the named case, only the second falls through to it.
     if doc_lang not in ("unknown", report_language):
         return TRANSLATION
     return UNVERIFIED

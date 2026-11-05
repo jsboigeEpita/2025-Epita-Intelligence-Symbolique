@@ -9844,6 +9844,11 @@ async def _invoke_fact_extraction(
                 _detect_language,
             )
 
+            # #3425 — the clause is written only for a language the detector
+            # NAMED. ``unknown`` (too thin a probe) and ``unlisted`` (a long
+            # probe no list covers) get no clause at all: a prompt that
+            # asserts "The source text is in French" about a document in a
+            # third language is a false statement inside the prompt.
             _lang = _detect_language(input_text)
             _lang_names = {"de": "German", "fr": "French", "en": "English"}
             if _lang in _lang_names and _lang != "en":
