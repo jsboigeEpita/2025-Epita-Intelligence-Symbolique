@@ -334,3 +334,9 @@ curl -X POST http://localhost:8000/api/v1/agents/debate \
 - `AnalysisCache`: TTL-based caching with LFU eviction
 - `PipelineMetrics`: Structured metrics collection with per-type aggregation
 - `run_batch_analysis()`: Semaphore-controlled concurrent batch processing
+
+## Cross-mode comparison
+
+Moved verbatim from the root `CLAUDE.md` (claudish#874).
+
+**Cross-mode comparison**: `scripts/compare_orchestration_modes.py` runs `pipeline_standard`, `pipeline_light`, `pipeline_full`, `hierarchical_bridge`, `hierarchical_delegation`, `conversational`, `conversation_deterministic` and `conversation_real` (the same `ConversationOrchestrator` with its real informal and FOL agents, #2456) on the same corpus and emits markdown + JSON with trade-off metrics (terminates / wall-time / decides / scope). This is the instrument for improving each mode against the others — see #1735. Every `--modes` key is exactly the label the report prints, and an unknown key fails the run instead of writing a report without it (#1747); `pipeline` and `hierarchical` remain dispatchable as deprecated aliases but are excluded from the default sweep so they cannot double-count a mode (#1740). Budget matters: at the 180s default every mode dies mid-DAG — `pipeline_standard` needs ~500s to reach 15/15 phases on a short corpus, so calibrate `--max-wall-seconds` before comparing policies.

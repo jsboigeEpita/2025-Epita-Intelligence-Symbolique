@@ -12,19 +12,11 @@ Multi-agent argumentation analysis system for EPITA (student project platform). 
 
 **IMPORTANT**: The repo is cloned across machines whose conda envs differ. Run everything inside the **most recent environment available locally** — check what your machine actually has (`conda env list`) rather than assuming a name.
 
-| Machine | Envs available | Notes (measured on the seat, or reported by it) |
-|---|---|---|
-| `myia-po-2023` | `projet-is`, plus `projet-is-lock`, **reinstalled from `main`'s lock on 2026-10-21** at `C:\Users\jsboi\.conda\envs\projet-is-lock` | measured on the seat 2026-10-21 under `PYTHONNOUSERSITE=1`: `projet-is-lock` resolves pytest 9.1.1 / asyncio 1.4.0 / timeout 2.4.0 / xdist 3.8.0 / playwright 0.9.0 and jpype 1.7.1 — the stack the gate runs. Work runs in `projet-is` via `/c/Tools/miniconda3/envs/projet-is/python.exe`, and there pytest runs **without** `PYTHONNOUSERSITE`: the user-site `pytest_playwright` is what `pytest.ini` requires, so `PYTHONNOUSERSITE=1` makes pytest fail to load. A user-site (`%APPDATA%\Python\Python310`) still shadows `projet-is`, and `conda-lock install` itself needs `PYTHONNOUSERSITE=1` or pip uninstalls packages from the shared user-site (measured: 17 removed, 2026-09-29); `conda-lock` 4.0.2 exists only in that user-site, so the PNUS=1 install was driven from an isolated venv holding `conda-lock==4.0.2` |
-| `myia-po-2025` | `projet-is-roo-new`, plus `projet-is-lock` at `C:\ProgramData\miniconda3\envs\projet-is-lock` | measured on the seat 2026-10-21: **both** now resolve the stack the gate runs — pytest 9.1.1 / asyncio 1.4.0 / timeout 2.4.0 / xdist 3.8.0 / playwright 0.9.0 and jpype 1.7.1 (`projet-is-lock` under `PYTHONNOUSERSITE=1`, Python 3.10.21; `projet-is-roo-new` on Python 3.10.20). The gate replay of `tests/unit` under xdist runs in `projet-is-lock`; the 2026-09-29 report of jpype1 1.6.0 in `projet-is-roo-new` predates its realignment and no longer holds |
-| `myia-ai-01` | `projet-is-roo-new`, `projet-is`, `projet-is-lock` (from `main`'s lock) | measured 2026-09-29: `projet-is-roo-new` and `projet-is-lock` resolve pytest 9.1.1 / asyncio 1.4.0 / timeout 2.4.0 / xdist 3.8.0 / playwright 0.9.0 and jpype 1.7.1 (under `PYTHONNOUSERSITE=1`); `projet-is` is on pytest 8.4.1 and does not measure what the gate runs |
+Per-seat envs, and what was measured on each seat (versions, user-site, lock env) → [`docs/guides/DEV_ENV_SEATS.md`](docs/guides/DEV_ENV_SEATS.md). The rules that decide:
 
-JPype is pinned in `environment.yml` to the version CI installs (1.7.1, #2538). A dev env on another version does not measure what the gate runs: check with `python -c "import jpype; print(jpype.__version__)"`, and bring it up with `pip install jpype1==1.7.1`.
-
-The CI gate runs pytest 9.1.1 with pytest-asyncio 1.4.0, pytest-timeout 2.4.0, pytest-xdist 3.8.0, and pytest-playwright 0.9.0 (#2566, run 36264473973). Dev envs on all three machines must resolve these versions before their results are compared with the gate; verify with `python -m pytest --version` and `python -m pip show pytest-asyncio pytest-timeout pytest-xdist pytest-playwright`. pytest-playwright 0.7.1 rejects pytest 9. On myia-po-2025 the pre-alignment versions measured 2026-09-27 were pytest 9.0.2, asyncio 1.3.0, timeout 2.4.0, xdist 3.8.0, playwright 0.7.2; the table above says, per seat, what was measured on it and what was only reported.
-
-pytest 9.1.1 also drops directory-conftest fixtures (named AND autouse) whenever a bare file arg interleaves a directory arg and a deeper file arg on the command line — two Package nodes for the same path, fixtures registered under one, items under the other (#3080; upstream pytest-dev/pytest#14971, fixed by #14635, backport #14968 unreleased as of 2026-10-19). `tests/conftest.py` ports the upstream reconciliation until a fixed release ships and self-disables at ≥9.1.2 — delete that shim at the next pytest bump. Witness: `tests/unit/test_conftest_argv_order_3080.py`.
-
-**CI installs `conda-lock.yml`, not `environment.yml`** (#1803 step 5). `environment.yml` is the input; the lock is its win-64 solve, with a checksum per package, and every workflow creates `projet-is` from it through `.github/actions/setup-projet-is`, with no solver at run time. After changing a dependency in `environment.yml`, regenerate the lock in the same PR with conda-lock **4.0.4** (#3334: 4.0.2 can no longer solve at all — its pinned PyPI-mapping URL `regro/cf-graph-countyfair` 404s upstream; 4.0.4 points at the repo's new home `conda-forge/conda-forge-bot-data`, and the lock it writes stays format `version: 1`, readable by `conda-lock install` on 4.0.2): `conda-lock lock -f environment.yml -p win-64 --without-cuda --lockfile conda-lock.yml`, driven from an isolated venv holding conda-lock==4.0.4. Every regeneration drifts transitive builds — declare the census in the PR body, and keep `libclang13` on the build pinned in `environment.yml` (#2856: a newer build of the same version pulls `llvm-openmp`, whose `libiomp5md.dll` overwrites Intel's and kills torch with WinError 182). `tests/unit/test_conda_lock_matches_environment_1803.py` fails the gate when `environment.yml` asks for something the lock does not provide. A dev env that installs exactly what CI installs: `conda-lock install --name <env> conda-lock.yml`.
+- **Gate versions.** CI runs pytest 9.1.1, pytest-asyncio 1.4.0, pytest-timeout 2.4.0, pytest-xdist 3.8.0, pytest-playwright 0.9.0 and JPype 1.7.1 (#2566, #2538). A dev env on other versions does not measure what the gate runs: check `python -m pytest --version` and `python -c "import jpype; print(jpype.__version__)"` before comparing with the gate.
+- **CI installs `conda-lock.yml`, not `environment.yml`** (#1803). After changing a dependency in `environment.yml`, regenerate the lock in the same PR with conda-lock **4.0.4**, and declare the transitive-build census in the PR body. `libclang13` stays on the build pinned in `environment.yml` (#2856). `tests/unit/test_conda_lock_matches_environment_1803.py` guards the pair. Command and history → the same page.
+- **pytest 9.1.1 conftest shim** (#3080): `tests/conftest.py` ports the upstream fix and self-disables at ≥ 9.1.2. Delete it at the next pytest bump.
 
 ```bash
 # List available environments
@@ -43,7 +35,7 @@ conda run -n projet-is-roo-new --no-capture-output <command>   # or -n projet-is
 ./setup_project_env.ps1
 ```
 
-> ⚠ **User-site shadowing (po-2023, measured 2026-09-18)**: `%APPDATA%\Python\Python310\site-packages` precedes the env's site-packages in `sys.path`, and the env's own `site-packages` is not writable without elevation — pip therefore installs to the user-site (this is how `pytest-timeout` and `mcp` 2.x live there). A package present in the user-site with an older API silently shadows the spec in `environment.yml` (measured: user-site `mcp` 1.26 hid `MCPServer` from `mcp>=2.0` code — #2282 A0). After provisioning, verify the resolved version, not just that the import succeeds.
+> ⚠ **User-site shadowing**: on some seats a user-site package shadows the env's spec (#2282 A0). After provisioning, verify the resolved version, not just that the import succeeds. Detail → [`docs/guides/DEV_ENV_SEATS.md`](docs/guides/DEV_ENV_SEATS.md).
 
 ### API Keys
 
@@ -128,20 +120,7 @@ Root/
 
 ### Known Overflow (completed — Epic #317)
 
-Root-level directories that were cleaned up during Epic #317 consolidation:
-
-| Root directory | Overlaps with | Status |
-|---|---|---|
-| `api/` | `argumentation_analysis/api/` | **KEPT** — root has general FastAPI endpoints, inside has JTMS-specific |
-| ~~`core/`~~ | ~~`argumentation_analysis/core/`~~ | **DELETED** (PR #154) |
-| ~~`demos/`~~ | ~~`argumentation_analysis/demos/`~~ | **MOVED** → `examples/03_demos_overflow/` |
-| ~~`services/`~~ | ~~`argumentation_analysis/services/`~~ | **CONSOLIDATED** (#322) — React frontend kept (load-bearing `STATIC_FILES_DIR`); `interface-simple/` archived; management scripts kept |
-| ~~`plugins/`~~ | ~~`argumentation_analysis/plugins/`~~ | **CONSOLIDATED** (#321) — orphan SK prompts archived to `docs/archives/plugins_overflow/` |
-| ~~`src/`~~ | ~~`argumentation_analysis/agents/`~~ | **CONSOLIDATED** (#321) — `fallacy_families.yaml` moved to consuming plugin; empty dir removed |
-| ~~`reports/`~~ | — | **ARCHIVED** (#323) → `docs/archives/reports_legacy_317/` (28 files, June 2025) |
-| ~~`validation/`~~ | — | **ARCHIVED** (#323) → `docs/archives/validation_legacy_317/` (3 files) |
-| ~~`data/`~~ | — | **RELOCATED** (#323) → `argumentation_analysis/data/datasets/legacy_fixtures/` (4 JSON files) |
-| `project_core/` | `argumentation_analysis/core/` | **KEPT** — infrastructure utilities (NOT business logic) |
+Epic #317 cleaned up the root-level overflow. `api/` and `project_core/` were kept; the other overlapping directories were deleted, moved, consolidated or archived. Table → [`docs/architecture/ROOT_OVERFLOW_317.md`](docs/architecture/ROOT_OVERFLOW_317.md).
 
 **Rule**: When adding new code, put it inside `argumentation_analysis/`. Do not add new modules at root level.
 
@@ -190,64 +169,10 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 - **`french_fallacy_plugin.py`** — `FrenchFallacyPlugin`: 3 `@kernel_function` methods for 3-tier hybrid fallacy detection (French NLP)
 - **`governance_plugin.py`** — `GovernancePlugin`: **6** `@kernel_function` methods (`detect_conflicts_fn`, `resolve_conflict_fn`, `compute_consensus_metrics`, `list_governance_methods`, `social_choice_vote`, `find_condorcet_winner`)
 
-> ⚠ **Counting `@kernel_function` with a plain grep over-counts**: the class docstrings of
-> `quality_scoring_plugin.py` and `french_fallacy_plugin.py` each open a line with
-> `@kernel_function`, which `grep -c '^\s*@kernel_function'` scores as a decorator. Count the
-> decorated `def`s, not the decorator lines.
-
-> ⚠ **One capability surface per module** (#1842, resolved): `debate`, `governance`,
-> `quality` and `synthesis/deep_synthesis_agent` each used to declare capabilities on a
-> second surface (`__init__.register_with_capability_registry`) that only tests — or nobody —
-> called. Those dead functions are deleted; the one table per module is the production
-> surface `orchestration/registry_setup.py` populates (`counter_argument` keeps its module
-> function, which `setup_registry` imports and calls). Each specialist's routing entry is
-> the capability production demands: `adversarial_debate`, `argument_quality`,
-> `governance_simulation`, `counter_argument_generation`, `deep_synthesis` — internal
-> features (scoring, virtues, voting methods) are not separate registry entries.
-> `tests/unit/argumentation_analysis/orchestration/test_one_capability_surface_1842.py`
-> guards the surface: any new unwired definer reddens, and so does any **new**
-> declared capability with zero production demanders. The orphans the tree
-> already carries are named debt, not silence: each sits in the guard's
-> `PENDING_TRIAGE` map with the issue owning its triage (#1604 — components with
-> no demanded name, a wire-or-retire decision; 9 pairs / 6 components, measured
-> 2026-09-27 on #1604's branch — the figure moves with every triage that lands,
-> re-measure before quoting). The census reads registrations made inside
-> `for name, caps, ... in <rows>:` loops and fails on a register call it cannot
-> read: before #1604 it skipped them, which hid 32 of 56 components. The map
-> shrinks as triage lands and never grows to absorb new silence; a stale
-> entry reddens on its own, whether its
-> component stopped declaring it or production started demanding it. When adding a
-> capability, add it to the surface `setup_registry` populates, **and give it
-> a consumer** — a phase asking for it, or a capability table a resolver reads.
-
-> ⚠ **"Requested" means `add_phase(capability="…")`, not a `find_*` grep.**
-> Phases are what consume capabilities: `workflow_dsl.py` resolves `phase.capability` through
-> `find_for_capability` at run time, and `argumentation_analysis/` carries **48** distinct
-> `capability=` phase literals. The resolver has **five spellings**, and they partition
-> sharply: production calls *only* the untyped `find_for_capability` (12 sites across six
-> modules — `workflow_dsl`, `router`, `hierarchy_bridge`, `capability_eval`, and the two MCP
-> tool modules), while the three typed variants
-> (`find_agents_`/`find_plugins_`/`find_services_for_capability`) have **zero** production
-> callers and live entirely under `tests/`. A grep on one spelling therefore measures
-> whichever half it matched, not the resolver — enumerate the surface before counting it.
-> Scope every figure, too: `argument_quality` (**22** production phases, 30 counting tests),
-> `counter_argument_generation` (13 / 16), `governance_simulation` (11 / 15) and
-> `adversarial_debate` (9 / 11) are all consumed on real runs; the production figure is the
-> one a claim about real runs may quote.
-> `tests/unit/argumentation_analysis/orchestration/test_capability_resolver_surface_1980.py`
-> re-derives the partition — it reddens when a sixth spelling appears or a typed variant gains
-> a production caller, not when the codebase grows.
-> A capability is also requested through a **table** a resolver reads with a variable
-> (`for cap in caps: registry.find_for_capability(cap)`): the hierarchical bridge map
-> `_OBJECTIVE_CAPABILITY_MAP`, the delegation `LEGACY_TO_REGISTRY_CAPABILITY`, the router's
-> `KNOWN_CAPABILITIES`. No literal grep sees that demand; the #1842 census counts it since
-> #2424 (`_capability_tables`), and `test_table_carried_demand_resolves` holds every name a
-> table carries to a provider of `setup_registry()` — `TABLE_DEMAND_GAPS` names the exceptions.
-> Since #2788 the census also reads **row tables** that a loop unpacks into
-> `add_phase(capability=<var>)` (the evaluation workflows, the router's optional phases), and the
-> literal form on all three phase callees (`add_phase`, `add_conditional_phase`, `add_loop`). A
-> phase capability it cannot read fails the census, unless `DYNAMIC_PHASE_CAPABILITIES` names
-> the site and where its demand is measured.
+> ⚠ **Capability census guards.** Full rules and measured figures → [`docs/architecture/CAPABILITY_CENSUS_GUARDS.md`](docs/architecture/CAPABILITY_CENSUS_GUARDS.md).
+> - Count the decorated `def`s, never the `@kernel_function` lines: two class docstrings open a line with it.
+> - **One capability surface per module** (#1842). A new capability goes on the surface `setup_registry()` populates, **and gets a consumer**: a phase asking for it, or a table a resolver reads. `test_one_capability_surface_1842.py` reddens on an unwired definer or a new zero-demand capability, and its `PENDING_TRIAGE` map (#1604) only shrinks.
+> - **"Requested" means `add_phase(capability=…)`**, or a table a resolver reads, never a `find_*` grep. Production calls only the untyped `find_for_capability`, and `test_capability_resolver_surface_1980.py` re-derives that partition.
 
 ### Lego Architecture (`argumentation_analysis/core/capability_registry.py`)
 
@@ -306,7 +231,7 @@ The system supports 4 orchestration modes. See `docs/architecture/ORCHESTRATION_
 | Hierarchical | ACTIVE | `--mode hierarchical --hierarchical-mode bridge\|delegation` | `bridge` (M2, RA-10 #1069): StrategicManager → Lego WorkflowExecutor. `delegation` (M3): Strategic → Tactical → Operational, dispatching through `CapabilityRegistry` via `RegistryBackedOperationalRegistry` (BO-1 #1471, fail-loud `DelegationError` without a registry). ~10.3k LOC, `strategic_bridge.py` (RA-4 #1049) syncs NL objectives/decisions into `UnifiedAnalysisState` with privacy scrubbing. |
 | Cluedo | ACTIVE | Dedicated scripts | Sherlock-Watson investigation game |
 
-**Cross-mode comparison**: `scripts/compare_orchestration_modes.py` runs `pipeline_standard`, `pipeline_light`, `pipeline_full`, `hierarchical_bridge`, `hierarchical_delegation`, `conversational`, `conversation_deterministic` and `conversation_real` (the same `ConversationOrchestrator` with its real informal and FOL agents, #2456) on the same corpus and emits markdown + JSON with trade-off metrics (terminates / wall-time / decides / scope). This is the instrument for improving each mode against the others — see #1735. Every `--modes` key is exactly the label the report prints, and an unknown key fails the run instead of writing a report without it (#1747); `pipeline` and `hierarchical` remain dispatchable as deprecated aliases but are excluded from the default sweep so they cannot double-count a mode (#1740). Budget matters: at the 180s default every mode dies mid-DAG — `pipeline_standard` needs ~500s to reach 15/15 phases on a short corpus, so calibrate `--max-wall-seconds` before comparing policies.
+**Cross-mode comparison**: `scripts/compare_orchestration_modes.py` runs the engines on the same corpus and emits markdown + JSON with trade-off metrics. It is the instrument of #1735 and #3378. Calibrate `--max-wall-seconds` before comparing: at the 180s default every mode dies mid-DAG. Mode keys, aliases and budget figures → [`docs/architecture/ORCHESTRATION_MODES.md`](docs/architecture/ORCHESTRATION_MODES.md) §Cross-mode comparison.
 
 ## CI/CD
 
