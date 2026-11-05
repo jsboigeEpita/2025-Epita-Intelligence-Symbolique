@@ -25,6 +25,7 @@ from argumentation_analysis.agents.core.reading.first_reading import (
     build_first_reading_prompt,
     defining_move_spans,
     defining_moves,
+    document_frame_for_unit,  # #3428
     document_statements_for_unit,  # #3416
     extract_first_reading,
     first_reading_note,
@@ -47,6 +48,7 @@ __all__ = [
     "build_first_reading_prompt",
     "defining_move_spans",
     "defining_moves",
+    "document_frame_for_unit",
     "document_statements_for_unit",
     "extract_first_reading",
     "first_reading_note",

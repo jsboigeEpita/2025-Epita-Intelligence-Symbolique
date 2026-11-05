@@ -88,8 +88,14 @@ def _stub_walk(fallacy_type: str = "appel_a_la_peur"):
     calls: list[str] = []
     statements: list = []
 
-    async def _walk(arg_text, arg_id, llm_service, taxonomy_path,
-                    document_statements=None):
+    async def _walk(
+        arg_text,
+        arg_id,
+        llm_service,
+        taxonomy_path,
+        document_statements=None,
+        document_frame=None,
+    ):
         calls.append(arg_id)
         statements.append(document_statements)
         return {
@@ -166,8 +172,14 @@ class TestTheWinnerIsReadAfterTheVote:
         import argumentation_analysis.orchestration.invoke_callables as ic
         import argumentation_analysis.orchestration.state_writers as sw
 
-        async def _boom(arg_text, arg_id, llm_service, taxonomy_path,
-                        document_statements=None):
+        async def _boom(
+            arg_text,
+            arg_id,
+            llm_service,
+            taxonomy_path,
+            document_statements=None,
+            document_frame=None,
+        ):
             raise RuntimeError("endpoint indisponible")
 
         monkeypatch.setattr(ic, "_walk_single_fallacy_unit", _boom)

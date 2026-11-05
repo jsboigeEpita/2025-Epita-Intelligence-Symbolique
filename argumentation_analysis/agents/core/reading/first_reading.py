@@ -1075,6 +1075,93 @@ def document_statements_for_unit(
     return statements
 
 
+#: #3428 — how much frame text rides on either side of the unit. The window
+#: is one sentence before and one sentence after, so it is bounded by
+#: construction — the cap only tames a document whose "sentence" runs for
+#: pages without a full stop, and keeps the side ADJACENT to the unit (the
+#: tail of the before-window, the head of the after-window).
+FRAME_CONTEXT_MAX_CHARS = 600
+
+#: #3428 — a sentence ends at a run of terminal punctuation followed by
+#: whitespace: ``.`` ``!`` ``?`` ``…`` (with optional closing quotes/brackets
+#: before the space). Deterministic local scan, no model, no segmentation
+#: library — the frame says where the sentence boundaries are, it does not
+#: interpret them.
+_SENTENCE_END_RE = re.compile(r'[.!?…]+[»"”\')\]]*\s+')
+
+
+def document_frame_for_unit(
+    state: Any,
+    unit_text: str = "",
+    offset: Optional[int] = None,
+    source_quote: Optional[str] = None,
+) -> Dict[str, str]:
+    """#3428 — the document's frame AROUND one unit, or ``{}``.
+
+    The per-unit descent reads the extracted unit alone. Cycle 2 measured
+    what that loses (13 of the 27 M2 contresens): a unit cut from its
+    sentence drops the antecedent of a noun and the premises before it; a
+    unit extracted as a paraphrase drops the document's own modality. This
+    producer hands the descent the LOCAL frame, verbatim, from the run's
+    own memory — no second call:
+
+    * ``before`` — from the start of the sentence BEFORE the unit's
+      sentence up to the unit's start (so it carries the previous sentence
+      AND the opening of the unit's own sentence when the unit starts
+      mid-sentence);
+    * ``after`` — from the unit's end to the end of the sentence AFTER the
+      unit's sentence (the unit's own completion plus the next sentence);
+    * ``source_quote`` — the verbatim passage the provenance recorded,
+      i.e. the document's own words where a PARAPHRASE was extracted. For
+      a paraphrase the offsets describe the quote, so the unit's end is
+      computed on the quote, not on the paraphrase's length.
+
+    Offsets come from the caller (provenance) — never from a search of the
+    unit text in the document: a paraphrase would cite the wrong passage,
+    and a wrong frame is worse than none (#1019). No offset, no raw text
+    or an offset outside the text ⇒ ``{}``, and the descent then emits its
+    pre-#3428 prompts byte for byte.
+    """
+    if not isinstance(offset, int) or isinstance(offset, bool):
+        return {}
+    raw = str(getattr(state, "raw_text", "") or "")
+    if not raw or not (0 <= offset < len(raw)):
+        return {}
+    parts: Dict[str, str] = {}
+    key = str(source_quote) if source_quote else str(unit_text or "")
+    unit_end = min(offset + max(len(key), 0), len(raw))
+    breaks = list(_SENTENCE_END_RE.finditer(raw))
+    # before: two sentence-start boundaries back from the unit's start
+    # (starts[0] = 0 — the opening of the document's first sentence).
+    starts = [0] + [m.end() for m in breaks]
+    idx = 0
+    for i, s in enumerate(starts):
+        if s <= offset:
+            idx = i
+        else:
+            break
+    s_prev = starts[idx - 1] if idx >= 1 else 0
+    before = raw[s_prev:offset].strip()[-FRAME_CONTEXT_MAX_CHARS:].strip()
+    if before:
+        parts["before"] = before
+    # after: from the unit's end past TWO sentence-end boundaries (the
+    # unit's own completion, then the whole next sentence). A document
+    # that ends sooner keeps what is there — the remainder is the next
+    # sentence, terminated or not.
+    after_matches = [m for m in breaks if m.start() >= unit_end]
+    if len(after_matches) >= 2:
+        after_end = after_matches[1].end()
+    else:
+        after_end = len(raw)
+    after = raw[unit_end:after_end].strip()[:FRAME_CONTEXT_MAX_CHARS].strip()
+    if after:
+        parts["after"] = after
+    quote = str(source_quote or "").strip()
+    if quote:
+        parts["source_quote"] = quote
+    return parts
+
+
 #: #3431 — the reader's position bands: (lower bound of the share, its part).
 #: Below the first bound the part is the opening. A raw character offset
 #: names nothing to a writer who does not hold the document (measured, panel
