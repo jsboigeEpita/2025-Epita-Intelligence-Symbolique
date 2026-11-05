@@ -292,9 +292,10 @@ class TestPrebuiltWorkflows:
 
         wf = build_standard_workflow()
         assert wf.name == "standard_analysis"
-        # 18 = 17 (kb belief-set chain wired in #2296) + fallacy_winner_reading
-        # (#3326: the vote winner is read after governance).
-        assert len(wf.phases) == 18
+        # 19 = 17 (kb belief-set chain wired in #2296) + fallacy_winner_reading
+        # (#3326: the vote winner is read after governance) + first_reading
+        # (#3395: the whole-document read the per-argument pass depends on).
+        assert len(wf.phases) == 19
         # Quality depends on extract
         quality_phase = wf.get_phase("quality")
         assert "extract" in quality_phase.depends_on

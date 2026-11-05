@@ -78,6 +78,16 @@ DEBATE_FALLBACK_WINDOW = 1500
 #: reads (#3376). One bound for every branch, and the value is a quality
 #: decision: it moves on a panel A/B, never as a repair side effect.
 DESCENT_WINDOW = 500
+#: The first-reading window (#3395, R1142) — NO cut: the first reading reads
+#: exactly what the zero-shot comparison arm reads (``max_chars=0``, #2841
+#: rule 4 — the same cut on both arms). A 30 000 bound covered 6 of the 10
+#: panel documents; the four it left unread (47 644 to 179 139 characters)
+#: are precisely the long documents where M1 is worst, and the zero-shot arm
+#: read the longest of them whole in one call (91 s, 0.026 $). ``0`` means
+#: the window IS the document — a text past the model's context fails loud
+#: (``llm_error``, persisted) rather than reading a window the comparison
+#: cannot use, and ``read_scope.whole_document`` keeps saying what was read.
+FIRST_READING_WINDOW = 0
 
 
 @dataclass(frozen=True)

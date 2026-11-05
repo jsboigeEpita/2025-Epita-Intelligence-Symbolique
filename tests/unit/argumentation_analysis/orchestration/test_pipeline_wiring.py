@@ -107,8 +107,9 @@ class TestWorkflowFormalPhases:
         # = 18 phases (#2296 added the kb belief-set chain standard was
         # missing — the golden min_belief_sets threshold tested a production
         # the workflow never ordered; #3326 added the post-vote winner
-        # reading after governance).
-        assert len(wf.phases) == 18
+        # reading after governance; #3395 added the root `first_reading`
+        # phase, which the per-argument fallacy pass now depends on).
+        assert len(wf.phases) == 19
 
 
 # ============================================================

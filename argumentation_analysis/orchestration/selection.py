@@ -86,6 +86,13 @@ class SelectionResult:
     bands_total: int
     span: Optional[Tuple[float, float]] = None
     largest_uncovered_stretch: Optional[float] = None
+    #: #3395 — how many of the selected units OVERLAP a first-reading move
+    #: (``select_for_budget(..., priority_spans=...)``, the rule of
+    #: ``_unit_overlaps_spans``, R1142). Zero on every call that passes no
+    #: spans, so a caller can print "N des M unités examinées recouvrent un
+    #: geste de la lecture première" — and print nothing when there was no
+    #: reading to prefer.
+    priority_taken: int = 0
 
 
 def _text_band(offset: int, text_length: int, band_count: int) -> int:
@@ -244,11 +251,124 @@ def _largest_uncovered_stretch(
     return max(edges) / text_length
 
 
+def _offset_in_spans(offset: int, spans: Optional[Sequence[Tuple[int, int]]]) -> bool:
+    """#3395 — is this text position inside a first-reading move's span?"""
+    if not spans:
+        return False
+    return any(int(a) <= offset < int(b) for a, b in spans)
+
+
+def _population_starts(positioned: Sequence[Tuple[SelectableUnit, int]]) -> List[int]:
+    """#3395 (R1142) — the distinct unit starts, ascending.
+
+    The geometry the nearest-before rule of ``_unit_overlaps_spans`` reads:
+    which unit start is the nearest one at or before a quote's start.
+    """
+    return sorted({unit.offset or 0 for unit, _ in positioned})
+
+
+def _unit_overlaps_spans(
+    unit: SelectableUnit,
+    spans: Sequence[Tuple[int, int]],
+    starts: Sequence[int],
+) -> bool:
+    """#3395 (R1142) — does this unit's evidence overlap a first-reading move?
+
+    Two named rules, one per extent case. The old test — "the unit's start
+    falls inside the quote" — never preferred a unit that starts BEFORE the
+    quote and contains it, and measured on the cycle-0 states only 18-40 % of
+    quotes contain a unit start, so consumer A stayed inert on four moves out
+    of five on the long documents:
+
+    - **extent known** (``source_quote`` carries the unit's passage): plain
+      interval intersection — ``[u, u + len(source_quote))`` against every
+      move span ``[a, b)``. Contains, contained, partial — all overlap.
+    - **extent unknown** (the median ``source_quote`` length is 0 on half the
+      panel documents): the unit's evidence is its start POINT. It overlaps a
+      span when that point lies in it, or when the start is the NEAREST unit
+      start at or before the span's start — the passage the quote lies in. A
+      unit that merely starts earlier does not qualify: the nearest unit owns
+      the passage.
+    """
+    u = unit.offset or 0
+    if unit.source_quote:
+        end = u + len(unit.source_quote)
+        return any(u < int(b) and end > int(a) for a, b in spans)
+    if _offset_in_spans(u, spans):
+        return True
+    return any(
+        u <= int(a) and not any(u < s <= int(a) for s in starts) for a, _ in spans
+    )
+
+
+def _prefer_priority(
+    positioned: Sequence[Tuple[SelectableUnit, int]],
+    picked: List[int],
+    n: int,
+    priority_spans: Optional[Sequence[Tuple[int, int]]],
+) -> Tuple[List[int], int]:
+    """#3395 — make room for the units that overlap a first-reading move.
+
+    ``picked`` holds indices into ``positioned`` and was established by the
+    band round-robin. A unit whose evidence overlaps a defining move's quote
+    (``_unit_overlaps_spans``, R1142: interval intersection when the extent
+    is known, nearest-start-before otherwise) is a unit the report has
+    ALREADY named, so the descent must examine it instead of one the
+    stratified pass happened to prefer. Each missing priority unit takes the
+    place of a picked NON-priority unit — the one farthest (by offset) from
+    every priority span, so the pass gives up what relates least to the moves
+    first, ties broken by position. The budget, the population and the
+    returned text order are untouched; the coverage figure is recomputed
+    downstream from ``picked``, so it stays the truth about what was actually
+    read.
+
+    Returns ``(picked, priority_taken)``. With no spans this is the identity
+    — the byte-identical path every other caller keeps.
+    """
+    if not priority_spans or not picked:
+        return picked, 0
+    spans = [(int(a), int(b)) for a, b in priority_spans if int(b) > int(a)]
+    if not spans:
+        return picked, 0
+    starts = _population_starts(positioned)
+
+    priority_all = {
+        i
+        for i, (unit, _) in enumerate(positioned)
+        if _unit_overlaps_spans(unit, spans, starts)
+    }
+    if not priority_all:
+        return picked, 0
+    taken = [i for i in picked if i in priority_all]
+    selected = list(picked)
+    # Missing priority units, in text order (``positioned`` is offset-sorted).
+    for candidate in sorted(priority_all):
+        if candidate in selected:
+            continue
+        # Give up the picked non-priority unit farthest from every span.
+        victims = [i for i in selected if i not in priority_all]
+        if not victims:
+            break
+        farthest = max(
+            victims,
+            key=lambda i: (
+                min(
+                    abs((positioned[i][0].offset or 0) - (start + end) / 2)
+                    for start, end in spans
+                ),
+                -i,
+            ),
+        )
+        selected[selected.index(farthest)] = candidate
+    return selected, len([i for i in selected if i in priority_all])
+
+
 def stratified_position(
     units: Sequence[SelectableUnit],
     n: int,
     band_count: Optional[int] = None,
     text_length: Optional[int] = None,
+    priority_spans: Optional[Sequence[Tuple[int, int]]] = None,
 ) -> SelectionResult:
     """≥1 unit per position band, then fill; returned in text order, stated.
 
@@ -328,6 +448,22 @@ def stratified_position(
             bands,
             span,
             _largest_uncovered_stretch(sel_spans, text_length),
+            # The budget holds the whole population, so every priority unit is
+            # in the selection by construction — counted, not claimed, under
+            # the same overlap rule the bounded path applies (R1142).
+            sum(
+                1
+                for unit, _ in positioned
+                if _unit_overlaps_spans(
+                    unit,
+                    [
+                        (int(a), int(b))
+                        for a, b in (priority_spans or ())
+                        if int(b) > int(a)
+                    ],
+                    _population_starts(positioned),
+                )
+            ),
         )
 
     # #2896 (b, R1053 retouch) — pass 1: the round-robin's grant
@@ -372,6 +508,12 @@ def stratified_position(
     while len(picked) + absent_picked < n and absent_picked < len(absent):
         absent_picked += 1
 
+    # #3395 — the first reading's moves get the seats they earn: a unit the
+    # report has already named is examined instead of one the stratified pass
+    # preferred. Recomputed coverage below then tells the truth about the
+    # final picks, not the pre-swap ones.
+    picked, priority_taken = _prefer_priority(positioned, picked, n, priority_spans)
+
     selected_positioned = [positioned[i][0] for i in picked if i < len(positioned)]
     selected_absent = [absent[j][0] for j in range(absent_picked)]
     covered = len(
@@ -391,6 +533,7 @@ def stratified_position(
         bands,
         span,
         _largest_uncovered_stretch(sel_spans, text_length),
+        priority_taken,
     )
 
 
@@ -400,6 +543,7 @@ def select_for_budget(
     strategy: str = "stratified_position",
     band_count: Optional[int] = None,
     text_length: Optional[int] = None,
+    priority_spans: Optional[Sequence[Tuple[int, int]]] = None,
 ) -> SelectionResult:
     """The dispatch point every budget-bounded population goes through.
 
@@ -407,13 +551,25 @@ def select_for_budget(
     error, not a silent fallback to the head (#1019). ``text_length`` routes
     the strategy to fixed text bands and yields the coverage span — pass it
     wherever the source text length is known (every state-backed call site).
+
+    ``priority_spans`` (#3395) names the text ranges the report has ALREADY
+    identified — the first reading's defining moves. Units inside them are
+    examined first: the pass gives up the picked unit farthest from every
+    span, never a priority unit, and keeps its budget. Absent (the default),
+    the selection is byte-identical to the pre-#3395 behaviour.
     """
     if strategy != "stratified_position":
         raise ValueError(
             f"select_for_budget: unknown strategy {strategy!r} — the only "
             "implemented strategy is 'stratified_position'"
         )
-    return stratified_position(units, n, band_count=band_count, text_length=text_length)
+    return stratified_position(
+        units,
+        n,
+        band_count=band_count,
+        text_length=text_length,
+        priority_spans=priority_spans,
+    )
 
 
 @dataclass(frozen=True)

@@ -31,7 +31,9 @@ class TestBeliefRevisionSpectacularPhase:
         # (weighted/social/qbf/cl), + 1 fallacy_winner_reading (#3326, the
         # post-vote reading of the winner the fallacy sample missed).
         # #3377 adds the two personas (historian, strategist). 40 → 42.
-        assert len(wf.phases) == 42
+        # #3395 (R1142) adds the first_reading root phase: the panel runs
+        # THIS workflow, so the producer lives here too. 42 → 43.
+        assert len(wf.phases) == 43
 
     def test_belief_revision_state_writer_exists(self):
         from argumentation_analysis.orchestration.state_writers import (

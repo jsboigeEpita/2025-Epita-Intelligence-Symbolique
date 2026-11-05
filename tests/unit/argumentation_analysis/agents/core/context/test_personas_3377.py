@@ -621,3 +621,70 @@ class TestTheTranslatorForwardsTheNote:
         await translator.translate_batch(["un argument assez long"])
 
         assert seen == [""]
+
+
+# ---------------------------------------------------------------------------
+# R1142 — a read that ran and failed reaches the state through its writer.
+#
+# The shared ``"error" in output`` guard skipped every error-carrying payload,
+# which made the failure branch unreachable: an invoke that failed left the
+# ``no_llm`` default on the state, and the render said "nobody read" about a
+# read that ran and failed. One father, three writers — the two personas here
+# and #3395's first reading (witnessed in test_first_reading_3395.py).
+# ---------------------------------------------------------------------------
+
+
+def test_an_invoke_failure_reaches_the_state_through_the_historian_writer():
+    """The invoke's own error dict (no shared state — its one failure shape)
+    is coerced to the only honest discrimination: ``llm_error``."""
+    from argumentation_analysis.orchestration.state_writers import (
+        _write_historical_context_to_state,
+    )
+
+    state = SimpleNamespace(historical_context={"status": "no_llm"})
+    _write_historical_context_to_state(
+        {"error": "No shared state available for the historian"}, state, {}
+    )
+
+    assert state.historical_context["status"] == "llm_error"
+    assert state.historical_context["situation"] == "", "nothing is fabricated"
+
+
+def test_a_producer_failure_stays_persisted_historian():
+    """The producer's own failure payload (discriminated status, no error
+    key) already passed the old guard — pinned here so the R1142 rewrite
+    cannot regress it."""
+    from argumentation_analysis.orchestration.state_writers import (
+        _write_historical_context_to_state,
+    )
+
+    state = SimpleNamespace(historical_context={"status": "no_llm"})
+    _write_historical_context_to_state(
+        {
+            "situation": "",
+            "items": [],
+            "status": "llm_error",
+            "basis": "model_knowledge",
+            "degraded": True,
+            "degraded_reason": "historian llm_error: TimeoutError",
+        },
+        state,
+        {},
+    )
+
+    assert state.historical_context["status"] == "llm_error"
+    assert state.historical_context["basis"] == "model_knowledge"
+
+
+def test_an_invoke_failure_reaches_the_state_through_the_strategist_writer():
+    from argumentation_analysis.orchestration.state_writers import (
+        _write_strategic_read_to_state,
+    )
+
+    state = SimpleNamespace(strategic_read={"status": "no_llm"})
+    _write_strategic_read_to_state(
+        {"error": "No shared state available for the strategist"}, state, {}
+    )
+
+    assert state.strategic_read["status"] == "llm_error"
+    assert state.strategic_read["players"] == [], "nothing is fabricated"

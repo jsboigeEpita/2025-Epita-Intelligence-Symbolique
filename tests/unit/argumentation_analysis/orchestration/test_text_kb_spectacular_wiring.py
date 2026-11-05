@@ -75,7 +75,9 @@ class TestSpectacularWorkflowPhases:
         # the fallacy sample missed). 39 → 40.
         # #3377: +2 personas (historian, strategist), each consumed by a
         # production phase. 40 → 42.
-        assert len(wf.phases) == 42
+        # #3395 (R1142): +1 first_reading root phase (the panel's workflow).
+        # 42 → 43.
+        assert len(wf.phases) == 43
 
 
 class TestInvokeCallables:

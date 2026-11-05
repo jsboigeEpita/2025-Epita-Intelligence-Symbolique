@@ -297,6 +297,10 @@ class TestSpectacularWorkflowGolden:
 
     EXPECTED_PHASES = {
         "extract",
+        # #3395 (R1142): the panel runs THIS workflow, so the whole-document
+        # first reading is a root phase here too — without it the producer
+        # never runs and every state prints the no_llm absence note.
+        "first_reading",
         "quality",
         "nl_to_logic",
         "neural_detect",
@@ -364,8 +368,10 @@ class TestSpectacularWorkflowGolden:
         # `strategist` (strategic_read), each with a production consumer.
         # They write into the state before the analysis, so the DAG gains
         # them, not the report. 40 → 42.
+        # #3395 (R1142) adds the first_reading root phase: the panel runs
+        # THIS workflow, so the producer lives here too. 42 → 43.
         wf = build_spectacular_workflow()
-        assert len(wf.phases) == 42
+        assert len(wf.phases) == 43
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -409,7 +415,9 @@ class TestSpectacularWorkflowGolden:
     def test_extract_is_sole_entry_point(self):
         wf = build_spectacular_workflow()
         levels = wf.get_execution_order()
-        assert levels[0] == ["extract"]
+        # #3395 (R1142): first_reading joins the entry level — a root phase
+        # over the text alone, beside extract (like its standard twin).
+        assert set(levels[0]) == {"extract", "first_reading"}
 
     def test_l1_parallel_phases(self):
         wf = build_spectacular_workflow()
@@ -815,7 +823,9 @@ class TestWorkflowCatalogGolden:
         # dropping the count from 40 to 39. #3326 added the post-vote
         # fallacy_winner_reading phase. 39 → 40. #3377 added the two
         # personas (historian, strategist). 40 → 42.
-        assert len(catalog["spectacular"].phases) == 42
+        # #3395 (R1142): +1 first_reading root phase (the panel's workflow).
+        # 42 → 43.
+        assert len(catalog["spectacular"].phases) == 43
 
     def test_catalog_includes_sherlock_modern(self):
         catalog = get_workflow_catalog()
