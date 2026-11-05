@@ -3014,12 +3014,16 @@ async def _invoke_governance(
     )
     if g_derivable:
         # #3386 + #3418 R1144 — the verdict is the DECLARED aggregate, always.
-        # The negotiation is a SENSITIVITY, never the vote: stances rotate
-        # over the seat order, so one play's winner moved with the elector
-        # order alone (measured: arg_3, arg_3, arg_1, arg_2, arg_2) while the
-        # declared winner stayed arg_2. play_sensitivity runs every cyclic
-        # shift of the stances; a flip is rendered only when it is uniform
-        # across them, and otherwise the record says stance_dependent.
+        # The negotiation is a SENSITIVITY, never the vote: TWO arbitrary
+        # inputs decide a play — the seat order (stances rotate over it AND
+        # the round-robin follows it, so it fixes who hears which proposal
+        # last) and the stance shift — so one play's winner is a fact about
+        # the assignment, not about the document (measured on the planted
+        # profile: all three arguments win somewhere as the seats rotate,
+        # while the declared winner stayed arg_2). play_sensitivity runs every
+        # seat rotation against every stance shift; a flip is rendered only
+        # when it is uniform across the whole family, and otherwise the record
+        # says stance_dependent and prints nothing.
         governance_verdict = _aggregate_governance_votes(g_agents, g_options, g_ballots)
         governance_verdict["degraded"] = False
         governance_verdict["derivation_reason"] = g_reason

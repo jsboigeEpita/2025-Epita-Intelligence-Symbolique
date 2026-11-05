@@ -52,7 +52,9 @@ from argumentation_analysis.agents.core.context.strategist import (
 from argumentation_analysis.agents.core.governance.coalition_play import (
     coalition_note,
     play_governance_rounds,
+    play_sensitivity,
 )
+from argumentation_analysis.agents.core.governance.governance_agent import Agent
 from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 from argumentation_analysis.orchestration.invoke_callables import (
     _aggregate_governance_votes,
@@ -595,3 +597,47 @@ class TestTheConcordantControlIsTheIdentity:
         assert game["winner"] == "arg_1"
         assert game["single_player"] == []
         assert game["coalitions"] == []
+
+
+# ---------------------------------------------------------------------------
+# The family rotates the DECLARED ballots, not a rebuild (#3418 review 3)
+# ---------------------------------------------------------------------------
+
+
+class TestTheFamilyRotatesTheBallotsItWasGiven:
+    def test_the_passed_ballots_decide_when_nothing_moves(self) -> None:
+        """``ballots`` is an input of ``play_sensitivity``; the plays must
+        rotate THAT list.
+
+        The electors' own preferences and the declared ballots are the same
+        object in a real run, so a rebuild from ``a.preferences`` looked
+        harmless — but it silently discarded the caller's list. Here the two
+        disagree: every elector holds ``arg_2`` on top (nothing can move, the
+        negotiation is an identity) while the declared ballots rank ``arg_1``
+        first. The Condorcet tier reads the ballots, so the family's winner is
+        the declared one — ``arg_1`` — and only a rotation of the PASSED list
+        can produce it.
+        """
+        options = ["arg_1", "arg_2"]
+        agents = [
+            Agent(
+                name=f"electeur_{i}",
+                personality="stubborn",
+                preferences=["arg_2", "arg_1"],
+            )
+            for i in range(3)
+        ]
+        ballots = [["arg_1", "arg_2"] for _ in agents]
+
+        sensitivity = play_sensitivity(
+            agents, options, ballots, _aggregate_governance_votes
+        )
+
+        assert sensitivity["winner_declared"] == "arg_1"
+        flat = [w for row in sensitivity["winners"] for w in row]
+        assert flat and set(flat) == {"arg_1"}, (
+            "the family replayed the agents' preferences instead of the "
+            f"declared ballots: {sensitivity['winners']}"
+        )
+        assert sensitivity["uniform_winner"] == "arg_1"
+        assert sensitivity["outcome_changed"] is False

@@ -208,7 +208,15 @@ def play_sensitivity(
     bloc_sets: List[Set[Tuple[str, Tuple[str, ...]]]] = []
     for rotation in range(rotations):
         rotated = agents[rotation:] + agents[:rotation]
-        rotated_ballots = [a.preferences for a in rotated]
+        # The DECLARED ballots rotate with their electors (#3418 review 3):
+        # ``ballots`` is what the caller aggregates, so rebuilding the list
+        # from ``a.preferences`` would play a different election whenever the
+        # two disagree. The length guard is a caller error, not a stance.
+        rotated_ballots = (
+            list(ballots[rotation:]) + list(ballots[:rotation])
+            if len(ballots) == len(agents)
+            else [list(a.preferences) for a in rotated]
+        )
         row: List[Optional[str]] = []
         for shift in range(shifts):
             play = play_governance_rounds(
