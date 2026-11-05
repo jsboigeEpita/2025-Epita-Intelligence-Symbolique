@@ -848,9 +848,14 @@ def _append_state_rule(lines: List[str], meta: Dict[str, Any]) -> None:
         lines.append(
             f"- **Consensus de {len(sources)} passages** sur les mêmes entrées "
             f"({', '.join(f'`{name}`' for name in sources)}), sans appel du juge "
-            f"(#3423) : un item compte quand au moins **{need}** passages le "
-            f"gardent, et il porte sur la thèse centrale quand au moins {need} "
-            "le disent ; l'état est dérivé de ces items. Les items tombés à la "
+            "(#3423) : chaque passage répond, sur SES items vérifiés, aux deux "
+            "questions de la règle — un surplus S1/S2/S3 ? un item sévère ? — "
+            "et l'état est la réponse de la majorité. Un document est "
+            "**fragile** quand, sur l'une des deux questions, la minorité "
+            "atteint un tiers des passages (à 3 passages : toute dissidence) : "
+            "un changement d'état sur un document fragile ne mesure pas le "
+            f"pipeline. Les items listés sont ceux qu'au moins {need} passages "
+            "gardent (même code, citation contenue) ; les items tombés à la "
             "vérification sont comptés dans chaque passage."
         )
     lines.append("")
@@ -942,9 +947,15 @@ def _append_body(
         state_cell = f"`{row.get('state')}`"
         if _label_differs(row):
             state_cell += f" (juge : `{row['reported_state']}`)"
-        pass_states = (row.get("consensus") or {}).get("pass_states") or []
-        if len(set(pass_states)) > 1:
-            state_cell += " · passages : " + ", ".join(f"`{s}`" for s in pass_states)
+        votes = (row.get("consensus") or {}).get("votes")
+        if votes:
+            parsed = votes.get("parsed", 0)
+            state_cell += (
+                f" · votes : surplus {votes.get('core', 0)}/{parsed}, "
+                f"sévère {votes.get('severe', 0)}/{parsed}"
+            )
+            if row["consensus"].get("fragile"):
+                state_cell += " **fragile**"
         if row.get("stop_reason") in TRUNCATION_STOP_REASONS:
             state_cell += " **(tronquée à la limite de sortie)**"
         elif row.get("state") == "UNPARSED" and row.get("reported_state"):
@@ -992,6 +1003,17 @@ def _append_body(
             f"- `UNPARSED` : **{distribution['UNPARSED']}** — "
             + " ; ".join(detail)
             + ", comptés comme tels et jamais convertis en verdict"
+        )
+    fragile = [
+        row["opaque_id"] for row in rows if (row.get("consensus") or {}).get("fragile")
+    ]
+    if fragile:
+        lines.append(
+            f"- **fragiles** (minorité d'au moins un tiers des passages sur une "
+            f"question décisive) : **{len(fragile)}** document(s) — "
+            + ", ".join(f"`{doc_id}`" for doc_id in fragile)
+            + " ; leur état est celui de la majorité, et un changement d'état "
+            "sur eux ne compte pas pour la condition 2"
         )
     differing = [row["opaque_id"] for row in rows if _label_differs(row)]
     if differing:
@@ -1155,8 +1177,10 @@ def rederive_row_state(row: Dict[str, Any]) -> str:
     """
     reported = row.get("reported_state")
     consensus = row.get("consensus") or {}
-    if consensus and consensus.get("parsed", 0) < consensus.get("need", 0):
-        return "UNPARSED"  # fewer passes read it than the majority needs
+    if consensus.get("votes"):
+        # #3423 — a consensus row is decided by its passes' votes, not by
+        # the recurring items it lists.
+        return state_from_votes(consensus["votes"])
     if reported in STATES:
         return derive_state(row.get("kept") or [], str(reported))
     return "UNPARSED"
@@ -1251,6 +1275,9 @@ def compare_passes(
                 "state_b": rederive_row_state(other),
                 "label_a": row.get("reported_state"),
                 "label_b": other.get("reported_state"),
+                "consensus": bool(row.get("consensus") and other.get("consensus")),
+                "fragile_a": bool((row.get("consensus") or {}).get("fragile")),
+                "fragile_b": bool((other.get("consensus") or {}).get("fragile")),
             }
         )
     return report
@@ -1287,6 +1314,24 @@ def render_stability(report: Sequence[Dict[str, Any]], name_a: str, name_b: str)
         f"- état dérivé identique : **{same_state}** document(s) sur {len(report)}",
         f"- étiquette du juge identique : **{same_label}** document(s) sur "
         f"{len(report)}",
+    ]
+    if report and all(entry.get("consensus") for entry in report):
+        decided = [
+            entry
+            for entry in report
+            if not entry.get("fragile_a") and not entry.get("fragile_b")
+        ]
+        contradicted = [e for e in decided if e["state_a"] != e["state_b"]]
+        lines.append(
+            f"- tranchés (non fragiles) des deux côtés : **{len(decided)}** "
+            f"document(s), dont **{len(contradicted)}** d'états différents"
+            + (
+                " — " + ", ".join(f"`{e['opaque_id']}`" for e in contradicted)
+                if contradicted
+                else ""
+            )
+        )
+    lines += [
         "",
         "Un écart entre deux cycles qui ne dépasse pas cet écart entre deux "
         "passages du même cycle ne mesure pas le pipeline.",
@@ -1314,15 +1359,71 @@ def _write_stability(
 #
 # Two passes of claude-sonnet-5-5 over identical inputs agreed on the derived
 # state on 4 of 10 documents and kept 13 common items out of 28 and 24. The
-# model refuses a fixed temperature, so the remedy is to judge each cycle N
-# times and keep what a majority of the passes keep. The consensus applies to
-# ITEMS (and to each item's ``on_central_thesis`` flag); the state is then
-# derived from the consensus items by the same rule as a single pass (#3417).
-# Labels are never averaged.
+# model refuses a fixed temperature, so each cycle is judged N times.
+#
+# What is aggregated was measured on six passes over the cycle-1 inputs, over
+# the ten ways of splitting them into two independent triples:
+#  - a consensus on ITEM IDENTITY (same code, contained quote) agreed with
+#    itself on 5.4 documents of 10 — worse than one pass (5.9 over the 15
+#    pairs): the same observation is quoted with a different span from one
+#    pass to the next, so on one document all three passes kept a severe M1
+#    and the item consensus kept none;
+#  - a majority over each pass's two DECIDING QUESTIONS (« a verified S1/S2/S3
+#    surplus? », « a verified severe item? ») agreed on 7 of 10 in every split;
+#    restricted to documents where both questions are unanimous in both
+#    triples, the two triples contradicted each other on 0 documents in 8
+#    splits and 1 in 2. Six passes leave three documents split exactly 3/3 on
+#    one question: those the judge itself does not decide.
+# So each pass answers the two questions from ITS OWN verified items, the
+# state is the majority answer, and a document is FRAGILE when, on either
+# question, the minority reaches a third of the passes (at three passes: any
+# dissent — the unanimity measured above; at six: two dissents or more, which
+# on the cycle-1 inputs names exactly the three documents split 3/3). Labels
+# are never averaged; items recurring across passes are still listed (with
+# their support), as what the reader can check.
 
 
 def _parsed(row: Dict[str, Any]) -> bool:
     return row.get("reported_state") in STATES and row.get("state") != "UNPARSED"
+
+
+def pass_answers(row: Dict[str, Any]) -> Dict[str, bool]:
+    """One pass's answers to the two questions the state rule asks (#3417)."""
+    kept = row.get("kept") or []
+    return {
+        "core": any(item.get("code") in CORE_SURPLUS_CODES for item in kept),
+        "severe": any(item.get("severity") == SEVERITY_SEVERE for item in kept),
+        "abstain": not kept and row.get("reported_state") == "BOTH_ABSTAIN",
+    }
+
+
+def state_from_votes(votes: Dict[str, int]) -> str:
+    """The consensus state: the majority answer of the passes that parsed."""
+    parsed = votes.get("parsed", 0)
+    if parsed < votes.get("need", 1):
+        return "UNPARSED"  # fewer passes read it than the majority needs
+
+    def majority(key: str) -> bool:
+        return votes.get(key, 0) * 2 > parsed
+
+    if majority("core"):
+        return (
+            "PIPELINE_SUPPLIES_WITH_GAP" if majority("severe") else "PIPELINE_SUPPLIES"
+        )
+    if majority("severe"):
+        return "ZEROSHOT_WINS"
+    return "BOTH_ABSTAIN" if majority("abstain") else "PARITY"
+
+
+def votes_are_fragile(votes: Dict[str, int]) -> bool:
+    """True when, on a deciding question, the minority reaches a third of the
+    parsed passes — any dissent at three passes, two or more at six."""
+    parsed = votes.get("parsed", 0)
+    for key in ("core", "severe"):
+        yes = votes.get(key, 0)
+        if parsed and min(yes, parsed - yes) * 3 >= parsed:
+            return True
+    return False
 
 
 def consensus_row(
@@ -1330,16 +1431,24 @@ def consensus_row(
 ) -> Dict[str, Any]:
     """One document's consensus over the rows of N passes.
 
-    An item counts when at least ``N // 2 + 1`` passes keep it (same code,
-    contained anchor quote — ``_same_item``), and it bears on the central
-    thesis when at least that many passes say so. Items below the majority
-    are kept apart as ``minority``, never silently dropped. A document that
-    fewer than a majority of passes could read stays ``UNPARSED``.
+    The state is the majority of the passes' answers to the two deciding
+    questions (``pass_answers``), and the row is ``fragile`` when the minority
+    on either reaches a third of the passes. Items that at least
+    ``N // 2 + 1`` passes keep
+    (``_same_item``) are listed with their support, the others as
+    ``minority`` — listed, never deciding. A document that fewer than a
+    majority of passes could read stays ``UNPARSED``.
     """
     n = len(rows)
     need = n // 2 + 1
     first = rows[0]
     parsed = [row for row in rows if _parsed(row)]
+    answers = [pass_answers(row) for row in parsed]
+    votes = {
+        key: sum(1 for answer in answers if answer[key])
+        for key in ("core", "severe", "abstain")
+    }
+    votes.update({"parsed": len(parsed), "need": need})
     clusters: List[List[Tuple[int, Dict[str, Any]]]] = []
     for index, row in enumerate(parsed):
         for item in row.get("kept") or []:
@@ -1364,7 +1473,7 @@ def consensus_row(
         (kept if len(cluster) >= need else minority).append(item)
     labels = [row["reported_state"] for row in parsed]
     reported = Counter(labels).most_common(1)[0][0] if labels else ""
-    state = derive_state(kept, reported) if len(parsed) >= need else "UNPARSED"
+    state = state_from_votes(votes)
     judge_costs = [row.get("judge_cost") for row in rows]
     return {
         "opaque_id": first["opaque_id"],
@@ -1387,6 +1496,8 @@ def consensus_row(
             "need": need,
             "parsed": len(parsed),
             "sources": list(sources),
+            "votes": votes,
+            "fragile": state != "UNPARSED" and votes_are_fragile(votes),
             "pass_states": [str(row.get("state")) for row in rows],
             "dropped_per_pass": [len(row.get("dropped") or []) for row in rows],
         },

@@ -1555,11 +1555,12 @@ class TestTwoPassesAreCompared:
 # ---------------------------------------------------------------------------
 
 
-class TestTheConsensusKeepsWhatAMajorityKeeps:
+class TestTheConsensusIsTheMajorityAnswer:
     """Two passes over identical inputs agreed on the derived state on 4 of
-    10 documents; the judge refuses a fixed temperature. The consensus keeps
-    the items a majority of passes keep, and decides the central-thesis flag
-    by the same majority."""
+    10 documents; the judge refuses a fixed temperature. Each pass answers
+    the rule's two questions from its own verified items, the state is the
+    majority answer, and a non-unanimous answer makes the document fragile.
+    Recurring items are listed with their support."""
 
     def _pass(self, items, label="PIPELINE_SUPPLIES", doc="d1"):
         row = _row(items, label)
@@ -1581,18 +1582,39 @@ class TestTheConsensusKeepsWhatAMajorityKeeps:
         ]
         assert [(i["code"], i["support"]) for i in row["minority"]] == [("M1", 1)]
         assert row["state"] == "PIPELINE_SUPPLIES"
+        # S2 or S4 alone: the surplus answer is 2 of 3, not unanimous.
+        assert row["consensus"]["votes"]["core"] == 2
+        assert row["consensus"]["fragile"] is True
         assert row["judge_cost"] == pytest.approx(0.3)
 
-    def test_the_central_flag_is_the_majority_flag(self):
+    def test_the_same_observation_quoted_three_ways_still_decides(self):
+        # Measured on six real passes: the same severe M1 is quoted with a
+        # different span by each pass, so an item consensus kept none of it
+        # and called the document PARITY. Each pass's answer still counts.
+        spans = [
+            "Le document defend la these beta",
+            "en s'appuyant sur un exemple date",
+            "ne discute jamais la semantique preferee",
+        ]
+        rows = [self._pass([{**_M1_CENTRAL, "reading_quote": s}]) for s in spans]
+        row = jp.consensus_row(rows, ["a", "b", "c"])
+        assert row["kept"] == []
+        assert len(row["minority"]) == 3
+        assert row["state"] == "ZEROSHOT_WINS"
+        assert row["consensus"]["fragile"] is False
+
+    def test_the_central_flag_decides_by_the_passes_votes(self):
         # The cycle-1 case: the same M1, central in one pass and not in the
-        # other. One central vote of three leaves it moderate…
+        # other. One central vote of three leaves the document supplied…
         one = [
             self._pass([_S2, _M1_CENTRAL]),
             self._pass([_S2, _M1_ELSEWHERE]),
             self._pass([_S2, _M1_ELSEWHERE]),
         ]
-        assert jp.consensus_row(one, ["a", "b", "c"])["state"] == "PIPELINE_SUPPLIES"
-        # …two of three make it severe.
+        row = jp.consensus_row(one, ["a", "b", "c"])
+        assert row["state"] == "PIPELINE_SUPPLIES"
+        assert row["consensus"]["fragile"] is True
+        # …two of three give it a gap, and the recurring M1 is listed severe.
         two = [
             self._pass([_S2, _M1_CENTRAL]),
             self._pass([_S2, _M1_CENTRAL]),
@@ -1602,6 +1624,21 @@ class TestTheConsensusKeepsWhatAMajorityKeeps:
         assert row["state"] == "PIPELINE_SUPPLIES_WITH_GAP"
         (m1,) = [i for i in row["kept"] if i["code"] == "M1"]
         assert m1["severity"] == "severe"
+
+    def test_unanimous_answers_are_not_fragile(self):
+        rows = [self._pass([_S2, _M2]) for _ in range(3)]
+        row = jp.consensus_row(rows, ["a", "b", "c"])
+        assert row["state"] == "PIPELINE_SUPPLIES_WITH_GAP"
+        assert row["consensus"]["fragile"] is False
+
+    def test_a_rerender_of_a_consensus_reads_the_votes(self):
+        rows = [self._pass([_M1_CENTRAL]) for _ in range(2)] + [self._pass([_S4])]
+        row = jp.consensus_row(rows, ["a", "b", "c"])
+        assert row["state"] == "ZEROSHOT_WINS"
+        # The listed items alone (one recurring M1, severe) would say the
+        # same here; the votes are what a re-render must read.
+        row["kept"] = []
+        assert jp.rederive_row_state(row) == "ZEROSHOT_WINS"
 
     def test_the_label_is_the_majority_label_and_never_decides_alone(self):
         rows = [
@@ -1651,8 +1688,35 @@ class TestTheConsensusKeepsWhatAMajorityKeeps:
         table = (out / "TABLE.md").read_text(encoding="utf-8")
         assert "**Consensus de 3 passages**" in table
         assert "- Commande : `p1`" in table
-        # The pass states differ on d1 (p2 kept no M1): the cell says so.
-        assert "· passages :" in table
+        # d1's severe answer is 2 of 3 (p2 kept no M1): the cell says so.
+        assert "votes : surplus 3/3, sévère 2/3 **fragile**" in table
+        assert "**fragiles** (minorité d'au moins un tiers des passages" in table
+
+    @pytest.mark.parametrize(
+        "yes, parsed, fragile",
+        [(3, 3, False), (2, 3, True), (1, 3, True), (0, 3, False)]
+        + [(6, 6, False), (5, 6, False), (4, 6, True), (3, 6, True), (1, 6, False)],
+    )
+    def test_fragility_is_a_minority_of_a_third(self, yes, parsed, fragile):
+        # Six passes over the cycle-1 inputs: one dissent of six is a decided
+        # document, three of six is one the judge does not decide.
+        votes = {"core": parsed, "severe": yes, "parsed": parsed, "need": 2}
+        assert jp.votes_are_fragile(votes) is fragile
+
+    def test_two_consensuses_count_their_decided_contradictions(self, tmp_path):
+        a = [
+            self._write_pass(tmp_path, f"a{k}", {"d1": [_S2], "d2": [_M1_CENTRAL]})
+            for k in range(3)
+        ]
+        b = [
+            self._write_pass(tmp_path, f"b{k}", {"d1": [_S2], "d2": [_S2]})
+            for k in range(3)
+        ]
+        ra, _ = jp.build_consensus(a, tmp_path / "ca")
+        rb, _ = jp.build_consensus(b, tmp_path / "cb")
+        text = jp.render_stability(jp.compare_passes(ra, rb), "ca", "cb")
+        assert "tranchés (non fragiles) des deux côtés : **2** document(s), " in text
+        assert "dont **1** d'états différents — `d2`" in text
 
     def test_the_consensus_never_overwrites_a_pass(self, tmp_path):
         p1 = self._write_pass(tmp_path, "p1", {"d1": [_S2]})
