@@ -2,8 +2,10 @@
 """#3180 — whose move a fallacy detection or an argument unit is.
 
 The record carries ``move_author``: ``speaker`` (the analysed text's own
-speaker commits the move), ``reported`` (the text reports or denounces a move
-made by another party, named by ``move_author_label``), ``character`` (a
+speaker commits the move — including a view he ASCRIBES to an adversary or a
+group in order to attack it, #3429), ``reported`` (the text quotes or relays
+words or positions actually held by another party, named by
+``move_author_label``), ``character`` (a
 fiction's character commits it — #3390) or ``audience`` (an audience
 interjection — #3390). Absent or invalid = not stated: every reader keeps the
 historical speaker attribution and invents no third party (#1019).
@@ -40,6 +42,60 @@ MOVE_AUTHORS = (
     MOVE_AUTHOR_CHARACTER,
     MOVE_AUTHOR_AUDIENCE,
 )
+
+
+#: #3429 — the ONE French definition of each value, in the place the vocabulary
+#: lives. Both tool descriptions (``phase_scoped_state`` and
+#: ``state_manager_plugin``) build their sentence from this table, and the
+#: state's own docstring names it, so a producer cannot read one meaning while
+#: the goldens read another.
+#:
+#: The panel measured what a one-sided definition costs: it said only « le
+#: texte rapporte ou dénonce le geste d'un tiers », so a view the speaker
+#: ASCRIBES to a group in order to attack it was labelled ``reported``, left
+#: the speaker's own faults, and the render attributed it to « the quoted
+#: voices » — voices the document never carries. #3180's fix (an opponent's
+#: quoted move is not charged to the speaker) still holds: this narrows what
+#: ``reported`` covers, it does not merge the two values.
+MOVE_AUTHOR_DEFINITIONS_FR = {
+    MOVE_AUTHOR_SPEAKER: (
+        "le locuteur du texte COMMET le geste — y compris quand il attribue "
+        "lui-même une vue à un adversaire, à un groupe ou à « ils » pour la "
+        "mieux attaquer, de front, par ironie ou par caricature : "
+        "l'attribution est son geste, pas une parole rapportée"
+    ),
+    MOVE_AUTHOR_REPORTED: (
+        "le texte CITE ou RELAIE des paroles ou des positions réellement "
+        "tenues par un tiers — une citation, un discours rapporté, une "
+        "position que le texte nomme comme celle d'un autre ; une vue que le "
+        "locuteur prête à un adversaire pour la combattre n'est PAS rapportée"
+    ),
+    MOVE_AUTHOR_CHARACTER: (
+        "un personnage de fiction commet le geste — pas une assertion de "
+        "l'auteur du texte"
+    ),
+    MOVE_AUTHOR_AUDIENCE: ("une interjection du public, pas le fait du locuteur"),
+}
+
+
+def move_author_guidance_fr() -> str:
+    """The ``move_author`` sentence of both tool descriptions, from one table.
+
+    #3429 — the two Kernel functions described the field in two hand-written
+    sentences, and neither discriminated an ascription-to-attack from reported
+    speech. Building the sentence here means the definition cannot drift from
+    ``MOVE_AUTHOR_DEFINITIONS_FR``, and a producer reading either tool reads
+    the same rule.
+    """
+    parts = [
+        f"'{value}' si {text}" for value, text in MOVE_AUTHOR_DEFINITIONS_FR.items()
+    ]
+    return (
+        "Ajoute un sophisme identifié à l'état. move_author dit À QUI est le "
+        "geste : " + " ; ".join(parts) + ". move_author_label nomme le tiers "
+        "quand il est nommé — sans label, aucun tiers ne doit être nommé. "
+        "Omettre les deux si le texte ne permet pas de le dire."
+    )
 
 
 def _field(entry: Any, name: str) -> Any:

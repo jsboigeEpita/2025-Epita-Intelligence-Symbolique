@@ -6,7 +6,10 @@ from semantic_kernel.functions import kernel_function
 
 # Importer la classe d'état depuis le même répertoire
 from .logic_types import LOGIC_TYPE_ALIASES, STATE_LABELS, canonical_logic_type
-from .fallacy_attribution import MOVE_AUTHORS  # #3390 — one closed vocabulary
+from .fallacy_attribution import (  # #3390 — one closed vocabulary
+    MOVE_AUTHORS,
+    move_author_guidance_fr,  # #3429 — one definition, read by both tools
+)
 from .shared_state import RhetoricalAnalysisState
 
 # Logger spécifique pour le StateManager
@@ -169,13 +172,9 @@ class StateManagerPlugin:
             return f"FUNC_ERROR: Erreur marquage tâche {task_id}: {e}"
 
     @kernel_function(
-        description=(
-            "Ajoute un sophisme identifié à l'état. move_author: 'speaker' si "
-            "le locuteur du texte analysé commet le sophisme, 'reported' si le "
-            "texte rapporte ou dénonce le geste d'un tiers (move_author_label "
-            "nomme alors ce tiers) ; omettre les deux si le texte ne permet pas "
-            "de le dire."
-        ),
+        # #3429 — built from the one table the vocabulary lives in, so both
+        # tool surfaces state the same definition of ``reported``.
+        description=move_author_guidance_fr(),
         name="add_identified_fallacy",
     )
     def add_identified_fallacy(

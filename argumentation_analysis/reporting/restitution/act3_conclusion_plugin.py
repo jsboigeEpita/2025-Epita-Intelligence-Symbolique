@@ -609,6 +609,10 @@ class Act3Evidence:
     # apart from the speaker's count so the conclusion can still say they were
     # found without filing them as this discourse's weaknesses.
     reported_fallacies_total: int = 0
+    # #3429 — the third parties the text actually NAMES for those reported
+    # moves. Empty means the text named none, and the block must then say so
+    # instead of pointing the conductor at a party that does not exist.
+    reported_fallacies_labels: List[str] = field(default_factory=list)
     counters_total: int = 0
     quality_axis_available: bool = False
     quality_strengths: List[QualityStrength] = field(default_factory=list)
@@ -2926,6 +2930,17 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         and (d.get("target_argument_id") or "")
         and is_reported_move(d)
     )
+    # #3429 — which third parties the text names, if any. Distinct and in
+    # state order: the block quotes them, it never invents one.
+    reported_fallacies_labels: List[str] = []
+    for _f, d in fallacies.items():
+        if not isinstance(d, dict) or not (d.get("target_argument_id") or ""):
+            continue
+        if not is_reported_move(d):
+            continue
+        _label = move_author_label_of(d).strip()
+        if _label and _label not in reported_fallacies_labels:
+            reported_fallacies_labels.append(_label)
     quality_axis_available = bool(quality)
     counters_total = sum(
         1
@@ -3184,6 +3199,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         args_total=args_total,
         fallacies_total=fallacies_total,
         reported_fallacies_total=reported_fallacies_total,
+        reported_fallacies_labels=reported_fallacies_labels,
         counters_total=counters_total,
         quality_axis_available=quality_axis_available,
         quality_strengths=quality_strengths,
@@ -3468,12 +3484,23 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
     reported_block = ""
     if evidence.reported_fallacies_total:
         _n_rep = evidence.reported_fallacies_total
+        # #3429 — no label, no attribution: an unlabelled ``reported`` must
+        # not be handed to « the quoted voices » (the panel read exactly that
+        # out of the bare « le texte les dénonce ou les cite »).
+        _labels = list(evidence.reported_fallacies_labels or ())
+        if _labels:
+            _who = "le texte nomme le tiers : " + ", ".join(
+                f"« {label} »" for label in _labels
+            )
+        else:
+            _who = "le texte ne nomme aucun tiers : ne les attribue à aucune voix citée"
         reported_block = (
             "[SOPHISMES RAPPORTÉS — geste d'un tiers, non commis par le "
             "locuteur]\n"
             f"  {accord(_n_rep, 'sophisme rapporté', 'sophismes rapportés')} : "
-            "le texte les dénonce ou les cite. Ils ne sont PAS des faiblesses "
-            "du locuteur et n'entrent dans aucun compte de cette conclusion.\n\n"
+            f"le texte les dénonce ou les cite ; {_who}. Ils ne sont PAS des "
+            "faiblesses du locuteur et n'entrent dans aucun compte de cette "
+            "conclusion.\n\n"
         )
 
     # #1914 résidu b — same citation contract as Act II, on the weak-point

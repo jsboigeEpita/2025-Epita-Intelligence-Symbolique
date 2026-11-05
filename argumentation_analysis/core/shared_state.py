@@ -452,7 +452,13 @@ class RhetoricalAnalysisState:
 
         #3180 — ``move_author`` dit À QUI est le geste : ``speaker`` (le
         locuteur du texte analysé) ou ``reported`` (le texte rapporte ou
-        dénonce un geste d'un tiers, nommé par ``move_author_label``). Sans ce
+        dénonce un geste d'un tiers, nommé par ``move_author_label``).
+        #3429 — la définition de ``reported`` est DISCRIMINANTE : elle couvre
+        les paroles ou positions réellement tenues par un tiers et que le texte
+        cite ou relaie ; une vue que le locuteur PRÊTE à un adversaire, à un
+        groupe ou à « ils » pour la combattre (de front, par ironie ou par
+        caricature) est son propre geste, donc ``speaker``. La table unique est
+        ``fallacy_attribution.MOVE_AUTHOR_DEFINITIONS_FR``. Sans ce
         champ, l'attribution passait implicitement par ``target_argument_id``
         et tout lecteur créditait le locuteur d'un sophisme que le détecteur
         avait localisé dans une parole RAPPORTÉE. Vide = non dit : le champ
