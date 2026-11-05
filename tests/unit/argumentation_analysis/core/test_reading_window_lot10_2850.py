@@ -192,3 +192,49 @@ class TestPersonaReading:
         # No position to anchor on → the fallback window, never a guessed one.
         assert selection.status == STATUS_HEAD_FALLBACK_NO_MOVES
         assert excerpt == text[:LLM_EXTRACTION_WINDOW]
+
+    def test_a_pillar_prints_its_role_not_just_its_kind(self):
+        """#3442 — the first reading now records pillars (``slot="pillar"``),
+        and they flow to the personas through ``defining_moves``. The header
+        must say the passage carries the thesis: a bare ``claim`` label would
+        read as one more local move, the exact confusion #3442's note guard
+        names. The kind stays, in parentheses."""
+        text = _text(10_000)
+        moves = [
+            {
+                "kind": "thesis",
+                "slot": "thesis",
+                "reading": "la thèse",
+                "quote": text[100:120],
+                "offset": 100,
+            },
+            {
+                "kind": "device",
+                "slot": "mechanism",
+                "reading": "le mécanisme",
+                "quote": text[200:220],
+                "offset": 200,
+            },
+            {
+                "kind": "claim",
+                "slot": "pillar",
+                "reading": "le passage qui porte la thèse",
+                "quote": text[8_000:8_030],
+                "offset": 8_000,
+            },
+            {
+                "kind": "concession",
+                "reading": "un geste local",
+                "quote": text[300:320],
+                "offset": 300,
+            },
+        ]
+        excerpt, selection, _ = persona_reading(text, moves)
+        assert selection.status == STATUS_ANCHORED_ON_MOVES
+        assert "[thèse centrale] position 100" in excerpt
+        assert "[mécanisme] position 200" in excerpt
+        assert "[pilier de la thèse (claim)] position 8000" in excerpt
+        # A local move keeps its bare kind — the role label is for slots only.
+        assert "[concession] position 300" in excerpt
+        # The pillar's passage is read like any anchored move's.
+        assert text[8_000:8_030] in excerpt

@@ -304,18 +304,43 @@ PERSONA_PASSAGE_PAD = 300
 #: the budget and the record says fewer moves were anchored.
 _PERSONA_PASSAGE_FLOOR = 80
 
+#: #3442 reach — the ROLE of a slot, in the reader's language. Mirrors
+#: ``_SLOT_LABELS_FR`` in ``agents/core/reading/first_reading.py``: that
+#: module imports this one, so the twin lives here rather than the import
+#: turning circular. A pillar's ``kind`` stays in the closed vocabulary
+#: (``claim``, ``concession``…) and is printed beside the role — the note
+#: and the persona header spell the same slot the same way.
+_PERSONA_SLOT_LABELS_FR = {
+    "thesis": "thèse centrale",
+    "mechanism": "mécanisme",
+    "pillar": "pilier de la thèse",
+}
+
 
 def _anchors_header(moves: Sequence[Mapping[str, Any]], cap: int) -> str:
-    """One line per defining move: kind, position, reading.
+    """One line per defining move: role (or kind), position, reading.
 
     The header is what makes the passages readable as a whole — a reader
     (and the persona) sees the thesis, the mechanism and the moves each with
     its position, then the text around those positions. Deterministic; the
     label is written here, never by a model.
+
+    A slot's ROLE is the label, its kind in parentheses: #3442's own rule —
+    « the slot is printed, because “affirmation” would read as one more
+    local move beside the ones the document makes elsewhere ». Without the
+    role, a pillar would arrive as an ordinary ``claim`` and the persona
+    would not know the passage carries the thesis.
     """
     lines: List[str] = []
     for move in moves:
         kind = str(move.get("kind") or "move")
+        slot = str(move.get("slot") or "").strip()
+        if slot == "pillar":
+            label = f"{_PERSONA_SLOT_LABELS_FR[slot]} ({kind})"
+        elif slot in _PERSONA_SLOT_LABELS_FR:
+            label = _PERSONA_SLOT_LABELS_FR[slot]
+        else:
+            label = kind
         reading = str(move.get("reading") or "").strip()
         offset = move.get("offset")
         where = (
@@ -323,7 +348,7 @@ def _anchors_header(moves: Sequence[Mapping[str, Any]], cap: int) -> str:
             if isinstance(offset, int) and not isinstance(offset, bool)
             else "position non localisée"
         )
-        lines.append(f"- [{kind}] {where} : {reading}")
+        lines.append(f"- [{label}] {where} : {reading}")
     header = "\n".join(lines)
     if len(header) > cap:
         header = header[: max(0, cap - 1)].rstrip() + "…"
