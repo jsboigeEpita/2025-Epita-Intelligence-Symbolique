@@ -45,6 +45,13 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
+# #3430 — the two labels a player's stance can carry, plus the anchor state
+# the producer writes when its quote failed the citation rule. Imported as
+# constants, never compared against literals, so a rename cannot leave a
+# consumer silently accepting an unlabelled stance.
+from argumentation_analysis.agents.core.context import TEXT_BASIS
+from argumentation_analysis.agents.core.reading import ANCHOR_UNANCHORED
+
 from .arena_record import ArenaRecord, build_arena_record, format_arena_line
 from .figure_scales import score_with_scale  # #3394 — scales ride the figures
 from .fr_accord import accord
@@ -454,9 +461,25 @@ def _format_strategic_block(read: Dict[str, Any]) -> str:
             for key in ("role", "stance")
             if str(player.get(key) or "").strip()
         )
-        players.append(f"{name} ({qualifiers})" if qualifiers else name)
+        label = f"{name} ({qualifiers})" if qualifiers else name
+        # #3430 — each player says WHERE its stance comes from. The panel
+        # measured the writer relaying a model's placement as the document's;
+        # a stance the pipeline verified against the text may be quoted, a
+        # stance it could not verify is kept but never guillemeted, and a
+        # stance nobody claimed for the text says so outright.
+        quote = _truncate(player.get("quote", ""), _MODEL_READ_CAP)
+        if player.get("basis") == TEXT_BASIS and quote:
+            label += f" — le texte dit : « {quote} »"
+        elif player.get("anchor") == ANCHOR_UNANCHORED:
+            label += (
+                " — citation non ancrée : le texte ne porte pas ce passage "
+                "(ne le cite PAS entre guillemets)"
+            )
+        else:
+            label += " — savoir du modèle : le texte ne l'énonce pas"
+        players.append(label)
     if players:
-        lines.append("  Joueurs : " + " ; ".join(players))
+        lines.append("  Joueurs :\n    - " + "\n    - ".join(players))
 
     options = [str(option) for option in (read.get("options") or []) if str(option)]
     if options:
@@ -1332,8 +1355,10 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         f"[LES ENJEUX — inférés du texte par l'extracteur (jamais « vérifiés »)]\n{stakes_block}\n\n"
         f"[SPECTRE ATTENDU — dérivation taxonomie]\n{spectrum_note}{spectrum_coda}\n"
         f"{spectrum_block}\n\n"
-        f"[LECTURE STRATÉGIQUE — parties inférées du texte ; profil et calcul = "
-        f"état (#3377)]\n{gt_block}\n{gt_note}\n{strategic_block}\n\n"
+        f"[LECTURE STRATÉGIQUE — profil et calcul = état (#3377) ; chaque "
+        f"partie dit SA provenance : « le texte dit » = citation vérifiée "
+        f"contre le document, « savoir du modèle » = le texte ne l'énonce "
+        f"pas (#3430)]\n{gt_block}\n{gt_note}\n{strategic_block}\n\n"
         "CONSIGNE DE RÉDACTION :\n"
         "- Rédige 4 paragraphes thématiques (un par battement), en prose lisible,\n"
         "  pas une liste de champs.\n"
@@ -1347,6 +1372,14 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         "- Pour le spectre, ancre chaque famille sur le contexte qui la rend\n"
         "  probable pour ce genre (ex. « dans un discours politique, l'appel à\n"
         "  l'autorité et l'attaque personnelle sont à guetter car… »).\n"
+        "- Pour la lecture stratégique, respecte la provenance de CHAQUE\n"
+        "  partie : une position assortie d'une citation du texte s'écrit\n"
+        "  « le texte présente X comme … » et la citation se reprend telle\n"
+        "  quelle ; une position étiquetée « savoir du modèle » s'écrit au\n"
+        "  registre de l'historien (« on sait par ailleurs que … »), jamais\n"
+        "  comme le propos du texte ; une position dont la citation n'a pas\n"
+        "  été retrouvée se dit sans guillemets.\n"
+        "  Aucune position n'est attribuée au texte sans sa citation.\n"
         "- TERMINE l'Acte I en posant LA QUESTION INTERPRÉTATIVE de ce\n"
         "  document : la question centrale que l'analyse (Acte II) instruit et\n"
         "  que la conclusion (Acte III) devra trancher sur CE discours. Dérive-\n"
