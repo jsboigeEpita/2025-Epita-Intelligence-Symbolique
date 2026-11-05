@@ -11,7 +11,9 @@ render, and never reads as the text's own content.
 What it writes (``state.historical_context``): a one-sentence situation, then
 items — date, place, actors, and what was at stake then — each with a
 confidence and a ``supports`` hint naming which element of the document the
-claim explains. No quotation: a quote would make the claim look textual, which
+claim explains, and ``blind_spot`` (#3432 ask 2): what the thesis leaves out,
+historically — a reading, not a move, so it carries no quote either. No
+quotation: a quote would make the claim look textual, which
 is the failure mode this module exists to prevent.
 """
 
@@ -41,6 +43,11 @@ MAX_ITEMS = 8
 #: can check it against the rendered prompt instead of a hidden truncation.
 _PROMPT_MAX_STAKES = 6
 
+#: Cap on the blind spot (#3432 ask 2): it rides the Act III prompt, so an
+#: unbounded sentence would crowd the conclusion it is there to sharpen.
+#: Same order of magnitude as the interpretive question's cap (#1914).
+BLIND_SPOT_CAP = 400
+
 HISTORIAN_PROMPT = """You are a historian. Situate the document below before anyone
 analyses its reasoning: what period, what place, which actors, and what was at
 stake THEN (not what the document argues).
@@ -52,11 +59,16 @@ Hard rules:
   element of the document it explains (its "supports" field) in your own words.
 - State a confidence between 0 and 1 per item. A date you infer from style is
   not a date you know: say 0.3, not 0.9.
+- "blind_spot" answers ONE question (#3432 ask 2): what does the thesis named
+  in the excerpt LEAVE OUT, historically — who or what is absent from the
+  story it tells? It is model knowledge too, never a quote, and an empty
+  string is a valid answer: an invented omission would render as knowledge.
 - If you do not know, return an empty list. An invented situation is worse than
   no situation: it would be rendered as knowledge.
 
 Answer in French, with ONLY this JSON, no fences, no commentary:
 {{"situation": "one sentence situating the document",
+  "blind_spot": "what the thesis leaves out, historically — empty string if none",
   "items": [{{"claim": "...", "confidence": 0.0,
              "supports": "which element of the document this explains"}}]}}
 
@@ -100,6 +112,7 @@ class HistoricalContext:
     """
 
     situation: str = ""
+    blind_spot: str = ""
     items: List[HistoricalItem] = field(default_factory=list)
     status: str = "no_llm"
     error: str = ""
@@ -107,6 +120,7 @@ class HistoricalContext:
     def to_state(self) -> Dict[str, Any]:
         return {
             "situation": self.situation,
+            "blind_spot": self.blind_spot,
             "items": [item.to_dict() for item in self.items],
             "status": self.status,
             "basis": MODEL_KNOWLEDGE_BASIS,
@@ -191,6 +205,12 @@ async def build_historical_context(
 
         parsed = json.loads(content)
         result.situation = str(parsed.get("situation", "") or "").strip()
+        # #3432 ask 2 — the thesis's historical blind spot, model knowledge.
+        # Capped and stripped: an unbounded sentence would crowd the Act III
+        # prompt it rides, and an empty string is the honest "none named".
+        result.blind_spot = str(parsed.get("blind_spot", "") or "").strip()[
+            :BLIND_SPOT_CAP
+        ]
         raw_items = parsed.get("items") or []
         items = []
         for raw in raw_items[:MAX_ITEMS]:
