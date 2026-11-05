@@ -167,6 +167,78 @@ def _document_caveat_instruction() -> str:
     )
 
 
+def _document_frame_parts(frame: Any) -> Dict[str, str]:
+    """#3428 — the frame's verbatim parts, normalised once for every site.
+
+    Accepts the producer's record (``{"before": ..., "after": ...,
+    "source_quote": ...}``) and keeps only the non-blank parts, so the leaf,
+    the navigation and the one-shot fallback carry the SAME frame — a unit
+    must not get a different window because the descent took another path.
+    Anything else (None, a blank record) is ``{}``, and every prompt is then
+    byte-identical to the pre-#3428 one.
+    """
+    if not isinstance(frame, dict):
+        return {}
+    parts: Dict[str, str] = {}
+    for key in ("before", "after", "source_quote"):
+        text = str(frame.get(key) or "").strip()
+        if text:
+            parts[key] = text
+    return parts
+
+
+def _document_frame_block(parts: Dict[str, str]) -> str:
+    """The prompt block that carries the document's frame around the unit.
+
+    Empty string with no part — the caller then emits the pre-#3428 prompt
+    byte for byte.
+    """
+    lines = []
+    if parts.get("before"):
+        lines.append(f"- before the unit: « {parts['before']} »")
+    if parts.get("after"):
+        lines.append(f"- after the unit: « {parts['after']} »")
+    if parts.get("source_quote"):
+        lines.append(
+            "- the document's own words where this unit was extracted "
+            f"(the unit restates them): « {parts['source_quote']} »"
+        )
+    if not lines:
+        return ""
+    return (
+        "\nTHE DOCUMENT AROUND THIS UNIT (verbatim, the sentences that "
+        "frame it in the document):\n"
+        + "\n".join(lines)
+        + "\n"
+    )
+
+
+def _frame_instruction() -> str:
+    """#3428 — judge the claim as the document states it, not as a bare
+    assertion. Injected only when a frame rides, and it names no family:
+    the four measured misreads span the taxonomy (an amalgam, a modality,
+    a dilemma's structure, a conditional), so the reading rule is the same
+    for every node. The absent case is stated: a frame that settles nothing
+    leaves the judgment as it was.
+    """
+    return (
+        "AS-STATED JUDGMENT — judge the claim AS THE DOCUMENT STATES IT, "
+        "using the frame above with the unit. Before confirming, settle "
+        "from the frame: the claim's modality (can, must, would — a "
+        "possibility is not a mechanism), a conditional or "
+        "counterfactual frame (a hypothesis is not an assertion), irony "
+        "(a statement made to be refused is not an insinuation), and the "
+        "antecedent a pronoun or a nickname carries (who did what). A "
+        "fallacy that needs the claim to be categorical — an accusation, "
+        "a closed dilemma, a suggested association, a mechanical "
+        "repetition — cannot be confirmed on a modal or conditional "
+        "claim without saying so: name the modality or the frame in the "
+        "justification, or answer that the node does not match. A real "
+        "fallacy on a modal claim stays a fallacy, stated with its "
+        "modality; a frame that settles nothing changes nothing.\n"
+    )
+
+
 class FallacyWorkflowPlugin:
     """Plugin orchestrating hierarchical taxonomy-guided fallacy detection.
 
@@ -1108,6 +1180,7 @@ class FallacyWorkflowPlugin:
         quote: str = "",
         outcomes: Optional[List[Dict[str, Any]]] = None,
         document_statements: Optional[List[str]] = None,
+        document_frame: Optional[Any] = None,
     ) -> Optional[IdentifiedFallacy]:
         """#3376 — one document-level branch: WHERE it reads, then the descent.
 
@@ -1147,6 +1220,7 @@ class FallacyWorkflowPlugin:
                 quote=quote,
                 outcomes=outcomes,
                 document_statements=document_statements,
+                document_frame=document_frame,
             )
         finally:
             if outcomes is not None:
@@ -1166,6 +1240,7 @@ class FallacyWorkflowPlugin:
         quote: str = "",
         outcomes: Optional[List[Dict[str, Any]]] = None,
         document_statements: Optional[List[str]] = None,
+        document_frame: Optional[Any] = None,
     ) -> Optional[IdentifiedFallacy]:
         """Explore a single taxonomy branch using iterative deepening.
 
@@ -1206,6 +1281,15 @@ class FallacyWorkflowPlugin:
         _statements = _document_statement_lines(document_statements)
         statement_block = _document_statement_block(_statements)
         guarded_instruction = _document_caveat_instruction() if _statements else ""
+
+        # #3428 — the document's frame around the unit, verbatim: the
+        # sentence before, the sentence after, and the passage a paraphrase
+        # restates. Same rule as the statements: with no part both the block
+        # and the frame instruction are empty strings, and every prompt this
+        # function emits is byte-identical to the pre-#3428 path.
+        _frame = _document_frame_parts(document_frame)
+        frame_block = _document_frame_block(_frame)
+        frame_instruction = _frame_instruction() if _frame else ""
 
         # FB-30 (#1107): no depth cap — the LLM descends until it reaches a
         # leaf (the only natural cap, depth ≤ 10). Bounded only by a generous
@@ -1296,7 +1380,7 @@ class FallacyWorkflowPlugin:
                 )
                 leaf_prompt = (
                     f'Text to analyze: "{window_text}"\n'
-                    f"{statement_block}\n"
+                    f"{statement_block}{frame_block}\n"
                     f"You reached a LEAF node in the fallacy taxonomy.\n"
                     f"Node: {leaf_name} (PK: {current_pk})\n"
                     f"Description: {leaf_desc}\n"
@@ -1305,7 +1389,7 @@ class FallacyWorkflowPlugin:
                     "Does this leaf node correctly identify a fallacy in the text?\n"
                     "IMPORTANT: Only confirm if the reasoning in the text is genuinely fallacious.\n"
                     "Legitimate uses of authority, emotion, or tradition are NOT fallacies.\n\n"
-                    f"{_leaf_caveat}"
+                    f"{_leaf_caveat}{frame_instruction}"
                     "Choose ONE action:\n"
                     f"- confirm_fallacy(node_pk='{current_pk}', matches=true, "
                     "justification='...', confidence=0.0-1.0, "
@@ -1570,11 +1654,11 @@ class FallacyWorkflowPlugin:
 
             prompt = (
                 f'Text to analyze: "{window_text}"\n'
-                f"{statement_block}\n"
+                f"{statement_block}{frame_block}\n"
                 f"You are navigating the fallacy taxonomy. Current position: {parent_name}\n"
                 f"{reasoning_context}"
                 f"{options_text}\n"
-                f"{guarded_instruction}"
+                f"{guarded_instruction}{frame_instruction}"
                 "Choose ONE action:\n"
                 "- Call confirm_fallacy(node_pk='<any_listed_pk>') to explore a node — "
                 "you may jump several levels deep by picking a grandchild/great-grandchild PK directly\n"
@@ -2014,6 +2098,7 @@ class FallacyWorkflowPlugin:
         trace_log_path: Optional[str] = None,
         use_one_shot: bool = False,
         document_statements: Optional[Any] = None,
+        document_frame: Optional[Any] = None,
     ) -> Annotated[str, "JSON result with identified fallacies"]:
         """Execute hierarchical fallacy detection with one-shot fallback.
 
@@ -2039,6 +2124,16 @@ class FallacyWorkflowPlugin:
         Empty or None keeps every prompt byte-identical to the pre-#3416
         path — a document that says nothing about the claim is no evidence
         either way.
+
+        #3428 — ``document_frame`` carries the document's frame AROUND the
+        unit (``first_reading.document_frame_for_unit``: the sentence
+        before, the sentence after, and the verbatim passage a paraphrase
+        restates). It is evidence, never a verdict: the descent reads it
+        with the unit and judges the claim as stated — its modality, a
+        conditional frame, irony, a pronoun's antecedent. Empty or None
+        keeps every prompt byte-identical to the pre-#3428 path — a unit
+        whose provenance carries no offset gets no window, not an invented
+        one.
         """
         file_handler = self._attach_trace_handler(trace_log_path)
 
@@ -2048,11 +2143,17 @@ class FallacyWorkflowPlugin:
             # #3416 — one normalisation for every branch (and the one-shot
             # fallback): quotes deduplicated, empties dropped, bounded.
             _statements = _document_statement_lines(document_statements)
+            # #3428 — same rule for the frame: normalised once, carried by
+            # every branch and the one-shot fallback alike.
+            _frame = _document_frame_parts(document_frame)
 
             # Direct one-shot mode if requested
             if use_one_shot:
                 return self._mark_regime(
-                    await self._run_one_shot(argument_text, _statements), "one_shot"
+                    await self._run_one_shot(
+                        argument_text, _statements, document_frame=_frame
+                    ),
+                    "one_shot",
                 )
 
             # Phase 1: Wide-net candidate selection (#578)
@@ -2062,7 +2163,9 @@ class FallacyWorkflowPlugin:
                     "Wide-net produced no candidates — falling back to one-shot"
                 )
                 _fallback = self._mark_fallback(
-                    await self._run_one_shot(argument_text, _statements)
+                    await self._run_one_shot(
+                        argument_text, _statements, document_frame=_frame
+                    )
                 )
                 return self._mark_regime(_fallback, "one_shot")
 
@@ -2106,6 +2209,7 @@ class FallacyWorkflowPlugin:
                     quote=self._wide_net_quotes.get(pk, ""),
                     outcomes=branch_outcomes,
                     document_statements=_statements,
+                    document_frame=_frame,
                 )
                 for pk in candidate_pks
             ]
@@ -2403,7 +2507,10 @@ class FallacyWorkflowPlugin:
         return "\n".join(lines)
 
     async def _run_one_shot(
-        self, argument_text: str, document_statements: Optional[Any] = None
+        self,
+        argument_text: str,
+        document_statements: Optional[Any] = None,
+        document_frame: Optional[Any] = None,
     ) -> str:
         """Fallback one-shot analysis — sends compact taxonomy to LLM.
 
@@ -2412,12 +2519,19 @@ class FallacyWorkflowPlugin:
         around the unit). With them the prompt asks the reply to cite what
         refutes a guarded attribution; without them the prompt is byte for
         byte the pre-#3416 one, so no recorded replay key moves.
+
+        #3428 — ``document_frame`` carries the document's frame around the
+        unit; the same unit must not get a different contract because the
+        descent timed out. No frame ⇒ byte-identical pre-#3428 prompt.
         """
         self.logger.info("Running one-shot fallback analysis")
 
         _statements = _document_statement_lines(document_statements)
         statement_block = _document_statement_block(_statements)
         caveat = _document_caveat_instruction() if _statements else ""
+        _frame = _document_frame_parts(document_frame)
+        frame_block = _document_frame_block(_frame)
+        frame_instruction = _frame_instruction() if _frame else ""
         document_json_key = (
             ', "document_statement": "the document\'s own words that refute '
             'this attribution, verbatim — omission if none"'
@@ -2485,6 +2599,8 @@ class FallacyWorkflowPlugin:
                     chunk_text,
                     statement_block=statement_block,
                     caveat=caveat,
+                    frame_block=frame_block,
+                    frame_instruction=frame_instruction,
                     document_json_key=document_json_key,
                     compact_taxonomy=compact_taxonomy,
                     kernel=kernel,
@@ -2526,6 +2642,8 @@ class FallacyWorkflowPlugin:
         *,
         statement_block: str,
         caveat: str,
+        frame_block: str = "",
+        frame_instruction: str = "",
         document_json_key: str,
         compact_taxonomy: str,
         kernel: Any,
@@ -2542,7 +2660,7 @@ class FallacyWorkflowPlugin:
         """
         prompt = (
             f"Analyze the following text:\n--- TEXT ---\n{windowed_text}\n--- END TEXT ---\n"
-            f"{statement_block}\n"
+            f"{statement_block}{frame_block}\n"
             "Identify the single most relevant fallacy from the taxonomy below. "
             "CRITICAL: Choose the MOST SPECIFIC (deepest) node that matches — "
             "generic labels like 'Ad hominem' or 'Appel à l'autorité' are too shallow. "
@@ -2573,7 +2691,7 @@ class FallacyWorkflowPlugin:
             "When the text revises or restricts its own preceding wording, "
             "that revision is not a false implication of the wording it "
             "corrects: do not flag it.\n"
-            f"{caveat}"
+            f"{caveat}{frame_instruction}"
             "Respond with ONLY a JSON object: "
             '{"fallacy_name": "...", "taxonomy_pk": "...", "explanation": "...", '
             '"confidence": 0.0-1.0, "move_author": "speaker|reported", '
