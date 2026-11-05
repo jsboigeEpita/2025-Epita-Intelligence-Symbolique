@@ -254,9 +254,39 @@ def _parse_json_object(content: str) -> Any:
     return json.loads(text) if text else {}
 
 
-def _balanced_object_spans(text: str) -> List[str]:
-    """The outermost balanced ``{...}`` spans of ``text``, string-aware."""
-    spans: List[str] = []
+def _key_before(text: str, start: int) -> Optional[str]:
+    """The object key naming the span that starts at ``start``, if any.
+
+    ``"thesis": {`` names the span; an array element (``[`` or ``,`` before
+    it) does not, and answers ``None``. Only plain names read as keys — the
+    answer's own vocabulary — so a quote's tail never passes for one.
+    """
+    head = text[:start].rstrip()
+    if not head.endswith(":"):
+        return None
+    head = head[:-1].rstrip()
+    if not head.endswith('"'):
+        return None
+    end = len(head) - 1
+    i = end - 1
+    while i >= 0:
+        if head[i] == '"' and (i == 0 or head[i - 1] != "\\"):
+            key = head[i + 1 : end]
+            return key if key and all(c.isalnum() or c in "_-" for c in key) else None
+        i -= 1
+    return None
+
+
+def _balanced_object_spans(text: str) -> List[Tuple[Optional[str], str]]:
+    """The outermost balanced ``{...}`` spans of ``text``, string-aware, each
+    with the key that names it (``None`` for an array element).
+
+    #3415 rework (R1144): a bare span lost the key that said WHICH object it
+    was — the salvage re-scans a failed wrapper's inside, and without the key
+    it could no longer tell the thesis from the mechanism: both came back as
+    anonymous moves, and the note printed « autre : » instead of their names.
+    """
+    spans: List[Tuple[Optional[str], str]] = []
     depth = 0
     start = -1
     in_string = False
@@ -280,12 +310,14 @@ def _balanced_object_spans(text: str) -> List[str]:
         elif ch == "}" and depth:
             depth -= 1
             if depth == 0 and start >= 0:
-                spans.append(text[start : i + 1])
+                spans.append((_key_before(text, start), text[start : i + 1]))
                 start = -1
     return spans
 
 
-def _salvage_objects(text: str) -> Tuple[List[Dict[str, Any]], int]:
+def _salvage_objects(
+    text: str,
+) -> Tuple[List[Tuple[Optional[str], Dict[str, Any]]], int]:
     """Parse every balanced object on its own; count what nothing could read.
 
     #3415 ask 2 — cycle 1 measured the failure class: one bad character (a
@@ -293,11 +325,12 @@ def _salvage_objects(text: str) -> Tuple[List[Dict[str, Any]], int]:
     answer and cost every move. Salvage is per-object: an outer span that
     fails is re-scanned INSIDE (the wrapper is structure, not a move — it
     counts only when it swallowed nothing readable), and a leaf span that
-    fails is one lost move.
+    fails is one lost move. Each readable object keeps the key it was found
+    under (R1144), so the splice can route a slot back to its name.
     """
-    objects: List[Dict[str, Any]] = []
+    objects: List[Tuple[Optional[str], Dict[str, Any]]] = []
     malformed = 0
-    for span in _balanced_object_spans(text):
+    for key, span in _balanced_object_spans(text):
         try:
             obj = json.loads(span)
         except json.JSONDecodeError:
@@ -306,7 +339,7 @@ def _salvage_objects(text: str) -> Tuple[List[Dict[str, Any]], int]:
             malformed += inner_bad if inner else 1
         else:
             if isinstance(obj, dict):
-                objects.append(obj)
+                objects.append((key, obj))
             else:
                 malformed += 1
     return objects, malformed
@@ -327,7 +360,15 @@ def _parse_answer(content: str) -> Tuple[Dict[str, Any], int]:
         objects, malformed = _salvage_objects(text)
         spliced: Dict[str, Any] = {}
         extra_moves: List[Any] = []
-        for obj in objects:
+        for key, obj in objects:
+            # R1144 — the key that named a slot object is how salvage knows
+            # it is the thesis or the mechanism, never a local move. Without
+            # it the recovered object came back anonymous ("autre"), losing
+            # the very thing the question had asked for first.
+            if key in ("thesis", "mechanism"):
+                if key not in spliced:
+                    spliced[key] = obj
+                continue
             if isinstance(obj.get("moves"), list):
                 extra_moves.extend(obj["moves"])
                 for slot in ("thesis", "mechanism"):

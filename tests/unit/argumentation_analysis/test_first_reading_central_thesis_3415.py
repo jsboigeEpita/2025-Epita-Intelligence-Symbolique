@@ -149,6 +149,34 @@ def _malformed_answer() -> str:
     )
 
 
+def _mechanism_corrupted_answer() -> str:
+    """The bad character sits INSIDE the mechanism object (R1144).
+
+    The mechanism is lost and counted; the thesis keeps its slot. A bare-span
+    salvage cannot tell the two apart — both arrive as anonymous moves.
+    """
+    return (
+        '{"thesis": '
+        + json.dumps(
+            {"reading": "la reforme protege ses commanditaires", "quote": _THESIS},
+            ensure_ascii=False,
+        )
+        + ', "mechanism": {"reading": "le risque est delegue", "quote": "'
+        + _MECHANISM
+        + '",}, "moves": ['
+        + json.dumps(
+            {"kind": "claim", "reading": "un chiffre", "quote": _LOCAL_1},
+            ensure_ascii=False,
+        )
+        + ", "
+        + json.dumps(
+            {"kind": "concession", "reading": "une remarque", "quote": _LOCAL_2},
+            ensure_ascii=False,
+        )
+        + "]}"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Ask 1 — the question names the thesis and the mechanism first
 # ---------------------------------------------------------------------------
@@ -213,14 +241,39 @@ class TestOneBadObjectCostsItsOwnMove:
         quotes = {m.quote for m in result.moves}
         assert _THESIS in quotes and _MECHANISM in quotes
         assert _LOCAL_1 in quotes and _LOCAL_2 in quotes
+        # R1144 — the salvage keeps the KEYS: the two slots come back under
+        # their own names and kinds, ahead of the local moves (a comparison
+        # of quotes alone cannot see this — it was the measured blind spot).
+        assert [m.slot for m in result.moves[:2]] == ["thesis", "mechanism"]
+        assert [m.kind for m in result.moves[:2]] == ["thesis", "device"]
         # Exactly one object was unreadable — stated, never hidden.
         assert result.malformed_moves == 1
         assert "citation perdue" not in quotes
         payload = result.to_state()
         assert payload["malformed_moves"] == 1
+        # The note names the slots — never « autre : » for the thesis or the
+        # mechanism (the reader-visible face of the same defect).
+        note = reading().first_reading_note(SimpleNamespace(defining_moves=payload))
+        assert "thèse centrale" in note and "mécanisme" in note
         # Recovered moves are not an error (the writers' shared guard would
         # drop the whole invoke on an error key).
         assert "error" not in payload
+
+    async def test_the_mechanism_is_lost_and_the_thesis_keeps_its_slot(
+        self,
+    ) -> None:
+        """R1144 — a bad character inside the mechanism costs the mechanism
+        only: it is counted, the thesis keeps its slot, the moves survive."""
+        result = await reading().build_first_reading(
+            _state(_long_document()), _FakeModel(_mechanism_corrupted_answer())
+        )
+        assert result.status == "ok"
+        assert result.malformed_moves == 1
+        assert [m.slot for m in result.moves] == ["thesis", "", ""]
+        assert [m.kind for m in result.moves] == ["thesis", "claim", "concession"]
+        quotes = {m.quote for m in result.moves}
+        assert _THESIS in quotes and _LOCAL_1 in quotes and _LOCAL_2 in quotes
+        assert _MECHANISM not in quotes
 
     async def test_an_answer_nothing_can_read_is_still_a_parse_error(self) -> None:
         result = await reading().build_first_reading(
