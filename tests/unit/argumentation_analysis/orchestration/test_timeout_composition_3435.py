@@ -24,7 +24,9 @@ constants and is asserted below as the rule's own test.
 """
 
 import asyncio
+import ast
 import time
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Dict, Optional
 
@@ -154,6 +156,10 @@ class TestTheTransport:
             await client.aclose()
         assert response.status_code == 200
         assert wall < 6.0, f"the retry must land inside the budget (wall {wall:.2f}s)"
+        # The transport's REAL call counter, not the observer's bookkeeping:
+        # the base transport was entered twice — the retry happened.
+        base = client._transport.transport.transport
+        assert base.calls == 2
         assert observer["attempts"] == 2
         assert observer["attempt_deadline"] == pytest.approx(1.5)
 
@@ -287,4 +293,59 @@ class TestTheExecutor:
         # The second call ran with NO clamp: the client default, not 1.5 s.
         assert base.seen_deadlines[-1] == pytest.approx(
             settings.network.default_timeout
+        )
+
+
+# --- the census -------------------------------------------------------------
+
+
+def _decorator_name(dec: Any) -> str:
+    """`network_breaker`, `mod.network_breaker(...)` — all spell one name."""
+    node = dec
+    while isinstance(node, ast.Call):
+        node = node.func
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    if isinstance(node, ast.Name):
+        return node.id
+    return ""
+
+
+class TestTheCensus:
+    def test_no_network_breaker_decorator_on_an_async_def_anywhere(self):
+        """AST census guard (#3435 review ask).
+
+        pybreaker's decorator wraps an ``async def`` into a SYNC callable,
+        which hides the coroutine from tenacity's async detection — that
+        stacking was the inert retry. The breaker must be driven via its
+        ``call_async`` API INSIDE a tenacity-decorated method, never stacked
+        as a decorator on an ``async def``. This walks the package's AST —
+        no import — so it sees every file, loaded or not.
+
+        Born red on ``origin/main``: the offender was
+        ``network_utils.ResilientAsyncTransport.handle_async_request``
+        (``@async_retry_on_network_error`` over ``@network_breaker`` on an
+        ``async def``) — the exact site this PR repairs. The five SYNC
+        stacking sites (``download_file`` + four ``fetch_service``
+        functions) are legitimate: the sync wrapper does not hide a
+        coroutine from sync tenacity.
+        """
+        import argumentation_analysis
+
+        package_root = Path(argumentation_analysis.__file__).resolve().parent
+        offenders = []
+        for path in sorted(package_root.rglob("*.py")):
+            try:
+                tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"))
+            except SyntaxError:
+                continue
+            for node in ast.walk(tree):
+                if isinstance(node, ast.AsyncFunctionDef) and any(
+                    _decorator_name(d) == "network_breaker" for d in node.decorator_list
+                ):
+                    offenders.append(f"{path.relative_to(package_root)}:{node.lineno}")
+        assert offenders == [], (
+            "pybreaker stacked as a decorator on an async def (the inert-retry "
+            f"shape) at: {offenders} — drive it with call_async inside a "
+            "tenacity-decorated method instead"
         )
