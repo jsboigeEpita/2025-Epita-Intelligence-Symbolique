@@ -12,10 +12,11 @@ import logging
 import os
 import re
 from contextvars import ContextVar
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import requests
 import httpx
-from typing import Any, Dict, Optional, Tuple, cast
+from typing import Any, Awaitable, Callable, Dict, Optional, Tuple, TypeVar
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -23,7 +24,12 @@ from tenacity import (
     retry_if_exception_type,
     before_sleep_log,
 )
-from pybreaker import CircuitBreaker, CircuitBreakerError
+from pybreaker import (
+    CBStateType,
+    CircuitBreaker,
+    CircuitBreakerError,
+    CircuitOpenState,
+)
 
 from argumentation_analysis.config.settings import settings
 
@@ -571,6 +577,74 @@ class ReasoningEffortTransport(httpx.AsyncBaseTransport):
         await self._wrapped_transport.aclose()
 
 
+# --- #3447 — le disjoncteur piloté depuis la coroutine, sans tornado -------
+#
+# ``CircuitBreaker.call_async`` (pybreaker 1.4.1) est construit sur
+# ``tornado.gen.coroutine`` : tornado n'est déclaré ni dans
+# ``environment.yml`` ni dans ``pyproject.toml``, et ``pybreaker.gen`` vaut
+# ``None`` quand le module manque — le chemin chaud du transport asynchrone
+# reposait donc sur un paquet non installé. Le même ``call_async`` garde
+# ``self._lock`` (un ``threading.RLock``) PENDANT toute la requête HTTP : les
+# appels simultanés de plusieurs boucles ou threads se sérialisent sur la
+# latence du premier.
+#
+# La coroutine ne traverse donc plus pybreaker : c'est son automate d'état qui
+# est piloté AUTOUR de l'``await``, avec ses propres primitives — la porte
+# d'entrée de l'état ouvert, puis ``_handle_error`` / ``_handle_success``
+# pour la comptabilité (ce que ``CircuitBreakerState.call`` fait lui-même).
+# Le verrou n'est pris que pour ces deux gestes, jamais pendant l'attente
+# réseau ; les transitions (``open()``, ``half_open()``, ``close()``) le
+# prennent de l'intérieur.
+#
+# Dépendance assumée : ces trois noms sont privés chez pybreaker. Une montée
+# de version les ferait disparaître bruyamment (``AttributeError`` à chaque
+# requête) ; ``test_breaker_without_tornado_3447.py`` vérifie en plus leur
+# présence, pour que le rouge arrive sur le bump et pas en production.
+_T = TypeVar("_T")
+
+
+async def _call_through_breaker(func: Callable[[], Awaitable[_T]]) -> _T:
+    """Exécute ``func`` sous ``network_breaker`` sans tornado (#3447).
+
+    Même sémantique que ``CircuitBreakerState.call_async`` : l'état est
+    figé avant l'appel, l'issue est comptée sur cet état, et un déclenchement
+    lève ``CircuitBreakerError`` au lieu de l'exception d'origine quand
+    ``throw_new_error_on_trip`` est armé (le défaut). L'état étant figé, un
+    succès tardif ne referme pas un disjoncteur qu'un appel concurrent aurait
+    ouvert entre-temps — et ``call_async`` ne l'empêchait pas davantage : son
+    ``RLock`` est réentrant pour le thread qui le détient, donc deux
+    coroutines de la MÊME boucle le traversent déjà en parallèle. Il ne
+    bloquait que les autres threads, et pendant toute la requête.
+    """
+    with network_breaker._lock:
+        state: CBStateType = network_breaker.state
+        if isinstance(state, CircuitOpenState):
+            # La porte de ``CircuitOpenState.before_call``, sans sa
+            # délégation synchrone : celle-ci appellerait ``func`` comme une
+            # fonction ordinaire, recevrait la coroutine en valeur de retour
+            # et compterait un succès qui n'a pas eu lieu.
+            timeout = timedelta(seconds=network_breaker.reset_timeout)
+            opened_at = network_breaker._state_storage.opened_at
+            if opened_at and datetime.now(timezone.utc) < opened_at + timeout:
+                raise CircuitBreakerError(
+                    "Timeout not elapsed yet, circuit breaker still open"
+                )
+            network_breaker.half_open()
+            state = network_breaker.state
+
+    try:
+        result = await func()
+    except BaseException as exc:
+        with network_breaker._lock:
+            # ``_handle_error`` relance l'exception lui-même (ou le
+            # ``CircuitBreakerError`` du déclenchement).
+            state._handle_error(exc)
+        raise  # inatteignable : garde le typage de sortie honnête
+    with network_breaker._lock:
+        state._handle_success()
+    return result
+
+
 class ResilientAsyncTransport(httpx.AsyncBaseTransport):
     """
     Transport httpx qui intègre Tenacity et PyBreaker pour la résilience.
@@ -580,10 +654,13 @@ class ResilientAsyncTransport(httpx.AsyncBaseTransport):
     cache la coroutine à la détection async de tenacity — le « rejeu » que
     le client promettait était mesuré INERTE (une ``ReadTimeout`` levée une
     fois s'échappait sans second appel : sonde 05/11, ``calls: 1``). Le
-    disjoncteur est désormais piloté par son API async documentée
-    (``call_async``) À L'INTÉRIEUR de la méthode décorée tenacity, pour que
-    les deux étages voient réellement l'exception : le rejeu rejoue, le
+    disjoncteur est piloté À L'INTÉRIEUR de la méthode décorée tenacity, pour
+    que les deux étages voient réellement l'exception : le rejeu rejoue, le
     disjoncteur compte.
+
+    #3447 — et il est piloté par ``_call_through_breaker`` (l'automate de
+    pybreaker autour de l'``await``), pas par ``call_async`` : plus de
+    tornado sur le chemin chaud, et plus de verrou tenu pendant la requête.
     """
 
     def __init__(self, transport: httpx.AsyncBaseTransport):
@@ -594,9 +671,9 @@ class ResilientAsyncTransport(httpx.AsyncBaseTransport):
         """
         Gère une requête asynchrone avec résilience (rejeu et disjoncteur).
         Le rejeu vit dans le décorateur tenacity (async-aware) ; le
-        disjoncteur via ``call_async`` dans le corps — voir la docstring de
-        la classe pour pourquoi l'empilement de décorateurs ne fonctionnait
-        pas.
+        disjoncteur via ``_call_through_breaker`` dans le corps — voir les
+        docstrings de la classe et de l'aide pour pourquoi ni l'empilement de
+        décorateurs (#3435) ni ``call_async`` (#3447) ne convenaient.
         """
         logger.debug(f"Via Resilient Transport: {request.method} {request.url}")
 
@@ -607,12 +684,7 @@ class ResilientAsyncTransport(httpx.AsyncBaseTransport):
         async def _inner() -> httpx.Response:
             return await self.transport.handle_async_request(request)
 
-        # pybreaker 1.4.1 n'exporte aucun stub : l'appel est typé ici, à la
-        # frontière, pour que le reste du transport reste strict.
-        return cast(
-            httpx.Response,
-            await network_breaker.call_async(_inner),  # type: ignore[no-untyped-call]
-        )
+        return await _call_through_breaker(_inner)
 
 
 def get_resilient_async_client() -> httpx.AsyncClient:
