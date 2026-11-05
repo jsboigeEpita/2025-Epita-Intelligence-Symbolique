@@ -910,6 +910,44 @@ def document_statements_for_unit(
     return statements
 
 
+#: #3431 — the reader's position bands: (lower bound of the share, its part).
+#: Below the first bound the part is the opening. A raw character offset
+#: names nothing to a writer who does not hold the document (measured, panel
+#: cycle 2: a thesis at 94 % read as an opening); the share and its part do.
+#: The péroraison band exists because a peroration is a rhetorical fact a
+#: « fin » at 98 % would hide.
+_POSITION_BANDS_FR = (
+    (0.25, "vers le milieu du texte"),
+    (0.75, "vers la fin du texte"),
+    (0.95, "dans la péroraison"),
+)
+_POSITION_OPENING_FR = "vers le début du texte"
+
+
+def _reader_position_fr(offset: Any, text_length: Any) -> str:
+    """The move's position in the READER's terms, or ``""``.
+
+    Computed from the record's own ``text_length`` (the length of the text
+    the producer read): the share of the text at which the quote starts and
+    the part that share falls in, e.g. ``", vers la fin du texte (94 %)"``.
+    No raw offset is printed to a writer — the offset itself stays in the
+    state, where the selection and the census read it.
+    """
+    if not isinstance(offset, int) or isinstance(offset, bool):
+        return ""
+    if not isinstance(text_length, int) or isinstance(text_length, bool):
+        return ""
+    if text_length <= 0:
+        return ""
+    share = min(1.0, max(0.0, offset / text_length))
+    percent = int(round(share * 100))
+    part = next(
+        (label for bound, label in reversed(_POSITION_BANDS_FR) if share >= bound),
+        _POSITION_OPENING_FR,
+    )
+    return f", {part} ({percent} %)"
+
+
 def first_reading_note(state: Any) -> str:
     """The labelled block a writer prepends to its own prompt (#3395 ask 3).
 
@@ -973,11 +1011,21 @@ def first_reading_note(state: Any) -> str:
         "instruments. Ce sont des GESTES DU TEXTE, pas un verdict d'instrument : "
         "ne les présente jamais comme un sophisme ni comme une note.",
         f"  Portée : {extent}.",
+        # #3431 ask 2 — the order is STATED, because the record beneath it
+        # stores the thesis and mechanism slots first (#3420) while this note
+        # lists the gestures as the document lays them out: a writer told
+        # nothing was reading the first slot as the opening (measured, panel
+        # cycle 2: a thesis at 94 % read as the speech's opening call).
+        "  Ordre : celui du document, du premier geste au dernier.",
     ]
     malformed = record.get("malformed_moves") or 0
+    text_length = scope.get("text_length")
     for move in moves:
         offset = move.get("offset")
-        position = f" [texte, position {offset}]" if isinstance(offset, int) else ""
+        # #3431 ask 1 — the position in the READER's terms (share of the text
+        # and its part), never a raw character offset a writer cannot place
+        # without the document in hand. The offset stays in the state.
+        position = _reader_position_fr(offset, text_length)
         label = _move_label(move)
         anchor = str(move.get("anchor") or "")
         if anchor == ANCHOR_UNANCHORED:

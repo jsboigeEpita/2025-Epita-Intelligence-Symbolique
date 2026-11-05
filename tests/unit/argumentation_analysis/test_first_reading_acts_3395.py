@@ -51,14 +51,24 @@ def _state_with_moves() -> UnifiedAnalysisState:
                 "kind": "device",
                 "reading": "La metaphore centrale structure tout le discours.",
                 "quote": "Une metaphore ouvriere porte l'argument entier.",
-                "offset": 48,
+                # Inside the document (46 chars): an offset beyond its end
+                # would clamp to 100 % — a production quote always sits in
+                # the text it was read from.
+                "offset": 30,
                 "basis": "first_reading",
             },
         ],
         "dropped_quotes": 1,
         "status": "ok",
         "error": "",
-        "read_scope": {"whole_document": True, "offset": 0, "window": len(_FILLER)},
+        "read_scope": {
+            "whole_document": True,
+            "offset": 0,
+            "window": len(_FILLER),
+            # #3431 — the production scope always records the text length;
+            # the note computes each move's share of the text from it.
+            "text_length": len(_FILLER),
+        },
         "basis": "first_reading",
     }
     return state
@@ -71,7 +81,12 @@ def _state_without_moves(status: str = "no_llm") -> UnifiedAnalysisState:
         "dropped_quotes": 0,
         "status": status,
         "error": "",
-        "read_scope": {"whole_document": True, "offset": 0, "window": len(_FILLER)},
+        "read_scope": {
+            "whole_document": True,
+            "offset": 0,
+            "window": len(_FILLER),
+            "text_length": len(_FILLER),
+        },
         "basis": "first_reading",
     }
     return state
@@ -83,9 +98,11 @@ class TestAct2ReceivesTheMoves:
         # The label first: a first-reading line never reads as a lens's verdict.
         assert "LECTURE PREMIÈRE" in prompt
         assert "GESTES DU TEXTE" in prompt
-        # The verbatim quote is on the line, with its position.
+        # The verbatim quote is on the line, with its position — in the
+        # reader's terms since #3431: the share of the text and its part,
+        # never a raw character offset.
         assert _QUOTE in prompt
-        assert "position 12" in prompt
+        assert "vers le milieu du texte (26 %)" in prompt
 
     def test_the_block_is_the_one_producers_wording(self):
         from argumentation_analysis.agents.core.reading import first_reading_note
@@ -126,7 +143,8 @@ class TestAct3ReceivesTheMoves:
         assert "LECTURE PREMIÈRE" in prompt
         assert "GESTES DU TEXTE" in prompt
         assert _QUOTE in prompt
-        assert "position 12" in prompt
+        # #3431 — the reader's terms, not the raw offset.
+        assert "vers le milieu du texte (26 %)" in prompt
 
     def test_the_block_is_the_one_producers_wording(self):
         from argumentation_analysis.agents.core.reading import first_reading_note
