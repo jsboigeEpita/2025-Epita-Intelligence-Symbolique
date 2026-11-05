@@ -59,6 +59,7 @@ from argumentation_analysis.core.reading_window import (
     WindowSelection,
     chunked_reading_offsets,
     descent_text_and_selection,
+    gather_k_calls,
     head_selection,
     select_reading_head,
     selected_text,
@@ -851,11 +852,20 @@ class FallacyWorkflowPlugin:
         candidate_pks: List[str] = []
         _raw_count = 0
         _answered_spans: List[Tuple[int, int]] = []
-        for _offset in _offsets:
-            wide_net_text = argument_text[
-                _offset : _offset + WHOLE_TEXT_CALL_CAPACITY
-            ]
-            _mapped = await self._wide_net_one_chunk(wide_net_text)
+        # #3446 — the k chunk calls fly CONCURRENTLY under one bound; the
+        # pool below walks their answers in PLAN order, so first-quote-wins
+        # keeps meaning "the first CHUNK's quote", whatever order the calls
+        # completed in.
+        _chunk_texts = [
+            argument_text[_offset : _offset + WHOLE_TEXT_CALL_CAPACITY]
+            for _offset in _offsets
+        ]
+        _chunk_answers = await gather_k_calls(
+            [self._wide_net_one_chunk(text) for text in _chunk_texts]
+        )
+        for _offset, wide_net_text, _mapped in zip(
+            _offsets, _chunk_texts, _chunk_answers
+        ):
             if _mapped is None:
                 continue
             _answered_spans.append((_offset, _offset + len(wide_net_text)))
@@ -2449,30 +2459,19 @@ class FallacyWorkflowPlugin:
         # says how many chunks carried it (ask 5); the opening window is not
         # the answer any more.
         planned: List[str]
-        if len(argument_text) > WIDE_NET_WINDOW:
+        _multi_chunk = len(argument_text) > WIDE_NET_WINDOW
+        _plan_offsets: List[int] = []
+        if _multi_chunk:
             head = select_reading_head(argument_text, WIDE_NET_WINDOW)
-            offsets = chunked_reading_offsets(
+            _plan_offsets = chunked_reading_offsets(
                 len(argument_text), WHOLE_TEXT_CALL_CAPACITY, start=head.offset
             )
             planned = [
                 argument_text[
                     offset : min(offset + WHOLE_TEXT_CALL_CAPACITY, len(argument_text))
                 ]
-                for offset in offsets
+                for offset in _plan_offsets
             ]
-            self._record_window(
-                argument_text,
-                WHOLE_TEXT_CALL_CAPACITY,
-                "fallacy_one_shot",
-                selection=WindowSelection(
-                    offsets[0], WHOLE_TEXT_CALL_CAPACITY, STATUS_SELECTED
-                ),
-                extra={
-                    "chunks": len(planned),
-                    "windows": len(planned),
-                    "chars_read": sum(len(text) for text in planned),
-                },
-            )
         else:
             planned = [
                 selected_text(
@@ -2483,10 +2482,13 @@ class FallacyWorkflowPlugin:
                 )
             ]
 
-        outcomes: List[Dict[str, Any]] = []
-        for chunk_text in planned:
-            outcomes.append(
-                await self._one_shot_single_call(
+        # #3446 — the k chunk calls fly CONCURRENTLY under one bound; the
+        # pooling below walks their answers in PLAN order, so "the first
+        # chunk's verdict" keeps its meaning, whatever order the calls
+        # completed in.
+        outcomes: List[Dict[str, Any]] = await gather_k_calls(
+            [
+                self._one_shot_single_call(
                     chunk_text,
                     statement_block=statement_block,
                     caveat=caveat,
@@ -2496,6 +2498,32 @@ class FallacyWorkflowPlugin:
                     settings=settings,
                     statements=_statements,
                 )
+                for chunk_text in planned
+            ]
+        )
+        if _multi_chunk:
+            # #3446 — the record counts only the chunks that ANSWERED, like
+            # the wide net: a chunk whose call failed (kind "error") read
+            # nothing, and counting it would state a read stronger than the
+            # measurement (#3099/#1019). Planned chunks stay named in
+            # "chunks"; chars_read is the answered ones.
+            _answered_chars = sum(
+                len(text)
+                for text, out in zip(planned, outcomes)
+                if out.get("kind") != "error"
+            )
+            self._record_window(
+                argument_text,
+                WHOLE_TEXT_CALL_CAPACITY,
+                "fallacy_one_shot",
+                selection=WindowSelection(
+                    _plan_offsets[0], WHOLE_TEXT_CALL_CAPACITY, STATUS_SELECTED
+                ),
+                extra={
+                    "chunks": len(planned),
+                    "windows": len(planned),
+                    "chars_read": _answered_chars,
+                },
             )
 
         fallacies = [out["fallacy"] for out in outcomes if out.get("fallacy")]
