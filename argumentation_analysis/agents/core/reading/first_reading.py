@@ -256,10 +256,15 @@ async def build_first_reading(
 
     # Resolved before the slice: ``next()`` falls back for a state that cannot
     # record, and the value is what the payload states about its own scope.
-    recorder = state if hasattr(state, "record_reading_window") else None
+    # It is the STATE (the shared selector's own ``state`` argument), not a
+    # callable: the no-cut branch below once called it as one, and every
+    # spectacular run of cycle 1 failed on « 'UnifiedAnalysisState' object is
+    # not callable » (R1143) — the witnesses used a bare namespace that never
+    # reached that call.
+    recording_state = state if hasattr(state, "record_reading_window") else None
     if FIRST_READING_WINDOW > 0:
         excerpt, selection = selected_text_and_selection(
-            raw_text, FIRST_READING_WINDOW, "first_reading", recorder
+            raw_text, FIRST_READING_WINDOW, "first_reading", recording_state
         )
     else:
         # R1142 — no cut: the zero-shot arm's own read (#2841 rule 4, the
@@ -269,8 +274,8 @@ async def build_first_reading(
         # other read so the scope stays a measured claim.
         selection = WindowSelection(0, len(raw_text), STATUS_SELECTED)
         excerpt = raw_text
-        if recorder is not None:
-            recorder("first_reading", selection)
+        if recording_state is not None:
+            recording_state.record_reading_window("first_reading", selection)
 
     result = FirstReading(
         read_scope={
