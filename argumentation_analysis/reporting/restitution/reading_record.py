@@ -91,6 +91,17 @@ _STATUS_PHRASES_FR = {
     "skipped: not_configured": "non évalué — aucun endpoint local configuré",
     "skipped: endpoint_unavailable": "non évalué — endpoint local injoignable",
     "error": "non évalué — erreur d'appel",
+    # #2850 lot 10 — the personas' fallback: the first reading failed (no
+    # move, no usable position), so the opening window survives. Said as what
+    # it is, never presented as a choice.
+    "head_fallback_no_first_reading": (
+        "aucune première lecture exploitable — repli sur la fenêtre d'ouverture"
+    ),
+    # #2850 lot 10 — the anchored read has its own rendering branch below
+    # (it carries counts); the phrase exists so a raw token can never leak.
+    "anchored_on_defining_moves": (
+        "lecture ancrée sur les mouvements de la première lecture"
+    ),
 }
 
 
@@ -485,7 +496,23 @@ def _local_llm_reading_line(state: Any) -> Optional[ReadingLine]:
 def format_reading_line(line: ReadingLine, source_chars: int) -> str:
     """The ONE phrasing every act quotes for one site — counts only."""
     label = SITE_LABELS_FR.get(line.site, line.site)
-    if line.status != "selected":
+    if line.status == "anchored_on_defining_moves" and line.windows and line.chars_read:
+        # #2850 lot 10 — the personas read the document through the first
+        # reading's positions: the record says how much text that carried,
+        # in how many passages, and where the first one sits.
+        base = (
+            f"« {label} » : {line.chars_read} des {source_chars} caractères "
+            f"lus en {accord(line.windows, 'passage')} autour des mouvements "
+            f"de la première lecture (décalage {line.offset})"
+        )
+    elif line.status == "head_fallback_no_first_reading":
+        read = min(line.window, source_chars) if source_chars else line.window
+        base = (
+            f"« {label} » : {read} des {source_chars} caractères — "
+            "aucune première lecture exploitable, repli sur la fenêtre "
+            "d'ouverture"
+        )
+    elif line.status != "selected":
         phrase = _STATUS_PHRASES_FR.get(line.status, line.status)
         base = f"« {label} » : {phrase}"
     elif line.units and line.unit_total and 0 < source_chars:

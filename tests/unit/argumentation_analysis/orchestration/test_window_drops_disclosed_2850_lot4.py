@@ -158,32 +158,61 @@ class TestExtractionWindowDisclosed:
         ):
             return asyncio.run(_invoke_fact_extraction(text, {"_state_object": state}))
 
-    def test_payload_pairs_the_union_with_the_source(self) -> None:
-        """#2850 lot 8 — re-pinned from ``== LLM_EXTRACTION_WINDOW`` (lot 4,
-        one window): above one window's worth of text the payload must carry
-        the UNION of the k windows' spans. A text of exactly 10 000 chars
-        reads k = 3 windows at offsets 0/3 500/7 000 — the union is
-        hand-derived 9 000 (three disjoint windows, two 500-char gaps), not
-        a mirror of the implementation's arithmetic."""
+    def test_payload_pairs_the_whole_read_with_the_source(self) -> None:
+        """#2850 lot 10 — supersedes lot 8's partial union. A 10 000-char
+        document is read WHOLE in k = ceil(L / capacity) = 2 contiguous
+        chunks, so the k of the k-of-N pair is the document itself; a
+        sampled read (lot 8) said 9 000 of 10 000."""
         exact = "mot " * 2500  # 10 000 chars, no punctuation → offset 0
         assert len(exact) == 10000
         out = self._run(exact, _Recorder())
         assert out["source_length"] == len(exact)
-        assert out["reading_window_chars"] == 3 * LLM_EXTRACTION_WINDOW, (
-            "the payload must carry the k of the k-of-N pair — the union of "
-            "the windows actually read, never the first window alone"
+        assert out["reading_window_chars"] == len(exact), (
+            "the whole text is read: the payload's k equals the source's N"
         )
 
-    def test_trace_names_the_windows_and_the_source(self) -> None:
-        """#2850 lot 8 — re-pinned from asserting the bare window number: the
-        trace now names the union AND the window count, because « X des Y
-        caractères » alone no longer distinguishes one window from three."""
+    def test_trace_names_a_partial_union_and_the_source(self) -> None:
+        """A chunk that answers nothing read nothing: the note names the
+        union actually read and the source. A read that covered everything
+        says nothing (nothing was lost) — so the partial case is the one
+        that must speak, and it is exercised by failing the second chunk."""
         state = _Recorder()
-        out = self._run(LONG, state)
+        exact = "mot " * 2500
+        marker = "QUEUEMARK"
+        exact = exact[:9000] + marker + exact[9000 + len(marker) :]
+        payload = {
+            "arguments": [{"text": "u1", "source_quote": "q1"}],
+            "claims": [{"text": "c1", "source_quote": "q1"}],
+            "summary": "s",
+        }
+
+        def _fake(_client: Any, model: Any = None, messages: Any = None, **kw: Any):
+            user = messages[-1]["content"] if messages else ""
+            if marker in user:  # the tail chunk answers garbage, every retry
+                return SimpleNamespace(
+                    choices=[
+                        SimpleNamespace(message=SimpleNamespace(content="garbage"))
+                    ]
+                )
+            return _resp(payload)
+
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_fact_extraction,
+        )
+
+        with patch(
+            f"{INVOKE}._get_openai_client",
+            return_value=(MagicMock(), "gpt-witness"),
+        ), patch(
+            f"{INVOKE}._guarded_chat_completion", AsyncMock(side_effect=_fake)
+        ):
+            out = asyncio.run(
+                _invoke_fact_extraction(exact, {"_state_object": state})
+            )
         summary = state.entry_for("extract")["summary"]
+        assert out["reading_window_chars"] < len(exact)
         assert str(out["reading_window_chars"]) in summary, summary
-        assert str(len(LONG)) in summary, summary
-        assert "fenêtre" in summary, summary
+        assert str(len(exact)) in summary, summary
 
 
 class TestPropositionalLogicWindowsDisclosed:

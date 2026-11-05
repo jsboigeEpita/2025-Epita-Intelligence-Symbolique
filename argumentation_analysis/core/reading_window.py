@@ -30,8 +30,9 @@ pure, no LLM, no I/O — same input, same selection.
 """
 
 import re
+from collections.abc import Mapping as _MappingABC
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import Any, Dict, List, Mapping, Sequence, Tuple
 
 _STRIDE = 500
 _PUNCT_RE = re.compile(r"[,;:]")
@@ -88,6 +89,29 @@ DESCENT_WINDOW = 500
 #: (``llm_error``, persisted) rather than reading a window the comparison
 #: cannot use, and ``read_scope.whole_document`` keeps saying what was read.
 FIRST_READING_WINDOW = 0
+
+# --- #2850 lot 10: the whole text, in k calls (dispatch R1144). ---
+
+#: Declared ceiling of the per-argument budget k(L) (dispatch R1144: "k(L)
+#: instead of a flat 10, with a declared ceiling"). 30 is the extraction k
+#: of the panel's longest document (179,139 chars): at two units per
+#: capacity-chunk the longest panel document asks 60 and is rationed to 30 —
+#: the ration is stratified by position (``select_for_budget``), and the
+#: coverage record says k of N, never a silent drop.
+PER_ARGUMENT_CEILING = 30
+
+#: #2850 lot 10 — the per-argument floor: today's flat 10. Below it k(L)
+#: never drops, so a short document's pass is byte-identical to today's.
+PER_ARGUMENT_FLOOR = 10
+
+#: #2850 lot 10 — the personas' anchored read: the window was built from the
+#: first reading's defining moves (positions + passages), not from offset 0.
+STATUS_ANCHORED_ON_MOVES = "anchored_on_defining_moves"
+
+#: #2850 lot 10 — the personas' opening window survived because the first
+#: reading failed (no LLM, no move, no position): the record names the
+#: fallback instead of presenting the head as a choice.
+STATUS_HEAD_FALLBACK_NO_MOVES = "head_fallback_no_first_reading"
 
 
 @dataclass(frozen=True)
@@ -213,6 +237,215 @@ def reads_whole_text_in_one_call(
     """
     return (
         window < length <= one_call_extraction_capacity(max_completion_tokens, window)
+    )
+
+
+# --- #2850 lot 10: the whole text, in k calls (dispatch R1144). ---
+
+#: The per-call reading capacity every k-calls axis chunks at: lot 9's
+#: extraction capacity at the run's default completion cap. One number for
+#: every multi-call reader (fact extraction, wide net, one call, the
+#: personas' anchored windows), so no axis silently reads wider than the
+#: capacity that was measured. A run that raises ``EXTRACTION_MAX_TOKENS``
+#: recomputes it on the extraction path; the other axes share this
+#: knob-at-default value.
+WHOLE_TEXT_CALL_CAPACITY = one_call_extraction_capacity(8192)
+
+
+def chunked_reading_offsets(length: int, capacity: int, start: int = 0) -> List[int]:
+    """#2850 lot 10 — the offsets of the k chunks that TILE the document.
+
+    ``k = ceil((length - start) / capacity)``; chunk ``i`` reads
+    ``[offset_i, min(offset_i + capacity, length))`` — contiguous by
+    construction, so the union of the chunks that answer IS the span
+    ``[start, length)``. ``start`` carries the #1737 selector's offset: the
+    head the selector already skipped (a table of contents) stays skipped —
+    tiling from 0 would re-read metadata the selection exists to drop.
+
+    Below one capacity this is ``[start]`` — today's single call,
+    byte-identical. Deterministic, pure.
+    """
+    if capacity <= 0:
+        raise ValueError(f"capacity must be positive, got {capacity}")
+    if start < 0 or length <= start:
+        return [max(0, start)]
+    return [start + i * capacity for i in range(-(-(length - start) // capacity))]
+
+
+def per_argument_unit_budget(
+    length: int,
+    capacity: int = WHOLE_TEXT_CALL_CAPACITY,
+    ceiling: int = PER_ARGUMENT_CEILING,
+    floor: int = PER_ARGUMENT_FLOOR,
+) -> int:
+    """#2850 lot 10 — k(L): the per-argument pass's unit budget.
+
+    Two units per capacity-chunk, floored at today's 10 (a short document
+    changes nothing), ceilinged at :data:`PER_ARGUMENT_CEILING` (declared).
+    The units the budget buys are still chosen by position and salience
+    (``select_for_budget`` + the first reading's priority spans) — this
+    function only says HOW MANY, never WHICH.
+    """
+    k = 2 * (-(-length // capacity))
+    return max(floor, min(ceiling, k))
+
+
+#: #2850 lot 10 — the personas' read: at most this many chars of each
+#: passage around a defining move's position, so a handful of moves spread
+#: over a long document still fit one call.
+PERSONA_PASSAGE_MAX = 1200
+
+#: #2850 lot 10 — how much text on each side of a move's own span the
+#: passage carries, when the budget allows it.
+PERSONA_PASSAGE_PAD = 300
+
+#: #2850 lot 10 — the floor under which a passage stops being a passage:
+#: below this, the header (which must carry the thesis and mechanism) gets
+#: the budget and the record says fewer moves were anchored.
+_PERSONA_PASSAGE_FLOOR = 80
+
+
+def _anchors_header(moves: Sequence[Mapping[str, Any]], cap: int) -> str:
+    """One line per defining move: kind, position, reading.
+
+    The header is what makes the passages readable as a whole — a reader
+    (and the persona) sees the thesis, the mechanism and the moves each with
+    its position, then the text around those positions. Deterministic; the
+    label is written here, never by a model.
+    """
+    lines: List[str] = []
+    for move in moves:
+        kind = str(move.get("kind") or "move")
+        reading = str(move.get("reading") or "").strip()
+        offset = move.get("offset")
+        where = (
+            f"position {offset}"
+            if isinstance(offset, int) and not isinstance(offset, bool)
+            else "position non localisée"
+        )
+        lines.append(f"- [{kind}] {where} : {reading}")
+    header = "\n".join(lines)
+    if len(header) > cap:
+        header = header[: max(0, cap - 1)].rstrip() + "…"
+    return header
+
+
+def _merge_spans(spans: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
+    merged: List[List[int]] = []
+    for start, end in sorted(spans):
+        if merged and start <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], end)
+        else:
+            merged.append([start, end])
+    return [(s, e) for s, e in merged]
+
+
+def persona_reading(
+    text: str,
+    moves: Sequence[Mapping[str, Any]],
+    capacity: int = WHOLE_TEXT_CALL_CAPACITY,
+    window: int = LLM_EXTRACTION_WINDOW,
+) -> Tuple[str, WindowSelection, Dict[str, Any]]:
+    """#2850 lot 10 — the excerpt a persona reads, anchored on the first reading.
+
+    The personas read the DOCUMENT, not its opening: the first reading's
+    thesis, mechanism and moves travel with their positions, and the text
+    around those positions follows — the whole excerpt within one call's
+    ``capacity``.
+
+    * positioned moves → ``STATUS_ANCHORED_ON_MOVES``: merged passages around
+      the spans, stratified by position when the budget cannot carry them
+      all (the extra block says ``windows`` read of ``moves_total``);
+    * no usable position (the first reading failed, found nothing, or could
+      not place its quotes) → ``STATUS_HEAD_FALLBACK_NO_MOVES``: the opening
+      window survives, and the record says it is a fallback, not a choice.
+
+    Returns ``(excerpt, selection, extra)``: the caller records the selection
+    with the extra block (``windows``, ``chars_read``, ``moves_total``,
+    ``moves_read``), so the bounds block can print what was actually read.
+    Pure and deterministic — no LLM, no I/O.
+    """
+    if capacity <= 0:
+        raise ValueError(f"capacity must be positive, got {capacity}")
+
+    moves = [m for m in (moves or []) if isinstance(m, _MappingABC)]
+    positioned: List[Tuple[int, int]] = []
+    for move in moves:
+        offset = move.get("offset")
+        if not isinstance(offset, int) or isinstance(offset, bool):
+            continue
+        if offset < 0 or offset > len(text):
+            continue
+        quote = str(move.get("quote") or "")
+        positioned.append(
+            (
+                max(0, offset - PERSONA_PASSAGE_PAD),
+                min(len(text), offset + len(quote) + PERSONA_PASSAGE_PAD),
+            )
+        )
+    positioned = [span for span in positioned if span[1] > span[0]]
+
+    if not positioned:
+        excerpt = text[:window]
+        return (
+            excerpt,
+            WindowSelection(0, window, STATUS_HEAD_FALLBACK_NO_MOVES),
+            {"chars_read": len(excerpt), "moves_total": len(moves), "moves_read": 0},
+        )
+
+    header = _anchors_header(moves, cap=max(0, capacity // 2))
+    remaining = capacity - len(header) - 2  # the blank line under the header
+    merged = _merge_spans(positioned)
+    total_moves = sum(
+        1
+        for move in moves
+        if isinstance(move.get("offset"), int)
+        and not isinstance(move.get("offset"), bool)
+    )
+
+    # A passage needs its marker ("[passage i — position N]\n") plus text:
+    # below the floor, read fewer moves — stratified by position — rather
+    # than emit markers with nothing under them.
+    marker_room = 40
+    per = remaining // max(1, len(merged))
+    if per < _PERSONA_PASSAGE_FLOOR + marker_room:
+        fit = max(1, remaining // (_PERSONA_PASSAGE_FLOOR + marker_room))
+        if fit < len(merged):
+            step = len(merged) / fit
+            picked = sorted({int(i * step) for i in range(fit)})
+            merged = [merged[i] for i in picked]
+            per = remaining // len(merged)
+
+    per = max(1, min(PERSONA_PASSAGE_MAX, per))
+    chunks: List[str] = []
+    read_spans: List[Tuple[int, int]] = []
+    used = 0
+    for index, (start, end) in enumerate(merged):
+        marker = f"[passage {index + 1} — position {start}]\n"
+        allowance = min(per, remaining - used - len(marker) - 2)
+        if allowance <= 0:
+            break
+        chunk = text[start:end][:allowance]
+        if not chunk:
+            continue
+        chunks.append(f"{marker}{chunk}")
+        read_spans.append((start, start + len(chunk)))
+        used += len(marker) + len(chunk) + 2
+
+    body = "\n\n".join(chunks)
+    excerpt = f"{header}\n\n{body}" if header else body
+    chars_read = sum(len(chunk) for chunk in chunks)
+    offset = read_spans[0][0] if read_spans else 0
+    extent = max(end for _, end in read_spans) - offset if read_spans else 0
+    return (
+        excerpt,
+        WindowSelection(offset, extent, STATUS_ANCHORED_ON_MOVES),
+        {
+            "windows": len(chunks),
+            "chars_read": chars_read,
+            "moves_total": total_moves,
+            "moves_read": len(chunks),
+        },
     )
 
 

@@ -6,8 +6,11 @@ document was read twice to produce one stitched read — and beyond 9 000
 characters the plan samples instead of reading.
 
 Lot 9 replaces the band it can afford to: when the document fits ONE call's
-completion budget, the extraction reads the document itself, once. The
-k-window sample stays for everything beyond, untouched.
+completion budget, the extraction reads the document itself, once.
+
+#2850 lot 10 extends the same rule above the capacity: the whole text is read
+in k = ceil(L / capacity) contiguous calls, and lot 8's three-window sample is
+kept only as the no-capacity fallback (its own witness below).
 
 The capacity is not a taste: it comes from the two measurements lot 8 posted
 (the completion shape of an extraction answer, and the peak density of the
@@ -188,15 +191,49 @@ class TestTheRecordStatesAnIntegralRead:
         )
 
 
-class TestBeyondOneCallTheSampleRemains:
-    """The lot-8 fallback is untouched — the dispatch says it serves beyond."""
+class TestBeyondOneCallTheWholeTextIsRead:
+    """#2850 lot 10 — the band above one capacity is no longer sampled.
 
-    def test_a_long_document_still_reads_three_windows(self) -> None:
+    The dispatch: "The whole text, in k calls, for fact extraction ... lot 8's
+    three-window sample stays only as the failure fallback, named when used."
+    """
+
+    def test_a_long_document_reads_the_whole_text_in_k_calls(self) -> None:
+        import math
+
         doc = _doc(60000)
-        _out, calls = _run(doc, UnifiedAnalysisState(doc))
+        out, calls = _run(doc, UnifiedAnalysisState(doc))
+        capacity = _lot9().one_call_extraction_capacity(_CAP)
+        k = math.ceil(len(doc) / capacity)
+        assert len(calls) == k, (
+            f"a {len(doc)}-char document must be read in k = ceil(L/capacity) "
+            f"= {k} contiguous calls at {capacity} chars — got {len(calls)}"
+        )
+        assert all(len(c) <= capacity for c in calls)
+        assert "".join(calls) == doc, "the chunks must tile the whole document"
+        assert capacity <= out["reading_window_chars"]
+
+    def test_the_sample_remains_the_named_fallback_without_a_capacity(self) -> None:
+        """No capacity known (the completion knob off) → lot 8's sample, and
+        the record names it as the plan actually followed."""
+        doc = _doc(60000)
+        state = UnifiedAnalysisState(doc)
+        calls: List[str] = []
+        with patch(
+            f"{INVOKE}._get_openai_client",
+            return_value=(MagicMock(), "gpt-witness"),
+        ), patch(
+            f"{INVOKE}._guarded_chat_completion",
+            AsyncMock(side_effect=_faithful_fake(calls)),
+        ), patch(f"{INVOKE}.one_call_extraction_capacity", return_value=0):
+            from argumentation_analysis.orchestration.invoke_callables import (
+                _invoke_fact_extraction,
+            )
+
+            asyncio.run(_invoke_fact_extraction(doc, {"_state_object": state}))
         assert len(calls) == 3, (
-            "past one call's capacity the three-window sample still governs "
-            f"— got {len(calls)} calls"
+            f"the no-capacity fallback is lot 8's three windows — got "
+            f"{len(calls)}"
         )
         assert all(len(c) <= LLM_EXTRACTION_WINDOW for c in calls)
 

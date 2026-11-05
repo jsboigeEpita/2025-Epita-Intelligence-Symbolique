@@ -36,10 +36,8 @@ from argumentation_analysis.agents.core.context import (
 from argumentation_analysis.agents.core.governance.social_choice import (
     condorcet_winner,
 )
-from argumentation_analysis.core.reading_window import (
-    LLM_EXTRACTION_WINDOW,
-    selected_text,
-)
+from argumentation_analysis.agents.core.reading import defining_moves
+from argumentation_analysis.core.reading_window import persona_reading
 
 logger = logging.getLogger("Strategist")
 
@@ -314,10 +312,18 @@ async def build_strategic_read(
     computes the outcome and the manipulability. A model failure leaves the
     computation empty rather than inventing a profile to compute on — the
     discriminated ``status`` carries the reason to the invoke layer.
+
+    The excerpt is the first reading's anchors (#2850 lot 10): thesis,
+    mechanism and moves with their positions, then the passages around them,
+    within one call's capacity — the strategic read of a long document no
+    longer sees only its opening. Without a usable position the opening
+    window survives, recorded as a fallback.
     """
     raw_text = getattr(state, "raw_text", "") or ""
     recorder = state if hasattr(state, "record_reading_window") else None
-    excerpt = selected_text(raw_text, LLM_EXTRACTION_WINDOW, "strategist", recorder)
+    excerpt, selection, extra = persona_reading(raw_text, defining_moves(state))
+    if recorder is not None:
+        recorder.record_reading_window("strategist", selection, extra)
 
     result = StrategicRead()
     if llm_callable is None:
