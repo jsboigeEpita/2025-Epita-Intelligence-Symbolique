@@ -17,7 +17,10 @@ from typing import List, Dict, Optional
 from semantic_kernel.functions import kernel_function
 
 from .logic_types import STATE_LABELS, canonical_logic_type
-from .fallacy_attribution import MOVE_AUTHORS  # #3390 — one closed vocabulary
+from .fallacy_attribution import (  # #3390 — one closed vocabulary
+    MOVE_AUTHORS,
+    move_author_guidance_fr,  # #3429 — one definition, read by both tools
+)
 from .shared_state import RhetoricalAnalysisState
 
 sm_logger = logging.getLogger("Orchestration.PhaseState")
@@ -129,13 +132,10 @@ class ExtractionPhaseState(_SharedStateBase):
             return f"FUNC_ERROR: {e}"
 
     @kernel_function(
-        description=(
-            "Ajoute un sophisme identifié à l'état. move_author: 'speaker' si "
-            "le locuteur du texte analysé commet le sophisme, 'reported' si le "
-            "texte rapporte ou dénonce le geste d'un tiers (move_author_label "
-            "nomme alors ce tiers) ; omettre les deux si le texte ne permet pas "
-            "de le dire."
-        ),
+        # #3429 — the sentence is BUILT from the one table the vocabulary lives
+        # in (``fallacy_attribution.MOVE_AUTHOR_DEFINITIONS_FR``), so the tool
+        # and the readers cannot state two definitions of ``reported``.
+        description=move_author_guidance_fr(),
         name="add_identified_fallacy",
     )
     def add_identified_fallacy(

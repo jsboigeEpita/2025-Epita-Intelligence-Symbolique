@@ -2263,14 +2263,30 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                 f"  • {fallacy_taxonomy_label(rep.type, rep.family, rep.taxonomy_path)} "
                 f"{chez} — l'unité {rep.target_arg_id} en fait état"
             )
+        # #3429 — an unlabelled ``reported`` must not become « the quoted
+        # voices »: the panel read exactly that out of a block that told the
+        # conductor to attribute to « the third party named below » when no
+        # party was named at all. No label, no attribution.
+        _named_parties = [
+            rep.move_author_label.strip()
+            for rep in evidence.reported_fallacies
+            if rep.move_author_label.strip()
+        ]
+        _attribution_rule = (
+            "et attribue-les au tiers nommé ci-dessous — ne les présente "
+            "jamais comme les siens."
+            if _named_parties
+            else "le texte ne nomme aucun tiers : ne les attribue à aucune "
+            "voix citée, ne nomme personne, et ne les présente jamais comme "
+            "les siens."
+        )
         reported_block = (
             "SOPHISMES RAPPORTÉS, NON COMMIS PAR LE LOCUTEUR : "
             f"{accord(n_rep, 'sophisme rapporté', 'sophismes rapportés')} "
             "(le texte les dénonce ou les cite, il ne les commet pas). "
             "Ils ne forment AUCUN mouvement ci-dessus et ne comptent PAS "
             "parmi les dérapages du locuteur : si tu les évoques, dis que le "
-            "locuteur les RAPPORTE, et attribue-les au tiers nommé ci-dessous "
-            "— ne les présente jamais comme les siens.\n"
+            f"locuteur les RAPPORTE, {_attribution_rule}\n"
             + "\n".join(rep_lines)
             + "\n\n"
         )
