@@ -2893,6 +2893,12 @@ async def _invoke_governance(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
     """Invoke governance analysis via plugin + LLM-powered deliberation assessment."""
+    from argumentation_analysis.agents.core.context.strategist import (
+        compute_manipulability,
+    )
+    from argumentation_analysis.agents.core.governance.coalition_play import (
+        play_governance_rounds,
+    )
     from argumentation_analysis.plugins.governance_plugin import GovernancePlugin
 
     plugin = GovernancePlugin()
@@ -3007,9 +3013,70 @@ async def _invoke_governance(
         quality_output
     )
     if g_derivable:
-        governance_verdict = _aggregate_governance_votes(g_agents, g_options, g_ballots)
+        # #3386 — the electors negotiate before they vote: the personalities
+        # the Agent machinery carries (never run before) play over the
+        # derivation's own outputs, and the vote aggregates the ballots the
+        # electors cast AFTER the negotiation. Nothing moved → the cast IS
+        # the declared profile (identity), so the vote is unchanged.
+        g_play = play_governance_rounds(g_agents, g_options, g_ballots)
+        governance_verdict = _aggregate_governance_votes(
+            g_play["cast_agents"], g_options, g_play["cast_ballots"]
+        )
         governance_verdict["degraded"] = False
         governance_verdict["derivation_reason"] = g_reason
+        if g_play["moved"]:
+            # Outcome-change probe: the same 12-method aggregate on the
+            # declared profile, so « the coalition changed the outcome » is
+            # measured on the real verdict, not on a plurality shortcut.
+            g_declared = _aggregate_governance_votes(g_agents, g_options, g_ballots)
+            governance_verdict["coalition"] = {
+                "blocs": g_play["blocs"],
+                "ballots_moved": [m["elector"] for m in g_play["moved"]],
+                "moves": g_play["moved"],
+                "winner_declared": g_declared.get("winner"),
+                "winner_cast": governance_verdict.get("winner"),
+                "outcome_changed": g_declared.get("winner")
+                != governance_verdict.get("winner"),
+            }
+        elif g_play["blocs"]:
+            # A bloc formed without moving a ballot (concordant electors) —
+            # a measured structure the renderer does not present as a change.
+            governance_verdict["coalition"] = {
+                "blocs": g_play["blocs"],
+                "ballots_moved": [],
+                "moves": [],
+                "outcome_changed": False,
+            }
+        # #3386 (b) — the declared profile's manipulability, from the SAME
+        # engine the strategist phase uses (#3385's compute_manipulability —
+        # imported, not copied). The finding: the first two-player coalition
+        # that can flip the Condorcet winner, else the first single-player
+        # pivot. Absent when the profile is not pivotal at ≤2 players.
+        g_manip = compute_manipulability(
+            {a.name: list(a.preferences) for a in g_agents}, list(g_options)
+        )
+        g_finding = None
+        if g_manip.get("coalitions"):
+            first = g_manip["coalitions"][0]
+            g_finding = {
+                "kind": "coalition",
+                "players": list(first["players"]),
+                "report": first["report"],
+                "winner": first["winner"],
+            }
+        elif g_manip.get("single_player"):
+            first = g_manip["single_player"][0]
+            g_finding = {
+                "kind": "single_player",
+                "players": [first["player"]],
+                "report": first["reports"],
+                "winner": first["winner"],
+            }
+        if g_finding is not None:
+            g_finding["baseline"] = g_manip.get("winner")
+            g_finding["engine"] = g_manip.get("engine")
+            g_finding["status"] = g_manip.get("status")
+            governance_verdict["manipulability"] = g_finding
         # #2850 R1107 — the vote names the population it was decided over,
         # apart from the conflict's own record. The winner is a member of
         # this set; the record says so.

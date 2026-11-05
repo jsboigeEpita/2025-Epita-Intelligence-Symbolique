@@ -29,6 +29,7 @@ from argumentation_analysis.core.shared_state import (
     RhetoricalAnalysisState,
     UnifiedAnalysisState,
 )
+from argumentation_analysis.agents.core.governance.governance_agent import Agent
 
 # ============================================================
 # Test: UnifiedAnalysisState
@@ -1207,7 +1208,17 @@ class TestInvokeCallables:
         ), patch.object(
             ic,
             "_derive_governance_profile",
-            return_value=(["A", "B"], {"qe": ["A", "B"]}, ["qe"], True, "ok"),
+            # #3386 — the play runs between the derivation and the aggregate,
+            # so the mocked derivation must return the CONTRACT the real one
+            # honours: electors are ``Agent`` objects (a bare str crashes the
+            # play's ``a.name``). One stubborn elector, nothing moves.
+            return_value=(
+                ["A", "B"],
+                {"qe": ["A", "B"]},
+                [Agent(name="qe", personality="stubborn", preferences=["A", "B"])],
+                True,
+                "ok",
+            ),
         ), patch.object(
             ic,
             "_aggregate_governance_votes",

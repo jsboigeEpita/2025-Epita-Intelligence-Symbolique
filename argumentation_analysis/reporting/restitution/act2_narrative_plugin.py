@@ -134,6 +134,9 @@ from argumentation_analysis.orchestration.selection import (
 
 from .text_sequence import MOVE_LABELS_FR, TextSequence, collect_text_sequence
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
+from argumentation_analysis.agents.core.governance.coalition_play import (
+    coalition_note,  # #3386
+)
 from argumentation_analysis.agents.core.reading import first_reading_note  # #3395
 
 logger = logging.getLogger(__name__)
@@ -502,6 +505,12 @@ class GovernanceVerdict:
     support_by_option: Dict[str, int] = field(default_factory=dict)
     n_methods_decided: Optional[int] = None
     winner_basis: Optional[str] = None
+    # #3386 — the coalition play's block, rendered by the producer's own
+    # function (``coalition_play.coalition_note``, the #3395 one-producer
+    # pattern): a bloc that moved the outcome, and/or a pivot the #3385
+    # engine found on the declared profile. Empty when the play changed
+    # nothing — the deliberation passage is then byte-identical.
+    coalition_note: str = ""
 
 
 @dataclass
@@ -1514,6 +1523,9 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
             support_by_option=support_by_option,
             n_methods_decided=n_methods_decided,
             winner_basis=winner_basis,
+            # #3386 — the producer-rendered coalition block ("" when the
+            # play changed nothing).
+            coalition_note=coalition_note(d),
         )
     return chosen
 
@@ -2347,6 +2359,11 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         if gov_warning:
             deliberation_lines.append(gov_warning)
         deliberation_lines.append(gov_lead)
+        # #3386 — the coalition play's facts, beside the verdict they
+        # qualify: who moved their ballot and what it changed, and/or the
+        # declared profile's pivot. Producer-rendered (no prompt rule added).
+        if gv.coalition_note:
+            deliberation_lines.append(f"  {gv.coalition_note}")
     if evidence.debate_exchanges:
         for i, ex in enumerate(evidence.debate_exchanges, start=1):
             scheme_anchor = ""
