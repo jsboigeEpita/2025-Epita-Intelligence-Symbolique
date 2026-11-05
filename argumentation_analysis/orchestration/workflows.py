@@ -182,6 +182,16 @@ def build_standard_workflow() -> WorkflowDefinition:
             optional=True,
             timeout_seconds=180,
         )
+        # #3387 rework — same twin as spectacular: the index queries the
+        # first reading over the document's own text, and its spans feed the
+        # per-argument selection of the fallacy pass below. Optional on both
+        # sides: a skipped index leaves the selection exactly as it was.
+        .add_phase(
+            "semantic_indexing",
+            capability="semantic_indexing",
+            depends_on=["first_reading"],
+            optional=True,
+        )
         .add_phase("extract", capability="fact_extraction")
         .add_phase(
             "neural_detect",
@@ -205,7 +215,9 @@ def build_standard_workflow() -> WorkflowDefinition:
             # examine the units that overlap a defining move first, so it must
             # run AFTER the first reading wrote them. Optional on both sides: a
             # missing reading leaves the selection exactly as it was.
-            depends_on=["extract", "text_to_kb", "first_reading"],
+            # #3387 rework — and AFTER the index wrote (or skipped, named) the
+            # ``semantic_priority_spans`` its selection spends.
+            depends_on=["extract", "text_to_kb", "first_reading", "semantic_indexing"],
             optional=True,
         )
         .add_phase(
@@ -343,6 +355,26 @@ def build_full_workflow() -> WorkflowDefinition:
             capability="speech_transcription",
             optional=True,
         )
+        # #3387 rework — full gains the first reading its index needs as a
+        # query: without it the index skipped with ``no_reading_query`` on
+        # every run (measured on the PR head), so the spans never existed
+        # here either. Root phase like its standard/spectacular twins.
+        .add_phase(
+            "first_reading",
+            capability="first_reading",
+            optional=True,
+            timeout_seconds=180,
+        )
+        # #3387 rework — the index moves BEFORE the fallacy pass (it used to
+        # sit after ``counter``: the spans arrived once the per-argument
+        # selection was already spent) and reads the first reading as its
+        # query instead of skipping for want of one.
+        .add_phase(
+            "index",
+            capability="semantic_indexing",
+            depends_on=["first_reading"],
+            optional=True,
+        )
         .add_phase("extract", capability="fact_extraction")
         .add_phase("quality", capability="argument_quality", depends_on=["extract"])
         .add_phase(
@@ -354,7 +386,12 @@ def build_full_workflow() -> WorkflowDefinition:
         .add_phase(
             "hierarchical_fallacy",
             capability="hierarchical_fallacy_detection",
-            depends_on=["extract"],
+            # #3387 rework — the per-argument selection spends
+            # ``semantic_priority_spans``: the ``index`` phase below must run
+            # (or skip, named) BEFORE this phase, or the spans arrive once
+            # the selection is already spent — the full workflow's old shape
+            # (index after counter) guaranteed the skip.
+            depends_on=["extract", "first_reading", "index"],
             optional=True,
         )
         .add_phase(
@@ -386,12 +423,6 @@ def build_full_workflow() -> WorkflowDefinition:
         .add_phase(
             "debate",
             capability="adversarial_debate",
-            depends_on=["counter"],
-            optional=True,
-        )
-        .add_phase(
-            "index",
-            capability="semantic_indexing",
             depends_on=["counter"],
             optional=True,
         )
@@ -804,6 +835,20 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             optional=True,
             timeout_seconds=180,
         )
+        # #3387 rework — the semantic index: its query is the first reading's
+        # thesis+mechanism and its corpus is the document's own text, so it
+        # runs right after the reading; its spans are spent by the
+        # per-argument selection below (hierarchical_fallacy), which is why
+        # that phase declares it below. Optional on BOTH sides (#3395's
+        # pattern): a skipped index (no embedding route, no reading) leaves
+        # the selection exactly as it was — the named skips travel in the
+        # phase output.
+        .add_phase(
+            "semantic_indexing",
+            capability="semantic_indexing",
+            depends_on=["first_reading"],
+            optional=True,
+        )
         # L0 — extraction
         .add_phase("extract", capability="fact_extraction")
         # L1 — parallel after extraction
@@ -851,7 +896,17 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             # defining move first, so it must run AFTER the first reading
             # wrote them. Optional on both sides: a missing reading leaves
             # the selection exactly as it was.
-            depends_on=["extract", "text_to_kb", "first_reading"],
+            # #3387 rework — same declaration for the index: the per-argument
+            # selection spends ``semantic_priority_spans``, so the phase runs
+            # AFTER the index wrote them (or skipped, named). Before this,
+            # the spans had no reader on any real run: the phase was absent
+            # from the panel's workflow entirely.
+            depends_on=[
+                "extract",
+                "text_to_kb",
+                "first_reading",
+                "semantic_indexing",
+            ],
             optional=True,
         )
         # L2 — formal logic (parallel, from nl_to_logic)

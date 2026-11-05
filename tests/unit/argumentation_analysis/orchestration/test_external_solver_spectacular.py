@@ -48,7 +48,9 @@ class TestExternalSolverSpectacular:
         # #3377 adds the two personas (historian, strategist). 40 → 42.
         # #3395 (R1142) adds the first_reading root phase: the panel runs
         # THIS workflow, so the producer lives here too. 42 → 43.
-        assert len(wf.phases) == 43
+        # #3387 rework adds semantic_indexing (the index queried by the
+        # reading, whose spans the per-argument selection spends). 43 → 44.
+        assert len(wf.phases) == 44
 
     def test_external_fol_solver_service_registered(self):
         from argumentation_analysis.orchestration.registry_setup import setup_registry

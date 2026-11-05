@@ -77,7 +77,9 @@ class TestSpectacularWorkflowPhases:
         # production phase. 40 → 42.
         # #3395 (R1142): +1 first_reading root phase (the panel's workflow).
         # 42 → 43.
-        assert len(wf.phases) == 43
+        # #3387 rework: +1 semantic_indexing (the index queried by the
+        # reading, whose spans the per-argument selection spends). 43 → 44.
+        assert len(wf.phases) == 44
 
 
 class TestInvokeCallables:

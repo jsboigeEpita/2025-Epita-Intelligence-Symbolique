@@ -108,8 +108,10 @@ class TestWorkflowFormalPhases:
         # missing — the golden min_belief_sets threshold tested a production
         # the workflow never ordered; #3326 added the post-vote winner
         # reading after governance; #3395 added the root `first_reading`
-        # phase, which the per-argument fallacy pass now depends on).
-        assert len(wf.phases) == 19
+        # phase, which the per-argument fallacy pass now depends on;
+        # #3387 rework added `semantic_indexing` right after the reading —
+        # the per-argument selection spends its spans).
+        assert len(wf.phases) == 20
 
 
 # ============================================================

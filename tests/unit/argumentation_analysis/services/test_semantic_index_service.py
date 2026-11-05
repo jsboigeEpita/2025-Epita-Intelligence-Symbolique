@@ -92,13 +92,21 @@ class TestAskResult:
 class TestServiceConfig:
     """Test service initialization and configuration."""
 
-    def test_default_url(self):
+    def test_no_default_endpoint_is_baked_in(self):
+        """#3387: the default no longer names a host.
+
+        It used to be ``127.0.0.1:9001``, which nothing listens on — so every
+        ``is_available()`` spent a doomed request to learn what the code
+        already knew. An unset default now answers "not available" without a
+        call, and a caller names its endpoint explicitly.
+        """
         from argumentation_analysis.services.semantic_index_service import (
             SemanticIndexService,
         )
 
         svc = SemanticIndexService()
-        assert "9001" in svc._km_url
+        assert svc._km_url == ""
+        assert svc.is_available() is False
 
     def test_custom_url(self):
         from argumentation_analysis.services.semantic_index_service import (
@@ -181,7 +189,9 @@ class TestServiceAvailability:
             SemanticIndexService,
         )
 
-        svc = SemanticIndexService()
+        # #3387: the endpoint is named by the caller — the service has no
+        # default host to probe.
+        svc = SemanticIndexService(km_url="http://km.test:9001")
         mock_response = MagicMock()
         mock_response.status_code = 200
 

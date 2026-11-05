@@ -1236,9 +1236,22 @@ def _write_fallacy_winner_reading_to_state(
 def _write_semantic_index_to_state(
     output: Any, state: Any, ctx: dict[str, Any]
 ) -> None:
-    """Write semantic index results to UnifiedAnalysisState."""
+    """Write semantic index results to UnifiedAnalysisState.
+
+    #3387 — the repointed phase answers with ``priority_spans`` (offsets into
+    the analysed text, never its content). They are recorded on the state so
+    the budget selector reads them; the legacy ``results`` list is still
+    accepted when a caller produces one.
+    """
     if not output or not isinstance(output, dict):
         return
+    spans = output.get("priority_spans")
+    if (
+        isinstance(spans, list)
+        and spans
+        and hasattr(state, "record_semantic_priority_spans")
+    ):
+        state.record_semantic_priority_spans(spans)
     results = output.get("results", [])
     if not isinstance(results, list):
         return
