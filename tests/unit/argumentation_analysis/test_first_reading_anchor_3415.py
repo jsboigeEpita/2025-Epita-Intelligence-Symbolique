@@ -357,11 +357,16 @@ _CONTROL_NOTE = (
     "instruments. Ce sont des GESTES DU TEXTE, pas un verdict d'instrument : "
     "ne les présente jamais comme un sophisme ni comme une note.\n"
     "  Portée : document entier lu une fois.\n"
-    "  - affirmation : un chiffre — « des chiffres d'expose » [texte, position 46]\n"
+    # #3431 — the order is stated (the record beneath stores the slots
+    # first) and the position prints in the reader's terms, never as the
+    # raw character offset this control carried before.
+    "  Ordre : celui du document, du premier geste au dernier.\n"
+    "  - affirmation : un chiffre — « des chiffres d'expose », "
+    "vers le début du texte (0 %)\n"
     "  - thèse centrale : la reforme protege ses commanditaires — "
-    f"« {_DOC_THESIS} » [texte, position 5442]\n"
+    f"« {_DOC_THESIS} », vers le milieu du texte (44 %)\n"
     "  - mécanisme : le risque est delegue aux petits porteurs — "
-    f"« {_DOC_MECHANISM} » [texte, position 10981]"
+    f"« {_DOC_MECHANISM} », vers la fin du texte (88 %)"
 )
 
 
