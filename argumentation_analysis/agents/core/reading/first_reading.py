@@ -413,6 +413,61 @@ def defining_move_spans(state: Any) -> List[Tuple[int, int]]:
     return spans
 
 
+#: #3416 — how far AFTER a unit's end a recorded concession still counts as
+#: the passage around the claim (the August method's « next sentence »). A
+#: concession further away belongs to another part of the document, and a
+#: statement that is not about the claim is not evidence about it.
+DOCUMENT_STATEMENT_AFTER_UNIT = 400
+
+
+def document_statements_for_unit(
+    state: Any,
+    unit_text: str = "",
+    offset: Optional[int] = None,
+) -> List[Dict[str, Any]]:
+    """#3416 (ask 2) — what the document ITSELF says about a unit's claim.
+
+    The descent reads one unit at a time. A unit extracted as a fragment
+    loses the document's own caveat — the concession the speaker makes two
+    sentences away — and the descent then confirms the family that caveat
+    refutes (the cycle-1 M2 defect). This producer hands the descent the
+    document's own words, never a verdict about them:
+
+    * ``relation="overlap"`` — a concession move the first reading recorded
+      whose span intersects the unit's;
+    * ``relation="adjacent"`` — a recorded concession that starts at most
+      ``DOCUMENT_STATEMENT_AFTER_UNIT`` characters after the unit's end: the
+      passage around the claim, the way the speaker restates it next.
+
+    No geometry (no offset on either side) means no statement: a citation
+    that cannot be placed is not evidence about this claim (the same rule as
+    ``defining_move_spans``). Nothing recorded means nothing carried — the
+    caller's behaviour is then byte-identical to the pre-#3416 path.
+    """
+    if not isinstance(offset, int) or isinstance(offset, bool):
+        return []
+    unit_end = offset + len(unit_text or "")
+    statements: List[Dict[str, Any]] = []
+    for move in defining_moves(state):
+        if str(move.get("kind") or "") != "concession":
+            continue
+        quote = str(move.get("quote") or "")
+        move_offset = move.get("offset")
+        if not quote or not isinstance(move_offset, int) or isinstance(move_offset, bool):
+            continue
+        move_end = move_offset + len(quote)
+        if offset < move_end and move_offset < unit_end:
+            relation = "overlap"
+        elif unit_end <= move_offset <= unit_end + DOCUMENT_STATEMENT_AFTER_UNIT:
+            relation = "adjacent"
+        else:
+            continue
+        statements.append(
+            {"source": "first_reading_concession", "relation": relation, "quote": quote}
+        )
+    return statements
+
+
 def first_reading_note(state: Any) -> str:
     """The labelled block a writer prepends to its own prompt (#3395 ask 3).
 

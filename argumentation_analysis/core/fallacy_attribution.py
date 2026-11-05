@@ -163,6 +163,49 @@ _REGISTER_FAMILY_PATTERNS = tuple(
     for marker in _REGISTER_FAMILY_MARKERS
 )
 
+#: #3416 — the two families whose confirmation presupposes that the document
+#: says nothing more about the claim: circular reasoning (the premise is said
+#: to presuppose the conclusion) and hasty generalisation (the scope is said
+#: to exceed what the text states). The names are the shipped taxonomy's own
+#: ``text_fr``, and the closed set is the predicate — a node outside it is
+#: never asked the question, so the guard cannot spread to the whole tree
+#: (anti-pendulum).
+_DOCUMENT_GUARDED_NAMES = frozenset(
+    {
+        "argument circulaire",
+        "définition circulaire",
+        "référencement circulaire",
+        "généralisation hâtive",
+        "généralisation abusive",
+        "généralisation excessive",
+        "conclusion hâtive",
+    }
+)
+
+
+def is_document_guarded_family(name: Any) -> bool:
+    """#3416 — True when a node's name is one of the two guarded families.
+
+    The family is the NAME, never the CSV ``Famille``: the taxonomy spreads
+    circularity across several branches (definition, reference, argument) and
+    the hasty-generalisation vocabulary across ``Insuffisance`` and
+    ``Causalité``, so matching a family would sweep in nodes that make no
+    claim about what the document leaves unsaid.
+    """
+    value = str(name or "").strip().lower()
+    return value in _DOCUMENT_GUARDED_NAMES
+
+
+def normalize_document_statement(value: Any) -> str:
+    """The citation a guarded confirmation carries, ``""`` when absent.
+
+    Only a non-empty string is a citation: a model that omits the field, or
+    passes a placeholder, has cited nothing, and an invented citation would
+    be worse than none (the #3029 rule applied to this field)."""
+    if isinstance(value, str):
+        return value.strip()
+    return ""
+
 
 def is_register_family_detection(name: str) -> bool:
     """#3391 — True when a detection's name belongs to the register family.

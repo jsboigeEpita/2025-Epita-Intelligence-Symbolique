@@ -75,14 +75,23 @@ def _vote(state: UnifiedAnalysisState, winner: str, winners: list[str]) -> None:
 
 
 def _stub_walk(fallacy_type: str = "appel_a_la_peur"):
-    """A walker double: records calls, returns one canned finding per unit."""
+    """A walker double: records calls, returns one canned finding per unit.
+
+    #3416 — the double tracks the walk's real signature, which now carries
+    ``document_statements``: the winner reading must hand the SAME document
+    words the per-argument sample gets. The synthetic state records no first
+    reading, so every call carries an empty list — asserted by the caller.
+    """
     import argumentation_analysis.orchestration.invoke_callables as ic
     import argumentation_analysis.orchestration.state_writers as sw
 
     calls: list[str] = []
+    statements: list = []
 
-    async def _walk(arg_text, arg_id, llm_service, taxonomy_path):
+    async def _walk(arg_text, arg_id, llm_service, taxonomy_path,
+                    document_statements=None):
         calls.append(arg_id)
+        statements.append(document_statements)
         return {
             "fallacies": [
                 {
@@ -96,7 +105,7 @@ def _stub_walk(fallacy_type: str = "appel_a_la_peur"):
             "source_arg_id": arg_id,
         }
 
-    return calls, _walk, ic, sw
+    return calls, _walk, ic, sw, statements
 
 
 class TestTheWinnerIsReadAfterTheVote:
@@ -105,7 +114,7 @@ class TestTheWinnerIsReadAfterTheVote:
     ):
         state, ids = _synthetic_state()
         _vote(state, "arg_11", ["arg_11", "arg_12"])
-        calls, walk, ic, sw = _stub_walk()
+        calls, walk, ic, sw, statements = _stub_walk()
         monkeypatch.setattr(ic, "_walk_single_fallacy_unit", walk)
 
         output = await ic._invoke_fallacy_winner_reading(
@@ -113,6 +122,10 @@ class TestTheWinnerIsReadAfterTheVote:
         )
         assert output["examined_ids"] == ["arg_11", "arg_12"]
         assert calls == ["arg_11", "arg_12"]
+        # #3416 — the winner reading hands each walk the document's own
+        # words; this state records no first reading, so every call carries
+        # an EMPTY list (never None, never a guess).
+        assert statements == [[], []]
 
         sw._write_fallacy_winner_reading_to_state(output, state, {})
         cov = state.analysis_coverage["fallacy_per_argument"]
@@ -132,7 +145,7 @@ class TestTheWinnerIsReadAfterTheVote:
     ):
         state, ids = _synthetic_state()
         _vote(state, "arg_3", ["arg_3", "arg_11"])  # arg_3 is already examined
-        calls, walk, ic, sw = _stub_walk()
+        calls, walk, ic, sw, statements = _stub_walk()
         monkeypatch.setattr(ic, "_walk_single_fallacy_unit", walk)
 
         output = await ic._invoke_fallacy_winner_reading(
@@ -153,7 +166,8 @@ class TestTheWinnerIsReadAfterTheVote:
         import argumentation_analysis.orchestration.invoke_callables as ic
         import argumentation_analysis.orchestration.state_writers as sw
 
-        async def _boom(arg_text, arg_id, llm_service, taxonomy_path):
+        async def _boom(arg_text, arg_id, llm_service, taxonomy_path,
+                        document_statements=None):
             raise RuntimeError("endpoint indisponible")
 
         monkeypatch.setattr(ic, "_walk_single_fallacy_unit", _boom)
@@ -170,7 +184,7 @@ class TestTheWinnerIsReadAfterTheVote:
 
     async def test_no_vote_no_reading(self, monkeypatch):
         state, ids = _synthetic_state()
-        calls, walk, ic, sw = _stub_walk()
+        calls, walk, ic, sw, statements = _stub_walk()
         monkeypatch.setattr(ic, "_walk_single_fallacy_unit", walk)
 
         output = await ic._invoke_fallacy_winner_reading(

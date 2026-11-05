@@ -18,6 +18,7 @@ from argumentation_analysis.agents.utils.taxonomy_navigator import TaxonomyNavig
 from argumentation_analysis.core.fallacy_attribution import MOVE_AUTHORS  # #3390
 from argumentation_analysis.core.fallacy_attribution import (  # #3391
     normalize_register_test as _register_test_of,
+    normalize_document_statement as _document_statement_of,  # #3416
 )
 
 logger = logging.getLogger(__name__)
@@ -185,6 +186,14 @@ class ExplorationPlugin:
             "taxonomy node's own conditions ARE the test. Empty when the "
             "node is not in that register family",
         ] = "",
+        document_statement: Annotated[
+            str,
+            "#3416 — for circular reasoning and hasty generalisation: the "
+            "document's OWN words, verbatim, that refute this attribution — "
+            "the concession it makes about the claim, read from what the "
+            "document itself says around it. Empty when the document says "
+            "nothing about the claim (no evidence either way)",
+        ] = "",
     ) -> Annotated[str, "Verdict result"]:
         """Record the verdict on a node, with the justification that supports it.
 
@@ -226,6 +235,10 @@ class ExplorationPlugin:
         # appeal is the family's own negative answer, and its test must
         # still be readable on the refusal).
         _register_test = _register_test_of(register_test)
+        # #3416 — the citation rides the REFUSAL only: a refuted attribution
+        # names the document's own words, a confirmed one has nothing to
+        # cite (carrying it there would contradict the verdict).
+        _document_statement = _document_statement_of(document_statement)
 
         if not matches:
             refusal = {
@@ -241,6 +254,8 @@ class ExplorationPlugin:
                 refusal["confidence_note"] = confidence_note
             if _register_test:
                 refusal["register_test"] = _register_test
+            if _document_statement:
+                refusal["document_statement"] = _document_statement
             return json.dumps(refusal, ensure_ascii=False)
 
         lang = self.language

@@ -41,6 +41,8 @@ from argumentation_analysis.agents.utils.taxonomy_navigator import TaxonomyNavig
 from argumentation_analysis.core.fallacy_attribution import (  # #3390
     MOVE_AUTHORS,
     REGISTER_TEST_PROPORTIONATE,
+    is_document_guarded_family,  # #3416
+    normalize_document_statement,  # #3416
     register_test_of,
 )
 from argumentation_analysis.core.plaintext_destination import (
@@ -88,6 +90,77 @@ def _move_author_pair(payload: Dict[str, object]) -> Tuple[str, str]:
 # module — #2915 moved it there: five off-pipeline readers (#2914) meant
 # the same bound, and a copy of a constant drifts (#2913's lesson,
 # reopened across modules, closed again).
+
+
+#: #3416 — how many of the document's own sentences a prompt carries beside
+#: the unit under analysis. Three is enough for the concession and the two
+#: lines around it, and it keeps the prompt bounded on a document that makes
+#: many concessions.
+DOCUMENT_STATEMENTS_IN_PROMPT = 3
+
+
+def _document_statement_lines(statements: Any) -> List[str]:
+    """The verbatim statements to carry, deduplicated and bounded (#3416).
+
+    One normaliser for every prompt site, so the leaf, the navigation and the
+    one-shot fallback carry the SAME list — a document must not get a
+    different contract because the descent took another path. Accepts the
+    producers' record (``{"quote": ...}``) and plain strings alike, so a
+    caller can hand over ``document_statements_for_unit``'s output as is.
+    """
+    seen: Set[str] = set()
+    kept: List[str] = []
+    for entry in statements or ():
+        if isinstance(entry, dict):
+            text = normalize_document_statement(entry.get("quote"))
+        else:
+            text = normalize_document_statement(entry)
+        if not text or text in seen:
+            continue
+        seen.add(text)
+        kept.append(text)
+        if len(kept) >= DOCUMENT_STATEMENTS_IN_PROMPT:
+            break
+    return kept
+
+
+def _document_statement_block(lines: List[str]) -> str:
+    """The prompt block that carries the document's own words (#3416).
+
+    Empty string with no line — the caller then emits the pre-#3416 prompt
+    byte for byte.
+    """
+    if not lines:
+        return ""
+    return (
+        "\nTHE DOCUMENT ITSELF SAYS, about this claim (verbatim, from "
+        "outside the unit above):\n"
+        + "\n".join(f"- « {q} »" for q in lines)
+        + "\n"
+    )
+
+
+def _document_caveat_instruction() -> str:
+    """The guarded-family instruction, injected only when statements ride.
+
+    It names no family beyond the two the predicate covers, so a node outside
+    them is asked nothing new (anti-pendulum), and it states the absent case
+    explicitly: a document that says nothing about the claim is no evidence
+    either way, so the confirmation stands on the text as before.
+    """
+    return (
+        "DOCUMENT CAVEAT — a node naming circular reasoning or hasty "
+        "generalisation presupposes that the document says nothing "
+        "more about this claim. Before confirming such a node, read "
+        "what the document itself says above. When it states the very "
+        "limitation the attribution would read as missing — a "
+        "concession, a scope, the missing premise — the attribution "
+        "is refuted: pass matches=false, cite the document's own "
+        "words in document_statement, and say in justification what "
+        "that statement settles. When the document says nothing "
+        "about the claim, the confirmation stands on the text as "
+        "before — an absent statement is no evidence either way.\n"
+    )
 
 
 class FallacyWorkflowPlugin:
@@ -982,6 +1055,7 @@ class FallacyWorkflowPlugin:
         results_sink: Optional[List[IdentifiedFallacy]] = None,
         quote: str = "",
         outcomes: Optional[List[Dict[str, Any]]] = None,
+        document_statements: Optional[List[str]] = None,
     ) -> Optional[IdentifiedFallacy]:
         """#3376 — one document-level branch: WHERE it reads, then the descent.
 
@@ -1020,6 +1094,7 @@ class FallacyWorkflowPlugin:
                 source_text=argument_text,
                 quote=quote,
                 outcomes=outcomes,
+                document_statements=document_statements,
             )
         finally:
             if outcomes is not None:
@@ -1038,6 +1113,7 @@ class FallacyWorkflowPlugin:
         source_text: str = "",
         quote: str = "",
         outcomes: Optional[List[Dict[str, Any]]] = None,
+        document_statements: Optional[List[str]] = None,
     ) -> Optional[IdentifiedFallacy]:
         """Explore a single taxonomy branch using iterative deepening.
 
@@ -1068,6 +1144,16 @@ class FallacyWorkflowPlugin:
         current_pk = start_pk
         navigation_trace = [start_pk]
         reasoning_history = reasoning_history or []
+
+        # #3416 — the document's own words about the claim, verbatim. The
+        # leaf and navigation prompts carry them so a family whose
+        # confirmation presupposes that the text says nothing more can read
+        # what it does say. Built once per branch; with no statement both the
+        # block and the guarded instruction are empty strings, and every
+        # prompt this function emits is byte-identical to the pre-#3416 path.
+        _statements = _document_statement_lines(document_statements)
+        statement_block = _document_statement_block(_statements)
+        guarded_instruction = _document_caveat_instruction() if _statements else ""
 
         # FB-30 (#1107): no depth cap — the LLM descends until it reaches a
         # leaf (the only natural cap, depth ≤ 10). Bounded only by a generous
@@ -1146,8 +1232,19 @@ class FallacyWorkflowPlugin:
                         + "\n"
                     )
 
+                # #3416 — the caveat rides the prompt that carries the
+                # statement, and only at a node whose name belongs to the
+                # guarded families: a leaf outside them is asked nothing new
+                # (anti-pendulum), and a leaf reached with no statement is
+                # byte-identical to the pre-#3416 prompt.
+                _leaf_caveat = (
+                    guarded_instruction
+                    if _statements and is_document_guarded_family(leaf_name)
+                    else ""
+                )
                 leaf_prompt = (
-                    f'Text to analyze: "{window_text}"\n\n'
+                    f'Text to analyze: "{window_text}"\n'
+                    f"{statement_block}\n"
                     f"You reached a LEAF node in the fallacy taxonomy.\n"
                     f"Node: {leaf_name} (PK: {current_pk})\n"
                     f"Description: {leaf_desc}\n"
@@ -1156,6 +1253,7 @@ class FallacyWorkflowPlugin:
                     "Does this leaf node correctly identify a fallacy in the text?\n"
                     "IMPORTANT: Only confirm if the reasoning in the text is genuinely fallacious.\n"
                     "Legitimate uses of authority, emotion, or tradition are NOT fallacies.\n\n"
+                    f"{_leaf_caveat}"
                     "Choose ONE action:\n"
                     f"- confirm_fallacy(node_pk='{current_pk}', matches=true, "
                     "justification='...', confidence=0.0-1.0, "
@@ -1292,10 +1390,26 @@ class FallacyWorkflowPlugin:
                                 "  Leaf refused by the model's verdict: "
                                 f"{lr.get('reason', lr.get('justification', ''))}"
                             )
-                            outcome["action"] = "refused"
-                            outcome["reason"] = str(
-                                lr.get("reason", lr.get("justification", ""))
+                            # #3416 — a refusal that cites the document's own
+                            # words is its own outcome, not a bare "refused":
+                            # the report can then say the attribution was
+                            # refuted BY the document, and by which sentence.
+                            # A refusal with no citation stays "refused" — an
+                            # absent citation is not a refutation.
+                            _cited = normalize_document_statement(
+                                lr.get("document_statement")
                             )
+                            if _cited and _statements:
+                                outcome["action"] = "refuted_by_document"
+                                outcome["reason"] = str(
+                                    lr.get("reason", lr.get("justification", ""))
+                                )
+                                outcome["document_statement"] = _cited
+                            else:
+                                outcome["action"] = "refused"
+                                outcome["reason"] = str(
+                                    lr.get("reason", lr.get("justification", ""))
+                                )
                             return None
                         leaf_depth = int(current_node.get("depth", 0))
                         # Register leaf confirmation for supersession (RA-3 #1048).
@@ -1403,10 +1517,12 @@ class FallacyWorkflowPlugin:
             )
 
             prompt = (
-                f'Text to analyze: "{window_text}"\n\n'
+                f'Text to analyze: "{window_text}"\n'
+                f"{statement_block}\n"
                 f"You are navigating the fallacy taxonomy. Current position: {parent_name}\n"
                 f"{reasoning_context}"
                 f"{options_text}\n"
+                f"{guarded_instruction}"
                 "Choose ONE action:\n"
                 "- Call confirm_fallacy(node_pk='<any_listed_pk>') to explore a node — "
                 "you may jump several levels deep by picking a grandchild/great-grandchild PK directly\n"
@@ -1686,7 +1802,18 @@ class FallacyWorkflowPlugin:
                     outcome["action"] = "legitimate_in_register"
                     outcome["register_test"] = REGISTER_TEST_PROPORTIONATE
                 else:
-                    outcome["action"] = "refused"
+                    # #3416 — same rule as the leaf site: a refusal that cites
+                    # the document's own words is refuted BY the document, and
+                    # the citation travels with the outcome. No citation ⇒ the
+                    # historical "refused", unchanged.
+                    _cited = normalize_document_statement(
+                        refused_result.get("document_statement")
+                    )
+                    if _cited and _statements:
+                        outcome["action"] = "refuted_by_document"
+                        outcome["document_statement"] = _cited
+                    else:
+                        outcome["action"] = "refused"
                 outcome["reason"] = str(reason)
                 return None
 
@@ -1834,6 +1961,7 @@ class FallacyWorkflowPlugin:
         argument_text: Annotated[str, "The text to analyze for fallacies"],
         trace_log_path: Optional[str] = None,
         use_one_shot: bool = False,
+        document_statements: Optional[Any] = None,
     ) -> Annotated[str, "JSON result with identified fallacies"]:
         """Execute hierarchical fallacy detection with one-shot fallback.
 
@@ -1848,16 +1976,31 @@ class FallacyWorkflowPlugin:
         Agentic navigation in step 3 now has no depth cap (taxonomy leaves are
         the only cap) and shows the LLM a multi-level cluster so it can jump
         levels — restoring the original summer-2025 design by subtraction.
+
+        #3416 — ``document_statements`` carries the document's OWN words
+        about the claim the unit states (``first_reading.
+        document_statements_for_unit``: a concession the first reading
+        recorded, overlapping or adjacent to the unit). They are evidence,
+        never a verdict: the descent reads them before confirming a
+        circular-reasoning or hasty-generalisation node, and a confirmation
+        whose presupposition they refute is refused WITH the citation.
+        Empty or None keeps every prompt byte-identical to the pre-#3416
+        path — a document that says nothing about the claim is no evidence
+        either way.
         """
         file_handler = self._attach_trace_handler(trace_log_path)
 
         try:
             self.logger.info(f"--- Fallacy Analysis for: '{argument_text[:80]}...' ---")
 
+            # #3416 — one normalisation for every branch (and the one-shot
+            # fallback): quotes deduplicated, empties dropped, bounded.
+            _statements = _document_statement_lines(document_statements)
+
             # Direct one-shot mode if requested
             if use_one_shot:
                 return self._mark_regime(
-                    await self._run_one_shot(argument_text), "one_shot"
+                    await self._run_one_shot(argument_text, _statements), "one_shot"
                 )
 
             # Phase 1: Wide-net candidate selection (#578)
@@ -1866,7 +2009,9 @@ class FallacyWorkflowPlugin:
                 self.logger.info(
                     "Wide-net produced no candidates — falling back to one-shot"
                 )
-                _fallback = self._mark_fallback(await self._run_one_shot(argument_text))
+                _fallback = self._mark_fallback(
+                    await self._run_one_shot(argument_text, _statements)
+                )
                 return self._mark_regime(_fallback, "one_shot")
 
             self.logger.info(
@@ -1908,6 +2053,7 @@ class FallacyWorkflowPlugin:
                     results_sink=fanout_sink,
                     quote=self._wide_net_quotes.get(pk, ""),
                     outcomes=branch_outcomes,
+                    document_statements=_statements,
                 )
                 for pk in candidate_pks
             ]
@@ -2204,9 +2350,28 @@ class FallacyWorkflowPlugin:
                 lines.append(f"{indent}PK={pk} [{path}] {name}")
         return "\n".join(lines)
 
-    async def _run_one_shot(self, argument_text: str) -> str:
-        """Fallback one-shot analysis — sends compact taxonomy to LLM."""
+    async def _run_one_shot(
+        self, argument_text: str, document_statements: Optional[Any] = None
+    ) -> str:
+        """Fallback one-shot analysis — sends compact taxonomy to LLM.
+
+        #3416 — ``document_statements`` carries the document's own words about
+        the claim (a concession the first reading recorded, or the passage
+        around the unit). With them the prompt asks the reply to cite what
+        refutes a guarded attribution; without them the prompt is byte for
+        byte the pre-#3416 one, so no recorded replay key moves.
+        """
         self.logger.info("Running one-shot fallback analysis")
+
+        _statements = _document_statement_lines(document_statements)
+        statement_block = _document_statement_block(_statements)
+        caveat = _document_caveat_instruction() if _statements else ""
+        document_json_key = (
+            ', "document_statement": "the document\'s own words that refute '
+            'this attribution, verbatim — omission if none"'
+            if _statements
+            else ""
+        )
 
         kernel, settings = self._create_one_shot_kernel()
         # Compact taxonomy at depth ≤ 6 (the call below) to bound the prompt.
@@ -2232,7 +2397,8 @@ class FallacyWorkflowPlugin:
             state=self._reading_state,
         )
         prompt = (
-            f"Analyze the following text:\n--- TEXT ---\n{windowed_text}\n--- END TEXT ---\n\n"
+            f"Analyze the following text:\n--- TEXT ---\n{windowed_text}\n--- END TEXT ---\n"
+            f"{statement_block}\n"
             "Identify the single most relevant fallacy from the taxonomy below. "
             "CRITICAL: Choose the MOST SPECIFIC (deepest) node that matches — "
             "generic labels like 'Ad hominem' or 'Appel à l'autorité' are too shallow. "
@@ -2263,11 +2429,13 @@ class FallacyWorkflowPlugin:
             "When the text revises or restricts its own preceding wording, "
             "that revision is not a false implication of the wording it "
             "corrects: do not flag it.\n"
+            f"{caveat}"
             "Respond with ONLY a JSON object: "
             '{"fallacy_name": "...", "taxonomy_pk": "...", "explanation": "...", '
             '"confidence": 0.0-1.0, "move_author": "speaker|reported", '
             '"move_author_label": "...", '
-            '"register_test": "proportionate|disproportionate"}\n\n'
+            '"register_test": "proportionate|disproportionate"'
+            f"{document_json_key}}}\n\n"
             f"--- TAXONOMY ---\n{compact_taxonomy}\n--- END ---"
         )
 
@@ -2330,6 +2498,36 @@ class FallacyWorkflowPlugin:
                                     "register_test": REGISTER_TEST_PROPORTIONATE,
                                     "register_reason": parsed.get("explanation", ""),
                                     "fallacy_name_considered": fallacy_name,
+                                },
+                                ensure_ascii=False,
+                            )
+                        # #3416 — a guarded attribution the reply itself
+                        # refutes with the document's own words is recorded as
+                        # refuted BY the document, never turned into a
+                        # fallacy. Outside the guarded families the field is
+                        # not asked for and an accidental citation settles
+                        # nothing, so the detection stands as before.
+                        _cited = normalize_document_statement(
+                            parsed.get("document_statement")
+                        )
+                        if (
+                            _cited
+                            and _statements
+                            and is_document_guarded_family(fallacy_name)
+                        ):
+                            self.logger.info(
+                                "One-shot: refuted by the document — "
+                                f"{fallacy_name}: {_cited}"
+                            )
+                            return json.dumps(
+                                {
+                                    "fallacies": [],
+                                    "exploration_method": (
+                                        "one_shot_refuted_by_document"
+                                    ),
+                                    "fallacy_name_considered": fallacy_name,
+                                    "document_statement": _cited,
+                                    "reason": parsed.get("explanation", ""),
                                 },
                                 ensure_ascii=False,
                             )
