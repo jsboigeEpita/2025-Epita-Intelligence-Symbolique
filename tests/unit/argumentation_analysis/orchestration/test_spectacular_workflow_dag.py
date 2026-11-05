@@ -47,7 +47,9 @@ class TestSpectacularWorkflowDAG:
         # (historian, strategist). 40 → 42.
         # #3395 (R1142) adds the first_reading root phase: the panel runs
         # THIS workflow, so the producer lives here too. 42 → 43.
-        assert len(wf.phases) == 43
+        # #3387 rework adds semantic_indexing (the index queried by the
+        # reading, whose spans the per-argument selection spends). 43 → 44.
+        assert len(wf.phases) == 44
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -56,6 +58,10 @@ class TestSpectacularWorkflowDAG:
             "extract",
             # #3395 (R1142): the panel's workflow carries the first reading.
             "first_reading",
+            # #3387 rework: the semantic index queries the reading over the
+            # document's own text; the per-argument fallacy selection below
+            # spends its spans.
+            "semantic_indexing",
             "quality",
             "nl_to_logic",
             "neural_detect",

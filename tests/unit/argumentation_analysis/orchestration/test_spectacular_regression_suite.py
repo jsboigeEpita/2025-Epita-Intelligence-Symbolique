@@ -301,6 +301,10 @@ class TestSpectacularWorkflowGolden:
         # first reading is a root phase here too — without it the producer
         # never runs and every state prints the no_llm absence note.
         "first_reading",
+        # #3387 rework: the semantic index queries the reading over the
+        # document's own text; the per-argument fallacy selection spends
+        # its spans.
+        "semantic_indexing",
         "quality",
         "nl_to_logic",
         "neural_detect",
@@ -370,8 +374,10 @@ class TestSpectacularWorkflowGolden:
         # them, not the report. 40 → 42.
         # #3395 (R1142) adds the first_reading root phase: the panel runs
         # THIS workflow, so the producer lives here too. 42 → 43.
+        # #3387 rework: +1 semantic_indexing (the index queried by the
+        # reading, whose spans the per-argument selection spends). 43 → 44.
         wf = build_spectacular_workflow()
-        assert len(wf.phases) == 43
+        assert len(wf.phases) == 44
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -432,11 +438,15 @@ class TestSpectacularWorkflowGolden:
         # text and the metadata, and declaring `stakes` instead would push
         # every downstream `nl_to_logic` reader one level later for an
         # enrichment its prompt treats as best-effort.
+        # #3387 rework: `semantic_indexing` joins them too — it reads only
+        # the first reading (L0 root) as its query, and the merged population
+        # it does NOT read stays below.
         assert set(levels[1]) == {
             "neural_detect",
             "text_to_kb",
             "dl_reasoning",
             "historian",
+            "semantic_indexing",
         }
 
     def test_l2_includes_formal_logic_and_counter(self):
@@ -825,7 +835,9 @@ class TestWorkflowCatalogGolden:
         # personas (historian, strategist). 40 → 42.
         # #3395 (R1142): +1 first_reading root phase (the panel's workflow).
         # 42 → 43.
-        assert len(catalog["spectacular"].phases) == 43
+        # #3387 rework: +1 semantic_indexing (index queried by the reading).
+        # 43 → 44.
+        assert len(catalog["spectacular"].phases) == 44
 
     def test_catalog_includes_sherlock_modern(self):
         catalog = get_workflow_catalog()
