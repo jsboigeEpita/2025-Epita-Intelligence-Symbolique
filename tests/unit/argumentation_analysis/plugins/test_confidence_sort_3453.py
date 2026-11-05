@@ -19,6 +19,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, create_autospec
 
 from semantic_kernel import Kernel
+from semantic_kernel.connectors.ai.open_ai import OpenAIPromptExecutionSettings
 
 from argumentation_analysis.plugins.fallacy_workflow_plugin import (
     FallacyWorkflowPlugin,
@@ -74,7 +75,13 @@ def _plugin_with_two_branches(first_confidence, second_confidence):
         taxonomy_data=_taxonomy(),
     )
     plugin._wide_net_candidates = AsyncMock(return_value=["9", "10"])
-    plugin._create_slave_kernel = MagicMock(return_value=(MagicMock(), MagicMock()))
+    plugin._create_slave_kernel = create_autospec(
+        plugin._create_slave_kernel,
+        return_value=(
+            create_autospec(Kernel, instance=True),
+            create_autospec(OpenAIPromptExecutionSettings, instance=True),
+        ),
+    )
     plugin._explore_single_branch = AsyncMock(
         side_effect=[
             _confirmed("9", "Appel à la peur", first_confidence),
