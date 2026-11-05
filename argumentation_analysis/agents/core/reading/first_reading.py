@@ -260,18 +260,29 @@ def _key_before(text: str, start: int) -> Optional[str]:
     ``"thesis": {`` names the span; an array element (``[`` or ``,`` before
     it) does not, and answers ``None``. Only plain names read as keys — the
     answer's own vocabulary — so a quote's tail never passes for one.
+
+    #3415 rework (R1144, CI) — the scan reads the buffer IN PLACE. It used to
+    take ``text[:start]``, which the #2850 census rightly reads as a head
+    slice: a coverage-ish window over the answer, and a full-answer copy for
+    every recovered object. Nothing needs the copy — the only thing the scan
+    wants is what lies before ``start``, and it can walk there.
     """
-    head = text[:start].rstrip()
-    if not head.endswith(":"):
+
+    def _before_whitespace(index: int) -> int:
+        while index >= 0 and text[index] in " \t\r\n":
+            index -= 1
+        return index
+
+    colon = _before_whitespace(start - 1)
+    if colon < 0 or text[colon] != ":":
         return None
-    head = head[:-1].rstrip()
-    if not head.endswith('"'):
+    end = _before_whitespace(colon - 1)
+    if end < 0 or text[end] != '"':
         return None
-    end = len(head) - 1
     i = end - 1
     while i >= 0:
-        if head[i] == '"' and (i == 0 or head[i - 1] != "\\"):
-            key = head[i + 1 : end]
+        if text[i] == '"' and (i == 0 or text[i - 1] != "\\"):
+            key = text[i + 1 : end]
             return key if key and all(c.isalnum() or c in "_-" for c in key) else None
         i -= 1
     return None
