@@ -1,7 +1,9 @@
 # Semantic Index Repoint — Design Note (#3387)
 
-Status: **proposal** — first deliverable of the R1143 decision ("repointer",
-option 1a: index the corpus, then retrieval). Decision owner: coordinator.
+Status: **decided** — the coordinator answered the three questions this note
+raised on 2026-11-05 (section "Decided"); the note keeps the design they
+settle. First deliverable of the R1143 decision ("repointer", option 1a: index
+the corpus, then retrieval). Decision owner: coordinator.
 
 ## What was decided, and why this note starts from confidentiality
 
@@ -59,20 +61,23 @@ The embedding compute on po-2023 is **not** the KM service:
   lane); it must come from the seat environment, never from a tracked file.
 
 The repoint therefore does not depend on KM at all: an OpenAI-compatible
-`/v1/embeddings` endpoint is the only external requirement, and this seat has
-one running.
+`/v1/embeddings` endpoint is the only external requirement. This seat has one
+running; `myia-ai-01` measured none on any of the three ports. That split is
+why the endpoint is a setting (decision 2) rather than a localhost default
+baked into the code.
 
 ## Two compliant index shapes
 
 Both start from the same in-memory loader and differ in what survives the
 process.
 
-**A — volatile, in-process (recommended for v1).** At run start: chunk each
-panel document, embed the chunks, keep `{opaque_doc_id, chunk_offset, vector}`
-in memory; at exit, everything is gone. Nothing persists, so no new privacy
-surface exists at all. Cost: re-embedding per run. The panel is 10 documents
-(the four longest are 47 644–179 139 chars), i.e. on the order of a few
-hundred chunks at ~2k chars — seconds on the local vLLM lane, zero paid calls.
+**A — volatile, in-process (decided for v1).** At run start: chunk the
+analysed document's own text, embed the chunks, keep
+`{opaque_doc_id, chunk_offset, vector}` in memory; at exit, everything is
+gone. Nothing persists, so no new privacy surface exists at all. Cost is
+re-embedding per run, and it is a per-document cost: the panel's four longest
+documents run 47 644–179 139 chars, which is the envelope to stay under — a
+few hundred chunks at ~2k chars, seconds of embedding, zero paid calls.
 
 **B — persisted, opaque ids + vectors only.** A gitignored file under the
 already-ignored evaluation results area stores `{opaque doc id, chunk
@@ -101,18 +106,31 @@ candidate, grounded in what the pipeline already does:
 One consumer in v1. More can join later; the capability census
 (`test_one_capability_surface_1842`) keeps counting real demand.
 
-## Open questions (coordinator)
+## Decided (coordinator, 2026-11-05)
 
-1. **Corpus scope** — the 10-document panel (#3375), or the full encrypted
-   dataset? This note assumes the panel (the Panel Bar's unit); a different
-   scope changes the chunk-count estimate, nothing structural.
-2. **Embedding endpoint** — the local vLLM lane (8005, free) as default, or a
-   paid embedding API? This note assumes local.
-3. **The KM path after the repoint** — with the index living in-process, the
-   KM upload/search path (the 9001 default, `Arg_Semantic_Index`'s docker) is
-   dead code on every measured seat. Recommendation: retire the KM HTTP path
-   with the repoint, keep the pure chunker. Alternative: keep the adapter for
-   offline fixtures only. This is the same wire-or-retire class the
-   coordinator pre-triaged on #3386.
+The three questions this note raised, and what settles them. Kept in the
+document rather than deleted: the design above is only readable against them.
 
-Refs #3387, Refs #3374
+1. **Corpus scope — the analysed document's own text.** v1 indexes the
+   document under analysis: `chunk_by_arguments` over its `raw_text`, queried
+   by the **central thesis and mechanism** #3415 extracts. The inter-document
+   panel index (the ten documents of #3375) is a **second reader**, not v1's
+   scope. Consequence: the chunk count above is a per-document figure, and the
+   envelope to respect is one document's.
+2. **Embedding endpoint — configurable, defaulting to the pipeline's provider
+   route.** The endpoint is a setting, and its **key and base URL are read as
+   a PAIR from one source** — the rule #3414 established for the judge: a key
+   from one place and a URL from another is how a run silently points at the
+   wrong host. Not a per-seat localhost default: measured on `myia-ai-01` on
+   2026-11-05, **nothing listens on 9001, 8005 or 8004**, while this seat
+   serves 8005 behind a bearer key. A localhost default would therefore be
+   correct on one lane and dead on the next. **Never the logging proxy 8004** —
+   it fronts an embeddings host, it is not one.
+3. **The KM path after the repoint — kept, default changed.** The
+   `SemanticIndexService` Kernel Memory adapter stays: it is the student
+   project's surface, and removing it is not this series' business. What
+   changes is its **default**, which stops being the dead 9001. `Arg_Semantic_Index/`
+   is untouched, and **no retirement happens here** — wire-or-retire is a
+   separate decision, taken on its own measurement, not folded into a repoint.
+
+Refs #3387, Refs #3374, Refs #3414, Refs #3415
