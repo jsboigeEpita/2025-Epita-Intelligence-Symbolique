@@ -30,6 +30,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Dict, Optional
 
+import httpcore
 import httpx
 import pytest
 
@@ -111,10 +112,12 @@ class _StallingBaseTransport(httpx.AsyncBaseTransport):
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         self.calls += 1
-        timeout_value = request.extensions.get("timeout")
-        read_deadline = getattr(timeout_value, "read", None)
-        if read_deadline is None and timeout_value is not None:
-            read_deadline = timeout_value.get("read")
+        # #3450 — httpcore reads this extension as a MAPPING, ``.get`` only.
+        # The first version of this fake also accepted an object
+        # (``getattr(value, "read")``), which is how an ``httpx.Timeout``
+        # written by the clamp passed here and crashed the real pool.
+        timeout_value = request.extensions.get("timeout", {})
+        read_deadline = timeout_value.get("read", None)
         self.seen_deadlines.append(read_deadline)
         if self.calls <= self.stall_calls:
             await asyncio.sleep(read_deadline + 0.3)
@@ -208,6 +211,120 @@ class TestTheTransport:
             "PhaseBudgetTransport"
         )
         assert chain[-1] == "AsyncHTTPTransport"
+
+
+# --- the real connection pool (#3450) ----------------------------------------
+
+
+class _RecordingMockStream(httpcore.AsyncMockStream):
+    """httpcore's own mock stream, recording the read deadline it is handed."""
+
+    def __init__(self, buffer, seen_reads):
+        super().__init__(buffer)
+        self._seen_reads = seen_reads
+
+    async def read(self, max_bytes: int, timeout: Optional[float] = None) -> bytes:
+        self._seen_reads.append(timeout)
+        return await super().read(max_bytes, timeout)
+
+
+class _RecordingMockBackend(httpcore.AsyncMockBackend):
+    def __init__(self, buffer):
+        super().__init__(buffer)
+        self.seen_reads = []
+
+    async def connect_tcp(
+        self, host, port, timeout=None, local_address=None, socket_options=None
+    ):
+        return _RecordingMockStream(list(self._buffer), self.seen_reads)
+
+
+_OK_RESPONSE = [
+    b"HTTP/1.1 200 OK\r\n",
+    b"Content-Type: application/json\r\n",
+    b"Content-Length: 11\r\n",
+    b"\r\n",
+    b'{"ok":true}',
+]
+
+
+def _real_pool_transport() -> "tuple[httpx.AsyncHTTPTransport, _RecordingMockBackend]":
+    """A real ``AsyncHTTPTransport`` whose httpcore pool runs on a mock backend.
+
+    Everything above the socket is the production code path — httpcore's
+    ``AsyncConnectionPool`` and HTTP/1.1 connection read
+    ``request.extensions["timeout"]`` exactly as they do against the LLM
+    endpoint. No socket is opened.
+    """
+    backend = _RecordingMockBackend(_OK_RESPONSE)
+    transport = httpx.AsyncHTTPTransport()
+    transport._pool = httpcore.AsyncConnectionPool(network_backend=backend)
+    return transport, backend
+
+
+class TestTheRealPool:
+    """#3450 — the clamp must speak the dialect httpcore reads.
+
+    Born red on ``a0acb7e94``: the clamp wrote ``httpx.Timeout(deadline)``
+    into the extension, httpcore's pool called ``.get("pool")`` on it and
+    raised ``AttributeError`` — the OpenAI SDK's « Connection error. » that
+    cost Acts I–III on 9 of the 10 panel documents (cycle 3).
+    """
+
+    async def test_a_clamped_request_reaches_the_socket_with_the_composed_deadline(
+        self,
+    ):
+        transport, backend = _real_pool_transport()
+        budget_token = phase_attempt_budget.set(PRODUCTION_BUDGET_SECONDS)
+        client = httpx.AsyncClient(
+            transport=PhaseBudgetTransport(transport),
+            timeout=PRODUCTION_DEFAULT_TIMEOUT,
+        )
+        try:
+            response = await client.post("http://llm.test/v1/chat/completions")
+        finally:
+            phase_attempt_budget.reset(budget_token)
+            await client.aclose()
+        assert response.status_code == 200
+        assert response.json() == {"ok": True}
+        # The stream received the composed 80 s, not the client's 90 s.
+        composed = compose_attempt_deadline(PRODUCTION_BUDGET_SECONDS)
+        assert composed < PRODUCTION_DEFAULT_TIMEOUT  # the clamp binds here
+        assert backend.seen_reads
+        assert backend.seen_reads == [pytest.approx(composed)] * len(backend.seen_reads)
+
+    async def test_the_production_chain_answers_under_a_budget(self):
+        """The full chain (retry → clamp → real pool) answers in ONE attempt."""
+        transport, backend = _real_pool_transport()
+        observer: Dict[str, Any] = {"attempts": 0}
+        budget_token = phase_attempt_budget.set(PRODUCTION_BUDGET_SECONDS)
+        observer_token = phase_transport_observer.set(observer)
+        client = httpx.AsyncClient(
+            transport=ResilientAsyncTransport(PhaseBudgetTransport(transport)),
+            timeout=PRODUCTION_DEFAULT_TIMEOUT,
+        )
+        try:
+            response = await client.post("http://llm.test/v1/chat/completions")
+        finally:
+            phase_attempt_budget.reset(budget_token)
+            phase_transport_observer.reset(observer_token)
+            await client.aclose()
+        assert response.status_code == 200
+        assert observer["attempts"] == 1
+
+    async def test_a_component_set_below_the_deadline_is_kept(self):
+        """The clamp only shrinks: a 5 s connect timeout stays 5 s."""
+        from argumentation_analysis.core.utils.network_utils import (
+            _clamped_timeout_mapping,
+        )
+
+        clamped = _clamped_timeout_mapping(
+            httpx.Timeout(90.0, connect=5.0).as_dict(), 80.0
+        )
+        assert clamped == {"connect": 5.0, "read": 80.0, "write": 80.0, "pool": 80.0}
+        assert _clamped_timeout_mapping(None, 80.0) == dict.fromkeys(
+            ("connect", "read", "write", "pool"), 80.0
+        )
 
 
 # --- the executor ----------------------------------------------------------

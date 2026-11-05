@@ -176,6 +176,37 @@ def _extension_read_deadline(value: Any) -> Optional[float]:
     return None
 
 
+#: The four keys httpcore reads from ``request.extensions["timeout"]``.
+_HTTPCORE_TIMEOUT_KEYS = ("connect", "read", "write", "pool")
+
+
+def _clamped_timeout_mapping(value: Any, deadline: float) -> Dict[str, Optional[float]]:
+    """The ``extensions["timeout"]`` MAPPING with every component clamped (#3450).
+
+    httpcore reads this extension with ``.get("pool")``, ``.get("connect")``,
+    ``.get("write")``, ``.get("read")`` — a mapping, never an object. httpx
+    itself writes ``Timeout.as_dict()`` there. Writing an ``httpx.Timeout``
+    object instead made every clamped request raise ``AttributeError`` inside
+    the connection pool, which the OpenAI SDK reports as « Connection
+    error. »: on the cycle-3 panel, Acts I–III and the deep synthesis were
+    lost on 9 documents out of 10.
+
+    Each component only SHRINKS: a component the client set below the
+    deadline keeps its value; a component left unbounded (``None``) gets the
+    deadline, since the phase budget bounds it.
+    """
+    current: Dict[str, Optional[float]] = {key: None for key in _HTTPCORE_TIMEOUT_KEYS}
+    if isinstance(value, httpx.Timeout):
+        current.update(value.as_dict())
+    elif value is not None and hasattr(value, "get"):
+        for key in _HTTPCORE_TIMEOUT_KEYS:
+            current[key] = value.get(key)
+    return {
+        key: deadline if (seconds is None or deadline < seconds) else seconds
+        for key, seconds in current.items()
+    }
+
+
 class PhaseBudgetTransport(httpx.AsyncBaseTransport):
     """Borne chaque tentative au délai composé du budget de phase (#3435).
 
@@ -201,11 +232,15 @@ class PhaseBudgetTransport(httpx.AsyncBaseTransport):
         if budget is not None:
             deadline = compose_attempt_deadline(budget)
             observer and observer.setdefault("attempt_deadline", deadline)
-            current = _extension_read_deadline(request.extensions.get("timeout"))
+            timeout_extension = request.extensions.get("timeout")
+            current = _extension_read_deadline(timeout_extension)
             if current is None or deadline < current:
                 # La borne ne fait que RÉTRÉCIR — jamais relever un délai
-                # que le client a posé plus petit.
-                request.extensions["timeout"] = httpx.Timeout(deadline)
+                # que le client a posé plus petit. httpcore lit un MAPPING
+                # (#3450) : jamais un objet ``httpx.Timeout``.
+                request.extensions["timeout"] = _clamped_timeout_mapping(
+                    timeout_extension, deadline
+                )
         return await self.transport.handle_async_request(request)
 
 
