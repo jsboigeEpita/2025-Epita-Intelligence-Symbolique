@@ -1211,10 +1211,13 @@ class TestInvokeCallables:
             # #3386 — the play runs between the derivation and the aggregate,
             # so the mocked derivation must return the CONTRACT the real one
             # honours: electors are ``Agent`` objects (a bare str crashes the
-            # play's ``a.name``). One stubborn elector, nothing moves.
+            # play's ``a.name``) and ballots are the LIST OF LISTS the real
+            # derivation returns (a dict crashes the seat rotation's slice —
+            # the CI red of #3418 review 3). One stubborn elector, nothing
+            # moves.
             return_value=(
                 ["A", "B"],
-                {"qe": ["A", "B"]},
+                [["A", "B"]],
                 [Agent(name="qe", personality="stubborn", preferences=["A", "B"])],
                 True,
                 "ok",
