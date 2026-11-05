@@ -37,6 +37,9 @@ from argumentation_analysis.core.reading_window import (
     LOGIC_READING_WINDOW,
     STATUS_SELECTED,
     WindowSelection,
+    chunked_reading_offsets,
+    one_call_extraction_capacity,
+    per_argument_unit_budget,
     reading_state_from_context,
     reads_whole_text_in_one_call,
     selected_text,
@@ -9541,13 +9544,22 @@ def _extract_arguments_for_parallel(
             ]
             # #3395 — the units that overlap a defining move from the first
             # reading are examined first: the report has already named them, so
-            # the 10 the descent reads should be the ones that matter. No
+            # the units the descent reads should be the ones that matter. No
             # reading (no LLM, or a document with no defining move) leaves the
             # selection byte-identical. #3387 adds the retrieval's passages to
             # the same hint: see ``_selection_priority_spans``.
+
+            # #2850 lot 10 — the budget is k(L), not a flat 10: two units per
+            # capacity-chunk, floored at 10, ceilinged at 30 (declared in
+            # ``reading_window.PER_ARGUMENT_CEILING``). The stratification and
+            # the priority spans still decide WHICH units — this only says how
+            # many, so a long document's tail enters the pass instead of being
+            # rationed away by a number picked in March.
+            _doc_length = state_text_length(state_obj) or len(input_text)
+            _unit_budget = per_argument_unit_budget(_doc_length)
             selection = select_for_budget(
                 population,
-                10,
+                _unit_budget,
                 text_length=state_text_length(state_obj),
                 priority_spans=_selection_priority_spans(state_obj),
             )
@@ -9576,7 +9588,10 @@ def _extract_arguments_for_parallel(
                 for u in merged_population_units(None, fallback_args=arguments)
                 if len(u.text.strip()) > 20
             ]
-            selection = select_for_budget(population, 10)
+            # #2850 lot 10 — same k(L) budget as the state source.
+            selection = select_for_budget(
+                population, per_argument_unit_budget(len(input_text))
+            )
             result = [(u.unit_id, u.text.strip()) for u in selection.selected]
             if result:
                 return result
@@ -9584,9 +9599,12 @@ def _extract_arguments_for_parallel(
     # Source 3: split by paragraph breaks (heuristic fallback)
     paragraphs = [p.strip() for p in input_text.split("\n\n") if p.strip()]
     if len(paragraphs) >= 2:
+        # #2850 lot 10 — the heuristic fallback's cap follows the same k(L)
+        # budget, never a flat 10.
+        _budget = per_argument_unit_budget(len(input_text))
         return [
             (f"paragraph_{i+1}", p)
-            for i, p in enumerate(paragraphs[:10])
+            for i, p in enumerate(paragraphs[:_budget])
             if len(p) > 20
         ]
 
@@ -9923,6 +9941,10 @@ async def _invoke_fact_extraction(
         _integral_read = reads_whole_text_in_one_call(
             len(input_text), _EXTRACTION_MAX_TOKENS
         )
+        # #2850 lot 10 — the planned spans, one per reading, so the loop's
+        # answered-span bookkeeping is the same whatever plan produced the
+        # readings (integral, k chunks, or the lot-8 fallback).
+        _planned_spans: List[Tuple[int, int]] = []
         if _integral_read:
             _extraction_reading = input_text
             # Nothing was selected: the window IS the text. Recorded through
@@ -9934,6 +9956,8 @@ async def _invoke_fact_extraction(
             if _extraction_recorder is not None:
                 _extraction_recorder("fact_extraction", _extraction_selection)
             _offsets = [0]
+            _readings = [input_text]
+            _planned_spans = [(0, len(input_text))]
         else:
             _extraction_reading, _extraction_selection = selected_text_and_selection(
                 input_text,
@@ -9941,18 +9965,46 @@ async def _invoke_fact_extraction(
                 "fact_extraction",
                 state=_extraction_state,
             )
-            _offsets = stratified_window_offsets(len(input_text), LLM_EXTRACTION_WINDOW)
-        # #2850 lot 8 — between one window and one call's capacity the read is
-        # the document itself (lot 9 above); BEYOND the capacity,
-        # k = min(3, ceil(L/3000)) stratified windows cover what they can
-        # (tiled up to 9 000 chars, head/middle/end beyond), the FIRST staying
-        # the selector's (#1737 head selection untouched). A document that fits
-        # one window keeps exactly today's single call, byte-identical. No
-        # call ever reads wider than the measured capacity — #2912 is the
-        # defect of a call that did.
-        _readings: List[str] = [_extraction_reading] + [
-            input_text[o : o + LLM_EXTRACTION_WINDOW] for o in _offsets[1:]
-        ]
+            # #2850 lot 10 (dispatch R1144): beyond one call's capacity the
+            # read is the WHOLE TEXT in k = ceil(L / capacity) calls that tile
+            # [selector offset, end) — contiguous chunks at the measured
+            # capacity, the #1737 head selection still choosing where reading
+            # starts. Lot 8's three-window sample survives only where no
+            # capacity is known (completion knob off): the fallback is named
+            # in the record, never presented as a choice.
+            _capacity = one_call_extraction_capacity(_EXTRACTION_MAX_TOKENS)
+            if _capacity > LLM_EXTRACTION_WINDOW:
+                _offsets = chunked_reading_offsets(
+                    len(input_text), _capacity, start=_extraction_selection.offset
+                )
+                _readings = [
+                    input_text[o : o + _capacity] for o in _offsets
+                ]
+                _planned_spans = [
+                    (o, min(o + _capacity, len(input_text))) for o in _offsets
+                ]
+            else:
+                _offsets = stratified_window_offsets(
+                    len(input_text), LLM_EXTRACTION_WINDOW
+                )
+                # #2850 lot 8 — k = min(3, ceil(L/3000)) stratified windows
+                # (head/middle/end), the FIRST staying the selector's
+                # (#1737). Kept as the no-capacity fallback, named above.
+                _readings = [_extraction_reading] + [
+                    input_text[o : o + LLM_EXTRACTION_WINDOW] for o in _offsets[1:]
+                ]
+                _planned_spans = [
+                    (
+                        _extraction_selection.offset,
+                        _extraction_selection.offset + len(_extraction_reading),
+                    )
+                ] + [
+                    (
+                        o,
+                        min(o + LLM_EXTRACTION_WINDOW, len(input_text)),
+                    )
+                    for o in _offsets[1:]
+                ]
         arguments: List[Dict[str, Any]] = []
         claims: List[Dict[str, Any]] = []
         fallacies: List[Dict[str, Any]] = []
@@ -9987,21 +10039,10 @@ async def _invoke_fact_extraction(
             if not _data:
                 continue
             _windows_ok += 1
-            if _window_index == 0:
-                _read_spans.append(
-                    (
-                        _extraction_selection.offset,
-                        _extraction_selection.offset + len(_extraction_reading),
-                    )
-                )
-            else:
-                _window_offset = _offsets[_window_index]
-                _read_spans.append(
-                    (
-                        _window_offset,
-                        min(_window_offset + LLM_EXTRACTION_WINDOW, len(input_text)),
-                    )
-                )
+            # #2850 lot 10 — the answered span is the PLANNED span of this
+            # reading, whatever plan produced it: integral, k chunks at the
+            # capacity, or lot 8's stratified windows.
+            _read_spans.append(_planned_spans[_window_index])
             arguments.extend(
                 _cross_window_unique(
                     _normalize_items_with_quotes(_data.get("arguments", [])),

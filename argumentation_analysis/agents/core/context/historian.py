@@ -26,10 +26,8 @@ from argumentation_analysis.agents.core.context import (
     MODEL_KNOWLEDGE_BASIS,
     stamp_basis,
 )
-from argumentation_analysis.core.reading_window import (
-    LLM_EXTRACTION_WINDOW,
-    selected_text,
-)
+from argumentation_analysis.agents.core.reading import defining_moves
+from argumentation_analysis.core.reading_window import persona_reading
 
 logger = logging.getLogger("Historian")
 
@@ -159,9 +157,11 @@ async def build_historical_context(
 ) -> HistoricalContext:
     """Build ``state.historical_context`` — the situation, labelled as model knowledge.
 
-    The excerpt is read through the #1737 selector (``selected_text``), so the
-    window this persona reads is the one the pipeline decides everywhere else,
-    and it is recorded on the state when the state can record it.
+    The excerpt is the first reading's anchors (#2850 lot 10): the thesis, the
+    mechanism and the moves with their positions, then the text around those
+    positions, within one call's capacity. Without a usable position the
+    opening window survives — and the recorded status says it is a fallback,
+    not a choice.
 
     ``llm_callable`` is injected: the invoke layer owns the client, the runaway
     guard and the provider route; this module owns the persona. No LLM → status
@@ -169,7 +169,9 @@ async def build_historical_context(
     """
     raw_text = getattr(state, "raw_text", "") or ""
     recorder = state if hasattr(state, "record_reading_window") else None
-    excerpt = selected_text(raw_text, LLM_EXTRACTION_WINDOW, "historian", recorder)
+    excerpt, selection, extra = persona_reading(raw_text, defining_moves(state))
+    if recorder is not None:
+        recorder.record_reading_window("historian", selection, extra)
 
     result = HistoricalContext()
     if llm_callable is None:

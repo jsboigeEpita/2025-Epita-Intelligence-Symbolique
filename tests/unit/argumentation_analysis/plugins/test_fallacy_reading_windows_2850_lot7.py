@@ -105,17 +105,30 @@ def _plugin(state, llm=None):
 
 class TestWidenetHeadRecorded:
     async def test_widenet_head_is_recorded_selected(self):
-        """The Phase-1 prompt reads the first 8000 chars of a 56k document —
-        the record must say (0, 8000, selected), the slice untouched."""
+        """Lot 10 supersedes the 8000-char head: the Phase-1 read is the whole
+        56k document in k calls of one call's capacity. The record must say
+        what was actually read — (selected, 0, 6016) plus the chunk count and
+        the chars read — so the reader can see the text was covered, not
+        sampled."""
+        from argumentation_analysis.core.reading_window import (
+            WHOLE_TEXT_CALL_CAPACITY,
+        )
+
         state = _RecordingState()
         plugin = _plugin(state)
-        plugin.llm_service.get_chat_message_content = AsyncMock(return_value="[]")
+        llm = AsyncMock(return_value="[]")
+        plugin.llm_service.get_chat_message_content = llm
         candidates = await plugin._wide_net_candidates(_long_doc(_DOC_CHARS))
         assert candidates == []
+        k = -(-_DOC_CHARS // WHOLE_TEXT_CALL_CAPACITY)
+        assert k == 10
+        assert llm.await_count == k, "one call per contiguous chunk"
         assert state.reading_window_status["fallacy_widenet"] == {
             "status": "selected",
             "offset": 0,
-            "window": 8000,
+            "window": WHOLE_TEXT_CALL_CAPACITY,
+            "chunks": k,
+            "chars_read": _DOC_CHARS,
         }
 
     async def test_widenet_short_text_reads_whole(self):
@@ -168,9 +181,14 @@ class TestDescentWindowRecorded:
 
 class TestOneShotRecorded:
     async def test_one_shot_selection_is_recorded(self):
-        """The #2908-bounded one-shot selection was computed but never
-        recorded (stateless call); the document path now threads the state —
-        same selection, entry in the table."""
+        """The one-shot selection was computed but never recorded (stateless
+        call); the document path now threads the state — entry in the table.
+        #2850 lot 10: a 56k document is read in k chunks of one call's
+        capacity, so the entry says so (chunks / chars_read), not 8000."""
+        from argumentation_analysis.core.reading_window import (
+            WHOLE_TEXT_CALL_CAPACITY,
+        )
+
         state = _RecordingState()
         plugin = _plugin(state)
         plugin.llm_service.get_chat_message_content = AsyncMock(
@@ -181,9 +199,12 @@ class TestOneShotRecorded:
         )
         await plugin._run_one_shot(_long_doc(_DOC_CHARS))
         entry = state.reading_window_status["fallacy_one_shot"]
-        assert entry["window"] == 8000
+        k = -(-_DOC_CHARS // WHOLE_TEXT_CALL_CAPACITY)
+        assert entry["window"] == WHOLE_TEXT_CALL_CAPACITY
         assert entry["offset"] == 0
         assert entry["status"] == "selected"
+        assert entry["chunks"] == k
+        assert entry["chars_read"] == _DOC_CHARS
 
 
 class TestStatelessConstructions:

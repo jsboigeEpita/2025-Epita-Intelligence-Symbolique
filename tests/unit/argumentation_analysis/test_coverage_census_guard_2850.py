@@ -211,26 +211,14 @@ REGISTRY = {
     # windows are RECORDED — the reading record says them with a French label
     # (reading_record.SITE_LABELS_FR), so the render's disclosure is the
     # record, not the Acts.
-    (
-        "argumentation_analysis/agents/core/context/historian.py",
-        "selected_text",
-        "LLM_EXTRACTION_WINDOW",
-        1,
-    ): (
-        "window",
-        "historian prompt reads the selected 3000, not the whole text",
-        "reading record, FR label (historien) — debt #2850, added #3377",
-    ),
-    (
-        "argumentation_analysis/agents/core/context/strategist.py",
-        "selected_text",
-        "LLM_EXTRACTION_WINDOW",
-        1,
-    ): (
-        "window",
-        "strategist prompt reads the selected 3000, not the whole text",
-        "reading record, FR label (stratège) — debt #2850, added #3377",
-    ),
+    # The two persona rows (``selected_text[…:LLM_EXTRACTION_WINDOW]``) left
+    # here (#2850 lot 10): historian and strategist no longer slice a head —
+    # they read the first reading's anchored passages through
+    # ``reading_window.persona_reading``, within one call's capacity, and the
+    # opening window survives only as the recorded fallback
+    # (``head_fallback_no_first_reading``). The slice lives in the core
+    # mechanism module, so no census site remains in either persona file.
+    # Stale rows deleted, per the gate's contract.
     # --- #3395: the first reading is the one reader whose window is the
     # WHOLE document whenever it fits — FIRST_READING_WINDOW (30 000) is a
     # document-scale backstop, not a sample. The selection is recorded (site
@@ -1332,19 +1320,11 @@ REGISTRY = {
         "80",
         1,
     ): ("display", "first 80 chars of an already-produced string", "display only"),
-    (
-        "argumentation_analysis/plugins/fallacy_workflow_plugin.py",
-        "argument_text",
-        "WIDE_NET_WINDOW",
-        1,
-    ): (
-        "window",
-        "the wide-net Phase-1 window — first WIDE_NET_WINDOW (= 8000) chars "
-        "of the source text",
-        "recorded at _wide_net_candidates entry (site fallacy_widenet) on "
-        "the document path; 8000 is the #1087/#2908 backstop, not lifted — "
-        "#2850 lot 7",
-    ),
+    # The ``argument_text[:WIDE_NET_WINDOW]`` row left here (#2850 lot 10):
+    # the wide net reads the WHOLE document in k contiguous chunks of one
+    # call's capacity (``chunked_reading_offsets``), so no coverage-limiting
+    # slice remains at that site — the record says (chunks, chars_read).
+    # Stale row deleted, per the gate's contract.
     (
         "argumentation_analysis/plugins/fallacy_workflow_plugin.py",
         "selected_text",
@@ -1352,13 +1332,13 @@ REGISTRY = {
         1,
     ): (
         "window",
-        "WIDE_NET_WINDOW-char window (= 8000, the constant shared with the "
-        "wide-net slice above — R1058: one constant, two readers) from the "
-        "selected offset — the one-shot fallback's text, bound by #2908 (was "
-        "the pipeline's only unbounded reader); drops the rest of the document",
+        "WIDE_NET_WINDOW-char window (= 8000) from the selected offset — the "
+        "one-shot fallback's text, bound by #2908 (was the pipeline's only "
+        "unbounded reader); drops the rest of the document",
         "recorded on the document path (state threaded to the call, site "
         "fallacy_one_shot) — #2850 lot 7; per-arg instances stay stateless "
-        "(unit ≤ 3000, no cut)",
+        "(unit ≤ 3000, no cut); the wide net no longer shares this window "
+        "(#2850 lot 10)",
     ),
     (
         "argumentation_analysis/plugins/kb_to_tweety_plugin.py",

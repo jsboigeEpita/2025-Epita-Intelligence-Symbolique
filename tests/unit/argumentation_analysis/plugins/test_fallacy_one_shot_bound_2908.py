@@ -28,7 +28,10 @@ import unittest.mock as um
 
 from semantic_kernel.contents import AuthorRole
 
-from argumentation_analysis.core.reading_window import WIDE_NET_WINDOW
+from argumentation_analysis.core.reading_window import (
+    WHOLE_TEXT_CALL_CAPACITY,
+    WIDE_NET_WINDOW,
+)
 from argumentation_analysis.plugins.fallacy_workflow_plugin import (
     FallacyWorkflowPlugin,
 )
@@ -93,23 +96,29 @@ def _run_one_shot_and_capture(text: str):
     plugin._create_one_shot_kernel = lambda: (um.MagicMock(), um.MagicMock())
     result_json = asyncio.run(plugin._run_one_shot(text))
     assert svc.prompts, "the one-shot call never reached the service"
-    return svc.prompts[0], json.loads(result_json)
+    return svc.prompts, json.loads(result_json)
 
 
-def test_text_over_the_bound_is_windowed_to_exactly_8000_chars():
-    """THE witness (born red before the fix): a 10,000-char document must
-    reach the one-shot prompt as an 8,000-char window — the wide-net's own
-    bound, at the selected offset (offset 0 here: the text is uniform
-    prose). Before #2908 the section carried the whole 10,000 chars."""
+def test_text_over_the_bound_is_read_whole_in_calls_of_one_capacity():
+    """#2850 lot 10 — supersedes the #2908 wide-net-sized window. The witness
+    flips in the direction the dispatch asks: a 10,000-char document no longer
+    loses its last 2,000 chars. It is read in k = 2 contiguous chunks of one
+    call's capacity, each prompt's text section stays under that capacity, and
+    the union of the sections IS the document (offset 0: uniform prose). Each
+    chunk answers, so the pooled result carries both detections."""
     text = _prose(10_000)
-    prompt, result = _run_one_shot_and_capture(text)
+    prompts, result = _run_one_shot_and_capture(text)
     assert result.get("exploration_method") == "one_shot"
-    section = _text_section(prompt)
-    assert len(section) == BOUND, (
-        f"the one-shot's text section is {len(section)} chars — it must be "
-        f"bounded at {BOUND}"
+    assert len(prompts) == 2
+    sections = [_text_section(prompt) for prompt in prompts]
+    assert all(len(section) <= WHOLE_TEXT_CALL_CAPACITY for section in sections), (
+        f"each call carries at most one capacity "
+        f"({WHOLE_TEXT_CALL_CAPACITY} chars), got {[len(s) for s in sections]}"
     )
-    assert section == text[:BOUND]
+    assert "".join(sections) == text, "the chunks must tile the whole document"
+    assert len(result.get("fallacies") or []) == 2, (
+        "each chunk's detection is pooled — a chunk is not a throwaway"
+    )
 
 
 def test_texts_at_or_under_the_bound_produce_a_byte_identical_prompt():
@@ -118,7 +127,8 @@ def test_texts_at_or_under_the_bound_produce_a_byte_identical_prompt():
     unbounded construction — same template, same full text."""
     for length in (500, BOUND):
         text = _prose(length)
-        prompt, result = _run_one_shot_and_capture(text)
+        prompts, result = _run_one_shot_and_capture(text)
+        prompt = prompts[0]
         assert result.get("exploration_method") == "one_shot"
         # The legacy construction, rebuilt here from the template in the
         # source: full text, same taxonomy part.
@@ -186,12 +196,16 @@ def test_the_window_is_the_shared_1737_mechanism_not_a_new_constant():
 
 
 def test_the_bound_is_one_named_constant_shared_with_the_wide_net():
-    """R1058 review: the wide-net Phase-1 slice and the one-shot window must
-    cite ONE constant — two literals with the same value could drift apart,
-    and the one-shot bound would silently stop being 'the wide-net's own'.
-    #2915 moved the constant to the shared ``reading_window`` module (five
-    off-pipeline readers meant the same bound): the plugin must IMPORT it,
-    never redefine it, and back exactly its two reads with it."""
+    """R1058 review: the one-shot window must cite ONE named constant rather
+    than a literal that could drift. #2915 moved the constant to the shared
+    ``reading_window`` module; the plugin must IMPORT it, never redefine it.
+
+    #2850 lot 10 changed the shape of the sharing, not its point: the wide
+    net no longer slices ``[:WIDE_NET_WINDOW]`` — it reads the whole document
+    in k calls chunked at ``WHOLE_TEXT_CALL_CAPACITY`` (same constant family,
+    derived from lot 9's one-call capacity). ``WIDE_NET_WINDOW`` therefore
+    backs exactly ONE read now (the one-shot), and the wide net must go
+    through the shared capacity constant, never a new literal."""
     import ast as _ast
     import importlib as _importlib
     from pathlib import Path as _Path
@@ -219,7 +233,27 @@ def test_the_bound_is_one_named_constant_shared_with_the_wide_net():
         for n in _ast.walk(tree)
         if isinstance(n, _ast.Name) and n.id == "WIDE_NET_WINDOW"
     ]
-    assert len(uses) == 2, (
-        f"WIDE_NET_WINDOW must back exactly two reads (the wide-net slice "
-        f"and the one-shot window) — found {len(uses)} at lines {uses}"
+    one_shot = [
+        n
+        for n in _ast.walk(tree)
+        if isinstance(n, (_ast.FunctionDef, _ast.AsyncFunctionDef))
+        and n.name == "_run_one_shot"
+    ]
+    assert one_shot, "the one-shot entry point moved; update this pin"
+    lo, hi = one_shot[0].lineno, one_shot[0].end_lineno
+    stray = [line for line in uses if not (lo <= line <= hi)]
+    assert uses and not stray, (
+        f"WIDE_NET_WINDOW must back only the one-shot window (in "
+        f"_run_one_shot, lines {lo}-{hi}; the wide net chunks at "
+        f"WHOLE_TEXT_CALL_CAPACITY since #2850 lot 10) — uses at {uses}, "
+        f"stray at {stray}"
+    )
+    capacity_uses = [
+        n.lineno
+        for n in _ast.walk(tree)
+        if isinstance(n, _ast.Name) and n.id == "WHOLE_TEXT_CALL_CAPACITY"
+    ]
+    assert capacity_uses, (
+        "the wide net must chunk through the shared WHOLE_TEXT_CALL_CAPACITY "
+        "(#2850 lot 10), never a local literal"
     )

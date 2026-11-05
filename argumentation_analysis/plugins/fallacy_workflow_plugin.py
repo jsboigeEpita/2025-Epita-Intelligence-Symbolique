@@ -53,10 +53,14 @@ from argumentation_analysis.core.reading_window import (
     DESCENT_WINDOW,
     STATUS_CENTRED_ON_QUOTE,
     STATUS_HEAD_FALLBACK,
+    STATUS_SELECTED,
     WIDE_NET_WINDOW,
+    WHOLE_TEXT_CALL_CAPACITY,
     WindowSelection,
+    chunked_reading_offsets,
     descent_text_and_selection,
     head_selection,
+    select_reading_head,
     selected_text,
 )
 from argumentation_analysis.plugins.exploration_plugin import ExplorationPlugin
@@ -829,19 +833,76 @@ class FallacyWorkflowPlugin:
         Tries deep index first (depth 2-3), falls back to root PKs. This gives
         the agentic navigation a 2-3 level head start; from there the LLM
         descends freely (multi-level cluster, no depth cap — FB-30 #1107).
+
+        #2850 lot 10 (dispatch R1144): the wide net reads the WHOLE TEXT in
+        k = ceil(L / capacity) calls — contiguous chunks at the measured
+        capacity — instead of the first WIDE_NET_WINDOW characters. The
+        candidates pool across chunks, first-quote-wins; MAX_CANDIDATES caps
+        the POOL, and the 240-call descent budget (FB-35) still bounds the
+        funnel a pooled candidate list can spawn. At or under one capacity
+        the call is today's, byte-identical.
         """
-        # #2850 lot 7: the Phase-1 prompt below reads the first
-        # WIDE_NET_WINDOW chars — say it in the record, never lift it (the
-        # bound is the #1087/#2908 backstop; beyond-head coverage is the
-        # per-argument pass's job). The record takes its window from the
-        # slice it mirrors, not from the constant (#2908 pin, R1101
-        # rework): WIDE_NET_WINDOW must back exactly the two reads — this
-        # slice and the one-shot window — a third AST use would blind the
-        # pin to a genuinely new read.
-        wide_net_text = argument_text[:WIDE_NET_WINDOW]
-        # #3376 — a fresh call holds no evidence from a previous one.
+        # #3376 — a fresh analysis holds no evidence from a previous one.
         self._wide_net_quotes = {}
-        self._record_window(argument_text, len(wide_net_text), "fallacy_widenet")
+        _offsets = chunked_reading_offsets(
+            len(argument_text), WHOLE_TEXT_CALL_CAPACITY
+        )
+        candidate_pks: List[str] = []
+        _raw_count = 0
+        _answered_spans: List[Tuple[int, int]] = []
+        for _offset in _offsets:
+            wide_net_text = argument_text[
+                _offset : _offset + WHOLE_TEXT_CALL_CAPACITY
+            ]
+            _mapped = await self._wide_net_one_chunk(wide_net_text)
+            if _mapped is None:
+                continue
+            _answered_spans.append((_offset, _offset + len(wide_net_text)))
+            for pk, quote in _mapped:
+                if pk not in candidate_pks:
+                    candidate_pks.append(pk)
+                    # #3376 — the evidence, keyed by the candidate it belongs
+                    # to. First quote wins: a later candidate mapping to the
+                    # same PK must not overwrite where the first one was
+                    # actually seen.
+                    if quote:
+                        self._wide_net_quotes[pk] = quote
+                    _raw_count += 1
+
+        candidate_pks = candidate_pks[: self.MAX_CANDIDATES]
+        # #2850 lot 10 — the record says what the k calls read: chunks asked,
+        # and the union of the spans whose calls ANSWERED (a chunk that timed
+        # out or failed to parse read nothing — counting it would state a
+        # coverage stronger than its measurement, #3099/#1019).
+        _chars_read = 0
+        _span_end = -1
+        for _lo, _hi in sorted(_answered_spans):
+            _chars_read += max(0, _hi - max(_lo, _span_end))
+            _span_end = max(_span_end, _hi)
+        _extra = {"chunks": len(_offsets), "chars_read": _chars_read}
+        self._record_window(
+            argument_text,
+            min(WHOLE_TEXT_CALL_CAPACITY, len(argument_text)),
+            "fallacy_widenet",
+            extra=_extra if len(_offsets) > 1 else None,
+        )
+        self.logger.info(
+            f"Phase 1 wide-net (FB-19 deep, lot 10): {_raw_count} candidates "
+            f"over {len(_offsets)} chunk(s), {len(candidate_pks)} unique PKs, "
+            f"{_chars_read} chars read: {candidate_pks}"
+        )
+        return candidate_pks
+
+    async def _wide_net_one_chunk(
+        self, wide_net_text: str
+    ) -> Optional[List[Tuple[str, str]]]:
+        """#2850 lot 10 — ONE chunk of the wide net: call, parse, map.
+
+        Returns ``None`` when the chunk's call failed (timeout, provider,
+        parse): a failed call read nothing, and the caller's span union must
+        not count it. A parsed answer with no fallacies is ``[]`` — the chunk
+        was read and found nothing, which is a result.
+        """
         kernel, settings = self._create_one_shot_kernel()
         roots = self.taxonomy_navigator.get_root_nodes()
         roots_text = "\n".join(
@@ -883,15 +944,15 @@ class FallacyWorkflowPlugin:
         except asyncio.TimeoutError:
             # str(TimeoutError()) == "" — a catch-all here logged an empty
             # message, so a budget overrun silently degraded the funnel to
-            # one-shot (#2157). Same shape as the two named handlers below.
+            # one-shot (#2157). Same shape as the named handler below.
             self.logger.warning(
                 f"Wide-net Phase 1 timed out after {self.WIDENET_PHASE1_TIMEOUT}s "
-                f"(FALLACY_WIDENET_PHASE1_TIMEOUT), falling back to one-shot"
+                f"(FALLACY_WIDENET_PHASE1_TIMEOUT) on one chunk"
             )
-            return []
+            return None
         except Exception as e:
             self.logger.warning(f"Wide-net Phase 1 failed: {type(e).__name__}: {e}")
-            return []
+            return None
 
         candidates_raw = []
         try:
@@ -907,7 +968,7 @@ class FallacyWorkflowPlugin:
                 candidates_raw = [json.loads(raw)]
         except (json.JSONDecodeError, ValueError):
             self.logger.warning(f"Wide-net parse failed, raw: {raw[:200]}")
-            return []
+            return None
 
         if not isinstance(candidates_raw, list):
             candidates_raw = [candidates_raw]
@@ -915,7 +976,7 @@ class FallacyWorkflowPlugin:
         # FB-19: try deep index first (depth 2-3), then fall back to root PKs
         deep_index = self._build_deep_index(max_depth=3)
         roots_index = self._build_roots_index()
-        candidate_pks = []
+        mapped: List[Tuple[str, str]] = []
         for c in candidates_raw:
             if not isinstance(c, dict):
                 continue
@@ -931,21 +992,12 @@ class FallacyWorkflowPlugin:
                 pk = self._map_fallacy_to_root_pk(root_cat, roots_index)
             if not pk:
                 pk = self._map_fallacy_to_root_pk(fallacy_name, roots_index)
-            if pk and pk not in candidate_pks:
-                candidate_pks.append(pk)
-                # #3376 — the evidence, keyed by the candidate it belongs to.
-                # First quote wins: a later candidate mapping to the same PK
-                # must not overwrite where the first one was actually seen.
+            if pk:
                 quote = c.get("quote", "")
-                if isinstance(quote, str) and quote.strip():
-                    self._wide_net_quotes[pk] = quote.strip()
-
-        candidate_pks = candidate_pks[: self.MAX_CANDIDATES]
-        self.logger.info(
-            f"Phase 1 wide-net (FB-19 deep): {len(candidates_raw)} candidates, "
-            f"{len(candidate_pks)} unique PKs: {candidate_pks}"
-        )
-        return candidate_pks
+                mapped.append(
+                    (pk, quote.strip() if isinstance(quote, str) else "")
+                )
+        return mapped
 
     async def _execute_tool_calls(
         self,
@@ -2377,25 +2429,117 @@ class FallacyWorkflowPlugin:
         # Compact taxonomy at depth ≤ 6 (the call below) to bound the prompt.
         compact_taxonomy = self._build_compact_taxonomy(max_depth=6)
 
-        # #2908: this was the analysis path's only UNBOUNDED reader — the
-        # whole document went into this single call (on the corpus's longest
-        # document, ~600k prompt tokens; #2907 reduction 5). Read through the
-        # #1737 shared window at WIDE_NET_WINDOW (the Phase-1 prompt's own
-        # bound, defined once at module top): no new constant, and at or
-        # under the bound the selection is offset 0 by construction, so the
-        # prompt is byte-identical to the unbounded form — no replay key can
-        # miss.
+        # #2908: this was the analysis path's only UNBOUNDED reader. Below the
+        # bound the single call is byte-identical to the bounded form (the
+        # guard pins it); at or under the bound the selection is offset 0 by
+        # construction, so no replay key can miss.
         # #2850 lot 7: the stateless call recorded nothing ("the plugin holds
         # no shared state"). The document-path construction now passes the
         # shared state, so the selection reaches the #1737 table; per-arg
         # instances keep state=None and stay unrecorded (unit-relative read,
         # document-scoped record).
-        windowed_text = selected_text(
-            argument_text,
-            WIDE_NET_WINDOW,
-            "fallacy_one_shot",
-            state=self._reading_state,
+        # #2850 lot 10 (dispatch ask 1): above the bound the document is read
+        # WHOLE in k contiguous chunks of one call's capacity — each chunk
+        # answers the same question and the detections are pooled. The record
+        # says how many chunks carried it (ask 5); the opening window is not
+        # the answer any more.
+        planned: List[str]
+        if len(argument_text) > WIDE_NET_WINDOW:
+            head = select_reading_head(argument_text, WIDE_NET_WINDOW)
+            offsets = chunked_reading_offsets(
+                len(argument_text), WHOLE_TEXT_CALL_CAPACITY, start=head.offset
+            )
+            planned = [
+                argument_text[
+                    offset : min(offset + WHOLE_TEXT_CALL_CAPACITY, len(argument_text))
+                ]
+                for offset in offsets
+            ]
+            self._record_window(
+                argument_text,
+                WHOLE_TEXT_CALL_CAPACITY,
+                "fallacy_one_shot",
+                selection=WindowSelection(
+                    offsets[0], WHOLE_TEXT_CALL_CAPACITY, STATUS_SELECTED
+                ),
+                extra={
+                    "chunks": len(planned),
+                    "windows": len(planned),
+                    "chars_read": sum(len(text) for text in planned),
+                },
+            )
+        else:
+            planned = [
+                selected_text(
+                    argument_text,
+                    WIDE_NET_WINDOW,
+                    "fallacy_one_shot",
+                    state=self._reading_state,
+                )
+            ]
+
+        outcomes: List[Dict[str, Any]] = []
+        for chunk_text in planned:
+            outcomes.append(
+                await self._one_shot_single_call(
+                    chunk_text,
+                    statement_block=statement_block,
+                    caveat=caveat,
+                    document_json_key=document_json_key,
+                    compact_taxonomy=compact_taxonomy,
+                    kernel=kernel,
+                    settings=settings,
+                    statements=_statements,
+                )
+            )
+
+        fallacies = [out["fallacy"] for out in outcomes if out.get("fallacy")]
+        if fallacies:
+            return FallacyAnalysisResult(
+                fallacies=fallacies, exploration_method="one_shot"
+            ).model_dump_json(indent=2)
+
+        # No detection in any chunk. A verdict ABOUT the text (the document
+        # refutes a guarded attribution, or the appeal is proportionate)
+        # outranks silence: it is carried as the answer, as before.
+        for kind in ("refuted_by_document", "legitimate_in_register"):
+            for out in outcomes:
+                if out.get("kind") == kind and isinstance(out.get("json"), str):
+                    return out["json"]
+        if outcomes and all(out.get("kind") == "error" for out in outcomes):
+            return json.dumps(
+                {"error": str(outcomes[0].get("message") or "one-shot failed"),
+                 "fallacies": []}
+            )
+
+        # No usable fallacy found — return empty rather than garbage
+        self.logger.warning(
+            "One-shot: could not extract usable fallacy name from response"
         )
+        return json.dumps(
+            {"fallacies": [], "exploration_method": "one_shot_no_match"}
+        )
+
+    async def _one_shot_single_call(
+        self,
+        windowed_text: str,
+        *,
+        statement_block: str,
+        caveat: str,
+        document_json_key: str,
+        compact_taxonomy: str,
+        kernel: Any,
+        settings: Any,
+        statements: List[str],
+    ) -> Dict[str, Any]:
+        """One one-shot call over one chunk — #2850 lot 10's per-chunk unit.
+
+        Returns ``{"kind": ..., "fallacy": IdentifiedFallacy | None,
+        "json": str | None}``; the pooling in :meth:`_run_one_shot` decides
+        what the run answers. Every non-detection keeps the envelope it
+        returned before (#3391 register, #3416 refutation), so a chunk's
+        verdict about the text is never lost in the merge.
+        """
         prompt = (
             f"Analyze the following text:\n--- TEXT ---\n{windowed_text}\n--- END TEXT ---\n"
             f"{statement_block}\n"
@@ -2489,18 +2633,22 @@ class FallacyWorkflowPlugin:
                                 "One-shot: legitimate in its register — "
                                 f"{parsed.get('explanation', '')}"
                             )
-                            return json.dumps(
-                                {
-                                    "fallacies": [],
-                                    "exploration_method": (
-                                        "one_shot_legitimate_in_register"
-                                    ),
-                                    "register_test": REGISTER_TEST_PROPORTIONATE,
-                                    "register_reason": parsed.get("explanation", ""),
-                                    "fallacy_name_considered": fallacy_name,
-                                },
-                                ensure_ascii=False,
-                            )
+                            return {
+                                "kind": "legitimate_in_register",
+                                "fallacy": None,
+                                "json": json.dumps(
+                                    {
+                                        "fallacies": [],
+                                        "exploration_method": (
+                                            "one_shot_legitimate_in_register"
+                                        ),
+                                        "register_test": REGISTER_TEST_PROPORTIONATE,
+                                        "register_reason": parsed.get("explanation", ""),
+                                        "fallacy_name_considered": fallacy_name,
+                                    },
+                                    ensure_ascii=False,
+                                ),
+                            }
                         # #3416 — a guarded attribution the reply itself
                         # refutes with the document's own words is recorded as
                         # refuted BY the document, never turned into a
@@ -2512,69 +2660,69 @@ class FallacyWorkflowPlugin:
                         )
                         if (
                             _cited
-                            and _statements
+                            and statements
                             and is_document_guarded_family(fallacy_name)
                         ):
                             self.logger.info(
                                 "One-shot: refuted by the document — "
                                 f"{fallacy_name}: {_cited}"
                             )
-                            return json.dumps(
-                                {
-                                    "fallacies": [],
-                                    "exploration_method": (
-                                        "one_shot_refuted_by_document"
-                                    ),
-                                    "fallacy_name_considered": fallacy_name,
-                                    "document_statement": _cited,
-                                    "reason": parsed.get("explanation", ""),
-                                },
-                                ensure_ascii=False,
-                            )
-                        fallacy = IdentifiedFallacy(
-                            fallacy_type=fallacy_name,
-                            taxonomy_pk=parsed.get("taxonomy_pk", ""),
-                            explanation=parsed.get("explanation", ""),
-                            confidence=confidence,
-                            navigation_trace=[],
-                            move_author=move_author,
-                            move_author_label=move_author_label,
-                            # #3391 — disagreement stands here: the test that
-                            # stands the flag rides the detection (the
-                            # proportionate case returned above).
-                            register_test=_register_test,
-                        )
-                        result = FallacyAnalysisResult(
-                            fallacies=[fallacy],
-                            exploration_method="one_shot",
-                        )
-                        return result.model_dump_json(indent=2)
+                            return {
+                                "kind": "refuted_by_document",
+                                "fallacy": None,
+                                "json": json.dumps(
+                                    {
+                                        "fallacies": [],
+                                        "exploration_method": (
+                                            "one_shot_refuted_by_document"
+                                        ),
+                                        "fallacy_name_considered": fallacy_name,
+                                        "document_statement": _cited,
+                                        "reason": parsed.get("explanation", ""),
+                                    },
+                                    ensure_ascii=False,
+                                ),
+                            }
+                        return {
+                            "kind": "fallacy",
+                            "json": None,
+                            "fallacy": IdentifiedFallacy(
+                                fallacy_type=fallacy_name,
+                                taxonomy_pk=parsed.get("taxonomy_pk", ""),
+                                explanation=parsed.get("explanation", ""),
+                                confidence=confidence,
+                                navigation_trace=[],
+                                move_author=move_author,
+                                move_author_label=move_author_label,
+                                # #3391 — disagreement stands here: the test
+                                # that stands the flag rides the detection (the
+                                # proportionate case returned above).
+                                register_test=_register_test,
+                            ),
+                        }
             except (json.JSONDecodeError, ValueError, TypeError):
                 pass
 
             # Fallback: try to match a taxonomy name in the raw text (#655 Track KK).
             matched_name = self._match_taxonomy_name(raw)
             if matched_name:
-                fallacy = IdentifiedFallacy(
-                    fallacy_type=matched_name,
-                    taxonomy_pk="",
-                    explanation="One-shot identification (taxonomy name extracted from response)",
-                    confidence=0.35,
-                    navigation_trace=[],
-                )
-                result = FallacyAnalysisResult(
-                    fallacies=[fallacy], exploration_method="one_shot"
-                )
-                return result.model_dump_json(indent=2)
+                return {
+                    "kind": "fallacy",
+                    "json": None,
+                    "fallacy": IdentifiedFallacy(
+                        fallacy_type=matched_name,
+                        taxonomy_pk="",
+                        explanation=(
+                            "One-shot identification (taxonomy name extracted "
+                            "from response)"
+                        ),
+                        confidence=0.35,
+                        navigation_trace=[],
+                    ),
+                }
 
-            # No usable fallacy found — return empty rather than garbage
-            self.logger.warning(
-                "One-shot: could not extract usable fallacy name from response"
-            )
-            return json.dumps(
-                {"fallacies": [], "exploration_method": "one_shot_no_match"}
-            )
+            return {"kind": "no_match", "fallacy": None, "json": None}
 
         except Exception as e:
             self.logger.error(f"One-shot fallback failed: {e}")
-            return json.dumps({"error": str(e), "fallacies": []})
+            return {"kind": "error", "fallacy": None, "json": None, "message": str(e)}

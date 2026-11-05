@@ -8,6 +8,12 @@ read: k = min(3, ceil(L / 3000)) windows, the FIRST still the #1737
 selector's (a TOC head is skipped, not re-read raw), the tails at fixed
 offsets — never one wider call (#2912 is that defect, named excluded).
 
+#2850 lot 10 — this file now pins the FALLBACK: above one call's capacity the
+extraction reads the whole text in k contiguous calls, and the three-window
+sample survives only where no capacity is known (the completion knob off).
+Every run below declares that condition, so the fallback stays measured
+rather than assumed dead.
+
 These witnesses are born red on the pre-lot-8 tree: one window meant one
 call, one tier, and a ``reading_window_chars`` of exactly 3 000. The mock
 pair (``_get_openai_client`` + ``_guarded_chat_completion``) keeps every run
@@ -100,6 +106,12 @@ def _run(text: str, state: Any) -> tuple[Dict[str, Any], List[str]]:
     ), patch(
         f"{INVOKE}._guarded_chat_completion",
         AsyncMock(side_effect=_faithful_fake(calls)),
+    ), patch(
+        # #2850 lot 10 — the sample is the NO-CAPACITY fallback now: the
+        # k-chunk read owns the band above one capacity. This file pins the
+        # fallback, so it declares the condition that selects it.
+        f"{INVOKE}.one_call_extraction_capacity",
+        return_value=0,
     ):
         out = asyncio.run(_invoke_fact_extraction(text, {"_state_object": state}))
     return out, calls
@@ -174,7 +186,9 @@ class TestStratifiedWindows:
         state = UnifiedAnalysisState(doc)
         with patch(
             f"{INVOKE}._get_openai_client", return_value=(MagicMock(), "gpt-witness")
-        ), patch(f"{INVOKE}._guarded_chat_completion", AsyncMock(side_effect=_fake)):
+        ), patch(
+            f"{INVOKE}._guarded_chat_completion", AsyncMock(side_effect=_fake)
+        ), patch(f"{INVOKE}.one_call_extraction_capacity", return_value=0):
             from argumentation_analysis.orchestration.invoke_callables import (
                 _invoke_fact_extraction,
             )
