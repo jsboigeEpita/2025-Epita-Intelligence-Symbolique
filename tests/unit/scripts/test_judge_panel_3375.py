@@ -1245,3 +1245,199 @@ class TestTheRouteIsOnePair:
         monkeypatch.delenv("ANTHROPIC_API_KEY")
         with pytest.raises(SystemExit, match="ANTHROPIC_API_KEY"):
             _REAL_RESOLVE_JUDGE_ENDPOINT("claude-sonnet-5-5")
+
+
+# ---------------------------------------------------------------------------
+# #3417 — the state is derived from the verified items, never the label
+# ---------------------------------------------------------------------------
+
+_S2 = {"code": "S2", "analysis_quote": "l'accepte dans la semantique preferee"}
+_M1_CENTRAL = {
+    "code": "M1",
+    "reading_quote": "ne discute jamais la semantique preferee",
+    "on_central_thesis": True,
+}
+_M1_ELSEWHERE = {**_M1_CENTRAL, "on_central_thesis": False}
+_M2 = {
+    "code": "M2",
+    "analysis_quote": "Le graphe rejette la these alpha",
+    "reading_quote": "Le document defend la these beta",
+    "document_quote": DOC_QUOTE,
+}
+_S4 = {"code": "S4", "analysis_quote": "aucun argument ne survit aux deux"}
+
+
+def _row(items, label):
+    return jp._judge_one(
+        "doc0",
+        PIPELINE_TEXT,
+        ZEROSHOT_TEXT,
+        DOCUMENT_TEXT,
+        SEED,
+        _answer(state=label, items=items),
+    )
+
+
+class TestTheStateIsDerivedFromTheItems:
+    """Cycle 1: the same single item gave PARITY in one cycle and
+    ZEROSHOT_WINS in the next. The state that decides exhaustion condition 2
+    must be a function of the verified items."""
+
+    def test_identical_items_give_the_identical_state_whatever_the_label(self):
+        states = {
+            _row([_M1_CENTRAL], label)["state"]
+            for label in ("PARITY", "ZEROSHOT_WINS", "PIPELINE_SUPPLIES")
+        }
+        assert states == {"ZEROSHOT_WINS"}
+
+    def test_the_label_is_kept_beside_the_derived_state(self):
+        row = _row([_M1_CENTRAL], "PARITY")
+        assert row["state"] == "ZEROSHOT_WINS"
+        assert row["reported_state"] == "PARITY"
+
+    @pytest.mark.parametrize(
+        "items, expected",
+        [
+            ([_S2], "PIPELINE_SUPPLIES"),
+            ([_S2, _M1_ELSEWHERE], "PIPELINE_SUPPLIES"),
+            ([_S2, _M1_CENTRAL], "PIPELINE_SUPPLIES_WITH_GAP"),
+            ([_S2, _M2], "PIPELINE_SUPPLIES_WITH_GAP"),
+            ([_S4], "PARITY"),
+            ([_S4, _M1_ELSEWHERE], "PARITY"),
+            ([_S4, _M1_CENTRAL], "ZEROSHOT_WINS"),
+            ([_M2], "ZEROSHOT_WINS"),
+            ([], "PARITY"),
+        ],
+    )
+    def test_the_grid_rule_on_the_codes(self, items, expected):
+        assert _row(items, "PIPELINE_SUPPLIES")["state"] == expected
+
+    def test_both_abstain_needs_the_label_and_an_empty_list(self):
+        assert _row([], "BOTH_ABSTAIN")["state"] == "BOTH_ABSTAIN"
+        assert _row([_S4], "BOTH_ABSTAIN")["state"] == "PARITY"
+
+    def test_a_dropped_item_derives_nothing(self):
+        invented = {"code": "S1", "analysis_quote": "une phrase absente des deux"}
+        row = _row([invented], "PIPELINE_SUPPLIES")
+        assert row["kept"] == []
+        assert row["state"] == "PARITY"
+
+    def test_a_label_off_the_grid_still_makes_the_row_unparsed(self):
+        assert _row([_S2], "PIPELINE_WINS")["state"] == "UNPARSED"
+
+
+class TestTheTableSaysWhereTheLabelDiffers:
+    def _run(self, world, judge):
+        return asyncio.run(jp.run(_argv(world), judge_call=judge))
+
+    def test_the_label_prints_beside_the_state_and_is_counted(self, tmp_path):
+        world = _with_panel_file(make_world(tmp_path))
+        judge = FakeJudge(lambda *_: _answer(state="PARITY", items=[_S2]))
+        assert self._run(world, judge) == 0
+        table = (world["out"] / "TABLE.md").read_text(encoding="utf-8")
+        assert "`PIPELINE_SUPPLIES` (juge : `PARITY`)" in table
+        assert f"`PIPELINE_SUPPLIES` : **{len(PANEL)}**" in table
+        assert f"étiquette du juge ≠ état dérivé : **{len(PANEL)}**" in table
+        assert "dérivé des items vérifiés" in table
+
+    def test_an_agreeing_label_prints_nothing_extra(self, tmp_path):
+        world = _with_panel_file(make_world(tmp_path))
+        judge = FakeJudge(lambda *_: _answer(state="PIPELINE_SUPPLIES", items=[_S2]))
+        self._run(world, judge)
+        table = (world["out"] / "TABLE.md").read_text(encoding="utf-8")
+        assert "(juge :" not in table
+        assert "étiquette du juge ≠ état dérivé" not in table
+
+    def test_a_pass_stores_its_meta_beside_its_rows(self, tmp_path):
+        world = _with_panel_file(make_world(tmp_path))
+        self._run(world, FakeJudge())
+        meta_path = world["out"] / jp.META_FILENAME
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        assert meta["judge_model"] == "claude-sonnet-5-5"
+        assert meta["seed"] == SEED
+        # The meta file is not a row.
+        assert [row["opaque_id"] for row in jp.load_rows(world["out"])] == PANEL
+
+
+class TestARerenderCallsNoJudge:
+    def _pre_3417_pass(self, tmp_path, items, label):
+        """Rows and table as a pass before #3417 wrote them: the state is the
+        judge's label, and no meta sits beside the rows."""
+        out = tmp_path / "out"
+        out.mkdir()
+        for doc in PANEL:
+            row = _row(items, label)
+            row["opaque_id"] = doc
+            row["state"] = label  # what the old code stored
+            row["costs"] = {"pipeline": 0.01, "zeroshot": 0.001}
+            (out / f"{doc}.json").write_text(json.dumps(row), encoding="utf-8")
+        (out / "TABLE.md").write_text(
+            "# Table de verdicts — juge à l'aveugle (#3375)\n\n"
+            "- Juge : `claude-sonnet-5-5` (famille `anthropic`)\n"
+            "- Commande : `recorded`\n\n## Par document\n\nold body\n",
+            encoding="utf-8",
+        )
+        return out
+
+    def test_the_rows_and_table_are_rederived_and_the_old_table_kept(self, tmp_path):
+        out = self._pre_3417_pass(tmp_path, [_M1_CENTRAL], "PARITY")
+        panel_file = tmp_path / "panel.txt"
+        panel_file.write_text("\n".join(PANEL) + "\n", encoding="utf-8")
+        argv = ["--rerender", "--panel-file", str(panel_file), "--out-dir", str(out)]
+        # No judge, no loader: a re-render must reach neither.
+        assert asyncio.run(jp.run(argv, judge_call=None, document_loader=None)) == 0
+        for doc in PANEL:
+            row = json.loads((out / f"{doc}.json").read_text(encoding="utf-8"))
+            assert row["state"] == "ZEROSHOT_WINS"
+            assert row["reported_state"] == "PARITY"
+        table = (out / "TABLE.md").read_text(encoding="utf-8")
+        assert table.startswith("# Table de verdicts — juge à l'aveugle (#3375)")
+        assert "- Commande : `recorded`" in table
+        assert "Re-rendu sans appel du juge" in table
+        assert f"`ZEROSHOT_WINS` : **{len(PANEL)}**" in table
+        preserved = (out / "TABLE.before-rerender.md").read_text(encoding="utf-8")
+        assert "old body" in preserved
+
+    def test_a_second_rerender_keeps_the_first_preserved_table(self, tmp_path):
+        out = self._pre_3417_pass(tmp_path, [_S2], "PARITY")
+        jp.rerender(out, PANEL)
+        jp.rerender(out, PANEL)
+        preserved = (out / "TABLE.before-rerender.md").read_text(encoding="utf-8")
+        assert "old body" in preserved
+
+    def test_a_rerender_without_a_panel_row_refuses(self, tmp_path):
+        out = self._pre_3417_pass(tmp_path, [_S2], "PIPELINE_SUPPLIES")
+        (out / f"{PANEL[0]}.json").unlink()
+        with pytest.raises(SystemExit, match="absent"):
+            jp.rerender(out, PANEL)
+
+
+class TestTwoPassesAreCompared:
+    def _rows(self, items_by_doc, label="PARITY"):
+        rows = []
+        for doc, items in items_by_doc.items():
+            row = _row(items, label)
+            row["opaque_id"] = doc
+            rows.append(row)
+        return rows
+
+    def test_a_wider_cut_of_the_same_quote_is_the_same_item(self):
+        wider = {**_S2, "analysis_quote": "et l'accepte dans la semantique preferee ;"}
+        a = self._rows({"d1": [_S2, _M1_CENTRAL]})
+        b = self._rows({"d1": [wider]})
+        (entry,) = jp.compare_passes(a, b)
+        assert entry["stable"] == 1
+        assert entry["stable_codes"] == ["S2"]
+        assert (entry["items_a"], entry["items_b"]) == (2, 1)
+
+    def test_another_code_on_the_same_quote_is_not_stable(self):
+        a = self._rows({"d1": [_S2]})
+        b = self._rows({"d1": [{**_S2, "code": "S3"}]})
+        assert jp.compare_passes(a, b)[0]["stable"] == 0
+
+    def test_the_stability_table_counts_states_and_labels(self):
+        a = self._rows({"d1": [_M1_CENTRAL], "d2": [_S2]}, label="PARITY")
+        b = self._rows({"d1": [_M1_CENTRAL], "d2": [_S2]}, label="ZEROSHOT_WINS")
+        text = jp.render_stability(jp.compare_passes(a, b), "a", "b")
+        assert "état dérivé identique : **2** document(s) sur 2" in text
+        assert "étiquette du juge identique : **0** document(s) sur 2" in text
