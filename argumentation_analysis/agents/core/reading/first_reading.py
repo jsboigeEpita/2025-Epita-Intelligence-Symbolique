@@ -113,24 +113,38 @@ _KIND_LABELS_FR = {
 }
 
 FIRST_READING_PROMPT = """You are reading the document below ONCE, whole, before any
-specialist sees it. Your job is to name the moves the document itself makes —
-the ones a reader who read the whole thing would point to first.
+specialist sees it. Your job, in this order:
+
+1. Name the document's CENTRAL THESIS — the claim the whole document builds
+   toward — and the MECHANISM it argues it by: the device, the proof or the
+   chain the document leans on to carry that thesis. On a long document these
+   are often stated late, sometimes once, nowhere near the opening; a reader
+   who stopped at the first page would miss them. Each of the two comes with
+   its own verbatim quote.
+2. Then the other moves the document makes, most important first. A local
+   move — a claim, a concession, an audience address, a threat, a dilemma —
+   comes only after the thesis and the mechanism.
 
 Hard rules:
 - One call, one pass. Say what the text DOES, not what it should have done.
 - No verdict. Never say whether a move is a fallacy, valid, good or bad: the
   instruments decide that afterwards, and your line must not read as their
   verdict.
-- Every move carries a VERBATIM quote copied from the document, character for
+- Every entry carries a VERBATIM quote copied from the document, character for
   character: no translation, no paraphrase, no ellipsis, no two passages
   joined. A quote the document does not carry is discarded by the pipeline.
 - Do not date, place or situate the document in history. Another reader does
   that.
-- At most {max_moves} moves, most important first. Fewer is a valid answer; an
-  empty list is a valid answer when the text makes no defining move.
+- At most {max_moves} entries in total, thesis and mechanism included. Fewer
+  is a valid answer; an entry you cannot fill with a verbatim quote from the
+  document is omitted, and an empty list of other moves is valid.
 
 Answer in French, with ONLY this JSON — no fences, no commentary:
-{{"moves": [{{"kind": "thesis|concession|device|claim|audience|threat|dilemma|other",
+{{"thesis": {{"reading": "one sentence naming the central thesis",
+             "quote": "a verbatim span of the document"}},
+ "mechanism": {{"reading": "one sentence naming the mechanism that carries it",
+                "quote": "a verbatim span of the document"}},
+ "moves": [{{"kind": "concession|device|claim|audience|threat|dilemma|other",
              "reading": "one sentence naming the move",
              "quote": "a verbatim span of the document"}}]}}
 
@@ -141,22 +155,33 @@ Document:
 
 @dataclass
 class DefiningMove:
-    """One move the first reading named, with the text's own words for it."""
+    """One move the first reading named, with the text's own words for it.
+
+    ``slot`` marks the two entries the question asks for FIRST (#3415): the
+    central thesis (``"thesis"``) and the mechanism that carries it
+    (``"mechanism"``). Empty for a local move — the record carries the key
+    only when there is a slot to state (honest absence, so a slot-less
+    record stays byte-identical to a pre-#3415 one).
+    """
 
     kind: str
     reading: str
     quote: str
     offset: Optional[int] = None
     basis: str = FIRST_READING_BASIS
+    slot: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        payload = {
             "kind": self.kind,
             "reading": self.reading,
             "quote": self.quote,
             "offset": self.offset,
             "basis": self.basis,
         }
+        if self.slot:
+            payload["slot"] = self.slot
+        return payload
 
     def span(self) -> Optional[Tuple[int, int]]:
         """``(start, end)`` in the document, or ``None`` when unpositioned."""
@@ -173,10 +198,14 @@ class FirstReading:
     read as "completed, nothing found". ``dropped_quotes`` counts the moves
     whose quote the document does not carry — the number the render can state,
     because a silently discarded move is the defect this module repairs.
+    ``malformed_moves`` (#3415) counts the answer objects the document-level
+    JSON parse could not read but the per-object salvage could not keep either:
+    one bad character must cost its own move, never the whole reading.
     """
 
     moves: List[DefiningMove] = field(default_factory=list)
     dropped_quotes: int = 0
+    malformed_moves: int = 0
     status: str = "no_llm"
     error: str = ""
     read_scope: Dict[str, Any] = field(default_factory=dict)
@@ -189,6 +218,8 @@ class FirstReading:
             "read_scope": dict(self.read_scope),
             "basis": FIRST_READING_BASIS,
         }
+        if self.malformed_moves:
+            payload["malformed_moves"] = self.malformed_moves
         # #3395 — ``error`` only when there IS one: the writers' shared guard
         # treats the presence of the key as a failed invoke (the #3377
         # convention), so an empty string here would make every successful
@@ -221,6 +252,93 @@ def _parse_json_object(content: str) -> Any:
     if text.startswith("```"):
         text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
     return json.loads(text) if text else {}
+
+
+def _balanced_object_spans(text: str) -> List[str]:
+    """The outermost balanced ``{...}`` spans of ``text``, string-aware."""
+    spans: List[str] = []
+    depth = 0
+    start = -1
+    in_string = False
+    escape = False
+    for i, ch in enumerate(text):
+        if escape:
+            escape = False
+            continue
+        if ch == "\\":
+            escape = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}" and depth:
+            depth -= 1
+            if depth == 0 and start >= 0:
+                spans.append(text[start : i + 1])
+                start = -1
+    return spans
+
+
+def _salvage_objects(text: str) -> Tuple[List[Dict[str, Any]], int]:
+    """Parse every balanced object on its own; count what nothing could read.
+
+    #3415 ask 2 — cycle 1 measured the failure class: one bad character (a
+    stray ``','``) made the document-level ``json.loads`` reject the whole
+    answer and cost every move. Salvage is per-object: an outer span that
+    fails is re-scanned INSIDE (the wrapper is structure, not a move — it
+    counts only when it swallowed nothing readable), and a leaf span that
+    fails is one lost move.
+    """
+    objects: List[Dict[str, Any]] = []
+    malformed = 0
+    for span in _balanced_object_spans(text):
+        try:
+            obj = json.loads(span)
+        except json.JSONDecodeError:
+            inner, inner_bad = _salvage_objects(span[1:-1])
+            objects.extend(inner)
+            malformed += inner_bad if inner else 1
+        else:
+            if isinstance(obj, dict):
+                objects.append(obj)
+            else:
+                malformed += 1
+    return objects, malformed
+
+
+def _parse_answer(content: str) -> Tuple[Dict[str, Any], int]:
+    """The answer dict and the count of objects no path could read.
+
+    Clean parse first; on a document-level ``JSONDecodeError`` the salvage
+    path keeps every object that reads on its own, splices a wrapper's
+    ``moves`` list and slots back in, and counts the rest — so a malformed
+    answer costs its own objects, never the reading.
+    """
+    text = (content or "").strip()
+    try:
+        parsed = _parse_json_object(text)
+    except json.JSONDecodeError:
+        objects, malformed = _salvage_objects(text)
+        spliced: Dict[str, Any] = {}
+        extra_moves: List[Any] = []
+        for obj in objects:
+            if isinstance(obj.get("moves"), list):
+                extra_moves.extend(obj["moves"])
+                for slot in ("thesis", "mechanism"):
+                    if isinstance(obj.get(slot), dict) and slot not in spliced:
+                        spliced[slot] = obj[slot]
+            elif "kind" in obj or ("reading" in obj and "quote" in obj):
+                extra_moves.append(obj)
+        if extra_moves:
+            spliced["moves"] = extra_moves
+        return spliced, malformed
+    return parsed if isinstance(parsed, dict) else {}, 0
 
 
 def build_first_reading_prompt(excerpt: str) -> str:
@@ -295,37 +413,68 @@ async def build_first_reading(
 
     try:
         content = await llm_callable(build_first_reading_prompt(excerpt))
-        parsed = _parse_json_object(content or "")
-        raw_moves = parsed.get("moves") if isinstance(parsed, dict) else None
+        parsed, malformed = _parse_answer(content or "")
+        raw_moves = parsed.get("moves")
         if not isinstance(raw_moves, list):
+            raw_moves = None
+        has_slot = isinstance(parsed.get("thesis"), dict) or isinstance(
+            parsed.get("mechanism"), dict
+        )
+        if raw_moves is None and not has_slot:
+            # Nothing readable: a clean answer with no entry at all, or a
+            # malformed one the salvage could not save anything from. The
+            # malformed count says which of the two it was.
             result.status = "parse_error"
-            result.error = "no 'moves' list in the answer"
+            result.error = (
+                f"no readable entry in the answer ({malformed} unreadable object(s))"
+                if malformed
+                else "no 'moves' list in the answer"
+            )
+            result.malformed_moves = malformed
             return result
 
         moves: List[DefiningMove] = []
         dropped = 0
-        for raw in raw_moves:
-            if not isinstance(raw, dict):
-                continue
-            reading = str(raw.get("reading", "") or "").strip()
-            quote = str(raw.get("quote", "") or "").strip()
+
+        def _keep(entry: Any, kind: str, slot: str) -> None:
+            """One verified entry — the citation rule is the same for a slot
+            (#3415) as for a local move: a quote the document does not carry
+            is counted and dropped, never kept."""
+            nonlocal dropped
+            if not isinstance(entry, dict):
+                return
+            reading = str(entry.get("reading", "") or "").strip()
+            quote = str(entry.get("quote", "") or "").strip()
             if not reading or not quote:
                 dropped += 1
-                continue
+                return
             if not quote_occurs_in(raw_text, quote):
                 # The one citation rule (#3389). Counted, never kept.
                 dropped += 1
-                logger.info("FirstReading: dropped a move whose quote is absent")
-                continue
+                logger.info("FirstReading: dropped an entry whose quote is absent")
+                return
             index = locate_quote(raw_text, quote)
             moves.append(
                 DefiningMove(
-                    kind=move_kind(raw.get("kind")),
+                    kind=kind,
                     reading=reading,
                     quote=quote,
                     offset=index if index >= 0 else None,
+                    slot=slot,
                 )
             )
+
+        # #3415 ask 1 — the two entries the question asks for FIRST: the
+        # central thesis and the mechanism that carries it. The kinds stay in
+        # the closed vocabulary (thesis / device); the slot marks what each
+        # is, and both are kept ahead of the local moves whatever their
+        # position in the document (a late mechanism is the measured case).
+        _keep(parsed.get("thesis"), "thesis", "thesis")
+        _keep(parsed.get("mechanism"), "device", "mechanism")
+        for raw in raw_moves or []:
+            if not isinstance(raw, dict):
+                continue
+            _keep(raw, move_kind(raw.get("kind")), "")
             if len(moves) >= MAX_MOVES:
                 break
 
@@ -344,17 +493,15 @@ async def build_first_reading(
 
         result.moves = unique
         result.dropped_quotes = dropped
+        result.malformed_moves = malformed
         result.status = "ok"
         logger.info(
-            "FirstReading: %d move(s), %d dropped, whole_document=%s",
+            "FirstReading: %d move(s), %d dropped, %d malformed, whole_document=%s",
             len(result.moves),
             result.dropped_quotes,
+            result.malformed_moves,
             result.read_scope.get("whole_document"),
         )
-    except json.JSONDecodeError as e:
-        result.status = "parse_error"
-        result.error = f"{type(e).__name__}: {e}"
-        logger.warning("FirstReading parse error: %s", e)
     except Exception as e:  # pragma: no cover - provider failures
         result.status = "llm_error"
         result.error = f"{type(e).__name__}: {e}"
@@ -477,16 +624,29 @@ def first_reading_note(state: Any) -> str:
         "ne les présente jamais comme un sophisme ni comme une note.",
         f"  Portée : {extent}.",
     ]
+    malformed = record.get("malformed_moves") or 0
     for move in moves:
         offset = move.get("offset")
         position = f" [texte, position {offset}]" if isinstance(offset, int) else ""
         # R1142 — the label prints in French (#3393, the reader's
-        # vocabulary); the English key stays in the state.
-        label = _KIND_LABELS_FR.get(str(move.get("kind")), "autre")
+        # vocabulary); the English key stays in the state. #3415 — the two
+        # slots the question asks for first print under their own names, so
+        # the writer can point at the thesis and the mechanism as such.
+        slot = str(move.get("slot") or "")
+        if slot == "thesis":
+            label = "thèse centrale"
+        elif slot == "mechanism":
+            label = "mécanisme"
+        else:
+            label = _KIND_LABELS_FR.get(str(move.get("kind")), "autre")
         lines.append(
             f"  - {label} : {move.get('reading')} "
             f"— « {move.get('quote')} »{position}"
         )
     if dropped:
         lines.append(f"  {dropped} geste(s) écarté(s) : citation absente du document.")
+    if malformed:
+        # #3415 ask 2 — a malformed object costs its own move, never the
+        # reading; what was lost is stated, not hidden.
+        lines.append(f"  {malformed} objet(s) illisible(s) : geste(s) perdu(s).")
     return "\n".join(lines)
