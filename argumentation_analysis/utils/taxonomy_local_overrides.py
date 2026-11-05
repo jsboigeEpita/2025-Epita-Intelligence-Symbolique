@@ -44,17 +44,15 @@ s'est déjà trompée », PK 992 « Vouloir le beurre et l'argent du beurre »
 (attested idiom, no alternative technical term), PK 1009 « Où est le mal ? ».
 The 7 borderlines are deliberately untouched (established idioms).
 
-#3394 follow-up (R1142) — register fixes for ``desc_fr``. The taxonomy
-addresses whoever commits the fallacy: 1 403 of the 1 408 upstream cells
-already speak in the second person, 5 do not. The register decision is the
-coordinator's (#3394 comment, cycle-0 re-review): every definition
-addresses the arguer. The 5 fixes re-person the SAME definition — no
-conjugation machinery anywhere (a generic re-personing would also rewrite
-the 1 403 that already hold), no « » added (the #3389 quote-fidelity
-control would read a quoted span as a citation of the document), no cell
-invented. Two of the five restore a leading « V » upstream had cut off
-(``ous adhérez`` → ``Vous adhérez``); the other three turn an impersonal
-statement into the address the surrounding 1 403 cells already use.
+#3394 follow-up (R1142, reworked R1143) — register repairs for ``desc_fr``.
+Two upstream cells lost their leading « V » (``ous adhérez …``, ``ous
+justifiez …``): a truncation, repaired here by PK the same way as the
+editorial purges. The register itself is NOT rewritten upstream: the R1142
+head re-personed three impersonal cells (PK 501, 589, 1057) and the
+coordinator's re-review sent it back — an impersonal definition is correct
+in another register, and the addressee the taxonomy speaks to is stated by
+the ONE producer the writer reads (``taxonomy_definition_note``, #3394),
+not by editing upstream content.
 """
 
 from __future__ import annotations
@@ -85,18 +83,11 @@ RENDER_ALIAS_SOURCES: Dict[int, str] = {
     1311: "rendu attesté de « big lie » — fr.wikipedia.org/wiki/Glossaire_de_la_langue_du_Troisième_Reich, Linguee/Reverso",
 }
 
-# PK -> register-fixed ``desc_fr`` (#3394 R1142). Each value re-persons the
-# upstream cell's own sentence into the second person; the guard test pins
-# that the upstream cell is NOT already second person (a dead override
-# reddens) and that the fix IS.
+# PK -> truncation-repaired ``desc_fr`` (#3394 R1142, reworked R1143). Each
+# value restores the leading « V » upstream had cut off — nothing else in the
+# sentence moves. The guard test pins that the upstream cell IS truncated (a
+# dead override reddens) and that the fix is not.
 REGISTER_FIXES: Dict[int, str] = {
-    501: (
-        "Vous ciblez un individu ou un groupe pour le blâmer pour des "
-        "problèmes dont il n’est pas responsable, souvent pour détourner "
-        "l’attention de vos propres échecs ou responsabilités."
-    ),
-    589: "Vous croisez les bras pour envoyer un signal de fermeture ou de défense.",
-    1057: "Vous traitez une information d’une manière qui affecte sa mémorisation.",
     1253: (
         "Vous adhérez à une approche qui attribue tout comportement humain à "
         "l’environnement et aux stimuli externes, négligeant les facteurs "

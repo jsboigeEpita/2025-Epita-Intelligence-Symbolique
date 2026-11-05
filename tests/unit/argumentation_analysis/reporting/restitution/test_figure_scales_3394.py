@@ -191,9 +191,11 @@ class TestALabelCarriesItsDefinition:
         assert taxonomy_definition("Argument fallac", None) == ""
 
     def test_the_note_reads_the_entry_record(self):
-        assert (
-            taxonomy_definition_note({"type": _ROOT_LABEL})
-            == f"définition : {_ROOT_DESC}"
+        # R1143: the root definition is second person, so the note also names
+        # the addressee the taxonomy speaks to.
+        assert taxonomy_definition_note({"type": _ROOT_LABEL}) == (
+            "définition (la taxonomie s'adresse à qui commet le sophisme) : "
+            f"{_ROOT_DESC}"
         )
 
     def test_the_note_prints_nothing_when_the_node_does_not_resolve(self):
@@ -243,15 +245,20 @@ class TestTheDefinitionRidesTheFirstMention:
     def test_the_first_mention_carries_the_definition(self):
         prompt = build_act3_prompt(build_act3_evidence(self._state_with_fallacies(1)))
         slot = self._weaknesses_slot(prompt)
-        assert f"définition : {_ROOT_DESC}" in slot, (
+        assert (
+            "définition (la taxonomie s'adresse à qui commet le sophisme) : "
+            f"{_ROOT_DESC}" in slot
+        ), (
             "a taxonomy label reaching the reader carries the taxonomy's "
-            "one-line definition on its first mention (#3394 ask 3)"
+            "one-line definition on its first mention (#3394 ask 3), and the "
+            "note names the addressee when the definition is second person "
+            "(R1143)"
         )
 
     def test_the_definition_is_said_once_per_label(self):
         prompt = build_act3_prompt(build_act3_evidence(self._state_with_fallacies(3)))
         slot = self._weaknesses_slot(prompt)
-        assert slot.count("définition :") == 1, (
+        assert slot.count("définition") == 1, (
             "the definition rides the FIRST mention; a repeat on every line "
             "would bury the document-grounded detail"
         )

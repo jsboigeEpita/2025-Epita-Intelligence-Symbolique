@@ -260,11 +260,12 @@ _DEFINITION_CAP = 240
 
 
 def _register_fixed_desc_fr(row: Dict[str, str]) -> str:
-    """The row's ``desc_fr`` with the #3394 register fixes applied.
+    """The row's ``desc_fr`` with the #3394 truncation repairs applied.
 
     The vendored CSV is a byte-faithful mirror of upstream (integrity guard
-    #1956) — the 5 cells that do not address the arguer are fixed at load,
-    addressed by PK, the same discipline as the #2036 editorial purges.
+    #1956) — the 2 cells whose leading « V » upstream cut off are repaired
+    at load, addressed by PK, the same discipline as the #2036 editorial
+    purges. Upstream register is not rewritten (R1143 rework).
     """
     pk = (row.get("PK") or "").strip()
     if pk.isdigit() and int(pk) in REGISTER_FIXES:
