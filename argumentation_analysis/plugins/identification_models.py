@@ -73,6 +73,21 @@ def confidence_outranks(new: Optional[float], incumbent: Optional[float]) -> boo
     return new > incumbent
 
 
+def confidence_sort_key(confidence: Optional[float]) -> Tuple[bool, float]:
+    """None-safe ordering KEY, same rule as ``confidence_outranks`` (#3453).
+
+    Sorted with ``reverse=True``: measured confidences first, descending;
+    unmeasured (``None``) after every measured one. Between unmeasured
+    entries the key is equal, so a stable sort keeps their order — no
+    invented tiebreak. A bare ``key=lambda f: f.confidence`` raised
+    ``TypeError`` on the first None and dropped every confirmation of the
+    descent that sorted it.
+    """
+    if confidence is None:
+        return (False, 0.0)
+    return (True, float(confidence))
+
+
 class IdentifiedFallacy(BaseModel):
     """Structured result from hierarchical taxonomy-guided fallacy detection."""
 
