@@ -69,6 +69,7 @@ from argumentation_analysis.plugins.identification_models import (
     IdentifiedFallacy,
     FallacyAnalysisResult,
     confidence_outranks,
+    confidence_sort_key,
     fallacy_measured_fields,
 )
 
@@ -2172,7 +2173,11 @@ class FallacyWorkflowPlugin:
                 )
 
             if identified:
-                identified.sort(key=lambda f: f.confidence, reverse=True)
+                # #3453 — None-safe: a measured confirmation outranks an
+                # unmeasured one (the dedup's own rule, confidence_outranks).
+                identified.sort(
+                    key=lambda f: confidence_sort_key(f.confidence), reverse=True
+                )
                 # FB-30 (#1107): the mechanical beam descent (_beam_descent,
                 # Phase 3b) is removed — restored agentic navigation in
                 # _explore_single_branch (no depth cap + multi-level cluster)

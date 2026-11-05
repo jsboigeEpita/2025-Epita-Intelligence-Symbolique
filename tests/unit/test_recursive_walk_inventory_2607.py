@@ -56,6 +56,9 @@ ROOTS_BY_WALK = {
     "unit/argumentation_analysis/orchestration/test_timeout_composition_3435.py": [
         "package_root (argumentation_analysis production)"
     ],
+    "unit/argumentation_analysis/plugins/test_confidence_sort_3453.py": [
+        "PLUGINS_DIR (argumentation_analysis/plugins production)"
+    ],
     "unit/argumentation_analysis/reporting/restitution/test_detection_confidence_words_3248.py": [
         "_STORED_STATES (argumentation_analysis/evaluation/results, gitignored)"
     ],
