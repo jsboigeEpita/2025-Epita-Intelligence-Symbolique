@@ -39,6 +39,10 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.dataset import judge_panel as jp  # noqa: E402
 
+# The real resolver, saved before the autouse fixture below replaces it, so
+# the R1143 route witnesses measure the function production calls.
+_REAL_RESOLVE_JUDGE_ENDPOINT = jp.resolve_judge_endpoint
+
 # --- synthetic arms -------------------------------------------------------
 # Deliberately unlike the corpus: no real name, no real excerpt. What matters
 # is that a quote can be found (or not) mechanically.
@@ -1185,3 +1189,59 @@ class TestTheAnthropicRoute:
         record = asyncio.run(jp.call_judge(endpoint, "prompt"))
         assert seen["url"] == "http://127.0.0.1:3002/v1/messages"
         assert record["answered_model"] == "claude-sonnet-5-5"
+
+
+class TestTheRouteIsOnePair:
+    """R1143: the key came from the repository's ``.env`` and the base URL
+    from the harness's process (``ANTHROPIC_BASE_URL`` = its local proxy), so
+    all ten cycle-1 judging calls answered 401 from ``127.0.0.1:3002``. The
+    URL now follows the key's source."""
+
+    PROXY = "http://127.0.0.1:3002"
+
+    @pytest.fixture
+    def seat(self, tmp_path, monkeypatch):
+        """A checkout whose ``.env`` carries a key and no URL, run under a
+        harness that exports its own proxy URL — the cycle-1 seat."""
+        from scripts.dataset import run_corpus_batch
+
+        (tmp_path / ".env").write_text("ANTHROPIC_API_KEY=file-key\n", encoding="utf-8")
+        monkeypatch.setattr(run_corpus_batch, "REPO_ROOT", tmp_path)
+        monkeypatch.setenv("ANTHROPIC_BASE_URL", self.PROXY)
+        # ``load_dotenv`` already copied the file's key into the process.
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "file-key")
+        from argumentation_analysis.core import llm_service
+
+        monkeypatch.setattr(
+            llm_service,
+            "resolve_chat_endpoint",
+            lambda: ("pipeline-key", "https://example.invalid/v1", "gpt-5.6-luna"),
+        )
+        return tmp_path
+
+    def test_the_file_key_reaches_the_vendor_not_the_harness_proxy(self, seat):
+        endpoint = _REAL_RESOLVE_JUDGE_ENDPOINT("claude-sonnet-5-5")
+        assert endpoint["api_key"] == "file-key"
+        assert endpoint["host"] == "api.anthropic.com", endpoint["base_url"]
+        assert endpoint["route"] == "named-anthropic (.env)"
+
+    def test_a_url_in_the_file_travels_with_its_key(self, seat):
+        (seat / ".env").write_text(
+            "ANTHROPIC_API_KEY=file-key\nANTHROPIC_BASE_URL=https://gw.invalid\n",
+            encoding="utf-8",
+        )
+        assert jp.anthropic_route_pair() == ("file-key", "https://gw.invalid", ".env")
+
+    def test_a_process_key_keeps_the_process_url(self, seat, monkeypatch):
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "process-key")
+        assert jp.anthropic_route_pair() == ("process-key", self.PROXY, "process")
+
+    def test_without_a_file_the_process_pair_is_used(self, seat, monkeypatch):
+        (seat / ".env").unlink()
+        assert jp.anthropic_route_pair() == ("file-key", self.PROXY, "process")
+
+    def test_no_key_anywhere_is_still_no_route(self, seat, monkeypatch):
+        (seat / ".env").unlink()
+        monkeypatch.delenv("ANTHROPIC_API_KEY")
+        with pytest.raises(SystemExit, match="ANTHROPIC_API_KEY"):
+            _REAL_RESOLVE_JUDGE_ENDPOINT("claude-sonnet-5-5")
