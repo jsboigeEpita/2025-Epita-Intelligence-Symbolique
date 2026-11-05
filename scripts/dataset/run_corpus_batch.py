@@ -49,7 +49,7 @@ import re
 import sys
 import time
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from argumentation_analysis.evaluation.env_manifest import (
     environment_manifest,
@@ -398,6 +398,18 @@ def expand_corpus(
         n_filtered = 0
         n_no_text = 0
         for ext_idx, extract in enumerate(extracts):
+            # #3392 ask 2 — the EXTRACT is the record: extract-level metadata
+            # overlays the source-level classification with the same #1906
+            # precedence (explicit values win, the "unknown" sentinel does
+            # not erase a resolved inference). Before this, an extract that
+            # recorded its own event, participants or title carried fields
+            # nothing read — source[9]-shaped extracts already do.
+            ext_meta = extract.get("metadata")
+            doc_meta = (
+                merge_source_metadata(classified, ext_meta)
+                if isinstance(ext_meta, dict)
+                else classified
+            )
             # Corpus uses "extract_text" (not "full_text") at extract level.
             # Fallback chain: extract_text → full_text_segment → source full_text.
             full_text = (
@@ -434,7 +446,7 @@ def expand_corpus(
                     "source_opaque_id": src_oid,
                     "opaque_id": oid,
                     "full_text": full_text,
-                    "metadata": classified,
+                    "metadata": doc_meta,
                 }
             )
             src_doc_count += 1
@@ -769,7 +781,7 @@ async def _run_single(
         sanitize_fn = sanitize_state
 
     # --- Resume logic -------------------------------------------------------
-    resume_from: Optional[set] = None
+    resume_from: Optional[Set[str]] = None
     resume_context: Optional[Dict[str, Any]] = None
     checkpoint_snapshot: Optional[Dict[str, Any]] = None
 
@@ -810,7 +822,7 @@ async def _run_single(
     # --- Build checkpoint callback ------------------------------------------
     level_counter = [0]
 
-    def _checkpoint_callback(results: Dict, ctx: Dict) -> None:
+    def _checkpoint_callback(results: Dict[str, Any], ctx: Dict[str, Any]) -> None:
         """Called by WorkflowExecutor after each DAG level."""
         if checkpoint_mgr is None:
             return

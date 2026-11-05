@@ -52,6 +52,12 @@ _STATE = {
     "act3_conclusion": None,
     "narrative_synthesis": None,
     "interpretive_question": None,
+    # The document's own words, as production states carry them: the three
+    # recorded classification values appear in it — « » is provable (#3389).
+    "raw_text": (
+        "Note de service émise par l'Institution X. Ordre du jour de "
+        "l'assemblée synthétique, année 2026."
+    ),
     "source_metadata": {
         "discourse_type": "note de service",
         "title": "Ordre du jour",
@@ -128,3 +134,137 @@ class TestTheBatchLogKeepsItsLine:
         )
         assert "classified non-argumentative" in line
         assert "#1909" in line
+
+
+class TestTheHeaderSElementsAreRecordedAndRead:
+    """#3392 ask 2 — the extract records what its own header lists.
+
+    The coordinator's ask: the gap closes by the EXTRACT recording the
+    event, the participants and the report's title — not by an LLM call in
+    the paragraph. Two producers carry it: ``expand_corpus`` reads
+    extract-level metadata (dead before — a source-9-shaped extract carried
+    fields nothing read), and the paragraph names the recorded elements
+    under reader labels. Synthetic words throughout.
+    """
+
+    _HEADER_META = {
+        "discourse_type": "compte rendu",
+        "event": "audition de la commission synthétique",
+        "participants": "deux rapporteures fictives",
+        "report_title": "Rapport sur un sujet inventé",
+    }
+
+    #: The panel's measured shape (#3408 rework): the header CARRIES the
+    #: report's title verbatim, words the event differently, and names the
+    #: participants nowhere in its 320 characters.
+    _HEADER_TEXT = (
+        "Compte rendu. La commission s'est réunie en audition dans la "
+        "journée. Rapport sur un sujet inventé, déposé au greffe."
+    )
+
+    def test_the_paragraph_names_the_three_elements(self):
+        state = dict(_STATE)
+        state["source_metadata"] = dict(self._HEADER_META)
+        state["raw_text"] = self._HEADER_TEXT
+        out = _fiche(state=state)
+        # Carried by the document → between « » (#3389's rule, #3392).
+        assert "titre du rapport : « Rapport sur un sujet inventé »" in out
+        # Recorded but NOT the document's words → a description, no « ».
+        assert "événement : audition de la commission synthétique" in out
+        assert "participants : deux rapporteures fictives" in out
+        assert "événement : «" not in out
+        assert "participants : «" not in out
+        # raw keys never reach the reader
+        assert "report_title" not in out
+        assert "event :" not in out
+
+    def test_a_quoted_value_is_one_the_document_carries(self):
+        """Born red on the first #3408 head: the paragraph « »-quoted every
+        recorded value, so a composed event and absent participants read as
+        the document's own words — the exact class #3389 exists to close.
+        A value goes between « » only if the in-memory document carries it
+        (``normalised_quote_in``); otherwise it prints as a description."""
+        state = dict(_STATE)
+        state["source_metadata"] = dict(self._HEADER_META)
+        state["raw_text"] = self._HEADER_TEXT
+        out = _fiche(state=state)
+        line = next(ln for ln in out.splitlines() if "Le matériel enregistré" in ln)
+        # the carried one is quoted, the two uncarried ones are not
+        assert "« Rapport sur un sujet inventé »" in line
+        assert "« audition" not in line
+        assert "« deux rapporteures" not in line
+
+    def test_the_control_render_stays_byte_identical(self):
+        """DoD: a render whose every recorded value the document carries
+        keeps the exact bytes the paragraph always printed."""
+        state = dict(_STATE)
+        state["source_metadata"] = dict(self._HEADER_META)
+        state["raw_text"] = (
+            "Compte rendu de l'audition de la commission synthétique où "
+            "deux rapporteures fictives ont présenté le rapport sur un "
+            "sujet inventé aux membres."
+        )
+        out = _fiche(state=state)
+        assert (
+            "type de discours : « compte rendu » ; "
+            "événement : « audition de la commission synthétique » ; "
+            "participants : « deux rapporteures fictives » ; "
+            "titre du rapport : « Rapport sur un sujet inventé »"
+        ) in out
+
+    def test_expand_corpus_reads_extract_level_metadata(self, monkeypatch):
+        """Born red on main: the per-document record carried only the
+        source-level classification — an extract recording its own event
+        handed the reader nothing. The opaque-id salt comes from the test
+        (monkeypatch), never from the CI's .env (#3408 rework: the seat's
+        .env carries OPAQUE_ID_SALT, the CI's does not)."""
+        monkeypatch.setenv("OPAQUE_ID_SALT", "sel-synthetique-3392")
+        from scripts.dataset.run_corpus_batch import expand_corpus
+
+        defs = [
+            {
+                "source_name": "Source synthétique",
+                "extracts": [
+                    {
+                        "extract_id": "hdr",
+                        "extract_name": "En-tête",
+                        "extract_text": "Un en-tête synthétique sans argument.",
+                        "metadata": {
+                            "event": "audition de la commission synthétique",
+                            "participants": "deux rapporteures fictives",
+                            "report_title": "Rapport sur un sujet inventé",
+                        },
+                    }
+                ],
+            }
+        ]
+        docs, _omitted, _skipped = expand_corpus(defs)
+        assert len(docs) == 1
+        meta = docs[0]["metadata"]
+        assert meta["event"] == "audition de la commission synthétique"
+        assert meta["participants"] == "deux rapporteures fictives"
+        assert meta["report_title"] == "Rapport sur un sujet inventé"
+
+    def test_extract_metadata_does_not_erase_source_classification(self, monkeypatch):
+        """#1906 precedence, extract layer: an explicit value wins, but the
+        source-level fields the extract does not mention survive. Salt via
+        monkeypatch — the CI's .env has no OPAQUE_ID_SALT."""
+        monkeypatch.setenv("OPAQUE_ID_SALT", "sel-synthetique-3392")
+        from scripts.dataset.run_corpus_batch import expand_corpus
+
+        defs = [
+            {
+                "source_name": "Discourspolitiquefr",
+                "metadata": {"era": "2020-2029"},
+                "extracts": [
+                    {
+                        "extract_text": "Un extrait synthétique.",
+                        "metadata": {"event": "un événement enregistré"},
+                    }
+                ],
+            }
+        ]
+        docs, _omitted, _skipped = expand_corpus(defs)
+        meta = docs[0]["metadata"]
+        assert meta["event"] == "un événement enregistré"
+        assert meta["era"] == "2020-2029"
