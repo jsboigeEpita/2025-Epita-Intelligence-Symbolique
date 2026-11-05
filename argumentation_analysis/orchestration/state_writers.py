@@ -878,6 +878,11 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
     # the winner is a member of it, and the conflict's own population is a
     # DIFFERENT set, recorded apart.
     vote_population: dict[str, Any] | None = None
+    # #3386 — the coalition play's structure and the declared profile's
+    # pivot, stored only when the verdict carried them (honest absence: a
+    # vote whose negotiation changed nothing carries neither).
+    coalition: dict[str, Any] | None = None
+    manipulability: dict[str, Any] | None = None
     if isinstance(vote_result, dict) and vote_result.get("winner"):
         winner = str(vote_result["winner"])
         winner_provenance = "vote_aggregate"
@@ -916,6 +921,15 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
             population = verdict.get("vote_population")
             if isinstance(population, dict) and population.get("unit_ids"):
                 vote_population = dict(population)
+            # #3386 — the coalition play's measured structure + the declared
+            # profile's pivot (read from the verdict, never recomputed: the
+            # writer states what the vote measured, not its own derivation).
+            raw_coalition = verdict.get("coalition")
+            if isinstance(raw_coalition, dict) and raw_coalition:
+                coalition = dict(raw_coalition)
+            raw_manip = verdict.get("manipulability")
+            if isinstance(raw_manip, dict) and raw_manip:
+                manipulability = dict(raw_manip)
     elif llm_gov.get("recommended_resolution"):
         winner = str(llm_gov["recommended_resolution"])
         winner_provenance = "llm_resolution"
@@ -953,6 +967,10 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
         winner_basis=winner_basis,
         # #2850 R1107 — the vote's own population, apart from the conflict's.
         vote_population=vote_population,
+        # #3386 — the coalition play's measured structure + pivot, read
+        # from the verdict above (honest absence when the play produced none).
+        coalition=coalition,
+        manipulability=manipulability,
     )
 
 

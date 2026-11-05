@@ -1547,6 +1547,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         n_methods_decided: Optional[int] = None,
         winner_basis: Optional[str] = None,
         vote_population: Optional[Dict[str, Any]] = None,
+        coalition: Optional[Dict[str, Any]] = None,
+        manipulability: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Add a governance voting decision.
 
@@ -1585,6 +1587,12 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         The conflict detection has its own population, recorded apart —
         one key with two producers was the defect this field closes.
 
+        #3386 — ``coalition`` carries the coalition play's measured outcome
+        (blocs, ballots moved, winner declared vs cast) and ``manipulability``
+        a pivot the #3385 engine found on the declared profile. Both stored
+        only when the play produced them; a vote whose negotiation changed
+        nothing carries neither.
+
         Optional fields are stored only when set (honest absence).
         """
         gd_id = self._generate_id("gov", self.governance_decisions)
@@ -1616,6 +1624,18 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             # reader cannot tell which set of units the deliberation
             # examined (the conflict's own record names another one).
             entry["vote_population"] = dict(vote_population)
+        if coalition:
+            # #3386 — the coalition play's measured outcome: the blocs that
+            # formed, the ballots the negotiation moved, and whether the
+            # winner changed between the declared and the cast profile.
+            # Stored only when the play produced a structure — a vote that
+            # never negotiated carries no coalition key.
+            entry["coalition"] = dict(coalition)
+        if manipulability:
+            # #3386 (b) — a pivot the #3385 engine found on the declared
+            # profile (a pair that can flip the Condorcet winner, else a
+            # single player). Honest absence when the profile is not pivotal.
+            entry["manipulability"] = dict(manipulability)
         self.governance_decisions.append(entry)
         state_logger.info(f"Governance decision added: {gd_id} ({method}: {winner})")
         return gd_id

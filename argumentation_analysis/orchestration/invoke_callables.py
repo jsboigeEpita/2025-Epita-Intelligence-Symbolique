@@ -2893,6 +2893,12 @@ async def _invoke_governance(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
     """Invoke governance analysis via plugin + LLM-powered deliberation assessment."""
+    from argumentation_analysis.agents.core.context.strategist import (
+        compute_manipulability,
+    )
+    from argumentation_analysis.agents.core.governance.coalition_play import (
+        play_sensitivity,
+    )
     from argumentation_analysis.plugins.governance_plugin import GovernancePlugin
 
     plugin = GovernancePlugin()
@@ -3007,9 +3013,59 @@ async def _invoke_governance(
         quality_output
     )
     if g_derivable:
+        # #3386 + #3418 R1144 — the verdict is the DECLARED aggregate, always.
+        # The negotiation is a SENSITIVITY, never the vote: TWO arbitrary
+        # inputs decide a play — the seat order (stances rotate over it AND
+        # the round-robin follows it, so it fixes who hears which proposal
+        # last) and the stance shift — so one play's winner is a fact about
+        # the assignment, not about the document (measured on the planted
+        # profile: all three arguments win somewhere as the seats rotate,
+        # while the declared winner stayed arg_2). play_sensitivity runs every
+        # seat rotation against every stance shift; a flip is rendered only
+        # when it is uniform across the whole family, and otherwise the record
+        # says stance_dependent and prints nothing.
         governance_verdict = _aggregate_governance_votes(g_agents, g_options, g_ballots)
         governance_verdict["degraded"] = False
         governance_verdict["derivation_reason"] = g_reason
+        g_sensitivity = play_sensitivity(
+            g_agents, g_options, g_ballots, _aggregate_governance_votes
+        )
+        if (
+            g_sensitivity["stance_dependent"]
+            or g_sensitivity["outcome_changed"]
+            or g_sensitivity["blocs"]
+        ):
+            governance_verdict["coalition"] = g_sensitivity
+        # #3386 (b) — the declared profile's manipulability, from the SAME
+        # engine the strategist phase uses (#3385's compute_manipulability —
+        # imported, not copied). The finding: the first two-player coalition
+        # that can flip the Condorcet winner, else the first single-player
+        # pivot. Absent when the profile is not pivotal at ≤2 players.
+        g_manip = compute_manipulability(
+            {a.name: list(a.preferences) for a in g_agents}, list(g_options)
+        )
+        g_finding = None
+        if g_manip.get("coalitions"):
+            first = g_manip["coalitions"][0]
+            g_finding = {
+                "kind": "coalition",
+                "players": list(first["players"]),
+                "report": first["report"],
+                "winner": first["winner"],
+            }
+        elif g_manip.get("single_player"):
+            first = g_manip["single_player"][0]
+            g_finding = {
+                "kind": "single_player",
+                "players": [first["player"]],
+                "report": first["reports"],
+                "winner": first["winner"],
+            }
+        if g_finding is not None:
+            g_finding["baseline"] = g_manip.get("winner")
+            g_finding["engine"] = g_manip.get("engine")
+            g_finding["status"] = g_manip.get("status")
+            governance_verdict["manipulability"] = g_finding
         # #2850 R1107 — the vote names the population it was decided over,
         # apart from the conflict's own record. The winner is a member of
         # this set; the record says so.

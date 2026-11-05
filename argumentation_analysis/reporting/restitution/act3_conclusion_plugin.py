@@ -133,6 +133,9 @@ from .llm_weaving import LlmCallable, WeaveOutcome, weave
 from .quote_fidelity import sanitize_act_quotes
 from .readability_gate import GateVerdict, ReadabilityGate
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
+from argumentation_analysis.agents.core.governance.coalition_play import (
+    coalition_note,  # #3386
+)
 from argumentation_analysis.agents.core.reading import first_reading_note  # #3395
 
 logger = logging.getLogger(__name__)
@@ -489,6 +492,10 @@ class GovernanceVerdict:
     support_by_option: Dict[str, int] = field(default_factory=dict)
     n_methods_decided: Optional[int] = None
     winner_basis: Optional[str] = None
+    # #3386 — the coalition play's block, producer-rendered like Acte II's
+    # (``coalition_play.coalition_note``): a bloc that moved the outcome
+    # and/or the declared profile's pivot. Empty when nothing changed.
+    coalition_note: str = ""
 
 
 @dataclass
@@ -1432,6 +1439,9 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
             support_by_option=support_by_option,
             n_methods_decided=n_methods_decided,
             winner_basis=winner_basis,
+            # #3386 — the producer-rendered coalition block ("" when the
+            # play changed nothing).
+            coalition_note=coalition_note(d),
         )
     return chosen
 
@@ -3638,6 +3648,10 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
         if gov_warning:
             deliberation_lines.append(gov_warning)
         deliberation_lines.append(gov_lead)
+        # #3386 — the coalition play's facts, beside the verdict (same as
+        # Acte II): producer-rendered, no prompt rule added.
+        if gv.coalition_note:
+            deliberation_lines.append(f"  {gv.coalition_note}")
     if evidence.debate_exchanges:
         for i, ex in enumerate(evidence.debate_exchanges, start=1):
             scheme_anchor = ""
