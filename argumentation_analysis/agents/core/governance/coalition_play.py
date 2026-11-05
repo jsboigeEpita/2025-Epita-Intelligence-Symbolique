@@ -17,15 +17,20 @@ every document without any coalition forming, which is decoration, not play.
 
 Deterministic by construction: stances are assigned by rotation over the
 elector list (sorted, as the derivation yields it) and the play uses no RNG
-(the ``random`` personality is never assigned).
+(the ``random`` personality is never assigned). **The rotation reads the
+SEAT order, not a measured property** — so one play is a fabricated input
+(#3418 R1144): rotating the elector list alone moved the cast winner. The
+verdict must therefore never consume the play; ``play_sensitivity`` runs it
+under every cyclic shift of the stances and reports the outcome as a
+sensitivity, and the caller keeps voting the DECLARED profile.
 
 Anti-pendulum (#3386): a coalition that changes no ballot is a measured fact
 recorded on the state, never a rendered result — ``coalition_note`` prints a
-bloc only when it moved the outcome, and a manipulability finding only when
-the declared profile is actually pivotal.
+flip only when the winner changes AND is the same under every shift, and a
+manipulability finding only when the declared profile is actually pivotal.
 """
 
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from argumentation_analysis.agents.core.governance.governance_agent import Agent
 
@@ -40,6 +45,7 @@ def play_governance_rounds(
     options: List[str],
     ballots: List[List[str]],
     rounds: int = PLAY_ROUNDS,
+    stance_offset: int = 0,
 ) -> Dict[str, Any]:
     """Negotiate over the derived profile, then read the coalitions off it.
 
@@ -70,7 +76,8 @@ def play_governance_rounds(
     """
     declared = {a.name: list(a.preferences) for a in agents}
     stances: Dict[str, str] = {
-        a.name: PLAY_STANCES[i % len(PLAY_STANCES)] for i, a in enumerate(agents)
+        a.name: PLAY_STANCES[(i + stance_offset) % len(PLAY_STANCES)]
+        for i, a in enumerate(agents)
     }
     players = [
         Agent(name=a.name, personality=stances[a.name], preferences=list(a.preferences))
@@ -147,45 +154,125 @@ def play_governance_rounds(
     }
 
 
+def play_sensitivity(
+    agents: List[Agent],
+    options: List[str],
+    ballots: List[List[str]],
+    aggregate: Callable[[List[Any], List[str], List[List[str]]], Dict[str, Any]],
+    rounds: int = PLAY_ROUNDS,
+) -> Dict[str, Any]:
+    """The play as a SENSITIVITY, never as the verdict (#3418 R1144).
+
+    One play reads a fabricated input: stances rotate over the elector list,
+    so the seat order alone decides who is flexible — measured on the planted
+    profile, the cast winner took arg_3, arg_3, arg_1, arg_2, arg_2 as the
+    list rotated, while the declared winner stayed arg_2. The play is
+    therefore run under EVERY cyclic shift of the stance assignment
+    (``len(PLAY_STANCES)`` — the assignment has period 3, so three offsets
+    cover the whole cyclic family), and the outcome is reported as a
+    sensitivity of the DECLARED verdict:
+
+    - ``outcome_changed`` — true only when the winner moves AND is the same
+      under every shift (a robust flip, not an artefact of the seat order);
+    - ``stance_dependent`` — true when the shifts disagree; nothing renders;
+    - ``uniform_winner`` — the winner when every shift agrees, else ``None``;
+    - ``ballots_moved`` — electors whose ballot moved under EVERY shift (the
+      stable movers; the per-shift movers are not summed or averaged);
+    - ``blocs`` — blocs present under every shift (stable structure).
+
+    ``aggregate`` is the caller's own aggregation function, injected: this
+    module must not import the orchestration layer that calls it.
+    """
+    declared_winner = aggregate(agents, options, ballots).get("winner")
+    winners: List[Optional[str]] = []
+    moved_sets: List[Set[str]] = []
+    bloc_sets: List[Set[Tuple[str, Tuple[str, ...]]]] = []
+    for offset in range(len(PLAY_STANCES)):
+        play = play_governance_rounds(
+            agents, options, ballots, rounds=rounds, stance_offset=offset
+        )
+        cast = aggregate(play["cast_agents"], options, play["cast_ballots"])
+        winners.append(cast.get("winner"))
+        moved_sets.append({str(m["elector"]) for m in play["moved"]})
+        bloc_sets.append(
+            {
+                (str(b["option"]), tuple(sorted(str(x) for x in b["members"])))
+                for b in play["blocs"]
+            }
+        )
+
+    uniform = winners[0] if winners and len(set(winners)) == 1 else None
+    stance_dependent = len(set(winners)) > 1
+    stable_movers = sorted(set.intersection(*moved_sets)) if moved_sets else []
+    stable_blocs: List[Tuple[str, Tuple[str, ...]]] = (
+        sorted(set.intersection(*bloc_sets)) if bloc_sets else []
+    )
+    return {
+        "shifts": len(PLAY_STANCES),
+        "winners_by_shift": [None if w is None else str(w) for w in winners],
+        "winner_declared": None if declared_winner is None else str(declared_winner),
+        "uniform_winner": None if uniform is None else str(uniform),
+        "outcome_changed": uniform is not None and uniform != declared_winner,
+        "stance_dependent": stance_dependent,
+        "ballots_moved": stable_movers,
+        "blocs": [
+            {"option": option, "members": list(members)}
+            for option, members in stable_blocs
+        ],
+    }
+
+
 def coalition_note(decision: Dict[str, Any]) -> str:
     """Render the coalition play's block for the act prompts (#3386).
 
     Reads a ``governance_decisions`` record (not the raw verdict): the writer
-    stores ``coalition`` (blocs + ballots moved + outcome change) and
-    ``manipulability`` (a pivot the #3385 engine found on the declared
-    profile) only when they exist — honest absence.
+    stores ``coalition`` (the stance sensitivity ``play_sensitivity``
+    computed) and ``manipulability`` (a pivot the #3385 engine found on the
+    declared profile) only when they exist — honest absence.
 
-    Anti-pendulum: a line is printed ONLY for a change. A bloc that moved no
-    ballot, or a negotiation that changed no outcome, stays on the record and
-    prints nothing. A pivot names its pair and the winner it would produce —
-    a coalition that cannot say what it changes is not rendered.
+    Anti-pendulum (#3418 R1144): a flip line is printed ONLY when the winner
+    changes AND is the same under every cyclic shift of the stances
+    (``outcome_changed``, never ``stance_dependent``) — a play whose result
+    depends on which elector drew which posture is not a finding, it is the
+    fabricated input itself. A pivot names its pair and the winner it would
+    produce, unchanged.
     """
     lines: List[str] = []
     coalition = decision.get("coalition")
-    if isinstance(coalition, dict) and coalition.get("outcome_changed"):
+    if (
+        isinstance(coalition, dict)
+        and coalition.get("outcome_changed")
+        and not coalition.get("stance_dependent")
+    ):
         moved = coalition.get("ballots_moved") or []
-        names = ", ".join(str(m) for m in moved[:3])
-        extra = f" (+{len(moved) - 3} autres)" if len(moved) > 3 else ""
         blocs = coalition.get("blocs") or []
-        bloc_txt = ""
-        if blocs:
-            members = blocs[0].get("members") or []
-            bloc_txt = (
-                f" derrière « {blocs[0].get('option', '')} »"
-                f" ({', '.join(str(m) for m in members[:3])})"
-                if members
-                else ""
+        shifts = coalition.get("shifts") or len(coalition.get("winners_by_shift") or [])
+        if moved:
+            names = ", ".join(str(m) for m in moved[:3])
+            extra = f" (+{len(moved) - 3} autres)" if len(moved) > 3 else ""
+            verb = (
+                "déplace son bulletin" if len(moved) == 1 else "déplacent leur bulletin"
             )
+            movers = (
+                f" ; {len(moved)} électeur(s) {verb} sous tous les "
+                f"décalages ({names}{extra})"
+            )
+            if blocs:
+                members = blocs[0].get("members") or []
+                if members:
+                    movers += (
+                        f" derrière « {blocs[0].get('option', '')} »"
+                        f" ({', '.join(str(m) for m in members[:3])})"
+                    )
+        else:
+            movers = " ; les électeurs qui bougent dépendent du décalage"
         lines.append(
-            "Jeu de coalitions : {n} électeur(s){bloc} ont déplacé leur "
-            "bulletin ({names}{extra}) ; le vainqueur passe de « {w0} » à "
-            "« {w1} ».".format(
-                n=len(moved),
-                bloc=bloc_txt,
-                names=names,
-                extra=extra,
+            "Jeu de coalitions : sous chacun des {n} décalages de posture, "
+            "le vainqueur passe de « {w0} » à « {w1} »{movers}.".format(
+                n=shifts,
                 w0=coalition.get("winner_declared", ""),
-                w1=coalition.get("winner_cast", ""),
+                w1=coalition.get("uniform_winner", ""),
+                movers=movers,
             )
         )
     manipulability = decision.get("manipulability")

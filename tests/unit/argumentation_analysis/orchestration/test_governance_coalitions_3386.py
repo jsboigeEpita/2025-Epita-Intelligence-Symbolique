@@ -14,10 +14,19 @@ The planted profile (opaque ids, no corpus content) is hand-computed:
 - declared ballots → Condorcet winner ``arg_2``;
 - stances rotate (stubborn, flexible, strategic) over the sorted electors;
   ``elector_vertu_b`` (flexible) rallies behind ``arg_3`` during the
-  round-robin → the cast profile's Condorcet winner is ``arg_3`` — a
-  coalition of {b, d, e} behind ``arg_3`` changes the vote outcome;
+  round-robin → that play's cast Condorcet winner is ``arg_3`` — a
+  coalition of {b, d, e} behind ``arg_3``;
 - the declared profile is pivotal: the pair (a, b) reporting ``arg_3`` first
   makes ``arg_3`` win instead of ``arg_2`` (#3385 engine, one witness).
+
+**The verdict is the DECLARED aggregate (#3418 R1144).** The stance rotation
+reads the seat order, so one play is a fabricated input: the measured cast
+winner took arg_3, arg_3, arg_1, arg_2, arg_2 as the elector list rotated.
+The play is therefore reported as a SENSITIVITY over every cyclic shift of
+the stances (``play_sensitivity``), and the verdict never consumes it. On the
+planted profile the three shifts agree (``arg_3`` under all of them), so the
+flip is recorded as robust — while no elector moves under EVERY shift, which
+is what the record says rather than inventing a mover.
 
 No JVM, no LLM (client patched to None), privacy HARD (opaque ids only).
 """
@@ -252,11 +261,19 @@ class TestTheVerdictCarriesCoalitionAndManipulability:
         assert output["governance_decided_firsthand"] is True
         verdict = output["governance_verdict"]
         assert verdict["degraded"] is False
+        # The verdict is the DECLARED aggregate — never the play's (#3418).
+        assert verdict["winner"] == "arg_2"
         coalition = verdict["coalition"]
-        assert coalition["outcome_changed"] is True
         assert coalition["winner_declared"] == "arg_2"
-        assert coalition["winner_cast"] == "arg_3"
-        assert coalition["ballots_moved"] == ["elector_vertu_b"]
+        assert coalition["shifts"] == 3
+        assert coalition["winners_by_shift"] == ["arg_3", "arg_3", "arg_3"]
+        assert coalition["uniform_winner"] == "arg_3"
+        assert coalition["outcome_changed"] is True
+        assert coalition["stance_dependent"] is False
+        # No elector moves under EVERY shift: the stable set is empty, and the
+        # per-shift movers are neither summed nor averaged into one.
+        assert coalition["ballots_moved"] == []
+        assert "winner_cast" not in coalition
         manipulability = verdict["manipulability"]
         assert manipulability["kind"] == "coalition"
         assert manipulability["players"] == ["elector_vertu_a", "elector_vertu_b"]
@@ -269,7 +286,11 @@ class TestTheVerdictCarriesCoalitionAndManipulability:
         output = await _handler_output(_PLANTED_QUALITY)
         state = _written_state(output)
         record = state.governance_decisions[-1]
+        # The recorded winner is the declared one; the play sits beside it as a
+        # sensitivity, never as the verdict.
+        assert record["winner"] == "arg_2"
         assert record["coalition"]["outcome_changed"] is True
+        assert record["coalition"]["winner_declared"] == "arg_2"
         assert record["manipulability"]["players"] == [
             "elector_vertu_a",
             "elector_vertu_b",
@@ -285,29 +306,83 @@ class TestTheVerdictCarriesCoalitionAndManipulability:
         assert "manipulability" not in record
 
 
+class TestTheVerdictDoesNotDependOnTheSeatOrder:
+    """#3418 R1144 witness 4 — born red against the pre-fix producer.
+
+    Before the fix the verdict consumed the play's aggregate, whose winner
+    followed the rotation of the elector list: the same profile, the same
+    ballots, and arg_3, arg_3, arg_1, arg_2, arg_2 as the seats rotated.
+    Permuting the electors is a change of SEAT, not of opinion — the recorded
+    winner must be byte-identical under every rotation.
+    """
+
+    @pytest.mark.asyncio
+    async def test_a_permutation_of_the_electors_leaves_the_winner_identical(
+        self,
+    ) -> None:
+        options, _ballots, agents, derivable, _reason = _derive_governance_profile(
+            _PLANTED_QUALITY
+        )
+        assert derivable
+        recorded: Dict[int, str] = {}
+        for k in range(len(agents)):
+            rotated = agents[k:] + agents[:k]
+            rotated_ballots = [a.preferences for a in rotated]
+            with patch(
+                "argumentation_analysis.orchestration.invoke_callables"
+                "._derive_governance_profile",
+                return_value=(options, rotated_ballots, rotated, True, "planted"),
+            ):
+                output = await _handler_output(_PLANTED_QUALITY)
+            recorded[k] = _written_state(output).governance_decisions[-1]["winner"]
+        # One distinct winner across every seat order, and it is the declared
+        # one — the play's per-shift winners are reported, never recorded.
+        assert set(recorded.values()) == {"arg_2"}
+
+    def test_the_sensitivity_covers_every_cyclic_shift_of_the_stances(self) -> None:
+        """Period 3: the three offsets are the whole cyclic family.
+
+        Imported here, not at module scope: a new symbol imported for the
+        whole file turns every witness red with a collection error, which
+        measures the import and not the behaviour.
+        """
+        from argumentation_analysis.agents.core.governance.coalition_play import (
+            play_sensitivity,
+        )
+
+        options, ballots, agents, _derivable, _reason = _derive_governance_profile(
+            _PLANTED_QUALITY
+        )
+        sensitivity = play_sensitivity(
+            agents, options, ballots, _aggregate_governance_votes
+        )
+        assert sensitivity["shifts"] == 3
+        assert len(sensitivity["winners_by_shift"]) == 3
+        assert sensitivity["winner_declared"] == "arg_2"
+        # Declared verdict ≠ play outcome, and the record says so explicitly.
+        assert sensitivity["uniform_winner"] == "arg_3"
+        assert sensitivity["outcome_changed"] is True
+        assert sensitivity["stance_dependent"] is False
+
+
 # ---------------------------------------------------------------------------
 # Record → render — a change prints, everything else stays byte-identical
 # ---------------------------------------------------------------------------
 
 
 class TestTheNotePrintsOnlyAChange:
-    def test_a_flipped_outcome_names_the_bloc_the_movers_and_both_winners(self) -> None:
+    def test_a_robust_flip_names_both_winners_and_the_unstable_movers(self) -> None:
+        """The measured planted record: the flip is uniform, the movers are not."""
         record = {
             "coalition": {
-                "outcome_changed": True,
+                "shifts": 3,
+                "winners_by_shift": ["arg_3", "arg_3", "arg_3"],
                 "winner_declared": "arg_2",
-                "winner_cast": "arg_3",
-                "ballots_moved": ["elector_vertu_b"],
-                "blocs": [
-                    {
-                        "option": "arg_3",
-                        "members": [
-                            "elector_vertu_b",
-                            "elector_vertu_d",
-                            "elector_vertu_e",
-                        ],
-                    }
-                ],
+                "uniform_winner": "arg_3",
+                "outcome_changed": True,
+                "stance_dependent": False,
+                "ballots_moved": [],
+                "blocs": [],
             },
             "manipulability": {
                 "kind": "coalition",
@@ -318,9 +393,63 @@ class TestTheNotePrintsOnlyAChange:
             },
         }
         note = coalition_note(record)
-        assert "elector_vertu_b" in note
-        assert "arg_2" in note and "arg_3" in note
+        assert "sous chacun des 3 décalages" in note
+        assert "de « arg_2 » à « arg_3 »" in note
+        assert "les électeurs qui bougent dépendent du décalage" in note
         assert "portant « arg_3 » en tête" in note
+
+    def test_a_stable_coalition_names_its_movers_and_its_bloc(self) -> None:
+        """A flip whose movers agree across shifts names them, with the bloc."""
+        record = {
+            "coalition": {
+                "shifts": 3,
+                "winner_declared": "arg_2",
+                "uniform_winner": "arg_3",
+                "outcome_changed": True,
+                "stance_dependent": False,
+                "ballots_moved": ["elector_vertu_b", "elector_vertu_e"],
+                "blocs": [
+                    {
+                        "option": "arg_3",
+                        "members": [
+                            "elector_vertu_b",
+                            "elector_vertu_d",
+                            "elector_vertu_e",
+                        ],
+                    }
+                ],
+            }
+        }
+        note = coalition_note(record)
+        assert "2 électeur(s) déplacent leur bulletin" in note
+        assert "elector_vertu_b, elector_vertu_e" in note
+        assert "derrière « arg_3 »" in note
+
+    def test_a_stance_dependent_play_prints_no_flip(self) -> None:
+        """#3418 R1144: shifts that disagree are the fabricated input itself."""
+        record = {
+            "coalition": {
+                "shifts": 3,
+                "winners_by_shift": ["arg_3", "arg_1", "arg_2"],
+                "winner_declared": "arg_2",
+                "uniform_winner": None,
+                "outcome_changed": False,
+                "stance_dependent": True,
+                "ballots_moved": ["elector_vertu_b"],
+                "blocs": [{"option": "arg_3", "members": ["elector_vertu_b"]}],
+            },
+            "manipulability": {
+                "kind": "coalition",
+                "players": ["elector_vertu_a"],
+                "report": "arg_3",
+                "winner": "arg_3",
+                "baseline": "arg_2",
+            },
+        }
+        note = coalition_note(record)
+        assert "Jeu de coalitions" not in note
+        # The pivot is a finding on the DECLARED profile — it still prints.
+        assert "Manipulabilité" in note
 
     def test_a_bloc_that_changed_nothing_prints_nothing(self) -> None:
         record = {
@@ -349,8 +478,12 @@ class TestTheBlockReachesTheActs:
         }
         block = _deliberation(_PROMPTS[act](state))
         assert "Jeu de coalitions" in block
-        assert "elector_vertu_b" in block
+        # The block renders the options under their opaque symbols (FB-34):
+        # declared « α » → uniform « β », never the raw ids.
+        assert "de « α » à « β »" in block
+        assert "dépendent du décalage" in block
         assert "Manipulabilité" in block
+        assert "elector_vertu_a et elector_vertu_b" in block  # the pivot's pair
 
     @pytest.mark.asyncio
     async def test_the_control_passage_is_byte_identical(self, act: str) -> None:
