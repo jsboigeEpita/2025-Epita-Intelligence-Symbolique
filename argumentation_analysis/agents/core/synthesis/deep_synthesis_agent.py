@@ -36,6 +36,11 @@ from argumentation_analysis.core.fallacy_attribution import (  # #3180
     move_author_note,
     move_author_of,
     register_test_note,  # #3391
+    taxonomy_definition_note,  # #3394
+)
+from argumentation_analysis.reporting.restitution.figure_scales import (  # #3394
+    penalised_sum_on_its_maximum,
+    sum_on_its_maximum,
 )
 from argumentation_analysis.reporting.restitution.speaker_record import (  # #3336
     build_speaker_record,
@@ -1769,7 +1774,8 @@ class DeepSynthesisAgent(BaseAgent):
 
     @staticmethod
     def _quality_line(entry: Any) -> str:
-        """The unit's quality line, stating the #289 penalty when it applied.
+        """The unit's quality line: the score ON ITS SCALE (#3394), stating
+        the #289 penalty when it applied.
 
         The state stores ``overall`` FALLACY-ADJUSTED (#289) beside the
         evaluator's penalty record (#3133: ``original_score``,
@@ -1781,27 +1787,47 @@ class DeepSynthesisAgent(BaseAgent):
         record carries an applied penalty, plus the rule that pairs them: a
         penalised score is not comparable with an unpenalised one.
 
+        #3394 (R1143) — the figure rides its own ceiling: ``overall`` is a
+        SUM over the evaluated virtues (#1942) and ``len(scores)`` is that
+        count, so the writer receives « 1,80 sur 9 », never the bare number
+        (the rendered instance of ask 1 was « score brut 0,58 »). An entry
+        with no ``scores`` map has an unmeasurable ceiling and keeps the bare
+        spelling — a scale without its denominator is invented (anti-#1019).
+
         ``penalty_factor`` is the RATE the producer subtracted, not the ratio
         it kept (``invoke_callables.py``: ``penalty = min(0.3 * n, 0.6)``,
         ``note = original - original * penalty``), so the reduction is
         ``penalty_factor × 100`` — the convention the producer already prints
         at ``invoke_callables.py`` (``penalty={penalty_factor:.0%}``).
-
-        Without an applied penalty the line is byte-for-byte what it always
-        was: no rounding, no extra text (R1135 rework: rounding lives in the
-        penalised branch only).
         """
         if not isinstance(entry, dict):
             return f"overall={entry}"
         raw = entry.get("overall", "?")
+        scores = entry.get("scores")
+        n_terms = len(scores) if isinstance(scores, dict) and scores else None
+        overall_value: Optional[float] = (
+            float(raw)
+            if isinstance(raw, (int, float)) and not isinstance(raw, bool)
+            else None
+        )
         penalty = entry.get("fallacy_penalty")
         if not (isinstance(penalty, dict) and penalty.get("applied")):
-            return f"overall={raw}"
-        overall = DeepSynthesisAgent._rounded_quality(raw)
+            scaled = sum_on_its_maximum(overall_value, n_terms)
+            return f"overall={scaled}" if scaled else f"overall={raw}"
         tail = "score penalise, non comparable aux scores sans penalite"
-        detail: List[str] = []
         original = penalty.get("original_score")
-        if isinstance(original, (int, float)) and not isinstance(original, bool):
+        before: Optional[float] = (
+            float(original)
+            if isinstance(original, (int, float)) and not isinstance(original, bool)
+            else None
+        )
+        figure = penalised_sum_on_its_maximum(overall_value, before, n_terms)
+        head = f"overall={figure}" if figure else f"overall={raw}"
+        detail: List[str] = []
+        # The pre-penalty value rides inside the figure when the scale
+        # printed; it keeps its own « mesure » segment only on the bare
+        # fallback, so no branch states it twice.
+        if before is not None and not figure:
             detail.append(f"mesure {DeepSynthesisAgent._rounded_quality(original)}")
         factor = penalty.get("penalty_factor")
         rate: Optional[int] = None
@@ -1817,8 +1843,8 @@ class DeepSynthesisAgent(BaseAgent):
         if reduction:
             detail.append(reduction)
         if detail:
-            return f"overall={overall} ({', '.join(detail)} ; {tail})"
-        return f"overall={overall} ({tail})"
+            return f"{head} ({', '.join(detail)} ; {tail})"
+        return f"{head} ({tail})"
 
     @staticmethod
     def _population_notes(
@@ -2089,6 +2115,33 @@ class DeepSynthesisAgent(BaseAgent):
                 )
 
         fallacies = getattr(state, "identified_fallacies", {}) or {}
+        # #3394 ask 4 — the read scope travels with the fallacy evidence.
+        # The detections sit on a handful of the document's units; the cycle-0
+        # synthesis read ten lines and told the reader the text « regularly »
+        # builds the move. The line states the counts as facts — the writer
+        # scopes any regularity claim to them; no vocabulary rule rides the
+        # prompt (data-only, the #3390 arena idiom).
+        _fallacy_targets = {
+            str(fdata.get("target_argument_id") or "")
+            for fdata in fallacies.values()
+            if isinstance(fdata, dict)
+        }
+        _fallacy_targets.discard("")
+        _n_units = len(getattr(state, "identified_arguments", {}) or {})
+        if _fallacy_targets and _n_units:
+            _k_units = len(_fallacy_targets)
+            lines.append(
+                f"PORTÉE DES DÉTECTIONS : les {len(fallacies)} détection(s) de "
+                f"ce run portent sur {_k_units} unités distinctes, parmi "
+                f"{_n_units} unités identifiées — toute régularité d'un geste "
+                f"se lit sur ces {_k_units} unités, pas sur le document entier."
+            )
+        # #3394 — a label reaches the writer with the taxonomy's one-line
+        # definition on its FIRST mention only (the acts' own pattern): the
+        # reader learns what « sophisme métonymique » means once, and the
+        # note also names the addressee the second-person definitions speak
+        # to (``taxonomy_definition_note``, R1143).
+        _defined_labels: set[str] = set()
         if fallacies:
             _f_units = []
             for fid, fdata in fallacies.items():
@@ -2143,12 +2196,23 @@ class DeepSynthesisAgent(BaseAgent):
                 # as the attribution note above.
                 _register_note = register_test_note(fdata)
                 _register_clause = f" — {_register_note}" if _register_note else ""
+                # The definition rides the label's FIRST mention only, and as
+                # the ``note`` param — after the cut, never through it
+                # (#3390's rule for notes the line exists to carry).
+                _definition_note = (
+                    taxonomy_definition_note(fdata)
+                    if ftype not in _defined_labels
+                    else ""
+                )
+                if _definition_note:
+                    _defined_labels.add(ftype)
                 _add(
                     "identified_fallacies",
                     u.unit_id,
                     f"type={ftype} family={family} target={target or 'n/a'}"
                     f"{_move_clause}{_register_clause} — "
                     f"{fdata.get('justification', '')}",
+                    note=_definition_note,
                 )
             if hasattr(state, "record_analysis_coverage"):
                 state.record_analysis_coverage(

@@ -472,14 +472,17 @@ def compute_argument_convergence(state: Any) -> Dict[str, Dict[str, Any]]:
     """Count INDEPENDENT method classes flagging each SIGNALLED argument weak.
 
     #3145: ``score`` counts independent classes only. ``sophisme``,
-    ``qualite faible`` (unpenalised, #3133) and ``rejet Dung`` are
-    independent — the Dung handlers drop every fallacy-minted attack source
-    (``fallacy_*`` nodes are never inventory members, #1698 measured), so a
-    rejection that fires was not caused by a fallacy edge. ``JTMS retracte``
-    is DERIVED (``_invoke_jtms`` step 4 retracts the fallacy's target
-    because the fallacy targets it) and ``contre-argument`` is gated on the
-    axis discriminating — both stay in ``signals`` and ``cited_signals`` as
-    content, never as witnesses.
+    ``qualite faible`` (unpenalised AND unpenalised-by-record, #3133/#3394)
+    and ``rejet Dung`` are independent — the Dung handlers drop every
+    fallacy-minted attack source (``fallacy_*`` nodes are never inventory
+    members, #1698 measured), so a rejection that fires was not caused by a
+    fallacy edge. ``JTMS retracte`` is DERIVED (``_invoke_jtms`` step 4
+    retracts the fallacy's target because the fallacy targets it),
+    ``contre-argument`` is gated on the axis discriminating, and
+    ``qualite faible`` on a unit whose record carries an APPLIED penalty is
+    not readable as independent by the reader (the only quality figure the
+    renders print for it is the penalised one) — all three stay in
+    ``signals`` and ``cited_signals`` as content, never as witnesses.
 
     Only arguments flagged by at least one signal appear in the result — an
     unflagged argument cannot clear any threshold, so it is structurally
@@ -552,14 +555,26 @@ def compute_argument_convergence(state: Any) -> Dict[str, Dict[str, Any]]:
         # UNPENALISED fraction — reading the penalised ``overall`` here would
         # count the fallacy twice, once as "sophisme" and once as the quality
         # it lowered; a unit weak only through the penalty gains no signal.
+        # #3394 ask 5: a unit the run PENALISED loses quality as an
+        # independent witness altogether — the reader-visible figure for it
+        # is the penalised one (the ranking prints « après pénalité »), so a
+        # convergence counting it read "plusieurs méthodes indépendantes"
+        # over a score the same fallacy had already moved. The judgement
+        # stays as CITED content; it stops counting.
         qs = quality.get(arg_id) if isinstance(quality, dict) else None
         fraction = independent_quality_fraction(qs)
         if fraction is not None and fraction < QUALITY_WEAK_FRACTION and quality_spans:
-            penalised = isinstance(qs, dict) and qs.get("fallacy_penalty")
+            penalty_record = qs.get("fallacy_penalty") if isinstance(qs, dict) else None
+            penalised = isinstance(penalty_record, dict) and bool(
+                penalty_record.get("applied")
+            )
             detail = f"{fraction:.0%} du maximum applicable"
             if penalised:
                 detail += " (hors penalite sophisme)"
-            _witness("qualite faible", detail)
+            if penalised:
+                _cite("qualite faible", detail)
+            else:
+                _witness("qualite faible", detail)
 
         # 3. Counter-argument generated against it — #3145: an independent
         # witness only when the counter axis discriminates on the run; on a

@@ -33,8 +33,8 @@ from argumentation_analysis.agents.core.synthesis.deep_synthesis_agent import (
 )
 
 PENALISED_LINE = (
-    "overall=1.8 (mesure 4.5, -60% pour 2 sophismes ; score penalise, "
-    "non comparable aux scores sans penalite)"
+    "overall=1,80 sur 9 après pénalité (4,50 avant) (-60% pour 2 "
+    "sophismes ; score penalise, non comparable aux scores sans penalite)"
 )
 
 
@@ -93,7 +93,7 @@ class TestPenalisedScoreIsPairedWithItsMeasure:
     def test_the_float_noise_of_the_adjusted_sum_never_prints(self):
         lines = _briefing_lines({"arg_37": _penalised()})
         assert "1.8000000000000003" not in lines["arg_37"]
-        assert "1.8" in lines["arg_37"]
+        assert "1,80 sur 9" in lines["arg_37"]
 
     def test_the_penalty_is_not_comparable_with_an_unpenalised_score(self):
         lines = _briefing_lines({"arg_37": _penalised()})
@@ -112,7 +112,8 @@ class TestPenalisedScoreIsPairedWithItsMeasure:
         }
         lines = _briefing_lines({"arg_02": entry})
         assert lines["arg_02"] == (
-            "overall=0.5 (score penalise, non comparable aux scores sans penalite)"
+            "overall=0,50 sur 1 après pénalité "
+            "(score penalise, non comparable aux scores sans penalite)"
         )
 
 
@@ -132,22 +133,32 @@ class TestTheReductionIsTheRateRemoved:
         assert "-40%" not in lines[f"arg_{count}"]
 
 
-class TestUnpenalisedLineIsUntouched:
-    """The issue's control: a unit with no applied penalty renders as before."""
+class TestUnpenalisedLineRidesItsScale:
+    """#3394 ask 1 (R1143) superseded the R1135 byte-stability of the
+    UNPENALISED branch: the bare ``overall=…`` was the bare-number defect.
+    The line carries its ceiling when ``scores`` measures one; the control
+    for byte-stability moved to the entry WITHOUT a scores map."""
 
     @pytest.mark.parametrize(
         "overall,expected",
         [
-            (4.5, "overall=4.5"),
-            (3, "overall=3"),
-            # R1135 — rounding is confined to the penalised branch, so a
-            # value carrying more than two decimals keeps its spelling.
-            (4.567, "overall=4.567"),
+            (4.5, "overall=4,50 sur 1"),
+            (3, "overall=3,00 sur 1"),
+            # the scale prints through the #3394 formatter — two decimals,
+            # French comma (the R1135 "keeps its third decimal" note is
+            # superseded with the bare spelling itself)
+            (4.567, "overall=4,57 sur 1"),
         ],
     )
     def test_the_line_is_byte_identical(self, overall, expected):
         lines = _briefing_lines({"arg_38": {"scores": {"a": 1.0}, "overall": overall}})
         assert lines["arg_38"] == expected
+
+    def test_an_entry_without_scores_keeps_the_bare_spelling(self):
+        # The control the DoD names: nothing measurable to scale, nothing
+        # penalised — byte-for-byte the pre-#3394 line.
+        lines = _briefing_lines({"arg_41": {"overall": 4.5}})
+        assert lines["arg_41"] == "overall=4.5"
 
     def test_a_recorded_but_unapplied_penalty_changes_nothing(self):
         entry = {
@@ -161,7 +172,7 @@ class TestUnpenalisedLineIsUntouched:
             },
         }
         lines = _briefing_lines({"arg_39": entry})
-        assert lines["arg_39"] == "overall=4.5"
+        assert lines["arg_39"] == "overall=4,50 sur 1"
 
     def test_a_bare_number_entry_is_still_rendered(self):
         lines = _briefing_lines({"arg_40": 2.25})
