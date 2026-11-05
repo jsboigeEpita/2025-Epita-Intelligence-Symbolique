@@ -56,6 +56,7 @@ import os
 import random
 import sys
 import time
+from collections import Counter
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
@@ -731,7 +732,7 @@ async def call_judge(
     import httpx
 
     if endpoint["family"] == "anthropic":
-        payload = {
+        payload: Dict[str, Any] = {
             "model": endpoint["model_id"],
             "max_tokens": JUDGE_MAX_TOKENS,
             "messages": [{"role": "user", "content": prompt}],
@@ -750,6 +751,10 @@ async def call_judge(
         }
         headers = {"Authorization": f"Bearer {endpoint['api_key']}"}
         url = f"{endpoint['base_url'].rstrip('/')}/chat/completions"
+    # #3423 — the sampling temperature rides on the endpoint. ``None`` leaves
+    # the provider's default, which is what every pass before #3423 ran on.
+    if endpoint.get("temperature") is not None:
+        payload["temperature"] = endpoint["temperature"]
 
     async with httpx.AsyncClient(timeout=timeout) as client:
         response = await client.post(url, json=payload, headers=headers)
@@ -816,6 +821,8 @@ def render_table(
     lines: List[str] = []
     if recorded_header is not None:
         lines.extend(recorded_header.rstrip("\n").split("\n"))
+        if "judge_temperature" not in meta:
+            lines.append(f"- Température du juge : {_temperature_label(meta)}")
     else:
         lines.extend(_header_lines(rows, meta))
     _append_state_rule(lines, meta)
@@ -834,6 +841,17 @@ def _append_state_rule(lines: List[str], meta: Dict[str, Any]) -> None:
             f"- **Re-rendu sans appel du juge** depuis les lignes de "
             f"`{meta['rerendered_from']}` : seuls l'état dérivé et cette table "
             "sont recalculés, les items et les coûts sont ceux du passage."
+        )
+    if meta.get("consensus_of"):
+        sources = meta["consensus_of"]
+        need = meta.get("consensus_need", len(sources) // 2 + 1)
+        lines.append(
+            f"- **Consensus de {len(sources)} passages** sur les mêmes entrées "
+            f"({', '.join(f'`{name}`' for name in sources)}), sans appel du juge "
+            f"(#3423) : un item compte quand au moins **{need}** passages le "
+            f"gardent, et il porte sur la thèse centrale quand au moins {need} "
+            "le disent ; l'état est dérivé de ces items. Les items tombés à la "
+            "vérification sont comptés dans chaque passage."
         )
     lines.append("")
 
@@ -861,6 +879,7 @@ def _header_lines(rows: Sequence[Dict[str, Any]], meta: Dict[str, Any]) -> List[
         f"`{meta['pipeline_family']}`) — la différence de famille est vérifiée"
     )
     lines.append(f"- Graine du tirage A/B : `{meta['seed']}` (par document)")
+    lines.append(f"- Température du juge : {_temperature_label(meta)}")
     lines.append(
         "- Le juge a lu le **document source** (bloc `Document`, texte "
         "entier) : un M2 est vérifié contre lui, `document_quote` à l'appui"
@@ -873,6 +892,37 @@ def _header_lines(rows: Sequence[Dict[str, Any]], meta: Dict[str, Any]) -> List[
     )
     lines.append(f"- Commande : `{meta['command']}`")
     return lines
+
+
+def _temperature_label(meta: Dict[str, Any]) -> str:
+    """How the judge sampled (#3423): a pass at the provider's default
+    temperature moves more between two passes than the pipeline moved
+    between two cycles, so the table says which one it was."""
+    if "judge_temperature" not in meta:
+        return "non enregistrée (passage antérieur à #3423 : défaut du fournisseur)"
+    value = meta["judge_temperature"]
+    if value is None:
+        return "défaut du fournisseur (non fixée)"
+    return f"`{value}`"
+
+
+def parse_temperature(text: str) -> Optional[float]:
+    """``--judge-temperature``: a number, or ``provider`` for the default."""
+    if text.strip().lower() == "provider":
+        return None
+    try:
+        value = float(text)
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"temperature must be a number or 'provider', got {text!r}"
+        )
+    if value < 0:
+        raise argparse.ArgumentTypeError(f"temperature must be >= 0, got {value}")
+    return value
+
+
+def _temperature_arg(value: Optional[float]) -> str:
+    return "provider" if value is None else f"{value:g}"
 
 
 def _append_body(
@@ -892,6 +942,9 @@ def _append_body(
         state_cell = f"`{row.get('state')}`"
         if _label_differs(row):
             state_cell += f" (juge : `{row['reported_state']}`)"
+        pass_states = (row.get("consensus") or {}).get("pass_states") or []
+        if len(set(pass_states)) > 1:
+            state_cell += " · passages : " + ", ".join(f"`{s}`" for s in pass_states)
         if row.get("stop_reason") in TRUNCATION_STOP_REASONS:
             state_cell += " **(tronquée à la limite de sortie)**"
         elif row.get("state") == "UNPARSED" and row.get("reported_state"):
@@ -1101,6 +1154,9 @@ def rederive_row_state(row: Dict[str, Any]) -> str:
     label left the grid stays ``UNPARSED``: there is nothing to derive from.
     """
     reported = row.get("reported_state")
+    consensus = row.get("consensus") or {}
+    if consensus and consensus.get("parsed", 0) < consensus.get("need", 0):
+        return "UNPARSED"  # fewer passes read it than the majority needs
     if reported in STATES:
         return derive_state(row.get("kept") or [], str(reported))
     return "UNPARSED"
@@ -1239,6 +1295,153 @@ def render_stability(report: Sequence[Dict[str, Any]], name_a: str, name_b: str)
     return "\n".join(lines)
 
 
+def _write_stability(
+    out_dir: Path,
+    rows: Sequence[Dict[str, Any]],
+    other_dir: Path,
+    panel: Optional[Sequence[str]],
+) -> None:
+    report = compare_passes(rows, load_rows(other_dir, panel))
+    (out_dir / "STABILITY.md").write_text(
+        render_stability(report, out_dir.name, other_dir.name), encoding="utf-8"
+    )
+    print(f"stability written: {out_dir / 'STABILITY.md'}", flush=True)
+
+
+# ---------------------------------------------------------------------------
+# #3423 — the consensus of N passes over the same inputs
+# ---------------------------------------------------------------------------
+#
+# Two passes of claude-sonnet-5-5 over identical inputs agreed on the derived
+# state on 4 of 10 documents and kept 13 common items out of 28 and 24. The
+# model refuses a fixed temperature, so the remedy is to judge each cycle N
+# times and keep what a majority of the passes keep. The consensus applies to
+# ITEMS (and to each item's ``on_central_thesis`` flag); the state is then
+# derived from the consensus items by the same rule as a single pass (#3417).
+# Labels are never averaged.
+
+
+def _parsed(row: Dict[str, Any]) -> bool:
+    return row.get("reported_state") in STATES and row.get("state") != "UNPARSED"
+
+
+def consensus_row(
+    rows: Sequence[Dict[str, Any]], sources: Sequence[str]
+) -> Dict[str, Any]:
+    """One document's consensus over the rows of N passes.
+
+    An item counts when at least ``N // 2 + 1`` passes keep it (same code,
+    contained anchor quote — ``_same_item``), and it bears on the central
+    thesis when at least that many passes say so. Items below the majority
+    are kept apart as ``minority``, never silently dropped. A document that
+    fewer than a majority of passes could read stays ``UNPARSED``.
+    """
+    n = len(rows)
+    need = n // 2 + 1
+    first = rows[0]
+    parsed = [row for row in rows if _parsed(row)]
+    clusters: List[List[Tuple[int, Dict[str, Any]]]] = []
+    for index, row in enumerate(parsed):
+        for item in row.get("kept") or []:
+            for cluster in clusters:
+                if index not in {i for i, _ in cluster} and _same_item(
+                    cluster[0][1], item
+                ):
+                    cluster.append((index, item))
+                    break
+            else:
+                clusters.append([(index, item)])
+    kept: List[Dict[str, Any]] = []
+    minority: List[Dict[str, Any]] = []
+    for cluster in clusters:
+        item = dict(cluster[0][1])
+        central_votes = sum(
+            1 for _, member in cluster if member.get("on_central_thesis")
+        )
+        item["on_central_thesis"] = central_votes >= need
+        item["severity"] = severity_of(item["code"], item["on_central_thesis"])
+        item["support"] = len(cluster)
+        (kept if len(cluster) >= need else minority).append(item)
+    labels = [row["reported_state"] for row in parsed]
+    reported = Counter(labels).most_common(1)[0][0] if labels else ""
+    state = derive_state(kept, reported) if len(parsed) >= need else "UNPARSED"
+    judge_costs = [row.get("judge_cost") for row in rows]
+    return {
+        "opaque_id": first["opaque_id"],
+        "positions": first.get("positions"),
+        "identification_ok": first.get("identification_ok"),
+        "state": state,
+        "reported_state": reported,
+        "kept": kept,
+        "minority": minority,
+        # Mechanical drops belong to each pass; they are counted there.
+        "dropped": [],
+        "costs": first.get("costs") or {},
+        "judge_cost": (
+            round(sum(judge_costs), 6)
+            if all(cost is not None for cost in judge_costs)
+            else None
+        ),
+        "consensus": {
+            "passes": n,
+            "need": need,
+            "parsed": len(parsed),
+            "sources": list(sources),
+            "pass_states": [str(row.get("state")) for row in rows],
+            "dropped_per_pass": [len(row.get("dropped") or []) for row in rows],
+        },
+    }
+
+
+def build_consensus(
+    pass_dirs: Sequence[Path], out_dir: Path, panel: Optional[Sequence[str]] = None
+) -> Tuple[List[Dict[str, Any]], str]:
+    """Write the consensus rows and table of ``pass_dirs`` into ``out_dir``."""
+    if len(pass_dirs) < 2:
+        raise SystemExit("a consensus needs at least two passes (three advised)")
+    resolved_out = out_dir.resolve()
+    if any(path.resolve() == resolved_out for path in pass_dirs):
+        raise SystemExit(
+            f"{out_dir} is one of the passes: the consensus goes elsewhere"
+        )
+    first_rows = load_rows(pass_dirs[0], panel)
+    ids = [row["opaque_id"] for row in first_rows]
+    passes = [first_rows] + [load_rows(path, ids) for path in pass_dirs[1:]]
+    sources = [path.name for path in pass_dirs]
+    rows = [
+        consensus_row([rows_of[i] for rows_of in passes], sources)
+        for i in range(len(ids))
+    ]
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for row in rows:
+        (out_dir / f"{row['opaque_id']}.json").write_text(
+            json.dumps(row, ensure_ascii=False, indent=1), encoding="utf-8"
+        )
+    meta_path = pass_dirs[0] / META_FILENAME
+    recorded_header: Optional[str] = None
+    if meta_path.exists():
+        meta = load_json(meta_path)
+    else:
+        table_path = pass_dirs[0] / "TABLE.md"
+        if not table_path.exists():
+            raise SystemExit(
+                f"{pass_dirs[0]} carries neither {META_FILENAME} nor TABLE.md — "
+                "the consensus cannot say which judge produced these rows"
+            )
+        recorded_header = table_path.read_text(encoding="utf-8").split(
+            "\n## Par document", 1
+        )[0]
+        meta = {}
+    meta["consensus_of"] = sources
+    meta["consensus_need"] = len(pass_dirs) // 2 + 1
+    (out_dir / META_FILENAME).write_text(
+        json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8"
+    )
+    table = render_table(rows, meta, recorded_header=recorded_header)
+    (out_dir / "TABLE.md").write_text(table, encoding="utf-8")
+    return rows, table
+
+
 # ---------------------------------------------------------------------------
 # The run
 # ---------------------------------------------------------------------------
@@ -1314,6 +1517,24 @@ async def run(
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--timeout", type=int, default=600)
     parser.add_argument(
+        "--judge-temperature",
+        type=parse_temperature,
+        default=None,
+        help="#3423: the judge's sampling temperature, recorded in META.json "
+        "and the table. Default 'provider' (none sent): claude-sonnet-5-5 "
+        "answers 400 « `temperature` is deprecated for this model » (measured "
+        "2026-11-05), so a fixed temperature only exists for judges that "
+        "accept one; --consensus is the remedy that works on every judge",
+    )
+    parser.add_argument(
+        "--consensus",
+        type=Path,
+        nargs="+",
+        default=None,
+        help="#3423: two or more out-dirs of passes over the same inputs; "
+        "writes their consensus rows and table into --out-dir — no judge call",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="list the panel, prompt sizes and estimated cost — no call at all",
@@ -1328,27 +1549,31 @@ async def run(
         "--compare-with",
         type=Path,
         default=None,
-        help="#3417, with --rerender: a second pass's out-dir; writes "
-        "STABILITY.md in --out-dir (items both passes kept, per document)",
+        help="#3417, with --rerender or --consensus: a second pass's (or "
+        "consensus's) out-dir; writes STABILITY.md in --out-dir (items both "
+        "kept, per document)",
     )
     args = parser.parse_args(argv)
 
     from scripts.dataset.run_corpus_batch import parse_doc_ids
 
     panel = parse_doc_ids(args.doc_ids, args.panel_file)
-    if args.rerender:
-        rows, _table = rerender(args.out_dir, panel)
-        print(f"table re-rendered: {args.out_dir / 'TABLE.md'}", flush=True)
+    if args.rerender and args.consensus:
+        parser.error("--rerender and --consensus are two different reads: pick one")
+    if args.rerender or args.consensus:
+        if args.rerender:
+            rows, _table = rerender(args.out_dir, panel)
+            print(f"table re-rendered: {args.out_dir / 'TABLE.md'}", flush=True)
+        else:
+            rows, _table = build_consensus(args.consensus, args.out_dir, panel)
+            print(f"consensus written: {args.out_dir / 'TABLE.md'}", flush=True)
         if args.compare_with is not None:
-            report = compare_passes(rows, load_rows(args.compare_with, panel))
-            (args.out_dir / "STABILITY.md").write_text(
-                render_stability(report, args.out_dir.name, args.compare_with.name),
-                encoding="utf-8",
-            )
-            print(f"stability written: {args.out_dir / 'STABILITY.md'}", flush=True)
+            _write_stability(args.out_dir, rows, args.compare_with, panel)
         return 0
     if args.compare_with is not None:
-        parser.error("--compare-with reads stored rows: it goes with --rerender")
+        parser.error(
+            "--compare-with reads stored rows: it goes with --rerender or --consensus"
+        )
     if not args.judge_model:
         parser.error("--judge-model is required for a judging pass")
     if panel is None:
@@ -1433,6 +1658,10 @@ async def run(
             flush=True,
         )
         print(f"seed: {args.seed}", flush=True)
+        print(
+            f"judge temperature: {_temperature_arg(args.judge_temperature)}",
+            flush=True,
+        )
         print(f"candidate documents: {len(documents)}", flush=True)
         for doc in documents:
             doc_id = doc["opaque_id"]
@@ -1454,7 +1683,10 @@ async def run(
         print("dry-run: no call made", flush=True)
         return 0
 
-    endpoint = resolve_judge_endpoint(args.judge_model)
+    endpoint = {
+        **resolve_judge_endpoint(args.judge_model),
+        "temperature": args.judge_temperature,
+    }
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
     rows: List[Dict[str, Any]] = []
@@ -1510,6 +1742,7 @@ async def run(
         "pipeline_model": pipeline_model,
         "pipeline_family": pipeline_family,
         "seed": args.seed,
+        "judge_temperature": args.judge_temperature,
         "run_head": run_head,
         "judge_host": endpoint.get("host"),
         "judge_route": endpoint.get("route"),
@@ -1521,6 +1754,7 @@ async def run(
             + (f" --doc-ids {args.doc_ids}" if args.doc_ids else "")
             + (f" --panel-file {args.panel_file}" if args.panel_file else "")
             + f" --seed {args.seed}"
+            + f" --judge-temperature {_temperature_arg(args.judge_temperature)}"
         ),
     }
     # #3417 — the meta rides beside the rows, so a re-render names this pass's
