@@ -11,10 +11,11 @@ des fichiers téléchargés via leur taille.
 import logging
 import os
 import re
+from contextvars import ContextVar
 from pathlib import Path
 import requests
 import httpx
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, cast
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -71,6 +72,141 @@ async_retry_on_network_error = retry(
     ),
     before_sleep=before_sleep_log(logger, logging.WARNING),
 )
+
+
+# --- #3435 — composition du budget de phase avec le retry du client ---
+#
+# Mesuré sur le panel cycle 2 : ``act1_framing`` complète en 13,3–38,6 s sur
+# les 8 documents sains ; sur un document un appel s'est bloqué et le budget
+# de phase (180 s, ``workflows.py``) a tué l'acte SANS retry — parce que les
+# propres nombres du client ne composent pas : ``default_timeout`` = 90 s par
+# requête × ``retry_stop_after_attempt`` = 3 avec backoff 2–10 s signifie
+# qu'UN appel bloqué suivi d'UN rejeu demande au moins 90 + 2 + 90 = 182 s,
+# soit plus que le budget. Un rejeu que le budget ne peut pas loger est une
+# promesse que le client ne peut pas tenir.
+#
+# LA règle (UN seul endroit, pas trois constantes) : quand une phase publie
+# son budget, chaque tentative transport est bornée pour qu'au moins un
+# rejeu tienne dedans :
+#
+#     deadline_par_tentative = min(default_timeout,
+#                                  max(plancher,
+#                                      (budget - retry_wait_max - marge) / 2))
+#
+# Au budget de production (180 s) : (180 - 10 - 10) / 2 = 80 s — deux
+# tentatives plus le pire backoff prennent 170 s ≤ 180 s, et 80 s reste 2×
+# la pire durée saine mesurée (38,6 s), donc une exécution saine ne sent
+# jamais la borne. La borne ne RELÈVE jamais un délai (min avec le défaut
+# configuré) ; une phase sans budget garde le comportement d'aujourd'hui,
+# octet pour octet.
+#
+# Le plancher n'existe que pour les petits budgets (témoin à l'échelle du
+# test) : en production (≥ 120 s) il ne lie jamais. Un budget qui ne peut
+# pas loger ``plancher + wait_min + plancher`` n'admet honnêtement aucun
+# rejeu — l'observateur et le message d'échec le disent alors.
+
+#: #3435 — plus petit délai par tentative qui reste une vraie tentative.
+PHASE_ATTEMPT_FLOOR_SECONDS = 1.5
+#: #3435 — la marge couvre l'ordonnancement et le temps hors transport de la
+#: phase (construction du prompt, écriture d'état) que le budget paie aussi.
+PHASE_COMPOSITION_MARGIN_SECONDS = 10.0
+
+#: #3435 — le budget de la phase en cours, publié par l'exécuteur
+#: (``workflow_dsl``) avant d'invoquer le provider. ``None`` = pas de budget
+#: (comportement d'avant, inchangé).
+phase_attempt_budget: ContextVar[Optional[float]] = ContextVar(
+    "phase_attempt_budget", default=None
+)
+
+#: #3435 — observateur mutable partagé entre l'exécuteur (qui le crée) et le
+#: transport (qui le remplit) : nombre de tentatives transport et délai
+#: appliqué. L'exécuteur lit son propre dictionnaire après l'échec — le
+#: contexte d'une tâche annulée ne se propage pas, mais la référence objet si.
+phase_transport_observer: ContextVar[Optional[Dict[str, Any]]] = ContextVar(
+    "phase_transport_observer", default=None
+)
+
+
+def compose_attempt_deadline(
+    phase_budget_seconds: float,
+    default_timeout: Optional[float] = None,
+    retry_wait_max: Optional[float] = None,
+    floor: Optional[float] = None,
+    margin: Optional[float] = None,
+) -> float:
+    """Le délai par tentative transport pour que UN rejeu tienne (#3435).
+
+    C'est LA règle de composition — l'unique endroit où elle vit. Les
+    défauts se lisent dans ``NetworkSettings`` (jamais trois constantes
+    copiées) : ``default_timeout``, ``retry_wait_max``. Voir le bloc
+    ``#3435`` ci-dessus pour les mesures qui l'étalonnent.
+    """
+    dt = (
+        settings.network.default_timeout if default_timeout is None else default_timeout
+    )
+    wmax = (
+        float(settings.network.retry_wait_max)
+        if retry_wait_max is None
+        else retry_wait_max
+    )
+    fl = PHASE_ATTEMPT_FLOOR_SECONDS if floor is None else floor
+    mg = PHASE_COMPOSITION_MARGIN_SECONDS if margin is None else margin
+    derived = (float(phase_budget_seconds) - wmax - mg) / 2.0
+    return min(dt, max(fl, derived))
+
+
+def _extension_read_deadline(value: Any) -> Optional[float]:
+    """Le délai de lecture posé dans ``extensions["timeout"]``, s'il existe.
+
+    httpx y met un ``httpx.Timeout`` (attributs) ; httpcore lit un mapping
+    (``.get``) — les deux formes sont lues, aucune n'est fabriquée.
+    """
+    if value is None:
+        return None
+    attr = getattr(value, "read", None)
+    if attr is not None:
+        return float(attr)
+    getter = getattr(value, "get", None)
+    if getter is not None:
+        try:
+            got = getter("read")
+        except Exception:
+            return None
+        return None if got is None else float(got)
+    return None
+
+
+class PhaseBudgetTransport(httpx.AsyncBaseTransport):
+    """Borne chaque tentative au délai composé du budget de phase (#3435).
+
+    Vit SOUS ``ResilientAsyncTransport`` : le rejeu tenacity rappelle
+    ``handle_async_request`` à chaque tentative, donc la borne s'applique
+    PAR TENTATIVE et non sur l'ensemble rejeué. Sans budget publié
+    (contextvar ``None``), la requête passe inchangée.
+
+    httpcore lit ``request.extensions["timeout"]`` à chaque requête — la
+    réécriture ici est le mécanisme de la borne, et l'exception qu'elle
+    produit (``httpx.ReadTimeout``, sous-classe de ``httpx.RequestError``)
+    est rejeuable par tenacity.
+    """
+
+    def __init__(self, transport: httpx.AsyncBaseTransport):
+        self.transport = transport
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        budget = phase_attempt_budget.get()
+        observer = phase_transport_observer.get()
+        if observer is not None:
+            observer["attempts"] = int(observer.get("attempts", 0)) + 1
+        if budget is not None:
+            deadline = compose_attempt_deadline(budget)
+            observer and observer.setdefault("attempt_deadline", deadline)
+            current = _extension_read_deadline(request.extensions.get("timeout"))
+            if current is None or deadline < current:
+                # La borne ne fait que RÉTRÉCIR — jamais relever un délai
+                # que le client a posé plus petit.
+                request.extensions["timeout"] = httpx.Timeout(deadline)
+        return await self.transport.handle_async_request(request)
 
 
 # --- Fonctions Utilitaires Réseau ---
@@ -438,25 +574,45 @@ class ReasoningEffortTransport(httpx.AsyncBaseTransport):
 class ResilientAsyncTransport(httpx.AsyncBaseTransport):
     """
     Transport httpx qui intègre Tenacity et PyBreaker pour la résilience.
+
+    #3435 — les décorateurs ne sont PLUS empilés : ``@network_breaker``
+    (pybreaker 1.4.1) enveloppe une def async en un callable SYNC, ce qui
+    cache la coroutine à la détection async de tenacity — le « rejeu » que
+    le client promettait était mesuré INERTE (une ``ReadTimeout`` levée une
+    fois s'échappait sans second appel : sonde 05/11, ``calls: 1``). Le
+    disjoncteur est désormais piloté par son API async documentée
+    (``call_async``) À L'INTÉRIEUR de la méthode décorée tenacity, pour que
+    les deux étages voient réellement l'exception : le rejeu rejoue, le
+    disjoncteur compte.
     """
 
     def __init__(self, transport: httpx.AsyncBaseTransport):
         self.transport = transport
 
     @async_retry_on_network_error
-    @network_breaker
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         """
         Gère une requête asynchrone avec résilience (rejeu et disjoncteur).
-        Les exceptions sont gérées par les décorateurs Tenacity et PyBreaker.
+        Le rejeu vit dans le décorateur tenacity (async-aware) ; le
+        disjoncteur via ``call_async`` dans le corps — voir la docstring de
+        la classe pour pourquoi l'empilement de décorateurs ne fonctionnait
+        pas.
         """
         logger.debug(f"Via Resilient Transport: {request.method} {request.url}")
+
         # L'appel est simplement transmis au transporteur suivant.
         # L'inspection de la réponse et la levée d'exception sont gérées
         # plus haut dans la chaîne (dans LoggingHttpTransport) pour garantir
         # que `raise_for_status()` est appelé sur un objet réponse valide.
-        response = await self.transport.handle_async_request(request)
-        return response
+        async def _inner() -> httpx.Response:
+            return await self.transport.handle_async_request(request)
+
+        # pybreaker 1.4.1 n'exporte aucun stub : l'appel est typé ici, à la
+        # frontière, pour que le reste du transport reste strict.
+        return cast(
+            httpx.Response,
+            await network_breaker.call_async(_inner),  # type: ignore[no-untyped-call]
+        )
 
 
 def get_resilient_async_client() -> httpx.AsyncClient:
@@ -465,7 +621,12 @@ def get_resilient_async_client() -> httpx.AsyncClient:
     et un logging détaillé.
     """
     base_transport = httpx.AsyncHTTPTransport()
-    resilient_transport = ResilientAsyncTransport(base_transport)
+    # #3435 — la borne par tentative vit SOUS la couche résiliente : tenacity
+    # ré-invoque ce transport à chaque rejeu, donc la borne s'applique par
+    # tentative et l'ensemble (tentative + attente + rejeu) tient dans le
+    # budget de phase publié par l'exécuteur.
+    budget_clamped = PhaseBudgetTransport(base_transport)
+    resilient_transport = ResilientAsyncTransport(budget_clamped)
     # Le logger utilisé ici est celui du module network_utils
     logged_transport = LoggingHttpTransport(
         logger, wrapped_transport=resilient_transport

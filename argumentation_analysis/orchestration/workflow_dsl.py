@@ -35,6 +35,10 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from .state_writers import _record_phase_failed_status  # #3087: failure father
+from argumentation_analysis.core.utils.network_utils import (  # #3435
+    phase_attempt_budget,
+    phase_transport_observer,
+)
 
 logger = logging.getLogger("WorkflowDSL")
 
@@ -796,8 +800,22 @@ class WorkflowExecutor:
         last_exc: Optional[BaseException] = None
 
         for attempt in range(1, max_attempts + 1):
+            # #3435 — publier le budget AUTOUR de l'invocation : le transport
+            # LLM (``network_utils.PhaseBudgetTransport``) borne alors chaque
+            # tentative pour qu'un rejeu tienne dans le budget (mesuré :
+            # 90 s/appel × rejeu ≥ 182 s > 180 s de budget — voir le bloc
+            # #3435 dans network_utils). Reset dans ``finally`` : un budget
+            # périmé ne doit pas borner la phase SUIVANTE.
+            observer: Optional[Dict[str, Any]] = None
+            budget_token = None
+            observer_token = None
             try:
                 if phase.timeout_seconds:
+                    observer = {"attempts": 0}
+                    budget_token = phase_attempt_budget.set(
+                        float(phase.timeout_seconds)
+                    )
+                    observer_token = phase_transport_observer.set(observer)
                     output = await asyncio.wait_for(
                         provider.invoke(phase_input, ctx),
                         timeout=phase.timeout_seconds,
@@ -807,6 +825,18 @@ class WorkflowExecutor:
                 return output, attempt
             except BaseException as exc:  # noqa: BLE001 — see below
                 last_exc = exc
+                # #3435 — quand c'est le BUDGET de phase qui a tiré (pas le
+                # délai du client), coller sur l'exception ce que le
+                # transport a observé : nombre de tentatives et délai par
+                # tentative composé — le message d'échec nommera sa cause au
+                # lieu d'un TimeoutError nu. L'observateur est un dict
+                # partagé par référence : l'exécuteur lit SES ÉCRITURES même
+                # après l'annulation (le contexte d'une tâche annulée ne se
+                # propage pas, la référence objet si).
+                if isinstance(exc, asyncio.TimeoutError) and observer is not None:
+                    setattr(exc, "llm_attempts", int(observer.get("attempts", 0)))
+                    if observer.get("attempt_deadline") is not None:
+                        setattr(exc, "attempt_deadline", observer["attempt_deadline"])
                 # Anti-theater: only retry transient exceptions.
                 if retry_cfg is None:
                     raise
@@ -830,6 +860,14 @@ class WorkflowExecutor:
                     f"failed with {type(exc).__name__} — retrying in {delay:.2f}s"
                 )
                 await asyncio.sleep(delay)
+            finally:
+                # #3435 — toujours reprendre les tokens : un budget publié
+                # ne survit pas à SA tentative (le sleep de backoff entre
+                # deux tentatives d'exécuteur n'est pas non plus sous budget).
+                if budget_token is not None:
+                    phase_attempt_budget.reset(budget_token)
+                if observer_token is not None:
+                    phase_transport_observer.reset(observer_token)
 
         # Unreachable — the loop either returns or raises on the last attempt.
         assert last_exc is not None
@@ -1153,15 +1191,30 @@ class WorkflowExecutor:
         an error that records nothing. Surface the exception type, the phase,
         and (for timeouts) the budget that was exceeded, so the failure is
         attributable rather than silent.
+
+        #3435: when the budget fired on a phase that publishes its budget,
+        ``_invoke_with_retry`` annotates the exception with what the
+        transport observed — the attempt count and the composed per-attempt
+        deadline — so the message names its cause (« budget exhausted after
+        N attempts ») instead of a bare timeout.
         """
         msg = str(exc)
         if msg:
             return msg
         if isinstance(exc, asyncio.TimeoutError) and timeout_seconds:
-            return (
+            base = (
                 f"{type(exc).__name__}: phase '{phase_name}' exceeded its "
                 f"{timeout_seconds}s budget"
             )
+            llm_attempts = getattr(exc, "llm_attempts", None)
+            deadline = getattr(exc, "attempt_deadline", None)
+            if isinstance(llm_attempts, int) and llm_attempts > 0:
+                base += f" after {llm_attempts} transport attempt(s)"
+                if isinstance(deadline, (int, float)):
+                    base += (
+                        f", each clamped to {deadline:g}s so a retry fits " "(#3435)"
+                    )
+            return base
         return type(exc).__name__ or "UnknownError"
 
     @staticmethod
@@ -1244,13 +1297,28 @@ class WorkflowExecutor:
         final_output = None
 
         for iteration in range(loop_config.max_iterations):
-            if phase.timeout_seconds:
-                output = await asyncio.wait_for(
-                    provider.invoke(phase_input, ctx),
-                    timeout=phase.timeout_seconds,
-                )
-            else:
-                output = await provider.invoke(phase_input, ctx)
+            # #3435 — même publication que _invoke_with_retry : le budget est
+            # PAR ITÉRATION ici (chaque itération a son wait_for), donc les
+            # tokens vivent et meurent avec elle.
+            budget_token = None
+            observer_token = None
+            try:
+                if phase.timeout_seconds:
+                    budget_token = phase_attempt_budget.set(
+                        float(phase.timeout_seconds)
+                    )
+                    observer_token = phase_transport_observer.set({"attempts": 0})
+                    output = await asyncio.wait_for(
+                        provider.invoke(phase_input, ctx),
+                        timeout=phase.timeout_seconds,
+                    )
+                else:
+                    output = await provider.invoke(phase_input, ctx)
+            finally:
+                if budget_token is not None:
+                    phase_attempt_budget.reset(budget_token)
+                if observer_token is not None:
+                    phase_transport_observer.reset(observer_token)
 
             # Store iteration result in context
             ctx[f"phase_{phase.name}_output"] = output
