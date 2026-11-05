@@ -641,3 +641,42 @@ class TestTheFamilyRotatesTheBallotsItWasGiven:
         )
         assert sensitivity["uniform_winner"] == "arg_1"
         assert sensitivity["outcome_changed"] is False
+
+
+# ---------------------------------------------------------------------------
+# Review 4 (R1144c) — a length mismatch is a caller error, and it raises
+# ---------------------------------------------------------------------------
+
+
+class TestBallotsAgentsMismatchRaises:
+    """``len(ballots) != len(agents)`` raises instead of falling back.
+
+    The rotation replays the caller's DECLARED ballots (review 3); a
+    mismatched pair would have played a rebuilt-from-preferences election
+    without saying so — the exact drift review 3 removed. A misaligned call
+    is not a stance the sensitivity can measure: it names itself and stops.
+    """
+
+    def test_misaligned_ballots_raise_and_name_the_lengths(self) -> None:
+        from argumentation_analysis.agents.core.governance.coalition_play import (
+            play_sensitivity,
+        )
+
+        options = ["arg_1", "arg_2"]
+        agents = [
+            Agent(
+                name=f"electeur_{i}",
+                personality="stubborn",
+                preferences=["arg_2", "arg_1"],
+            )
+            for i in range(3)
+        ]
+        # Two ballots for three electors — the misalignment under test.
+        ballots = [["arg_1", "arg_2"] for _ in agents[:2]]
+
+        with pytest.raises(ValueError) as raised:
+            play_sensitivity(agents, options, ballots, _aggregate_governance_votes)
+
+        message = str(raised.value)
+        assert "2 ballot(s) for 3 agent(s)" in message
+        assert "rotate" in message
