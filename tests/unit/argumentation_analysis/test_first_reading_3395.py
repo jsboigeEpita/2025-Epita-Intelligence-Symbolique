@@ -123,6 +123,48 @@ async def test_a_document_past_thirty_thousand_characters_is_read_whole():
     assert result.read_scope["window"] == len(long_doc)
 
 
+# ---------------------------------------------------------------------------
+# 1b. The seam the witnesses above double: a REAL production state (R1143).
+# ---------------------------------------------------------------------------
+
+
+async def test_a_real_state_is_read_whole_and_its_window_is_recorded(monkeypatch):
+    """R1143 — every spectacular run of cycle 1 failed this phase on
+    « 'UnifiedAnalysisState' object is not callable »: the no-cut branch
+    called the state as if it were its recorder. The witnesses above pass a
+    bare namespace, which never reached that call. This one goes through the
+    production surface — the invoke callable, a ``UnifiedAnalysisState``, the
+    writer — with only the model faked.
+    """
+    from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+    from argumentation_analysis.orchestration import invoke_callables
+    from argumentation_analysis.orchestration.state_writers import (
+        _write_first_reading_to_state,
+    )
+
+    long_doc = DOC * 400
+    state = UnifiedAnalysisState(long_doc)
+    model = _FakeModel(_answer(("concession", "Il concède le coût.", CONCESSION)))
+    monkeypatch.setattr(
+        invoke_callables, "_build_persona_callable", lambda name: (model, None)
+    )
+
+    payload = await invoke_callables._invoke_first_reading(
+        long_doc, {"_state_object": state}
+    )
+    _write_first_reading_to_state(payload, state, {})
+
+    assert len(model.prompts) == 1, "the model is called once"
+    assert long_doc in model.prompts[0], "the WHOLE text reaches the prompt"
+    record = state.defining_moves
+    assert record["status"] == "ok", record
+    assert record["read_scope"]["whole_document"] is True
+    assert [m["quote"] for m in record["moves"]] == [CONCESSION]
+    window = state.reading_window_status["first_reading"]
+    assert window["offset"] == 0
+    assert window["window"] == len(long_doc), "the recorded window is the text"
+
+
 async def test_no_model_is_an_honest_empty_read():
     result = await reading().build_first_reading(_state(), None)
     assert result.status == "no_llm"
