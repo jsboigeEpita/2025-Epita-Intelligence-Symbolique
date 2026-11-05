@@ -87,8 +87,14 @@ def move_author_guidance_fr() -> str:
     ``MOVE_AUTHOR_DEFINITIONS_FR``, and a producer reading either tool reads
     the same rule.
     """
+    # The loop variable is named ``definition``, not ``text``: these are the
+    # constant sentences of MOVE_AUTHOR_DEFINITIONS_FR, and the #2908 census
+    # guard is right to treat a bare ``text`` interpolation as document text
+    # unless it can see otherwise. A misleading name is the defect — the guard
+    # gets the name, not a triage row.
     parts = [
-        f"'{value}' si {text}" for value, text in MOVE_AUTHOR_DEFINITIONS_FR.items()
+        f"'{value}' si {definition}"
+        for value, definition in MOVE_AUTHOR_DEFINITIONS_FR.items()
     ]
     return (
         "Ajoute un sophisme identifié à l'état. move_author dit À QUI est le "
