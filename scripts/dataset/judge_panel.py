@@ -595,7 +595,7 @@ def resolve_judge_endpoint(judge_model: str) -> Dict[str, Any]:
     if model_family(model_id) == want:
         route = "canonical"
     elif want == "anthropic":
-        key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+        key, named_base_url, key_source = anthropic_route_pair()
         if not key:
             raise SystemExit(
                 f"the judge {judge_model!r} is an Anthropic model and the "
@@ -607,10 +607,8 @@ def resolve_judge_endpoint(judge_model: str) -> Dict[str, Any]:
         # The SDK's convention: ANTHROPIC_BASE_URL names the host WITHOUT the
         # ``/v1`` segment (``https://api.anthropic.com``), and the client adds
         # ``/v1/messages``. ``anthropic_messages_url`` accepts both forms.
-        base_url = (
-            os.environ.get("ANTHROPIC_BASE_URL") or ""
-        ).strip() or ANTHROPIC_DEFAULT_BASE_URL
-        route = "named-anthropic"
+        base_url = named_base_url
+        route = f"named-anthropic ({key_source})"
     else:
         raise SystemExit(
             f"the judge {judge_model!r} is a {want} model but the canonical "
@@ -628,6 +626,34 @@ def resolve_judge_endpoint(judge_model: str) -> Dict[str, Any]:
 
 
 ANTHROPIC_DEFAULT_BASE_URL = "https://api.anthropic.com"
+
+
+def anthropic_route_pair(dotenv_path: Optional[Path] = None) -> Tuple[str, str, str]:
+    """The judge's key AND base URL, both from ONE source: ``(key, url, source)``.
+
+    R1143: the repository's ``.env`` carries ``ANTHROPIC_API_KEY`` and no
+    ``ANTHROPIC_BASE_URL``, while the agent harness running the script exports
+    ``ANTHROPIC_BASE_URL`` for its own local proxy. Taken separately, the key
+    came from the file and the URL from the harness: all ten cycle-1 judging
+    calls went to ``127.0.0.1:3002`` with the vendor key and answered 401.
+    A route is a pair, so the URL now follows the key. When the key is the
+    file's (the process carries none, or the same one), the URL is the file's,
+    or the vendor's default. When the process carries its own key, the URL is
+    the process's. Nothing is guessed: a missing key still returns ``""``.
+    """
+    from dotenv import dotenv_values
+
+    from scripts.dataset.run_corpus_batch import REPO_ROOT
+
+    path = Path(dotenv_path) if dotenv_path is not None else REPO_ROOT / ".env"
+    file_values = dotenv_values(path) if path.is_file() else {}
+    file_key = (file_values.get("ANTHROPIC_API_KEY") or "").strip()
+    process_key = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+    if file_key and process_key in ("", file_key):
+        base = (file_values.get("ANTHROPIC_BASE_URL") or "").strip()
+        return file_key, base or ANTHROPIC_DEFAULT_BASE_URL, ".env"
+    base = (os.environ.get("ANTHROPIC_BASE_URL") or "").strip()
+    return process_key, base or ANTHROPIC_DEFAULT_BASE_URL, "process"
 
 
 def anthropic_messages_url(base_url: str) -> str:
@@ -739,7 +765,9 @@ def render_table(rows: Sequence[Dict[str, Any]], meta: Dict[str, Any]) -> str:
             f"- Route du juge : `{meta.get('judge_route')}` → hôte "
             f"`{meta['judge_host']}`"
         )
-    answered = sorted({row["answered_model"] for row in rows if row.get("answered_model")})
+    answered = sorted(
+        {row["answered_model"] for row in rows if row.get("answered_model")}
+    )
     if answered:
         lines.append(
             "- Modèle(s) ayant répondu, selon le fournisseur : "
