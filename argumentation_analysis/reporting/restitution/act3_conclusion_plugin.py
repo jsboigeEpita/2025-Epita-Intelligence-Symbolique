@@ -498,6 +498,10 @@ class GovernanceVerdict:
     # #3394 cycle 2 — the NAMES behind the counts (which deciding methods
     # chose each option): the render names the vote it invokes.
     methods_by_option: Dict[str, List[str]] = field(default_factory=dict)
+    # #3394 (tranche R1145) — the two consensus protocols' verdicts, named
+    # apart: not scrutins, never in the support population; the band names
+    # their count (« plus deux protocoles de consensus »).
+    consensus_protocols: Dict[str, str] = field(default_factory=dict)
     # #3386 — the coalition play's block, producer-rendered like Acte II's
     # (``coalition_play.coalition_note``): a bloc that moved the outcome
     # and/or the declared profile's pivot. Empty when nothing changed.
@@ -1470,6 +1474,14 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
                     kept = [str(n) for n in names if isinstance(n, str) and n.strip()]
                     if kept:
                         methods_by_option[str(k)] = kept
+        # #3394 (tranche R1145) — the protocols, named apart (honest absence
+        # when the record carries none: no protocol clause invented).
+        raw_protocols = d.get("consensus_protocols", {}) or {}
+        consensus_protocols: Dict[str, str] = {}
+        if isinstance(raw_protocols, dict):
+            for k, v in raw_protocols.items():
+                if isinstance(v, str) and v.strip():
+                    consensus_protocols[str(k)] = v
         chosen = GovernanceVerdict(
             method=method,
             winner=winner,
@@ -1498,6 +1510,8 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
             winner_basis=winner_basis,
             # #3394 cycle 2 — the names behind the counts.
             methods_by_option=methods_by_option,
+            # #3394 (tranche R1145) — the protocols, named apart.
+            consensus_protocols=consensus_protocols,
             # #3386 — the producer-rendered coalition block ("" when the
             # play changed nothing).
             coalition_note=coalition_note(d),
@@ -3741,6 +3755,9 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
             methods_by_option=gv.methods_by_option,
             n_methods_decided=gv.n_methods_decided,
             winner_basis=gv.winner_basis,
+            # #3394 (tranche R1145) — the protocols, named apart from the
+            # vote's fraction.
+            n_consensus_protocols=len(gv.consensus_protocols) or None,
             # #3308 — what the fallacy pass established about THIS winner.
             examination=evidence.examination_by_unit.get(str(gv.winner).strip(), ""),
         )

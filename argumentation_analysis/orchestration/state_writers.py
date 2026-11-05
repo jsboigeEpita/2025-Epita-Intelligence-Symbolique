@@ -819,6 +819,14 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
     if not output or not isinstance(output, dict):
         return
 
+    # #3394 — imported here, not at module level: the category lives with the
+    # governance methods (which pull numpy for the stochastic protocols this
+    # module only needs to SKIP), and this module's import surface stays the
+    # light one the invoke layer loads early.
+    from argumentation_analysis.agents.core.governance.governance_methods import (
+        CONSENSUS_PROTOCOLS,
+    )
+
     llm_gov = output.get("llm_governance_assessment", {})
     if not isinstance(llm_gov, dict):
         llm_gov = {}
@@ -878,6 +886,13 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
     methods_by_option: dict[str, list[str]] = {}
     n_methods_decided: int | None = None
     winner_basis: str | None = None
+    # #3394 (tranche R1145) — the two consensus protocols' own verdicts,
+    # NAMED APART from the vote's support: they do not enter
+    # ``support_by_option``/``methods_by_option`` (the band counts scrutins),
+    # and the render names them as protocols (« plus deux protocoles de
+    # consensus »), never as voting methods. Read from the verdict, never
+    # recomputed here — the writer states what the aggregate measured.
+    consensus_protocols: dict[str, str] = {}
     # #2850 R1107 — the population the vote was decided over (k of N + the
     # unit ids). Stored only when the verdict carried it (honest absence):
     # the winner is a member of it, and the conflict's own population is a
@@ -911,10 +926,21 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
             wpm = verdict.get("winners_per_method")
             if isinstance(wpm, dict):
                 for name, chosen in wpm.items():
+                    # #3394 — the support population is the scrutins: a
+                    # consensus protocol's verdict is not a vote's support
+                    # and must not sit in the named list (« Raft parmi les
+                    # méthodes de vote » was the defect).
+                    if name in CONSENSUS_PROTOCOLS:
+                        continue
                     if chosen:
                         key = str(chosen)
                         support_by_option[key] = support_by_option.get(key, 0) + 1
                         methods_by_option.setdefault(key, []).append(str(name))
+            raw_protocols = verdict.get("consensus_protocols")
+            if isinstance(raw_protocols, dict):
+                consensus_protocols = {
+                    str(k): str(v) for k, v in raw_protocols.items() if v
+                }
             n_decided = verdict.get("n_methods_decided")
             if isinstance(n_decided, int) and n_decided > 0:
                 n_methods_decided = n_decided
@@ -973,6 +999,8 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
         methods_by_option=methods_by_option or None,
         n_methods_decided=n_methods_decided,
         winner_basis=winner_basis,
+        # #3394 (tranche R1145) — the two consensus protocols, named apart.
+        consensus_protocols=consensus_protocols or None,
         # #2850 R1107 — the vote's own population, apart from the conflict's.
         vote_population=vote_population,
         # #3386 — the coalition play's measured structure + pivot, read

@@ -2759,6 +2759,15 @@ def _aggregate_governance_votes(
     across methods) — reported verbatim, NEVER reconciled into a single number
     (cf. multi-prover FOL / I5 anti-reconcile discipline).
 
+    #3394 — the support POPULATION is the SCRUTINS: ``n_methods_decided``
+    counts the deciding scrutins (10 when all of them decide), and the two
+    consensus protocols' own verdicts travel apart in
+    ``consensus_protocols``. A protocol is not a scrutin (CLAUDE.md:
+    « 5 voting rules + 2 distributed-consensus protocols — the latter are not
+    scrutins »), and counting it as one inflated the rendered fraction
+    (12 instead of 10) while listing « Raft » among the methods that carried
+    a winner. The divergence set still reads every decided method.
+
     Deterministic by construction: ``byzantine`` and ``raft`` are stochastic by
     design (faulty-agent / leader-election models); they run under a fixed local
     seed (RNG state snapshotted and restored) so the verdict is reproducible and
@@ -2767,6 +2776,7 @@ def _aggregate_governance_votes(
     import numpy as np
 
     from argumentation_analysis.agents.core.governance.governance_methods import (
+        CONSENSUS_PROTOCOLS,
         GOVERNANCE_METHODS,
     )
     from argumentation_analysis.agents.core.governance import social_choice as sc
@@ -2816,7 +2826,22 @@ def _aggregate_governance_votes(
 
     decided = {k: v for k, v in winners.items() if v is not None}
     distinct_winners = sorted({str(v) for v in decided.values()})
-    n_decided = len(decided)
+    # #3394 (tranche R1145) — the support POPULATION counts scrutins only:
+    # the band renders « 9 des 10 scrutins », never « 9 des 12 méthodes ».
+    # Byzantine and Raft are consensus protocols, not scrutins (CLAUDE.md's
+    # classification, carried by ``CONSENSUS_PROTOCOLS``); counting them as
+    # voting methods inflated the denominator by two and let a random-vote
+    # simulation carry the winner's fraction. Their own verdicts are recorded
+    # APART below (``consensus_protocols``) so the render can name them as
+    # what they are — and ``distinct_winners`` keeps reading every decided
+    # method: a protocol that lands elsewhere IS a divergence, and the
+    # declared winner's tiers (condorcet → majority → plurality) never read
+    # either protocol, unchanged.
+    scrutin_decided = {k: v for k, v in decided.items() if k not in CONSENSUS_PROTOCOLS}
+    consensus_protocol_verdicts = {
+        k: v for k, v in decided.items() if k in CONSENSUS_PROTOCOLS
+    }
+    n_decided = len(scrutin_decided)
     disagreement = len(distinct_winners) > 1
 
     # #2300 — the rendered winner, defined ONCE at the aggregate: the strict
@@ -2838,7 +2863,11 @@ def _aggregate_governance_votes(
 
     return {
         "winners_per_method": winners,
+        # #3394 — the DECIDING SCRUTINS. The two consensus protocols decide
+        # their own verdict (``consensus_protocols`` below) and are not part
+        # of this population: the band's fraction is a fraction of scrutins.
         "n_methods_decided": n_decided,
+        "consensus_protocols": consensus_protocol_verdicts,
         "distinct_winners": distinct_winners,
         "inter_method_disagreement": disagreement,
         "condorcet_winner": condorcet_w,

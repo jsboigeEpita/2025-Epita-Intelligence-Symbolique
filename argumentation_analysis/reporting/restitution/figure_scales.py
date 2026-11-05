@@ -86,16 +86,22 @@ def sum_on_its_maximum(value: Optional[float], n_terms: Optional[int]) -> str:
 def vote_count_phrase(
     support: Optional[int], n_methods: Optional[int]
 ) -> Optional[str]:
-    """A vote's support as the counted fact: « 9 des 12 méthodes ».
+    """A vote's support as the counted fact: « 9 des 10 scrutins ».
 
     The count comes from governance's own record — the number of deciding
     methods that elected the rendered winner, over the number that decided.
     ``None`` when either side of the fraction is missing or zero: a count
     without its population is the bare-number defect again (anti-#1019).
+
+    #3394 (tranche R1145) — the noun is « scrutins », not « méthodes »: the
+    population IS the scrutins (the two consensus protocols are not counted
+    here; the band names them apart). Before the tranche the phrase read
+    « 9 des 12 méthodes » — a denominator of 12 where only 10 methods had
+    voted, because two fault-tolerance simulations were counted as votes.
     """
     if not support or not n_methods or n_methods <= 0 or support <= 0:
         return None
-    return f"{support} des {n_methods} méthodes"
+    return f"{support} des {n_methods} scrutins"
 
 
 def penalised_sum_on_its_maximum(

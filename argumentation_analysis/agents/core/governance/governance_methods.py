@@ -135,3 +135,16 @@ GOVERNANCE_METHODS = {
     "byzantine": byzantine_consensus,
     "raft": raft_consensus,
 }
+
+#: #3394 — the two distributed-consensus protocols, NAMED APART from the
+#: scrutins. The support band counts scrutins only: a protocol simulates
+#: fault tolerance (random faulty agents; a leader election), it does not
+#: tally a vote, and counting it as one inflated the band's denominator
+#: (12 instead of 10) and listed « Raft » among the « méthodes de vote »
+#: that carried a winner (#3441's named list).
+#:
+#: The category lives HERE, not in ``invoke_callables.stochastic_methods``:
+#: "stochastic" is an implementation property (the seed), the category is
+#: what the method IS. A reader asking "which of these decide like a vote?"
+#: gets the answer from this set, whatever the RNG does.
+CONSENSUS_PROTOCOLS = frozenset({"byzantine", "raft"})

@@ -324,11 +324,35 @@ def _vote_method_names_fr(methods: Optional[Sequence[str]]) -> str:
     return ", ".join(VOTE_METHOD_LABELS_FR.get(m, m) for m in methods)
 
 
+def _protocols_apart(n: Optional[int]) -> str:
+    """« , plus deux protocoles de consensus » — the protocols, named apart.
+
+    #3394 (tranche R1145): a protocol is not a scrutin, so it never enters
+    the vote's fraction — but a reader who only saw « 9 des 10 scrutins »
+    would not know two other measured procedures ran. The clause names their
+    COUNT as what they are. Nothing for zero: a protocol that did not decide
+    (or did not run) is an honest absence, and the phrase would advertise a
+    procedure the record does not carry.
+    """
+    if not n or n <= 0:
+        return ""
+    if n == 1:
+        word = "un protocole de consensus"
+    elif n == 2:
+        word = "deux protocoles de consensus"
+    else:
+        # The population is two by construction (``CONSENSUS_PROTOCOLS``);
+        # a third would print its count rather than borrow a word.
+        word = f"{n} protocoles de consensus"
+    return f", plus {word}"
+
+
 def qualitative_support_band(
     support: Optional[int],
     n_methods_decided: Optional[int],
     winner_basis: Optional[str] = None,
     supporting_methods: Optional[Sequence[str]] = None,
+    n_consensus_protocols: Optional[int] = None,
 ) -> Optional[str]:
     """The band of a vote's support, carrying its count (#3001 a′, #3394).
 
@@ -336,19 +360,20 @@ def qualitative_support_band(
     record: "11 methods out of 12" and "the plurality fallback tier only"
     are two different verdicts the Acts rendered with the same sentence.
 
-    #3394 — the band now carries the COUNT (« 9 des 12 méthodes »), measured
-    from the same record. Cycle 0's renders read « une large majorité des
-    méthodes de vote » with no number behind it, and the panel's reader — a
-    non-specialist — could not tell 9 of 12 from 5 of 11. The word stays (it
-    is the honest characterisation); the count rides it. #1914's no-digits
-    clause is superseded ON THIS LINE for the counted form: what it banned
-    was a bare counter without its population, and ``vote_count_phrase``
-    prints both sides of the fraction or nothing.
+    #3394 — the band now carries the COUNT (« 9 des 12 méthodes » then,
+    # « 9 des 10 scrutins » since the R1145 tranche), measured from the same
+    # record. Cycle 0's renders read « une large majorité des méthodes de
+    # vote » with no number behind it, and the panel's reader — a
+    # non-specialist — could not tell 9 of 12 from 5 of 11. The word stays
+    # (it is the honest characterisation); the count rides it. #1914's
+    # no-digits clause is superseded ON THIS LINE for the counted form: what
+    # it banned was a bare counter without its population, and
+    # ``vote_count_phrase`` prints both sides of the fraction or nothing.
 
     The bands derive from the DEFINITION (R1080 rework): "majorité" is
     spoken only when 2s > n — strictly more than half of the deciding
     methods — so a tie (2s == n) and any support below half render the
-    honest no-majority band (« par une partie seulement des méthodes »).
+    honest no-majority band (« par une partie seulement des scrutins »).
     The pre-rework else branch said « une majorité étroite » for every
     support below 2/3, which the coordinator's enumeration measured as 108
     affirmative false majorities on the grid n 1..12 — including every
@@ -370,6 +395,12 @@ def qualitative_support_band(
         return None
     n = n_methods_decided
     s = support
+    # #3394 (tranche R1145) — the population is the SCRUTINS: « 9 des 10
+    # scrutins, plus deux protocoles de consensus ». The two protocols are
+    # named apart — their count closes the band sentence, AFTER the named
+    # scrutins, so the clause qualifies the population and never reads as one
+    # more name in the list. They never enter the fraction.
+    apart = _protocols_apart(n_consensus_protocols)
     count = vote_count_phrase(s, n)
     # #3394 cycle 2 — the names ride the count, but ONLY when they are
     # exactly as many as the counted support: a caller whose names and
@@ -388,22 +419,22 @@ def qualitative_support_band(
     else:
         counted = ""
     if s >= n:
-        return f"à l'unanimité des méthodes qui ont décidé{counted}"
+        return f"à l'unanimité des scrutins qui ont décidé{counted}{apart}"
     if 3 * s >= 2 * n:
-        return f"par une large majorité des méthodes{counted}"
+        return f"par une large majorité des scrutins{counted}{apart}"
     if winner_basis == "plurality":
         if 2 * s > n:
             return (
-                "de justesse, par une majorité étroite des méthodes, au "
-                f"palier de repli{counted}"
+                "de justesse, par une majorité étroite des scrutins, au "
+                f"palier de repli{counted}{apart}"
             )
         return (
             "de justesse, au palier de repli — aucune option ne s'était "
-            f"clairement imposée parmi les méthodes{counted}"
+            f"clairement imposée parmi les scrutins{counted}{apart}"
         )
     if 2 * s > n:
-        return f"de justesse, par une majorité étroite des méthodes{counted}"
-    return f"par une partie seulement des méthodes{counted}"
+        return f"de justesse, par une majorité étroite des scrutins{counted}{apart}"
+    return f"par une partie seulement des scrutins{counted}{apart}"
 
 
 def render_governance_lead(
@@ -417,6 +448,7 @@ def render_governance_lead(
     methods_by_option: Optional[Mapping[str, Sequence[str]]] = None,
     n_methods_decided: Optional[int] = None,
     winner_basis: Optional[str] = None,
+    n_consensus_protocols: Optional[int] = None,
     examination: str = "",
 ) -> Tuple[str, str]:
     """The GOUVERNANCE line of both Acts' prompts — one renderer, no drift.
@@ -499,6 +531,9 @@ def render_governance_lead(
                 if methods_by_option
                 else None
             ),
+            # #3394 (tranche R1145) — the protocols are named apart, never
+            # counted in the vote's fraction.
+            n_consensus_protocols=n_consensus_protocols,
         )
         if band:
             # #3394 — the band itself now carries the counted support

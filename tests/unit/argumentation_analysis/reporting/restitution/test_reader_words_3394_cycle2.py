@@ -50,7 +50,9 @@ _NINE_FR = (
     "majorité, pluralité, Borda, Condorcet, vote quadratique, "
     "vote par approbation, vote unique transférable, Copeland, Schulze"
 )
-_ALL_TWELVE_FR = _NINE_FR + ", vainqueur de Condorcet, consensus byzantin, Raft"
+#: #3394 (tranche R1145) — the scrutins only: byzantine and raft are
+#: consensus protocols, named apart by the band, never in the vote's list.
+_ALL_TEN_FR = _NINE_FR + ", vainqueur de Condorcet"
 
 
 # ---------------------------------------------------------------------------
@@ -60,41 +62,45 @@ _ALL_TWELVE_FR = _NINE_FR + ", vainqueur de Condorcet, consensus byzantin, Raft"
 
 class TestTheVoteNamesItsMethods:
     def test_the_band_carries_the_methods_beside_their_count(self):
-        band = qualitative_support_band(9, 12, None, supporting_methods=_NINE)
+        band = qualitative_support_band(9, 10, None, supporting_methods=_NINE)
         assert band == (
-            f"par une large majorité des méthodes (9 des 12 méthodes : {_NINE_FR})"
+            f"par une large majorité des scrutins (9 des 10 scrutins : {_NINE_FR})"
         )
 
-    def test_unanimity_names_every_method(self):
-        twelve = _NINE + ["condorcet_winner", "byzantine", "raft"]
-        band = qualitative_support_band(12, 12, None, supporting_methods=twelve)
-        assert band == (
-            "à l'unanimité des méthodes qui ont décidé "
-            f"(12 des 12 méthodes : {_ALL_TWELVE_FR})"
+    def test_unanimity_names_every_scrutin(self):
+        # #3394 (tranche R1145) — ten scrutins vote; the two protocols ran
+        # and are named APART, after the list. They are not in it.
+        ten = _NINE + ["condorcet_winner"]
+        band = qualitative_support_band(
+            10, 10, None, supporting_methods=ten, n_consensus_protocols=2
         )
+        assert band == (
+            "à l'unanimité des scrutins qui ont décidé "
+            f"(10 des 10 scrutins : {_ALL_TEN_FR}), plus deux protocoles de consensus"
+        ), "Raft must never sit among the methods that carried the winner"
 
     def test_an_unknown_method_prints_as_itself_never_dropped(self):
         band = qualitative_support_band(
-            2, 12, None, supporting_methods=["majority", "landauer"]
+            2, 10, None, supporting_methods=["majority", "landauer"]
         )
         assert band == (
-            "par une partie seulement des méthodes (2 des 12 méthodes : majorité, landauer)"
+            "par une partie seulement des scrutins (2 des 10 scrutins : majorité, landauer)"
         )
 
     def test_names_that_disagree_with_the_count_stay_home(self):
         # The count is the measured half; a name list of another length
         # describes a different vote — printing both would be false.
         band = qualitative_support_band(
-            9, 12, None, supporting_methods=["majority", "borda"]
+            9, 10, None, supporting_methods=["majority", "borda"]
         )
-        assert band == "par une large majorité des méthodes (9 des 12 méthodes)"
+        assert band == "par une large majorité des scrutins (9 des 10 scrutins)"
 
     def test_a_band_without_names_is_unchanged(self):
         # Honest absence: a pre-cycle-2 record keeps its count-only band,
         # byte-identical.
         assert (
-            qualitative_support_band(9, 12, None)
-            == "par une large majorité des méthodes (9 des 12 méthodes)"
+            qualitative_support_band(9, 10, None)
+            == "par une large majorité des scrutins (9 des 10 scrutins)"
         )
 
     def test_the_lead_names_the_methods_of_the_verdict(self):
@@ -105,9 +111,9 @@ class TestTheVoteNamesItsMethods:
             "vote_aggregate",
             support_by_option={"arg_1": 9},
             methods_by_option={"arg_1": _NINE},
-            n_methods_decided=12,
+            n_methods_decided=10,
         )
-        assert f"(9 des 12 méthodes : {_NINE_FR})" in lead
+        assert f"(9 des 10 scrutins : {_NINE_FR})" in lead
 
     def test_each_divergent_winner_carries_its_own_methods(self):
         clause = render_divergence_clause(
@@ -117,14 +123,14 @@ class TestTheVoteNamesItsMethods:
                 "arg_2": ["borda", "schulze", "copeland", "approval", "stv"],
                 "arg_3": ["majority", "plurality", "quadratic", "condorcet"],
             },
-            n_methods_decided=12,
+            n_methods_decided=10,
         )
         assert (
-            "(5 des 12 méthodes : Borda, Schulze, Copeland, vote par approbation, "
+            "(5 des 10 scrutins : Borda, Schulze, Copeland, vote par approbation, "
             "vote unique transférable)" in clause
         )
         assert (
-            "(4 des 12 méthodes : majorité, pluralité, vote quadratique, Condorcet)"
+            "(4 des 10 scrutins : majorité, pluralité, vote quadratique, Condorcet)"
             in clause
         )
 
@@ -139,14 +145,14 @@ class TestTheVoteNamesItsMethods:
             winner_provenance="vote_aggregate",
             support_by_option={"arg_1": 9},
             methods_by_option={"arg_1": _NINE},
-            n_methods_decided=12,
+            n_methods_decided=10,
         )
         entry = state.governance_decisions[0]
         assert entry["methods_by_option"] == {"arg_1": _NINE}
         # Honest absence: a caller that passes none stores no empty key.
         state2 = UnifiedAnalysisState("texte")
         state2.add_governance_decision(
-            method="majority", winner="arg_1", scores={}, n_methods_decided=12
+            method="majority", winner="arg_1", scores={}, n_methods_decided=10
         )
         assert "methods_by_option" not in state2.governance_decisions[0]
 
@@ -170,14 +176,14 @@ class TestTheVoteNamesItsMethods:
                     "winner_provenance": "vote_aggregate",
                     "support_by_option": {"arg_1": 9},
                     "methods_by_option": {"arg_1": _NINE},
-                    "n_methods_decided": 12,
+                    "n_methods_decided": 10,
                 }
             ]
         )
-        assert f"(9 des 12 méthodes : {_NINE_FR})" in build_act2_prompt(
+        assert f"(9 des 10 scrutins : {_NINE_FR})" in build_act2_prompt(
             build_act2_evidence(state)
         )
-        assert f"(9 des 12 méthodes : {_NINE_FR})" in build_act3_prompt(
+        assert f"(9 des 10 scrutins : {_NINE_FR})" in build_act3_prompt(
             build_act3_evidence(state)
         )
 
