@@ -133,6 +133,7 @@ from argumentation_analysis.orchestration.selection import (
 
 from .text_sequence import MOVE_LABELS_FR, TextSequence, collect_text_sequence
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
+from argumentation_analysis.agents.core.reading import first_reading_note  # #3395
 
 logger = logging.getLogger(__name__)
 
@@ -613,6 +614,13 @@ class Act2Evidence:
     # basis the "Acts silent" family never spoke: the trace named each
     # window since lot 4, the acts quoted none of them.
     readings: ReadingRecord = field(default_factory=ReadingRecord)
+    # #3395 (acts slice) — the first reading's labelled block, rendered by its
+    # ONE producer (``first_reading_note``): the text's defining moves with
+    # their verbatim quotes, or the stated absence — the writer may neither
+    # invent a centre nor read a failed read as a silence. Empty when the state
+    # carries no record at all (bare doubles): the prompt then omits the
+    # section instead of putting a producer's vocabulary where none ran.
+    first_reading: str = ""
 
 
 @dataclass
@@ -1297,6 +1305,9 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         # named it.
         arena=build_arena_record(state),
         readings=build_reading_record(state),
+        # #3395 (acts slice) — the one producer renders the block; the act
+        # never re-words the moves in its own vocabulary.
+        first_reading=first_reading_note(state),
     )
 
 
@@ -2403,6 +2414,13 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
     if reading_block:
         reading_block += "\n\n"
 
+    # #3395 (acts slice) — the first reading's block, beside the reading
+    # bounds: what the one whole-document read found the TEXT doing, before
+    # any lens ran. Empty on a state that carries no record (omitted whole).
+    first_reading_block = (
+        f"{evidence.first_reading}\n\n" if evidence.first_reading else ""
+    )
+
     prompt = (
         "Tu es l'auteur de l'ACTE II d'un rapport de restitution argumentative.\n"
         "Le récit suit le FIL ARGUMENTATIF (thèse → soutiens → dérapages), découpé\n"
@@ -2438,7 +2456,8 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
             if is_fiction_arena(evidence.arena)
             else ""
         )
-        + f"\n{reading_block}"
+        + f"\n{first_reading_block}"
+        f"{reading_block}"
         f"{coverage_note}"
         f"{unattributed_block}"
         f"{reported_block}"
