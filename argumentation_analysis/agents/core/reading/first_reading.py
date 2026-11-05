@@ -24,7 +24,34 @@ the repo already owns (#3389's ``normalised_quote_in``): case, whitespace,
 typographic apostrophes and quotation marks are normalised, ``[…]`` reads as an
 elision gap, and a span under a word or two is a keyword rather than a
 citation. A quote that fails is DROPPED and counted — never kept "because the
-model probably copied it".
+model probably copied it". The rule itself is untouched (#3415 ask 4): what a
+failed quote may gain is a SECOND chance at being evidence, never a cheaper
+pass.
+
+**A failed quote is re-anchored on the document, and never invents its words**
+(#3415 ask 4). The paid probe of 2026-11-05 measured the defect this repairs:
+on the longest panel document the mechanism survived the rule 3/3 and the
+thesis 1/3 — a thesis whose citation failed was lost WITH its reading, under an
+anonymous « 1 geste écarté ». So the two slots the question asks for first
+(``thesis``, ``mechanism``) do not fall on a failed citation any more:
+
+* the document is searched for the passage carrying the longest run of
+  consecutive words the quote and the text share (``anchor_quote_in``), and the
+  passage must clear BOTH declared floors (``ANCHOR_MIN_RUN`` words,
+  ``ANCHOR_MIN_SHARE`` of the quote's own words). Above them the move keeps its
+  reading and takes the DOCUMENT's characters as its quote, flagged
+  ``anchor="relocated"`` — the model's words are never printed between « »;
+* below them the move keeps its reading with NO quote, flagged
+  ``anchor="unanchored"``, and the note prints it without guillemets. The
+  reading reaching Act II and Act III is the point of #3395; the citation was
+  its ornament.
+
+No second model call: the anchor is a deterministic word scan over the text
+already in memory. A local move keeps the pre-#3415 rule — a failed citation
+costs it, counted — because the measured loss was the centre of the document,
+and widening the rule to twelve local moves would buy noise. And the record
+NAMES the slot it lost (``dropped_slots``): a slot that produced nothing says
+which one and why, so the next probe reads a fact instead of a count.
 
 **Not the historian of #3377.** The historian writes what the model knows about
 the situation, labelled ``model_knowledge``. This module writes the text's own
@@ -36,6 +63,8 @@ from __future__ import annotations
 
 import json
 import logging
+import math
+import re
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
@@ -76,6 +105,20 @@ MAX_MOVES = 12
 #: model rather than truncated after the fact.
 _PROMPT_MAX_MOVES = MAX_MOVES
 
+#: #3415 ask 4 — the two floors a document passage must clear before it can
+#: anchor a slot whose quote failed the citation rule. Both are DECLARED here,
+#: not tuned per call site, so the record can state what it accepted: a run of
+#: this many consecutive words, covering at least this share of the quote's own
+#: words. A short overlap is a coincidence of vocabulary (« la réforme » occurs
+#: everywhere), and anchoring a thesis on one would be the fuzzy match this
+#: repo refuses.
+ANCHOR_MIN_RUN = 8
+ANCHOR_MIN_SHARE = 0.5
+
+#: One word, kept with its ORIGINAL offsets: the anchor must return the
+#: document's characters, never a normalised copy of them.
+_WORD_RE = re.compile(r"\S+")
+
 #: French words the model tends to answer with, mapped to the vocabulary. The
 #: kind is a hint about the move, not a verdict: a synonym is not an error.
 _KIND_SYNONYMS = {
@@ -111,6 +154,43 @@ _KIND_LABELS_FR = {
     "dilemma": "dilemme",
     "other": "autre",
 }
+
+#: The two slots the question asks for first, under the names the NOTE prints
+#: (#3415). One table so the move line and the lost-slot line cannot spell the
+#: same slot two ways.
+_SLOT_LABELS_FR = {"thesis": "thèse centrale", "mechanism": "mécanisme"}
+
+#: Why a slot produced nothing, in the reader's language (#3415 ask 4). The
+#: state keeps the code; the note prints the phrase.
+_SLOT_DROP_LABELS_FR = {
+    "not_an_object": "réponse illisible",
+    "no_reading": "lecture vide",
+    "duplicate": "citation en double",
+}
+
+#: The two states a moved anchor can take (#3415 ask 4). One spelling each,
+#: in the state, the note and the tests.
+ANCHOR_RELOCATED = "relocated"
+ANCHOR_UNANCHORED = "unanchored"
+
+
+def _slot_label(slot: str) -> str:
+    """The French name of a slot, or ``""`` when the value is not a slot."""
+    return _SLOT_LABELS_FR.get(slot, "")
+
+
+def _move_label(move: Dict[str, Any]) -> str:
+    """The note's name for one move: its slot when it has one, else its kind.
+
+    R1142 — the label prints in French (#3393, the reader's vocabulary); the
+    English key stays in the state. #3415 — the two slots the question asks
+    for first print under their own names, so the writer can point at the
+    thesis and the mechanism as such.
+    """
+    return _slot_label(str(move.get("slot") or "")) or _KIND_LABELS_FR.get(
+        str(move.get("kind")), "autre"
+    )
+
 
 FIRST_READING_PROMPT = """You are reading the document below ONCE, whole, before any
 specialist sees it. Your job, in this order:
@@ -162,6 +242,18 @@ class DefiningMove:
     (``"mechanism"``). Empty for a local move — the record carries the key
     only when there is a slot to state (honest absence, so a slot-less
     record stays byte-identical to a pre-#3415 one).
+
+    ``anchor`` states how the quote relates to the document (#3415 ask 4), and
+    is EMPTY when the quote passed the citation rule as given — the ordinary
+    case, and the one a control record must keep byte-identical:
+
+    * ``"relocated"`` — the model's quote failed the rule; the document
+      carries a passage that clears the anchor floors, and ``quote``/``offset``
+      are that passage, in the document's own characters;
+    * ``"unanchored"`` — the model's quote failed and nothing in the document
+      carried enough of it: the reading is kept, ``quote`` is empty and
+      ``offset`` is ``None``, and the render prints no guillemets. The model's
+      words are never presented as the document's.
     """
 
     kind: str
@@ -170,6 +262,7 @@ class DefiningMove:
     offset: Optional[int] = None
     basis: str = FIRST_READING_BASIS
     slot: str = ""
+    anchor: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         payload = {
@@ -181,6 +274,8 @@ class DefiningMove:
         }
         if self.slot:
             payload["slot"] = self.slot
+        if self.anchor:
+            payload["anchor"] = self.anchor
         return payload
 
     def span(self) -> Optional[Tuple[int, int]]:
@@ -201,11 +296,20 @@ class FirstReading:
     ``malformed_moves`` (#3415) counts the answer objects the document-level
     JSON parse could not read but the per-object salvage could not keep either:
     one bad character must cost its own move, never the whole reading.
+
+    ``dropped_slots`` (#3415 ask 4) NAMES the slot a reading lost, and why:
+    ``[{"slot": "thesis", "reason": "no_reading"}]``. ``dropped_quotes`` alone
+    could say only « 1 geste écarté » — the paid probe read that count and
+    could not tell the central thesis from a local claim, which is how a
+    thesis lost to a failed citation stayed invisible. A slot whose citation
+    fails is no longer dropped (it is kept, anchored or not); this list is
+    therefore the slots that produced NOTHING at all.
     """
 
     moves: List[DefiningMove] = field(default_factory=list)
     dropped_quotes: int = 0
     malformed_moves: int = 0
+    dropped_slots: List[Dict[str, str]] = field(default_factory=list)
     status: str = "no_llm"
     error: str = ""
     read_scope: Dict[str, Any] = field(default_factory=dict)
@@ -220,6 +324,8 @@ class FirstReading:
         }
         if self.malformed_moves:
             payload["malformed_moves"] = self.malformed_moves
+        if self.dropped_slots:
+            payload["dropped_slots"] = [dict(entry) for entry in self.dropped_slots]
         # #3395 — ``error`` only when there IS one: the writers' shared guard
         # treats the presence of the key as a failed invoke (the #3377
         # convention), so an empty string here would make every successful
@@ -489,32 +595,84 @@ async def build_first_reading(
         dropped = 0
 
         def _keep(entry: Any, kind: str, slot: str) -> None:
-            """One verified entry — the citation rule is the same for a slot
-            (#3415) as for a local move: a quote the document does not carry
-            is counted and dropped, never kept."""
+            """One entry, through the citation rule — then, for a slot only,
+            through the anchor (#3415 ask 4).
+
+            A local move keeps the pre-#3415 rule: a quote the document does
+            not carry is counted and dropped. The two slots the question asks
+            for FIRST are what the panel measures, and a thesis that falls on
+            its citation takes its reading with it — so a failed citation
+            sends them to ``anchor_quote_in``: a document passage that clears
+            the floors re-anchors the move on the DOCUMENT's words, and one
+            that does not leaves the move with its reading and no quote at all.
+            In neither case do the model's words reach a guillemet."""
             nonlocal dropped
             if not isinstance(entry, dict):
+                if slot:
+                    result.dropped_slots.append(
+                        {"slot": slot, "reason": "not_an_object"}
+                    )
+                else:
+                    dropped += 1
                 return
             reading = str(entry.get("reading", "") or "").strip()
             quote = str(entry.get("quote", "") or "").strip()
-            if not reading or not quote:
-                dropped += 1
+            if not reading:
+                # A slot with no reading has nothing to record: it is NAMED
+                # (#3415 ask 4), where the counter alone could not say which.
+                if slot:
+                    result.dropped_slots.append({"slot": slot, "reason": "no_reading"})
+                else:
+                    dropped += 1
                 return
-            if not quote_occurs_in(raw_text, quote):
-                # The one citation rule (#3389). Counted, never kept.
-                dropped += 1
-                logger.info("FirstReading: dropped an entry whose quote is absent")
-                return
-            index = locate_quote(raw_text, quote)
-            moves.append(
-                DefiningMove(
-                    kind=kind,
-                    reading=reading,
-                    quote=quote,
-                    offset=index if index >= 0 else None,
-                    slot=slot,
+            if quote and quote_occurs_in(raw_text, quote):
+                index = locate_quote(raw_text, quote)
+                moves.append(
+                    DefiningMove(
+                        kind=kind,
+                        reading=reading,
+                        quote=quote,
+                        offset=index if index >= 0 else None,
+                        slot=slot,
+                    )
                 )
-            )
+                return
+            if slot:
+                anchored = anchor_quote_in(raw_text, quote) if quote else None
+                if anchored is not None:
+                    passage, start = anchored
+                    logger.info(
+                        "FirstReading: slot %s re-anchored on a document passage",
+                        slot,
+                    )
+                    moves.append(
+                        DefiningMove(
+                            kind=kind,
+                            reading=reading,
+                            quote=passage,
+                            offset=start,
+                            slot=slot,
+                            anchor=ANCHOR_RELOCATED,
+                        )
+                    )
+                    return
+                logger.info(
+                    "FirstReading: slot %s kept unanchored (no document passage)", slot
+                )
+                moves.append(
+                    DefiningMove(
+                        kind=kind,
+                        reading=reading,
+                        quote="",
+                        offset=None,
+                        slot=slot,
+                        anchor=ANCHOR_UNANCHORED,
+                    )
+                )
+                return
+            # The one citation rule (#3389). Counted, never kept.
+            dropped += 1
+            logger.info("FirstReading: dropped an entry whose quote is absent")
 
         # #3415 ask 1 — the two entries the question asks for FIRST: the
         # central thesis and the mechanism that carries it. The kinds stay in
@@ -532,13 +690,21 @@ async def build_first_reading(
 
         # A move the model repeated (same quote) is one move: the reading is
         # kept once, in its first position, and the duplicate is counted as
-        # dropped like any other unreadable answer.
+        # dropped like any other unreadable answer. An UNANCHORED slot has no
+        # quote to compare (#3415 ask 4), so it keys on its own slot and
+        # reading — keying on the empty string collapsed every unanchored move
+        # into the first one.
         unique: List[DefiningMove] = []
         seen = set()
         for move in moves:
-            key = move.quote
+            key = move.quote or f"#{move.slot}:{move.reading}"
             if key in seen:
-                dropped += 1
+                if move.slot:
+                    result.dropped_slots.append(
+                        {"slot": move.slot, "reason": "duplicate"}
+                    )
+                else:
+                    dropped += 1
                 continue
             seen.add(key)
             unique.append(move)
@@ -573,6 +739,79 @@ def quote_occurs_in(text: str, quote: str) -> bool:
     )
 
     return normalised_quote_in(text, quote)
+
+
+def _folded_words(text: str) -> List[Tuple[str, int, int]]:
+    """``(folded, start, end)`` per word — the fold, with original offsets.
+
+    The folding is the citation rule's own (``normalise_for_citation``: case,
+    typographic apostrophes and quotation marks) and nothing more: no stemming,
+    no punctuation stripping, no stop-word removal. A word the two texts do not
+    spell the same way is a different word, even where a human reader would
+    call it the same one — that is what keeps the anchor from being a fuzzy
+    match. Because only the CHARACTERS are folded, never the layout, the
+    offsets address the document itself.
+    """
+    from argumentation_analysis.reporting.restitution.quote_fidelity import (
+        normalise_for_citation,
+    )
+
+    words: List[Tuple[str, int, int]] = []
+    for match in _WORD_RE.finditer(text or ""):
+        folded = normalise_for_citation(match.group(0))
+        if folded:
+            words.append((folded, match.start(), match.end()))
+    return words
+
+
+def anchor_quote_in(text: str, quote: str) -> Optional[Tuple[str, int]]:
+    """The document passage carrying the longest shared word run, or ``None``.
+
+    #3415 ask 4. A quote the citation rule refused is not thereby a
+    fabrication: the model may have joined two passages, changed one word, or
+    re-cut the span. This scan looks for what the two DO share — the longest
+    run of consecutive words equal after the citation rule's own folding — and
+    answers the document's characters for that run plus their offset.
+
+    ``None`` unless the run clears BOTH floors (:data:`ANCHOR_MIN_RUN`
+    consecutive words, :data:`ANCHOR_MIN_SHARE` of the quote's words). Under
+    them the overlap is a coincidence of vocabulary, and a passage anchored on
+    one would put the reader's eye on a sentence the model never quoted.
+
+    The passage returned is a substring of ``text`` by construction — it is
+    cut from the document at word boundaries — so printing it between « » is
+    honest, and the citation rule accepts it without any relaxation.
+
+    Deterministic and local: no model call, no network, no RNG. Cost is one
+    pass over the document's words plus one extension per candidate position of
+    each quote word.
+    """
+    words = _folded_words(text)
+    needle = [folded for folded, _start, _end in _folded_words(quote)]
+    if not words or not needle:
+        return None
+    positions: Dict[str, List[int]] = {}
+    for index, (folded, _start, _end) in enumerate(words):
+        positions.setdefault(folded, []).append(index)
+    best_run = 0
+    best_text = -1
+    for qi, folded in enumerate(needle):
+        for pi in positions.get(folded, ()):
+            run = 0
+            while (
+                qi + run < len(needle)
+                and pi + run < len(words)
+                and needle[qi + run] == words[pi + run][0]
+            ):
+                run += 1
+            if run > best_run:
+                best_run, best_text = run, pi
+    required = max(ANCHOR_MIN_RUN, math.ceil(ANCHOR_MIN_SHARE * len(needle)))
+    if best_run < required:
+        return None
+    start = words[best_text][1]
+    end = words[best_text + best_run - 1][2]
+    return text[start:end], start
 
 
 async def extract_first_reading(**kwargs: Any) -> Dict[str, Any]:
@@ -652,7 +891,11 @@ def document_statements_for_unit(
             continue
         quote = str(move.get("quote") or "")
         move_offset = move.get("offset")
-        if not quote or not isinstance(move_offset, int) or isinstance(move_offset, bool):
+        if (
+            not quote
+            or not isinstance(move_offset, int)
+            or isinstance(move_offset, bool)
+        ):
             continue
         move_end = move_offset + len(quote)
         if offset < move_end and move_offset < unit_end:
@@ -735,20 +978,24 @@ def first_reading_note(state: Any) -> str:
     for move in moves:
         offset = move.get("offset")
         position = f" [texte, position {offset}]" if isinstance(offset, int) else ""
-        # R1142 — the label prints in French (#3393, the reader's
-        # vocabulary); the English key stays in the state. #3415 — the two
-        # slots the question asks for first print under their own names, so
-        # the writer can point at the thesis and the mechanism as such.
-        slot = str(move.get("slot") or "")
-        if slot == "thesis":
-            label = "thèse centrale"
-        elif slot == "mechanism":
-            label = "mécanisme"
-        else:
-            label = _KIND_LABELS_FR.get(str(move.get("kind")), "autre")
+        label = _move_label(move)
+        anchor = str(move.get("anchor") or "")
+        if anchor == ANCHOR_UNANCHORED:
+            # #3415 ask 4 — the reading survived its failed citation, without
+            # one. No guillemets: the model's words are not the document's.
+            lines.append(
+                f"  - {label} : {move.get('reading')} "
+                "— citation non ancrée : le document ne porte pas ce passage."
+            )
+            continue
+        marker = (
+            " (réancrée sur un passage du document)"
+            if anchor == ANCHOR_RELOCATED
+            else ""
+        )
         lines.append(
             f"  - {label} : {move.get('reading')} "
-            f"— « {move.get('quote')} »{position}"
+            f"— « {move.get('quote')} »{position}{marker}"
         )
     if dropped:
         lines.append(f"  {dropped} geste(s) écarté(s) : citation absente du document.")
@@ -756,4 +1003,13 @@ def first_reading_note(state: Any) -> str:
         # #3415 ask 2 — a malformed object costs its own move, never the
         # reading; what was lost is stated, not hidden.
         lines.append(f"  {malformed} objet(s) illisible(s) : geste(s) perdu(s).")
+    for lost in record.get("dropped_slots") or []:
+        # #3415 ask 4 — the slot is NAMED. « 1 geste écarté » could not tell
+        # the central thesis from a local claim, which is how the probe read
+        # a lost thesis as a count.
+        if not isinstance(lost, dict):
+            continue
+        label = _slot_label(str(lost.get("slot") or ""))
+        reason = _SLOT_DROP_LABELS_FR.get(str(lost.get("reason") or ""), "geste perdu")
+        lines.append(f"  - {label} : aucun geste retenu ({reason}).")
     return "\n".join(lines)
