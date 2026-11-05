@@ -53,6 +53,23 @@ and widening the rule to twelve local moves would buy noise. And the record
 NAMES the slot it lost (``dropped_slots``): a slot that produced nothing says
 which one and why, so the next probe reads a fact instead of a count.
 
+**The pillars, not only the thesis** (#3432). Cycle 2 of the panel measured
+that the render now STATES the central thesis (9/10 documents) but does not
+EXAMINE it: 25 severe M1 items remain, on 7 documents, and the zero-shot names
+what the thesis rests on — the two or three passages of evidence or reasoning
+that carry it — which no line of the render does. Those passages are usually
+far from the thesis one, and the per-argument selection (#3395) prefers the
+units overlapping a defining move, so they were rarely read at all. The third
+slot names them (``slot="pillar"``, at most :data:`MAX_PILLARS`), each with its
+own verbatim quote and a kind from the closed vocabulary; being moves, their
+spans join ``defining_move_spans`` and the selector examines them first. The
+slot points the lenses at the passages that carry the thesis — it does not
+judge them, and it does not raise ``MAX_MOVES`` to catch them by volume.
+
+What the thesis LEAVES OUT is not a reading of the text: it belongs to the
+historian and strategist personas (#3377), labelled ``model_knowledge``, and
+never to this module.
+
 **Not the historian of #3377.** The historian writes what the model knows about
 the situation, labelled ``model_knowledge``. This module writes the text's own
 content, labelled ``first_reading``. Two fields, two producers, two labels; a
@@ -104,6 +121,13 @@ MAX_MOVES = 12
 #: How many moves the prompt asks for — a bound on the answer, stated to the
 #: model rather than truncated after the fact.
 _PROMPT_MAX_MOVES = MAX_MOVES
+
+#: #3432 — how many pillars the answer may carry. The panel measured 2-3
+#: passages carrying a thesis, and the slot is a reading, not a second list of
+#: local moves: the bound stays DECLARED here (and stated to the model) rather
+#: than raised later, and it never touches ``MAX_MOVES`` — the anti-pendulum
+#: the issue names is « catch the pillars by volume ».
+MAX_PILLARS = 3
 
 #: #3415 ask 4 — the two floors a document passage must clear before it can
 #: anchor a slot whose quote failed the citation rule. Both are DECLARED here,
@@ -158,7 +182,15 @@ _KIND_LABELS_FR = {
 #: The two slots the question asks for first, under the names the NOTE prints
 #: (#3415). One table so the move line and the lost-slot line cannot spell the
 #: same slot two ways.
-_SLOT_LABELS_FR = {"thesis": "thèse centrale", "mechanism": "mécanisme"}
+_SLOT_LABELS_FR = {
+    "thesis": "thèse centrale",
+    "mechanism": "mécanisme",
+    # #3432 — the passages the thesis rests on. The kind of each pillar stays
+    # in the closed vocabulary (the state records it); the NOTE prints the
+    # slot, because « affirmation » would read as one more local move beside
+    # the ones the document makes elsewhere.
+    "pillar": "pilier de la thèse",
+}
 
 #: Why a slot produced nothing, in the reader's language (#3415 ask 4). The
 #: state keeps the code; the note prints the phrase.
@@ -201,9 +233,16 @@ specialist sees it. Your job, in this order:
    are often stated late, sometimes once, nowhere near the opening; a reader
    who stopped at the first page would miss them. Each of the two comes with
    its own verbatim quote.
-2. Then the other moves the document makes, most important first. A local
+2. Name the PILLARS the thesis rests on: the two or three passages the
+   thesis would fall without — the evidence it cites, the premise it leans
+   on, the ruling it claims to follow. They are usually FAR from the thesis
+   passage, sometimes in another part of the document; that distance is
+   exactly why a reader who only looks beside the thesis misses them. Each
+   pillar comes with its own verbatim quote and a kind from the closed
+   vocabulary.
+3. Then the other moves the document makes, most important first. A local
    move — a claim, a concession, an audience address, a threat, a dilemma —
-   comes only after the thesis and the mechanism.
+   comes only after the thesis, the mechanism and the pillars.
 
 Hard rules:
 - One call, one pass. Say what the text DOES, not what it should have done.
@@ -215,15 +254,21 @@ Hard rules:
   joined. A quote the document does not carry is discarded by the pipeline.
 - Do not date, place or situate the document in history. Another reader does
   that.
-- At most {max_moves} entries in total, thesis and mechanism included. Fewer
-  is a valid answer; an entry you cannot fill with a verbatim quote from the
-  document is omitted, and an empty list of other moves is valid.
+- At most {max_moves} entries in total, thesis, mechanism and pillars
+  included. Fewer is a valid answer; an entry you cannot fill with a verbatim
+  quote from the document is omitted, and an empty list of other moves is
+  valid.
+- At most {max_pillars} pillars, and only those the thesis genuinely rests on:
+  a pillar is not a restatement of the thesis and not a local remark.
 
 Answer in French, with ONLY this JSON — no fences, no commentary:
 {{"thesis": {{"reading": "one sentence naming the central thesis",
              "quote": "a verbatim span of the document"}},
  "mechanism": {{"reading": "one sentence naming the mechanism that carries it",
                 "quote": "a verbatim span of the document"}},
+ "pillars": [{{"kind": "claim|concession|device|audience|threat|dilemma|other",
+              "reading": "one sentence naming what the thesis rests on",
+              "quote": "a verbatim span of the document, usually far from the thesis"}}],
  "moves": [{{"kind": "concession|device|claim|audience|threat|dilemma|other",
              "reading": "one sentence naming the move",
              "quote": "a verbatim span of the document"}}]}}
@@ -237,9 +282,10 @@ Document:
 class DefiningMove:
     """One move the first reading named, with the text's own words for it.
 
-    ``slot`` marks the two entries the question asks for FIRST (#3415): the
-    central thesis (``"thesis"``) and the mechanism that carries it
-    (``"mechanism"``). Empty for a local move — the record carries the key
+    ``slot`` marks the entries the question asks for FIRST (#3415, #3432): the
+    central thesis (``"thesis"``), the mechanism that carries it
+    (``"mechanism"``) and each passage the thesis rests on (``"pillar"``,
+    repeated up to :data:`MAX_PILLARS`). Empty for a local move — the record carries the key
     only when there is a slot to state (honest absence, so a slot-less
     record stays byte-identical to a pre-#3415 one).
 
@@ -462,6 +508,79 @@ def _salvage_objects(
     return objects, malformed
 
 
+def _array_span(text: str, key: str) -> Optional[Tuple[int, int]]:
+    """``(start, end)`` of the top-level array named ``key``, string-aware.
+
+    #3432 — the salvage could route back a slot that is an OBJECT (``thesis``,
+    ``mechanism``), because ``_key_before`` names a ``{`` preceded by
+    ``"key":``. An array's elements are preceded by ``[`` or ``,`` and carry
+    no name at all: inside a failed wrapper, every pillar came back anonymous
+    and was spliced as one more local move. This scan gives the array its own
+    address, so its elements can be recovered with their slot.
+    """
+    needle = f'"{key}"'
+    at = text.find(needle)
+    while at != -1:
+        i = at + len(needle)
+        while i < len(text) and text[i] in " \t\r\n":
+            i += 1
+        if i < len(text) and text[i] == ":":
+            i += 1
+            while i < len(text) and text[i] in " \t\r\n":
+                i += 1
+            if i < len(text) and text[i] == "[":
+                depth = 0
+                in_string = False
+                escape = False
+                for j in range(i, len(text)):
+                    ch = text[j]
+                    if escape:
+                        escape = False
+                        continue
+                    if ch == "\\":
+                        escape = True
+                        continue
+                    if ch == '"':
+                        in_string = not in_string
+                        continue
+                    if in_string:
+                        continue
+                    if ch == "[":
+                        depth += 1
+                    elif ch == "]":
+                        depth -= 1
+                        if depth == 0:
+                            return (i, j + 1)
+                return None
+        at = text.find(needle, at + len(needle))
+    return None
+
+
+def _salvage_array(text: str, key: str) -> Tuple[List[Any], int]:
+    """Every readable element of the array named ``key``, and what was lost.
+
+    Same principle as ``_salvage_objects``: one unreadable element costs that
+    element, never the array.
+    """
+    span = _array_span(text, key)
+    if span is None:
+        return [], 0
+    inner = text[span[0] + 1 : span[1] - 1]
+    values: List[Any] = []
+    malformed = 0
+    for _name, element in _balanced_object_spans(inner):
+        try:
+            value = json.loads(element)
+        except json.JSONDecodeError:
+            malformed += 1
+            continue
+        if isinstance(value, dict):
+            values.append(value)
+        else:
+            malformed += 1
+    return values, malformed
+
+
 def _parse_answer(content: str) -> Tuple[Dict[str, Any], int]:
     """The answer dict and the count of objects no path could read.
 
@@ -477,6 +596,15 @@ def _parse_answer(content: str) -> Tuple[Dict[str, Any], int]:
         objects, malformed = _salvage_objects(text)
         spliced: Dict[str, Any] = {}
         extra_moves: List[Any] = []
+        # #3432 — the pillars array is recovered by its own address, before
+        # the object splice. Its elements are anonymous to ``_key_before``
+        # (« ``[`` or ``,`` before it »), so without this they were spliced as
+        # local moves and the slot they name was lost with the malformed
+        # sibling that cost the wrapper its parse.
+        recovered_pillars, pillar_bad = _salvage_array(text, "pillars")
+        malformed += pillar_bad
+        if recovered_pillars:
+            spliced["pillars"] = recovered_pillars[:MAX_PILLARS]
         for key, obj in objects:
             # R1144 — the key that named a slot object is how salvage knows
             # it is the thesis or the mechanism, never a local move. Without
@@ -491,7 +619,17 @@ def _parse_answer(content: str) -> Tuple[Dict[str, Any], int]:
                 for slot in ("thesis", "mechanism"):
                     if isinstance(obj.get(slot), dict) and slot not in spliced:
                         spliced[slot] = obj[slot]
+                # #3432 — the pillars are a LIST under their own key, so the
+                # pre-#3432 salvage could not route them back to their slot:
+                # one bad character elsewhere and every pillar arrived as an
+                # anonymous local move. Same principle as the two dict slots.
+                if isinstance(obj.get("pillars"), list) and "pillars" not in spliced:
+                    spliced["pillars"] = obj["pillars"]
             elif "kind" in obj or ("reading" in obj and "quote" in obj):
+                # A pillar already recovered from its array must not come
+                # back a second time as a local move (#3432).
+                if recovered_pillars and any(obj == p for p in recovered_pillars):
+                    continue
                 extra_moves.append(obj)
         if extra_moves:
             spliced["moves"] = extra_moves
@@ -501,7 +639,9 @@ def _parse_answer(content: str) -> Tuple[Dict[str, Any], int]:
 
 def build_first_reading_prompt(excerpt: str) -> str:
     """The one prompt of the first reading."""
-    return FIRST_READING_PROMPT.format(max_moves=_PROMPT_MAX_MOVES, excerpt=excerpt)
+    return FIRST_READING_PROMPT.format(
+        max_moves=_PROMPT_MAX_MOVES, max_pillars=MAX_PILLARS, excerpt=excerpt
+    )
 
 
 async def build_first_reading(
@@ -575,8 +715,11 @@ async def build_first_reading(
         raw_moves = parsed.get("moves")
         if not isinstance(raw_moves, list):
             raw_moves = None
-        has_slot = isinstance(parsed.get("thesis"), dict) or isinstance(
-            parsed.get("mechanism"), dict
+        _pillars = parsed.get("pillars")
+        has_slot = (
+            isinstance(parsed.get("thesis"), dict)
+            or isinstance(parsed.get("mechanism"), dict)
+            or (isinstance(_pillars, list) and bool(_pillars))
         )
         if raw_moves is None and not has_slot:
             # Nothing readable: a clean answer with no entry at all, or a
@@ -681,6 +824,28 @@ async def build_first_reading(
         # position in the document (a late mechanism is the measured case).
         _keep(parsed.get("thesis"), "thesis", "thesis")
         _keep(parsed.get("mechanism"), "device", "mechanism")
+        # #3432 — the pillars the thesis rests on, kept AHEAD of the local
+        # moves whatever their position in the document. The panel measured
+        # them far from the thesis passage (the zero-shot finds them, the
+        # per-argument selection does not), and the selection prefers the
+        # units a recorded move overlaps (``defining_move_spans``): kept at
+        # their document order, a pillar would lose its place to a local
+        # claim that happens to sit beside the thesis. Bounded by
+        # ``MAX_PILLARS`` and never by loosening ``MAX_MOVES``.
+        pillars = parsed.get("pillars")
+        if isinstance(pillars, list):
+            for raw in pillars[:MAX_PILLARS]:
+                pillar_kind = (
+                    move_kind(raw.get("kind")) if isinstance(raw, dict) else "other"
+                )
+                if pillar_kind == "other":
+                    # A pillar without a kind from the closed vocabulary is
+                    # still a claim the thesis rests on — the kind is a hint,
+                    # not a verdict, and refusing it would lose the passage.
+                    pillar_kind = "claim"
+                _keep(raw, pillar_kind, "pillar")
+                if len(moves) >= MAX_MOVES:
+                    break
         for raw in raw_moves or []:
             if not isinstance(raw, dict):
                 continue
