@@ -38,6 +38,7 @@ from argumentation_analysis.core.reading_window import (
     STATUS_SELECTED,
     WindowSelection,
     chunked_reading_offsets,
+    gather_k_calls,
     one_call_extraction_capacity,
     per_argument_unit_budget,
     reading_state_from_context,
@@ -10026,16 +10027,27 @@ async def _invoke_fact_extraction(
         # window that failed read nothing: counting its span would state a
         # figure stronger than its measurement (#3099/#1019).
         _read_spans: List[Tuple[int, int]] = []
-        for _window_index, _window_reading in enumerate(_readings):
-            _data = await _extraction_call_one_window(
-                client=client,
-                model_id=model_id,
-                det_params=det_params,
-                system_content=system_content,
-                extraction_fmt=_extraction_fmt,
-                reading=_window_reading,
-                flags=_extraction_flags,
-            )
+        # #3446 — the k calls fly CONCURRENTLY under one bound, then the
+        # merge below walks their answers in PLAN order: the cross-window
+        # dedup, the first-quote-wins and the answered-span union read the
+        # same sequence the sequential loop read, whatever order the calls
+        # completed in. A stalled window no longer freezes the axis (#3435
+        # measured one stalled call costing a whole phase).
+        _window_answers = await gather_k_calls(
+            [
+                _extraction_call_one_window(
+                    client=client,
+                    model_id=model_id,
+                    det_params=det_params,
+                    system_content=system_content,
+                    extraction_fmt=_extraction_fmt,
+                    reading=_window_reading,
+                    flags=_extraction_flags,
+                )
+                for _window_reading in _readings
+            ]
+        )
+        for _window_index, _data in enumerate(_window_answers):
             if not _data:
                 continue
             _windows_ok += 1

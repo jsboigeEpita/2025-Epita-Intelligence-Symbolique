@@ -29,10 +29,11 @@ diluted density, so the run starts at the prose boundary. Deterministic,
 pure, no LLM, no I/O — same input, same selection.
 """
 
+import asyncio
 import re
 from collections.abc import Mapping as _MappingABC
 from dataclasses import dataclass
-from typing import Any, Dict, List, Mapping, Sequence, Tuple
+from typing import Any, Awaitable, Dict, List, Mapping, Sequence, Tuple
 
 _STRIDE = 500
 _PUNCT_RE = re.compile(r"[,;:]")
@@ -250,6 +251,45 @@ def reads_whole_text_in_one_call(
 #: recomputes it on the extraction path; the other axes share this
 #: knob-at-default value.
 WHOLE_TEXT_CALL_CAPACITY = one_call_extraction_capacity(8192)
+
+#: #3446 — how many of the k reading calls may be IN FLIGHT at once. The
+#: k calls tile the document (#2850 lot 10) but flew SEQUENTIALLY: on the
+#: cycle-2 measures a 179k-char document cost 30 extraction + 30 wide-net
+#: calls wall-to-wall, one stall (#3435) freezing the whole axis. The bound
+#: is one name beside the capacity it bounds the calls OF — not a rate
+#: limit (the #3435 budget composes inside each call) and not a window
+#: change (every call still carries one capacity, byte-identical prompt).
+K_CALL_CONCURRENCY = 4
+
+
+async def gather_k_calls(
+    calls: Sequence[Awaitable[Any]], bound: int | None = None
+) -> List[Any]:
+    """#3446 — run the k reading calls concurrently under one bound.
+
+    Results come back in PLAN order — the order of ``calls`` — whatever
+    order they complete in, so the merges that follow (cross-window dedup,
+    first-quote-wins, answered-span union) read the same list the
+    sequential loop read. The semaphore bounds how many calls are in
+    flight; it does not cancel, retry or reorder anything. A call that
+    raises still raises here, exactly as it did inline. No I/O of its
+    own — the awaitables carry it.
+    """
+    if bound is None:
+        # Read at call time so a monkeypatched knob is honoured (the def-time
+        # default would freeze the first value it saw).
+        bound = K_CALL_CONCURRENCY
+    if bound <= 0:
+        raise ValueError(f"bound must be positive, got {bound}")
+    if not calls:
+        return []
+    gate = asyncio.Semaphore(bound)
+
+    async def _one(awaitable: Awaitable[Any]) -> Any:
+        async with gate:
+            return await awaitable
+
+    return list(await asyncio.gather(*(_one(c) for c in calls)))
 
 
 def chunked_reading_offsets(length: int, capacity: int, start: int = 0) -> List[int]:
