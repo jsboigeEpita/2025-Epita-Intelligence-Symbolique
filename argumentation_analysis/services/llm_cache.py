@@ -872,6 +872,7 @@ class CachedChatCompletion(ChatCompletionClientBase):
                 _cache_stats.miss_keys.append(key[:16])
                 raise LLMCacheMiss(
                     f"Cache miss in replay mode for key {key[:16]}... "
+                    f"model={self._call_model(settings)!r} — "
                     f"Record fixtures first with LLM_CACHE_MODE=record"
                 )
             _cache_stats.hit += 1
@@ -1127,6 +1128,7 @@ async def cached_raw_chat_completion(client: Any, **kwargs: Any) -> Any:
             _cache_stats.miss_keys.append(key[:16])
             raise LLMCacheMiss(
                 f"Raw cache miss in replay mode for key {key[:16]}... "
+                f"model={kwargs.get('model')!r} — "
                 f"Record fixtures first with LLM_CACHE_MODE=record"
             )
         _cache_stats.hit += 1
@@ -1199,6 +1201,7 @@ def cached_raw_chat_completion_sync(client: Any, **kwargs: Any) -> Any:
             _cache_stats.miss_keys.append(key[:16])
             raise LLMCacheMiss(
                 f"Raw cache miss (sync) in replay mode for key {key[:16]}... "
+                f"model={kwargs.get('model')!r} — "
                 f"Record fixtures first with LLM_CACHE_MODE=record"
             )
         _cache_stats.hit += 1
