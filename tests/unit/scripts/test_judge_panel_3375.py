@@ -1191,6 +1191,113 @@ class TestTheAnthropicRoute:
         assert record["answered_model"] == "claude-sonnet-5-5"
 
 
+class TestTheJudgeSamplesAtAFixedTemperature:
+    """#3423: two passes over identical inputs agreed on the derived state on
+    4 of 10 documents, with no temperature set. The temperature is fixed by
+    default, recorded, and printed."""
+
+    @pytest.fixture
+    def posted(self, monkeypatch):
+        import httpx
+
+        seen = []
+
+        class FakeResponse:
+            status_code = 200
+            text = ""
+
+            def json(self):
+                return {
+                    "model": "m",
+                    "content": [{"type": "text", "text": "{}"}],
+                    "choices": [{"message": {"content": "{}"}}],
+                    "usage": {},
+                }
+
+        class FakeClient:
+            def __init__(self, *args, **kwargs):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *exc):
+                return False
+
+            async def post(self, url, json=None, headers=None):
+                seen.append(json)
+                return FakeResponse()
+
+        monkeypatch.setattr(httpx, "AsyncClient", FakeClient)
+        return seen
+
+    @pytest.mark.parametrize("family", ["anthropic", "openai"])
+    def test_the_payload_carries_the_endpoint_temperature(self, posted, family):
+        endpoint = {
+            "api_key": "not-a-key",
+            "base_url": "https://example.invalid/v1",
+            "model_id": "m",
+            "family": family,
+            "temperature": 0.0,
+        }
+        asyncio.run(jp.call_judge(endpoint, "prompt"))
+        assert posted[-1]["temperature"] == 0.0
+
+    def test_no_temperature_leaves_the_provider_default(self, posted):
+        endpoint = {
+            "api_key": "not-a-key",
+            "base_url": "https://example.invalid/v1",
+            "model_id": "m",
+            "family": "anthropic",
+            "temperature": None,
+        }
+        asyncio.run(jp.call_judge(endpoint, "prompt"))
+        assert "temperature" not in posted[-1]
+
+    def _run(self, world, extra=()):
+        endpoints = []
+
+        async def judge(endpoint, prompt, timeout=600):
+            endpoints.append(endpoint)
+            return {"status_code": 200, "answer": _answer(), "usage": {}}
+
+        code = asyncio.run(jp.run(_argv(world, extra=extra), judge_call=judge))
+        return code, endpoints
+
+    def test_a_fixed_temperature_reaches_the_call_and_is_recorded(self, tmp_path):
+        world = _with_panel_file(make_world(tmp_path))
+        code, endpoints = self._run(world, ("--judge-temperature", "0"))
+        assert code == 0
+        assert {e["temperature"] for e in endpoints} == {0.0}
+        meta = json.loads((world["out"] / jp.META_FILENAME).read_text("utf-8"))
+        assert meta["judge_temperature"] == 0.0
+        assert "--judge-temperature 0" in meta["command"]
+        table = (world["out"] / "TABLE.md").read_text(encoding="utf-8")
+        assert "- Température du juge : `0.0`" in table
+
+    def test_the_default_is_the_provider_and_the_table_says_so(self, tmp_path):
+        # claude-sonnet-5-5 answers 400 to any ``temperature`` (measured
+        # 2026-11-05): a default of 0 would fail every call of the panel.
+        world = _with_panel_file(make_world(tmp_path))
+        _code, endpoints = self._run(world)
+        assert {e["temperature"] for e in endpoints} == {None}
+        meta = json.loads((world["out"] / jp.META_FILENAME).read_text("utf-8"))
+        assert meta["judge_temperature"] is None
+        assert "--judge-temperature provider" in meta["command"]
+        table = (world["out"] / "TABLE.md").read_text(encoding="utf-8")
+        assert "défaut du fournisseur (non fixée)" in table
+
+    def test_a_pass_from_before_says_its_temperature_was_not_recorded(self):
+        assert "non enregistrée" in jp._temperature_label({})
+
+    @pytest.mark.parametrize("text", ["-1", "hot"])
+    def test_a_bad_temperature_is_refused(self, text):
+        import argparse
+
+        with pytest.raises(argparse.ArgumentTypeError):
+            jp.parse_temperature(text)
+
+
 class TestTheRouteIsOnePair:
     """R1143: the key came from the repository's ``.env`` and the base URL
     from the harness's process (``ANTHROPIC_BASE_URL`` = its local proxy), so
@@ -1441,3 +1548,183 @@ class TestTwoPassesAreCompared:
         text = jp.render_stability(jp.compare_passes(a, b), "a", "b")
         assert "état dérivé identique : **2** document(s) sur 2" in text
         assert "étiquette du juge identique : **0** document(s) sur 2" in text
+
+
+# ---------------------------------------------------------------------------
+# #3423 — the consensus of N passes over the same inputs
+# ---------------------------------------------------------------------------
+
+
+class TestTheConsensusIsTheMajorityAnswer:
+    """Two passes over identical inputs agreed on the derived state on 4 of
+    10 documents; the judge refuses a fixed temperature. Each pass answers
+    the rule's two questions from its own verified items, the state is the
+    majority answer, and a non-unanimous answer makes the document fragile.
+    Recurring items are listed with their support."""
+
+    def _pass(self, items, label="PIPELINE_SUPPLIES", doc="d1"):
+        row = _row(items, label)
+        row["opaque_id"] = doc
+        row["costs"] = {"pipeline": 0.01, "zeroshot": 0.001}
+        row["judge_cost"] = 0.1
+        return row
+
+    def test_an_item_two_passes_of_three_keep_counts(self):
+        rows = [
+            self._pass([_S2, _S4]),
+            self._pass([_S2]),
+            self._pass([_S4, _M1_ELSEWHERE]),
+        ]
+        row = jp.consensus_row(rows, ["p1", "p2", "p3"])
+        assert sorted((i["code"], i["support"]) for i in row["kept"]) == [
+            ("S2", 2),
+            ("S4", 2),
+        ]
+        assert [(i["code"], i["support"]) for i in row["minority"]] == [("M1", 1)]
+        assert row["state"] == "PIPELINE_SUPPLIES"
+        # S2 or S4 alone: the surplus answer is 2 of 3, not unanimous.
+        assert row["consensus"]["votes"]["core"] == 2
+        assert row["consensus"]["fragile"] is True
+        assert row["judge_cost"] == pytest.approx(0.3)
+
+    def test_the_same_observation_quoted_three_ways_still_decides(self):
+        # Measured on six real passes: the same severe M1 is quoted with a
+        # different span by each pass, so an item consensus kept none of it
+        # and called the document PARITY. Each pass's answer still counts.
+        spans = [
+            "Le document defend la these beta",
+            "en s'appuyant sur un exemple date",
+            "ne discute jamais la semantique preferee",
+        ]
+        rows = [self._pass([{**_M1_CENTRAL, "reading_quote": s}]) for s in spans]
+        row = jp.consensus_row(rows, ["a", "b", "c"])
+        assert row["kept"] == []
+        assert len(row["minority"]) == 3
+        assert row["state"] == "ZEROSHOT_WINS"
+        assert row["consensus"]["fragile"] is False
+
+    def test_the_central_flag_decides_by_the_passes_votes(self):
+        # The cycle-1 case: the same M1, central in one pass and not in the
+        # other. One central vote of three leaves the document supplied…
+        one = [
+            self._pass([_S2, _M1_CENTRAL]),
+            self._pass([_S2, _M1_ELSEWHERE]),
+            self._pass([_S2, _M1_ELSEWHERE]),
+        ]
+        row = jp.consensus_row(one, ["a", "b", "c"])
+        assert row["state"] == "PIPELINE_SUPPLIES"
+        assert row["consensus"]["fragile"] is True
+        # …two of three give it a gap, and the recurring M1 is listed severe.
+        two = [
+            self._pass([_S2, _M1_CENTRAL]),
+            self._pass([_S2, _M1_CENTRAL]),
+            self._pass([_S2, _M1_ELSEWHERE]),
+        ]
+        row = jp.consensus_row(two, ["a", "b", "c"])
+        assert row["state"] == "PIPELINE_SUPPLIES_WITH_GAP"
+        (m1,) = [i for i in row["kept"] if i["code"] == "M1"]
+        assert m1["severity"] == "severe"
+
+    def test_unanimous_answers_are_not_fragile(self):
+        rows = [self._pass([_S2, _M2]) for _ in range(3)]
+        row = jp.consensus_row(rows, ["a", "b", "c"])
+        assert row["state"] == "PIPELINE_SUPPLIES_WITH_GAP"
+        assert row["consensus"]["fragile"] is False
+
+    def test_a_rerender_of_a_consensus_reads_the_votes(self):
+        rows = [self._pass([_M1_CENTRAL]) for _ in range(2)] + [self._pass([_S4])]
+        row = jp.consensus_row(rows, ["a", "b", "c"])
+        assert row["state"] == "ZEROSHOT_WINS"
+        # The listed items alone (one recurring M1, severe) would say the
+        # same here; the votes are what a re-render must read.
+        row["kept"] = []
+        assert jp.rederive_row_state(row) == "ZEROSHOT_WINS"
+
+    def test_the_label_is_the_majority_label_and_never_decides_alone(self):
+        rows = [
+            self._pass([_M1_CENTRAL], "PARITY"),
+            self._pass([_M1_CENTRAL], "PARITY"),
+            self._pass([_M1_CENTRAL], "ZEROSHOT_WINS"),
+        ]
+        row = jp.consensus_row(rows, ["a", "b", "c"])
+        assert row["reported_state"] == "PARITY"
+        assert row["state"] == "ZEROSHOT_WINS"
+
+    def test_a_document_a_majority_could_not_read_stays_unparsed(self):
+        broken = self._pass([_S2], "PIPELINE_WINS")  # off the grid: UNPARSED
+        rows = [self._pass([_S2]), broken, dict(broken)]
+        row = jp.consensus_row(rows, ["a", "b", "c"])
+        assert row["state"] == "UNPARSED"
+        assert jp.rederive_row_state(row) == "UNPARSED"
+
+    def _write_pass(self, root, name, items_by_doc, label="PARITY"):
+        out = root / name
+        out.mkdir()
+        for doc, items in items_by_doc.items():
+            row = self._pass(items, label, doc)
+            (out / f"{doc}.json").write_text(json.dumps(row), encoding="utf-8")
+        (out / "TABLE.md").write_text(
+            f"# Table de verdicts — juge à l'aveugle (#3375)\n\n"
+            f"- Commande : `{name}`\n\n## Par document\n\nold\n",
+            encoding="utf-8",
+        )
+        return out
+
+    def test_the_cli_writes_the_consensus_with_no_judge_call(self, tmp_path):
+        docs = {"d1": [_S2, _M1_CENTRAL], "d2": [_S4]}
+        passes = [
+            self._write_pass(tmp_path, "p1", docs),
+            self._write_pass(tmp_path, "p2", {"d1": [_S2], "d2": [_S4]}),
+            self._write_pass(tmp_path, "p3", docs, label="ZEROSHOT_WINS"),
+        ]
+        out = tmp_path / "consensus"
+        argv = ["--consensus", *map(str, passes), "--out-dir", str(out)]
+        assert asyncio.run(jp.run(argv, judge_call=None, document_loader=None)) == 0
+        rows = {row["opaque_id"]: row for row in jp.load_rows(out)}
+        assert rows["d1"]["state"] == "PIPELINE_SUPPLIES_WITH_GAP"
+        assert rows["d2"]["state"] == "PARITY"
+        meta = json.loads((out / jp.META_FILENAME).read_text(encoding="utf-8"))
+        assert meta["consensus_of"] == ["p1", "p2", "p3"]
+        table = (out / "TABLE.md").read_text(encoding="utf-8")
+        assert "**Consensus de 3 passages**" in table
+        assert "- Commande : `p1`" in table
+        # d1's severe answer is 2 of 3 (p2 kept no M1): the cell says so.
+        assert "votes : surplus 3/3, sévère 2/3 **fragile**" in table
+        assert "**fragiles** (minorité d'au moins un tiers des passages" in table
+
+    @pytest.mark.parametrize(
+        "yes, parsed, fragile",
+        [(3, 3, False), (2, 3, True), (1, 3, True), (0, 3, False)]
+        + [(6, 6, False), (5, 6, False), (4, 6, True), (3, 6, True), (1, 6, False)],
+    )
+    def test_fragility_is_a_minority_of_a_third(self, yes, parsed, fragile):
+        # Six passes over the cycle-1 inputs: one dissent of six is a decided
+        # document, three of six is one the judge does not decide.
+        votes = {"core": parsed, "severe": yes, "parsed": parsed, "need": 2}
+        assert jp.votes_are_fragile(votes) is fragile
+
+    def test_two_consensuses_count_their_decided_contradictions(self, tmp_path):
+        a = [
+            self._write_pass(tmp_path, f"a{k}", {"d1": [_S2], "d2": [_M1_CENTRAL]})
+            for k in range(3)
+        ]
+        b = [
+            self._write_pass(tmp_path, f"b{k}", {"d1": [_S2], "d2": [_S2]})
+            for k in range(3)
+        ]
+        ra, _ = jp.build_consensus(a, tmp_path / "ca")
+        rb, _ = jp.build_consensus(b, tmp_path / "cb")
+        text = jp.render_stability(jp.compare_passes(ra, rb), "ca", "cb")
+        assert "tranchés (non fragiles) des deux côtés : **2** document(s), " in text
+        assert "dont **1** d'états différents — `d2`" in text
+
+    def test_the_consensus_never_overwrites_a_pass(self, tmp_path):
+        p1 = self._write_pass(tmp_path, "p1", {"d1": [_S2]})
+        p2 = self._write_pass(tmp_path, "p2", {"d1": [_S2]})
+        with pytest.raises(SystemExit, match="one of the passes"):
+            jp.build_consensus([p1, p2], p1)
+
+    def test_one_pass_is_not_a_consensus(self, tmp_path):
+        p1 = self._write_pass(tmp_path, "p1", {"d1": [_S2]})
+        with pytest.raises(SystemExit, match="at least two"):
+            jp.build_consensus([p1], tmp_path / "out")
