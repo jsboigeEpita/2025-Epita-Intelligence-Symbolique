@@ -148,26 +148,54 @@ class TestTheVerdictCountNamesItsBar:
 
 
 class TestAVotePrintsItsCount:
-    """Ask 2 — « une large majorité des méthodes de vote » carried no number."""
+    """Ask 2 — « une large majorité des méthodes de vote » carried no number.
+
+    R1145 tranche (#3394): the population is the SCRUTINS — the noun is
+    « scrutins » and the two consensus protocols are named apart, never
+    counted in the fraction.
+    """
 
     def test_the_count_comes_from_the_record(self):
-        assert vote_count_phrase(9, 12) == "9 des 12 méthodes"
+        assert vote_count_phrase(9, 10) == "9 des 10 scrutins"
 
     def test_no_count_without_a_population(self):
-        assert vote_count_phrase(None, 12) is None
+        assert vote_count_phrase(None, 10) is None
         assert vote_count_phrase(9, None) is None
-        assert vote_count_phrase(0, 12) is None
+        assert vote_count_phrase(0, 10) is None
 
     def test_the_band_carries_its_count(self):
-        band = qualitative_support_band(9, 12)
-        assert band == "par une large majorité des méthodes (9 des 12 méthodes)"
+        band = qualitative_support_band(9, 10)
+        assert band == "par une large majorité des scrutins (9 des 10 scrutins)"
 
     def test_unanimity_carries_its_count(self):
-        band = qualitative_support_band(12, 12)
-        assert band == "à l'unanimité des méthodes qui ont décidé (12 des 12 méthodes)"
+        band = qualitative_support_band(10, 10)
+        assert band == "à l'unanimité des scrutins qui ont décidé (10 des 10 scrutins)"
+
+    def test_the_protocols_are_named_apart_from_the_fraction(self):
+        """#3394 (tranche R1145) — « 9 des 10 scrutins, plus deux protocoles
+        de consensus »: the protocols run and are recorded, but they are not
+        scrutins and never enter the vote's denominator."""
+        band = qualitative_support_band(9, 10, n_consensus_protocols=2)
+        assert band == (
+            "par une large majorité des scrutins (9 des 10 scrutins), "
+            "plus deux protocoles de consensus"
+        )
+        assert "12" not in band, "the protocols must not inflate the population"
+        # Honest absence: a record that carries no protocol gets no clause.
+        assert qualitative_support_band(9, 10, n_consensus_protocols=0) == (
+            "par une large majorité des scrutins (9 des 10 scrutins)"
+        )
+        assert qualitative_support_band(9, 10) == (
+            "par une large majorité des scrutins (9 des 10 scrutins)"
+        )
+        # One protocol that decided (the other failed) says « un ».
+        assert qualitative_support_band(9, 10, n_consensus_protocols=1) == (
+            "par une large majorité des scrutins (9 des 10 scrutins), "
+            "plus un protocole de consensus"
+        )
 
     def test_no_band_without_a_measured_support(self):
-        assert qualitative_support_band(None, 12) is None
+        assert qualitative_support_band(None, 10) is None
         assert qualitative_support_band(9, 0) is None
 
 

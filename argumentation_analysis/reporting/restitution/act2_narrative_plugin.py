@@ -510,6 +510,11 @@ class GovernanceVerdict:
     # chose each option. The cycle-0 band said « à l'unanimité des méthodes »
     # without naming one; the render now carries the names beside the count.
     methods_by_option: Dict[str, List[str]] = field(default_factory=dict)
+    # #3394 (tranche R1145) — the two distributed-consensus protocols'
+    # verdicts, named APART from the vote's support: they are not scrutins,
+    # so they never enter ``support_by_option``/``n_methods_decided``; the
+    # band names their count (« plus deux protocoles de consensus »).
+    consensus_protocols: Dict[str, str] = field(default_factory=dict)
     # #3386 — the coalition play's block, rendered by the producer's own
     # function (``coalition_play.coalition_note``, the #3395 one-producer
     # pattern): a bloc that moved the outcome, and/or a pivot the #3385
@@ -1549,6 +1554,15 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
                     kept = [str(n) for n in names if isinstance(n, str) and n.strip()]
                     if kept:
                         methods_by_option[str(k)] = kept
+        # #3394 (tranche R1145) — the protocols, named apart (honest absence
+        # when the record carries none: pre-tranche entries keep their band
+        # byte-identical, no protocol clause invented).
+        raw_protocols = d.get("consensus_protocols", {}) or {}
+        consensus_protocols: Dict[str, str] = {}
+        if isinstance(raw_protocols, dict):
+            for k, v in raw_protocols.items():
+                if isinstance(v, str) and v.strip():
+                    consensus_protocols[str(k)] = v
         chosen = GovernanceVerdict(
             method=method,
             winner=winner,
@@ -1567,6 +1581,8 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
             winner_basis=winner_basis,
             # #3394 cycle 2 — the names behind the counts.
             methods_by_option=methods_by_option,
+            # #3394 (tranche R1145) — the protocols, named apart.
+            consensus_protocols=consensus_protocols,
             # #3386 — the producer-rendered coalition block ("" when the
             # play changed nothing).
             coalition_note=coalition_note(d),
@@ -2415,6 +2431,9 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
             methods_by_option=gv.methods_by_option,
             n_methods_decided=gv.n_methods_decided,
             winner_basis=gv.winner_basis,
+            # #3394 (tranche R1145) — the protocols, named apart from the
+            # vote's fraction.
+            n_consensus_protocols=len(gv.consensus_protocols) or None,
         )
         # #2969 / #2989 rework: a divergent vote is part of the verdict —
         # name every distinct winner by WHAT IT SAYS (an id only when its

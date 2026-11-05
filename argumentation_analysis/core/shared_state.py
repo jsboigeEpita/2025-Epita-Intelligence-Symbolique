@@ -1567,6 +1567,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         methods_by_option: Optional[Dict[str, List[str]]] = None,
         n_methods_decided: Optional[int] = None,
         winner_basis: Optional[str] = None,
+        consensus_protocols: Optional[Dict[str, str]] = None,
         vote_population: Optional[Dict[str, Any]] = None,
         coalition: Optional[Dict[str, Any]] = None,
         manipulability: Optional[Dict[str, Any]] = None,
@@ -1603,8 +1604,15 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         QUALITATIVELY (``cited_units.qualitative_support_band``), never as a
         counter (#1914). ``methods_by_option`` (#3394 cycle 2) names the
         methods behind those counts — the inversion of the aggregate's
-        ``winners_per_method`` — so a band that says « 9 des 12 méthodes »
+        ``winners_per_method`` — so a band that says « 9 des 10 scrutins »
         can say WHICH nine.
+
+        #3394 (tranche R1145) — the population above is the SCRUTINS. The
+        two distributed-consensus protocols are not scrutins: their own
+        verdicts travel apart in ``consensus_protocols`` (name → winner), and
+        the render names them as protocols (« plus deux protocoles de
+        consensus »), never as voting methods. Stored only when at least one
+        protocol decided (honest absence).
 
         #2850 R1107 — ``vote_population`` names the units the vote was
         decided OVER (k of N + their ids): the winner is a member of it.
@@ -1647,6 +1655,13 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             }
         if n_methods_decided is not None:
             entry["n_methods_decided"] = n_methods_decided
+        if consensus_protocols:
+            # #3394 (tranche R1145) — the two consensus protocols, named
+            # apart from the vote's support: their verdicts are recorded,
+            # never tallied as scrutins.
+            entry["consensus_protocols"] = {
+                str(k): str(v) for k, v in consensus_protocols.items()
+            }
         if winner_basis:
             entry["winner_basis"] = winner_basis
         if vote_population:

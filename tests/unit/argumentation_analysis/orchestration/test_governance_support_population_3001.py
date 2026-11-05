@@ -202,7 +202,7 @@ class TestTheSupportBandReachesTheActs:
     def test_a_unanimous_vote_reads_as_unanimous(self, act: str) -> None:
         state = _written_state(_unanimous_output())
         line = _gov_line(_PROMPTS[act](state))
-        assert "unanimité des méthodes" in line
+        assert "unanimité des scrutins" in line
         assert "large majorité" not in line
         assert "de justesse" not in line
         assert "palier de repli" not in line
@@ -235,10 +235,10 @@ class TestTheSupportBandReachesTheActs:
         # #3394 cycle 2 — the counted phrase now continues with the counted
         # methods' NAMES (« (12 des 12 méthodes : majorité, …) »); the two
         # sides of the fraction stay the pin.
-        assert "unanimité des méthodes qui ont décidé (12 des 12 méthodes" in line
+        assert "unanimité des scrutins qui ont décidé (12 des 12 scrutins" in line
         state = _written_state(_narrow_output())
         line = _gov_line(_PROMPTS[act](state))
-        assert "partie seulement des méthodes (6 des 12 méthodes" in line
+        assert "partie seulement des scrutins (6 des 12 scrutins" in line
 
     def test_a_divergent_vote_carries_each_winners_band_next_to_its_text(
         self, act: str
@@ -253,7 +253,7 @@ class TestTheSupportBandReachesTheActs:
         # R1080: 6/12, 4/12 and 2/12 hold no majority — each winner's band is
         # the honest no-majority one, and the pinned "majorité étroite" the
         # pre-rework head rendered for all three is gone
-        assert "partie seulement des méthodes" in line
+        assert "partie seulement des scrutins" in line
         # #3394 cycle 2 — the band's words are what must be majority-free;
         # « majorité » now legitimately names the majority METHOD in the
         # counted support's names.
@@ -287,7 +287,7 @@ class TestTheSupportBandReachesTheActs:
         }
         state = _written_state(output)
         line = _gov_line(_PROMPTS[act](state))
-        assert "partie seulement des méthodes" in line
+        assert "partie seulement des scrutins" in line
         # no divergent winner holds a majority either (5/4/3) — the BANDS
         # are majority-free, by measurement not by scoping. #3394 cycle 2:
         # the counted support now also names the methods (one of which is
