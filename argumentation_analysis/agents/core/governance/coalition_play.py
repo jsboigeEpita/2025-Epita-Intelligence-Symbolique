@@ -163,55 +163,86 @@ def play_sensitivity(
 ) -> Dict[str, Any]:
     """The play as a SENSITIVITY, never as the verdict (#3418 R1144).
 
-    One play reads a fabricated input: stances rotate over the elector list,
-    so the seat order alone decides who is flexible — measured on the planted
-    profile, the cast winner took arg_3, arg_3, arg_1, arg_2, arg_2 as the
-    list rotated, while the declared winner stayed arg_2. The play is
-    therefore run under EVERY cyclic shift of the stance assignment
-    (``len(PLAY_STANCES)`` — the assignment has period 3, so three offsets
-    cover the whole cyclic family), and the outcome is reported as a
-    sensitivity of the DECLARED verdict:
+    TWO arbitrary inputs decide a play, not one, and an earlier revision of
+    this function varied only the first:
 
+    - the **seat order**, which the code assigns stances over
+      (``PLAY_STANCES[(i + shift) % 3]``) AND which fixes the round-robin —
+      who negotiates before whom, hence who hears which proposal last, hence
+      where a flexible elector's ballot lands;
+    - the **stance shift**, the offset into that rotation.
+
+    Measured on the planted profile (review 2, coordinator): holding the
+    shift family fixed and rotating the seats gives ``arg_3 ×3`` then
+    ``arg_3, arg_1, arg_2`` then ``arg_1, arg_2, arg_2`` then ``arg_2 ×3``
+    then ``arg_2, arg_3, arg_3`` — all three arguments win somewhere, so a
+    line printed off one seat rotation is a fact about the alphabet.
+
+    The family is therefore ``len(agents) × len(PLAY_STANCES)`` deterministic
+    plays — every seat rotation against every stance shift — and the outcome
+    is reported as a sensitivity of the DECLARED verdict:
+
+    - ``plays`` / ``rotations`` / ``shifts`` — the family's size and its two
+      axes, so the record says what was enumerated;
+    - ``winners`` — ``winners[rotation][shift]``, the cast winner of each play;
     - ``outcome_changed`` — true only when the winner moves AND is the same
-      under every shift (a robust flip, not an artefact of the seat order);
-    - ``stance_dependent`` — true when the shifts disagree; nothing renders;
-    - ``uniform_winner`` — the winner when every shift agrees, else ``None``;
-    - ``ballots_moved`` — electors whose ballot moved under EVERY shift (the
-      stable movers; the per-shift movers are not summed or averaged);
-    - ``blocs`` — blocs present under every shift (stable structure).
+      across the whole family (a robust flip, not an artefact of either axis);
+    - ``stance_dependent`` — true when any two plays disagree; nothing renders;
+    - ``uniform_winner`` — the winner when every play agrees, else ``None``;
+    - ``ballots_moved`` — electors whose ballot moved in EVERY play (the
+      stable movers; the per-play movers are not summed or averaged);
+    - ``blocs`` — blocs present in every play (stable structure).
+
+    The family is still a SUBSET of every possible assignment: it is exactly
+    what the code itself introduces, enumerated. No RNG, no sampling, no
+    majority — one disagreeing play is enough.
 
     ``aggregate`` is the caller's own aggregation function, injected: this
     module must not import the orchestration layer that calls it.
     """
     declared_winner = aggregate(agents, options, ballots).get("winner")
-    winners: List[Optional[str]] = []
+    rotations = max(1, len(agents))
+    shifts = len(PLAY_STANCES)
+    winners: List[List[Optional[str]]] = []
     moved_sets: List[Set[str]] = []
     bloc_sets: List[Set[Tuple[str, Tuple[str, ...]]]] = []
-    for offset in range(len(PLAY_STANCES)):
-        play = play_governance_rounds(
-            agents, options, ballots, rounds=rounds, stance_offset=offset
-        )
-        cast = aggregate(play["cast_agents"], options, play["cast_ballots"])
-        winners.append(cast.get("winner"))
-        moved_sets.append({str(m["elector"]) for m in play["moved"]})
-        bloc_sets.append(
-            {
-                (str(b["option"]), tuple(sorted(str(x) for x in b["members"])))
-                for b in play["blocs"]
-            }
-        )
+    for rotation in range(rotations):
+        rotated = agents[rotation:] + agents[:rotation]
+        rotated_ballots = [a.preferences for a in rotated]
+        row: List[Optional[str]] = []
+        for shift in range(shifts):
+            play = play_governance_rounds(
+                rotated,
+                options,
+                rotated_ballots,
+                rounds=rounds,
+                stance_offset=shift,
+            )
+            cast = aggregate(play["cast_agents"], options, play["cast_ballots"])
+            row.append(None if cast.get("winner") is None else str(cast["winner"]))
+            moved_sets.append({str(m["elector"]) for m in play["moved"]})
+            bloc_sets.append(
+                {
+                    (str(b["option"]), tuple(sorted(str(x) for x in b["members"])))
+                    for b in play["blocs"]
+                }
+            )
+        winners.append(row)
 
-    uniform = winners[0] if winners and len(set(winners)) == 1 else None
-    stance_dependent = len(set(winners)) > 1
+    flat = [w for row in winners for w in row]
+    uniform = flat[0] if flat and len(set(flat)) == 1 else None
+    stance_dependent = len(set(flat)) > 1
     stable_movers = sorted(set.intersection(*moved_sets)) if moved_sets else []
     stable_blocs: List[Tuple[str, Tuple[str, ...]]] = (
         sorted(set.intersection(*bloc_sets)) if bloc_sets else []
     )
     return {
-        "shifts": len(PLAY_STANCES),
-        "winners_by_shift": [None if w is None else str(w) for w in winners],
+        "plays": rotations * shifts,
+        "rotations": rotations,
+        "shifts": shifts,
+        "winners": winners,
         "winner_declared": None if declared_winner is None else str(declared_winner),
-        "uniform_winner": None if uniform is None else str(uniform),
+        "uniform_winner": uniform,
         "outcome_changed": uniform is not None and uniform != declared_winner,
         "stance_dependent": stance_dependent,
         "ballots_moved": stable_movers,
@@ -231,11 +262,15 @@ def coalition_note(decision: Dict[str, Any]) -> str:
     declared profile) only when they exist — honest absence.
 
     Anti-pendulum (#3418 R1144): a flip line is printed ONLY when the winner
-    changes AND is the same under every cyclic shift of the stances
-    (``outcome_changed``, never ``stance_dependent``) — a play whose result
-    depends on which elector drew which posture is not a finding, it is the
-    fabricated input itself. A pivot names its pair and the winner it would
-    produce, unchanged.
+    changes AND is the same across the WHOLE enumerated family — every seat
+    rotation against every stance shift (``outcome_changed``, never
+    ``stance_dependent``). A play whose result depends on the seat order or on
+    the shift is not a finding, it is the fabricated input itself.
+
+    The wording is scoped to what was enumerated (« sous les N attributions
+    testées »), never to « whatever the assignment »: the family is the set of
+    arbitrary inputs the code introduces, not every possible one. A pivot names
+    its pair and the winner it would produce, unchanged.
     """
     lines: List[str] = []
     coalition = decision.get("coalition")
@@ -246,17 +281,22 @@ def coalition_note(decision: Dict[str, Any]) -> str:
     ):
         moved = coalition.get("ballots_moved") or []
         blocs = coalition.get("blocs") or []
-        shifts = coalition.get("shifts") or len(coalition.get("winners_by_shift") or [])
+        shifts = coalition.get("shifts") or 0
+        rotations = coalition.get("rotations") or 0
+        plays = coalition.get("plays") or (rotations * shifts)
+        family = (
+            f"{plays} attributions testées ({rotations} ordres de parole × "
+            f"{shifts} décalages de posture)"
+            if rotations and shifts
+            else f"{plays} attributions testées"
+        )
         if moved:
             names = ", ".join(str(m) for m in moved[:3])
             extra = f" (+{len(moved) - 3} autres)" if len(moved) > 3 else ""
             verb = (
                 "déplace son bulletin" if len(moved) == 1 else "déplacent leur bulletin"
             )
-            movers = (
-                f" ; {len(moved)} électeur(s) {verb} sous tous les "
-                f"décalages ({names}{extra})"
-            )
+            movers = f" ; {len(moved)} électeur(s) {verb} dans toutes les attributions ({names}{extra})"
             if blocs:
                 members = blocs[0].get("members") or []
                 if members:
@@ -265,11 +305,11 @@ def coalition_note(decision: Dict[str, Any]) -> str:
                         f" ({', '.join(str(m) for m in members[:3])})"
                     )
         else:
-            movers = " ; les électeurs qui bougent dépendent du décalage"
+            movers = " ; les électeurs qui bougent dépendent de l'attribution"
         lines.append(
-            "Jeu de coalitions : sous chacun des {n} décalages de posture, "
+            "Jeu de coalitions : sous les {family}, "
             "le vainqueur passe de « {w0} » à « {w1} »{movers}.".format(
-                n=shifts,
+                family=family,
                 w0=coalition.get("winner_declared", ""),
                 w1=coalition.get("uniform_winner", ""),
                 movers=movers,

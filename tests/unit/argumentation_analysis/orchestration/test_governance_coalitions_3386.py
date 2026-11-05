@@ -19,14 +19,22 @@ The planted profile (opaque ids, no corpus content) is hand-computed:
 - the declared profile is pivotal: the pair (a, b) reporting ``arg_3`` first
   makes ``arg_3`` win instead of ``arg_2`` (#3385 engine, one witness).
 
-**The verdict is the DECLARED aggregate (#3418 R1144).** The stance rotation
-reads the seat order, so one play is a fabricated input: the measured cast
-winner took arg_3, arg_3, arg_1, arg_2, arg_2 as the elector list rotated.
-The play is therefore reported as a SENSITIVITY over every cyclic shift of
-the stances (``play_sensitivity``), and the verdict never consumes it. On the
-planted profile the three shifts agree (``arg_3`` under all of them), so the
-flip is recorded as robust — while no elector moves under EVERY shift, which
-is what the record says rather than inventing a mover.
+**The verdict is the DECLARED aggregate (#3418 R1144, review 2).** TWO
+arbitrary inputs decide a play, and an earlier revision varied only the
+stance shift: the seat order assigns the stances AND fixes the round-robin,
+so it also decides who hears which proposal last, hence where a flexible
+elector's ballot lands. Rotating the elector list alone already moved the
+cast winner through arg_3, arg_1 and arg_2 while the declared winner stayed
+arg_2. The family is therefore ``len(agents) × len(PLAY_STANCES)`` plays —
+every seat rotation against every stance shift — reported as a SENSITIVITY
+(``play_sensitivity``); the verdict never consumes it.
+
+On the planted profile the fifteen plays disagree (all three arguments win
+somewhere), so the record says ``stance_dependent: true`` and NOTHING is
+printed: a line printed off one arbitrary input is a fact about the alphabet,
+not about the document. The wording, when a flip IS uniform, stays scoped to
+what was enumerated (« sous les N attributions testées »), never « whatever
+the assignment ».
 
 No JVM, no LLM (client patched to None), privacy HARD (opaque ids only).
 """
@@ -265,14 +273,28 @@ class TestTheVerdictCarriesCoalitionAndManipulability:
         assert verdict["winner"] == "arg_2"
         coalition = verdict["coalition"]
         assert coalition["winner_declared"] == "arg_2"
-        assert coalition["shifts"] == 3
-        assert coalition["winners_by_shift"] == ["arg_3", "arg_3", "arg_3"]
-        assert coalition["uniform_winner"] == "arg_3"
-        assert coalition["outcome_changed"] is True
-        assert coalition["stance_dependent"] is False
-        # No elector moves under EVERY shift: the stable set is empty, and the
-        # per-shift movers are neither summed nor averaged into one.
+        # The family's size and its two axes are recorded: 5 seats × 3 stances.
+        assert (coalition["plays"], coalition["rotations"], coalition["shifts"]) == (
+            15,
+            5,
+            3,
+        )
+        assert coalition["winners"] == [
+            ["arg_3", "arg_3", "arg_3"],
+            ["arg_3", "arg_1", "arg_2"],
+            ["arg_1", "arg_2", "arg_2"],
+            ["arg_2", "arg_2", "arg_2"],
+            ["arg_2", "arg_3", "arg_3"],
+        ]
+        # All three arguments win somewhere: the play is the fabricated input,
+        # so it is reported as stance-dependent and no flip is claimed.
+        assert coalition["uniform_winner"] is None
+        assert coalition["outcome_changed"] is False
+        assert coalition["stance_dependent"] is True
+        # No elector moves under EVERY play: the stable set is empty, and the
+        # per-play movers are neither summed nor averaged into one.
         assert coalition["ballots_moved"] == []
+        assert coalition["blocs"] == []
         assert "winner_cast" not in coalition
         manipulability = verdict["manipulability"]
         assert manipulability["kind"] == "coalition"
@@ -289,7 +311,8 @@ class TestTheVerdictCarriesCoalitionAndManipulability:
         # The recorded winner is the declared one; the play sits beside it as a
         # sensitivity, never as the verdict.
         assert record["winner"] == "arg_2"
-        assert record["coalition"]["outcome_changed"] is True
+        assert record["coalition"]["stance_dependent"] is True
+        assert record["coalition"]["plays"] == 15
         assert record["coalition"]["winner_declared"] == "arg_2"
         assert record["manipulability"]["players"] == [
             "elector_vertu_a",
@@ -339,8 +362,13 @@ class TestTheVerdictDoesNotDependOnTheSeatOrder:
         # one — the play's per-shift winners are reported, never recorded.
         assert set(recorded.values()) == {"arg_2"}
 
-    def test_the_sensitivity_covers_every_cyclic_shift_of_the_stances(self) -> None:
-        """Period 3: the three offsets are the whole cyclic family.
+    def test_the_sensitivity_covers_every_rotation_and_every_shift(self) -> None:
+        """The family is seat rotation × stance shift, not the shift alone.
+
+        Review 2: the stance rotation reads the seat order AND the round-robin
+        fixes who hears which proposal last, so varying only the offset leaves
+        half the arbitrary input unmeasured. Here the family is 5 × 3 = 15 and
+        the record carries both axes.
 
         Imported here, not at module scope: a new symbol imported for the
         whole file turns every witness red with a collection error, which
@@ -356,13 +384,21 @@ class TestTheVerdictDoesNotDependOnTheSeatOrder:
         sensitivity = play_sensitivity(
             agents, options, ballots, _aggregate_governance_votes
         )
+        assert (sensitivity["plays"], sensitivity["rotations"]) == (15, 5)
         assert sensitivity["shifts"] == 3
-        assert len(sensitivity["winners_by_shift"]) == 3
+        assert len(sensitivity["winners"]) == sensitivity["rotations"]
+        assert all(len(row) == 3 for row in sensitivity["winners"])
         assert sensitivity["winner_declared"] == "arg_2"
-        # Declared verdict ≠ play outcome, and the record says so explicitly.
-        assert sensitivity["uniform_winner"] == "arg_3"
-        assert sensitivity["outcome_changed"] is True
-        assert sensitivity["stance_dependent"] is False
+        # Every argument wins in some play: the family is stance-dependent, so
+        # no flip is claimed and the verdict stays the declared aggregate.
+        assert {w for row in sensitivity["winners"] for w in row} == {
+            "arg_1",
+            "arg_2",
+            "arg_3",
+        }
+        assert sensitivity["uniform_winner"] is None
+        assert sensitivity["outcome_changed"] is False
+        assert sensitivity["stance_dependent"] is True
 
 
 # ---------------------------------------------------------------------------
@@ -372,11 +408,13 @@ class TestTheVerdictDoesNotDependOnTheSeatOrder:
 
 class TestTheNotePrintsOnlyAChange:
     def test_a_robust_flip_names_both_winners_and_the_unstable_movers(self) -> None:
-        """The measured planted record: the flip is uniform, the movers are not."""
+        """A uniform flip prints — scoped to the family that was enumerated."""
         record = {
             "coalition": {
+                "plays": 15,
+                "rotations": 5,
                 "shifts": 3,
-                "winners_by_shift": ["arg_3", "arg_3", "arg_3"],
+                "winners": [["arg_3"] * 3] * 5,
                 "winner_declared": "arg_2",
                 "uniform_winner": "arg_3",
                 "outcome_changed": True,
@@ -393,15 +431,22 @@ class TestTheNotePrintsOnlyAChange:
             },
         }
         note = coalition_note(record)
-        assert "sous chacun des 3 décalages" in note
+        # Scoped to what was enumerated — the family's size and its two axes.
+        assert (
+            "sous les 15 attributions testées (5 ordres de parole × "
+            "3 décalages de posture)" in note
+        )
+        assert "quelle que soit" not in note
         assert "de « arg_2 » à « arg_3 »" in note
-        assert "les électeurs qui bougent dépendent du décalage" in note
+        assert "les électeurs qui bougent dépendent de l'attribution" in note
         assert "portant « arg_3 » en tête" in note
 
     def test_a_stable_coalition_names_its_movers_and_its_bloc(self) -> None:
-        """A flip whose movers agree across shifts names them, with the bloc."""
+        """A flip whose movers agree in every play names them, with the bloc."""
         record = {
             "coalition": {
+                "plays": 15,
+                "rotations": 5,
                 "shifts": 3,
                 "winner_declared": "arg_2",
                 "uniform_winner": "arg_3",
@@ -422,15 +467,21 @@ class TestTheNotePrintsOnlyAChange:
         }
         note = coalition_note(record)
         assert "2 électeur(s) déplacent leur bulletin" in note
+        assert "dans toutes les attributions" in note
         assert "elector_vertu_b, elector_vertu_e" in note
         assert "derrière « arg_3 »" in note
 
     def test_a_stance_dependent_play_prints_no_flip(self) -> None:
-        """#3418 R1144: shifts that disagree are the fabricated input itself."""
+        """#3418 R1144 review 2: disagreeing plays are the fabricated input."""
         record = {
             "coalition": {
+                "plays": 15,
+                "rotations": 5,
                 "shifts": 3,
-                "winners_by_shift": ["arg_3", "arg_1", "arg_2"],
+                "winners": [
+                    ["arg_3", "arg_3", "arg_3"],
+                    ["arg_3", "arg_1", "arg_2"],
+                ],
                 "winner_declared": "arg_2",
                 "uniform_winner": None,
                 "outcome_changed": False,
@@ -467,21 +518,24 @@ class TestTheNotePrintsOnlyAChange:
 @pytest.mark.parametrize("act", ["act2", "act3"])
 class TestTheBlockReachesTheActs:
     @pytest.mark.asyncio
-    async def test_the_planted_record_renders_in_the_deliberation(
-        self, act: str
-    ) -> None:
+    async def test_the_planted_record_prints_only_the_pivot(self, act: str) -> None:
+        """Born red on review 2 — the fifteen plays claim no flip.
+
+        An earlier revision varied only the stance shift, and on this profile
+        the three shifted plays agreed on arg_3, so the Acts printed a flip
+        that seat rotation contradicts (all three arguments win somewhere in
+        the real family). The coalition line must disappear; the pivot — a
+        finding on the DECLARED profile, independent of any play — stays.
+        """
         output = await _handler_output(_PLANTED_QUALITY)
+        assert output["governance_verdict"]["coalition"]["stance_dependent"] is True
         state = _written_state(output)
         state.identified_arguments = {
             "arg_2": "Position synthétique deux.",
             "arg_3": "Position synthétique trois.",
         }
         block = _deliberation(_PROMPTS[act](state))
-        assert "Jeu de coalitions" in block
-        # The block renders the options under their opaque symbols (FB-34):
-        # declared « α » → uniform « β », never the raw ids.
-        assert "de « α » à « β »" in block
-        assert "dépendent du décalage" in block
+        assert "Jeu de coalitions" not in block
         assert "Manipulabilité" in block
         assert "elector_vertu_a et elector_vertu_b" in block  # the pivot's pair
 
