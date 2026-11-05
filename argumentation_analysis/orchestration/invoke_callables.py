@@ -14336,6 +14336,9 @@ async def _invoke_act1_framing(
         # #1914 — the interpretive question the framing closed on; the act1
         # state writer persists it onto the state for Acte III to read.
         "interpretive_question": result.interpretive_question,
+        # #3432 (ask 3) — the points the framing announced as needing to be
+        # settled; the same writer persists them so Acte III can close each one.
+        "announced_checks": list(result.announced_checks),
     }
 
 

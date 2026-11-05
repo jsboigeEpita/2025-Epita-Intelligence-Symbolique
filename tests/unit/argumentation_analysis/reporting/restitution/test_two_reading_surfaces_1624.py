@@ -187,6 +187,13 @@ def _prose_keys_read_from_state() -> set[str]:
 # to keep visible.
 PROSE_BASELINE = frozenset(
     {
+        # #3432 (ask 3) — ``build_act3_evidence`` reads back the points the
+        # framing announced as needing to be settled, so the conclusion can
+        # close each one instead of leaving it open in silence. Same family as
+        # ``interpretive_question`` below: a rendering-adjacent carrier, not an
+        # analytical dimension the appendix would attest — but the prose
+        # surface reads it, so the AST baseline pins it.
+        "announced_checks",
         "argument_quality_scores",
         "aspic_results",
         "belief_revision_results",
@@ -292,6 +299,12 @@ ANNEXE_ONLY = frozenset(
 PROSE_ONLY = frozenset(
     {
         "deanonymized",
+        # #3432 (ask 3) — the points the framing announced as needing to be
+        # settled. Exactly the same family as ``interpretive_question`` below:
+        # a rendering carrier (announced by Acte I, closed by Acte III), not an
+        # analytical dimension, so the appendix has no "disponible / mobilisée"
+        # row for it.
+        "announced_checks",
         # #1914 (Acte I slice) — the interpretive question the framing
         # closed on. Same family as ``deanonymized``: a rendering carrier
         # (posed by Acte I, answered by Acte III), not an analytical

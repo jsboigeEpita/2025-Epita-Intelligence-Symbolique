@@ -717,6 +717,13 @@ class Act3Evidence:
     # after Acte I). Empty when Acte I posed none — honest absence; the
     # prompt then forbids a retroactive question instead of fabricating one.
     interpretive_question: str = ""
+    # #3432 (ask 3) — the points the framing ANNOUNCED as needing to be
+    # settled, READ back from the state (written by both orchestration lanes
+    # after Acte I). Empty when the framing announced none — honest absence,
+    # and the prompt then forbids inventing a retroactive one. A non-empty
+    # list binds the conclusion: each announced point is either settled with
+    # its verdict, or explicitly reported as not reached.
+    announced_checks: List[str] = field(default_factory=list)
     # #2845 — the source metadata as the run recorded them
     # (``state.source_metadata``). The prompt has always asked the writer to
     # name the speaker "via les métadonnées" while the bundle carried none, so
@@ -3217,6 +3224,11 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         interpretive_question=str(
             getattr(state, "interpretive_question", "") or ""
         ).strip(),
+        announced_checks=[
+            str(check).strip()
+            for check in (getattr(state, "announced_checks", None) or [])
+            if str(check).strip()
+        ],
         metadata=metadata_view,
         arena=build_arena_record(state),
         speaker=build_speaker_record(state),
@@ -3775,6 +3787,26 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
             "n'en fabrique pas une rétroactive)"
         )
 
+    # #3432 (ask 3) — the points the framing announced as needing to be
+    # settled. Rendered in BOTH states (#1941 discipline: a silence must never
+    # be misread) — when the framing announced none, the honest-absence
+    # wording renders and the consigne forbids inventing one. Before this
+    # block, only the closing question rode here: a point announced in Acte
+    # I's prose reached no later act, so nothing ever closed it (the panel's
+    # `5075cd82` announced a false dilemma as a point to test and no act
+    # settled it).
+    if evidence.announced_checks:
+        checks_block = "\n".join(f"  - {check}" for check in evidence.announced_checks)
+        checks_block += (
+            "\n  (annoncés par la mise en situation — chacun doit être CLOS "
+            "par cette conclusion)"
+        )
+    else:
+        checks_block = (
+            "  (la mise en situation n'a annoncé aucun point à trancher — "
+            "n'en fabrique pas un rétroactif)"
+        )
+
     # #1914 (Acte III slice) — the salience hierarchy. The structure carries
     # the ranking; the consigne binds the verdict beat to it. Renders in
     # both states so a silence is never read as a verdict.
@@ -3916,6 +3948,7 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
         f"[CE QUE LES CADRES STRUCTURÉS ÉTABLISSENT]\n{presence_block}\n\n"
         f"[CONVERGENCES GLOBALES — synthèse inter-axes, ancrées]\n{global_block}\n\n"
         f"[LA QUESTION DE L'ACTE I — celle que la conclusion doit trancher]\n{question_block}\n\n"
+        f"[POINTS À TRANCHER — ceux que la mise en situation a annoncés]\n{checks_block}\n\n"
         f"[HIÉRARCHIE DU VERDICT — ce qui porte la conclusion]\n{hierarchy_block}\n\n"
         f"[SURPLUS MULTI-AGENTS — au-delà d'une lecture simple]\n{surplus_block}\n\n"
         f"[DIMENSIONS NON ÉVALUÉES — à dire, jamais à taire]\n{absence_block}\n\n"
@@ -4015,6 +4048,13 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
         "  qui reste ouvert. Une conclusion qui ne répond pas à la question\n"
         "  posée en Acte I manque son objet. Si le bloc dit qu'aucune question\n"
         "  n'a été posée, n'en formule pas une rétroactive.\n"
+        "- POINTS À TRANCHER : le bloc POINTS À TRANCHER liste les points que\n"
+        "  la mise en situation a annoncés. Chacun est CLOS, nommément : soit\n"
+        "  tu dis ce que l'analyse établit sur lui (son verdict, appuyé sur la\n"
+        "  hiérarchie du verdict), soit tu dis franchement qu'il n'a pas été\n"
+        "  atteint — et alors tu ne laisses pas croire qu'il l'a été. Un point\n"
+        "  annoncé puis passé sous silence est le défaut que ce bloc répare.\n"
+        "  Si le bloc dit qu'aucun point n'a été annoncé, n'en invente aucun.\n"
         "- QUESTION — PORTÉE D'UNE ABSENCE : une absence que tu constates ne\n"
         "  porte JAMAIS sur le texte, toujours sur ce que l'analyse en a\n"
         "  porté. Dis ce que les unités analysées n'établissent pas (« les\n"

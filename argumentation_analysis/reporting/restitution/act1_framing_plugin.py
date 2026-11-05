@@ -139,6 +139,22 @@ _QUESTION_LINE_RE = re.compile(
     re.MULTILINE,
 )
 
+# #3432 (ask 3) — Acte I may ANNOUNCE points the rest of the analysis has to
+# settle (the panel's `5075cd82` announced a false dilemma as a point to test
+# and no later act ever closed it). Only the closing interpretive question was
+# carried to Acte III, so an announced point living in the prose reached
+# nowhere. One marker per announced point, same deterministic shape as the
+# question line, so the carrier is extracted rather than guessed from prose.
+_ANNOUNCED_CHECK_LINE_RE = re.compile(
+    r"^\s*\**\s*POINT[S]? À TRANCHER\s*[:：]\s*(.+?)\s*\**\s*$",
+    re.MULTILINE,
+)
+
+# #3432 — a reading that announces ten open points is not a framing, it is a
+# list; the bound keeps the Acte III block readable and matches the prompt's
+# own instruction ("au plus 3").
+ANNOUNCED_CHECKS_CAP = 3
+
 # Single source of truth: the taxonomy families YAML (same data the
 # TaxonomyExplorerPlugin loads). We read it directly to stay file-disjoint from
 # the SK plugin_framework (heavy JVM deps) and keep the restitution package
@@ -278,6 +294,12 @@ class Act1Result:
     # lanes persist it onto the state; Acte III reads it back and binds its
     # response beat to it.
     interpretive_question: str = ""
+    # #3432 (ask 3) — the points the framing ANNOUNCED that the rest of the
+    # analysis has to settle, extracted from their marker lines. Empty when
+    # the framing announced none (honest absence). Acte III reads the list
+    # back and must either report a verdict on each point or say it was not
+    # reached — an announced check is never left open in silence.
+    announced_checks: List[str] = field(default_factory=list)
 
 
 # --- taxonomy loader (minimal, file-disjoint) --------------------------------
@@ -1271,11 +1293,20 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         "  attendu — chacune avec sa provenance étiquetée) : elle doit être\n"
         "  spécifique à ce document — une question réutilisable sur n'importe\n"
         "  quel discours est un échec.\n"
-        "  Écris-la en DERNIÈRE ligne, au format exact :\n"
+        "  Écris-la en DERNIÈRE ligne de prose, au format exact :\n"
         "  QUESTION INTERPRÉTATIVE : <la question en une phrase>\n"
         "  Si des métadonnées manquent, ancre la question dans ce qui est\n"
         "  étiqueté « métadonnée enregistrée » ; une inférence du texte ne fait\n"
         "  pas une métadonnée — n'invente JAMAIS de contexte pour la formuler.\n"
+        "- SI — et seulement si — le cadrage annonce des points précis que la\n"
+        "  suite devra TRANCHER (un dilemme à départager, une incohérence à\n"
+        "  vérifier, une affirmation à éprouver sur le texte), liste-les APRÈS\n"
+        "  la question, une par ligne, au format exact :\n"
+        "  POINT À TRANCHER : <le point, en une phrase>\n"
+        "  Au plus 3. Chacun doit être porté par CE document et instruisible\n"
+        "  par l'analyse — un point que le texte ne permet pas d'éprouver n'est\n"
+        "  pas annoncé. N'écris aucune ligne de ce type si le cadrage n'annonce\n"
+        "  aucun point : une liste vide est une absence honnête, pas un échec.\n"
         "- Le récit doit VARIER selon le contenu réel ci-dessus : pas de prose\n"
         "  générique recyclable.\n"
         "- Rédige en français, markdown léger (titres thématiques en ###). "
@@ -1309,6 +1340,30 @@ def _extract_interpretive_question(narrative: str) -> str:
     if not matches:
         return ""
     return _truncate(matches[-1].strip().strip("*").strip(), _QUESTION_CAP)
+
+
+def _extract_announced_checks(narrative: str) -> List[str]:
+    """Extract the ``POINT À TRANCHER :`` lines Acte I announced (#3432).
+
+    Symmetric with :func:`_extract_interpretive_question`, and for the same
+    reason: the carrier must be *extracted* from a deterministic marker, never
+    guessed from prose. The panel measured the difference — `5075cd82` had its
+    framing announce a false dilemma as a point to test, and only the closing
+    question rode to Acte III, so no later act ever closed the announced point.
+
+    Order is the Acte I order (the reader's order), duplicates collapse, the
+    list is bounded by :data:`ANNOUNCED_CHECKS_CAP`, and no marker line yields
+    the EMPTY list — an honest absence, never a fabricated check. The marker
+    lines stay in the narrative: the reader sees what the framing announced.
+    """
+    checks: List[str] = []
+    for match in _ANNOUNCED_CHECK_LINE_RE.findall(narrative or ""):
+        text = _truncate(match.strip().strip("*").strip(), _QUESTION_CAP)
+        if text and text not in checks:
+            checks.append(text)
+        if len(checks) >= ANNOUNCED_CHECKS_CAP:
+            break
+    return checks
 
 
 # --- orchestrator ------------------------------------------------------------
@@ -1444,4 +1499,5 @@ async def build_act1_framing(
         degraded=degraded,
         is_virtuous=is_virtuous,
         interpretive_question=_extract_interpretive_question(narrative),
+        announced_checks=_extract_announced_checks(narrative),
     )

@@ -2844,6 +2844,17 @@ def _write_act1_framing_to_state(output: Any, state: Any, ctx: dict[str, Any]) -
         and hasattr(state, "interpretive_question")
     ):
         state.interpretive_question = question
+    # #3432 (ask 3) — the framing's announced points ride the same output; the
+    # carrier is what lets Acte III close each one (verdict, or say it was not
+    # reached). A list that carries nothing writes nothing: the default stays
+    # empty, which reads as "the framing announced none" (honest absence).
+    announced = output.get("announced_checks", [])
+    if (
+        isinstance(announced, (list, tuple))
+        and announced
+        and hasattr(state, "announced_checks")
+    ):
+        state.announced_checks = [str(check) for check in announced if check]
     _persist_act_degraded_reasons(state, "act1_framing", output)  # #1608 motifs
 
 
