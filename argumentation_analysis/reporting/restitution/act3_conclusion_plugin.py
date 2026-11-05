@@ -83,9 +83,12 @@ from .dung_reader import (  # #1908: shared meaning with act2
     REJECTED_MEANS,
     appendix_ref,
     appendix_refs_in,
+    citable_appendix_refs,
 )
 from .native_dung import (  # #1912: single shared decoder — see native_dung.py
     decode_native_dung,
+    native_semantics_label,
+    select_primary_native,
 )
 from .conclusion_salience import ConclusionSalience, assess_conclusion_salience
 from .cited_units import (  # #2965 (Acte III slice) — same budget as Act II
@@ -492,6 +495,9 @@ class GovernanceVerdict:
     support_by_option: Dict[str, int] = field(default_factory=dict)
     n_methods_decided: Optional[int] = None
     winner_basis: Optional[str] = None
+    # #3394 cycle 2 — the NAMES behind the counts (which deciding methods
+    # chose each option): the render names the vote it invokes.
+    methods_by_option: Dict[str, List[str]] = field(default_factory=dict)
     # #3386 — the coalition play's block, producer-rendered like Acte II's
     # (``coalition_play.coalition_note``): a bloc that moved the outcome
     # and/or the declared profile's pivot. Empty when nothing changed.
@@ -982,6 +988,8 @@ def _collect_weak_points(
     fol_inc: int,
     fol_causes: Optional[List[str]] = None,
     pl_causes: Optional[List[str]] = None,
+    citable_refs: Optional[Set[str]] = None,
+    primary_semantics: Optional[str] = None,
 ) -> List[StructuringWeakPoint]:
     """Collect the structuring weak points the reader can target (real-in-state).
 
@@ -1026,6 +1034,27 @@ def _collect_weak_points(
             )
         )
     for arg_id, semantics in dung_rejected.items():
+        # #3394 cycle 2 — the annex ref rides the point ONLY when the annex
+        # will print it (citable_appendix_refs, the appendix's own
+        # derivation); otherwise the point states its result in place. And
+        # when this rejection's semantics is not the one Act II's primary
+        # verdict spoke under, the line SAYS the two readings — the cycle-2
+        # census measured the same proposition sent to Annexe Dung[preferred]
+        # in Act II and Annexe Dung[multi] in Act III with the difference
+        # never said.
+        _ref = appendix_ref(semantics)
+        if _ref and (citable_refs is None or _ref in citable_refs):
+            _detail = f"{_ref} — {REJECTED_MEANS}"
+        else:
+            _detail = (
+                f"{REJECTED_MEANS} — conséquence énoncée en place "
+                f"(aucune annexe imprimée pour la sémantique {semantics})"
+            )
+        if primary_semantics and semantics != primary_semantics:
+            _detail += (
+                " — le verdict principal (Acte II) est énoncé sous la "
+                f"sémantique {primary_semantics}"
+            )
         points.append(
             StructuringWeakPoint(
                 source="dung",
@@ -1036,7 +1065,7 @@ def _collect_weak_points(
                 # #1914 résidu b: the same graph finding bears the same stable
                 # ref in both acts — the rejection's proof is the machinery
                 # the annexe folds under that ref.
-                detail=f"{appendix_ref(semantics)} — {REJECTED_MEANS}",
+                detail=_detail,
             )
         )
     if pl_inc:
@@ -1413,6 +1442,16 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
             if isinstance(wb_raw, str) and str(wb_raw).strip()
             else None
         )
+        # #3394 cycle 2 — the methods' names per option (honest absence when
+        # the record carries none).
+        raw_methods = d.get("methods_by_option", {}) or {}
+        methods_by_option: Dict[str, List[str]] = {}
+        if isinstance(raw_methods, dict):
+            for k, names in raw_methods.items():
+                if isinstance(names, list):
+                    kept = [str(n) for n in names if isinstance(n, str) and n.strip()]
+                    if kept:
+                        methods_by_option[str(k)] = kept
         chosen = GovernanceVerdict(
             method=method,
             winner=winner,
@@ -1439,6 +1478,8 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
             support_by_option=support_by_option,
             n_methods_decided=n_methods_decided,
             winner_basis=winner_basis,
+            # #3394 cycle 2 — the names behind the counts.
+            methods_by_option=methods_by_option,
             # #3386 — the producer-rendered coalition block ("" when the
             # play changed nothing).
             coalition_note=coalition_note(d),
@@ -2940,6 +2981,14 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
     pl_verified = _pl_verified(state)
     fol_verified = _fol_verified(state)
     dung_rejected = decode_native_dung(state).rejected_by_arg
+    # #3394 cycle 2 — the refs the annex will print, and the semantics Act
+    # II's primary verdict spoke under: the weak points gate their refs on
+    # the first and name any divergence from the second.
+    _citable_dung_refs = citable_appendix_refs(state)
+    _primary_fw = select_primary_native(getattr(state, "dung_frameworks", {}) or {})
+    _primary_dung_semantics = (
+        native_semantics_label(_primary_fw) if _primary_fw is not None else None
+    )
 
     # Non-trivial axes (real-in-state content), in a stable display order.
     axes_nontrivial: List[str] = []
@@ -2963,7 +3012,14 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
     # counts (guest sidecars never carry a cause).
     pl_causes = _pl_stated_causes(state)
     weak_points = _collect_weak_points(
-        fallacies, dung_rejected, pl_inc, fol_inc, fol_causes, pl_causes
+        fallacies,
+        dung_rejected,
+        pl_inc,
+        fol_inc,
+        fol_causes,
+        pl_causes,
+        citable_refs=_citable_dung_refs,
+        primary_semantics=_primary_dung_semantics,
     )
     counter_strategies: List[CounterStrategy] = []
     for ca in counters:
@@ -3625,6 +3681,7 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
             tail="(options opaques, FB-34.)",
             # #3001 (a′) — the robustness band's inputs (vote only).
             support_by_option=gv.support_by_option,
+            methods_by_option=gv.methods_by_option,
             n_methods_decided=gv.n_methods_decided,
             winner_basis=gv.winner_basis,
             # #3308 — what the fallacy pass established about THIS winner.
@@ -3639,6 +3696,7 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
         divergence = render_divergence_clause(
             evidence.governance_divergent_texts,
             support_by_option=gv.support_by_option,
+            methods_by_option=gv.methods_by_option,
             n_methods_decided=gv.n_methods_decided,
             # #3308 — each divergent winner's examination status, on its line.
             examination_by_unit=evidence.examination_by_unit,

@@ -170,6 +170,7 @@ def render_divergence_clause(
     winner_texts: Sequence[Tuple[str, str]],
     cap: int = CITED_UNIT_TEXT_CAP,
     support_by_option: Optional[Mapping[str, int]] = None,
+    methods_by_option: Optional[Mapping[str, Sequence[str]]] = None,
     n_methods_decided: Optional[int] = None,
     examination_by_unit: Optional[Mapping[str, str]] = None,
 ) -> str:
@@ -201,6 +202,9 @@ def render_divergence_clause(
         band = qualitative_support_band(
             support_by_option.get(wid) if support_by_option else None,
             n_methods_decided,
+            supporting_methods=(
+                methods_by_option.get(wid) if methods_by_option else None
+            ),
         )
         if band:
             fragment += f" — soutenu {band}"
@@ -288,10 +292,43 @@ def governance_origin(
     return "", None, "", "unrecorded"
 
 
+#: #3394 cycle 2 — the vote methods' reader-facing names. The aggregate's
+#: ``winners_per_method`` keys are code identifiers ("majority", "stv");
+#: the cycle-0 renders named NONE of them (« à l'unanimité des méthodes »),
+#: so a reader could not tell which vote had run. An unknown key prints as
+#: itself — never dropped, never guessed (anti-#1019).
+VOTE_METHOD_LABELS_FR = {
+    "majority": "majorité",
+    "plurality": "pluralité",
+    "borda": "Borda",
+    "condorcet": "Condorcet",
+    "quadratic": "vote quadratique",
+    "byzantine": "consensus byzantin",
+    "raft": "Raft",
+    "approval": "vote par approbation",
+    "stv": "vote unique transférable",
+    "copeland": "Copeland",
+    "schulze": "Schulze",
+    "condorcet_winner": "vainqueur de Condorcet",
+}
+
+
+def _vote_method_names_fr(methods: Optional[Sequence[str]]) -> str:
+    """The methods' names, in French, in the record's own order.
+
+    Unknown identifiers print as themselves (a future method must not lose
+    its name to this map); an empty input prints nothing.
+    """
+    if not methods:
+        return ""
+    return ", ".join(VOTE_METHOD_LABELS_FR.get(m, m) for m in methods)
+
+
 def qualitative_support_band(
     support: Optional[int],
     n_methods_decided: Optional[int],
     winner_basis: Optional[str] = None,
+    supporting_methods: Optional[Sequence[str]] = None,
 ) -> Optional[str]:
     """The band of a vote's support, carrying its count (#3001 a′, #3394).
 
@@ -334,7 +371,22 @@ def qualitative_support_band(
     n = n_methods_decided
     s = support
     count = vote_count_phrase(s, n)
-    counted = f" ({count})" if count else ""
+    # #3394 cycle 2 — the names ride the count, but ONLY when they are
+    # exactly as many as the counted support: a caller whose names and
+    # counts disagree hands the reader a fraction and a list that do not
+    # describe the same vote, so the names stay home (the count is the
+    # measured half; the names are read, never recomputed here).
+    names = _vote_method_names_fr(supporting_methods)
+    if names and len(supporting_methods or ()) != s:
+        names = ""
+    if count and names:
+        counted = f" ({count} : {names})"
+    elif count:
+        counted = f" ({count})"
+    elif names:
+        counted = f" ({names})"
+    else:
+        counted = ""
     if s >= n:
         return f"à l'unanimité des méthodes qui ont décidé{counted}"
     if 3 * s >= 2 * n:
@@ -362,6 +414,7 @@ def render_governance_lead(
     method_provenance: Any = None,
     tail: str = "",
     support_by_option: Optional[Mapping[str, int]] = None,
+    methods_by_option: Optional[Mapping[str, Sequence[str]]] = None,
     n_methods_decided: Optional[int] = None,
     winner_basis: Optional[str] = None,
     examination: str = "",
@@ -441,6 +494,11 @@ def render_governance_lead(
             support_by_option.get(str(winner).strip()) if support_by_option else None,
             n_methods_decided,
             winner_basis,
+            supporting_methods=(
+                methods_by_option.get(str(winner).strip())
+                if methods_by_option
+                else None
+            ),
         )
         if band:
             # #3394 — the band itself now carries the counted support

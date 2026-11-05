@@ -58,7 +58,11 @@ from .state_adapter import state_to_appendix_mapping
 # from the FINAL state, so the two halves of one report cannot disagree about
 # the same map. Import direction stays one-way: the plugin never imports this
 # module (no cycle).
-from .act1_framing_plugin import refresh_coverage_passage
+from .act1_framing_plugin import (
+    dedupe_coverage_passage_across_acts,
+    refresh_coverage_passage,
+)
+from .dung_reader import citable_appendix_refs, demote_uncitable_dung_refs
 
 logger = logging.getLogger(__name__)
 
@@ -249,10 +253,20 @@ def build_restitution_acts(
     if act1:
         act1 = refresh_coverage_passage(act1, state)
 
+    # #3394 cycle 2 — the coverage section prints ONCE in the full text: the
+    # writers of Acts II/III sometimes copied the section the prompt names,
+    # and the reader met it up to three times. Act I's refreshed block is
+    # canonical when present; the repeats are stripped here, at the assembly
+    # point where all three acts are in hand (keep-first across II → III
+    # when Act I carried none).
+    act1, act2, act3 = dedupe_coverage_passage_across_acts(
+        act1, _read("act2_narrative"), _read("act3_conclusion")
+    )
+
     return RestitutionActs(
         act1_framing=act1,
-        act2_narrative=_read("act2_narrative"),
-        act3_conclusion=_read("act3_conclusion"),
+        act2_narrative=act2,
+        act3_conclusion=act3,
         source_id=_derive_source_id(state, source_id),
         degraded=degraded,
     )
@@ -288,6 +302,19 @@ def render_spectacular_restitution(
     """
     acts = build_restitution_acts(state, source_id=source_id)
     appendix_state = state_to_appendix_mapping(state)
+    # #3394 cycle 2 — an act may cite a Dung annex ref the appendix state
+    # will NOT print (the acts read the raw state; the annex reads this
+    # mapping — a render path that strips the frameworks leaves the anchors
+    # with no target). The refs gate here, on the mapping actually rendered:
+    # a citable-everywhere text is returned byte-identical.
+    _citable_dung = citable_appendix_refs(appendix_state)
+    acts = RestitutionActs(
+        act1_framing=demote_uncitable_dung_refs(acts.act1_framing, _citable_dung),
+        act2_narrative=demote_uncitable_dung_refs(acts.act2_narrative, _citable_dung),
+        act3_conclusion=demote_uncitable_dung_refs(acts.act3_conclusion, _citable_dung),
+        source_id=acts.source_id,
+        degraded=acts.degraded,
+    )
     report = render_restitution_report(
         acts,
         state=appendix_state,

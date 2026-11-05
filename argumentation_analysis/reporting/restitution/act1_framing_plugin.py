@@ -1012,6 +1012,67 @@ def refresh_coverage_passage(narrative: str, state: Any) -> str:
     return insert_coverage_passage(narrative, format_coverage_passage(sentence))
 
 
+def _strip_coverage_blocks(narrative: str, keep_first: bool) -> str:
+    """Delete coverage blocks from an act's text, keeping the first optionally.
+
+    Same paragraph-span rule as the #3393 dedup: a block is its heading line
+    plus the non-empty lines that follow it.
+    """
+    if COVERAGE_HEADING not in (narrative or ""):
+        return narrative
+    lines = (narrative or "").split("\n")
+    out: List[str] = []
+    kept = False
+    index = 0
+    while index < len(lines):
+        if COVERAGE_HEADING in lines[index]:
+            end = index + 1
+            while end < len(lines) and lines[end].strip():
+                end += 1
+            if keep_first and not kept:
+                out.extend(lines[index:end])
+                kept = True
+            index = end
+        else:
+            out.append(lines[index])
+            index += 1
+    return "\n".join(out)
+
+
+def dedupe_coverage_passage_across_acts(
+    act1: str, act2: str, act3: str
+) -> Tuple[str, str, str]:
+    """#3394 cycle 2 — the coverage section prints ONCE in the full text.
+
+    The #3393 dedup runs on Act I alone; the cycle-2 census measured the
+    writer copying the section into Acts II and III too — the full text then
+    carried it up to three times, each copy competing with the refreshed
+    one. Called at the single assembly point (``pipeline_adapter``) where
+    all three acts are in hand:
+
+    - Act I's block (refreshed by ``refresh_coverage_passage``) is canonical
+      when present; every later act's copy is stripped;
+    - with no Act I block (degraded run, or no coverage map and no copy),
+      the FIRST block across II → III stays and every other is stripped.
+
+    No insertion, no rewrite: what stays is the writer's own placement,
+    untouched — only the repeats go.
+    """
+    if act1 and COVERAGE_HEADING in act1:
+        return (
+            act1,
+            _strip_coverage_blocks(act2, keep_first=False),
+            _strip_coverage_blocks(act3, keep_first=False),
+        )
+    if act2 and COVERAGE_HEADING in act2:
+        return (
+            act1,
+            _strip_coverage_blocks(act2, keep_first=True),
+            _strip_coverage_blocks(act3, keep_first=False),
+        )
+    return act1, act2, _strip_coverage_blocks(act3, keep_first=True)
+
+
 def build_act1_prompt(evidence: Act1Evidence) -> str:
     """Build the §4-compliant LLM-conducted prompt for the Acte I framing.
 

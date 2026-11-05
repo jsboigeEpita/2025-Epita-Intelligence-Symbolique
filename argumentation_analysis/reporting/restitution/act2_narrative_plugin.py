@@ -77,6 +77,7 @@ from .dung_reader import (  # #1908: one shared meaning for act2 and act3
     UNAVAILABLE_STATUS,
     appendix_ref,
     appendix_refs_in,
+    citable_appendix_refs,
     reader_consequence,
 )
 from .native_dung import (  # #1912: single shared decoder — see native_dung.py
@@ -505,6 +506,10 @@ class GovernanceVerdict:
     support_by_option: Dict[str, int] = field(default_factory=dict)
     n_methods_decided: Optional[int] = None
     winner_basis: Optional[str] = None
+    # #3394 cycle 2 — the NAMES behind the counts: which deciding methods
+    # chose each option. The cycle-0 band said « à l'unanimité des méthodes »
+    # without naming one; the render now carries the names beside the count.
+    methods_by_option: Dict[str, List[str]] = field(default_factory=dict)
     # #3386 — the coalition play's block, rendered by the producer's own
     # function (``coalition_play.coalition_note``, the #3395 one-producer
     # pattern): a bloc that moved the outcome, and/or a pivot the #3385
@@ -781,6 +786,32 @@ def _collect_dung_trace(state: Any) -> DungSolverTrace:
         credulously_accepted=credulous,
         sample_attacks=sampled_attacks,
         population_total=fw_total,
+    )
+
+
+def _dung_detail_with_citable_ref(
+    semantics_label: str, citable: "set[str]", gloss: str
+) -> str:
+    """#3394 cycle 2 — the Dung finding's detail: the annex ref ONLY when the
+    annex will print it; the result stated in place otherwise.
+
+    The cycle-2 census measured renders citing ``Annexe Dung[...]`` anchors
+    with no annex in the full text — same format, no target. The ref gates on
+    ``citable_appendix_refs`` (the appendix's own derivation), so the two
+    cannot drift; a ref that will not print never reaches the prompt, and the
+    gloss plus the verdict above already state the result.
+    """
+    ref = appendix_ref(semantics_label)
+    if ref and ref in citable:
+        return (
+            f"{ref} — composition exacte de "
+            f"l'extension, identifiants et arêtes d'attaque ; {gloss}. "
+            "Cite la conséquence ci-dessus, PAS la composition."
+        )
+    return (
+        "conséquence énoncée ci-dessus — composition non jointe "
+        f"(aucune annexe imprimée pour la sémantique {semantics_label}) ; "
+        f"{gloss}. Cite la conséquence, jamais une composition absente."
     )
 
 
@@ -1507,6 +1538,17 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
             if isinstance(wb_raw, str) and str(wb_raw).strip()
             else None
         )
+        # #3394 cycle 2 — the methods' names per option (honest absence when
+        # the record carries none: pre-cycle-2 entries keep their count-only
+        # band, byte-identical).
+        raw_methods = d.get("methods_by_option", {}) or {}
+        methods_by_option: Dict[str, List[str]] = {}
+        if isinstance(raw_methods, dict):
+            for k, names in raw_methods.items():
+                if isinstance(names, list):
+                    kept = [str(n) for n in names if isinstance(n, str) and n.strip()]
+                    if kept:
+                        methods_by_option[str(k)] = kept
         chosen = GovernanceVerdict(
             method=method,
             winner=winner,
@@ -1523,6 +1565,8 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
             support_by_option=support_by_option,
             n_methods_decided=n_methods_decided,
             winner_basis=winner_basis,
+            # #3394 cycle 2 — the names behind the counts.
+            methods_by_option=methods_by_option,
             # #3386 — the producer-rendered coalition block ("" when the
             # play changed nothing).
             coalition_note=coalition_note(d),
@@ -1829,6 +1873,10 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                 )
 
     dung_trace = _collect_dung_trace(state)
+    # #3394 cycle 2 — the refs the appendix WILL print for this state: a
+    # ref outside the set is an anchor with no target, and the finding
+    # states its result in place instead of citing it.
+    _citable = citable_appendix_refs(state)
     if dung_trace.available and dung_trace.non_concluable:
         # #1912: a native framework exists but its extension shape is
         # undecodable — say so. Never render "N rejected" from a shape the
@@ -1860,8 +1908,19 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                 "décodable) — aucun argument n'est fragilisé par ce "
                 "verdict d'indécidabilité"
             )
+            # #3394 cycle 2 — the protocol line cites the annex only when
+            # the annex will print that ref; otherwise the verdict above
+            # already states the result, and no dangling anchor rides it.
+            _machinery = appendix_ref(_label)
+            if _machinery and _machinery not in _citable:
+                _machinery = (
+                    "machinerie complète — protocole non joint "
+                    f"(aucune annexe imprimée pour la sémantique {_label})"
+                )
+            else:
+                _machinery = f"machinerie complète et protocole : {_machinery}"
             _detail = (
-                f"machinerie complète et protocole : {appendix_ref(_label)} ; "
+                f"{_machinery} ; "
                 f"{EPISTEMIC_CAVEAT} (#1912 : ni accepté-vide ni inventé)"
             )
         findings.append(FormalFinding(kind="dung", verdict=_verdict, detail=_detail))
@@ -1906,10 +1965,8 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
             _gloss = f"{_gloss}. {UNDECIDED_MEANS}"
             if dung_trace.credulously_accepted:
                 _gloss = f"{_gloss}. {CREDULOUS_MEANS}"
-        detail = (
-            f"{appendix_ref(dung_trace.semantics_label)} — composition exacte de "
-            f"l'extension, identifiants et arêtes d'attaque ; {_gloss}. "
-            "Cite la conséquence ci-dessus, PAS la composition."
+        detail = _dung_detail_with_citable_ref(
+            dung_trace.semantics_label, _citable, _gloss
         )
         findings.append(FormalFinding(kind="dung", verdict=verdict, detail=detail))
     elif dung_trace.available and (
@@ -1940,10 +1997,8 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
             _gloss = f"{_gloss}. {UNDECIDED_MEANS}"
             if dung_trace.credulously_accepted:
                 _gloss = f"{_gloss}. {CREDULOUS_MEANS}"
-        detail = (
-            f"{appendix_ref(dung_trace.semantics_label)} — composition exacte de "
-            f"l'extension, identifiants et arêtes d'attaque ; {_gloss}. "
-            "Cite la conséquence ci-dessus, PAS la composition."
+        detail = _dung_detail_with_citable_ref(
+            dung_trace.semantics_label, _citable, _gloss
         )
         findings.append(FormalFinding(kind="dung", verdict=verdict, detail=detail))
 
@@ -2341,6 +2396,7 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
             tail="(noms d'options maintenus opaques — discipline FB-34.)",
             # #3001 (a′) — the robustness band's inputs (vote only).
             support_by_option=gv.support_by_option,
+            methods_by_option=gv.methods_by_option,
             n_methods_decided=gv.n_methods_decided,
             winner_basis=gv.winner_basis,
         )
@@ -2352,6 +2408,7 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         divergence = render_divergence_clause(
             evidence.governance_divergent_texts,
             support_by_option=gv.support_by_option,
+            methods_by_option=gv.methods_by_option,
             n_methods_decided=gv.n_methods_decided,
         )
         if divergence:
@@ -2619,8 +2676,8 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         "CONSIGNE DE RÉDACTION :\n"
         "- Pour chaque mouvement, écris un paragraphe qui tisse en UN battement : "
         "l'argument, son caractère (vertus) si l'axe est disponible, ses procédés "
-        "relevés (procédé + descente + contre-argument), et sa tenue formelle "
-        "citée comme preuve.\n"
+        "relevés (procédé + examen approfondi + contre-argument), et sa tenue "
+        "formelle citée comme preuve.\n"
         # #3082 — la règle de nommage que l'Acte III porte déjà, mot pour mot :
         # un seul contrat, une seule constante. L'Acte II récitait « le
         # locuteur » sans jamais lire la donnée qui dit qui il est.

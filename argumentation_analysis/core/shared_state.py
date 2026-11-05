@@ -1548,6 +1548,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         winner_provenance: Optional[str] = None,
         method_provenance: Optional[str] = None,
         support_by_option: Optional[Dict[str, int]] = None,
+        methods_by_option: Optional[Dict[str, List[str]]] = None,
         n_methods_decided: Optional[int] = None,
         winner_basis: Optional[str] = None,
         vote_population: Optional[Dict[str, Any]] = None,
@@ -1584,7 +1585,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         ``n_methods_decided`` and ``winner_basis`` (the tier that decided —
         condorcet → majority → plurality, #2300). Restitution renders this
         QUALITATIVELY (``cited_units.qualitative_support_band``), never as a
-        counter (#1914).
+        counter (#1914). ``methods_by_option`` (#3394 cycle 2) names the
+        methods behind those counts — the inversion of the aggregate's
+        ``winners_per_method`` — so a band that says « 9 des 12 méthodes »
+        can say WHICH nine.
 
         #2850 R1107 — ``vote_population`` names the units the vote was
         decided OVER (k of N + their ids): the winner is a member of it.
@@ -1618,6 +1622,13 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             entry["method_provenance"] = method_provenance
         if support_by_option:
             entry["support_by_option"] = dict(support_by_option)
+        if methods_by_option:
+            # #3394 cycle 2 — the NAMES behind ``support_by_option``'s counts:
+            # which deciding methods chose each option. Stored beside the
+            # counts, only when the aggregate carried them.
+            entry["methods_by_option"] = {
+                str(k): list(v) for k, v in methods_by_option.items()
+            }
         if n_methods_decided is not None:
             entry["n_methods_decided"] = n_methods_decided
         if winner_basis:

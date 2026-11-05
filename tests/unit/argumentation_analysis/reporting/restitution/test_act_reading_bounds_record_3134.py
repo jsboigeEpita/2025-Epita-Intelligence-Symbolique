@@ -110,10 +110,12 @@ class TestActThree:
         narrative = result.narrative
         assert "Bornes de lecture du run" in narrative
         # The wide net — the bound the render omitted — says its 8000.
-        assert "détection de sophismes — large filet" in narrative
+        # #3394 cycle 2: the label speaks to the reader (premier balayage),
+        # not in the organ's code name (large filet).
+        assert "détection de sophismes — premier balayage du texte entier" in narrative
         assert "lecture de 8000 des 12000 caractères" in narrative
         # The descent keeps its own 500, under its own label.
-        assert "détection de sophismes — descente" in narrative
+        assert "détection de sophismes — examen approfondi par fenêtres" in narrative
         assert "lecture de 500 des 12000 caractères" in narrative
         # The per-argument reading speaks in units, the extraction in chars.
         assert "10 unités sur 91 lues" in narrative
@@ -193,8 +195,8 @@ class TestReaderBoundsPassage:
 
         passage = format_reader_bounds_passage(build_reading_record(_state()))
         assert passage.startswith("**Bornes de lecture du run")
-        assert "« détection de sophismes — large filet »" in passage
-        assert "« détection de sophismes — descente »" in passage
+        assert "« détection de sophismes — premier balayage du texte entier »" in passage
+        assert "« détection de sophismes — examen approfondi par fenêtres »" in passage
         assert "BASE DU RUN" in passage
 
     def test_no_lines_no_passage(self):
