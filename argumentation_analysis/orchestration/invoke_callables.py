@@ -3606,13 +3606,30 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
     fallacy_beliefs = []
     _jtms_fallacy_head = detected_fallacies[:6]
     _jtms_fallacies_total = len(detected_fallacies)
+    # #3434 — fallacies the descent declares UNMEASURED (#3029/#3034: the
+    # key is present and None, the reason travels in ``confidence_note``).
+    # They are excluded from the belief set and named in the phase output:
+    # inventing the number the model did not give is what #3029 removed,
+    # and a belief whose confidence nobody measured would read as measured
+    # in every reader downstream (ExtendedBelief coerces to float and
+    # max()-merges on update). Honest absence (#1019), never a TypeError.
+    _jtms_unmeasured: List[Dict[str, str]] = []
     session.jtms.enable_tracing()  # type: ignore[no-untyped-call]  # Track retraction cascades (#350)
     for i, f in enumerate(_jtms_fallacy_head):
         if not isinstance(f, dict):
             continue
         fallacy_type = f.get("type", f.get("fallacy_type", f"fallacy_{i+1}"))
         fallacy_name = f"FALLACY:{fallacy_type}"[:80]
-        confidence = float(f.get("confidence", f.get("severity", 0.7)))  # type: ignore[arg-type]
+        raw_confidence = f.get("confidence", f.get("severity", 0.7))
+        if raw_confidence is None:
+            _jtms_unmeasured.append(
+                {
+                    "fallacy_type": str(fallacy_type),
+                    "confidence_note": str(f.get("confidence_note") or ""),
+                }
+            )
+            continue
+        confidence = float(raw_confidence)
         session.add_belief(
             fallacy_name,
             agent_source="fallacy_detector",
@@ -3888,6 +3905,12 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
         # absence otherwise — the branch did not run).
         _jtms_result["arguments_from_sentences"] = len(_raw_arg_texts)
         _jtms_result["sentences_total"] = _jtms_sentences_total
+    if _jtms_unmeasured:
+        # #3434 — the fallacies the loop EXCLUDED because the descent
+        # declared their confidence unmeasured (None, #3029/#3034): named
+        # with their note, so ``fallacies_considered`` minus ``fallacy_count``
+        # is explained, not silent. Absent key = none were excluded.
+        _jtms_result["unmeasured_confidence_fallacies"] = _jtms_unmeasured
     # Trace entry for JTMS specialist
     _state = context.get("_state_object")
     _n_beliefs_raw = _jtms_result.get("belief_count", 0)
@@ -9006,9 +9029,7 @@ def _document_statements_for_unit(
             document_statements_for_unit,
         )
 
-        return document_statements_for_unit(
-            state, unit_text=unit_text, offset=offset
-        )
+        return document_statements_for_unit(state, unit_text=unit_text, offset=offset)
     except Exception as exc:  # a reading helper must never sink the walk
         logger.warning(
             "document statements unavailable for %s: %s: %s",
