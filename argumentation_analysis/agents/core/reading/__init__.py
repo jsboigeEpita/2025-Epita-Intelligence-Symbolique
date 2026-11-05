@@ -10,11 +10,16 @@ fields, two labels.
 from __future__ import annotations
 
 from argumentation_analysis.agents.core.reading.first_reading import (
+    ANCHOR_MIN_RUN,
+    ANCHOR_MIN_SHARE,
+    ANCHOR_RELOCATED,
+    ANCHOR_UNANCHORED,
     FIRST_READING_BASIS,
     MAX_MOVES,
     MOVE_KINDS,
     DefiningMove,
     FirstReading,
+    anchor_quote_in,  # #3415 ask 4
     build_first_reading,
     build_first_reading_prompt,
     defining_move_spans,
@@ -26,11 +31,16 @@ from argumentation_analysis.agents.core.reading.first_reading import (
 )
 
 __all__ = [
+    "ANCHOR_MIN_RUN",
+    "ANCHOR_MIN_SHARE",
+    "ANCHOR_RELOCATED",
+    "ANCHOR_UNANCHORED",
     "FIRST_READING_BASIS",
     "MAX_MOVES",
     "MOVE_KINDS",
     "DefiningMove",
     "FirstReading",
+    "anchor_quote_in",
     "build_first_reading",
     "build_first_reading_prompt",
     "defining_move_spans",
