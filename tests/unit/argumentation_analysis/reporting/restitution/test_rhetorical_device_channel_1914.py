@@ -104,8 +104,11 @@ class TestConsigneContract:
         assert "N'invente JAMAIS une fonction" in _prompt()
 
     def test_weaving_bullet_names_the_new_channel(self):
+        # #3394 cycle 2 — the bullet's organ word (« descente ») became the
+        # reader word; the channel is still named on the weaving bullet.
         assert (
-            "ses procédés relevés (procédé + descente + contre-argument)" in _prompt()
+            "ses procédés relevés (procédé + examen approfondi + contre-argument)"
+            in _prompt()
         )
 
 

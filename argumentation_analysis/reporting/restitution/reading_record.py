@@ -34,10 +34,13 @@ SITE_LABELS_FR = {
     "governance": "délibération de gouvernance",
     "counter_argument": "contre-argumentation",
     "collaborative_debate": "débat collaboratif",
-    # #2850 lot 7 — the fallacy workflow's document-path windows.
-    "fallacy_widenet": "détection de sophismes — large filet",
-    "fallacy_descent": "détection de sophismes — descente",
-    "fallacy_one_shot": "détection de sophismes — repli en un appel",
+    # #2850 lot 7 — the fallacy workflow's document-path windows. #3394
+    # cycle 2: the labels speak to the READER — « large filet », « descente »,
+    # « repli » were the organs' own code names, copied onto the reader
+    # surface; each label now says what the reading DID.
+    "fallacy_widenet": "détection de sophismes — premier balayage du texte entier",
+    "fallacy_descent": "détection de sophismes — examen approfondi par fenêtres",
+    "fallacy_one_shot": "détection de sophismes — lecture en un seul appel",
     # #3377 — the two personas read the document too; a site with no label
     # renders its raw key, which is not a sentence a reader can use.
     "historian": "historien — situation du document",
@@ -183,11 +186,15 @@ def _fallacy_fed(site: str, state: Any) -> str:
         )
         other = "la lecture par argument"
     elif site == "fallacy_one_shot":
-        base = f"le repli en un appel de la détection de sophismes ({_count_fr(n)})"
+        # #3394 cycle 2 — reader words: the organ's own name (« repli »)
+        # never reaches the surface; the line says what the reading did.
+        base = (
+            f"la lecture en un seul appel de la détection de sophismes ({_count_fr(n)})"
+        )
         other = "la lecture par argument"
     else:
         base = f"les procédés retenus de la lecture par argument ({_count_fr(n)})"
-        other = "la descente"
+        other = "l'examen approfondi par fenêtres"
     if shared:
         base += f" — dont {shared} partagé{'s' if shared > 1 else ''} avec {other}"
     if untagged and site == "fallacy_descent":
@@ -335,7 +342,9 @@ def _site_fed(site: str, state: Any) -> str:
             )
         return f"{name} et ses {verdicts}"
     if site == "fallacy_widenet":
-        return "les candidats de la détection de sophismes (phase large filet)"
+        # #3394 cycle 2 — « phase large filet » was the organ's name for its
+        # own pass; the reader gets what the pass did.
+        return "les candidats du premier balayage du texte entier"
     if site in ("fallacy_descent", "fallacy_one_shot", "fallacy_per_argument"):
         return _fallacy_fed(site, state)
     if site == "counter_argument":
@@ -583,9 +592,13 @@ _BOUND_SHAPE = re.compile(
 
 #: A word naming a bounded READING (a site of the record). The shape alone
 #: would also catch a document length (« un discours de 12000 caractères ») —
-#: the measured object there is the document, not a reading.
+#: the measured object there is the document, not a reading. #3394 cycle 2:
+#: the old organ names (filet/descente/repli) stay — they catch any render
+#: that still carries them — and the new reader words (balayage, fenêtres)
+#: join them, so a restated bound phrased in the new vocabulary does not
+#: escape the restatement check.
 _READING_WORD = re.compile(
-    r"détection|lecture|extraction|traduction|logique|filet|descente|repli",
+    r"détection|lecture|extraction|traduction|logique|balayage|fenêtres|filet|descente|repli",
     re.IGNORECASE,
 )
 

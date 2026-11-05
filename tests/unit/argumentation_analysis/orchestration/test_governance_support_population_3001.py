@@ -215,8 +215,13 @@ class TestTheSupportBandReachesTheActs:
         assert "unanimité" not in line
         assert "large majorité" not in line
         # R1080: the winner holds exactly half the methods (6/12) — a tie is
-        # not a majority, and the GOUVERNANCE line must not say one
-        assert "majorit" not in line
+        # not a majority, and the GOUVERNANCE line's BAND must not say one.
+        # #3394 cycle 2: « majorité » now legitimately names the majority
+        # METHOD among the counted support's names — the assertion pins the
+        # band's own words, never the whole line's vocabulary.
+        assert "majorité étroite" not in line
+        assert "large majorité" not in line
+        assert "à l'unanimité" not in line
 
     def test_the_band_carries_its_count_with_its_word(self, act: str) -> None:
         """#1914 → #3394: the band keeps its qualitative word AND carries the
@@ -227,10 +232,13 @@ class TestTheSupportBandReachesTheActs:
         of the fraction, or nothing."""
         state = _written_state(_unanimous_output())
         line = _gov_line(_PROMPTS[act](state))
-        assert "unanimité des méthodes qui ont décidé (12 des 12 méthodes)" in line
+        # #3394 cycle 2 — the counted phrase now continues with the counted
+        # methods' NAMES (« (12 des 12 méthodes : majorité, …) »); the two
+        # sides of the fraction stay the pin.
+        assert "unanimité des méthodes qui ont décidé (12 des 12 méthodes" in line
         state = _written_state(_narrow_output())
         line = _gov_line(_PROMPTS[act](state))
-        assert "partie seulement des méthodes (6 des 12 méthodes)" in line
+        assert "partie seulement des méthodes (6 des 12 méthodes" in line
 
     def test_a_divergent_vote_carries_each_winners_band_next_to_its_text(
         self, act: str
@@ -246,7 +254,11 @@ class TestTheSupportBandReachesTheActs:
         # the honest no-majority one, and the pinned "majorité étroite" the
         # pre-rework head rendered for all three is gone
         assert "partie seulement des méthodes" in line
-        assert "majorit" not in line
+        # #3394 cycle 2 — the band's words are what must be majority-free;
+        # « majorité » now legitimately names the majority METHOD in the
+        # counted support's names.
+        assert "majorité étroite" not in line
+        assert "large majorité" not in line
 
     def test_a_lead_winner_below_half_reads_as_no_majority(self, act: str) -> None:
         """R1080: a condorcet-tier winner chosen by fewer than half the
@@ -276,9 +288,13 @@ class TestTheSupportBandReachesTheActs:
         state = _written_state(output)
         line = _gov_line(_PROMPTS[act](state))
         assert "partie seulement des méthodes" in line
-        # no divergent winner holds a majority either (5/4/3) — the whole
-        # line is majority-free, by measurement not by scoping
-        assert "majorit" not in line
+        # no divergent winner holds a majority either (5/4/3) — the BANDS
+        # are majority-free, by measurement not by scoping. #3394 cycle 2:
+        # the counted support now also names the methods (one of which is
+        # named « majorité ») — the pin is on the band's own words.
+        assert "majorité étroite" not in line
+        assert "large majorité" not in line
+        assert "à l'unanimité" not in line
 
 
 class TestTheBandMatchesTheDefinition:

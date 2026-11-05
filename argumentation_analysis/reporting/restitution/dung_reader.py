@@ -15,6 +15,9 @@ protocol) moves to the appendix, referenced from the prose.
 from __future__ import annotations
 
 import re
+from typing import Any, Set
+
+from .native_dung import native_semantics_label
 
 # The epistemic caveat, stated at the FIRST reader-facing mention of the
 # graph (Act II) — not deferred to Act III. Acceptance and rejection are
@@ -165,6 +168,62 @@ def appendix_refs_in(text: str) -> list[str]:
     re-deriving the format — ``appendix_ref`` stays the single producer.
     """
     return _REF_RE.findall(text or "")
+
+
+def citable_appendix_refs(state: Any) -> Set[str]:
+    """The Dung appendix refs that WILL print for this state (#3394 cycle 2).
+
+    The appendix prints one heading per native ``verification_*`` framework,
+    the ref derived from the framework's OWN semantics label (appendix.py's
+    loop). Within one state the acts derive their refs from the same
+    frameworks, so same-state refs always resolve — the cycle-2 census
+    measured the OTHER class: full texts whose appendix section carried no
+    Dung machinery at all (a render path handed the renderer a state mapping
+    without the frameworks) while the acts, built from the raw state, cited
+    ``Annexe Dung[...]`` anchors with no target. A ref outside this set is
+    such an anchor: the site citing it states its result in place instead.
+
+    Mirrors the appendix's own derivation exactly (``native_semantics_label``
+    → ``appendix_ref``, unavailable folded to no ref) so the set cannot drift
+    from what prints. Reads both state shapes (attr or plain dict mapping —
+    the renderer's appendix state is a dict).
+    """
+    if isinstance(state, dict):
+        frameworks = state.get("dung_frameworks") or {}
+    else:
+        frameworks = getattr(state, "dung_frameworks", {}) or {}
+    if not isinstance(frameworks, dict):
+        return set()
+    refs: Set[str] = set()
+    for fw in frameworks.values():
+        if not isinstance(fw, dict):
+            continue
+        if not str(fw.get("name", "") or "").startswith("verification_"):
+            continue
+        ref = appendix_ref(native_semantics_label(fw) or "dung")
+        if ref:
+            refs.add(ref)
+    return refs
+
+
+def demote_uncitable_dung_refs(text: str, citable: Set[str]) -> str:
+    """Demote the Dung refs this text cites but the annex will not print.
+
+    The final pass of #3394 cycle 2's item (c), run at the assembly point on
+    each act string: an anchor whose annex section is absent from the full
+    text states its result in place instead of pointing — « {ref} — gloss »
+    keeps its gloss (the result, already stated), and a bare ref names the
+    absence. A text whose every ref is citable is returned BYTE-IDENTICAL
+    (the clean path — measured control).
+    """
+    for ref in appendix_refs_in(text or ""):
+        if ref in citable:
+            continue
+        text = text.replace(f"{ref} — ", "").replace(
+            f"{ref} ; ", "annexe non imprimée ; "
+        )
+        text = text.replace(ref, "annexe non imprimée pour cette sémantique")
+    return text
 
 
 def backend_provenance() -> str:

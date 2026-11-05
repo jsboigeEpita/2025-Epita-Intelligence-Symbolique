@@ -309,8 +309,10 @@ class TestActsCanQuoteThem:
             source_chars=_DOC_CHARS,
         )
         block = format_reading_block(record)
-        assert "détection de sophismes — large filet" in block
-        assert "détection de sophismes — descente" in block
-        assert "détection de sophismes — repli en un appel" in block
+        # #3394 cycle 2 — the labels speak to the reader (what the reading
+        # did), not in the organs' code names.
+        assert "détection de sophismes — premier balayage du texte entier" in block
+        assert "détection de sophismes — examen approfondi par fenêtres" in block
+        assert "détection de sophismes — lecture en un seul appel" in block
         assert f"8000 des {_DOC_CHARS}" in block
         assert f"500 des {_DOC_CHARS}" in block

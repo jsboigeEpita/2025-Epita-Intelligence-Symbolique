@@ -871,6 +871,11 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
     # census measured this population was dropped before the record, so
     # "11/12" and "the plurality fallback tier only" read identically.
     support_by_option: dict[str, int] = {}
+    # #3394 cycle 2 — the NAMES behind the counts: which deciding methods
+    # chose each option (the inversion of ``winners_per_method``). The cycle-0
+    # renders said « à l'unanimité des méthodes » without naming one method;
+    # a reader could not tell which vote had run. Absent when ``wpm`` is.
+    methods_by_option: dict[str, list[str]] = {}
     n_methods_decided: int | None = None
     winner_basis: str | None = None
     # #2850 R1107 — the population the vote was decided over (k of N + the
@@ -905,10 +910,11 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
                 winners = [str(w) for w in distinct if w]
             wpm = verdict.get("winners_per_method")
             if isinstance(wpm, dict):
-                for chosen in wpm.values():
+                for name, chosen in wpm.items():
                     if chosen:
                         key = str(chosen)
                         support_by_option[key] = support_by_option.get(key, 0) + 1
+                        methods_by_option.setdefault(key, []).append(str(name))
             n_decided = verdict.get("n_methods_decided")
             if isinstance(n_decided, int) and n_decided > 0:
                 n_methods_decided = n_decided
@@ -963,6 +969,8 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
         # #3001 — the vote's support population, stored only when the
         # verdict carried it (honest absence for a bare vote_result).
         support_by_option=support_by_option or None,
+        # #3394 cycle 2 — the methods' names beside their counts.
+        methods_by_option=methods_by_option or None,
         n_methods_decided=n_methods_decided,
         winner_basis=winner_basis,
         # #2850 R1107 — the vote's own population, apart from the conflict's.
