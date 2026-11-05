@@ -51,6 +51,11 @@ def _act_result() -> Any:
         gate_verdict=None,
         degraded={},
         interpretive_question="",
+        # #3432 (ask 3) — the act result now also carries the points the
+        # framing announced as needing to be settled; the invoke callable
+        # projects them into its output dict. The stand-in follows the real
+        # contract (``Act1Result.announced_checks``), it does not shrink it.
+        announced_checks=[],
         # Wider contract since #3123/R1105c: the act result carries its own
         # reading-license check, which the invoke callable returns to the trace.
         read_license={},

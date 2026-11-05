@@ -126,6 +126,7 @@ async def generate_and_render_for_conversational_state(
             getattr(act1, "degraded", None),
         )
         _persist_interpretive_question(state, act1.interpretive_question)
+        _persist_announced_checks(state, act1.announced_checks)
     except Exception:  # noqa: BLE001 — one act failing must not abort the others
         logger.warning("Acte I framing failed (fail-loud, continuing): ", exc_info=True)
 
@@ -187,6 +188,31 @@ def _persist_interpretive_question(state: Any, question: str) -> None:
         return
     setattr(state, "interpretive_question", question)
     logger.info("Restitution interpretive question persisted (%d chars)", len(question))
+
+
+def _persist_announced_checks(state: Any, checks: Any) -> None:
+    """Write the Acte I announced points onto the state (#3432, ask 3).
+
+    Twin of :func:`_persist_interpretive_question`, on the same seam and for
+    the same reason: the closed loop needs a carrier between the act that
+    announces (« POINT À TRANCHER : … ») and the act that must close it
+    (``build_act3_evidence``). An empty list persists nothing — the state's
+    empty default already reads as "the framing announced none".
+
+    **Twin**: ``state_writers._write_act1_framing_to_state`` writes the same
+    field on the pipeline lane — the two lanes must agree on the carrier.
+    """
+    if not checks:
+        return
+    if not hasattr(state, "announced_checks"):
+        logger.warning(
+            "State has no 'announced_checks' attribute — %d announced point(s) "
+            "dropped",
+            len(checks),
+        )
+        return
+    setattr(state, "announced_checks", [str(check) for check in checks if check])
+    logger.info("Restitution announced checks persisted (%d item(s))", len(checks))
 
 
 def _persist_act(

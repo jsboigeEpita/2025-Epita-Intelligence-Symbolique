@@ -892,6 +892,16 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         # question the framing actually posed. Empty when Acte I posed none
         # (no LLM / no marker line) — honest absence, never fabricated.
         self.interpretive_question: str = ""
+        # #3432 (ask 3) — the points Acte I ANNOUNCED as needing to be settled
+        # (its ``POINT À TRANCHER :`` marker lines, extracted by the act). The
+        # interpretive question is one carrier; a framing can announce others
+        # in its prose (the panel's `5075cd82` announced a false dilemma as a
+        # point to test), and before this field they reached no later act — so
+        # an announced check stayed open in silence. Written by the act1 lanes
+        # on both orchestration paths, READ by ``build_act3_evidence``, which
+        # must either report a verdict on each point or say it was not reached.
+        # Empty = the framing announced none (honest absence, never fabricated).
+        self.announced_checks: List[str] = []
         # #1608 — per-act degradation motifs (the *why* an act ran degraded:
         # readability-gate band, virtuous-mode shift, etc.). The acts return
         # ``degraded`` as a dict of motifs (``ActNResult.degraded``); the act
