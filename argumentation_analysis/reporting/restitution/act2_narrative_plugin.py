@@ -37,6 +37,7 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 from .figure_scales import (  # #3394 — a figure prints on its own scale
     _fr_number,
+    penalised_sum_on_its_maximum,
     sum_on_its_maximum,
 )
 from .cited_units import (  # #2967: shared cited-unit budget + boundary cut
@@ -872,9 +873,25 @@ def quality_ranking_line(
         return ""
     # #3394 — each collected score rides with the count of evaluated virtues
     # that is its own scale (#1942: ``overall`` is a SUM whose ceiling varies
-    # by unit). The sort stays on the sum — the ranking's semantics are not
-    # this issue's to change — but nothing prints bare anymore.
-    scored: List[Tuple[str, float, int]] = []
+    # by unit), and with its #289 penalty record when one applied. Nothing
+    # prints bare anymore.
+    #
+    # #3394 follow-up (R1142), two rules on the same record:
+    # - THE PENALTY IS SAID. 38 of 67 cycle-0 entries are
+    #   ``original_score × (1 − penalty_factor)`` while the base clause
+    #   called every figure a plain sum. A penalised entry now prints
+    #   « 4,25 sur 6 après pénalité (6,00 avant) » — the reader sees which
+    #   figure the penalty moved (same class as ask 5, render side).
+    # - THE RANK COMPARES PARTS. The sort moved from the raw sum to the
+    #   part of the ceiling each unit reaches (``overall / len(scores)``) —
+    #   the reading ``add_quality_score``'s own contract documents. Measured
+    #   on this seat's 10 cycle-0 state dumps, the two orders disagree on
+    #   9/10 documents (table in the PR body): the sum order crowned
+    #   whichever unit happened to have more evaluated virtues, not the
+    #   better-held one. An entry with no ``scores`` map has no measurable
+    #   part: it rides after the measured ones, by its sum (fixture-only
+    #   shape — production pairs the two).
+    scored: List[Tuple[str, float, int, bool, Optional[float]]] = []
     for arg_id, entry in quality.items():
         if not isinstance(entry, dict):
             continue
@@ -882,17 +899,67 @@ def quality_ranking_line(
         if isinstance(overall, (int, float)):
             scores = entry.get("scores")
             n_virtues = len(scores) if isinstance(scores, dict) and scores else 0
-            scored.append((str(arg_id), float(overall), n_virtues))
+            penalty = entry.get("fallacy_penalty")
+            penalised = False
+            before: Optional[float] = None
+            if isinstance(penalty, dict) and penalty.get("applied"):
+                penalised = True
+                raw_before = penalty.get("original_score")
+                if isinstance(raw_before, (int, float)):
+                    before = float(raw_before)
+            scored.append((str(arg_id), float(overall), n_virtues, penalised, before))
     if not scored:
         return ""
-    scored.sort(key=lambda pair: (-pair[1], pair[0]))
 
-    def _scaled(arg_id: str, score: float, n_virtues: int) -> str:
-        scaled = sum_on_its_maximum(score, n_virtues or None)
+    def _part(entry: Tuple[str, float, int, bool, Optional[float]]) -> Optional[float]:
+        _a, overall, n, _p, _b = entry
+        return overall / n if n else None
+
+    def _tie_key(
+        entry: Tuple[str, float, int, bool, Optional[float]],
+    ) -> Tuple[int, float]:
+        """What « same rank » means — the sort's key minus the id.
+
+        Two entries tie when they reach the same PART of their ceiling.
+        But ``None == None`` holds: two entries with no ``scores`` map
+        (fixture-only shape — production pairs the two, #1942) would tie
+        WHATEVER their sums, and a bare 4.0 would ride the co-holders of a
+        bare 5.0 head. The key carries the group: bare entries tie on
+        their sum, and never tie a measured one (different sort groups).
+        """
+        part = _part(entry)
+        return (0, part) if part is not None else (1, entry[1])
+
+    def _sort_key(
+        entry: Tuple[str, float, int, bool, Optional[float]],
+    ) -> Tuple[int, float, str]:
+        return (_tie_key(entry)[0], -_tie_key(entry)[1], entry[0])
+
+    scored.sort(key=_sort_key)
+
+    def _scaled(
+        arg_id: str,
+        score: float,
+        n_virtues: int,
+        penalised: bool,
+        before: Optional[float],
+    ) -> str:
+        if penalised:
+            scaled = penalised_sum_on_its_maximum(score, before, n_virtues or None)
+        else:
+            scaled = sum_on_its_maximum(score, n_virtues or None)
         # An entry with no ``scores`` map has an unmeasurable ceiling: its id
         # rides the listing, its number does not (a bare sum is the #3394
         # defect; production pairs the two — ``add_quality_score``).
         return f"{arg_id} ({scaled})" if scaled else arg_id
+
+    any_penalised = any(p for _a, _s, _n, p, _b in scored)
+    penalty_clause = (
+        " ; un score marqué « après pénalité » est cette somme après la "
+        "pénalité de sophisme, la somme d'avant entre parenthèses"
+        if any_penalised
+        else ""
+    )
 
     shown = scored[:3]
     overflow = ""
@@ -901,11 +968,11 @@ def quality_ranking_line(
         # 4.0 and dropping another by alphabetical id order is an accident of
         # the sort, not a ranking: Act II then wrote « partage la deuxième
         # place avec [one of two co-holders] ». Every holder of the boundary
-        # score rides the listing (bounded: at most six shown), and beyond
+        # rank rides the listing (bounded: at most six shown), and beyond
         # that the left-outs are counted, never silently dropped. A cut
-        # between two different scores keeps the #3159 line, byte-identical.
-        boundary_score = shown[-1][1]
-        tied_out = [pair for pair in scored[3:] if pair[1] == boundary_score]
+        # between two different ranks keeps the #3159 line, byte-identical.
+        boundary_part = _part(shown[-1])
+        tied_out = [e for e in scored[3:] if _tie_key(e) == _tie_key(shown[-1])]
         if tied_out:
             if len(tied_out) <= 3:
                 shown = shown + tied_out
@@ -913,93 +980,147 @@ def quality_ranking_line(
                 # Plural by construction: this path starts at 4 left-outs
                 # (fewer ride the listing above), so the count/noun
                 # agreement the #3337 residual demands cannot break here.
-                # #3394 — the group phrase carries the boundary score on its
-                # scale: the concrete count when the left-outs share one, the
-                # base clause's convention when their ceilings differ.
-                group_ns = {n for _a, _s, n in tied_out}
-                group_scale = (
-                    f" sur {next(iter(group_ns))}"
-                    if len(group_ns) == 1 and 0 not in group_ns
-                    else " sur leur maximum applicable"
-                )
-                overflow = (
-                    f" et {len(tied_out)} autres à "
-                    f"{_fr_number(boundary_score, 2)}{group_scale}"
-                )
+                # #3394 — the group phrase carries the boundary rank on its
+                # scale: the boundary sum when the left-outs share one
+                # ceiling, the reached part otherwise (« 2,00 sur leur
+                # maximum applicable » reads exactly under both). A bare
+                # boundary (no ``scores`` map) prints no figure at all —
+                # those sums ride nowhere, the group must not invent one.
+                if boundary_part is None:
+                    overflow = f" et {len(tied_out)} autres"
+                else:
+                    group_ns = {n for _a, _s, n, _p, _b in tied_out}
+                    if len(group_ns) == 1 and 0 not in group_ns:
+                        n_group = next(iter(group_ns))
+                        group_value = _fr_number((boundary_part or 0.0) * n_group, 2)
+                        group_scale = f" sur {n_group}"
+                    else:
+                        group_value = _fr_number(boundary_part or 0.0, 2)
+                        group_scale = " sur leur maximum applicable"
+                    group_pen = (
+                        " après pénalité"
+                        if all(p for _a, _s, _n, p, _b in tied_out)
+                        else ""
+                    )
+                    overflow = (
+                        f" et {len(tied_out)} autres à {group_value}"
+                        f"{group_scale}{group_pen}"
+                    )
     listed = (
-        ", ".join(_scaled(arg_id, score, n) for arg_id, score, n in shown) + overflow
+        ", ".join(_scaled(arg_id, score, n, p, b) for arg_id, score, n, p, b in shown)
+        + overflow
     )
     line = (
         f"Classement qualité (base : {len(scored)} unités évaluées sur "
         f"{units_total} ; chaque score est une somme de vertus, donnée sur "
-        "le nombre de vertus évaluées de son unité, plus haut = meilleur) : "
+        "le nombre de vertus évaluées de son unité ; le rang se lit sur la "
+        "part du plafond atteinte, plus haut = meilleur"
+        f"{penalty_clause}) : "
         f"{listed}. C'est le SEUL classement mesuré — aucun "
         "superlatif portant sur « tout le discours » n'a de base ici."
     )
     if not governance_winner:
         return line
-    winner_score, winner_n = next(
-        ((score, n) for arg_id, score, n in scored if arg_id == governance_winner),
-        (None, 0),
+    winner_entry = next(
+        (e for e in scored if e[0] == governance_winner),
+        None,
     )
-    if winner_score is None:
+    if winner_entry is None:
         # #3326 shape — the vote winner is a unit the quality pass never
         # scored: the vote ranks nothing in this measured set.
         return (
             f"{line} Le gagnant du vote, {governance_winner}, n'est pas dans "
             "ce classement mesuré : le vote ne dit pas qu'il est le mieux tenu."
         )
-    top_score, top_n = scored[0][1], scored[0][2]
-    if winner_score == top_score:
+    winner_score, winner_n = winner_entry[1], winner_entry[2]
+    top_score, top_n, top_pen, top_before = (
+        scored[0][1],
+        scored[0][2],
+        scored[0][3],
+        scored[0][4],
+    )
+    if _tie_key(winner_entry) == _tie_key(scored[0]):
         # #3341 — the winner is AT the maximum. Naming the other holders is
         # saying the crown is shared; the vote does not make it unique, and
         # the measurement does not deny it. Same ids order as the listing
-        # above (`scored` is sorted by score then id).
+        # above (`scored` is sorted by part then id).
         co_holders = sorted(
             arg_id
-            for arg_id, score, _n in scored
-            if score == top_score and arg_id != governance_winner
+            for arg_id, _s, _n, _p, _b in scored
+            if arg_id != governance_winner
+            and _tie_key((arg_id, _s, _n, _p, _b)) == _tie_key(scored[0])
         )
         if not co_holders:
             # Sole top-1 — the #3159 line, byte-identical.
             return line
-        winner_scale = sum_on_its_maximum(winner_score, winner_n or None)
+        winner_scale = (
+            penalised_sum_on_its_maximum(
+                winner_score, winner_entry[4], winner_n or None
+            )
+            if winner_entry[3]
+            else sum_on_its_maximum(winner_score, winner_n or None)
+        )
         winner_scale_str = f" ({winner_scale})" if winner_scale else ""
         return (
             f"{line} Le gagnant du vote, {governance_winner}, partage la tête "
             f"de ce classement{winner_scale_str} avec "
             f"{_tie_companions(co_holders)}."
         )
-    # Rank of the winner's SCORE (first holder of it), and who shares it.
-    rank = 1 + next(
-        i for i, (_arg_id, score, _n) in enumerate(scored) if score == winner_score
-    )
+    # Rank of the winner's PART (first holder of it), and who shares it.
+    winner_key = _tie_key(winner_entry)
+    rank = 1 + next(i for i, e in enumerate(scored) if _tie_key(e) == winner_key)
     # #3347 — the off-top twin of the #3341 rule: saying « à égalité »
     # without naming the co-holders left the writer to fill the gap from the
     # only tie partner the truncated listing showed (1 of 2 on the recorded
     # pass). The mates are named the same way the head branch names its own.
     tie_mates = sorted(
         arg_id
-        for arg_id, score, _n in scored
-        if score == winner_score and arg_id != governance_winner
+        for arg_id, _s, _n, _p, _b in scored
+        if arg_id != governance_winner
+        and _tie_key((arg_id, _s, _n, _p, _b)) == winner_key
     )
-    top_id, top_score, top_n = scored[0]
+    top_id = scored[0][0]
     # #3356 — the last tie slot of the line: « {top_id} est en tête » read the
     # sort's first holder as THE head. With a shared maximum it crowned one
     # holder by alphabetical accident — the same defect #3347 removed from the
     # listing, one clause later. A tied head is named the one way the line
     # already names ties (#3341's helper, its count/noun agreement inside); a
-    # sole top-1 keeps the exact pre-#3356 clause, byte-identical.
-    head_holders = sorted(arg_id for arg_id, score, _n in scored if score == top_score)
-    top_scale = sum_on_its_maximum(top_score, top_n or None)
-    top_scale_str = f" ({top_scale})" if top_scale else ""
+    # sole top-1 keeps the exact pre-#3356 clause, byte-identical. A head
+    # group tied on PART with different ceilings prints no parenthetical —
+    # each holder's own scale rides the listing above, and one member's
+    # ceiling must not label another's.
+    head_holders = sorted(
+        arg_id
+        for arg_id, _s, _n, _p, _b in scored
+        if _tie_key((arg_id, _s, _n, _p, _b)) == _tie_key(scored[0])
+    )
+    head_ns = {n for a, _s, n, _p, _b in scored if a in head_holders}
     if len(head_holders) == 1:
+        top_scale = (
+            penalised_sum_on_its_maximum(top_score, top_before, top_n or None)
+            if top_pen
+            else sum_on_its_maximum(top_score, top_n or None)
+        )
+        top_scale_str = f" ({top_scale})" if top_scale else ""
         head_clause = f"{top_id}{top_scale_str} est en tête"
     else:
+        if len(head_ns) == 1 and 0 not in head_ns:
+            top_scale = (
+                penalised_sum_on_its_maximum(top_score, top_before, top_n or None)
+                if top_pen
+                else sum_on_its_maximum(top_score, top_n or None)
+            )
+        else:
+            top_scale = ""
+        top_scale_str = f" ({top_scale})" if top_scale else ""
         head_clause = (
             f"{_tie_companions(head_holders)}{top_scale_str} " "partagent la tête"
         )
-    winner_scale = sum_on_its_maximum(winner_score, winner_n or None)
+    winner_scale = (
+        penalised_sum_on_its_maximum(winner_score, winner_entry[4], winner_n or None)
+        if winner_entry[3]
+        else sum_on_its_maximum(winner_score, winner_n or None)
+    )
     winner_scale_str = f" ({winner_scale})" if winner_scale else ""
     return (
         f"{line} Le gagnant du vote, {governance_winner}, est {rank}ᵉ"

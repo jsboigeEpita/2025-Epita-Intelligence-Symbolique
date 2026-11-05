@@ -237,6 +237,11 @@ def register_test_note(entry: Any) -> str:
 
 # --- #3394 — the taxonomy's own definition for a printed label ---------------
 
+# The taxonomy speaks to whoever commits the fallacy: its definitions are
+# overwhelmingly second person (« Vous … »). The census that grounded the
+# R1142 fix measured 1 403 of 1 408 cells matching this test.
+_SECOND_PERSON_DEFINITION = re.compile(r"\b(vous|votre|vos)\b", re.IGNORECASE)
+
 
 def taxonomy_definition_note(entry: Any) -> str:
     """The ONE French clause that carries a label's definition (#3394).
@@ -248,6 +253,14 @@ def taxonomy_definition_note(entry: Any) -> str:
     dotted path first, exact name second) and carries that node's one-line
     ``desc_fr`` on the briefing line, so no writer has to know what the label
     means for the reader to learn it.
+
+    #3394 R1143 — when the definition addresses the arguer (the same
+    ``\\b(vous|votre|vos)\\b`` test as the census), the note SAYS so: a
+    writer whose reader is not the speaker was carrying « vous » into the
+    report's prose with nothing telling it who « vous » is. The register is
+    stated here, by the ONE producer — upstream definitions are not
+    rewritten (an impersonal definition stays impersonal and prints the
+    bare form).
 
     The note is a definition, not a verdict: it prints in lowercase, it never
     restates the detection, and an unresolvable label prints NOTHING — a
@@ -261,6 +274,11 @@ def taxonomy_definition_note(entry: Any) -> str:
     definition = taxonomy_definition(ftype, str(path) if path else None)
     if not definition:
         return ""
+    if _SECOND_PERSON_DEFINITION.search(definition):
+        return (
+            "définition (la taxonomie s'adresse à qui commet le sophisme) : "
+            f"{definition}"
+        )
     return f"définition : {definition}"
 
 

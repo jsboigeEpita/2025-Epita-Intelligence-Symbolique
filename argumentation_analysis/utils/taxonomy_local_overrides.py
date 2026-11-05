@@ -43,6 +43,16 @@ Nodes left untouched because no attested French term was found (searched
 s'est déjà trompée », PK 992 « Vouloir le beurre et l'argent du beurre »
 (attested idiom, no alternative technical term), PK 1009 « Où est le mal ? ».
 The 7 borderlines are deliberately untouched (established idioms).
+
+#3394 follow-up (R1142, reworked R1143) — register repairs for ``desc_fr``.
+Two upstream cells lost their leading « V » (``ous adhérez …``, ``ous
+justifiez …``): a truncation, repaired here by PK the same way as the
+editorial purges. The register itself is NOT rewritten upstream: the R1142
+head re-personed three impersonal cells (PK 501, 589, 1057) and the
+coordinator's re-review sent it back — an impersonal definition is correct
+in another register, and the addressee the taxonomy speaks to is stated by
+the ONE producer the writer reads (``taxonomy_definition_note``, #3394),
+not by editing upstream content.
 """
 
 from __future__ import annotations
@@ -73,6 +83,23 @@ RENDER_ALIAS_SOURCES: Dict[int, str] = {
     1311: "rendu attesté de « big lie » — fr.wikipedia.org/wiki/Glossaire_de_la_langue_du_Troisième_Reich, Linguee/Reverso",
 }
 
+# PK -> truncation-repaired ``desc_fr`` (#3394 R1142, reworked R1143). Each
+# value restores the leading « V » upstream had cut off — nothing else in the
+# sentence moves. The guard test pins that the upstream cell IS truncated (a
+# dead override reddens) and that the fix is not.
+REGISTER_FIXES: Dict[int, str] = {
+    1253: (
+        "Vous adhérez à une approche qui attribue tout comportement humain à "
+        "l’environnement et aux stimuli externes, négligeant les facteurs "
+        "internes comme les pensées et les émotions."
+    ),
+    1265: (
+        "Vous justifiez ou participez à l’utilisation de la violence et de "
+        "l’intimidation, surtout contre les civils, pour des fins politiques "
+        "ou idéologiques."
+    ),
+}
+
 
 def render_alias(pk, default_name: str) -> str:
     """Return the attested display alias for a node, else the default name.
@@ -90,12 +117,19 @@ def render_alias(pk, default_name: str) -> str:
 
 
 def purge_row(row: Dict[str, str]) -> Dict[str, str]:
-    """Apply the editorial-note purges to one DictReader row, in place."""
+    """Apply the local overrides to one DictReader row, in place.
+
+    Both override families ride this entry point: the editorial-note purges,
+    then the ``desc_fr`` register fixes — a row leaving here carries the
+    register every other loaded row already speaks.
+    """
     pk = str(row.get("PK", ""))
     overrides = EDITORIAL_NOTE_PURGES.get(int(pk)) if pk.isdigit() else None
     if overrides:
         for field, replacement in overrides.items():
             row[field] = replacement
+    if pk.isdigit() and int(pk) in REGISTER_FIXES:
+        row["desc_fr"] = REGISTER_FIXES[int(pk)]
     return row
 
 
@@ -121,3 +155,7 @@ def purge_dataframe(df) -> None:
             continue
         for field, replacement in overrides.items():
             df.loc[mask, field] = replacement
+    for pk, fixed_desc in REGISTER_FIXES.items():
+        mask = pk_column == str(pk)
+        if mask.any():
+            df.loc[mask, "desc_fr"] = fixed_desc
