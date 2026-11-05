@@ -37,6 +37,10 @@ from argumentation_analysis.core.reading_window import (
 from argumentation_analysis.core.fallacy_attribution import (  # #3180
     is_speaker_move,
 )
+from argumentation_analysis.agents.core.text_scoring import (  # #3425
+    UNKNOWN_LANGUAGE,
+    UNLISTED_LANGUAGE,
+)
 from argumentation_analysis.orchestration.invoke_callables import (
     LLMBudgetExceeded,
     _bump_sk_budget,
@@ -104,17 +108,48 @@ class WallClockBudget:
 # window, different name, per the one-constant-per-meaning rule).
 _LANGUAGE_PROBE_WINDOW = 3000
 
+#: #3425 — the minimum marker count before ANY name is attempted. Below it the
+#: probe is too thin, and the honest answer stays ``unknown`` (pre-#3425
+#: behaviour, unchanged: a 40-character French text still reads ``fr``).
+_LANGUAGE_MIN_MARKERS = 3
 
-def _detect_language(text: str) -> str:
-    """Detect text language using heuristic word-frequency analysis.
+#: #3425 — a language is NAMED only when its markers cover at least this share
+#: of the probe's word tokens. The best count alone is not evidence: short
+#: foreign words that collide with FR markers (``de``, ``du``, ``se``…) add up
+#: past the count floor on a long text in a language this heuristic does not
+#: list.
+#:
+#: Calibrated on the cycle-1 panel, through THIS production probe (3000-char
+#: window, these markers) — share of the probe covered by the winning list:
+#:
+#: * real languages of the panel: **0.201–0.337** (English) and 0.273–0.277
+#:   (French) — the lowest real language measured is 0.201;
+#: * the document in a third language: **0.016** (fr 7, de 6, en 6 on 437
+#:   tokens), labelled ``fr`` — the defect this floor removes;
+#: * the twin-document witness of #3389 (a 2 000-character shared header no
+#:   function word populates, then French/English prose): **0.068**. That
+#:   geometry reproduces a documented regression and must keep its label, so
+#:   the floor has to sit under it.
+#:
+#: 0.05 is 3.1× over the mislabelled document, 4.0× under the lowest real
+#: language, and 1.4× under the twin witness. The dispatch proposed 0.08 as an
+#: example; the third measurement is what moved it — a floor chosen to fit a
+#: constant would have eaten a witness instead of informing it. Fixtures of
+#: this fix measure French 0.341, English 0.455, German 0.545, and a
+#: 38-character French sentence 0.429: a SHORT sentence is dense in function
+#: words, which is why a share, and not a count, is the gate.
+LANGUAGE_COVERAGE_FLOOR = 0.05
 
-    Distinguishes DE, FR, EN based on common function words and articles.
-    Returns ISO 639-1 code: 'de', 'fr', 'en', or 'unknown'.
-    """
-    sample = selected_text(text, _LANGUAGE_PROBE_WINDOW, "detect_language").lower()
-    scores: Dict[str, int] = {"de": 0, "fr": 0, "en": 0}
+#: Word tokens of the probe — the denominator of the coverage share. ``\w``
+#: is the token shape the marker regexes bound themselves with, so the
+#: numerator and the denominator count the same thing.
+_LANGUAGE_WORD = re.compile(r"\w+", re.UNICODE)
 
-    de_markers = [
+#: The marker lists. Module-level so that the coverage measure and the tests
+#: count exactly what the detector counts — one producer for the lists, as
+#: for the answer (#3425).
+_LANGUAGE_MARKERS: Dict[str, Tuple[str, ...]] = {
+    "de": (
         r"\bder\b",
         r"\bdie\b",
         r"\bdas\b",
@@ -139,8 +174,8 @@ def _detect_language(text: str) -> str:
         r"\bnoch\b",
         r"\bnach\b",
         r"\büber\b",
-    ]
-    fr_markers = [
+    ),
+    "fr": (
         r"\ble\b",
         r"\bla\b",
         r"\bles\b",
@@ -161,8 +196,8 @@ def _detect_language(text: str) -> str:
         r"\bne\b",
         r"\bse\b",
         r"\bsont\b",
-    ]
-    en_markers = [
+    ),
+    "en": (
         r"\bthe\b",
         r"\band\b",
         r"\bis\b",
@@ -183,19 +218,58 @@ def _detect_language(text: str) -> str:
         r"\bour\b",
         r"\bthey\b",
         r"\bnot\b",
-    ]
+    ),
+}
 
-    for pattern in de_markers:
-        scores["de"] += len(re.findall(pattern, sample))
-    for pattern in fr_markers:
-        scores["fr"] += len(re.findall(pattern, sample))
-    for pattern in en_markers:
-        scores["en"] += len(re.findall(pattern, sample))
 
-    if max(scores.values()) < 3:
-        return "unknown"
+def language_coverage(sample: str) -> Dict[str, float]:
+    """The share of ``sample``'s word tokens each marker list covers (#3425).
 
-    return max(scores, key=scores.get)
+    The ONE measure the floor is applied to, and the one a witness quotes:
+    the winning list's coverage is ``max(values())``. Reads the same lists
+    and the same token shape as :func:`_detect_language`.
+    """
+    lowered = str(sample or "").lower()
+    tokens = len(_LANGUAGE_WORD.findall(lowered))
+    if not tokens:
+        return {name: 0.0 for name in _LANGUAGE_MARKERS}
+    return {
+        name: sum(len(re.findall(p, lowered)) for p in patterns) / tokens
+        for name, patterns in _LANGUAGE_MARKERS.items()
+    }
+
+
+def _detect_language(text: str) -> str:
+    """Detect text language using heuristic word-frequency analysis.
+
+    Distinguishes DE, FR, EN based on common function words and articles.
+    Returns one of ``'de'``, ``'fr'``, ``'en'``, ``'unknown'`` (too little
+    signal) or ``'unlisted'`` (a long enough probe that no list covers —
+    #3425). Never guesses a listed language out of accidental collisions.
+    """
+    sample = selected_text(text, _LANGUAGE_PROBE_WINDOW, "detect_language").lower()
+    scores: Dict[str, int] = {
+        name: sum(len(re.findall(p, sample)) for p in patterns)
+        for name, patterns in _LANGUAGE_MARKERS.items()
+    }
+
+    best_lang = max(scores, key=scores.get)
+    best = scores[best_lang]
+    if best < _LANGUAGE_MIN_MARKERS:
+        return UNKNOWN_LANGUAGE
+
+    # #3425 — the count alone is not evidence. A long text in a language
+    # outside these lists still scores a few collisions; naming the winner
+    # then states a language the document is not, and every consumer acts on
+    # it (a degraded translation, a false clause in the extraction prompt,
+    # French instruments on non-French prose). The share of the probe the
+    # winning list covers is what separates the two cases: measured 0.201 as
+    # the floor among real languages, 0.016 on the mislabelled document.
+    tokens = len(_LANGUAGE_WORD.findall(sample))
+    if tokens and best / tokens < LANGUAGE_COVERAGE_FLOOR:
+        return UNLISTED_LANGUAGE
+
+    return best_lang
 
 
 # ---------------------------------------------------------------------------
@@ -1187,7 +1261,14 @@ async def _run_conversational_analysis_inner(
 
     # 4b. Detect text language for adaptive prompting (#539)
     detected_lang = _detect_language(text)
-    if detected_lang != "en" and detected_lang != "unknown":
+    if detected_lang == UNLISTED_LANGUAGE:
+        # #3425 — named as its own fact: the text is outside every list this
+        # heuristic carries, which is not the same as "too short to tell".
+        logger.info(
+            "Text language not in the DE/FR/EN lists — no language-bound "
+            "prompt or instrument applies"
+        )
+    elif detected_lang != "en" and detected_lang != UNKNOWN_LANGUAGE:
         logger.info(f"Detected non-English text language: {detected_lang}")
 
     # 5. Run 3 macro-phases
