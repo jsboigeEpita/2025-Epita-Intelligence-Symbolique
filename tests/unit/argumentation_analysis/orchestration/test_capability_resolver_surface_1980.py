@@ -132,8 +132,9 @@ def test_resolver_surface_is_the_enumerated_five():
         f"  defined in production : {sorted(defined)}\n"
         f"  enumerated here       : {sorted(RESOLVER_SURFACE)}\n"
         "Any doc or audit that greps ONE spelling is now measuring an unknown "
-        "fraction of the resolver. Update CLAUDE.md's capability paragraph "
-        "together with this set."
+        "fraction of the resolver. Update the capability paragraph "
+        "(docs/architecture/CAPABILITY_CENSUS_GUARDS.md, summarised in "
+        "CLAUDE.md) together with this set."
     )
 
 
@@ -144,13 +145,15 @@ def test_typed_variants_have_no_production_callers():
     assert not offenders, (
         "A typed resolver variant gained a production caller: "
         f"{offenders}\n"
-        "The partition CLAUDE.md documents (production resolves only through "
+        "The partition docs/architecture/CAPABILITY_CENSUS_GUARDS.md documents "
+        "(production resolves only through "
         f"the untyped {UNTYPED_RESOLVER!r}) no longer holds — revise it. "
         "If you got here implementing RESTITUTION_REPORT_SPEC.md §wiring or "
         "SPECTACULAR_ANALYSIS_SPEC.md §1 — both prescribe the typed variants — "
         "this red is the decision point, not a bug: either use "
         f"{UNTYPED_RESOLVER!r} like the rest of production, or move the "
-        "variant out of TYPED_VARIANTS and update CLAUDE.md's partition with it."
+        "variant out of TYPED_VARIANTS and update that partition (and the "
+        "CLAUDE.md summary) with it."
     )
     # Non-vacuity: these names must still be a live test idiom, otherwise the
     # guard above passes because nobody calls them anywhere.

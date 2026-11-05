@@ -187,7 +187,7 @@ From the original roadmap (#78): Mobile UI (React Native), public API, multi-use
 
 ### Q33: How did you integrate 12 student projects?
 
-Each student project became an operational agent or plugin: (1) inherit `BaseAgent(ChatCompletionAgent)`, (2) expose logic via `@kernel_function`, (3) register in `CapabilityRegistry`. The integration was tracked in Epic #317 consolidation — 6 PRs (#321-#326) cleaned up root-level overflow. Some projects required significant refactoring (e.g., governance simulation was a standalone script, converted to a plugin). Others were straightforward (JTMS was already well-structured). See CLAUDE.md "Known Overflow" table for the cleanup history.
+Each student project became an operational agent or plugin: (1) inherit `BaseAgent(ChatCompletionAgent)`, (2) expose logic via `@kernel_function`, (3) register in `CapabilityRegistry`. The integration was tracked in Epic #317 consolidation — 6 PRs (#321-#326) cleaned up root-level overflow. Some projects required significant refactoring (e.g., governance simulation was a standalone script, converted to a plugin). Others were straightforward (JTMS was already well-structured). See `docs/architecture/ROOT_OVERFLOW_317.md` (the "Known Overflow" table, moved out of CLAUDE.md) for the cleanup history.
 
 ### Q34: What are the 5 pedagogical scenarios?
 
