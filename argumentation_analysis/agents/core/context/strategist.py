@@ -20,6 +20,15 @@ Anti-pendulum: this module never writes a verdict about who *should* win. It
 states the configuration (players, options, profile, computed outcome) and where
 a single player, or a pair of players, can move the outcome by misreporting.
 The same map for every side — that is the user's "neutralising light".
+
+#3430 — the read has TWO layers, and the panel measured what merging them costs:
+a player's position *as the document states it* is a fact the document can
+check, so it must carry its verbatim span (the citation rule, the first
+reading's own); everything the reading ADDS — the game, the interests, the
+anticipation — stays model knowledge. The wrap-around is that the split cannot
+be left to the model: :func:`anchor_player` drops whatever ``basis`` the reply
+carried and re-derives it from the document, so a model answering ``"text"``
+still cannot launder a deduction into a quotation.
 """
 
 from __future__ import annotations
@@ -31,13 +40,21 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 from argumentation_analysis.agents.core.context import (
     MODEL_KNOWLEDGE_BASIS,
-    stamp_basis,
+    TEXT_BASIS,
 )
 from argumentation_analysis.agents.core.governance.social_choice import (
     condorcet_winner,
 )
-from argumentation_analysis.agents.core.reading import defining_moves
-from argumentation_analysis.core.reading_window import persona_reading
+from argumentation_analysis.agents.core.reading import (
+    ANCHOR_UNANCHORED,
+    defining_moves,
+)
+
+# The one citation rule (#3389), imported from the module that owns it: the
+# reading package exports the producers, not this predicate, and #3430 must not
+# depend on a surface another change is editing.
+from argumentation_analysis.agents.core.reading.first_reading import quote_occurs_in
+from argumentation_analysis.core.reading_window import locate_quote, persona_reading
 
 logger = logging.getLogger("Strategist")
 
@@ -59,8 +76,16 @@ not the argument it makes: who the players are, what each of them can do, what
 each one wants, and which framings are in competition.
 
 Hard rules:
-- This is your reading of the document, so it is MODEL KNOWLEDGE: the report
-  labels it as such. Do not present it as something the text states.
+- TWO LAYERS, never merged. What your reading ADDS (the game, the interests, the
+  anticipation) is MODEL KNOWLEDGE and the report labels it as such. A player's
+  position that the DOCUMENT ITSELF states is the text's, and only when you copy
+  its verbatim span into "quote". Copy character for character: no translation,
+  no paraphrase, no ellipsis, no two passages joined. The pipeline re-checks
+  every quote against the document — a quote it does not find is dropped and the
+  position is marked unanchored, so an invented quote buys you nothing.
+- Omit "quote" whenever the position is yours rather than the document's: a
+  player you infer from the situation, a stance you would call normal for that
+  role, anything the text does not assert. Omitting it is the honest answer.
 - The "options" are the competing framings or moves the situation puts in play
   (2 to 6, in the order you judge most salient).
 - For each player, give a FULL ranking of the options, best first. Fill every
@@ -78,7 +103,8 @@ Hard rules:
 
 Answer in French, with ONLY this JSON, no fences, no commentary:
 {{"players": [{{"name": "...", "role": "...", "stance": "for|against|ambivalent|uncommitted",
-              "interests": "what this player wants"}}],
+              "interests": "what this player wants",
+              "quote": "the document's own words for this stance (omit when the text does not state it)"}}],
   "options": ["framing A", "framing B"],
   "preferences": {{"<player name>": ["option best first", "..."]}},
   "blind_spot": "what the thesis leaves out, strategically — empty string if none",
@@ -95,6 +121,46 @@ Document excerpt:
 """
 
 
+def anchor_player(player: Dict[str, Any], raw_text: str) -> Dict[str, Any]:
+    """#3430 — a player's stance, anchored on the document or labelled as ours.
+
+    A position the text states comes with a verbatim ``quote``. The producer
+    re-runs the one citation rule (#3389) on that quote against the document it
+    already holds, so the basis is COMPUTED from the text, never asserted by
+    the model: whatever ``basis`` the reply carried is dropped before the check.
+
+    Three outcomes, the first reading's shape (#3415, #3427):
+
+    * the quote is in the document → ``basis="text"``, the quote and its
+      offset kept; the render may quote the position as the document's;
+    * the quote is absent from the document → the position is KEPT (it may
+      still be true, and dropping it would be the pendulum), the quote is
+      emptied, ``anchor="unanchored"``; the render never puts the model's
+      words between « »;
+    * no quote at all → ordinary model knowledge: no ``quote`` key, no
+      ``anchor`` key, so a player that carried neither stays byte-identical
+      to a pre-#3430 one.
+
+    The model's own keys are never trusted: ``basis`` and ``anchor`` are
+    removed from the incoming dict and only the producer writes them back.
+    """
+    item = {key: value for key, value in (player or {}).items() if key != "basis"}
+    item.pop("anchor", None)
+    quote = str(item.pop("quote", "") or "").strip()
+    if not quote:
+        item["basis"] = MODEL_KNOWLEDGE_BASIS
+        return item
+    if raw_text and quote_occurs_in(raw_text, quote):
+        index = locate_quote(raw_text, quote)
+        item["quote"] = quote
+        item["offset"] = index if index >= 0 else None
+        item["basis"] = TEXT_BASIS
+        return item
+    item["anchor"] = ANCHOR_UNANCHORED
+    item["basis"] = MODEL_KNOWLEDGE_BASIS
+    return item
+
+
 @dataclass
 class StrategicRead:
     """The strategist's read, plus what the engine computed from it."""
@@ -108,9 +174,32 @@ class StrategicRead:
     status: str = "no_llm"
     error: str = ""
 
+    def _labelled_players(self) -> List[Dict[str, Any]]:
+        """The players, each with the basis the PRODUCER decided (#3430).
+
+        ``stamp_basis`` is unconditional by design and would erase an anchored
+        stance, so the strategist writes this field itself — but from the
+        producer's decision, never the reply: ``anchor_player`` already dropped
+        whatever ``basis`` the model sent. Re-asserted here so a caller that
+        built ``StrategicRead`` by hand cannot smuggle one either: ``text``
+        survives only with a non-empty quote AND an offset that locates it.
+        """
+        labelled: List[Dict[str, Any]] = []
+        for player in self.players:
+            item = dict(player)
+            anchored = (
+                item.get("basis") == TEXT_BASIS
+                and bool(str(item.get("quote") or "").strip())
+                and isinstance(item.get("offset"), int)
+                and not isinstance(item.get("offset"), bool)
+            )
+            item["basis"] = TEXT_BASIS if anchored else MODEL_KNOWLEDGE_BASIS
+            labelled.append(item)
+        return labelled
+
     def to_state(self) -> Dict[str, Any]:
         return {
-            "players": stamp_basis(self.players),
+            "players": self._labelled_players(),
             "options": list(self.options),
             "preferences": {k: list(v) for k, v in self.preferences.items()},
             "blind_spot": self.blind_spot,
@@ -361,7 +450,7 @@ async def build_strategic_read(
             if str(option).strip()
         ]
         result.players = [
-            dict(player)
+            anchor_player(dict(player), raw_text)
             for player in (parsed.get("players") or [])[:MAX_PLAYERS]
             if isinstance(player, dict) and player.get("name")
         ]
