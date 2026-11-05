@@ -211,12 +211,17 @@ def play_sensitivity(
         # The DECLARED ballots rotate with their electors (#3418 review 3):
         # ``ballots`` is what the caller aggregates, so rebuilding the list
         # from ``a.preferences`` would play a different election whenever the
-        # two disagree. The length guard is a caller error, not a stance.
-        rotated_ballots = (
-            list(ballots[rotation:]) + list(ballots[:rotation])
-            if len(ballots) == len(agents)
-            else [list(a.preferences) for a in rotated]
-        )
+        # two disagree. A length mismatch is a CALLER error and raises (#3418
+        # review 4, R1144c): silently falling back to ``a.preferences`` here
+        # would play that different election without saying so — the exact
+        # drift the rotation was introduced to prevent.
+        if len(ballots) != len(agents):
+            raise ValueError(
+                "play_sensitivity: ballots and agents must be aligned "
+                f"list-by-list ({len(ballots)} ballot(s) for {len(agents)} "
+                "agent(s)) — the declared ballots rotate with their electors"
+            )
+        rotated_ballots = list(ballots[rotation:]) + list(ballots[:rotation])
         row: List[Optional[str]] = []
         for shift in range(shifts):
             play = play_governance_rounds(
