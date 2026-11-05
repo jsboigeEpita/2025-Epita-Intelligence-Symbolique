@@ -8923,11 +8923,52 @@ def _record_logic_units_reading(state_obj: Any, site: str, selection: Any) -> No
     )
 
 
+def _document_statements_for_unit(
+    state: Any, unit_id: str, unit_text: str
+) -> List[Dict[str, str]]:
+    """#3416 — the document's own words about ONE unit's claim, or ``[]``.
+
+    Reads the first reading's recorded concessions (``state.defining_moves``)
+    against the unit's PROVENANCE offset and keeps the ones that overlap the
+    unit or sit immediately after it (``document_statements_for_unit``).
+    Offsets come from ``state.argument_provenance`` — never from a search of
+    the unit text in the document: repeated phrases would cite the wrong
+    sentence, and a wrong citation is worse than none (#1019).
+
+    No state, no provenance, no offset ⇒ ``[]``, and the descent then emits
+    its pre-#3416 prompts byte for byte.
+    """
+    if state is None:
+        return []
+    provenance = getattr(state, "argument_provenance", None)
+    entry = provenance.get(unit_id) if isinstance(provenance, dict) else None
+    offset = entry.get("offset") if isinstance(entry, dict) else None
+    if not isinstance(offset, int) or isinstance(offset, bool):
+        return []
+    try:
+        from argumentation_analysis.agents.core.reading.first_reading import (
+            document_statements_for_unit,
+        )
+
+        return document_statements_for_unit(
+            state, unit_text=unit_text, offset=offset
+        )
+    except Exception as exc:  # a reading helper must never sink the walk
+        logger.warning(
+            "document statements unavailable for %s: %s: %s",
+            unit_id,
+            type(exc).__name__,
+            exc,
+        )
+        return []
+
+
 async def _walk_single_fallacy_unit(
     arg_text: str,
     arg_id: str,
     shared_llm_service: Any,
     taxonomy_path: str,
+    document_statements: Any = None,
 ) -> Dict[str, Any]:
     """Walk ONE unit through the hierarchical fallacy plugin (#3310 #3326).
 
@@ -8944,6 +8985,15 @@ async def _walk_single_fallacy_unit(
     the convergence layer (fallacy is one of its inputs). The one-shot is a
     single taxonomy-mapped call, so it recovers recall cheaply when the API
     is slow.
+
+    #3416 — ``document_statements`` carries the document's OWN words about
+    the unit's claim (a concession the first reading recorded, or the
+    passage that follows the unit), verbatim. The descent reads them before
+    confirming a guarded family, and cites them when they refute the
+    attribution. Computing them is the CALLER's job: only the caller holds
+    the state (offsets, provenance, defining moves), and a walk that guessed
+    its own offsets would cite the wrong sentence. ``None`` keeps every
+    prompt byte-identical to the pre-#3416 path.
 
     D1a (#1167): enrich every emitted fallacy with the grounded arg link so
     the state writer (_write_hierarchical_fallacy_to_state) can attach it to
@@ -9017,7 +9067,10 @@ async def _walk_single_fallacy_unit(
         )
 
         result_json = await asyncio.wait_for(
-            plugin.run_guided_analysis(argument_text=arg_text),
+            plugin.run_guided_analysis(
+                argument_text=arg_text,
+                document_statements=document_statements,
+            ),
             timeout=120.0,
         )
         result: Dict[str, Any] = json.loads(result_json)
@@ -9033,7 +9086,9 @@ async def _walk_single_fallacy_unit(
             try:
                 oneshot_json = await asyncio.wait_for(
                     plugin.run_guided_analysis(
-                        argument_text=arg_text, use_one_shot=True
+                        argument_text=arg_text,
+                        use_one_shot=True,
+                        document_statements=document_statements,
                     ),
                     timeout=45.0,
                 )
@@ -9161,6 +9216,12 @@ async def _invoke_fallacy_winner_reading(
                 w,
                 shared_llm_service,
                 taxonomy_path,
+                # #3416 — the same document words the per-argument sample
+                # gets: the winner reading is the same walk, so it must not
+                # read a different caveat for the same document.
+                document_statements=_document_statements_for_unit(
+                    state, w, str(state.identified_arguments[w]).strip()
+                ),
             )
             for w in walkable
         ),
@@ -9241,6 +9302,11 @@ async def _invoke_hierarchical_fallacy_per_argument(
     try:
         from argumentation_analysis.core.llm_service import create_llm_service
 
+        # #3416 — the state is the only holder of the unit offsets and of the
+        # first reading's moves; read it ONCE, so every walk of this pass
+        # computes its document statements the same way.
+        state_obj = context.get("_state_object")
+
         # Extract individual arguments from context or input text
         arguments = _extract_arguments_for_parallel(input_text, context)
 
@@ -9296,8 +9362,18 @@ async def _invoke_hierarchical_fallacy_per_argument(
         # implementation, two callers. The closure keeps its timeout /
         # one-shot semantics and enrichment contract unchanged.
         async def _analyze_single_arg(arg_text: str, arg_id: str) -> Dict[str, Any]:
+            # #3416 — the document's own words about this unit's claim ride
+            # the walk when the state carries the first reading and the
+            # unit's provenance offset. No state (extraction-only context) ⇒
+            # [], and the prompt stays the pre-#3416 one.
             return await _walk_single_fallacy_unit(
-                arg_text, arg_id, shared_llm_service, taxonomy_path
+                arg_text,
+                arg_id,
+                shared_llm_service,
+                taxonomy_path,
+                document_statements=_document_statements_for_unit(
+                    state_obj, arg_id, arg_text
+                ),
             )
 
         # Parallel execution via asyncio.gather
