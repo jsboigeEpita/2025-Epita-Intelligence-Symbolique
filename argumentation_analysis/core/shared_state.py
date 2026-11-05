@@ -829,6 +829,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self.transcription_segments: List[Dict[str, Any]] = []
         # Semantic index references (Arg_Semantic_Index)
         self.semantic_index_refs: List[Dict[str, Any]] = []
+        # #3387 — the spans the document-scale retrieval answers with: offsets
+        # into the analysed text, never its content. The budget selector reads
+        # them as a priority hint (``select_for_budget(priority_spans=...)``).
+        self.semantic_priority_spans: List[Tuple[int, int]] = []
         # Neural fallacy detection scores (2.3.2 CamemBERT)
         self.neural_fallacy_scores: List[Dict[str, Any]] = []
         # Track A: Tweety handler results (#55-#62)
@@ -1694,6 +1698,38 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             f"Transcription segment added: {ts_id} ({start_time:.1f}s-{end_time:.1f}s)"
         )
         return ts_id
+
+    def record_semantic_priority_spans(
+        self, spans: Any, replace: bool = True
+    ) -> List[Tuple[int, int]]:
+        """Record the retrieval's spans (#3387) — offsets, never text.
+
+        Each entry must be a ``(start, end)`` pair of non-negative integers
+        with ``end > start``; anything else is dropped rather than repaired,
+        because an invented offset would point the selector at a passage the
+        retrieval never ranked. Returns what was recorded.
+        """
+        clean: List[Tuple[int, int]] = []
+        for entry in spans or []:
+            if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+                continue
+            start, end = entry
+            if isinstance(start, bool) or isinstance(end, bool):
+                continue
+            if not isinstance(start, int) or not isinstance(end, int):
+                continue
+            if start < 0 or end <= start:
+                continue
+            clean.append((start, end))
+        if replace:
+            self.semantic_priority_spans = clean
+        else:
+            self.semantic_priority_spans.extend(clean)
+        if clean:
+            state_logger.info(
+                "Semantic priority spans recorded: %d (offsets only)", len(clean)
+            )
+        return list(self.semantic_priority_spans)
 
     def add_semantic_index_ref(
         self,

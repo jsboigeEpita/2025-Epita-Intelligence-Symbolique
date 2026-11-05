@@ -1,28 +1,27 @@
-"""#2618: the semantic_indexing phase indexes the run's arguments before
-searching, and the search never returns another run's arguments.
+"""#2618 service witnesses — kept after the #3387 repoint retired the phase.
 
-On main the phase only called ``service.search`` — the #174 indexing half
-(``index_arguments``) had no production caller, so the phase searched an
-index this repository never filled. These witnesses run the real phase
-against a fake Kernel Memory transport (no real service) and require, in
-order: an ``/upload`` per argument (with quality and fallacy tags), a
-bounded ``/upload-status`` wait, then the argument ``/search``.
+What the phase used to do (index the run's own extracted arguments through
+Kernel Memory, wait for indexing, search them back under a run-scoped source
+name) was measured inert in R1300: no corpus was ever indexed, and nothing
+outside the writer read the refs. The 2026-11-05 decision (#3387) repointed
+the phase to the analysed document's own text; its contract lives in
+``test_semantic_repoint_3387.py``.
 
-The review of #2618 added the scoping requirement: every run used the
-default source name ``pipeline``, so document ids collided across runs and
-a run's search could return a previous run's arguments. The fake transport
-here REMEMBERS uploads and answers ``/search`` from them, applying the
-payload filters — the two-runs witness cannot pass on a transport with a
-canned answer.
+The PHASE witnesses of #2618 are therefore RETIRED with the behaviour they
+certified — an honest removal, not a burial: the requirement they encoded
+("the run never returns another run's content") is now structural, since v1
+keeps nothing between runs.
 
-Fixtures use opaque ids and synthetic text only (privacy: indexed payloads
-stay local to the KM instance).
+What stays here is the Kernel Memory adapter, which the decision keeps: it is
+the student project's surface, and only its default changed. These witnesses
+exercise ``SemanticIndexService`` directly, with a fake transport that applies
+Kernel Memory's real tag-filter semantics.
 """
 
 import pytest
 from unittest.mock import patch
 
-import argumentation_analysis.orchestration.invoke_callables as ic
+import argumentation_analysis.orchestration.invoke_callables as ic  # noqa: F401 — the module the retired phase lived in
 
 
 class _FakeResponse:
@@ -127,124 +126,6 @@ class _FakeKMTransport:
         return False
 
 
-_ARGS = [
-    {"text": "argument synthetique un assez long", "source_quote": "quote1"},
-    {"text": "argument synthetique deux assez long", "source_quote": "quote2"},
-]
-
-
-def _context():
-    return {
-        "phase_extract_output": {"arguments": [dict(a) for a in _ARGS]},
-        "phase_quality_output": {
-            "per_argument_scores": {
-                "arg_1": {
-                    "note_finale": 0.8,
-                    "scores_par_vertu": {"clarte": 0.9, "refutation_constructive": 0.4},
-                },
-                "arg_2": {"note_finale": 0.3, "scores_par_vertu": {"clarte": 0.2}},
-            }
-        },
-        "phase_hierarchical_fallacy_output": {
-            "fallacies": [
-                # Real producer shape (#2744): the descent attaches the
-                # target under ``target_argument`` + a quote anchor — not
-                # ``target_argument_id``, which this payload never carries.
-                {
-                    "type": "appelautorite",
-                    "target_argument": "arg_2",
-                    "problematic_quote": "argument synthetique deux",
-                }
-            ]
-        },
-    }
-
-
-def _first(transport, method, suffix):
-    for i, (m, url, _) in enumerate(transport.calls):
-        if m == method and url.endswith(suffix):
-            return i
-    return None
-
-
-async def test_phase_indexes_arguments_before_searching():
-    transport = _FakeKMTransport()
-    with patch(
-        "argumentation_analysis.services.semantic_index_service.SemanticIndexService._get_requests",
-        return_value=transport,
-    ):
-        result = await ic._invoke_semantic_index("requete synthetique", _context())
-
-    first_upload = _first(transport, "POST", "/upload")
-    first_status = _first(transport, "GET", "/upload-status")
-    first_search = _first(transport, "POST", "/search")
-    assert first_upload is not None, "aucun upload: la phase n'indexe pas"
-    assert first_search is not None
-    assert first_upload < first_search, "la recherche precede l'indexation"
-    assert first_status is not None and first_upload < first_status < first_search
-
-    run_name = ic._run_source_name("requete synthetique")
-    assert result["status"] == "ran"
-    assert result["source_name"] == run_name
-    assert result["indexed_count"] == 2
-    assert result["arguments_seen"] == 2
-    assert result["indexing"]["completed"] == 2
-    assert result["indexing"]["timed_out"] is False
-    assert result["indexing"]["timeout_seconds"] == ic._KM_INDEXING_WAIT_TIMEOUT
-
-    joined_tags = " ".join(transport._uploaded_tags)
-    assert "chunk_type:argument" in joined_tags
-    assert "quality_level:high" in joined_tags
-    assert "quality_level:low" in joined_tags
-    # #2744: the producer's ``target_argument=arg_2`` must reach the indexed
-    # tags — searchable via fallacy_type/has_fallacy on this same run.
-    assert "fallacy_type:appelautorite" in joined_tags
-    assert "has_fallacy:true" in joined_tags
-    assert "has_fallacy:false" in joined_tags
-
-    assert result["results"][0]["id"] == f"{run_name}__arg_1"
-    assert result["results"][0]["snippet"] == "argument synthetique un assez long"
-
-
-async def test_two_runs_do_not_cross_contaminate():
-    """Review #2618: run B (1 argument) must never receive run A's (2
-    arguments) documents — the search is scoped to the run's source_name."""
-    transport = _FakeKMTransport()
-    with patch(
-        "argumentation_analysis.services.semantic_index_service.SemanticIndexService._get_requests",
-        return_value=transport,
-    ):
-        run_a = await ic._invoke_semantic_index("texte du document A", _context())
-        run_b = await ic._invoke_semantic_index(
-            "texte du document B",
-            {
-                "phase_extract_output": {
-                    "arguments": [
-                        {"text": "argument seul du document B", "source_quote": "qB"}
-                    ]
-                }
-            },
-        )
-
-    assert run_a["source_name"] != run_b["source_name"]
-    b_ids = set(run_b["indexed_document_ids"])
-    assert len(b_ids) == 1
-    a_ids = set(run_a["indexed_document_ids"])
-    assert not (a_ids & b_ids), "ids de documents partages entre deux runs"
-
-    returned_ids = [r["id"] for r in run_b["results"]]
-    assert returned_ids, "la recherche du run B ne retourne rien"
-    message = (
-        f"la recherche du run B retourne des documents d'un autre run: {returned_ids}"
-    )
-    assert set(returned_ids) <= b_ids, message
-
-    assert a_ids <= set(transport.docs), (
-        "les documents du run A ont disparu du transport: l'absence vient du "
-        "scope, pas de l'absence de donnees"
-    )
-
-
 def test_fallacy_type_filter_excludes_untagged_arguments():
     """#2698 re-review: on a real Kernel Memory, one criterion per filter
     object is ORed with the others, so ``fallacy_type=X`` alone let every
@@ -274,55 +155,6 @@ def test_fallacy_type_filter_excludes_untagged_arguments():
     }, f"le filtre fallacy_type laisse passer des arguments non taggues: {returned}"
 
 
-async def test_phase_without_arguments_reports_no_input():
-    """#2763: no upstream arguments is an explicit skipped status, not a
-    successful empty run — nothing is uploaded, nothing is searched."""
-    transport = _FakeKMTransport()
-    with patch(
-        "argumentation_analysis.services.semantic_index_service.SemanticIndexService._get_requests",
-        return_value=transport,
-    ):
-        result = await ic._invoke_semantic_index("requete synthetique", {})
-
-    assert result["status"] == "skipped: no_input_arguments"
-    assert _first(transport, "POST", "/upload") is None
-    assert _first(transport, "POST", "/search") is None
-
-
-async def test_indexing_wait_is_bounded_and_named(monkeypatch):
-    monkeypatch.setattr(ic, "_KM_INDEXING_WAIT_TIMEOUT", 0.2)
-    monkeypatch.setattr(ic, "_KM_INDEXING_POLL_INTERVAL", 0.05)
-    transport = _FakeKMTransport(indexing_completes=False)
-    with patch(
-        "argumentation_analysis.services.semantic_index_service.SemanticIndexService._get_requests",
-        return_value=transport,
-    ):
-        result = await ic._invoke_semantic_index("requete synthetique", _context())
-
-    assert result["status"] == "ran"
-    assert result["indexing"]["timed_out"] is True
-    assert result["indexing"]["completed"] == 0
-    assert result["indexing"]["timeout_seconds"] == 0.2
-    assert result["indexing"]["probe_errors"] == 0
-    assert _first(transport, "POST", "/search") is not None
-
-
-async def test_failing_status_probe_is_not_silent_timeout(monkeypatch):
-    """Review #2618 (note): a probe that raises is counted, not read as a
-    plain timeout."""
-    monkeypatch.setattr(ic, "_KM_INDEXING_WAIT_TIMEOUT", 0.2)
-    monkeypatch.setattr(ic, "_KM_INDEXING_POLL_INTERVAL", 0.05)
-    transport = _FakeKMTransport(status_probe_fails=True)
-    with patch(
-        "argumentation_analysis.services.semantic_index_service.SemanticIndexService._get_requests",
-        return_value=transport,
-    ):
-        result = await ic._invoke_semantic_index("requete synthetique", _context())
-
-    assert result["indexing"]["probe_errors"] > 0
-    assert _first(transport, "POST", "/search") is not None
-
-
 def test_wait_for_indexing_polling_is_gone():
     """#2346/#2618: le polling fixe ``time.sleep`` n'existe plus — la boucle
     bornée vit dans la phase (asyncio.sleep), le service n'expose qu'une
@@ -333,3 +165,23 @@ def test_wait_for_indexing_polling_is_gone():
 
     assert not hasattr(SemanticIndexService, "wait_for_indexing")
     assert hasattr(SemanticIndexService, "indexing_status")
+
+
+@pytest.mark.parametrize(
+    "removed",
+    [
+        "_wait_km_indexing_bounded",
+        "_KM_INDEXING_WAIT_TIMEOUT",
+        "_KM_INDEXING_POLL_INTERVAL",
+        "_run_source_name",
+        "_belief_premises",
+    ],
+)
+def test_the_retired_phase_helpers_are_gone(removed):
+    """#3387 — the KM indexing wait and the run-scoped source name had no
+    caller outside the old phase; the repoint removed them rather than
+    leaving a second, unread path (anti-pendulum: subtract)."""
+    assert not hasattr(ic, removed), (
+        f"{removed} survit au retrait de la phase qu'il servait: la boucle "
+        "d'indexation KM n'a plus d'appelant"
+    )

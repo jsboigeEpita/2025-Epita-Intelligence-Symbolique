@@ -84,7 +84,6 @@ from argumentation_analysis.services.argument_ids import (
     FALLACY_TARGET_KEYS as _FALLACY_TARGET_KEYS,
     read_fallacy_target as _read_fallacy_target,
     resolve_target_argument_index as _resolve_target_argument_index,
-    split_arg_id_prefix,
 )
 from argumentation_analysis.core.prover9_runner import SolverInputDefect
 
@@ -4700,227 +4699,131 @@ async def _invoke_local_llm(input_text: str, context: Dict[str, Any]) -> Dict[st
     return result
 
 
-_KM_INDEXING_WAIT_TIMEOUT = 30.0
-_KM_INDEXING_POLL_INTERVAL = 1.0
+def _semantic_query_from_state(state: Any) -> Tuple[str, str]:
+    """The run's question: what the first reading says the document is about.
 
+    #3387 decision 1 — retrieval is queried by the **central thesis and the
+    mechanism** (#3415's slots), never by the arguments the run already
+    extracted: searching back what the pipeline just produced is the
+    self-referential loop R1300 measured. A reading that recorded no thesis
+    leaves no question, and the phase says so instead of embedding the empty
+    string.
 
-async def _wait_km_indexing_bounded(
-    service: Any,
-    doc_ids: List[str],
-    timeout: float,
-    interval: float,
-) -> Dict[str, Any]:
-    """Bounded, non-blocking wait for Kernel Memory to finish indexing.
-
-    Polls ``indexing_status`` (one HTTP request per poll) with
-    ``asyncio.sleep`` between polls — never ``time.sleep``, which would
-    block the event loop (#2618, absorbing the #2346 polling debt).
-    Returns what is known when the deadline hits: a partial wait is
-    reported, not raised. A probe that raises is not a timeout:
-    ``probe_errors`` counts them so the two causes stay distinguishable.
+    Returns ``(query, reason)``; ``reason`` is ``""`` when a query exists.
     """
-    import time as _time
+    from argumentation_analysis.agents.core.reading import defining_moves
 
-    deadline = _time.monotonic() + timeout
-    pending = list(doc_ids)
-    completed = []
-    probe_errors = 0
-    while pending and _time.monotonic() < deadline:
-        still = []
-        for doc_id in pending:
-            try:
-                info = await asyncio.to_thread(service.indexing_status, doc_id)
-            except Exception:
-                probe_errors += 1
-                still.append(doc_id)
-                continue
-            if info.get("completed", False):
-                completed.append(doc_id)
-            else:
-                still.append(doc_id)
-        pending = still
-        if pending:
-            await asyncio.sleep(interval)
-    return {
-        "completed": len(completed),
-        "total": len(doc_ids),
-        "timed_out": bool(pending),
-        "timeout_seconds": timeout,
-        "probe_errors": probe_errors,
-    }
-
-
-def _run_source_name(input_text: str) -> str:
-    """Opaque, document-unique source name for one run's indexed arguments.
-
-    #2618 review: with the service default, every run indexed under
-    ``pipeline``, so document ids collided across runs and one run's search
-    could return another run's arguments. A digest of the analyzed text
-    gives each document its own namespace; re-running the same text
-    overwrites its own ids (idempotent) and never mixes documents.
-    """
-    import hashlib
-
-    return "run_" + hashlib.sha256(input_text.encode("utf-8")).hexdigest()[:12]
-
-
-def _belief_premises(belief_output: Any) -> List[Dict[str, str]]:
-    """Recover a run's argument units from the belief phase's premises.
-
-    ``_invoke_jtms`` names premise beliefs ``arg_N:<text>`` over the units it
-    tracked (extract arguments, or the sentence fallback when the workflow has
-    no extract phase — #2763). Claims, defeats and rebuttals carry other names
-    and are not argument units. Order is the ``arg_N`` enumeration, not dict
-    insertion order.
-    """
-    beliefs = (
-        belief_output.get("beliefs", {}) if isinstance(belief_output, dict) else {}
-    )
-    if not isinstance(beliefs, dict):
-        return []
-    premises: Dict[int, str] = {}
-    for name, entry in beliefs.items():
-        if not isinstance(entry, dict):
+    if state is None:
+        return "", "no state object in context — the first reading is unreachable"
+    moves = defining_moves(state)
+    if not moves:
+        return "", "the first reading recorded no defining move — no question to ask"
+    wanted = ("thesis", "mechanism")
+    parts: List[str] = []
+    for move in moves:
+        if str(move.get("kind") or "") not in wanted:
             continue
-        entry_context = entry.get("context")
-        if not isinstance(entry_context, dict):
-            continue
-        if entry_context.get("belief_type") != "premise":
-            continue
-        split = split_arg_id_prefix(name)
-        if split is None:
-            continue
-        unit, text = split
-        if text and unit not in premises:
-            premises[unit] = text
-    return [{"text": premises[unit]} for unit in sorted(premises)]
+        quote = str(move.get("quote") or "").strip()
+        reading = str(move.get("reading") or "").strip()
+        part = " — ".join(p for p in (quote, reading) if p)
+        if part:
+            parts.append(part)
+    if not parts:
+        kinds = sorted({str(m.get("kind") or "other") for m in moves})
+        return (
+            "",
+            (
+                "the reading named no thesis or mechanism move "
+                f"(kinds recorded: {', '.join(kinds)})"
+            ),
+        )
+    return "\n".join(parts), ""
 
 
 async def _invoke_semantic_index(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Index the run's arguments, then search them — scoped to this run.
+    """Retrieve, over the document's own text, the passages that answer it.
 
-    KK #700: consults ``is_available()`` first — ``skipped:
-    endpoint_unavailable`` names the absent endpoint (no silent optional
-    skip). When the endpoint is up, the phase first indexes what the run
-    produced: the extracted arguments, each with its quality scores and
-    detected fallacies as metadata tags (#174 argument-level indexing),
-    through ``index_arguments``. It then waits a bounded time for the
-    index and runs an argument search. What was indexed and what was
-    found are recorded in the phase result, not only in the log.
+    #3387 repoint (decided 2026-11-05). The phase used to index the run's own
+    extracted arguments and search them back under the run's namespace — a
+    loop with no corpus in it and no reader outside the writer (R1300). It now
+    indexes the analysed document: ``chunk_by_arguments`` over its text, one
+    embedding per chunk through an OpenAI-compatible endpoint, ranked against
+    the central thesis the first reading named. What it returns is the SPANS
+    of the best chunks — offsets into a text the caller already holds, so
+    nothing decrypted is stored or carried.
 
-    Scope: the run indexes under an opaque, document-unique source name
-    (a digest of the analyzed text) and the search filters on that name,
-    so a run never returns another run's arguments — answering with
-    another run's content is the pattern #2541/#2688 removed from the
-    API. Re-running the same text overwrites its own ids (idempotent).
+    The spans are a hint for the budget selector (``select_for_budget``'s
+    ``priority_spans``, the #3395/#3406 consumer): the reader exists, it is
+    not a new surface.
+
+    Cost, stated plainly: the default route is the pipeline's provider route
+    and it is PAID. A panel-scale embedding spend is expected to be small (the
+    coordinator's order of magnitude is under a cent per document), but it is
+    a cost to be MEASURED by a dry run — this phase makes no "free" claim. A
+    seat that serves its own endpoint declares the
+    ``SEMANTIC_INDEX_EMBEDDING_*`` pair and no provider call is made; the
+    phase records which source answered.
+
+    Honest absence (#1019): a missing route, a missing question, an empty
+    chunk population and a transport failure each name themselves in
+    ``status`` — the phase never answers ``ran`` over nothing.
     """
-    from argumentation_analysis.services.semantic_index_service import (
-        SemanticIndexService,
+    from argumentation_analysis.services.semantic_retrieval import (
+        resolve_embedding_route,
+        retrieve_priority_spans,
     )
 
-    service = SemanticIndexService()
-    if not service.is_available():
-        return {
-            "status": "skipped: endpoint_unavailable",
-            "reason": "SemanticIndexService at 127.0.0.1:9001 is not reachable",
-        }
+    route, route_reason = resolve_embedding_route()
+    if route is None:
+        return {"status": "skipped: no_embedding_route", "reason": route_reason}
 
-    # #2763 — the units this run actually produced, per workflow. The full and
-    # standard workflows extract them (``phase_extract_output``, the #2744
-    # producer shape). The fact_check workflow has no extract phase; its
-    # indexing phase declares ``depends_on=["belief_tracking"]``, and
-    # ``_invoke_jtms`` tracks the run's units as ``arg_N:<text>`` premises —
-    # extract arguments win when present (untruncated texts), else the
-    # tracked premises are the run's units.
-    extract_output = context.get("phase_extract_output", {})
-    arguments = (
-        extract_output.get("arguments", []) if isinstance(extract_output, dict) else []
-    )
-    if not arguments:
-        arguments = _belief_premises(context.get("phase_belief_tracking_output", {}))
-    if not arguments:
-        # Fail-loud (#1019): an empty index is not a successful run. Report
-        # the absent input instead of answering ``ran`` over nothing.
+    query, query_reason = _semantic_query_from_state(context.get("_state_object"))
+    if not query:
+        return {"status": "skipped: no_reading_query", "reason": query_reason}
+
+    if not input_text or len(input_text.strip()) < 200:
         return {
-            "status": "skipped: no_input_arguments",
+            "status": "skipped: no_document_text",
             "reason": (
-                "no upstream output carries arguments to index "
-                "(extract arguments absent, tracked premises absent)"
+                "the analysed text is absent or too short to chunk "
+                f"({len(input_text or '')} chars)"
             ),
         }
 
-    # Quality scores: the quality phase is ``quality`` in the full/standard
-    # workflows and ``quality_assessment`` in fact_check (#2763).
-    quality_output: Dict[str, Any] = next(
-        (
-            context[key]
-            for key in ("phase_quality_output", "phase_quality_assessment_output")
-            if isinstance(context.get(key), dict)
-        ),
-        {},
-    )
-    per_argument_scores = quality_output.get("per_argument_scores", {})
-
-    # Fallacies: the hierarchical descent writes a target-bearing list under
-    # ``phase_hierarchical_fallacy_output`` (#2744); the neural detector of
-    # the fact_check workflow (``fallacy_screen``) writes a type-keyed dict
-    # with no per-argument target — its records resolve to no association
-    # (#1019), never a guessed one.
-    fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
-    fallacies = (
-        fallacy_output.get("fallacies", []) if isinstance(fallacy_output, dict) else []
-    )
-    if not fallacies:
-        screen_output = context.get("phase_fallacy_screen_output", {})
-        detected = (
-            screen_output.get("detected_fallacies", {})
-            if isinstance(screen_output, dict)
-            else {}
+    try:
+        retrieval = await asyncio.to_thread(
+            retrieve_priority_spans, input_text, query, route
         )
-        if isinstance(detected, dict):
-            fallacies = [
-                {"fallacy_type": fallacy_type, **meta}
-                for fallacy_type, meta in detected.items()
-                if isinstance(meta, dict)
-            ]
+    except Exception as exc:  # noqa: BLE001 — named skip, never a silent success
+        logger.warning("semantic index: embedding/retrieval failed: %s", exc)
+        return {
+            "status": "skipped: embedding_failed",
+            "reason": f"{type(exc).__name__}: {exc}",
+            "embedding_model": route.model,
+            "route_source": route.source,
+        }
 
-    run_name = _run_source_name(input_text)
-    doc_ids = await asyncio.to_thread(
-        service.index_arguments,
-        arguments,
-        source_name=run_name,
-        quality_scores=per_argument_scores,
-        fallacies=fallacies,
-    )
-    indexing = await _wait_km_indexing_bounded(
-        service,
-        doc_ids,
-        _KM_INDEXING_WAIT_TIMEOUT,
-        _KM_INDEXING_POLL_INTERVAL,
-    )
+    if not retrieval["spans"]:
+        return {
+            "status": "skipped: no_chunk_span",
+            "reason": retrieval.get("reason")
+            or "no chunk of the text could be located",
+            "route_source": route.source,
+            "embedding_model": route.model,
+        }
 
-    results = await asyncio.to_thread(
-        service.search_arguments, input_text, source_name=run_name
-    )
     return {
         "status": "ran",
-        "source_name": run_name,
-        "indexed_document_ids": doc_ids,
-        "indexed_count": len(doc_ids),
-        "arguments_seen": len(arguments),
-        "indexing": indexing,
-        "results": [
-            {
-                "id": r.document_id,
-                "score": r.relevance,
-                "snippet": r.text,
-                "source_name": r.source_name,
-                "tags": dict(r.tags),
-            }
-            for r in results
-        ],
+        "priority_spans": retrieval["spans"],
+        "scores": retrieval["scores"],
+        "chunks": retrieval["chunks"],
+        "ranked": retrieval["ranked"],
+        "top_k": len(retrieval["spans"]),
+        "query_chars": len(query),
+        "route_source": route.source,
+        "embedding_model": route.model,
     }
 
 
@@ -9502,6 +9405,34 @@ async def _invoke_hierarchical_fallacy_per_argument(
         raise
 
 
+def _selection_priority_spans(state_obj: Any) -> List[Tuple[int, int]]:
+    """The ranges the budget selector should examine first (#3395, #3387).
+
+    Two hints of the SAME kind — ranges the report can already name:
+
+    - the first reading's positioned moves (``defining_move_spans``, #3395);
+    - the passages the document-scale retrieval ranked against that same
+      reading (#3387), recorded as offsets on the state.
+
+    They are concatenated, not merged or re-ranked: the selector decides.
+    """
+    from argumentation_analysis.agents.core.reading import defining_move_spans
+
+    spans: List[Tuple[int, int]] = list(defining_move_spans(state_obj))
+    for span in getattr(state_obj, "semantic_priority_spans", []) or []:
+        if not isinstance(span, (list, tuple)) or len(span) != 2:
+            continue
+        start, end = span
+        if isinstance(start, bool) or isinstance(end, bool):
+            continue
+        if not isinstance(start, int) or not isinstance(end, int):
+            continue
+        if end <= start:
+            continue
+        spans.append((start, end))
+    return spans
+
+
 def _extract_arguments_for_parallel(
     input_text: str, context: Dict[str, Any]
 ) -> List[tuple[str, str]]:
@@ -9535,16 +9466,13 @@ def _extract_arguments_for_parallel(
             # reading are examined first: the report has already named them, so
             # the 10 the descent reads should be the ones that matter. No
             # reading (no LLM, or a document with no defining move) leaves the
-            # selection byte-identical.
-            from argumentation_analysis.agents.core.reading import (
-                defining_move_spans,
-            )
-
+            # selection byte-identical. #3387 adds the retrieval's passages to
+            # the same hint: see ``_selection_priority_spans``.
             selection = select_for_budget(
                 population,
                 10,
                 text_length=state_text_length(state_obj),
-                priority_spans=defining_move_spans(state_obj),
+                priority_spans=_selection_priority_spans(state_obj),
             )
             if hasattr(state_obj, "record_analysis_coverage"):
                 state_obj.record_analysis_coverage(

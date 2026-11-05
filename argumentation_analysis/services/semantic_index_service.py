@@ -31,7 +31,14 @@ logger = logging.getLogger(__name__)
 
 # ── Configuration ────────────────────────────────────────────────────────
 
-DEFAULT_KM_URL = "http://127.0.0.1:9001"
+#: #3387 (decision 3) — there is no baked-in default any more. The old one was
+#: ``http://127.0.0.1:9001``, and nothing was listening on it on the seat that
+#: probed it (R1300). A constructor that silently points at a host nobody
+#: serves is how every default-constructed service answered
+#: ``skipped: endpoint_unavailable`` while the real path was never exercised.
+#: The adapter stays — it is the student project's surface — and the address is
+#: now declared by the caller or by ``KERNEL_MEMORY_URL``.
+DEFAULT_KM_URL = ""
 ENV_KM_URL = "KERNEL_MEMORY_URL"
 ENV_KM_API_KEY = "KERNEL_MEMORY_API_KEY"
 
@@ -109,8 +116,20 @@ class SemanticIndexService:
         return headers
 
     def is_available(self) -> bool:
-        """Check if the Kernel Memory service is reachable."""
+        """Check if the Kernel Memory service is reachable.
+
+        #3387 — with no address declared there is nothing to probe: the
+        service answers ``False`` and says why, instead of probing a localhost
+        default that no probed seat serves.
+        """
         if self._available is None:
+            if not self._km_url:
+                logger.info(
+                    "Kernel Memory adapter not configured: pass km_url or set %s",
+                    ENV_KM_URL,
+                )
+                self._available = False
+                return self._available
             try:
                 requests = self._get_requests()
                 r = requests.get(
