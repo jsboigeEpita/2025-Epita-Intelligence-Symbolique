@@ -734,6 +734,13 @@ class Act3Evidence:
     # list binds the conclusion: each announced point is either settled with
     # its verdict, or explicitly reported as not reached.
     announced_checks: List[str] = field(default_factory=list)
+    # #3432 (ask 2) — what the thesis LEAVES OUT, as the personas read it
+    # (#3377): one named field per persona, labelled model knowledge by the
+    # persona's dict-level ``basis`` and by the block that renders it here.
+    # A reading, not a move: no quote, no span, and an empty string is the
+    # honest "none named" — the prompt then forbids inventing one.
+    historical_blind_spot: str = ""
+    strategic_blind_spot: str = ""
     # #2845 — the source metadata as the run recorded them
     # (``state.source_metadata``). The prompt has always asked the writer to
     # name the speaker "via les métadonnées" while the bundle carried none, so
@@ -3301,6 +3308,17 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
             for check in (getattr(state, "announced_checks", None) or [])
             if str(check).strip()
         ],
+        # #3432 (ask 2) — the personas' blind spots, read from the same state
+        # dicts Acte I renders (#3377): no new state attribute, the field is a
+        # named part of each persona's read. Strip-and-keep only — capping
+        # happened at the producer (BLIND_SPOT_CAP), a reader that re-capped
+        # would say a different sentence from the one recorded.
+        historical_blind_spot=str(
+            (getattr(state, "historical_context", {}) or {}).get("blind_spot", "") or ""
+        ).strip(),
+        strategic_blind_spot=str(
+            (getattr(state, "strategic_read", {}) or {}).get("blind_spot", "") or ""
+        ).strip(),
         metadata=metadata_view,
         arena=build_arena_record(state),
         speaker=build_speaker_record(state),
@@ -3892,6 +3910,30 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
             "n'en fabrique pas un rétroactif)"
         )
 
+    # #3432 (ask 2) — what the thesis leaves out, per the personas (#3377).
+    # Rendered in BOTH states (#1941 discipline): when a persona named no
+    # blind spot, the honest-absence line renders for that persona — an empty
+    # block would let the writer fill the gap with the text's own content,
+    # which is exactly the confusion the model_knowledge label exists to
+    # prevent. Each line carries its persona: the reader must be able to tell
+    # a historian's omission from a strategist's.
+    blind_spot_lines = []
+    if evidence.historical_blind_spot:
+        blind_spot_lines.append(f"  - l'historien : {evidence.historical_blind_spot}")
+    else:
+        blind_spot_lines.append(
+            "  - l'historien : (aucune tache aveugle nommée sur ce run — "
+            "n'en invente pas une)"
+        )
+    if evidence.strategic_blind_spot:
+        blind_spot_lines.append(f"  - le stratège : {evidence.strategic_blind_spot}")
+    else:
+        blind_spot_lines.append(
+            "  - le stratège : (aucune tache aveugle nommée sur ce run — "
+            "n'en invente pas une)"
+        )
+    blind_spot_block = "\n".join(blind_spot_lines)
+
     # #1914 (Acte III slice) — the salience hierarchy. The structure carries
     # the ranking; the consigne binds the verdict beat to it. Renders in
     # both states so a silence is never read as a verdict.
@@ -4034,6 +4076,8 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
         f"[CONVERGENCES GLOBALES — synthèse inter-axes, ancrées]\n{global_block}\n\n"
         f"[LA QUESTION DE L'ACTE I — celle que la conclusion doit trancher]\n{question_block}\n\n"
         f"[POINTS À TRANCHER — ceux que la mise en situation a annoncés]\n{checks_block}\n\n"
+        f"[CE QUE LA THÈSE LAISSE DE CÔTÉ — lecture des personas, "
+        f"connaissance du modèle]\n{blind_spot_block}\n\n"
         f"[HIÉRARCHIE DU VERDICT — ce qui porte la conclusion]\n{hierarchy_block}\n\n"
         f"[SURPLUS MULTI-AGENTS — au-delà d'une lecture simple]\n{surplus_block}\n\n"
         f"[DIMENSIONS NON ÉVALUÉES — à dire, jamais à taire]\n{absence_block}\n\n"
@@ -4140,6 +4184,17 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
         "  atteint — et alors tu ne laisses pas croire qu'il l'a été. Un point\n"
         "  annoncé puis passé sous silence est le défaut que ce bloc répare.\n"
         "  Si le bloc dit qu'aucun point n'a été annoncé, n'en invente aucun.\n"
+        # #3432 (ask 2) — the blind-spot block is model knowledge riding the
+        # personas' read (#3377): the consigne binds the writer to the same
+        # label the state carries, so the omission can never read as the
+        # text's own content — nor as something the pipeline extracted.
+        "- CE QUE LA THÈSE LAISSE DE CÔTÉ : ce bloc est la lecture des personas\n"
+        "  (l'historien, le stratège), étiquetée CONNAISSANCE DU MODÈLE — un\n"
+        "  angle de vue que le modèle apporte, jamais un contenu du texte.\n"
+        "  Présente-le comme tel si tu t'en sers (« ce que l'analyse éclaire\n"
+        "  par contraste »), sans citer le texte à l'appui et sans le\n"
+        "  présenter comme une extraction. Une ligne « aucune tache aveugle\n"
+        "  nommée » est une absence honnête : n'invente pas d'omission.\n"
         "- QUESTION — PORTÉE D'UNE ABSENCE : une absence que tu constates ne\n"
         "  porte JAMAIS sur le texte, toujours sur ce que l'analyse en a\n"
         "  porté. Dis ce que les unités analysées n'établissent pas (« les\n"

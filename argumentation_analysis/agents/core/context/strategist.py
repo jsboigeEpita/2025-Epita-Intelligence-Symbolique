@@ -49,6 +49,11 @@ logger = logging.getLogger("Strategist")
 MAX_PLAYERS = 12
 MAX_OPTIONS = 8
 
+#: Cap on the blind spot (#3432 ask 2): it rides the Act III prompt, so an
+#: unbounded sentence would crowd the conclusion it is there to sharpen.
+#: Same order of magnitude as the interpretive question's cap (#1914).
+BLIND_SPOT_CAP = 400
+
 STRATEGIST_PROMPT = """You are a strategist. Read the game the document plays,
 not the argument it makes: who the players are, what each of them can do, what
 each one wants, and which framings are in competition.
@@ -63,6 +68,11 @@ Hard rules:
 - Keep the reading neutral: the same map for every side. No verdict on who is
   right, no moral ranking. Say where a player gains from a framing, not whether
   the framing is good.
+- "blind_spot" answers ONE question (#3432 ask 2): what does the thesis named
+  in the excerpt LEAVE OUT, strategically — which player, option or cost its
+  framing makes invisible? It is model knowledge too, never a quote, and an
+  empty string is a valid answer: an invented omission would render as
+  knowledge.
 - If the document carries no strategic configuration, return an empty players
   list. An invented game is worse than no game.
 
@@ -71,6 +81,7 @@ Answer in French, with ONLY this JSON, no fences, no commentary:
               "interests": "what this player wants"}}],
   "options": ["framing A", "framing B"],
   "preferences": {{"<player name>": ["option best first", "..."]}},
+  "blind_spot": "what the thesis leaves out, strategically — empty string if none",
   "reading": "two to four sentences on the configuration and where it is open"}}
 
 Source metadata: speaker={speaker}, venue={venue}, topic={topic}, era={era}.
@@ -91,6 +102,7 @@ class StrategicRead:
     players: List[Dict[str, Any]] = field(default_factory=list)
     options: List[str] = field(default_factory=list)
     preferences: Dict[str, List[str]] = field(default_factory=dict)
+    blind_spot: str = ""
     reading: str = ""
     game: Dict[str, Any] = field(default_factory=dict)
     status: str = "no_llm"
@@ -101,6 +113,7 @@ class StrategicRead:
             "players": stamp_basis(self.players),
             "options": list(self.options),
             "preferences": {k: list(v) for k, v in self.preferences.items()},
+            "blind_spot": self.blind_spot,
             "reading": self.reading,
             # ``game`` is OURS, not the model's: it carries its own provenance
             # so a reader can tell a computed verdict from a stated one.
@@ -359,6 +372,12 @@ async def build_strategic_read(
             if isinstance(ranking, list)
         }
         result.reading = str(parsed.get("reading", "") or "").strip()
+        # #3432 ask 2 — the thesis's strategic blind spot, model knowledge.
+        # Capped and stripped: it rides the Act III prompt, and an empty
+        # string is the honest "none named".
+        result.blind_spot = str(parsed.get("blind_spot", "") or "").strip()[
+            :BLIND_SPOT_CAP
+        ]
         result.game = compute_manipulability(result.preferences, result.options)
         result.status = "ok"
         logger.info(

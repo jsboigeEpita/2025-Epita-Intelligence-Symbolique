@@ -3319,6 +3319,10 @@ def _write_historical_context_to_state(
 
     payload = {
         "situation": output.get("situation", ""),
+        # #3432 ask 2 — the thesis's historical blind spot rides the read it
+        # belongs to: a named field of the persona, labelled model knowledge
+        # by the dict-level ``basis`` and by the Act III block that renders it.
+        "blind_spot": output.get("blind_spot", ""),
         "items": output.get("items", []),
         "status": _persisted_status(output),
         "basis": MODEL_KNOWLEDGE_BASIS,
@@ -3348,6 +3352,9 @@ def _write_strategic_read_to_state(
         "players": output.get("players", []),
         "options": output.get("options", []),
         "preferences": output.get("preferences", {}),
+        # #3432 ask 2 — the thesis's strategic blind spot, same landing rule
+        # as the historian's: a named field of the persona's read.
+        "blind_spot": output.get("blind_spot", ""),
         "reading": output.get("reading", ""),
         "game": output.get("game", {}),
         "status": _persisted_status(output),
