@@ -267,6 +267,55 @@ def severity_of(code: str, on_central_thesis: bool = False) -> Optional[str]:
     return None  # S* is a supply, not a defect: severity does not apply.
 
 
+# #3417 — the grid's §3 names S1/S2/S3 as what makes the pipeline SUPPLY
+# something; S4 (declared partial coverage) and S5 (a discriminating virtue
+# note) are kept and counted as items, but they do not by themselves make a
+# document a supply.
+CORE_SURPLUS_CODES: Tuple[str, ...] = ("S1", "S2", "S3")
+
+DERIVED_STATE_RULE = (
+    "au moins un S1/S2/S3 vérifié et aucun item sévère ⇒ `PIPELINE_SUPPLIES` ; "
+    "au moins un S1/S2/S3 et au moins un item sévère (M2, ou M1 sur la thèse "
+    "centrale) ⇒ `PIPELINE_SUPPLIES_WITH_GAP` ; aucun S1/S2/S3 et au moins un "
+    "item sévère ⇒ `ZEROSHOT_WINS` ; sinon `PARITY`, ou `BOTH_ABSTAIN` quand le "
+    "juge l'a dit et qu'aucun item n'a été retenu"
+)
+
+
+def derive_state(kept: Sequence[Dict[str, Any]], reported_state: str) -> str:
+    """The document's state, derived from its VERIFIED items (#3417).
+
+    Cycle 1 measured why the judge's own label cannot decide the table: on
+    one document the judge kept the same single item (an M1 on the central
+    thesis) in both cycles and wrote ``PARITY`` the first time and
+    ``ZEROSHOT_WINS`` the second. Exhaustion condition 2 compares states
+    across cycles, so the state has to be a function of the items: identical
+    items give the identical state, whatever the label says.
+
+    The rule is the grid's §3 read on the item codes, with the coordinator's
+    severity rule (``severity_of``) standing in for the grid's « manque
+    matériel » and « lecture trompeuse »: an M2 is a misleading reading, an
+    M1 on the central thesis is a material miss. A moderate M1 (an
+    observation off the thesis) is counted as an item and makes no gap.
+
+    ``reported_state`` is consulted for ONE distinction the items cannot
+    carry: an empty item list is ``BOTH_ABSTAIN`` when the judge said both
+    texts abstain, ``PARITY`` otherwise. The grid's « D » clause (the axis
+    that judges read a minority of the text) has no item code, so it cannot
+    be verified here: a gap claimed through it alone does not count.
+    """
+    codes = [str(item.get("code") or "") for item in kept]
+    core = any(code in CORE_SURPLUS_CODES for code in codes)
+    severe = any(item.get("severity") == SEVERITY_SEVERE for item in kept)
+    if core:
+        return "PIPELINE_SUPPLIES_WITH_GAP" if severe else "PIPELINE_SUPPLIES"
+    if severe:
+        return "ZEROSHOT_WINS"
+    if not kept and reported_state == "BOTH_ABSTAIN":
+        return "BOTH_ABSTAIN"
+    return "PARITY"
+
+
 # ---------------------------------------------------------------------------
 # The judge's answer
 # ---------------------------------------------------------------------------
@@ -749,13 +798,47 @@ def _money(value: Optional[float]) -> str:
     return "unpriced" if value is None else f"{value:.4f} $"
 
 
-def render_table(rows: Sequence[Dict[str, Any]], meta: Dict[str, Any]) -> str:
+def render_table(
+    rows: Sequence[Dict[str, Any]],
+    meta: Dict[str, Any],
+    recorded_header: Optional[str] = None,
+) -> str:
     """The aggregated verdict table: per document, then the totals.
 
     Every figure is a count of something the rows carry; nothing is scored.
     The grid's §4 forbids an aggregate score, and this table honours that:
     the last section names a distribution and a dominant nature, not a note.
+
+    ``recorded_header`` (#3417 re-render) is the header block a pass wrote
+    before its meta was stored beside its rows: it is kept verbatim, so a
+    re-rendered table still names the judge, route and command of the pass.
     """
+    lines: List[str] = []
+    if recorded_header is not None:
+        lines.extend(recorded_header.rstrip("\n").split("\n"))
+    else:
+        lines.extend(_header_lines(rows, meta))
+    _append_state_rule(lines, meta)
+    _append_body(lines, rows, meta)
+    return "\n".join(lines)
+
+
+def _append_state_rule(lines: List[str], meta: Dict[str, Any]) -> None:
+    lines.append(
+        "- État : **dérivé des items vérifiés** (#3417), jamais recopié de "
+        f"l'étiquette du juge — {DERIVED_STATE_RULE}. L'étiquette du juge est "
+        "imprimée à côté quand elle diffère."
+    )
+    if meta.get("rerendered_from"):
+        lines.append(
+            f"- **Re-rendu sans appel du juge** depuis les lignes de "
+            f"`{meta['rerendered_from']}` : seuls l'état dérivé et cette table "
+            "sont recalculés, les items et les coûts sont ceux du passage."
+        )
+    lines.append("")
+
+
+def _header_lines(rows: Sequence[Dict[str, Any]], meta: Dict[str, Any]) -> List[str]:
     lines: List[str] = []
     lines.append("# Table de verdicts — juge à l'aveugle (#3375)")
     lines.append("")
@@ -789,8 +872,12 @@ def render_table(rows: Sequence[Dict[str, Any]], meta: Dict[str, Any]) -> str:
         "est enregistrée ci-dessous."
     )
     lines.append(f"- Commande : `{meta['command']}`")
-    lines.append("")
+    return lines
 
+
+def _append_body(
+    lines: List[str], rows: Sequence[Dict[str, Any]], meta: Dict[str, Any]
+) -> None:
     lines.append("## Par document")
     lines.append("")
     lines.append(
@@ -803,6 +890,8 @@ def render_table(rows: Sequence[Dict[str, Any]], meta: Dict[str, Any]) -> str:
         severity = _count_severities(row.get("kept") or [])
         ident = "ok" if row.get("identification_ok") else "**inversée**"
         state_cell = f"`{row.get('state')}`"
+        if _label_differs(row):
+            state_cell += f" (juge : `{row['reported_state']}`)"
         if row.get("stop_reason") in TRUNCATION_STOP_REASONS:
             state_cell += " **(tronquée à la limite de sortie)**"
         elif row.get("state") == "UNPARSED" and row.get("reported_state"):
@@ -850,6 +939,14 @@ def render_table(rows: Sequence[Dict[str, Any]], meta: Dict[str, Any]) -> str:
             f"- `UNPARSED` : **{distribution['UNPARSED']}** — "
             + " ; ".join(detail)
             + ", comptés comme tels et jamais convertis en verdict"
+        )
+    differing = [row["opaque_id"] for row in rows if _label_differs(row)]
+    if differing:
+        lines.append(
+            f"- étiquette du juge ≠ état dérivé : **{len(differing)}** "
+            "document(s) — "
+            + ", ".join(f"`{doc_id}`" for doc_id in differing)
+            + " ; la répartition ci-dessus compte l'état dérivé"
         )
     lines.append("")
 
@@ -918,7 +1015,12 @@ def render_table(rows: Sequence[Dict[str, Any]], meta: Dict[str, Any]) -> str:
     lines.append("")
     lines.append(meta.get("conclusion") or _dominant_nature(rows))
     lines.append("")
-    return "\n".join(lines)
+
+
+def _label_differs(row: Dict[str, Any]) -> bool:
+    """True when the judge's in-grid label is not the derived state (#3417)."""
+    reported = row.get("reported_state")
+    return reported in STATES and reported != row.get("state")
 
 
 def _count_codes(items: Sequence[Dict[str, Any]]) -> Dict[str, int]:
@@ -966,6 +1068,178 @@ def _dominant_nature(rows: Sequence[Dict[str, Any]]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# #3417 — re-render a pass from its stored rows, and compare two passes
+# ---------------------------------------------------------------------------
+
+META_FILENAME = "META.json"
+_NON_ROW_FILES = frozenset({META_FILENAME})
+
+
+def load_rows(
+    out_dir: Path, panel: Optional[Sequence[str]] = None
+) -> List[Dict[str, Any]]:
+    """The rows a pass wrote, in panel order when a panel is given."""
+    if panel is not None:
+        missing = [doc for doc in panel if not (out_dir / f"{doc}.json").exists()]
+        if missing:
+            raise SystemExit(
+                f"{len(missing)} panel row(s) absent from {out_dir}: "
+                f"{', '.join(missing)} — a re-render covers the panel or nothing"
+            )
+        paths = [out_dir / f"{doc}.json" for doc in panel]
+    else:
+        paths = sorted(
+            path for path in out_dir.glob("*.json") if path.name not in _NON_ROW_FILES
+        )
+    return [load_json(path) for path in paths]
+
+
+def rederive_row_state(row: Dict[str, Any]) -> str:
+    """The derived state of a stored row — the same rule as a live pass.
+
+    A row whose answer never parsed (failed call, truncated answer) or whose
+    label left the grid stays ``UNPARSED``: there is nothing to derive from.
+    """
+    reported = row.get("reported_state")
+    if reported in STATES:
+        return derive_state(row.get("kept") or [], str(reported))
+    return "UNPARSED"
+
+
+def rerender(
+    out_dir: Path, panel: Optional[Sequence[str]] = None
+) -> Tuple[List[Dict[str, Any]], str]:
+    """Re-derive every row's state and rewrite the table — no judge call.
+
+    The rows are rewritten with the derived ``state`` (the judge's label is
+    already kept as ``reported_state``, so nothing is lost), and the table the
+    pass first wrote is preserved once as ``TABLE.before-rerender.md`` before
+    the new one replaces it.
+    """
+    rows = load_rows(out_dir, panel)
+    for row in rows:
+        row["state"] = rederive_row_state(row)
+        (out_dir / f"{row['opaque_id']}.json").write_text(
+            json.dumps(row, ensure_ascii=False, indent=1), encoding="utf-8"
+        )
+    table_path = out_dir / "TABLE.md"
+    preserved = out_dir / "TABLE.before-rerender.md"
+    recorded_header: Optional[str] = None
+    meta_path = out_dir / META_FILENAME
+    if meta_path.exists():
+        meta = load_json(meta_path)
+    else:
+        # A pass from before #3417 stored no meta: its own header, verbatim.
+        if not table_path.exists():
+            raise SystemExit(
+                f"{out_dir} carries neither {META_FILENAME} nor TABLE.md — the "
+                "re-render cannot say which judge produced these rows"
+            )
+        recorded_header = table_path.read_text(encoding="utf-8").split(
+            "\n## Par document", 1
+        )[0]
+        meta = {}
+    meta["rerendered_from"] = out_dir.name
+    if table_path.exists() and not preserved.exists():
+        preserved.write_text(table_path.read_text(encoding="utf-8"), encoding="utf-8")
+    table = render_table(rows, meta, recorded_header=recorded_header)
+    table_path.write_text(table, encoding="utf-8")
+    return rows, table
+
+
+def _item_anchor(item: Dict[str, Any]) -> str:
+    """The quote that identifies an item: the side its code must quote."""
+    side = "zeroshot" if item.get("code") == "M1" else "pipeline"
+    return normalise(item.get(f"{side}_quote") or "")
+
+
+def _same_item(a: Dict[str, Any], b: Dict[str, Any]) -> bool:
+    """Same code, and one pass's anchor quote contains the other's.
+
+    Containment, not equality: two passes over the same texts often cut the
+    same passage a few words wider or narrower, and that is the same item.
+    """
+    if a.get("code") != b.get("code"):
+        return False
+    qa, qb = _item_anchor(a), _item_anchor(b)
+    return bool(qa and qb) and (qa in qb or qb in qa)
+
+
+def compare_passes(
+    rows_a: Sequence[Dict[str, Any]], rows_b: Sequence[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Per document: how many items both passes kept, and both states."""
+    by_id = {row["opaque_id"]: row for row in rows_b}
+    report: List[Dict[str, Any]] = []
+    for row in rows_a:
+        other = by_id.get(row["opaque_id"])
+        if other is None:
+            continue
+        items_a = list(row.get("kept") or [])
+        remaining = list(other.get("kept") or [])
+        stable: List[str] = []
+        for item in items_a:
+            for index, candidate in enumerate(remaining):
+                if _same_item(item, candidate):
+                    stable.append(str(item.get("code")))
+                    del remaining[index]
+                    break
+        report.append(
+            {
+                "opaque_id": row["opaque_id"],
+                "items_a": len(items_a),
+                "items_b": len(other.get("kept") or []),
+                "stable": len(stable),
+                "stable_codes": stable,
+                "state_a": rederive_row_state(row),
+                "state_b": rederive_row_state(other),
+                "label_a": row.get("reported_state"),
+                "label_b": other.get("reported_state"),
+            }
+        )
+    return report
+
+
+def render_stability(report: Sequence[Dict[str, Any]], name_a: str, name_b: str) -> str:
+    """The variance of the instrument, as counts — what a cycle delta can mean."""
+    lines = [
+        "# Stabilité du juge entre deux passages (#3417)",
+        "",
+        f"- Passage A : `{name_a}` · passage B : `{name_b}`",
+        "- Un item est **stable** quand l'autre passage garde un item de même "
+        "code dont la citation d'ancrage contient la sienne ou y est contenue "
+        "(citation de l'analyse pour S* et M2, de la lecture pour M1).",
+        "",
+        "| doc | items A | items B | stables | état dérivé A | état dérivé B | "
+        "étiquette A | étiquette B |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    for entry in report:
+        lines.append(
+            f"| `{entry['opaque_id']}` | {entry['items_a']} | {entry['items_b']} | "
+            f"{entry['stable']} | `{entry['state_a']}` | `{entry['state_b']}` | "
+            f"`{entry['label_a']}` | `{entry['label_b']}` |"
+        )
+    total_a = sum(entry["items_a"] for entry in report)
+    total_b = sum(entry["items_b"] for entry in report)
+    total_stable = sum(entry["stable"] for entry in report)
+    same_state = sum(1 for entry in report if entry["state_a"] == entry["state_b"])
+    same_label = sum(1 for entry in report if entry["label_a"] == entry["label_b"])
+    lines += [
+        "",
+        f"- items : **{total_stable}** stables sur {total_a} (A) et {total_b} (B)",
+        f"- état dérivé identique : **{same_state}** document(s) sur {len(report)}",
+        f"- étiquette du juge identique : **{same_label}** document(s) sur "
+        f"{len(report)}",
+        "",
+        "Un écart entre deux cycles qui ne dépasse pas cet écart entre deux "
+        "passages du même cycle ne mesure pas le pipeline.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # The run
 # ---------------------------------------------------------------------------
 
@@ -996,12 +1270,15 @@ def _judge_one(
     reported = str(parsed.get("identification") or "").strip()
     # The judge names a POSITION as "the analysis"; compare it with the draw.
     identification_ok = reported in ("1", "2") and int(reported) == pos["pipeline"]
-    state = str(parsed.get("state") or "").strip()
-    reported_state = state
-    if state not in STATES:
-        state = "UNPARSED"
+    reported_state = str(parsed.get("state") or "").strip()
     kept, dropped = validate_items(
         parsed.get("items") or [], pipeline_text, zeroshot_text, document_text
+    )
+    # #3417 — the state is derived from the verified items, never copied from
+    # the judge's label. A label outside the grid still makes the row
+    # UNPARSED: an answer that broke the format is not read further.
+    state = (
+        derive_state(kept, reported_state) if reported_state in STATES else "UNPARSED"
     )
     return {
         "opaque_id": doc_id,
@@ -1009,8 +1286,8 @@ def _judge_one(
         "reported_identification": reported,
         "identification_ok": identification_ok,
         "state": state,
-        # What the judge wrote in ``state``, kept when it is not one of the
-        # grid's five: an UNPARSED row must say which word it refused.
+        # What the judge wrote in ``state``: printed beside the derived state
+        # when the two differ (#3417), and the refused word on an UNPARSED row.
         "reported_state": reported_state,
         "kept": kept,
         "dropped": dropped,
@@ -1025,7 +1302,9 @@ async def run(
     document_loader: Optional[Callable[[Sequence[str]], Dict[str, str]]] = None,
 ) -> int:
     parser = argparse.ArgumentParser(description="#3375 blind judge — v1 panel")
-    parser.add_argument("--judge-model", required=True, help="judge model id")
+    parser.add_argument(
+        "--judge-model", default=None, help="judge model id (required for a pass)"
+    )
     parser.add_argument("--doc-ids", default=None, help="panel ids, comma separated")
     parser.add_argument("--panel-file", default=None, help="panel ids, one per line")
     parser.add_argument("--seed", type=int, default=3375, help="A/B draw seed")
@@ -1039,11 +1318,39 @@ async def run(
         action="store_true",
         help="list the panel, prompt sizes and estimated cost — no call at all",
     )
+    parser.add_argument(
+        "--rerender",
+        action="store_true",
+        help="#3417: re-derive the states of the rows in --out-dir and rewrite "
+        "its table — no judge call, no document read",
+    )
+    parser.add_argument(
+        "--compare-with",
+        type=Path,
+        default=None,
+        help="#3417, with --rerender: a second pass's out-dir; writes "
+        "STABILITY.md in --out-dir (items both passes kept, per document)",
+    )
     args = parser.parse_args(argv)
 
     from scripts.dataset.run_corpus_batch import parse_doc_ids
 
     panel = parse_doc_ids(args.doc_ids, args.panel_file)
+    if args.rerender:
+        rows, _table = rerender(args.out_dir, panel)
+        print(f"table re-rendered: {args.out_dir / 'TABLE.md'}", flush=True)
+        if args.compare_with is not None:
+            report = compare_passes(rows, load_rows(args.compare_with, panel))
+            (args.out_dir / "STABILITY.md").write_text(
+                render_stability(report, args.out_dir.name, args.compare_with.name),
+                encoding="utf-8",
+            )
+            print(f"stability written: {args.out_dir / 'STABILITY.md'}", flush=True)
+        return 0
+    if args.compare_with is not None:
+        parser.error("--compare-with reads stored rows: it goes with --rerender")
+    if not args.judge_model:
+        parser.error("--judge-model is required for a judging pass")
     if panel is None:
         raise SystemExit(
             "no panel given: pass --doc-ids or --panel-file. The v1 bar is a "
@@ -1216,6 +1523,11 @@ async def run(
             + f" --seed {args.seed}"
         ),
     }
+    # #3417 — the meta rides beside the rows, so a re-render names this pass's
+    # judge, route and command without reading them back out of a table.
+    (args.out_dir / META_FILENAME).write_text(
+        json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8"
+    )
     table = render_table(rows, meta)
     (args.out_dir / "TABLE.md").write_text(table, encoding="utf-8")
     print(f"table written: {args.out_dir / 'TABLE.md'}", flush=True)
