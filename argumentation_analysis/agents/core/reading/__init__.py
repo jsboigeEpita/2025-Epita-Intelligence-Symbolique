@@ -16,6 +16,7 @@ from argumentation_analysis.agents.core.reading.first_reading import (
     ANCHOR_UNANCHORED,
     FIRST_READING_BASIS,
     MAX_MOVES,
+    MAX_PILLARS,  # #3432
     MOVE_KINDS,
     DefiningMove,
     FirstReading,
@@ -37,6 +38,7 @@ __all__ = [
     "ANCHOR_UNANCHORED",
     "FIRST_READING_BASIS",
     "MAX_MOVES",
+    "MAX_PILLARS",
     "MOVE_KINDS",
     "DefiningMove",
     "FirstReading",
