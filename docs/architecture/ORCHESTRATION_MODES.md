@@ -340,3 +340,46 @@ curl -X POST http://localhost:8000/api/v1/agents/debate \
 Moved verbatim from the root `CLAUDE.md` (claudish#874).
 
 **Cross-mode comparison**: `scripts/compare_orchestration_modes.py` runs `pipeline_standard`, `pipeline_light`, `pipeline_full`, `hierarchical_bridge`, `hierarchical_delegation`, `conversational`, `conversation_deterministic` and `conversation_real` (the same `ConversationOrchestrator` with its real informal and FOL agents, #2456) on the same corpus and emits markdown + JSON with trade-off metrics (terminates / wall-time / decides / scope). This is the instrument for improving each mode against the others — see #1735. Every `--modes` key is exactly the label the report prints, and an unknown key fails the run instead of writing a report without it (#1747); `pipeline` and `hierarchical` remain dispatchable as deprecated aliases but are excluded from the default sweep so they cannot double-count a mode (#1740). Budget matters: at the 180s default every mode dies mid-DAG — `pipeline_standard` needs ~500s to reach 15/15 phases on a short corpus, so calibrate `--max-wall-seconds` before comparing policies.
+
+## Panel comparison (#3378)
+
+The same instrument takes the v1 panel as input (`--doc-ids`/`--panel-file`, parsed by the campaign's one parser) and loads the documents **in memory** from the encrypted dataset through the judge's own loader — no plaintext document file is ever produced. With a panel selection, the default modes become the six panel arms over the **five engines**: `pipeline_spectacular` (the campaign's spectacular preset, the pipeline engine's judged arm), `conversational`, `conversation_deterministic` + `conversation_real` (the ConversationOrchestrator engine's free control and paid counterpart), `hierarchical_bridge`, and `hierarchical_delegation`.
+
+Each state-bearing mode writes, under one gitignored root (`argumentation_analysis/evaluation/results/orchestration_panel/`, one directory per run label):
+
+- `<mode>/states/state_full_<opaque_id>.json` — the full state snapshot plus the run's measured `llm_usage`;
+- `<mode>/signatures/signature_<opaque_id>.json` — the sanitized signature (same shape the campaign judge reads);
+- `manifest.json` — replay commands for the **existing** judge (`scripts/dataset/judge_panel.py`, same zero-shot, no second judge), the honest absences, and the summed live usage per engine. An artifact is never silently overwritten; use a fresh run label to re-run.
+
+Engines without a `UnifiedAnalysisState` surface (`conversation_deterministic`, `conversation_real`, `hierarchical_delegation`) are **named absences** in the manifest (`engine_has_no_unified_analysis_state`), never given a manufactured state or an empty judged column. A failed or partial state-bearing run is likewise an absence, never a complete arm.
+
+### Coordinator sequence (the paid pass stays with the coordinator)
+
+```bash
+# 1) Generate the per-mode states (PAID engine calls; calibrate the budget first)
+PYTHONPATH=. python scripts/compare_orchestration_modes.py \
+  --doc-ids <opaque_id_1>,<opaque_id_2>,<opaque_id_3> \
+  --panel-out-dir argumentation_analysis/evaluation/results/orchestration_panel/<run_label> \
+  --max-wall-seconds <calibrated> \
+  --panel-judge-model claude-sonnet-5-5
+
+# 2) Free pricing pass: loads the panel, runs NO engine and NO judge;
+#    prints each complete arm's judge_panel.py --dry-run command and names
+#    every absent arm. Cost per engine is in manifest.json -> engine_usage.
+PYTHONPATH=. python scripts/compare_orchestration_modes.py \
+  --doc-ids <opaque_id_1>,<opaque_id_2>,<opaque_id_3> \
+  --panel-out-dir argumentation_analysis/evaluation/results/orchestration_panel/<run_label> \
+  --dry-run
+
+# 3) Paid judged pass: run each manifest command WITHOUT --dry-run
+#    (its --out-dir is already per-mode).
+```
+
+### Perfectibility, one line per engine (source-backed candidates; the panel trace confirms or demotes)
+
+- **pipeline** — the reader's acts sit at the spectacular DAG's tail, so a wall-clock cut pays for every upstream phase and still leaves no readable act (#3468).
+- **conversational** — the safety-net timeout discards the partial state the internal bound exists to preserve (#3469).
+- **ConversationOrchestrator (`conversation_real`)** — it decides in its own `AnalysisState`, so the common judge has no arm to read (#3470).
+- **hierarchical bridge** — the strategic objective map cannot ask for the restitution acts; the harness appends the conversational act generator after the bridge's phases (#3471).
+- **hierarchical delegation** — productive task results never become a reader-facing verdict; the mode has no shared-state surface (#3472).
+
