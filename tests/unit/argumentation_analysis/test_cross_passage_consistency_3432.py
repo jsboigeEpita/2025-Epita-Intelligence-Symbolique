@@ -113,6 +113,133 @@ def _translation_llm(document: str):
     return llm
 
 
+class TestOneVocabularyPerBatch:
+    def test_changing_names_between_calls_does_not_lose_the_pair(self):
+        document = _synthetic_document()
+        calls = []
+
+        async def llm(prompt):
+            calls.append(prompt)
+            prefix = f"call{len(calls)}_"
+            result = {}
+            if _THESIS_QUOTE in prompt:
+                result["s1"] = [prefix + "claim"]
+            if _CONTRA_QUOTE in prompt:
+                result["s2"] = ["!" + prefix + "claim"]
+            return json.dumps(result)
+
+        result = asyncio.run(
+            build_cross_passage_consistency(
+                _reading_state(document), llm, bridge=_MiniSatBridge()
+            )
+        )
+        assert result["status"] == "inconsistent"
+        assert len(result["findings"]) == 1
+        assert len(calls) == 1
+
+    def test_sat_batch_cannot_create_a_pair_by_name_collision(self):
+        document = _synthetic_document()
+
+        async def llm(prompt):
+            if _THESIS_QUOTE in prompt and _CONTRA_QUOTE in prompt:
+                return json.dumps({"s1": ["p"], "s2": ["q"]})
+            if _CONTRA_QUOTE in prompt:
+                return json.dumps({"s2": ["!p"]})
+            return json.dumps({"s1": ["p"]})
+
+        result = asyncio.run(
+            build_cross_passage_consistency(
+                _reading_state(document), llm, bridge=_MiniSatBridge()
+            )
+        )
+        assert result["status"] == "checked"
+        assert result["findings"] == []
+        assert result["pairs_decided"] == 0
+
+    def test_self_contradiction_is_not_a_two_passage_finding(self):
+        document = _synthetic_document()
+        state = _reading_state(document)
+
+        async def llm(prompt):
+            return json.dumps({"s1": ["p"], "s2": ["q", "!q"]})
+
+        result = asyncio.run(
+            build_cross_passage_consistency(state, llm, bridge=_MiniSatBridge())
+        )
+        assert result["status"] == "inconsistent"
+        assert result["findings"] == []
+        assert result["single_passage_unsat"] == ["s2"]
+        state.cross_passage_consistency = result
+        assert "interne à un seul passage" in cross_passage_note(state)
+
+    def test_single_quoted_slot_is_still_checked(self):
+        document = _synthetic_document()
+        state = _reading_state(document)
+        state.defining_moves["moves"] = state.defining_moves["moves"][:1]
+
+        async def llm(prompt):
+            return json.dumps({"s1": ["p"]})
+
+        result = asyncio.run(
+            build_cross_passage_consistency(state, llm, bridge=_MiniSatBridge())
+        )
+        assert result["status"] == "checked"
+        assert result["batches"] == 1
+
+    def test_unknown_solo_verdict_cannot_become_a_located_pair(self):
+        document = _synthetic_document()
+
+        class UnknownSolo(_MiniSatBridge):
+            def check_consistency(self, belief_set, logic_type="propositional"):
+                if belief_set.strip() == "p":
+                    return None, "undecided"
+                return super().check_consistency(belief_set, logic_type)
+
+        async def llm(prompt):
+            return json.dumps({"s1": ["p"], "s2": ["!p"]})
+
+        result = asyncio.run(
+            build_cross_passage_consistency(
+                _reading_state(document), llm, bridge=UnknownSolo()
+            )
+        )
+        assert result["status"] == "inconsistent"
+        assert result["findings"] == []
+
+    def test_batches_repeat_thesis_and_name_cross_batch_gaps(self):
+        quotes = [f"Passage synthétique numéro {i}." for i in range(8)]
+        document = " ".join(quotes)
+        state = UnifiedAnalysisState(document)
+        state.defining_moves = {
+            "moves": [
+                {
+                    "slot": "thesis" if i == 0 else "pillar",
+                    "kind": "claim",
+                    "quote": quote,
+                    "offset": document.index(quote),
+                }
+                for i, quote in enumerate(quotes)
+            ]
+        }
+        prompts = []
+
+        async def llm(prompt):
+            prompts.append(prompt)
+            return json.dumps(
+                {f"s{i + 1}": [f"p{i}"] for i, q in enumerate(quotes) if q in prompt}
+            )
+
+        result = asyncio.run(
+            build_cross_passage_consistency(state, llm, bridge=_MiniSatBridge())
+        )
+        assert result["status"] == "checked"
+        assert len(prompts) == 2
+        assert all(quotes[0] in prompt for prompt in prompts)
+        assert result["cross_batch_pairs_not_decided"] == 10
+        state.cross_passage_consistency = result
+        assert "non décidées" in cross_passage_note(state)
+
+
 class TestTheLensDecidesTheDistantContradiction:
     def test_a_contradiction_20000_characters_apart_is_reported_with_both_quotes(
         self,

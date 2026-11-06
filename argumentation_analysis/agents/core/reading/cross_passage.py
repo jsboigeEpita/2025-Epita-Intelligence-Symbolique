@@ -16,23 +16,27 @@ first reading named (#3442), each kept with its OWN verified quote and
 offset — the document's characters, never a paraphrase (#3389's citation
 rule, already applied by the first reading).
 
-**The lens decides; a prompt never does.** One translation call, on a FREE
-vocabulary (#2960's lesson: reusing atoms across independently translated
-passages conjoins two meanings under one ``p`` and yields a mechanical UNSAT
-pinned on the wrong formulas). The central batch is translated in ONE call
-so its propositions mean the same thing on both sides of a contradiction —
-the point of the check, since a separately-translated theory could never be
-inconsistent for the right reason. Distant slots, those the selector would
-never batch with the thesis, are also translated per slot, and every
-candidate pair that carries a position is decided by SAT.
+**The lens decides; a prompt never does.** Every translation batch is ONE
+call on a FREE vocabulary (#2960's lesson: two independently translated
+passages name their atoms independently, so their union is trivially SAT —
+nothing is ever located — or UNSAT by a name collision — a fabricated
+contradiction). A positioned pair is decided on that ONE call's per-entry
+formulas, so a pair's UNSAT is a statement about its two passages. The
+pair search runs only when a batch theory is UNSAT, and only to LOCATE its
+core: the farthest pair whose union is UNSAT while each member is SAT on
+its own. A slot that contradicts itself alone is a single-passage case,
+named as such — never printed as a pair. Every batch carries the thesis,
+so no pair ever spans two calls; pairs that would are counted, never
+guessed.
 
-* ``status="inconsistent"`` — the central theory is UNSAT **or** a pair is:
-  the render gets the two slots, each with its quote and its offset, and the
-  minimal core the solver implicated. Only a solver verdict writes this.
-* ``status="checked"`` — the central theory is SAT and no pair decided
-  UNSAT: the honest « no inconsistency established » of the control
-  document, never « the document is consistent » (a SAT theory of free
-  propositions is the common case).
+* ``status="inconsistent"`` — a batch theory is UNSAT: the render gets the
+  located pair (two slots, each with its quote and its offset) when the
+  core is two passages, or the named single-passage case / the theory's
+  verdict when no located pair carries it. Only a solver verdict writes
+  this.
+* ``status="checked"`` — every batch theory is SAT: the honest « no
+  inconsistency established » of the control document, never « the document
+  is consistent » (a SAT theory of free propositions is the common case).
 * ``status="undecided"`` — the reasoner answered None (degraded, JVM down,
   unparseable theory): an absence (#1941), stated, never a False.
 * ``status="unreachable"`` — no reading, no quote, no translation, no LLM:
@@ -58,8 +62,8 @@ logger = logging.getLogger("CrossPassageConsistency")
 #: The slots that carry the thesis — the KB's population, in reading order.
 CROSS_PASSAGE_SLOTS: Tuple[str, ...] = ("thesis", "mechanism", "pillar")
 
-#: How far a translation batch may run: the central theory is one call, so a
-#: long panel document's slots stay bounded. Declared, not tuned per call.
+#: How many quoted slots one translation batch may carry. Every batch holds
+#: the thesis plus up to this many minus one others: declared, not tuned.
 CROSS_PASSAGE_BATCH_CAP = 6
 
 #: The per-slot quotes the solver keeps, verbatim, never re-anchored here.
@@ -150,7 +154,7 @@ def _positioned_pairs(
     A pair whose member has no position is not a finding a reader can
     locate: the report needs both quotes AND both positions, so the check
     only decides pairs the render could name. The unpositioned entries stay
-    in the central theory (their claims still count against the batch).
+    in the batch theory (their claims still count against the batch).
     """
     positioned = [e for e in entries if e["offset"] is not None and e["quote"]]
     pairs = [
@@ -206,6 +210,14 @@ async def build_cross_passage_consistency(
     over a theory built from the FIRST READING's slots — never from the
     extraction window. ``bridge`` is injectable for the offline witness;
     production leaves it None and the wired bridge is built here.
+
+    One vocabulary per batch (#2960): every batch is ONE translation call,
+    and a positioned pair is decided on that call's OWN per-entry formulas.
+    The pair search runs only when a batch theory is UNSAT — a pair subset
+    of a SAT theory is SAT — and only to locate the core: the farthest pair
+    whose union is UNSAT while each member alone is SAT. A slot that is
+    UNSAT on its own is named as a single-passage case, never one side of a
+    pair. Every batch carries the thesis; a pair never spans two batches.
     """
     payload: Dict[str, Any] = {
         "status": "unreachable",
@@ -215,6 +227,9 @@ async def build_cross_passage_consistency(
         "unquoted_slots": [],
         "pairs_decided": 0,
         "findings": [],
+        "single_passage_unsat": [],
+        "cross_batch_pairs_not_decided": 0,
+        "batches": 0,
         "basis": "cross_passage_consistency",
     }
     entries = _slot_entries(state)
@@ -228,31 +243,20 @@ async def build_cross_passage_consistency(
         payload["reason"] = "no_verbatim_quote_on_any_slot"
         return payload
 
-    central = quoted[:CROSS_PASSAGE_BATCH_CAP]
-
     if llm_callable is None:
         payload["reason"] = "no_llm_translation_route"
         return payload
 
-    try:
-        central_answer = await llm_callable(_translation_prompt(central))
-    except Exception as exc:
-        payload["reason"] = f"translation_failed: {type(exc).__name__}"
-        return payload
-    parsed = _parse_json_object(central_answer)
-    central_formulas: List[str] = []
-    for entry in central:
-        raw = parsed.get(entry["id"])
-        if isinstance(raw, list):
-            central_formulas.extend(str(f).strip() for f in raw if str(f).strip())
-    payload["dropped_formulas"] += sum(
-        1
-        for entry in central
-        if not isinstance(parsed.get(entry["id"]), list) or not parsed.get(entry["id"])
-    )
-    if not central_formulas:
-        payload["reason"] = "translation_produced_no_formula"
-        return payload
+    # Thesis-anchored batches: every batch carries the thesis (or the first
+    # quoted slot when no thesis is quoted), so no pair ever spans two
+    # calls, and every quoted slot joins exactly one batch beside it.
+    anchor = next((e for e in quoted if e["slot"] == "thesis"), quoted[0])
+    others = [e for e in quoted if e is not anchor]
+    stride = CROSS_PASSAGE_BATCH_CAP - 1
+    batches = [
+        [anchor] + others[i : i + stride] for i in range(0, len(others), stride)
+    ] or [[anchor]]
+    payload["batches"] = len(batches)
 
     if bridge is None:
         from argumentation_analysis.agents.core.logic.tweety_bridge import (
@@ -261,48 +265,109 @@ async def build_cross_passage_consistency(
 
         bridge = TweetyBridge()
 
-    # 1. The central theory, one verdict over the whole batch. A SAT theory
-    #    is the honest « no inconsistency established »; a None is the named
-    #    absence, never a False (#1941).
-    central_verdict = await _decide(bridge, central_formulas)
-    payload["checked"] = len(central_formulas)
-    if central_verdict is None:
-        payload["status"] = "undecided"
-        payload["reason"] = "the_reasoner_did_not_decide_the_central_theory"
-        return payload
-
-    # 2. The positioned pairs, farthest first. A pair is decided on its own
-    #    members' formulas ONLY — the same per-slot translation on both
-    #    sides, so a pair is never UNSAT on an unrelated batch formula. The
-    #    first UNSAT pair is the finding, and the render can locate both
-    #    passages. A pair with no formula on one side is not decidable:
-    #    counted as skipped, never invented.
-    slot_formulas = await _translate_per_slot(quoted, llm_callable)
-    payload["checked"] += sum(len(fs) for fs in slot_formulas.values())
     findings: List[Dict[str, Any]] = []
-    decided = 0
-    for left, right, _gap in _positioned_pairs(quoted):
-        left_formulas = slot_formulas.get(left["id"], [])
-        right_formulas = slot_formulas.get(right["id"], [])
-        if not left_formulas or not right_formulas:
+    decided_pairs = 0
+    saw_unsat = False
+    saw_undecided = False
+    for batch in batches:
+        try:
+            answer = await llm_callable(_translation_prompt(batch))
+        except Exception as exc:
+            payload["reason"] = f"translation_failed: {type(exc).__name__}"
+            return payload
+        parsed = _parse_json_object(answer)
+        formulas_by_id: Dict[str, List[str]] = {}
+        batch_formulas: List[str] = []
+        for entry in batch:
+            raw = parsed.get(entry["id"])
+            if isinstance(raw, list) and raw:
+                entry_formulas = [str(f).strip() for f in raw if str(f).strip()]
+                if entry_formulas:
+                    formulas_by_id[entry["id"]] = entry_formulas
+                    batch_formulas.extend(entry_formulas)
+                    continue
+            payload["dropped_formulas"] += 1
+        if not batch_formulas:
+            payload["reason"] = "translation_produced_no_formula"
+            return payload
+
+        # One verdict over the whole batch: its formulas share one
+        # vocabulary, so an UNSAT is a statement about the passages, never
+        # about two translations' name collisions.
+        verdict = await _decide(bridge, batch_formulas)
+        payload["checked"] += len(batch_formulas)
+        if verdict is None:
+            saw_undecided = True
             continue
-        verdict = await _decide(bridge, left_formulas + right_formulas)
-        decided += 1
-        if verdict is False:
-            findings.append(_finding(left, right, origin="positioned_pair"))
-            break
-    payload["pairs_decided"] = decided
+        if verdict is True:
+            # A pair subset of a SAT theory is SAT: the search runs only
+            # when the theory is UNSAT, and only to LOCATE its core.
+            continue
+
+        saw_unsat = True
+        # A slot whose own formulas are UNSAT contradicts ITSELF: that is a
+        # single-passage case, named here, never one side of a pair.
+        solo_verdicts = {}
+        for entry in batch:
+            entry_formulas = formulas_by_id.get(entry["id"])
+            if not entry_formulas:
+                continue
+            solo_verdicts[entry["id"]] = await _decide(bridge, entry_formulas)
+            if solo_verdicts[entry["id"]] is False:
+                if entry["id"] not in payload["single_passage_unsat"]:
+                    payload["single_passage_unsat"].append(entry["id"])
+        for left, right, _gap in _positioned_pairs(batch):
+            if (
+                solo_verdicts.get(left["id"]) is not True
+                or solo_verdicts.get(right["id"]) is not True
+            ):
+                continue
+            left_formulas = formulas_by_id.get(left["id"])
+            right_formulas = formulas_by_id.get(right["id"])
+            if not left_formulas or not right_formulas:
+                continue
+            decided_pairs += 1
+            if await _decide(bridge, left_formulas + right_formulas) is False:
+                findings.append(_finding(left, right, origin="positioned_pair"))
+                break  # farthest first: one located core per batch
+
+    # Pairs spanning two batches were never decided — one vocabulary per
+    # call is the whole point (#2960). Counted, named, never guessed.
+    batch_index = {
+        entry["id"]: index
+        for index, batch in enumerate(batches)
+        for entry in batch
+        if entry is not anchor
+    }
+    cross_batch = 0
+    for left, right, _gap in _positioned_pairs(quoted):
+        if left is anchor or right is anchor:
+            continue  # the anchor shares every batch
+        if batch_index.get(left["id"]) != batch_index.get(right["id"]):
+            cross_batch += 1
+    payload["cross_batch_pairs_not_decided"] = cross_batch
+
+    payload["pairs_decided"] = decided_pairs
     payload["findings"] = findings
-    payload["status"] = (
-        "inconsistent"
-        if findings
-        else ("inconsistent" if central_verdict is False else "checked")
-    )
-    if central_verdict is False and not findings:
-        # The theory is UNSAT but no POSITIONED pair decides it: the render
-        # names the theory's verdict with no located pair — the honest
-        # absence of a citation, never a fabricated one (#1941).
-        payload["reason"] = "unsat_theory_without_a_decided_positioned_pair"
+    if findings or saw_unsat:
+        payload["status"] = "inconsistent"
+        if not findings:
+            if payload["single_passage_unsat"]:
+                payload["reason"] = (
+                    "unsat_theory_including_single_passage: "
+                    + ",".join(payload["single_passage_unsat"])
+                )
+            else:
+                # The theory is UNSAT but no POSITIONED pair decides it: the
+                # render names the theory's verdict with no located pair —
+                # the honest absence of a citation, never a fabricated one
+                # (#1941).
+                payload["reason"] = "unsat_theory_without_a_decided_positioned_pair"
+    elif saw_undecided:
+        payload["status"] = "undecided"
+        payload["reason"] = "the_reasoner_did_not_decide_a_batch_theory"
+    else:
+        payload["status"] = "checked"
     return payload
 
 
@@ -369,54 +434,44 @@ def cross_passage_note(state: Any) -> str:
                 "l'emporte : le contrôle ne tranche pas, il constate."
             )
         if len(lines) == 1:
-            # An inconsistent record with no readable finding: the verdict
-            # exists, the located pair does not — stated, not decorated.
-            lines.append(
-                "Le solveur établit une contradiction dans la théorie, sans "
-                f"qu'aucune paire localisable ne la porte ({record.get('reason') or 'sans paire décidée'})."
-            )
+            single = record.get("single_passage_unsat") or []
+            if single:
+                lines.append(
+                    "Le solveur établit une contradiction interne à un seul "
+                    "passage ("
+                    + ", ".join(str(s) for s in single)
+                    + ") ; aucune paire de passages éloignés n'a été établie."
+                )
+            else:
+                # An inconsistent record with no readable finding: the
+                # verdict exists, the located pair does not — stated, not
+                # decorated.
+                lines.append(
+                    "Le solveur établit une contradiction dans la théorie, sans "
+                    f"qu'aucune paire localisable ne la porte ({record.get('reason') or 'sans paire décidée'})."
+                )
     elif status == "checked":
-        lines.append(
+        line = (
             "Contrôle atteint : le solveur n'établit aucune contradiction "
             f"entre les passages porteurs de la thèse ({record.get('checked') or 0} "
             "formules vérifiées)."
         )
+        lines.append(line)
     else:
         reason = str(record.get("reason") or "")
         suffix = f" ({reason})" if reason else ""
         word = "non tranche" if status == "undecided" else "non atteint"
         lines.append(f"Contrôle {word}{suffix} : aucune incohérence rapportée.")
-    return "\n".join(lines)
-
-
-async def _translate_per_slot(
-    entries: Sequence[Dict[str, Any]],
-    llm_callable: Callable[[str], Awaitable[str]],
-) -> Dict[str, List[str]]:
-    """Each slot's own formulas, one call per slot.
-
-    A pair is decided on these formulas, so a pair's UNSAT is a statement
-    about its two passages alone — not about the batch. One call per slot
-    keeps each passage's atoms within its own vocabulary (#2960), and the
-    pair verdict stays meaningful because BOTH sides are translated with
-    the same free-vocabulary rule. A slot with no formula is simply absent
-    from the map: its pairs are skipped, never decided.
-    """
-    per_slot: Dict[str, List[str]] = {}
-    for entry in entries:
-        try:
-            answer = await llm_callable(_translation_prompt([entry]))
-        except Exception:
-            continue
-        raw = _parse_json_object(answer).get(entry["id"])
-        formulas = (
-            [str(f).strip() for f in raw if str(f).strip()]
-            if isinstance(raw, list)
-            else []
+    skipped = record.get("cross_batch_pairs_not_decided") or 0
+    if skipped:
+        lines.append(
+            f"{skipped} paire(s) réparties entre deux lots de traduction "
+            "restent non décidées."
         )
-        if formulas:
-            per_slot[entry["id"]] = formulas
-    return per_slot
+    dropped = record.get("dropped_formulas") or 0
+    if dropped:
+        lines.append(f"{dropped} passage(s) sans traduction exploitable.")
+    return "\n".join(lines)
 
 
 __all__ = [
