@@ -297,8 +297,10 @@ class TestPrebuiltWorkflows:
         # (#3326: the vote winner is read after governance) + first_reading
         # (#3395: the whole-document read the per-argument pass depends on)
         # + semantic_indexing (#3387 rework: the index queried by the reading,
-        # whose spans the per-argument selection spends).
-        assert len(wf.phases) == 20
+        # whose spans the per-argument selection spends) +
+        # cross_passage_consistency (#3432 ask 6b: the distant-contradiction
+        # check over the first reading's slots).
+        assert len(wf.phases) == 21
         # Quality depends on extract
         quality_phase = wf.get_phase("quality")
         assert "extract" in quality_phase.depends_on
