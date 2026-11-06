@@ -150,7 +150,6 @@ def sample_charge_deltas(
     ceiling: float,
     min_steps: int = QUANTUM_MIN_STEPS,
     clock=time.monotonic,
-    sleep=time.sleep,
 ) -> tuple[list[int], int, float]:
     """Read ``read`` until ``min_steps`` positive deltas are seen, bounded.
 
@@ -170,6 +169,15 @@ def sample_charge_deltas(
     serves seats whose reads are slow or starved). A zero or starved
     reader yields an empty ``steps`` list; the CALLER names that outcome,
     this helper never invents a quantum.
+
+    No yield between reads: the read itself is the cost (walking the
+    process's thread table measured ~60 ms here), and a wall-clock sleep
+    does not buy samples — it costs them. Measured on a seat loaded by
+    eight CPU hogs, 20 samples per variant: a tight loop never named a
+    multiple of the tick, while a 1 ms sleep named 46.875 ms twice and
+    31.25 ms twice (two deltas that happened to share the multiple — the
+    very reading the whole-span rule exists to avoid). A starved reader
+    stays bounded by the ceiling; nothing here busy-waits past it.
     """
     start = clock()
     previous = read()
@@ -186,11 +194,6 @@ def sample_charge_deltas(
         if delta > 0:
             steps.append(delta)
         previous = current
-        # Yield between reads: a reader that never charges (a starved seat,
-        # a constant double) must not turn the ceiling into a busy-wait.
-        # 1 ms against a 15.6 ms tick never hides a step, and the read
-        # itself costs ~60 ms on the measured seat.
-        sleep(0.001)
     return steps, reads, clock() - start
 
 
