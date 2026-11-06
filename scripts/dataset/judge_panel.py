@@ -1003,6 +1003,11 @@ def _append_body(
             # without this flag would mistake a broken render for the
             # pipeline's own doing.
             state_cell += " **(bras pipeline dégradé)**"
+        if row.get("zeroshot_truncated"):
+            # #3460 — the baseline's own truncation, on the row itself: a
+            # verdict read without this flag counts a cut baseline as a
+            # plain pipeline win.
+            state_cell += " **(zero-shot tronqué)**"
         if row.get("status_code") not in (200, None):
             # A document whose call failed (a prompt over the judge's context
             # answers 400, a network fault 0) is UNPARSED — and the reader
@@ -1066,6 +1071,15 @@ def _append_body(
             + " ; comptés dans la répartition ci-dessus, mais jamais lus "
             "comme une victoire ou une défaite du pipeline sans ce drapeau "
             "(#3458 : un acte vide ET un signalement de dégradation)"
+        )
+    zs_truncated = [row["opaque_id"] for row in rows if row.get("zeroshot_truncated")]
+    if zs_truncated:
+        lines.append(
+            f"- **zero-shot tronqué** : **{len(zs_truncated)}** document(s) — "
+            + ", ".join(f"`{doc_id}`" for doc_id in zs_truncated)
+            + " ; comptés dans la répartition ci-dessus, mais jamais comptés "
+            "comme une victoire simple du pipeline : la baseline a été "
+            "coupée à sa limite de sortie avant sa conclusion (#3460)"
         )
     differing = [row["opaque_id"] for row in rows if _label_differs(row)]
     if differing:
@@ -1543,6 +1557,10 @@ def consensus_row(
         # its flag, whichever pass produced the rows.
         "pipeline_degraded": bool(first.get("pipeline_degraded")),
         "pipeline_empty_acts": list(first.get("pipeline_empty_acts") or []),
+        # #3460 — the baseline's truncation crosses with it: a cut baseline
+        # is never counted as a plain pipeline win, whichever pass produced
+        # the rows.
+        "zeroshot_truncated": bool(first.get("zeroshot_truncated")),
         "judge_cost": (
             round(sum(judge_costs), 6)
             if all(cost is not None for cost in judge_costs)
@@ -1710,10 +1728,11 @@ async def run(
     parser.add_argument(
         "--allow-degraded-arm",
         action="store_true",
-        help="#3458: judge a panel whose pipeline arm is degraded at or "
-        "beyond the refusal threshold anyway — the override's use is "
-        "PRINTED, and every degraded document stays flagged in its record "
-        "and the table",
+        help="#3458/#3460: judge a panel whose arm is systemically broken "
+        "at or beyond the refusal threshold anyway — a degraded pipeline "
+        "arm or a zero-shot baseline cut at its token cap. The override's "
+        "use is PRINTED, and every flagged document stays flagged in its "
+        "record and the table",
     )
     parser.add_argument(
         "--rerender",
@@ -1792,6 +1811,12 @@ async def run(
         if not zeroshot or not zeroshot.get("answer"):
             missing.append(f"{doc_id} (no zero-shot answer)")
             continue
+        # #3460 — the arm's OWN finish_reason is read, never assumed: panel B
+        # carried 2 of 10 answers cut at the cap, and a baseline judged as
+        # whole biases every verdict toward the pipeline.
+        zeroshot_truncated = (
+            str(zeroshot.get("finish_reason") or "") in TRUNCATION_STOP_REASONS
+        )
         signature = load_json(sig_path) if sig_path.exists() else {}
         state = load_json(state_path)
         documents.append(
@@ -1805,6 +1830,10 @@ async def run(
                 # #3458 — the judge reads the arm's health itself, per
                 # document, from the same state dump the fiche reads.
                 "health": arm_health(state),
+                # #3460 — the baseline's own truncation, read from the arm's
+                # record (never re-derived from the text: the judge does not
+                # truncate or rewrite the arm's response, it flags it).
+                "zeroshot_truncated": zeroshot_truncated,
             }
         )
     if missing:
@@ -1891,6 +1920,36 @@ async def run(
             )
             return 3
 
+    # #3460 — the same mechanism for the baseline arm: a systemically
+    # truncated zero-shot is refused before the first paid call. Judging a
+    # baseline that was never finished measures the cap, not the model —
+    # and the bias always goes toward the pipeline.
+    truncated_ids = [doc["opaque_id"] for doc in documents if doc["zeroshot_truncated"]]
+    if len(truncated_ids) >= DEGRADED_ARM_REFUSAL_THRESHOLD:
+        if args.allow_degraded_arm:
+            print(
+                f"--allow-degraded-arm: judging {len(truncated_ids)} "
+                "document(s) whose zero-shot baseline was cut at its token "
+                f"cap, at or beyond the refusal threshold "
+                f"({DEGRADED_ARM_REFUSAL_THRESHOLD}) anyway — every one "
+                "stays flagged in its record and the table (#3460)",
+                flush=True,
+            )
+        else:
+            print(
+                f"REFUSED: {len(truncated_ids)}/{len(documents)} document(s) "
+                "carry a zero-shot baseline cut at its token cap "
+                "(finish_reason length/max_tokens): "
+                + ", ".join(f"`{doc_id}`" for doc_id in truncated_ids)
+                + f" — at or beyond DEGRADED_ARM_REFUSAL_THRESHOLD="
+                f"{DEGRADED_ARM_REFUSAL_THRESHOLD}. The judge would grade a "
+                "baseline that was not finished, and the bias would always "
+                "go toward the pipeline; refusing before the first paid "
+                "call (#3460). Pass --allow-degraded-arm to judge anyway.",
+                flush=True,
+            )
+            return 3
+
     endpoint = {
         **resolve_judge_endpoint(args.judge_model),
         "temperature": args.judge_temperature,
@@ -1919,6 +1978,7 @@ async def run(
         # state is never read as a pipeline loss/win without this flag.
         row["pipeline_degraded"] = doc["health"]["pipeline_degraded"]
         row["pipeline_empty_acts"] = doc["health"]["empty_acts"]
+        row["zeroshot_truncated"] = doc["zeroshot_truncated"]
         row["elapsed_seconds"] = elapsed
         row["status_code"] = record.get("status_code")
         row["error_body_head"] = record.get("error_body_head")

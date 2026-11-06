@@ -17,7 +17,8 @@ Usage (PYTHONPATH is required — the repo root is not on sys.path for a
 plain script run):
 
     PYTHONPATH=. python scripts/dataset/run_zeroshot_arm.py \
-        [--max-chars 0] [--timeout 600] [--skip-existing] [--dry-run]
+        [--max-chars 0] [--timeout 600] [--max-completion-tokens 32000] \
+        [--skip-existing] [--dry-run]
 
 Output (gitignored — ``argumentation_analysis/evaluation/results/`` is
 ignored by default):
@@ -47,6 +48,18 @@ RESULTS_DIR = (
 DATASET_PATH = (
     REPO_ROOT / "argumentation_analysis" / "data" / "extract_sources.json.gz.enc"
 )
+
+# #3460 — the completion cap, a flag with a default that leaves room for a
+# thinking model. Panel B measured 2 of 10 Sonnet answers stopping at
+# ``finish_reason: "length"`` on the old 16 000 hardcode: Sonnet bills its
+# hidden thinking as completion tokens (#3096 measured ~44 % of a
+# completion), so a cap sized for luna (largest 11 781) cuts a thinking
+# model's visible answer in half.
+DEFAULT_MAX_COMPLETION_TOKENS = 32000
+# A 200 answer that stopped here is TRUNCATED, not ok: counted apart, and
+# the run exits non-zero (#3460 — raising the cap alone is not enough; the
+# UNSIGNALLED truncation is what falsified the measure).
+TRUNCATION_FINISH_REASONS = ("length", "max_tokens")
 
 # The analyst prompt is the campaign's starting point, verbatim from the
 # existing instrument (#2841: "start from ZEROSHOT_PROMPT in
@@ -106,16 +119,25 @@ def build_prompt(doc_text: str) -> str:
     return ZEROSHOT_PROMPT.format(text=doc_text)
 
 
-def build_payload(model_id: str, doc_text: str) -> Dict[str, Any]:
+def build_payload(
+    model_id: str,
+    doc_text: str,
+    max_completion_tokens: int = DEFAULT_MAX_COMPLETION_TOKENS,
+) -> Dict[str, Any]:
     """One call, no tools, answer allowed to run long."""
     return {
         "model": model_id,
         "messages": [{"role": "user", "content": build_prompt(doc_text)}],
-        "max_completion_tokens": 16000,
+        "max_completion_tokens": max_completion_tokens,
     }
 
 
-def provenance_header(model_id: str, base_url: str, max_chars: int) -> Dict[str, Any]:
+def provenance_header(
+    model_id: str,
+    base_url: str,
+    max_chars: int,
+    max_completion_tokens: int = DEFAULT_MAX_COMPLETION_TOKENS,
+) -> Dict[str, Any]:
     """#2353: the render cites its reproducing command; this is its source."""
     git_head = os.environ.get("GITHUB_SHA", "")
     if not git_head:
@@ -138,22 +160,27 @@ def provenance_header(model_id: str, base_url: str, max_chars: int) -> Dict[str,
         "model": model_id,
         "base_url_host": urlparse(base_url).hostname,
         "max_chars": max_chars,
+        "max_completion_tokens": max_completion_tokens,
         "git_head": git_head,
         "command": (
             "PYTHONPATH=. python scripts/dataset/run_zeroshot_arm.py"
             f" --max-chars {max_chars}"
+            f" --max-completion-tokens {max_completion_tokens}"
         ),
     }
 
 
 async def call_zeroshot(
-    endpoint: Dict[str, str], doc_text: str, timeout: int
+    endpoint: Dict[str, str],
+    doc_text: str,
+    timeout: int,
+    max_completion_tokens: int = DEFAULT_MAX_COMPLETION_TOKENS,
 ) -> Dict[str, Any]:
     """One live call; the verdict (status, body head) is returned, never
     swallowed — a failed document is counted failed, not absent (#2841)."""
     import httpx
 
-    payload = build_payload(endpoint["model_id"], doc_text)
+    payload = build_payload(endpoint["model_id"], doc_text, max_completion_tokens)
     async with httpx.AsyncClient(timeout=timeout) as client:
         response = await client.post(
             f"{endpoint['base_url'].rstrip('/')}/chat/completions",
@@ -182,6 +209,18 @@ async def run_arm(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--timeout", type=int, default=600, help="Per-doc timeout seconds"
+    )
+    parser.add_argument(
+        "--max-completion-tokens",
+        type=int,
+        default=DEFAULT_MAX_COMPLETION_TOKENS,
+        help=(
+            f"Completion cap (default {DEFAULT_MAX_COMPLETION_TOKENS}). A "
+            "thinking model bills its hidden tokens as completion "
+            "(#3096): a cap sized for a non-thinking model cuts the "
+            "visible answer — a truncated answer is printed TRUNCATED, "
+            "counted apart and fails the run (#3460)"
+        ),
     )
     # #3375 — the v1 panel: the same selection as the pipeline arm, parsed by
     # the same helper, so the two populations cannot drift (#2841 rule 4).
@@ -226,12 +265,17 @@ async def run_arm(argv: Optional[List[str]] = None) -> int:
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     endpoint = resolve_arm_endpoint()
     header = provenance_header(
-        endpoint["model_id"], endpoint["base_url"], args.max_chars
+        endpoint["model_id"],
+        endpoint["base_url"],
+        args.max_chars,
+        max_completion_tokens=args.max_completion_tokens,
     )
     print(f"model: {endpoint['model_id']}", flush=True)
+    print(f"max_completion_tokens: {args.max_completion_tokens}", flush=True)
 
     attempted = 0
     ok = 0
+    truncated = 0
     failed = 0
     t_start = time.time()
     for doc in docs:
@@ -242,7 +286,12 @@ async def run_arm(argv: Optional[List[str]] = None) -> int:
         attempted += 1
         t0 = time.time()
         try:
-            record = await call_zeroshot(endpoint, doc["full_text"], args.timeout)
+            record = await call_zeroshot(
+                endpoint,
+                doc["full_text"],
+                args.timeout,
+                max_completion_tokens=args.max_completion_tokens,
+            )
         except Exception as exc:  # network-level failure: named, never silent
             record = {"status_code": 0, "error_body_head": repr(exc)}
         elapsed = round(time.time() - t0, 1)
@@ -257,8 +306,22 @@ async def run_arm(argv: Optional[List[str]] = None) -> int:
             json.dumps(entry, ensure_ascii=False, indent=1), encoding="utf-8"
         )
         if record.get("status_code") == 200 and record.get("answer"):
-            ok += 1
-            print(f"[{doc['opaque_id']}] ok in {elapsed}s", flush=True)
+            # #3460 — a 200 answer that stopped at the cap is NOT ok: the
+            # baseline was cut before its conclusion, and grading it as a
+            # whole answer biases every verdict toward the pipeline.
+            if str(record.get("finish_reason") or "") in TRUNCATION_FINISH_REASONS:
+                truncated += 1
+                completion_tokens = (record.get("usage") or {}).get("completion_tokens")
+                print(
+                    f"[{doc['opaque_id']}] TRUNCATED at "
+                    f"{completion_tokens} completion tokens "
+                    f"(finish_reason={record.get('finish_reason')}) "
+                    f"in {elapsed}s — raise --max-completion-tokens (#3460)",
+                    flush=True,
+                )
+            else:
+                ok += 1
+                print(f"[{doc['opaque_id']}] ok in {elapsed}s", flush=True)
         else:
             failed += 1
             print(
@@ -267,7 +330,11 @@ async def run_arm(argv: Optional[List[str]] = None) -> int:
                 flush=True,
             )
 
-    print(f"attempted: {attempted}  ok: {ok}  failed: {failed}", flush=True)
+    print(
+        f"attempted: {attempted}  ok: {ok}  truncated: {truncated}  "
+        f"failed: {failed}",
+        flush=True,
+    )
     print(f"wall: {round(time.time() - t_start, 1)}s", flush=True)
 
     # #2282: the stamp says which model answered.
@@ -277,7 +344,10 @@ async def run_arm(argv: Optional[List[str]] = None) -> int:
     )
 
     print(render_environment_stamp(environment_manifest()), flush=True)
-    return 0 if failed == 0 else 1
+    # #3460 — a truncated answer fails the run: the panel B print
+    # (« attempted: 10  ok: 10  failed: 0 » with 2 answers cut at the cap)
+    # is the failure this line refuses to repeat.
+    return 0 if failed == 0 and truncated == 0 else 1
 
 
 def main() -> int:
