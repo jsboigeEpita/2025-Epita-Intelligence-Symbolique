@@ -204,8 +204,11 @@ class TestTheQuestionAsksForThePillars:
         module = reading()
         assert module.MAX_PILLARS == 3
         model = _FakeModel(_answer())
-        await module.build_first_reading(_state(_document()), model)
-        assert f"At most {module.MAX_PILLARS} pillars" in model.prompts[0]
+        document = _document()
+        await module.build_first_reading(_state(document), model)
+        budget = module.pillar_budget(len(document))
+        assert budget >= module.MAX_PILLARS
+        assert f"At most {budget} pillars" in model.prompts[0]
 
     def test_the_volume_bound_is_not_the_repair(self) -> None:
         """The issue's anti-pendulum: the pillars are named, not caught by
@@ -275,9 +278,10 @@ class TestTheProducerRecordsThePillars:
         ]
         result, _ = await _read(_answer(pillars=many))
         pillars = [m for m in result.moves if m.slot == "pillar"]
-        assert len(pillars) == reading().MAX_PILLARS
-        # The kept ones are the first MAX_PILLARS the answer offered, in order.
-        assert [m.quote for m in pillars] == list(distinct[: reading().MAX_PILLARS])
+        budget = reading().pillar_budget(len(_document()))
+        assert len(pillars) == budget
+        # The kept ones are the first pillars the length-aware budget allows.
+        assert [m.quote for m in pillars] == list(distinct[:budget])
 
 
 # ---------------------------------------------------------------------------

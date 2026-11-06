@@ -30,6 +30,7 @@ from argumentation_analysis.agents.core.reading.first_reading import (
     extract_first_reading,
     first_reading_note,
     move_kind,
+    pillar_budget,
 )
 
 __all__ = [
@@ -53,4 +54,5 @@ __all__ = [
     "extract_first_reading",
     "first_reading_note",
     "move_kind",
+    "pillar_budget",
 ]
