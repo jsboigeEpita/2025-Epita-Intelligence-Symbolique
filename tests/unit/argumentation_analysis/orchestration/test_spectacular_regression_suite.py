@@ -301,6 +301,9 @@ class TestSpectacularWorkflowGolden:
         # first reading is a root phase here too — without it the producer
         # never runs and every state prints the no_llm absence note.
         "first_reading",
+        # #3432 (ask 6b): the distant-contradiction check over the first
+        # reading's slots — the reasoner decides, Act II renders the pair.
+        "cross_passage_consistency",
         # #3387 rework: the semantic index queries the reading over the
         # document's own text; the per-argument fallacy selection spends
         # its spans.
@@ -376,8 +379,9 @@ class TestSpectacularWorkflowGolden:
         # THIS workflow, so the producer lives here too. 42 → 43.
         # #3387 rework: +1 semantic_indexing (the index queried by the
         # reading, whose spans the per-argument selection spends). 43 → 44.
+        # #3432 (ask 6b) adds cross_passage_consistency. 44 → 45.
         wf = build_spectacular_workflow()
-        assert len(wf.phases) == 44
+        assert len(wf.phases) == 45
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -441,12 +445,15 @@ class TestSpectacularWorkflowGolden:
         # #3387 rework: `semantic_indexing` joins them too — it reads only
         # the first reading (L0 root) as its query, and the merged population
         # it does NOT read stays below.
+        # #3432 (ask 6b): `cross_passage_consistency` joins them — it reads
+        # only the first reading's slots (L0), never the merged population.
         assert set(levels[1]) == {
             "neural_detect",
             "text_to_kb",
             "dl_reasoning",
             "historian",
             "semantic_indexing",
+            "cross_passage_consistency",
         }
 
     def test_l2_includes_formal_logic_and_counter(self):
@@ -836,8 +843,8 @@ class TestWorkflowCatalogGolden:
         # #3395 (R1142): +1 first_reading root phase (the panel's workflow).
         # 42 → 43.
         # #3387 rework: +1 semantic_indexing (index queried by the reading).
-        # 43 → 44.
-        assert len(catalog["spectacular"].phases) == 44
+        # 43 → 44. #3432 (ask 6b): +1 cross_passage_consistency. 44 → 45.
+        assert len(catalog["spectacular"].phases) == 45
 
     def test_catalog_includes_sherlock_modern(self):
         catalog = get_workflow_catalog()
