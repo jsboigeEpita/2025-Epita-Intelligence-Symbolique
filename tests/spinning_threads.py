@@ -49,11 +49,12 @@ waiting.
 
 The quantum measurement itself can starve (#3467): under a loaded gate the
 sampler used to return ``0.0`` after one clock-window, and the seat-property
-test read that as "this seat has no positive increment". Now the sampler ends
-on EVIDENCE (two charge steps, the gcd of one delta could be a multiple) up to
-a named ceiling, and a starved sample is a distinct ``unmeasured`` dict
-carrying the reads and the elapsed time — never ``0.0``, and callers never
-receive a zero floor.
+test read that as "this seat has no positive increment". Now a measured
+sample covers the whole span (the gcd runs over every delta the window saw —
+two deltas alone can be the same multiple of the step) and needs at least
+two steps, past the span only up to a named ceiling; a starved sample is a
+distinct ``unmeasured`` dict carrying the reads and the elapsed time — never
+``0.0``, and callers never receive a zero floor.
 
 Loaded as a plugin by ``tests/conftest.py``. ``psutil``, which times each
 thread, is imported only when a test leaves a thread alive.
@@ -132,9 +133,11 @@ _QUANTUM: float | None = None
 
 # #3467: how many POSITIVE charge steps make a measured quantum, and the
 # ceiling of one measurement. One delta could be a multiple of the seat's
-# step — the gcd of two can name it, one alone cannot. The loop ends on
-# EVIDENCE (two steps), not on a clock: a starved sample stops at the
-# ceiling and says UNMEASURED, never a fabricated 0.0 quantum.
+# step — the gcd of SEVERAL can name it, and two of them can be the SAME
+# multiple (the gcd of the whole window removes that). A measured sample
+# covers at least the span and ends once it holds ``min_steps`` steps;
+# a starved sample stops at the ceiling and says UNMEASURED, never a
+# fabricated 0.0 quantum.
 QUANTUM_MIN_STEPS = 2
 QUANTUM_CEILING = 4.0
 QUANTUM_UNMEASURED = "unmeasured"
@@ -152,18 +155,21 @@ def sample_charge_deltas(
     """Read ``read`` until ``min_steps`` positive deltas are seen, bounded.
 
     Pure sampling, apart from the thread and ``psutil`` so the witness can
-    inject a reader and a clock: the measure ends on evidence (``min_steps``
-    steps) or on the ceiling, whichever comes first. Returns ``(steps, reads,
-    elapsed)`` — ``reads`` counts every read past the first, so a starved
-    sample can be REPORTED with the number of reads it actually made and the
-    time it actually took (#3467), instead of reading as a seat property.
+    inject a reader and a clock: a measured sample covers the WHOLE
+    ``span`` (every delta within it feeds the caller's gcd — two deltas
+    alone can be the same multiple of the step), then continues only
+    until it holds ``min_steps`` steps, and never past the ceiling.
+    Returns ``(steps, reads, elapsed)`` — ``reads`` counts every read
+    past the first, so a starved sample can be REPORTED with the number
+    of reads it actually made and the time it actually took (#3467),
+    instead of reading as a seat property.
 
     ``span`` is the first window; past it the sampler keeps going only
-    until the named ceiling (the base 0.4 s, extended — never simply
-    lengthened: the ceiling is reached only on seats whose reads are slow
-    or starved, and a measured sample still ends as early as its second
-    step). A zero or starved reader yields an empty ``steps`` list; the
-    CALLER names that outcome, this helper never invents a quantum.
+    until ``min_steps`` steps are held or the named ceiling is reached
+    (the base 0.4 s, extended — never simply lengthened: the extension
+    serves seats whose reads are slow or starved). A zero or starved
+    reader yields an empty ``steps`` list; the CALLER names that outcome,
+    this helper never invents a quantum.
     """
     start = clock()
     previous = read()
@@ -180,8 +186,6 @@ def sample_charge_deltas(
         if delta > 0:
             steps.append(delta)
         previous = current
-        if len(steps) >= min_steps:
-            break
         # Yield between reads: a reader that never charges (a starved seat,
         # a constant double) must not turn the ceiling into a busy-wait.
         # 1 ms against a 15.6 ms tick never hides a step, and the read
@@ -197,15 +201,16 @@ def thread_time_quantum(span: float = 0.4, *, ceiling: float = QUANTUM_CEILING):
 
     Measured, never assumed: the sampling engine of the seat decides the
     step, so a hard-coded 15.625 ms would state the wrong resolution on any
-    other seat. A burner thread of this process is sampled until TWO
-    positive charge steps are seen (the gcd of one delta could be a
-    multiple), bounded by ``span`` then by the named ``ceiling`` — the
-    measure ends on evidence, not on a clock. Every delta is a whole number
-    of steps, so the step is their greatest common divisor (in whole
-    microseconds), not their smallest member: reading a thread's time walks
-    the whole process table on some seats (measured here: ~60 ms per read,
-    several charge steps), and the smallest delta a slow reader ever sees
-    can be a multiple.
+    other seat. A burner thread of this process is sampled across the
+    whole ``span`` (every delta within it feeds the gcd) until it holds
+    TWO positive charge steps — the gcd of one delta could be a multiple,
+    and two can be the SAME multiple, so the gcd runs over every delta
+    the window saw — bounded by the named ``ceiling`` past the span.
+    Every delta is a whole number of steps, so the step is their greatest
+    common divisor (in whole microseconds), not their smallest member:
+    reading a thread's time walks the whole process table on some seats
+    (measured here: ~60 ms per read, several charge steps), and the
+    smallest delta a slow reader ever sees can be a multiple.
 
     A starved sample is NOT a zero quantum (#3467): when the ceiling passes
     with no step, the seat's property is UNMEASURED — reported with the

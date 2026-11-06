@@ -302,15 +302,18 @@ def test_a_starved_sample_is_unmeasured_with_its_reads_and_elapsed():
 
 def test_two_known_deltas_keep_the_gcd_result():
     """The measurement is unchanged: two positive deltas of 31.25 ms and
-    46.875 ms gcd to 15.625 ms (never their smallest member), and the loop
-    ends on evidence — two steps, long before the ceiling."""
+    46.875 ms gcd to 15.625 ms (never their smallest member). The sample
+    covers the WHOLE span — the reader is read past its second step, so
+    the gcd is taken over every delta the window saw, not the first two
+    (#3467 review: a sample ends on the clock, never on a step count)."""
     from tests.spinning_threads import (
         sample_charge_deltas,
         thread_time_quantum,
     )
 
-    # Reader sequence: first reading 0.0, then +31.25 ms, then +46.875 ms.
-    readings = iter([0.0, 0.03125, 0.078125])
+    # Reader sequence: first reading 0.0, then +31.25 ms, then +46.875 ms,
+    # then flat — the loop keeps reading to the span regardless.
+    readings = iter([0.0, 0.03125, 0.078125] + [0.078125] * 20)
     steps, reads, elapsed = sample_charge_deltas(
         lambda: next(readings),
         span=0.4,
@@ -319,13 +322,17 @@ def test_two_known_deltas_keep_the_gcd_result():
         sleep=lambda _: None,
     )
     assert steps == [31250, 46875]
-    assert reads == 2  # ended on the second step, not on the clock
+    # The whole span was read — the clock ended the sample, never a step
+    # count. (7 reads nominally; the scripted clock's 0.05 additions round
+    # the 0.4 boundary below once in a while, so one extra flat read.)
+    assert 7 <= reads <= 8
+    assert elapsed >= 0.4  # the span was covered, then the loop ended
 
     import tests.spinning_threads as mod
 
     original = mod.sample_charge_deltas
     original_burn = mod._burn_until
-    mod.sample_charge_deltas = lambda *a, **k: ([31250, 46875], 2, 0.15)
+    mod.sample_charge_deltas = lambda *a, **k: ([31250, 46875], 7, 0.45)
     mod._burn_until = lambda stop: None
     try:
         outcome = thread_time_quantum()
@@ -333,6 +340,51 @@ def test_two_known_deltas_keep_the_gcd_result():
         mod.sample_charge_deltas = original
         mod._burn_until = original_burn
     assert outcome == 0.015625
+    assert not isinstance(outcome, dict)
+
+
+def test_equal_first_deltas_do_not_name_a_multiple_quantum():
+    """Born red (#3467 review): the first two deltas can be the SAME
+    multiple of the seat's step (62.5 ms + 62.5 ms gcds to 62.5 ms — four
+    times the step). A later delta names the step (46.875 ms = 3 steps),
+    so the sample must cover the span and take the gcd of ALL its deltas:
+    15625 µs, never the 62500 the first two alone would decide."""
+    from tests.spinning_threads import (
+        sample_charge_deltas,
+        thread_time_quantum,
+    )
+
+    # +62.5 ms, +62.5 ms, flat, then +46.875 ms — the third delta lands
+    # INSIDE the span, at a read the loop only makes when it keeps going.
+    readings = iter(
+        [0.0, 0.0625, 0.125, 0.125, 0.125, 0.125, 0.171875] + [0.171875] * 20
+    )
+    steps, reads, elapsed = sample_charge_deltas(
+        lambda: next(readings),
+        span=0.4,
+        ceiling=4.0,
+        clock=_ScriptedClock(0.05),
+        sleep=lambda _: None,
+    )
+    assert steps == [62500, 62500, 46875]  # the span's every delta
+    assert elapsed >= 0.4
+
+    import tests.spinning_threads as mod
+
+    original = mod.sample_charge_deltas
+    original_burn = mod._burn_until
+    mod.sample_charge_deltas = lambda *a, **k: (
+        [62500, 62500, 46875],
+        7,
+        0.45,
+    )
+    mod._burn_until = lambda stop: None
+    try:
+        outcome = thread_time_quantum()
+    finally:
+        mod.sample_charge_deltas = original
+        mod._burn_until = original_burn
+    assert outcome == 0.015625  # gcd(62500, 62500, 46875), not 0.0625
     assert not isinstance(outcome, dict)
 
 
