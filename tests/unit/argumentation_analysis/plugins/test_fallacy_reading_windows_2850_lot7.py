@@ -123,12 +123,15 @@ class TestWidenetHeadRecorded:
         k = -(-_DOC_CHARS // WHOLE_TEXT_CALL_CAPACITY)
         assert k == 10
         assert llm.await_count == k, "one call per contiguous chunk"
+        # #3446 item 3 — the multi-chunk record also names the pool the
+        # cap was applied to (0 distinct PKs here, no drop to name).
         assert state.reading_window_status["fallacy_widenet"] == {
             "status": "selected",
             "offset": 0,
             "window": WHOLE_TEXT_CALL_CAPACITY,
             "chunks": k,
             "chars_read": _DOC_CHARS,
+            "pool_before_cap": 0,
         }
 
     async def test_widenet_short_text_reads_whole(self):
