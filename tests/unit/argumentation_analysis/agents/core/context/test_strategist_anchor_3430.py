@@ -280,14 +280,17 @@ class TestActOneTellsTheTwoApart:
         block = _format_strategic_block(read)
 
         assert f"le texte dit : « {QUOTE_A} »" in block
-        assert "savoir du modèle : le texte ne l'énonce pas" in block
+        # #3461 — the no-quote label says UNVERIFIED, never absent.
+        assert "savoir du modèle, sans citation" in block
+        assert "le texte ne l'énonce pas" not in block
         assert "citation non ancrée" in block
 
     def test_a_merged_position_never_reaches_act_one_as_the_texts(self):
         """Born red: on the pre-fix tree the block carried no provenance at all."""
         prompt = build_act1_prompt(_evidence(self._merged_read()))
 
-        assert "savoir du modèle : le texte ne l'énonce pas" in prompt
+        # #3461 — same deliberate relabel on the full prompt.
+        assert "savoir du modèle, sans citation" in prompt
         # Nothing here is presented as the document's words.
         assert "le texte dit :" not in prompt
 

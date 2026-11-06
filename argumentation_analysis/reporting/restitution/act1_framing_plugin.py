@@ -467,6 +467,13 @@ def _format_strategic_block(read: Dict[str, Any]) -> str:
         # a stance the pipeline verified against the text may be quoted, a
         # stance it could not verify is kept but never guillemeted, and a
         # stance nobody claimed for the text says so outright.
+        # #3461 — the no-quote label says UNVERIFIED, never ABSENT: the
+        # cycle-3b panel's one severe item was Act I writing « le texte ne
+        # l'énonce pas » on a stance the document states in so many words.
+        # « le texte ne l'énonce pas » is a claim about the TEXT, and no
+        # control ran on an unquoted stance. The only negation a control
+        # establishes is the unanchored case below (quote_occurs_in failed
+        # on a supplied quote) — it keeps its exact wording.
         quote = _truncate(player.get("quote", ""), _MODEL_READ_CAP)
         if player.get("basis") == TEXT_BASIS and quote:
             label += f" — le texte dit : « {quote} »"
@@ -476,7 +483,10 @@ def _format_strategic_block(read: Dict[str, Any]) -> str:
                 "(ne le cite PAS entre guillemets)"
             )
         else:
-            label += " — savoir du modèle : le texte ne l'énonce pas"
+            label += (
+                " — savoir du modèle, sans citation (le texte n'a pas été "
+                "vérifié pour cette position)"
+            )
         players.append(label)
     if players:
         lines.append("  Joueurs :\n    - " + "\n    - ".join(players))
@@ -1350,15 +1360,16 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         "« inférée du texte » = lecture de modèle, jamais une donnée "
         "vérifiée) :\n\n"
         f"[LE TEXTE — métadonnées enregistrées]\n{meta_block}\n\n"
-        f"[SITUATION HISTORIQUE — SAVOIR DU MODÈLE, jamais le contenu du texte "
-        f"(#3377)]\n{historical_block}\n\n"
+        f"[SITUATION HISTORIQUE — SAVOIR DU MODÈLE : lectures non vérifiées "
+        f"contre le texte, à ne jamais présenter comme son contenu (#3377, "
+        f"#3461)]\n{historical_block}\n\n"
         f"[LES ENJEUX — inférés du texte par l'extracteur (jamais « vérifiés »)]\n{stakes_block}\n\n"
         f"[SPECTRE ATTENDU — dérivation taxonomie]\n{spectrum_note}{spectrum_coda}\n"
         f"{spectrum_block}\n\n"
         f"[LECTURE STRATÉGIQUE — profil et calcul = état (#3377) ; chaque "
         f"partie dit SA provenance : « le texte dit » = citation vérifiée "
-        f"contre le document, « savoir du modèle » = le texte ne l'énonce "
-        f"pas (#3430)]\n{gt_block}\n{gt_note}\n{strategic_block}\n\n"
+        f"contre le document, « savoir du modèle » = lecture sans citation, "
+        f"que le texte n'a pas vérifiée (#3430, #3461)]\n{gt_block}\n{gt_note}\n{strategic_block}\n\n"
         "CONSIGNE DE RÉDACTION :\n"
         "- Rédige 4 paragraphes thématiques (un par battement), en prose lisible,\n"
         "  pas une liste de champs.\n"
@@ -1380,6 +1391,15 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         "  comme le propos du texte ; une position dont la citation n'a pas\n"
         "  été retrouvée se dit sans guillemets.\n"
         "  Aucune position n'est attribuée au texte sans sa citation.\n"
+        # #3461 — la négation non contrôlée : le panel 3b n'a retenu qu'un
+        # seul item sévère, et c'est celui-ci. Une provenance dit D'OÙ vient
+        # une affirmation, jamais ce qui manque au texte.
+        "- N'ÉCRIS JAMAIS « le texte ne dit pas X », « le texte ne l'énonce\n"
+        "  pas » ni aucune variante de cette négation, SAUF pour une citation\n"
+        "  étiquetée non ancrée : là SEULEMENT un contrôle a réellement tourné\n"
+        "  (le passage fourni n'a pas été retrouvé dans le document). Une\n"
+        "  position « savoir du modèle » se présente comme une lecture non\n"
+        "  vérifiée contre le texte — jamais comme une absence dans le texte.\n"
         "- TERMINE l'Acte I en posant LA QUESTION INTERPRÉTATIVE de ce\n"
         "  document : la question centrale que l'analyse (Acte II) instruit et\n"
         "  que la conclusion (Acte III) devra trancher sur CE discours. Dérive-\n"
