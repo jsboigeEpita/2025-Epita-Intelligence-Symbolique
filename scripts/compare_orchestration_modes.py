@@ -1045,17 +1045,19 @@ async def run_pipeline_mode(
 
         checkpoint_callback = _record_completed
 
-    # Outside a panel run the call is byte-for-byte the historical one. In a
-    # panel run the workflow is normally spectacular (the campaign's workflow);
-    # the caller may still choose any preset, and its absent acts stay honest.
+    # Outside a panel run the call is byte-for-byte the historical one: the
+    # bounded run passes the state reference and its checkpoint (CB #1528),
+    # the unbounded one passes neither. In a panel run the workflow is
+    # normally spectacular (the campaign's workflow); the caller may still
+    # choose any preset, and its absent acts stay honest.
     analysis_kwargs: Dict[str, Any] = {
         "text": text,
         "workflow_name": workflow_name,
     }
+    if state is not None:
+        analysis_kwargs.update(state=state, checkpoint_callback=checkpoint_callback)
     if panel_mode:
         analysis_kwargs.update(
-            state=state,
-            checkpoint_callback=checkpoint_callback,
             render_restitution=True,
             deanonymized=False,
             source_metadata=source_metadata or {"opaque_id": corpus_id},
