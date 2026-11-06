@@ -151,6 +151,81 @@ class TestTheExtraction:
         assert past_cited_bound([]) is None
 
 
+class TestAFloorIsAYear:
+    """R1148 review — the measured false floor: a media timestamp inside a
+    URL query parameter fired the degradation on a document whose dating
+    nothing refutes. A false refutation is worse than a missed one, so every
+    doubtful token falls on the side of NO floor. One witness per class,
+    synthetic-only."""
+
+    def test_a_year_inside_a_url_or_identifier_is_not_a_dated_reference(self):
+        from argumentation_analysis.agents.core.context.stated_dates import (
+            extract_stated_dates,
+        )
+
+        text = (
+            "L'annexe visuelle est en ligne : "
+            "https://example.test/archive?id=2019 pour le détail, "
+            "et le code de dossier A?2019&B la référence."
+        )
+
+        assert extract_stated_dates(text) == []
+
+    def test_a_decimal_number_is_not_a_dated_reference(self):
+        from argumentation_analysis.agents.core.context.stated_dates import (
+            extract_stated_dates,
+        )
+
+        text = (
+            "La séquence dure 2019,5 secondes, et la note vaut 2019.5 " "sur l'échelle."
+        )
+
+        assert extract_stated_dates(text) == []
+
+    def test_a_digit_grouped_quantity_is_not_a_dated_reference(self):
+        from argumentation_analysis.agents.core.context.stated_dates import (
+            extract_stated_dates,
+        )
+
+        text = "L'assemblée réunit 12 2019 délégués et 1,2019 million d'auditeurs."
+
+        assert extract_stated_dates(text) == []
+
+    def test_an_english_future_year_is_projected_even_without_french_markers(self):
+        from argumentation_analysis.agents.core.context.stated_dates import (
+            extract_stated_dates,
+            past_cited_bound,
+        )
+
+        text = (
+            "The roadmap binds nobody yet: the target will be met by 2088, "
+            "and payments continue until 2090. Nothing else carries a year."
+        )
+
+        stated = extract_stated_dates(text)
+
+        assert [entry.year for entry in stated] == [2088, 2090]
+        assert all(entry.projected for entry in stated)
+        assert past_cited_bound(stated) is None
+
+    def test_a_real_year_beside_the_excluded_classes_still_bounds(self):
+        """The filters remove the junk, never the dated reference beside it."""
+        from argumentation_analysis.agents.core.context.stated_dates import (
+            extract_stated_dates,
+            past_cited_bound,
+        )
+
+        text = (
+            "La séquence dure 2019,5 secondes ; le rappel ouvre pourtant sur "
+            "le congrès de 1955, cité comme déjà passé."
+        )
+
+        bound = past_cited_bound(extract_stated_dates(text))
+
+        assert bound is not None
+        assert bound.year == 1955
+
+
 # ============================================================================
 # Item 1 — the document's own dates ride the prompt before the historian answers
 # ============================================================================
@@ -192,14 +267,32 @@ class TestAnImpossibleDatingIsDegradedAndNamed:
         assert dating["refuted_by"]["offset"] == _OFFSET_2019
         assert "congrès de 2019" in dating["refuted_by"]["quote"]
 
-    async def test_a_range_situation_is_confronted_on_its_earliest_year(self):
+    async def test_a_range_situation_is_confronted_on_its_latest_year(self):
+        """R1148: ``min`` fired as soon as the situation MENTIONED an earlier
+        context event; ``max`` fires only when the whole situation predates
+        the floor. The range 1904-2004 still predates 2019 — at its latest."""
         payload = {"situation": "Le texte couvre la période 1904-2004.", "items": []}
 
         result = await build_historical_context(
             _state(raw_text=_TEXT_WITH_PAST_DATE), _llm(payload)
         )
 
-        assert result.to_state()["dating"]["model_year"] == 1904
+        assert result.to_state()["dating"]["model_year"] == 2004
+
+    async def test_a_situation_naming_an_earlier_context_year_is_not_refuted(self):
+        """R1148's measured shape: "ten years after the crisis of YYYY" — the
+        situation's DATING is right; its earliest year is context, not the
+        document's date. The confrontation must not fire."""
+        payload = {
+            "situation": "Rédigé en 2024, dix ans après la crise de 1914.",
+            "items": [],
+        }
+
+        result = await build_historical_context(
+            _state(raw_text=_TEXT_WITH_PAST_DATE), _llm(payload)
+        )
+
+        assert "dating" not in result.to_state()
 
     async def test_act1_names_the_quoted_reference_with_its_position(self):
         from argumentation_analysis.reporting.restitution.act1_framing_plugin import (
@@ -216,7 +309,10 @@ class TestAnImpossibleDatingIsDegradedAndNamed:
         assert "Datation DÉGRADÉE" in prompt
         assert "congrès de 2019" in prompt
         assert f"position {_OFFSET_2019}" in prompt
-        assert "postérieur à 2019" in prompt
+        # R1148 wording nit: the check proves "at or after", never strictly
+        # after — « au plus tôt de » says that, « postérieur à » does not.
+        assert "au plus tôt de 2019" in prompt
+        assert "postérieur à" not in prompt
         # Anti-pendulum: the refuted situation is still rendered — model
         # knowledge, reframed as uncertain, never silenced.
         assert "rédigé autour de 2004" in prompt

@@ -320,11 +320,15 @@ async def build_historical_context(
 def _confront_dating(result: HistoricalContext, stated: List[StatedDate]) -> None:
     """#3479 — degrade a dating the document's own dates refute.
 
-    The EARLIEST year the situation assigns the document, compared with the
-    LATEST year the document cites as past: earlier is impossible — the text
-    cites that reference as already past — and the dating becomes uncertain,
-    named by the quoted reference that refutes it. Deterministic post-check,
-    no second model opinion.
+    The LATEST year the situation names, compared with the LATEST year the
+    document cites as past: the whole situation predating that floor is
+    impossible — the text cites the reference as already past — and the
+    dating becomes uncertain, named by the quoted reference that refutes it.
+    ``max`` on the situation side (R1148): ``min`` fired as soon as the
+    situation MENTIONED an earlier context event ("ten years after the
+    crisis of YYYY") while its dating was right; ``max`` fires only when the
+    dating itself is refuted. Deterministic post-check, no second model
+    opinion.
 
     Anti-pendulum: this does not stop the historian from dating. A consistent
     situation passes through untouched, and so does a situation with no year
@@ -336,7 +340,7 @@ def _confront_dating(result: HistoricalContext, stated: List[StatedDate]) -> Non
     years = stated_years(result.situation)
     if not years:
         return
-    model_year = min(years)
+    model_year = max(years)
     if model_year >= bound.year:
         return
     result.dating_degraded = True

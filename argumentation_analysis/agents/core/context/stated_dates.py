@@ -17,6 +17,15 @@ Two consumers, both in :mod:`~argumentation_analysis.agents.core.context.histori
 
 Not a persona and no capability of its own: the census counts personas, this
 is their instrument.
+
+R1148 review (#3480-series rework): a floor is a YEAR. The first replay on the
+recorded panel states measured the check firing on a document whose dating
+nothing refutes — the bound was a media timestamp inside a URL query
+parameter. A false refutation is worse than a missed one (it prints
+« DÉGRADÉE » on a sound dating, carrying a "deterministic" label), so every
+doubtful token falls on the side of NO floor: URLs, identifiers, decimals and
+digit-grouped quantities are not dated references, and a year announced as
+future is projected in the corpus's languages, not only French.
 """
 
 from __future__ import annotations
@@ -31,12 +40,25 @@ from typing import List, Optional, Sequence
 #: year, so nothing stated is missed by shape.
 _YEAR_RE = re.compile(r"\b(?:1[0-9]{3}|20[0-9]{2})\b")
 
+#: Sigils that mark the token's non-whitespace run as a URL, query string or
+#: identifier rather than prose (R1148's measured false floor lived in
+#: ``...?time=NNNN``). A four-digit token inside such a run is not a year.
+_IDENTIFIER_SIGILS = ("://", "=", "?", "&", "#")
+
 #: Markers that make a stated year a PROJECTION rather than a dated reference
-#: ("d'ici 2088", "à l'horizon 2088"): a projected year does not bound the
-#: writing date below, so it never takes part in the confrontation — but it
-#: still rides the prompt, it IS a date the document states. The list is
-#: deliberately tiny and named: over-listing would silence real references.
-_FUTURE_MARKERS = ("d'ici", "horizon")
+#: ("d'ici 2088", "à l'horizon 2088", "by 2088", "until 2088"): a projected
+#: year does not bound the writing date below, so it never takes part in the
+#: confrontation — but it still rides the prompt, it IS a date the document
+#: states. One short NAMED list per corpus language (the corpus is not
+#: French-only, R1148); over-listing would silence real references, which is
+#: the safe side of the error: a doubtful year loses its floor, never gains
+#: one.
+_FUTURE_MARKERS = (
+    ("fr", "d'ici"),
+    ("fr", "horizon"),
+    ("en", "by"),
+    ("en", "until"),
+)
 
 #: How far before the year a projection marker may sit and still count.
 _MARKER_WINDOW = 24
@@ -56,8 +78,8 @@ class StatedDate:
     """One explicit year the document states, positioned for the render.
 
     ``projected`` is True when a marker says the year is announced as future
-    ("d'ici 2088"): a stated date all the same, but never a floor for the
-    writing date.
+    ("d'ici 2088", "by 2088"): a stated date all the same, but never a floor
+    for the writing date.
     """
 
     year: int
@@ -66,24 +88,72 @@ class StatedDate:
     projected: bool = False
 
 
+def _is_year_token(text: str, start: int, end: int) -> bool:
+    """Is the four-digit token at ``[start, end)`` a YEAR, not a number?
+
+    R1148's three exclusion classes, each named by the review that measured
+    them — a false refutation is worse than a missed one:
+
+    - a decimal on either side (``2019,5``, ``2019.5``, ``1,2019``): a
+      separator touching a digit is a decimal part or an English digit
+      group, never a date;
+    - a digit-grouped quantity (``12 2019``): the token is the tail of a
+      space-grouped number when digits sit just before it across one space;
+    - a URL, query string or identifier: the token's non-whitespace run
+      carries one of :data:`_IDENTIFIER_SIGILS`.
+
+    A sentence-final period (``… en 2019.``) has no digit after it and stays
+    a year.
+    """
+    after = text[end] if end < len(text) else ""
+    before = text[start - 1] if start > 0 else ""
+    # a decimal part or an English digit group on either side
+    if after in ".," and end + 1 < len(text) and text[end + 1].isdigit():
+        return False
+    if before in ".," and start >= 2 and text[start - 2].isdigit():
+        return False
+    # the tail of a space-grouped quantity ("12 2019")
+    if start >= 2 and text[start - 1].isspace() and text[start - 2].isdigit():
+        return False
+    # the token's non-whitespace run, URL/identifier sigils
+    run_start = start
+    while run_start > 0 and not text[run_start - 1].isspace():
+        run_start -= 1
+    run_end = end
+    while run_end < len(text) and not text[run_end].isspace():
+        run_end += 1
+    run = text[run_start:run_end]
+    return not any(sigil in run for sigil in _IDENTIFIER_SIGILS)
+
+
 def _is_projection(text: str, offset: int) -> bool:
     window = text[max(0, offset - _MARKER_WINDOW) : offset]
     window = window.replace("’", "'").lower()
-    return any(marker in window for marker in _FUTURE_MARKERS)
+    # Whole words only: "by" must not fire inside "lobby" — the marker names
+    # a word of the announcement, not a substring of one.
+    return any(
+        re.search(rf"\b{re.escape(marker)}\b", window)
+        for _language, marker in _FUTURE_MARKERS
+    )
 
 
 def extract_stated_dates(text: str) -> List[StatedDate]:
-    """Every explicit year in the text, in order of appearance.
+    """Every explicit YEAR in the text, in order of appearance.
 
     Deterministic by construction: same text, same list, same offsets — the
     opposite of an LLM reading, and the reason the confrontation needs no
     second opinion. Whitespace in the quote is collapsed so a reference
     spanning a line break still reads as one; the wording stays verbatim.
+    A four-digit token that is not a year (URL, decimal, grouped quantity)
+    is not a stated date at all: it neither rides the prompt nor bounds the
+    writing date (R1148).
     """
     if not text:
         return []
     stated: List[StatedDate] = []
     for match in _YEAR_RE.finditer(text):
+        if not _is_year_token(text, match.start(), match.end()):
+            continue
         offset = match.start()
         window_start = max(0, offset - _QUOTE_CONTEXT)
         window_end = min(len(text), match.end() + _QUOTE_CONTEXT)
@@ -113,9 +183,15 @@ def past_cited_bound(stated: Sequence[StatedDate]) -> Optional[StatedDate]:
 
 
 def stated_years(text: str) -> List[int]:
-    """Every explicit year in a string, in order of appearance.
+    """Every explicit YEAR in a string, in order of appearance.
 
     Used on the historian's own answer: the situation's years are the dating
-    the confrontation examines.
+    the confrontation examines. The same not-a-year filters apply — a
+    doubtful year on the situation side may only keep a sound dating sound,
+    never manufacture a refutation.
     """
-    return [int(match.group(0)) for match in _YEAR_RE.finditer(text or "")]
+    return [
+        int(match.group(0))
+        for match in _YEAR_RE.finditer(text or "")
+        if _is_year_token(text or "", match.start(), match.end())
+    ]
