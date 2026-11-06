@@ -238,6 +238,17 @@ def build_standard_workflow() -> WorkflowDefinition:
             depends_on=["nl_to_logic"],
             optional=True,
         )
+        # #3432 (ask 6b) — the cross-passage consistency check, standard twin
+        # of the spectacular phase: the first reading's slots feed the wired
+        # propositional reasoner, which decides the contradiction between
+        # distant passages. Optional on both sides.
+        .add_phase(
+            "cross_passage_consistency",
+            capability="cross_passage_consistency",
+            depends_on=["first_reading"],
+            optional=True,
+            timeout_seconds=300,
+        )
         # Belief-set production (#506) — the golden min_belief_sets threshold
         # has tested this chain since a9dce5e26, but standard never wired the
         # only two capabilities whose writers call add_belief_set; the red was
@@ -443,6 +454,16 @@ def build_full_workflow() -> WorkflowDefinition:
             capability="fol_reasoning",
             depends_on=["nl_to_logic"],
             optional=True,
+        )
+        # #3432 (ask 6b) — the cross-passage consistency check, full twin of
+        # the spectacular/standard phases: the first reading's slots feed the
+        # wired propositional reasoner. Optional on both sides.
+        .add_phase(
+            "cross_passage_consistency",
+            capability="cross_passage_consistency",
+            depends_on=["first_reading"],
+            optional=True,
+            timeout_seconds=300,
         )
         .add_phase(
             "dung_extensions",
@@ -930,6 +951,20 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             # slowest formal phase; 180s was the cause of the DAG fol collapse
             # (failed_phases=['fol'] on A/C). Raised so it completes.
             timeout_seconds=600,
+        )
+        # #3432 (ask 6b) — the cross-passage consistency check: the thesis's
+        # own passages (the first reading's slots) feed the wired propositional
+        # reasoner, which decides whether two distant passages contradict one
+        # another. Depends on the first reading alone (its KB is the moves,
+        # not the extraction window); the paired L2 formal phase so the lens
+        # runs where the other lenses run. Optional on both sides: a missing
+        # reading leaves the check in its named absence.
+        .add_phase(
+            "cross_passage_consistency",
+            capability="cross_passage_consistency",
+            depends_on=["first_reading"],
+            optional=True,
+            timeout_seconds=300,
         )
         .add_phase(
             "modal",

@@ -49,7 +49,9 @@ class TestSpectacularWorkflowDAG:
         # THIS workflow, so the producer lives here too. 42 → 43.
         # #3387 rework adds semantic_indexing (the index queried by the
         # reading, whose spans the per-argument selection spends). 43 → 44.
-        assert len(wf.phases) == 44
+        # #3432 (ask 6b) adds cross_passage_consistency: the thesis's own
+        # passages, decided by the wired propositional reasoner. 44 → 45.
+        assert len(wf.phases) == 45
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -58,6 +60,9 @@ class TestSpectacularWorkflowDAG:
             "extract",
             # #3395 (R1142): the panel's workflow carries the first reading.
             "first_reading",
+            # #3432 (ask 6b): the distant-contradiction check over the first
+            # reading's slots — the reasoner decides, Act II renders.
+            "cross_passage_consistency",
             # #3387 rework: the semantic index queries the reading over the
             # document's own text; the per-argument fallacy selection below
             # spends its spans.

@@ -236,6 +236,7 @@ __all__ = [
     "_invoke_fact_extraction",
     "_invoke_propositional_logic",
     "_invoke_fol_reasoning",
+    "_invoke_cross_passage_consistency",
     "_invoke_nl_to_logic",
     "_invoke_modal_logic",
     "_invoke_dung_extensions",
@@ -14290,6 +14291,37 @@ async def _invoke_first_reading(
             log_error("FirstReading", detail)
         logger.warning("First reading failed loudly: %s", detail)
     return payload
+
+
+async def _invoke_cross_passage_consistency(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Produce ``state.cross_passage_consistency`` (#3432 ask 6b).
+
+    The KB is built from the FIRST READING's slots (thesis, mechanism,
+    pillars), never from the opening's extracted units; the propositional
+    reasoner decides whether two distant passages contradict one another,
+    and the render reports the two quotes with their positions — or states
+    that the check was not reached (#1941).
+    """
+    from argumentation_analysis.agents.core.reading import (
+        build_cross_passage_consistency,
+    )
+
+    state = context.get("_state_object") or context.get("unified_state")
+    if state is None:
+        return {
+            "status": "unreachable",
+            "reason": "no_shared_state",
+            "findings": [],
+            "basis": "cross_passage_consistency",
+        }
+
+    llm, reason = _build_persona_callable("cross_passage_consistency")
+    if llm is None:
+        logger.info("CrossPassageConsistency: %s — check not reached.", reason)
+
+    return await build_cross_passage_consistency(state, llm)
 
 
 async def _invoke_strategic_read(

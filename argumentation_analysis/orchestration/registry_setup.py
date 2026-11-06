@@ -62,6 +62,7 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_historical_context,
     _invoke_strategic_read,
     _invoke_first_reading,
+    _invoke_cross_passage_consistency,
     _invoke_act3_conclusion,
     _invoke_external_fol_solver,
     _invoke_external_modal_solver,
@@ -595,6 +596,28 @@ def setup_registry(
         registered.append("first_reading_service")
     except Exception as e:
         skipped.append(("first_reading_service", str(e)))
+
+    # --- Cross-passage consistency (#3432 ask 6b, Epic #3374) ---
+    try:
+        registry.register_service(
+            name="cross_passage_consistency_service",
+            service_class=type("cross_passage_consistency_service", (), {}),
+            capabilities=["cross_passage_consistency"],
+            metadata={
+                "description": (
+                    "Contrôle de cohérence entre passages éloignés : la KB "
+                    "vient des slots de la première lecture (thèse, mécanisme, "
+                    "piliers), jamais des unités de l'ouverture ; le raisonneur "
+                    "propositionnel tranche (UNSAT), pas un prompt. L'Acte II "
+                    "rend les deux citations et leurs positions, ou l'absence "
+                    "honnête (#1941)."
+                )
+            },
+            invoke=_invoke_cross_passage_consistency,
+        )
+        registered.append("cross_passage_consistency_service")
+    except Exception as e:
+        skipped.append(("cross_passage_consistency_service", str(e)))
 
     # --- Historian persona (#3377, Epic #3374) ---
     try:
