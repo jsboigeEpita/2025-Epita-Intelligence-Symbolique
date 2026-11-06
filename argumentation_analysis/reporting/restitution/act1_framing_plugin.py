@@ -405,9 +405,26 @@ def _format_historical_block(context: Dict[str, Any]) -> str:
     The block is titled by the caller, so the label lives in one place; here we
     only render what the producer wrote, confidence included. An absent read
     says it is absent: the act may not fill the gap with its own history.
+    #3479 — when the producer's deterministic check degraded the dating (the
+    document cites a later dated reference as already past), the refutation is
+    printed FIRST, quoting the document's reference with its position: the
+    writer must not print the refuted year as the document's date. The
+    situation stays — it is model knowledge — reframed as uncertain, not
+    silenced.
     """
     context = context or {}
     lines: List[str] = []
+    dating = context.get("dating")
+    if isinstance(dating, dict) and dating.get("status") == "uncertain":
+        refuted = dating.get("refuted_by") or {}
+        lines.append(
+            f"  Datation DÉGRADÉE (contrôle déterministe) : le document cite "
+            f"« {refuted.get('quote', '')} » (position {refuted.get('offset')}) "
+            f"comme déjà passé — il est donc postérieur à {refuted.get('year')}. "
+            f"La situation ci-dessous situait le texte à partir de "
+            f"{dating.get('model_year')} : datation incertaine, ne date pas le "
+            "texte d'après elle."
+        )
     situation = _truncate(context.get("situation", ""), _STRATEGIC_READ_CAP)
     if situation:
         lines.append(f"  Situation : {situation}")

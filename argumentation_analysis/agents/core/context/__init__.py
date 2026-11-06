@@ -8,7 +8,11 @@ production phase:
   (capability ``historical_context``);
 - :mod:`~argumentation_analysis.agents.core.context.strategist` — the game being
   played: players, options, preference profile, and the manipulability the
-  governance engine actually COMPUTES (capability ``strategic_read``).
+  governance engine actually COMPUTES (capability ``strategic_read``);
+- :mod:`~argumentation_analysis.agents.core.context.stated_dates` — the explicit
+  dates a document states, read deterministically with quote and offset
+  (#3479): not a persona and no capability of its own — the historian's
+  instrument, so its dating is confronted with the text's own references.
 
 Both write MODEL KNOWLEDGE: what the model brings to the document, never what
 the document says. The measured gap (#2841 M1) is exactly this one — the
