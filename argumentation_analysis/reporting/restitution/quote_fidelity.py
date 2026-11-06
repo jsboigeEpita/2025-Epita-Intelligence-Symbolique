@@ -90,6 +90,25 @@ _FOLD = str.maketrans(
 
 _WS_RE = re.compile(r"\s+")
 
+# #3465 — markdown markup is FORM, not content. The third-family judge
+# quotes the RENDERED text of a markdown answer (emphasis markers dropped,
+# lines re-flowed) and 6 of its 7 quotes were dropped for formatting alone.
+# Only the markup folds, on BOTH sides: no fuzzy matching, no edit
+# distance — a changed word still misses, and a span that only exists by
+# joining two separate emphasised fragments still misses (the prose
+# between the fragments stays).
+#: Emphasis/code delimiters and guillemets-as-prose-quotes, dropped anywhere.
+#: Mid-word characters survive: an apostrophe (l'impôt), a hyphen, a digit.
+#: An isolated ``*`` (a multiplication sign) folds too — markup is form.
+_MD_CHARS_RE = re.compile(r"[*_`«»]")
+#: Structural markers, only at the start of a line (possibly indented):
+#: ATX headings (``## Titre``), blockquotes (``> citation``), list bullets
+#: (``- item``, ``* item``, ``+ item``, ``1. item``). A ``>`` mid-sentence
+#: (a comparison, ``n > 3``) is content and stays.
+_MD_LINE_RE = re.compile(
+    r"(?m)^[ \t]*(?:#{1,6}[ \t]+|>[ \t]?|[-*+][ \t]+|\d{1,3}\.[ \t]+)"
+)
+
 #: Labels an audit can count. ``verbatim`` and ``translation`` and
 #: ``unverified`` are the issue's three; ``untranslated`` is a verbatim span
 #: of a foreign document printed with no ``(trad. : …)`` rendering beside it —
@@ -101,15 +120,20 @@ UNVERIFIED = "unverified"
 
 
 def normalise_for_citation(text: Any) -> str:
-    """The comparison form of ``text``: case, whitespace and quotes folded.
+    """The comparison form of ``text``: case, whitespace, quotes folded —
+    and markdown markup (#3465).
 
     Case folding is deliberate (#3389 ask 1): capitalisation is typography,
     not wording. Whitespace runs collapse so a line-wrapped quote still
     matches; typographic apostrophes and quotation marks fold to ASCII.
+    Markdown markup is the same class of form: a judge that quotes the
+    rendered text has still quoted the text. Markup folds, CONTENT never
+    does — no fuzzy matching, and the length floor of the caller stays.
     """
     if not text:
         return ""
-    return _WS_RE.sub(" ", str(text).translate(_FOLD)).strip().casefold()
+    markup_folded = _MD_LINE_RE.sub("", _MD_CHARS_RE.sub("", str(text)))
+    return _WS_RE.sub(" ", markup_folded.translate(_FOLD)).strip().casefold()
 
 
 def _fragments(span: str) -> List[str]:
