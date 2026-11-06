@@ -140,9 +140,7 @@ def _document_statement_block(lines: List[str]) -> str:
         return ""
     return (
         "\nTHE DOCUMENT ITSELF SAYS, about this claim (verbatim, from "
-        "outside the unit above):\n"
-        + "\n".join(f"- « {q} »" for q in lines)
-        + "\n"
+        "outside the unit above):\n" + "\n".join(f"- « {q} »" for q in lines) + "\n"
     )
 
 
@@ -209,9 +207,7 @@ def _document_frame_block(parts: Dict[str, str]) -> str:
         return ""
     return (
         "\nTHE DOCUMENT AROUND THIS UNIT (verbatim, the sentences that "
-        "frame it in the document):\n"
-        + "\n".join(lines)
-        + "\n"
+        "frame it in the document):\n" + "\n".join(lines) + "\n"
     )
 
 
@@ -239,6 +235,55 @@ def _frame_instruction() -> str:
         "fallacy on a modal claim stays a fallacy, stated with its "
         "modality; a frame that settles nothing changes nothing.\n"
     )
+
+
+def _pool_widenet_answers(
+    offsets: List[int],
+    chunk_texts: List[str],
+    chunk_answers: List[Optional[List[Tuple[str, str]]]],
+) -> Tuple[List[str], Dict[str, str], Dict[str, int], List[Tuple[int, int]], int]:
+    """#3446 item 3 — plan-order pooling over per-chunk answers, PURE.
+
+    One definition of the pool for both exits of phase 1: distinct PKs in
+    first-appearance plan order, the first-quote-wins evidence table, the
+    chunk index each PK first appeared in (0-based, plan order — what
+    ``dropped_by_cap`` names its drops from), the spans of the ANSWERED
+    chunks, and the raw candidate count. No state is touched: the normal
+    path applies the quotes, the cancelled path does not — a pass that
+    never returned installs no evidence.
+    """
+    pks: List[str] = []
+    quotes: Dict[str, str] = {}
+    first_chunk: Dict[str, int] = {}
+    spans: List[Tuple[int, int]] = []
+    raw_count = 0
+    for index, (offset, text, mapped) in enumerate(
+        zip(offsets, chunk_texts, chunk_answers)
+    ):
+        if mapped is None:
+            continue
+        spans.append((offset, offset + len(text)))
+        for pk, quote in mapped:
+            if pk not in first_chunk:
+                first_chunk[pk] = index
+                pks.append(pk)
+                # #3376 — first quote wins: a later candidate mapping to
+                # the same PK must not overwrite where the first one was
+                # actually seen.
+                if quote:
+                    quotes[pk] = quote
+                raw_count += 1
+    return pks, quotes, first_chunk, spans, raw_count
+
+
+def _union_chars(spans: List[Tuple[int, int]]) -> int:
+    """#2850 lot 10 — the union of the answered spans, never a sum."""
+    chars = 0
+    span_end = -1
+    for lo, hi in sorted(spans):
+        chars += max(0, hi - max(lo, span_end))
+        span_end = max(span_end, hi)
+    return chars
 
 
 class FallacyWorkflowPlugin:
@@ -915,15 +960,17 @@ class FallacyWorkflowPlugin:
         the POOL, and the 240-call descent budget (FB-35) still bounds the
         funnel a pooled candidate list can spawn. At or under one capacity
         the call is today's, byte-identical.
+
+        #3446 item 3: the phase-1 record exists on BOTH exits. The normal
+        exit names the pool the cap was applied to (``pool_before_cap``)
+        and every PK the cap dropped, with the chunk each first appeared
+        in (``dropped_by_cap``); a cancellation mid-flight (the 300 s
+        descent cap #1087) records over the chunks that ANSWERED, marked
+        ``expired``, and the cancellation travels untouched.
         """
         # #3376 — a fresh analysis holds no evidence from a previous one.
         self._wide_net_quotes = {}
-        _offsets = chunked_reading_offsets(
-            len(argument_text), WHOLE_TEXT_CALL_CAPACITY
-        )
-        candidate_pks: List[str] = []
-        _raw_count = 0
-        _answered_spans: List[Tuple[int, int]] = []
+        _offsets = chunked_reading_offsets(len(argument_text), WHOLE_TEXT_CALL_CAPACITY)
         # #3446 — the k chunk calls fly CONCURRENTLY under one bound; the
         # pool below walks their answers in PLAN order, so first-quote-wins
         # keeps meaning "the first CHUNK's quote", whatever order the calls
@@ -932,42 +979,81 @@ class FallacyWorkflowPlugin:
             argument_text[_offset : _offset + WHOLE_TEXT_CALL_CAPACITY]
             for _offset in _offsets
         ]
-        _chunk_answers = await gather_k_calls(
-            [self._wide_net_one_chunk(text) for text in _chunk_texts]
+        # #3446 item 3 — each chunk stores its answer the MOMENT it lands,
+        # not only in gather's return: the 300 s descent cap (#1087) cancels
+        # the whole coroutine while calls are still in flight, and the
+        # record must still know which chunks ANSWERED. On the normal path
+        # the stored list is exactly gather's return, plan order.
+        _chunk_answers: List[Optional[List[Tuple[str, str]]]] = [None] * len(
+            _chunk_texts
         )
-        for _offset, wide_net_text, _mapped in zip(
-            _offsets, _chunk_texts, _chunk_answers
-        ):
-            if _mapped is None:
-                continue
-            _answered_spans.append((_offset, _offset + len(wide_net_text)))
-            for pk, quote in _mapped:
-                if pk not in candidate_pks:
-                    candidate_pks.append(pk)
-                    # #3376 — the evidence, keyed by the candidate it belongs
-                    # to. First quote wins: a later candidate mapping to the
-                    # same PK must not overwrite where the first one was
-                    # actually seen.
-                    if quote:
-                        self._wide_net_quotes[pk] = quote
-                    _raw_count += 1
 
+        async def _answer_and_store(
+            _index: int, _text: str
+        ) -> Optional[List[Tuple[str, str]]]:
+            answer = await self._wide_net_one_chunk(_text)
+            _chunk_answers[_index] = answer
+            return answer
+
+        try:
+            await gather_k_calls(
+                [
+                    _answer_and_store(_index, _text)
+                    for _index, _text in enumerate(_chunk_texts)
+                ]
+            )
+        except asyncio.CancelledError:
+            # #3446 item 3 — the record exists ALSO when the descent
+            # expires: pool the chunks that ANSWERED before the cap and
+            # record, then let the cancellation travel untouched (the
+            # caller's per-argument fallback is what answers next). The
+            # gesture is the record alone — a pass that never returned
+            # installs no quote evidence.
+            (
+                _expired_pks,
+                _,
+                _expired_first,
+                _expired_spans,
+                _,
+            ) = _pool_widenet_answers(_offsets, _chunk_texts, _chunk_answers)
+            self._record_widenet_read(
+                argument_text,
+                len(_offsets),
+                _union_chars(_expired_spans),
+                pool_before_cap=len(_expired_pks),
+                dropped_by_cap={
+                    pk: _expired_first[pk] for pk in _expired_pks[self.MAX_CANDIDATES :]
+                },
+                expired=True,
+            )
+            raise
+        (
+            candidate_pks,
+            _quotes,
+            _pk_first_chunk,
+            _answered_spans,
+            _raw_count,
+        ) = _pool_widenet_answers(_offsets, _chunk_texts, _chunk_answers)
+        self._wide_net_quotes = _quotes
+        # #3446 item 3 — the pool BEFORE the cap: what the record compares
+        # the cap against, and what its drop is named from. The ceiling
+        # itself does not move; the record says what it cut.
+        _pool_before_cap = len(candidate_pks)
+        _dropped_by_cap = {
+            pk: _pk_first_chunk[pk] for pk in candidate_pks[self.MAX_CANDIDATES :]
+        }
         candidate_pks = candidate_pks[: self.MAX_CANDIDATES]
         # #2850 lot 10 — the record says what the k calls read: chunks asked,
         # and the union of the spans whose calls ANSWERED (a chunk that timed
         # out or failed to parse read nothing — counting it would state a
         # coverage stronger than its measurement, #3099/#1019).
-        _chars_read = 0
-        _span_end = -1
-        for _lo, _hi in sorted(_answered_spans):
-            _chars_read += max(0, _hi - max(_lo, _span_end))
-            _span_end = max(_span_end, _hi)
-        _extra = {"chunks": len(_offsets), "chars_read": _chars_read}
-        self._record_window(
+        _chars_read = _union_chars(_answered_spans)
+        self._record_widenet_read(
             argument_text,
-            min(WHOLE_TEXT_CALL_CAPACITY, len(argument_text)),
-            "fallacy_widenet",
-            extra=_extra if len(_offsets) > 1 else None,
+            len(_offsets),
+            _chars_read,
+            pool_before_cap=_pool_before_cap,
+            dropped_by_cap=_dropped_by_cap,
         )
         self.logger.info(
             f"Phase 1 wide-net (FB-19 deep, lot 10): {_raw_count} candidates "
@@ -975,6 +1061,43 @@ class FallacyWorkflowPlugin:
             f"{_chars_read} chars read: {candidate_pks}"
         )
         return candidate_pks
+
+    def _record_widenet_read(
+        self,
+        argument_text: str,
+        n_chunks: int,
+        chars_read: int,
+        pool_before_cap: int,
+        dropped_by_cap: Dict[str, int],
+        expired: bool = False,
+    ) -> None:
+        """#3446 item 3 — the wide-net record, cap and expiry named.
+
+        One shape for both exits of phase 1. ``pool_before_cap`` is the
+        number of distinct PKs pooled across the ANSWERED chunks — what
+        the cap was applied to; ``dropped_by_cap`` names every PK beyond
+        ``MAX_CANDIDATES`` with the chunk index it first appeared in (plan
+        order, 0-based). ``expired`` marks a phase cancelled mid-flight
+        (#1087): its counts run over the answered chunks only. A
+        single-chunk phase under the cap keeps today's exact record — no
+        extra keys where the cap never had meaning.
+        """
+        _extra: Optional[Dict[str, Any]] = None
+        if n_chunks > 1 or dropped_by_cap or expired:
+            _extra = {"pool_before_cap": pool_before_cap}
+            if n_chunks > 1 or expired:
+                _extra["chunks"] = n_chunks
+                _extra["chars_read"] = chars_read
+            if expired:
+                _extra["expired"] = True
+            if dropped_by_cap:
+                _extra["dropped_by_cap"] = dropped_by_cap
+        self._record_window(
+            argument_text,
+            min(WHOLE_TEXT_CALL_CAPACITY, len(argument_text)),
+            "fallacy_widenet",
+            extra=_extra,
+        )
 
     async def _wide_net_one_chunk(
         self, wide_net_text: str
@@ -1077,9 +1200,7 @@ class FallacyWorkflowPlugin:
                 pk = self._map_fallacy_to_root_pk(fallacy_name, roots_index)
             if pk:
                 quote = c.get("quote", "")
-                mapped.append(
-                    (pk, quote.strip() if isinstance(quote, str) else "")
-                )
+                mapped.append((pk, quote.strip() if isinstance(quote, str) else ""))
         return mapped
 
     async def _execute_tool_calls(
@@ -2657,17 +2778,17 @@ class FallacyWorkflowPlugin:
                     return out["json"]
         if outcomes and all(out.get("kind") == "error" for out in outcomes):
             return json.dumps(
-                {"error": str(outcomes[0].get("message") or "one-shot failed"),
-                 "fallacies": []}
+                {
+                    "error": str(outcomes[0].get("message") or "one-shot failed"),
+                    "fallacies": [],
+                }
             )
 
         # No usable fallacy found — return empty rather than garbage
         self.logger.warning(
             "One-shot: could not extract usable fallacy name from response"
         )
-        return json.dumps(
-            {"fallacies": [], "exploration_method": "one_shot_no_match"}
-        )
+        return json.dumps({"fallacies": [], "exploration_method": "one_shot_no_match"})
 
     async def _one_shot_single_call(
         self,
@@ -2794,7 +2915,9 @@ class FallacyWorkflowPlugin:
                                             "one_shot_legitimate_in_register"
                                         ),
                                         "register_test": REGISTER_TEST_PROPORTIONATE,
-                                        "register_reason": parsed.get("explanation", ""),
+                                        "register_reason": parsed.get(
+                                            "explanation", ""
+                                        ),
                                         "fallacy_name_considered": fallacy_name,
                                     },
                                     ensure_ascii=False,
