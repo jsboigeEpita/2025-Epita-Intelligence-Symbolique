@@ -130,6 +130,16 @@ REQUIRED_SIDES: Dict[str, Tuple[str, ...]] = {
 SEVERITY_SEVERE = "severe"
 SEVERITY_MODERATE = "moderate"
 
+# #3458 — the pipeline arm's health, read from each document's state dump.
+# The three act keys the rule reads; all three live at the state's root, the
+# same level the fiche renderer reads them at.
+ACT_KEYS: Tuple[str, ...] = ("act1_framing", "act2_narrative", "act3_conclusion")
+# Refuse the pass when this many documents carry a degraded pipeline arm.
+# Calibration on the panel runs: c2 = 1 degraded document passes (judged,
+# flagged), c3 = 9 refuses — the boundary is 2 of 10, a named constant so
+# the refusal never hides behind a bare literal at the call site.
+DEGRADED_ARM_REFUSAL_THRESHOLD = 2
+
 
 class JudgeUnparsed(RuntimeError):
     """The judge's answer carried no readable JSON — counted, never guessed."""
@@ -477,6 +487,34 @@ def pipeline_text_from_state(state: Dict[str, Any], signature: Dict[str, Any]) -
         str(signature.get("opaque_id") or ""),
         signature.get("outcome") or {},
     )
+
+
+def arm_health(state: Dict[str, Any]) -> Dict[str, Any]:
+    """The pipeline arm's health for ONE document, read from its state dump.
+
+    Degraded = an empty act key AND a non-empty ``restitution_acts_degraded``
+    — never either half alone (#3458):
+
+    - a document with no acts BY DESIGN carries neither (empty acts, no
+      report): it is not degraded, it is a document the campaign never meant
+      to render in three acts;
+    - the c2 panel run carries the report on documents whose acts RENDERED
+      (the report records per-act retry events, not only hard gaps): the
+      report alone must not flag them.
+
+    The conjunctive rule is what separates "the render broke mid-way" (a
+    break the judge would grade as the pipeline's own doing) from both
+    honest shapes above. The state is unwrapped the way
+    ``pipeline_text_from_state`` unwraps it.
+    """
+    st = state.get("state") or state
+    empty_acts = [key for key in ACT_KEYS if not str(st.get(key) or "").strip()]
+    reported = bool(st.get("restitution_acts_degraded"))
+    return {
+        "pipeline_degraded": bool(empty_acts) and reported,
+        "empty_acts": empty_acts,
+        "acts_degraded_reported": reported,
+    }
 
 
 def document_texts_from_definitions(
@@ -960,6 +998,11 @@ def _append_body(
             state_cell += " **(tronquée à la limite de sortie)**"
         elif row.get("state") == "UNPARSED" and row.get("reported_state"):
             state_cell += f" (état hors grille : `{row['reported_state']}`)"
+        if row.get("pipeline_degraded"):
+            # #3458 — the arm's health, on the row itself: a state read
+            # without this flag would mistake a broken render for the
+            # pipeline's own doing.
+            state_cell += " **(bras pipeline dégradé)**"
         if row.get("status_code") not in (200, None):
             # A document whose call failed (a prompt over the judge's context
             # answers 400, a network fault 0) is UNPARSED — and the reader
@@ -1014,6 +1057,15 @@ def _append_body(
             + ", ".join(f"`{doc_id}`" for doc_id in fragile)
             + " ; leur état est celui de la majorité, et un changement d'état "
             "sur eux ne compte pas pour la condition 2"
+        )
+    degraded = [row["opaque_id"] for row in rows if row.get("pipeline_degraded")]
+    if degraded:
+        lines.append(
+            f"- **bras pipeline dégradé** : **{len(degraded)}** document(s) — "
+            + ", ".join(f"`{doc_id}`" for doc_id in degraded)
+            + " ; comptés dans la répartition ci-dessus, mais jamais lus "
+            "comme une victoire ou une défaite du pipeline sans ce drapeau "
+            "(#3458 : un acte vide ET un signalement de dégradation)"
         )
     differing = [row["opaque_id"] for row in rows if _label_differs(row)]
     if differing:
@@ -1486,6 +1538,11 @@ def consensus_row(
         # Mechanical drops belong to each pass; they are counted there.
         "dropped": [],
         "costs": first.get("costs") or {},
+        # #3458 — the arm's health crosses into the consensus with the row:
+        # a degraded document is never read as a pipeline loss/win without
+        # its flag, whichever pass produced the rows.
+        "pipeline_degraded": bool(first.get("pipeline_degraded")),
+        "pipeline_empty_acts": list(first.get("pipeline_empty_acts") or []),
         "judge_cost": (
             round(sum(judge_costs), 6)
             if all(cost is not None for cost in judge_costs)
@@ -1651,6 +1708,14 @@ async def run(
         help="list the panel, prompt sizes and estimated cost — no call at all",
     )
     parser.add_argument(
+        "--allow-degraded-arm",
+        action="store_true",
+        help="#3458: judge a panel whose pipeline arm is degraded at or "
+        "beyond the refusal threshold anyway — the override's use is "
+        "PRINTED, and every degraded document stays flagged in its record "
+        "and the table",
+    )
+    parser.add_argument(
         "--rerender",
         action="store_true",
         help="#3417: re-derive the states of the rows in --out-dir and rewrite "
@@ -1728,16 +1793,18 @@ async def run(
             missing.append(f"{doc_id} (no zero-shot answer)")
             continue
         signature = load_json(sig_path) if sig_path.exists() else {}
+        state = load_json(state_path)
         documents.append(
             {
                 "opaque_id": doc_id,
-                "pipeline_text": pipeline_text_from_state(
-                    load_json(state_path), signature
-                ),
+                "pipeline_text": pipeline_text_from_state(state, signature),
                 "zeroshot_text": zeroshot.get("answer") or "",
                 "document_text": document_texts[doc_id],
                 "zeroshot": zeroshot,
                 "costs": arm_costs(signature, zeroshot, pipeline_model),
+                # #3458 — the judge reads the arm's health itself, per
+                # document, from the same state dump the fiche reads.
+                "health": arm_health(state),
             }
         )
     if missing:
@@ -1794,6 +1861,36 @@ async def run(
         print("dry-run: no call made", flush=True)
         return 0
 
+    # #3458 — the arm's health gate: a systemically broken pipeline arm is
+    # refused BEFORE the first paid call. The judge would grade a broken
+    # render as the pipeline's own doing, and no consensus of judges repairs
+    # that — the only honest move is to refuse and name the documents.
+    degraded_ids = [
+        doc["opaque_id"] for doc in documents if doc["health"]["pipeline_degraded"]
+    ]
+    if len(degraded_ids) >= DEGRADED_ARM_REFUSAL_THRESHOLD:
+        if args.allow_degraded_arm:
+            print(
+                f"--allow-degraded-arm: judging {len(degraded_ids)} degraded "
+                f"document(s) at or beyond the refusal threshold "
+                f"({DEGRADED_ARM_REFUSAL_THRESHOLD}) anyway — every one stays "
+                "flagged in its record and the table (#3458)",
+                flush=True,
+            )
+        else:
+            print(
+                f"REFUSED: {len(degraded_ids)}/{len(documents)} document(s) "
+                "carry a degraded pipeline arm (an empty act AND a non-empty "
+                "restitution_acts_degraded): "
+                + ", ".join(f"`{doc_id}`" for doc_id in degraded_ids)
+                + f" — at or beyond DEGRADED_ARM_REFUSAL_THRESHOLD="
+                f"{DEGRADED_ARM_REFUSAL_THRESHOLD}. The judge would grade a "
+                "broken render, not the pipeline; refusing before the first "
+                "paid call (#3458). Pass --allow-degraded-arm to judge anyway.",
+                flush=True,
+            )
+            return 3
+
     endpoint = {
         **resolve_judge_endpoint(args.judge_model),
         "temperature": args.judge_temperature,
@@ -1818,6 +1915,10 @@ async def run(
             record.get("answer") or "",
         )
         row["costs"] = doc["costs"]
+        # #3458 — the arm's health rides in the record: a degraded doc's
+        # state is never read as a pipeline loss/win without this flag.
+        row["pipeline_degraded"] = doc["health"]["pipeline_degraded"]
+        row["pipeline_empty_acts"] = doc["health"]["empty_acts"]
         row["elapsed_seconds"] = elapsed
         row["status_code"] = record.get("status_code")
         row["error_body_head"] = record.get("error_body_head")
@@ -1866,6 +1967,7 @@ async def run(
             + (f" --panel-file {args.panel_file}" if args.panel_file else "")
             + f" --seed {args.seed}"
             + f" --judge-temperature {_temperature_arg(args.judge_temperature)}"
+            + (" --allow-degraded-arm" if args.allow_degraded_arm else "")
         ),
     }
     # #3417 — the meta rides beside the rows, so a re-render names this pass's
