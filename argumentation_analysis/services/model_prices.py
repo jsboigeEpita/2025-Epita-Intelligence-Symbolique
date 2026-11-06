@@ -83,6 +83,18 @@ PRICE_TABLE: List[PriceRow] = [
         prompt_threshold_tokens=100_000,
     ),
     PriceRow(
+        model_id="gemini-4-argon",
+        input_per_mtok=2.00,
+        output_per_mtok=10.00,
+        source=(
+            "OpenRouter model page — openrouter.ai/google/gemini-4-argon "
+            "(2 $/M input, 10 $/M output). NOT verified against a bill; the "
+            "12 third-family passes (2 948 316 in / 165 991 out, #3465 ask 4) "
+            "priced 7.55 $ by this row are the first measured use."
+        ),
+        read_on="2026-11-06",
+    ),
+    PriceRow(
         model_id="claude-sonnet-5-5",
         input_per_mtok=2.00,
         output_per_mtok=10.00,
