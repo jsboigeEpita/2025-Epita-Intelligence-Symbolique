@@ -130,6 +130,34 @@ _PROMPT_MAX_MOVES = MAX_MOVES
 #: volume of local moves: ``MAX_MOVES`` stays where it was.
 MAX_PILLARS = 3
 
+#: #3480 rework (R1148) — step 2's bound sentence, at the floor. The paid
+#: probe (0.086 $) measured the model obeying THIS sentence over the hard
+#: rules: with "the two or three passages" still in step 2, it named three
+#: pillars on every long document whatever ``At most N`` said. The wrap is
+#: part of the value so the rendered floor prompt keeps the template's
+#: former bytes exactly; above the floor :func:`pillar_prose` names the
+#: computed budget instead.
+_PILLAR_PROSE_FLOOR = "the two or three passages the\n   thesis would fall without"
+
+
+def pillar_prose(max_pillars: int) -> str:
+    """The sentence step 2 states the pillar bound in (#3480 rework).
+
+    One producer: the caller fills this from its own
+    ``pillar_budget(len(excerpt))`` — the number is never restated here. At
+    or below :data:`MAX_PILLARS` the sentence is the flat-three prompt's own
+    bytes, so a short document's prompt stays byte-identical; above it the
+    sentence NAMES the budget, because a bound the model is not told in the
+    sentence it reads does not bind (the measured defect).
+    """
+    if max_pillars <= MAX_PILLARS:
+        return _PILLAR_PROSE_FLOOR
+    return (
+        "the passages the thesis would fall without, at most\n   "
+        f"{max_pillars} on a document of this length"
+    )
+
+
 #: #3415 ask 4 — the two floors a document passage must clear before it can
 #: anchor a slot whose quote failed the citation rule. Both are DECLARED here,
 #: not tuned per call site, so the record can state what it accepted: a run of
@@ -234,8 +262,7 @@ specialist sees it. Your job, in this order:
    are often stated late, sometimes once, nowhere near the opening; a reader
    who stopped at the first page would miss them. Each of the two comes with
    its own verbatim quote.
-2. Name the PILLARS the thesis rests on: the two or three passages the
-   thesis would fall without — the evidence it cites, the premise it leans
+2. Name the PILLARS the thesis rests on: {pillar_bound} — the evidence it cites, the premise it leans
    on, the ruling it claims to follow. They are usually FAR from the thesis
    passage, sometimes in another part of the document; that distance is
    exactly why a reader who only looks beside the thesis misses them. Each
@@ -643,10 +670,18 @@ def _parse_answer(content: str, max_pillars: int) -> Tuple[Dict[str, Any], int]:
 
 
 def build_first_reading_prompt(excerpt: str) -> str:
-    """The one prompt of the first reading, with its length-aware pillar bound."""
+    """The one prompt of the first reading, with its length-aware pillar bound.
+
+    #3480 rework (R1148) — the bound is computed ONCE and reaches the prompt
+    twice, as the number of the hard rule and as the sentence of step 2
+    (:func:`pillar_prose`): the model obeyed the sentence, never the rule,
+    so both must name the same figure from this single call.
+    """
+    bound = pillar_budget(len(excerpt))
     return FIRST_READING_PROMPT.format(
         max_moves=_PROMPT_MAX_MOVES,
-        max_pillars=pillar_budget(len(excerpt)),
+        max_pillars=bound,
+        pillar_bound=pillar_prose(bound),
         excerpt=excerpt,
     )
 

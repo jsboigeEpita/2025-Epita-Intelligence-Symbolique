@@ -123,6 +123,40 @@ async def test_the_model_is_told_the_length_dependent_budget() -> None:
     assert f"At most {budget} pillars" in model.prompts[0]
 
 
+async def test_step2_prose_names_the_computed_budget_not_two_or_three() -> None:
+    """R1148 (0.086 $ probe): the old "two or three" sentence won over the rule.
+
+    The bound was computed right and stated in the hard rules, but step 2
+    still said "the two or three passages" — and the model obeyed the
+    sentence, naming 3 pillars on every long document. Above the floor the
+    sentence itself must name the same number the hard-rules line names,
+    from the same producer."""
+    from argumentation_analysis.agents.core import reading as module
+
+    model = _FakeModel(_answer())
+    await module.build_first_reading(SimpleNamespace(raw_text=_long_document()), model)
+    budget = module.pillar_budget(len(_long_document()))
+    assert budget > module.MAX_PILLARS  # the branch where the old sentence lied
+    assert "two or three" not in model.prompts[0]
+    folded = " ".join(model.prompts[0].split())
+    assert f"at most {budget} on a document of this length" in folded
+    assert f"At most {budget} pillars" in model.prompts[0]
+
+
+def test_the_floor_prose_is_the_old_sentence_byte_for_byte() -> None:
+    """At budget 3 the placeholder renders the template's former own bytes.
+
+    The wrap is part of the value: the rendered short-document prompt keeps
+    the exact line breaks the flat-three prompt had, so the byte-identity
+    control below compares like with like."""
+    from argumentation_analysis.agents.core.reading.first_reading import pillar_prose
+
+    assert pillar_prose(3) == (
+        "the two or three passages the\n   thesis would fall without"
+    )
+    assert pillar_prose(2) == pillar_prose(3)  # at or below the floor, no change
+
+
 def test_the_budget_has_the_per_argument_shape_and_named_bounds() -> None:
     from argumentation_analysis.agents.core.reading import pillar_budget
     from argumentation_analysis.core import reading_window as window
@@ -159,10 +193,20 @@ async def test_a_short_document_keeps_the_flat_three_state_and_prompt() -> None:
     )
     assert module.pillar_budget(len(short_document)) == module.MAX_PILLARS == 3
     assert "At most 3 pillars" in model.prompts[0]
+    # R1148 — the seam itself is pinned: the floor value lands where the
+    # sentence always sat, byte for byte, wrapped as the template wrapped it.
+    assert (
+        "the two or three passages the\n   thesis would fall without — the "
+        "evidence it cites, the premise it leans"
+    ) in model.prompts[0]
+    assert "two or three" in model.prompts[0]  # at the floor, and only there
     assert model.prompts == [
         FIRST_READING_PROMPT.format(
             max_moves=module.MAX_MOVES,
             max_pillars=module.MAX_PILLARS,
+            pillar_bound=(
+                "the two or three passages the\n   thesis would fall without"
+            ),
             excerpt=short_document,
         )
     ]

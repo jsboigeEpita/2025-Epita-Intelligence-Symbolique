@@ -31,6 +31,7 @@ from argumentation_analysis.agents.core.reading.first_reading import (
     first_reading_note,
     move_kind,
     pillar_budget,
+    pillar_prose,  # #3480 rework
 )
 
 __all__ = [
@@ -55,4 +56,5 @@ __all__ = [
     "first_reading_note",
     "move_kind",
     "pillar_budget",
+    "pillar_prose",
 ]
