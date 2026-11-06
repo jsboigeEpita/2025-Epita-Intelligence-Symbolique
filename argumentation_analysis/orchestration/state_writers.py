@@ -3355,6 +3355,12 @@ def _write_historical_context_to_state(
         "status": _persisted_status(output),
         "basis": MODEL_KNOWLEDGE_BASIS,
     }
+    # #3479 — the deterministic dating degradation rides the read it belongs
+    # to, present only when the confrontation fired (same convention as the
+    # historian's own ``to_state``: absence of the key IS the not-degraded
+    # state, so it is never written empty).
+    if output.get("dating"):
+        payload["dating"] = output["dating"]
     if isinstance(state, dict):
         state["historical_context"] = payload
     elif hasattr(state, "historical_context"):

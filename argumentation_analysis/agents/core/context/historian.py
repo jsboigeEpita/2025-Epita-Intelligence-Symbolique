@@ -28,6 +28,13 @@ from argumentation_analysis.agents.core.context import (
     MODEL_KNOWLEDGE_BASIS,
     stamp_basis,
 )
+from argumentation_analysis.agents.core.context.stated_dates import (
+    PROMPT_MAX_DATES,
+    StatedDate,
+    extract_stated_dates,
+    past_cited_bound,
+    stated_years,
+)
 from argumentation_analysis.agents.core.reading import defining_moves
 from argumentation_analysis.core.reading_window import persona_reading
 
@@ -79,7 +86,7 @@ Enjeux already extracted from the text (read them, do not restate them as
 history):
 {stakes_block}
 
-Document excerpt:
+{dates_section}Document excerpt:
 {excerpt}
 """
 
@@ -116,15 +123,31 @@ class HistoricalContext:
     items: List[HistoricalItem] = field(default_factory=list)
     status: str = "no_llm"
     error: str = ""
+    # #3479 — set by the deterministic confrontation when the document's own
+    # stated dates refute the situation's dating. ``to_state`` exposes the
+    # degradation ONLY when it fired: a consistent dating changes nothing
+    # anywhere, and neither does a text that states no date at all.
+    dating_degraded: bool = False
+    dating_model_year: Optional[int] = None
+    dating_refuted_by: Optional[Dict[str, Any]] = None
 
     def to_state(self) -> Dict[str, Any]:
-        return {
+        payload = {
             "situation": self.situation,
             "blind_spot": self.blind_spot,
             "items": [item.to_dict() for item in self.items],
             "status": self.status,
             "basis": MODEL_KNOWLEDGE_BASIS,
         }
+        if self.dating_degraded:
+            # #3479 — uncertain dating, named by the document's own dated
+            # reference. The key exists only when the confrontation fired.
+            payload["dating"] = {
+                "status": "uncertain",
+                "model_year": self.dating_model_year,
+                "refuted_by": dict(self.dating_refuted_by or {}),
+            }
+        return payload
 
 
 def _clamp_confidence(value: Any) -> float:
@@ -151,8 +174,39 @@ def _stakes_block(state: Any) -> str:
     return "\n".join(descriptions) if descriptions else "  (aucun enjeu extrait)"
 
 
-def build_historian_prompt(state: Any, excerpt: str) -> str:
-    """Render the historian's prompt from the gathered evidence."""
+def _dates_section(stated: Optional[List[StatedDate]]) -> str:
+    """#3479 — the document's own dated references, for the historian's prompt.
+
+    Empty string when the document states no date: the formatted prompt is
+    then byte-identical to the one #3377 defined, which is the no-change
+    control the issue demands. Projections ride too ("d'ici 2088"): they are
+    dates the document states, even though only the past-cited ones bound the
+    writing date below.
+    """
+    if not stated:
+        return ""
+    lines = [
+        "Dated references the document itself states (deterministic " "extraction,",
+        "offset = character position): the document was written AT OR AFTER",
+        "each past-cited one — a dating you assign it earlier than one of",
+        "them is impossible.",
+    ]
+    for entry in stated[:PROMPT_MAX_DATES]:
+        lines.append(f"- {entry.year} — « {entry.quote} » (offset {entry.offset})")
+    return "\n".join(lines) + "\n\n"
+
+
+def build_historian_prompt(
+    state: Any, excerpt: str, stated_dates: Optional[List[StatedDate]] = None
+) -> str:
+    """Render the historian's prompt from the gathered evidence.
+
+    #3479 — ``stated_dates`` are the explicit dates the DOCUMENT states,
+    extracted from the whole text (not just the excerpt: the dated reference
+    may sit outside the reading window). The historian dates with them in
+    view. ``None`` or empty keeps the prompt byte-identical to the one #3377
+    defined — a document that states no date changes nothing.
+    """
     metadata = getattr(state, "source_metadata", {}) or {}
     return HISTORIAN_PROMPT.format(
         speaker=metadata.get("speaker", "unknown"),
@@ -161,6 +215,7 @@ def build_historian_prompt(state: Any, excerpt: str) -> str:
         era=metadata.get("era", metadata.get("date_or_year", "unknown")),
         language=metadata.get("language", "unknown"),
         stakes_block=_stakes_block(state),
+        dates_section=_dates_section(stated_dates),
         excerpt=excerpt,
     )
 
@@ -187,12 +242,17 @@ async def build_historical_context(
     if recorder is not None:
         recorder.record_reading_window("historian", selection, extra)
 
+    # #3479 — the document's own dated references, read BEFORE the historian
+    # writes a date: they ride the prompt (the model dates with them in
+    # view) and the post-check below confronts the answer against them.
+    stated = extract_stated_dates(raw_text)
+
     result = HistoricalContext()
     if llm_callable is None:
         logger.debug("Historian: no LLM callable; returning an empty read.")
         return result
 
-    prompt = build_historian_prompt(state, excerpt)
+    prompt = build_historian_prompt(state, excerpt, stated_dates=stated)
     try:
         content = await llm_callable(prompt)
         content = (content or "").strip()
@@ -240,6 +300,7 @@ async def build_historical_context(
             for entry in stamped
         ]
         result.status = "ok"
+        _confront_dating(result, stated)
         logger.info(
             "Historian: %d item(s), situation=%s",
             len(result.items),
@@ -254,6 +315,48 @@ async def build_historical_context(
         result.error = f"{type(e).__name__}: {e}"
         logger.warning("Historian LLM error: %s", e)
     return result
+
+
+def _confront_dating(result: HistoricalContext, stated: List[StatedDate]) -> None:
+    """#3479 — degrade a dating the document's own dates refute.
+
+    The LATEST year the situation names, compared with the LATEST year the
+    document cites as past: the whole situation predating that floor is
+    impossible — the text cites the reference as already past — and the
+    dating becomes uncertain, named by the quoted reference that refutes it.
+    ``max`` on the situation side (R1148): ``min`` fired as soon as the
+    situation MENTIONED an earlier context event ("ten years after the
+    crisis of YYYY") while its dating was right; ``max`` fires only when the
+    dating itself is refuted. Deterministic post-check, no second model
+    opinion.
+
+    Anti-pendulum: this does not stop the historian from dating. A consistent
+    situation passes through untouched, and so does a situation with no year
+    at all — the confrontation only fires on the impossible.
+    """
+    bound = past_cited_bound(stated)
+    if bound is None:
+        return
+    years = stated_years(result.situation)
+    if not years:
+        return
+    model_year = max(years)
+    if model_year >= bound.year:
+        return
+    result.dating_degraded = True
+    result.dating_model_year = model_year
+    result.dating_refuted_by = {
+        "year": bound.year,
+        "quote": bound.quote,
+        "offset": bound.offset,
+    }
+    logger.info(
+        "Historian dating degraded: situation at-or-after %d, document cites "
+        "%d as past (offset %d) — dating uncertain",
+        model_year,
+        bound.year,
+        bound.offset,
+    )
 
 
 async def extract_historical_context(**kwargs: Any) -> Dict[str, Any]:
