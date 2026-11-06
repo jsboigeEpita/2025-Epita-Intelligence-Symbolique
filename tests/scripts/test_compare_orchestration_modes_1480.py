@@ -1870,7 +1870,10 @@ class TestFillRateExcludesConstructionBaseline:
         # `no_llm` default (moves empty, status recorded) is written at
         # construction, so it is construction, not analysis; the summarized
         # shape does not carry it either. 5 → 6 raw, 2 summarized.
-        assert len(raw_base) == 6
+        # #3432 (ask 6b): +1 raw — `cross_passage_consistency` follows the
+        # same rule: its honest `unreachable` default is written at
+        # construction, so it is construction, not analysis. 6 → 7 raw.
+        assert len(raw_base) == 7
         assert len(sum_base) == 2
 
     def test_dict_form_agrees_with_object_form(self) -> None:
