@@ -113,13 +113,21 @@ class TestTokensArePricedFromTheTable:
 
     def test_every_row_cites_a_source_and_a_date(self):
         """One dated table: no row may be added without the page it was read
-        from and the day it was read."""
+        from and the day it was read. #3478: the day is per-row — a row added
+        after the bulk read (``gemini-4-argon``, read 2026-11-06) carries its
+        own date rather than borrowing the table's; what stays pinned is that
+        EVERY row is dated, in ISO form, never empty or defaulted loosely."""
         assert PRICE_TABLE, "the run path needs a price table"
         for row in PRICE_TABLE:
             assert row.source.strip(), f"{row.model_id}: row without a source page"
+            read_on = row.read_on
             assert (
-                row.read_on == PRICES_READ_ON
-            ), f"{row.model_id}: row must carry the table's read date"
+                len(read_on) == 10 and read_on[4] == "-" and read_on[7] == "-"
+            ), f"{row.model_id}: row must carry an ISO read date, got {read_on!r}"
+            assert (
+                read_on[:4].isdigit() and read_on[5:7].isdigit()
+            ), f"{row.model_id}: {read_on!r} is not a date"
+        # The table-wide date stays the documented bulk read.
         assert len(PRICES_READ_ON) == 10 and PRICES_READ_ON[4] == "-"
 
     def test_an_unknown_model_suffix_does_not_borrow_a_price(self):

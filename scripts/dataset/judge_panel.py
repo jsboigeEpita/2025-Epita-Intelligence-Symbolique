@@ -1864,6 +1864,18 @@ async def run(
             f"pipeline model: {pipeline_model} ({pipeline_family}) — families differ",
             flush=True,
         )
+        # #3478 — the dry-run resolves the judge's route exactly as the paid
+        # pass will: configuration only, no network call. A dry-run that
+        # certifies a run which cannot start is the seam #3402 already paid
+        # for once — an unresolvable route raises the same SystemExit the
+        # paid pass would hit, before any call is made, so the exit code
+        # says what the paid pass would have said.
+        dry_endpoint = resolve_judge_endpoint(args.judge_model)
+        print(
+            f"judge route: family={dry_endpoint['family']} "
+            f"host={dry_endpoint['host']} route={dry_endpoint['route']}",
+            flush=True,
+        )
         print(f"seed: {args.seed}", flush=True)
         print(
             f"judge temperature: {_temperature_arg(args.judge_temperature)}",
