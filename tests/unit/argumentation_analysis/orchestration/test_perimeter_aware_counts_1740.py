@@ -199,14 +199,18 @@ class TestDeprecatedAliasExcludedFromDefaultSweep:
         # means is that the default sweep is the runner set MINUS the aliases;
         # deriving it from ``_DEPRECATED_MODE_ALIASES`` states that property
         # and survives the next alias.
+        #
+        # #3378: ``pipeline_spectacular`` is excluded the same way, through
+        # ``_NON_DEFAULT_MODE_PRESETS`` — it is the pipeline engine's judged
+        # panel arm (paid acts at DAG tail), not a trade-off mode; running it
+        # in every default sweep would double-count the pipeline engine. The
+        # anti-drop property survives: a runner classified in NEITHER set
+        # reddens this guard.
+        excluded = harness._DEPRECATED_MODE_ALIASES | harness._NON_DEFAULT_MODE_PRESETS
         modes = harness.default_modes()
         assert len(modes) == len(set(modes))
-        assert len(modes) == len(harness.MODE_RUNNERS) - len(
-            harness._DEPRECATED_MODE_ALIASES
-        )
-        assert (
-            set(modes) == set(harness.MODE_RUNNERS) - harness._DEPRECATED_MODE_ALIASES
-        )
+        assert len(modes) == len(harness.MODE_RUNNERS) - len(excluded)
+        assert set(modes) == set(harness.MODE_RUNNERS) - excluded
 
 
 class TestPartialPerimeterIsNotAnAbsence:

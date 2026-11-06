@@ -66,7 +66,18 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, FrozenSet, List, Optional, Tuple
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    FrozenSet,
+    List,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Tuple,
+)
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -309,9 +320,17 @@ class ModeResult:
     # hop. Default False = "cannot demonstrate an absence" — the safe side,
     # which shows the observed count instead of overclaiming.
     perimeter_is_exhaustive: bool = False
+    # #3378: the real state reference is transient runner→panel-dump transport,
+    # never a JSON-report field (to_dict drops it). Its source is the engine's
+    # completed/partial state, not a reconstructed imitation of one.
+    panel_state: Any = field(default=None, repr=False, compare=False)
+    panel_state_reason: Optional[str] = field(default=None, repr=False, compare=False)
 
     def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+        payload = asdict(self)
+        payload.pop("panel_state", None)
+        payload.pop("panel_state_reason", None)
+        return payload
 
 
 def _fmt_fill(rate: Optional[float]) -> str:
@@ -969,6 +988,8 @@ async def run_pipeline_mode(
     corpus_id: str,
     workflow_name: str = "standard",
     max_wall_seconds: Optional[float] = None,
+    panel_mode: bool = False,
+    source_metadata: Optional[Dict[str, str]] = None,
 ) -> ModeResult:
     """Run UnifiedPipeline (modern workflow engine).
 
@@ -996,10 +1017,12 @@ async def run_pipeline_mode(
     start = time.time()
 
     # CB #1528: state-reference trick + recording checkpoint (bound only).
+    # #3378: panel mode needs that same reference on an unbounded run — the
+    # judge reads the completed state, not the summarized reporting snapshot.
     state = None
     last_completed = [0]
     checkpoint_callback = None
-    if max_wall_seconds is not None:
+    if max_wall_seconds is not None or panel_mode:
         from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 
         state = UnifiedAnalysisState(text)
@@ -1022,19 +1045,30 @@ async def run_pipeline_mode(
 
         checkpoint_callback = _record_completed
 
+    # Outside a panel run the call is byte-for-byte the historical one: the
+    # bounded run passes the state reference and its checkpoint (CB #1528),
+    # the unbounded one passes neither. In a panel run the workflow is
+    # normally spectacular (the campaign's workflow); the caller may still
+    # choose any preset, and its absent acts stay honest.
+    analysis_kwargs: Dict[str, Any] = {
+        "text": text,
+        "workflow_name": workflow_name,
+    }
+    if state is not None:
+        analysis_kwargs.update(state=state, checkpoint_callback=checkpoint_callback)
+    if panel_mode:
+        analysis_kwargs.update(
+            render_restitution=True,
+            deanonymized=False,
+            source_metadata=source_metadata or {"opaque_id": corpus_id},
+        )
     try:
         if max_wall_seconds is not None:
             result = await asyncio.wait_for(
-                run_unified_analysis(
-                    text=text,
-                    workflow_name=workflow_name,
-                    state=state,
-                    checkpoint_callback=checkpoint_callback,
-                ),
-                timeout=max_wall_seconds,
+                run_unified_analysis(**analysis_kwargs), timeout=max_wall_seconds
             )
         else:
-            result = await run_unified_analysis(text=text, workflow_name=workflow_name)
+            result = await run_unified_analysis(**analysis_kwargs)
     except asyncio.TimeoutError:
         duration = time.time() - start
         logger.warning(
@@ -1064,6 +1098,8 @@ async def run_pipeline_mode(
             # `decides` left None → _compute_decides in run_all. A partial
             # state (fill>0) or any completed phase ⇒ True (anti-#1019:
             # the partial state IS the verdict).
+            panel_state=state if panel_mode else None,
+            panel_state_reason=("budget_expired_partial_state" if panel_mode else None),
             scope_of_work=scope,
         )
 
@@ -1119,6 +1155,17 @@ async def run_pipeline_mode(
         # in the executed perimeter", and ``n/a`` is earned. This is the ONE
         # runner that may claim it; the others cannot.
         perimeter_is_exhaustive=True,
+        panel_state=(result.get("unified_state") or state) if panel_mode else None,
+        panel_state_reason=(
+            (
+                "restitution_unavailable"
+                if result.get("restitution_report") is None
+                else "completed"
+            )
+            if panel_mode
+            else None
+        ),
+        extra_metrics=({"panel_workflow": workflow_name} if panel_mode else {}),
         scope_of_work=scope,
     )
 
@@ -1128,6 +1175,8 @@ async def run_conversational_mode(
     corpus_id: str,
     max_wall_seconds: float = DEFAULT_WALL_SECONDS,
     room_policy: str = "phase_casting",
+    panel_mode: bool = False,
+    source_metadata: Optional[Dict[str, str]] = None,
 ) -> ModeResult:
     """Run conversational orchestrator (AgentGroupChat multi-agent).
 
@@ -1161,12 +1210,21 @@ async def run_conversational_mode(
     )
     start = time.time()
     safety_net = _conversational_safety_net_timeout(max_wall_seconds)
+    analysis_kwargs: Dict[str, Any] = {
+        "text": text,
+        "max_wall_seconds": max_wall_seconds,
+        "room_policy": room_policy,
+    }
+    if panel_mode:
+        # #3378: this flag GENERATES the acts on the state (conversational
+        # adapter), rather than merely assembling acts this engine never ran.
+        analysis_kwargs.update(
+            render_restitution=True,
+            source_metadata=source_metadata or {"opaque_id": corpus_id},
+        )
     try:
         result = await asyncio.wait_for(
-            run_conversational_analysis(
-                text=text, max_wall_seconds=max_wall_seconds, room_policy=room_policy
-            ),
-            timeout=safety_net,
+            run_conversational_analysis(**analysis_kwargs), timeout=safety_net
         )
     except asyncio.TimeoutError:
         duration = time.time() - start
@@ -1197,6 +1255,12 @@ async def run_conversational_mode(
             scope_of_work=scope,
         )
     duration = time.time() - start
+
+    if panel_mode:
+        panel_state = result.get("unified_state")
+        if panel_state is not None:
+            panel_state.deanonymized = False
+            panel_state.set_source_metadata(source_metadata or {"opaque_id": corpus_id})
 
     budget = result.get("budget", {}) if isinstance(result, dict) else {}
     wall_clock_bounded = bool(budget.get("wall_clock_bounded", False))
@@ -1268,6 +1332,16 @@ async def run_conversational_mode(
         # not an anomaly. Readers wanting "hit its wall clock at all" must use
         # ``_hit_its_wall_clock``, not this field.
         terminated_by_budget=False,
+        panel_state=panel_state if panel_mode else None,
+        panel_state_reason=(
+            (
+                "restitution_unavailable"
+                if result.get("restitution_report") is None
+                else "completed"
+            )
+            if panel_mode
+            else None
+        ),
         scope_of_work=scope,
         extra_metrics={
             "total_messages": total_messages,
@@ -1524,7 +1598,11 @@ async def run_conversation_real_mode(
 
 
 async def run_hierarchical_bridge_mode(
-    text: str, corpus_id: str, max_wall_seconds: Optional[float] = None
+    text: str,
+    corpus_id: str,
+    max_wall_seconds: Optional[float] = None,
+    panel_mode: bool = False,
+    source_metadata: Optional[Dict[str, str]] = None,
 ) -> ModeResult:
     """Run hierarchical analysis via the bridge mode (M2 default).
 
@@ -1579,14 +1657,20 @@ async def run_hierarchical_bridge_mode(
     # Optional across all 8 runners + both report tables, which is a change to
     # the report schema, not to this bound). Not silently papered over.
     recorded: Dict[str, Any] = {"completed": 0, "planned": None}
-    if max_wall_seconds is not None:
+    if max_wall_seconds is not None or panel_mode:
         from argumentation_analysis.core.shared_state import UnifiedAnalysisState
         from argumentation_analysis.orchestration.state_writers import (
             CAPABILITY_STATE_WRITERS,
         )
 
         state = UnifiedAnalysisState(text)
+        if panel_mode:
+            # Opaque metadata only; the panel report never enables the
+            # deanonymized source-name prompts (#1258 boundary).
+            state.deanonymized = False
         state_writers = CAPABILITY_STATE_WRITERS
+        if panel_mode:
+            state.set_source_metadata(source_metadata or {"opaque_id": corpus_id})
 
         def _record_completed(results, ctx):
             # Recording only — never raises (the executor swallows callback
@@ -1643,6 +1727,8 @@ async def run_hierarchical_bridge_mode(
             # `decides` left None → _compute_decides in run_all: a completed
             # phase or a non-empty state IS the partial verdict; nothing
             # recovered stays honestly sterile (— , not a manufactured ✅).
+            panel_state=state if panel_mode else None,
+            panel_state_reason="budget_expired_partial_state" if panel_mode else None,
             scope_of_work=scope,
         )
     except Exception as exc:
@@ -1681,6 +1767,24 @@ async def run_hierarchical_bridge_mode(
             )
         )
 
+    if panel_mode and state is not None:
+        # The bridge's strategic planner never requests the restitution acts:
+        # its keyword map covers analysis capabilities only (#3378 trace). Use
+        # the same state→acts producer as the conversational engine, after the
+        # bridge's own phases. No phase is invented and no act is templated.
+        from argumentation_analysis.reporting.restitution.conversational_adapter import (
+            generate_and_render_for_conversational_state,
+        )
+
+        try:
+            report = await generate_and_render_for_conversational_state(state, text)
+            if isinstance(result, dict):
+                result["restitution_report"] = report
+        except Exception as exc:
+            logger.warning("Bridge restitution failed (named, non-fatal): %s", exc)
+            if isinstance(result, dict):
+                result["restitution_report"] = None
+
     return ModeResult(
         mode="hierarchical_bridge",
         corpus_id=corpus_id,
@@ -1703,6 +1807,16 @@ async def run_hierarchical_bridge_mode(
         # measured-looking ``0`` — pinned by the #1756 control tests.
         capabilities_used=(
             result.get("capabilities_used") if isinstance(result, dict) else None
+        ),
+        panel_state=state if panel_mode else None,
+        panel_state_reason=(
+            (
+                "restitution_unavailable"
+                if result.get("restitution_report") is None
+                else "completed"
+            )
+            if panel_mode
+            else None
         ),
         scope_of_work=(
             "Strategic planning -> objectives_to_workflow -> "
@@ -1929,6 +2043,16 @@ async def run_hierarchical_mode(
 # an argumentation-analysis mode comparable to the others.
 
 MODE_RUNNERS: Dict[str, Callable[..., Awaitable[ModeResult]]] = {
+    # #3378: the panel's pipeline arm uses the campaign workflow, whose act
+    # phases write the judge's three sections. This is a workflow preset of the
+    # SAME pipeline engine, not a sixth engine, and stays out of the default 8.
+    "pipeline_spectacular": lambda text, cid, max_wall_seconds=None, **kwargs: run_pipeline_mode(
+        text,
+        cid,
+        "spectacular",
+        max_wall_seconds=max_wall_seconds,
+        **kwargs,
+    ),
     # #1747: the CANONICAL key is ``pipeline_standard`` — identical to the label
     # ``run_pipeline_mode`` self-assigns (``mode=f"pipeline_{workflow_name}"``,
     # :852/:900), so a label copied out of a report is a key that works. Before
@@ -1971,11 +2095,17 @@ MODE_RUNNERS: Dict[str, Callable[..., Awaitable[ModeResult]]] = {
 # default sweep would double-count the flagship mode exactly as ``hierarchical``
 # double-counted the bridge.
 _DEPRECATED_MODE_ALIASES: FrozenSet[str] = frozenset({"hierarchical", "pipeline"})
+# A workflow preset of the existing pipeline engine, not a deprecated alias.
+_NON_DEFAULT_MODE_PRESETS: FrozenSet[str] = frozenset({"pipeline_spectacular"})
 
 
 def default_modes() -> List[str]:
-    """The default sweep: every runner except deprecated aliases (#1740)."""
-    return [m for m in MODE_RUNNERS if m not in _DEPRECATED_MODE_ALIASES]
+    """The default sweep: every runner except aliases and explicit presets."""
+    return [
+        m
+        for m in MODE_RUNNERS
+        if m not in _DEPRECATED_MODE_ALIASES | _NON_DEFAULT_MODE_PRESETS
+    ]
 
 
 # Mode -> human-readable scope-of-work description, for the report table.
@@ -2220,6 +2350,269 @@ def generate_report(
     return "\n".join(lines)
 
 
+# ── Panel input/output (#3378) ───────────────────────────────────────────────
+
+# The default five-engine sweep on the panel. ConversationOrchestrator's real
+# agents are the paid counterpart of its deterministic control, so both appear;
+# the pipeline's spectacular preset is the same engine as the standard preset.
+PANEL_MODES = (
+    "pipeline_spectacular",
+    "conversational",
+    "conversation_deterministic",
+    "conversation_real",
+    "hierarchical_bridge",
+    "hierarchical_delegation",
+)
+PANEL_STATEFUL_MODES = frozenset(
+    {"pipeline_spectacular", "conversational", "hierarchical_bridge"}
+)
+PANEL_OUTPUT_ROOT = (
+    PROJECT_ROOT
+    / "argumentation_analysis"
+    / "evaluation"
+    / "results"
+    / "orchestration_panel"
+)
+# Recorded in replay commands only — this harness never calls the judge. The
+# existing judge refuses a model of the pipeline's own family at run time.
+DEFAULT_PANEL_JUDGE_MODEL = "claude-sonnet-5-5"
+
+
+def load_panel_documents(
+    panel: Sequence[str],
+    loader: Optional[Callable[[Sequence[str]], Dict[str, str]]] = None,
+) -> Dict[str, str]:
+    """Load the panel through the judge's in-memory encrypted-corpus loader.
+
+    The loader returns WHOLE texts, never excerpts. They stay in memory until
+    their engine writes its own state to the caller-selected gitignored folder.
+    No plaintext document file is ever produced by this input path.
+    """
+    if loader is None:
+        from scripts.dataset.judge_panel import load_document_texts
+
+        loader = load_document_texts
+    texts = loader(panel)
+    missing = [doc_id for doc_id in panel if doc_id not in texts]
+    if missing:
+        raise ValueError(f"panel documents absent from the corpus: {missing}")
+    return {doc_id: texts[doc_id] for doc_id in panel}
+
+
+class PanelArtifacts(NamedTuple):
+    """The two files one judge invocation consumes, plus its honest status."""
+
+    state: Dict[str, Any]
+    signature: Dict[str, Any]
+    states_dir: Path
+    signatures_dir: Path
+
+
+def panel_state_absence_reason(result: ModeResult) -> Optional[str]:
+    """Why this row cannot enter the state-based judge, or None if it can.
+
+    A blank act is still a legible fail-loud act (the existing renderer names
+    it). An absent engine state, a state-capture failure and a missing-act
+    report are different reasons, not a manufactured verdict or an empty 0.
+    """
+    if result.panel_state is None:
+        if result.mode not in PANEL_STATEFUL_MODES:
+            return "engine_has_no_unified_analysis_state"
+        return result.panel_state_reason or "runner_failed_before_state_capture"
+    if not result.success:
+        return result.panel_state_reason or "incomplete_partial_state"
+    return None
+
+
+def _json_safe(value: Any) -> Any:
+    """Deterministic JSON conversion, mirroring the corpus-batch dump policy."""
+    if isinstance(value, dict):
+        return {str(key): _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, set):
+        return sorted((_json_safe(item) for item in value), key=str)
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    return str(value)
+
+
+def write_panel_mode_artifacts(
+    result: ModeResult,
+    mode_out_dir: Path,
+) -> Optional[PanelArtifacts]:
+    """Write the judge's exact state/signature contract under one mode's dir.
+
+    Raw text and downstream analysis are restricted to the gitignored results
+    tree selected by the CLI. Only the sanitized state rides in the signature;
+    the judge reads the full local state, exactly as it does for the campaign.
+    """
+    if result.panel_state is None:
+        return None
+    from argumentation_analysis.evaluation.sanitize_state import sanitize_state
+
+    if isinstance(result.panel_state, dict):
+        snapshot = dict(result.panel_state)
+    else:
+        snapshot = result.panel_state.get_state_snapshot(summarize=False) or {}
+    state = _json_safe(snapshot)
+    usage = _json_safe(result.extra_metrics.get("llm_usage") or {})
+    state["llm_usage"] = usage
+    workflow = result.extra_metrics.get("panel_workflow", result.mode)
+    signature = {
+        "opaque_id": result.corpus_id,
+        "workflow": workflow,
+        "wall_clock_s": result.duration_seconds,
+        "outcome": {
+            "status": "ok" if result.success else "partial",
+            "reason": result.error,
+        },
+        "state": _json_safe(sanitize_state(state)),
+        "llm_usage": usage,
+        "provenance": {
+            "issue": 3378,
+            "mode": result.mode,
+            "panel_state_reason": result.panel_state_reason,
+        },
+    }
+    states_dir = mode_out_dir / "states"
+    signatures_dir = mode_out_dir / "signatures"
+    state_path = states_dir / f"state_full_{result.corpus_id}.json"
+    signature_path = signatures_dir / f"signature_{result.corpus_id}.json"
+    if state_path.exists() or signature_path.exists():
+        raise ValueError(
+            f"refusing to overwrite a panel artifact for {result.mode}:{result.corpus_id}"
+        )
+    states_dir.mkdir(parents=True, exist_ok=True)
+    signatures_dir.mkdir(parents=True, exist_ok=True)
+    state_path.write_text(
+        json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    signature_path.write_text(
+        json.dumps(signature, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    return PanelArtifacts(state, signature, states_dir, signatures_dir)
+
+
+def _panel_usage_rows(results: Sequence[ModeResult]) -> Dict[str, Dict[str, Any]]:
+    """Measured live usage per ENGINE, summed over the panel documents (#3378).
+
+    Reads the same accounting window ``run_all`` closed after each run. A mode
+    with no live call keeps ``computed_cost_usd: None`` — an unpriced absence,
+    never a fabricated 0.00 (#1019).
+    """
+    rows: Dict[str, Dict[str, Any]] = {}
+    for result in results:
+        usage = result.extra_metrics.get("llm_usage") or {}
+        row = rows.setdefault(
+            result.mode,
+            {
+                "documents": 0,
+                "live_calls": 0,
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "calls_without_usage": 0,
+                "unpriced_calls": {},
+                "computed_cost_usd": None,
+                "wall_clock_s": 0.0,
+            },
+        )
+        row["documents"] += 1
+        row["wall_clock_s"] += result.duration_seconds
+        for bucket in usage.values():
+            if not isinstance(bucket, dict) or "calls" not in bucket:
+                continue
+            row["live_calls"] += int(bucket.get("calls", 0))
+            row["prompt_tokens"] += int(bucket.get("prompt_tokens", 0))
+            row["completion_tokens"] += int(bucket.get("completion_tokens", 0))
+            row["calls_without_usage"] += int(bucket.get("calls_without_usage", 0))
+        for model, count in (usage.get("unpriced_calls") or {}).items():
+            row["unpriced_calls"][str(model)] = row["unpriced_calls"].get(
+                str(model), 0
+            ) + int(count)
+        cost = usage.get("computed_cost_usd")
+        if cost is not None:
+            row["computed_cost_usd"] = round(
+                (row["computed_cost_usd"] or 0.0) + float(cost), 4
+            )
+    return rows
+
+
+def build_panel_manifest(
+    *,
+    out_dir: Path,
+    panel: Sequence[str],
+    requested_modes: Sequence[str],
+    judge_model: str,
+    wall_seconds: float,
+    zero_shot_dir: Optional[Path] = None,
+    engines_executed: bool = False,
+) -> Path:
+    """One replay manifest, not a second judge nor a judged-table imitation.
+
+    Each command is the existing judge in --dry-run mode. The coordinator
+    removes --dry-run for the paid pass, after reviewing its cost. Each arm's
+    --out-dir already differs: a second pass must not silently overwrite the
+    first one. Stateless/failed modes are explicitly absent.
+    """
+    if zero_shot_dir is None:
+        from scripts.dataset.judge_panel import DEFAULT_ZEROSHOT_DIR
+
+        zero_shot_dir = DEFAULT_ZEROSHOT_DIR
+
+    commands: Dict[str, str] = {}
+    absences: Dict[str, str] = {}
+    for mode in requested_modes:
+        mode_dir = out_dir / mode
+        states = sorted((mode_dir / "states").glob("state_full_*.json"))
+        signatures = sorted((mode_dir / "signatures").glob("signature_*.json"))
+        state_ids = {p.stem.removeprefix("state_full_") for p in states}
+        signature_ids = {p.stem.removeprefix("signature_") for p in signatures}
+        panel_ids = set(panel)
+        if state_ids != panel_ids or signature_ids != panel_ids:
+            absences[mode] = (
+                f"incomplete_state_surface: "
+                f"{len(states)}/{len(panel)} states, "
+                f"{len(signatures)}/{len(panel)} signatures "
+                f"for {','.join(panel)}"
+            )
+            continue
+        judge_out = mode_dir / "judge"
+        ids = ",".join(panel)
+        commands[mode] = (
+            "PYTHONPATH=. python scripts/dataset/judge_panel.py "
+            f"--judge-model {judge_model} --doc-ids {ids} "
+            f"--states-dir {mode_dir / 'states'} "
+            f"--signatures-dir {mode_dir / 'signatures'} "
+            f"--zeroshot-dir {zero_shot_dir} "
+            f"--out-dir {judge_out} --dry-run"
+        )
+    payload = {
+        "issue": 3378,
+        "panel": list(panel),
+        "requested_modes": list(requested_modes),
+        "judge_model": judge_model,
+        "wall_seconds": wall_seconds,
+        "zero_shot_dir": str(zero_shot_dir),
+        "judge_commands": commands,
+        "state_absences": absences,
+        "engine_usage": {},
+        "engine_runs_executed": bool(engines_executed),
+        "judge_calls_made": False,
+        "note": (
+            "Dry-run commands price the existing judge on the panel. Remove "
+            "--dry-run for the coordinator's paid pass; each arm's --out-dir "
+            "is distinct. This harness makes no judge call and writes no "
+            "verdict table; engine_usage carries the measured live spend "
+            "when engine_runs_executed is true."
+        ),
+    }
+    path = out_dir / "manifest.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return path
+
+
 # ── Main ─────────────────────────────────────────────────────────────────
 
 
@@ -2230,6 +2623,9 @@ async def run_all(
     dry_run: bool = False,
     max_wall_seconds: float = DEFAULT_WALL_SECONDS,
     conv_room_policy: str = "phase_casting",
+    document_texts: Optional[Dict[str, str]] = None,
+    panel_out_dir: Optional[Path] = None,
+    panel_judge_model: Optional[str] = None,
 ) -> List[ModeResult]:
     """Run selected modes on selected corpora.
 
@@ -2262,7 +2658,13 @@ async def run_all(
     # raises: the latter is caught below and still yields a ``ModeResult`` with
     # ``success=False``. Failed and skipped stay two different outputs.
     unknown_modes = [m for m in modes if m not in MODE_RUNNERS]
-    unknown_corpora = [c for c in corpora if c not in BENCHMARK_TEXTS]
+    unknown_corpora = [
+        c for c in corpora if document_texts is None and c not in BENCHMARK_TEXTS
+    ]
+    if document_texts is not None:
+        missing_texts = [c for c in corpora if c not in document_texts]
+        if missing_texts:
+            raise ValueError(f"panel text(s) not loaded: {', '.join(missing_texts)}")
     if unknown_modes or unknown_corpora:
         problems = []
         if unknown_modes:
@@ -2280,6 +2682,16 @@ async def run_all(
             + "\n".join(problems)
         )
 
+    if panel_out_dir is not None and panel_judge_model is None:
+        raise ValueError(
+            "panel artifacts are written without a judge model: the replay "
+            "manifest cannot be built — pass panel_judge_model (#3378)"
+        )
+    if panel_out_dir is not None and document_texts is None:
+        raise ValueError(
+            "--panel-out-dir requires panel documents (--doc-ids/--panel-file)"
+        )
+
     if dry_run:
         # Every mode listed here is dispatchable: the pre-flight validation
         # already rejected the unknown ones, so ``--dry-run`` no longer doubles
@@ -2290,6 +2702,30 @@ async def run_all(
             print(f"  {mode}: available{alias}")
         print(f"\nCorpora: {', '.join(corpora)}")
         print(f"Wall-clock budget (all modes, CB #1528): {max_wall_seconds:g}s")
+        if panel_out_dir is not None and panel_judge_model:
+            # #3378: no engine, no LLM, no pretend cost. Real prompts and
+            # measured usage exist only after the per-mode states have run;
+            # the existing judge then prices them through these commands.
+            manifest_path = build_panel_manifest(
+                out_dir=panel_out_dir,
+                panel=corpora,
+                requested_modes=modes,
+                judge_model=panel_judge_model,
+                wall_seconds=max_wall_seconds,
+            )
+            print(
+                "\nPanel pricing: no engine was run, so no live-call or "
+                "prompt-cost measurement exists yet. The existing judge "
+                "prices complete state/signature/zero-shot inputs; incomplete "
+                "arms are named in the manifest.",
+                flush=True,
+            )
+            payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+            for mode, command in payload["judge_commands"].items():
+                print(f"\n{mode}:\n  {command}", flush=True)
+            for mode, reason in payload["state_absences"].items():
+                print(f"\n{mode}: {reason}", flush=True)
+            print(f"\nPanel judge replay manifest: {manifest_path}", flush=True)
         return []
 
     # Load environment
@@ -2305,12 +2741,24 @@ async def run_all(
     for corpus_id in corpora:
         # Both lookups are total: the pre-flight validation above rejected every
         # unknown key, so a silent skip is no longer reachable here (#1747).
-        text = BENCHMARK_TEXTS[corpus_id]
+        text = (
+            document_texts[corpus_id]
+            if document_texts is not None
+            else BENCHMARK_TEXTS[corpus_id]
+        )
 
         for mode in modes:
             runner = MODE_RUNNERS[mode]
 
             logger.info(f"Running {mode} on {corpus_id} ({len(text)} chars)...")
+            from argumentation_analysis.services.llm_cache import (
+                get_usage_stats,
+                reset_usage_stats,
+            )
+
+            # #3378: one accounting window per mode×document. A cached answer
+            # is not billed as live: the existing counters count live calls only.
+            reset_usage_stats()
             try:
                 # CB #1528: the wall-clock budget is now threaded to EVERY
                 # runner (uniform signature ``runner(text, cid, max_wall_seconds=...)``).
@@ -2321,7 +2769,23 @@ async def run_all(
                 runner_kwargs = {"max_wall_seconds": max_wall_seconds}
                 if mode == "conversational":
                     runner_kwargs["room_policy"] = conv_room_policy
+                if panel_out_dir is not None and mode in PANEL_STATEFUL_MODES:
+                    runner_kwargs.update(
+                        panel_mode=True,
+                        source_metadata={
+                            "opaque_id": corpus_id,
+                            "source_id": corpus_id,
+                        },
+                    )
                 result = await runner(text, corpus_id, **runner_kwargs)
+                result.extra_metrics["llm_usage"] = get_usage_stats()
+                if panel_out_dir is not None:
+                    artifacts = write_panel_mode_artifacts(result, panel_out_dir / mode)
+                    if artifacts is not None:
+                        logger.info(
+                            "  → judge state written under %s",
+                            panel_out_dir / mode / "states",
+                        )
                 results.append(result)
                 if result.terminated_by_budget:
                     status = f"BUDGET BREACH ({result.duration_seconds:.2f}s)"
@@ -2365,6 +2829,31 @@ async def run_all(
 
     # Generate report
     report = generate_report(results)
+
+    if panel_out_dir is not None and panel_judge_model:
+        from scripts.dataset.judge_panel import DEFAULT_ZEROSHOT_DIR
+
+        absences = {
+            f"{r.mode}:{r.corpus_id}": reason
+            for r in results
+            if (reason := panel_state_absence_reason(r)) is not None
+        }
+        manifest_path = build_panel_manifest(
+            out_dir=panel_out_dir,
+            panel=corpora,
+            requested_modes=modes,
+            judge_model=panel_judge_model,
+            wall_seconds=max_wall_seconds,
+            zero_shot_dir=DEFAULT_ZEROSHOT_DIR,
+            engines_executed=True,
+        )
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        payload["state_absences"].update(absences)
+        payload["engine_usage"] = _panel_usage_rows(results)
+        manifest_path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        print(f"Panel judge replay manifest: {manifest_path}", flush=True)
 
     if output_file:
         output_path = Path(output_file)
@@ -2438,6 +2927,30 @@ def main():
         ),
     )
     parser.add_argument(
+        "--doc-ids",
+        default=None,
+        help="#3378: panel ids, comma/whitespace separated; encrypted dataset in memory",
+    )
+    parser.add_argument(
+        "--panel-file",
+        default=None,
+        help="#3378: one panel id per line; comments and blank lines ignored",
+    )
+    parser.add_argument(
+        "--panel-out-dir",
+        type=Path,
+        default=None,
+        help=(
+            "#3378: gitignored output root; one states/signatures dir per mode "
+            "plus the existing judge's dry-run replay commands"
+        ),
+    )
+    parser.add_argument(
+        "--panel-judge-model",
+        default=None,
+        help="#3378: judge model recorded in replay commands; never called here",
+    )
+    parser.add_argument(
         "--depth-parity",
         action="store_true",
         help=(
@@ -2452,6 +2965,30 @@ def main():
         print(render_depth_parity_section())
         return
 
+    document_texts = None
+    panel_out_dir = args.panel_out_dir
+    if args.doc_ids is not None or args.panel_file is not None:
+        from scripts.dataset.run_corpus_batch import parse_doc_ids
+
+        try:
+            panel = parse_doc_ids(args.doc_ids, args.panel_file)
+        except ValueError as exc:
+            parser.error(str(exc))
+        if panel is None:
+            parser.error("the panel selection is empty")
+        if args.corpora is not None:
+            parser.error("--corpora and --doc-ids/--panel-file are exclusive")
+        document_texts = load_panel_documents(panel)
+        args.corpora = panel
+        args.modes = args.modes or list(PANEL_MODES)
+        args.output = args.output or str(PANEL_OUTPUT_ROOT / "comparison.md")
+        panel_out_dir = panel_out_dir or PANEL_OUTPUT_ROOT
+        args.panel_judge_model = args.panel_judge_model or DEFAULT_PANEL_JUDGE_MODEL
+    if panel_out_dir is not None and args.panel_judge_model is None:
+        parser.error("--panel-out-dir requires --panel-judge-model")
+    if panel_out_dir is not None and document_texts is None:
+        parser.error("--panel-out-dir requires --doc-ids or --panel-file")
+
     try:
         asyncio.run(
             run_all(
@@ -2461,6 +2998,9 @@ def main():
                 dry_run=args.dry_run,
                 max_wall_seconds=args.max_wall_seconds,
                 conv_room_policy=args.conv_room_policy,
+                document_texts=document_texts,
+                panel_out_dir=panel_out_dir,
+                panel_judge_model=args.panel_judge_model,
             )
         )
     except ValueError as exc:
