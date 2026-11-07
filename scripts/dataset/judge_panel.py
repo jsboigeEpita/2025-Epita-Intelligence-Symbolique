@@ -499,8 +499,11 @@ def pipeline_text_from_state(state: Dict[str, Any], signature: Dict[str, Any]) -
     )
 
 
-def arm_health(state: Dict[str, Any]) -> Dict[str, Any]:
-    """The pipeline arm's health for ONE document, read from its state dump.
+def arm_health(
+    state: Dict[str, Any], signature: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """The pipeline arm's health for ONE document, read from its state dump
+    and from the run's own outcome (#3489).
 
     Degraded = an empty act key AND a non-empty ``restitution_acts_degraded``
     — never either half alone (#3458):
@@ -512,18 +515,41 @@ def arm_health(state: Dict[str, Any]) -> Dict[str, Any]:
       (the report records per-act retry events, not only hard gaps): the
       report alone must not flag them.
 
+    OR the signature's outcome says the run itself died (#3489): a
+    ``failed`` status counts as a broken arm whatever the state says — the
+    c4 run died at extract on most documents, leaving empty acts and NO
+    report (the render never started, so the report never existed), and the
+    conjunctive rule read those deaths as "no acts by design". A
+    ``non_argumentative`` classification stays by design: that is a document
+    the pipeline read and classified, not a death. The partial statuses do
+    NOT count — ``partial_timeout`` / ``partial_error`` are legible partials
+    (#3468 renders a cut run's recorded material and names the cut), and the
+    panel sweep's ``ok`` / ``partial`` vocabulary is the same distinction:
+    ``failed`` is the death record, and only the death record is new signal.
+
     The conjunctive rule is what separates "the render broke mid-way" (a
     break the judge would grade as the pipeline's own doing) from both
     honest shapes above. The state is unwrapped the way
-    ``pipeline_text_from_state`` unwraps it.
+    ``pipeline_text_from_state`` unwraps it. Without a signature the rule
+    stays exactly #3458's.
     """
     st = state.get("state") or state
     empty_acts = [key for key in ACT_KEYS if not str(st.get(key) or "").strip()]
     reported = bool(st.get("restitution_acts_degraded"))
+    outcome = (signature or {}).get("outcome")
+    status = outcome.get("status") if isinstance(outcome, dict) else None
+    upstream_failed = (
+        status == "failed"
+        and (signature or {}).get("document_classification") != "non_argumentative"
+    )
     return {
-        "pipeline_degraded": bool(empty_acts) and reported,
+        "pipeline_degraded": (bool(empty_acts) and reported) or upstream_failed,
         "empty_acts": empty_acts,
         "acts_degraded_reported": reported,
+        # #3489 — the death record read from the signature, named so the
+        # record and the refusal can tell an upstream death from a broken
+        # render.
+        "upstream_failed": upstream_failed,
     }
 
 
@@ -1575,6 +1601,9 @@ def consensus_row(
         # its flag, whichever pass produced the rows.
         "pipeline_degraded": bool(first.get("pipeline_degraded")),
         "pipeline_empty_acts": list(first.get("pipeline_empty_acts") or []),
+        # #3489 — which half of the rule fired crosses with it, so the
+        # consensus names an upstream death as an upstream death.
+        "pipeline_upstream_failed": bool(first.get("pipeline_upstream_failed")),
         # #3460 — the baseline's truncation crosses with it: a cut baseline
         # is never counted as a plain pipeline win, whichever pass produced
         # the rows.
@@ -1846,8 +1875,10 @@ async def run(
                 "zeroshot": zeroshot,
                 "costs": arm_costs(signature, zeroshot, pipeline_model),
                 # #3458 — the judge reads the arm's health itself, per
-                # document, from the same state dump the fiche reads.
-                "health": arm_health(state),
+                # document, from the same state dump the fiche reads; the
+                # run's own outcome rides with it (#3489): a signature that
+                # says the run died is a broken arm whatever the dump says.
+                "health": arm_health(state, signature),
                 # #3460 — the baseline's own truncation, read from the arm's
                 # record (never re-derived from the text: the judge does not
                 # truncate or rewrite the arm's response, it flags it).
@@ -1939,9 +1970,20 @@ async def run(
         else:
             print(
                 f"REFUSED: {len(degraded_ids)}/{len(documents)} document(s) "
-                "carry a degraded pipeline arm (an empty act AND a non-empty "
-                "restitution_acts_degraded): "
-                + ", ".join(f"`{doc_id}`" for doc_id in degraded_ids)
+                "carry a degraded pipeline arm — "
+                + ", ".join(
+                    f"`{doc['opaque_id']}` "
+                    + (
+                        # #3489 — the status rides with the id: a reader
+                        # tells an upstream death from a broken render.
+                        "(signature status: failed — the run died upstream)"
+                        if doc["health"]["upstream_failed"]
+                        else "(an empty act AND a non-empty "
+                        "restitution_acts_degraded)"
+                    )
+                    for doc in documents
+                    if doc["health"]["pipeline_degraded"]
+                )
                 + f" — at or beyond DEGRADED_ARM_REFUSAL_THRESHOLD="
                 f"{DEGRADED_ARM_REFUSAL_THRESHOLD}. The judge would grade a "
                 "broken render, not the pipeline; refusing before the first "
@@ -2008,6 +2050,9 @@ async def run(
         # state is never read as a pipeline loss/win without this flag.
         row["pipeline_degraded"] = doc["health"]["pipeline_degraded"]
         row["pipeline_empty_acts"] = doc["health"]["empty_acts"]
+        # #3489 — which half of the rule fired: a reader of the record
+        # tells an upstream death from a broken render.
+        row["pipeline_upstream_failed"] = doc["health"]["upstream_failed"]
         row["zeroshot_truncated"] = doc["zeroshot_truncated"]
         row["elapsed_seconds"] = elapsed
         row["status_code"] = record.get("status_code")
