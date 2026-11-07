@@ -925,6 +925,7 @@ async def run_conversational_analysis(
     render_restitution: bool = False,
     room_policy: str = ROOM_POLICY_PHASE_CASTING,
     capability_registry: Optional[Any] = None,
+    state_sink: Optional[List[Any]] = None,
 ) -> Dict[str, Any]:
     """Run a full conversational analysis on the input text.
 
@@ -984,6 +985,11 @@ async def run_conversational_analysis(
         capability_registry: T1 #1735 — registry the PM's capability map is
             derived from. None builds one lazily via setup_registry() and
             memoizes it module-wide.
+        state_sink: #3469 recovery hook — a caller-owned list the run appends
+            its state object to the moment the state is constructed. The run
+            never reads it back; it exists so a caller whose coroutine is
+            killed at a safety net (``asyncio.wait_for``) can still reach the
+            partial state the internal wall-clock bound would have returned.
 
     Returns dict with state snapshot, conversation history, and metrics.
     """
@@ -1020,6 +1026,7 @@ async def run_conversational_analysis(
             render_restitution=render_restitution,
             room_policy=room_policy,
             capability_registry=capability_registry,
+            state_sink=state_sink,
         )
 
 
@@ -1163,6 +1170,7 @@ async def _run_conversational_analysis_inner(
     render_restitution: bool = False,
     room_policy: str = ROOM_POLICY_PHASE_CASTING,
     capability_registry: Optional[Any] = None,
+    state_sink: Optional[List[Any]] = None,
 ) -> Dict[str, Any]:
     """Inner implementation of run_conversational_analysis, already inside llm_budget_scope."""
     start_time = time.time()
@@ -1232,6 +1240,11 @@ async def _run_conversational_analysis_inner(
     # 2. Setup shared state (#363: UnifiedAnalysisState for spectacular coverage)
     state_cls = UnifiedAnalysisState if spectacular else RhetoricalAnalysisState
     state = state_cls(text)
+    # #3469: hand the state to the caller's sink BEFORE any await — a safety
+    # net that cancels this coroutine mid-flight leaves every local name
+    # unreachable, and the caller must still reach the partial state.
+    if state_sink is not None:
+        state_sink.append(state)
 
     # 2b. Build agent → phase-scoped state plugin mapping (#605)
     agent_state_class = {}
