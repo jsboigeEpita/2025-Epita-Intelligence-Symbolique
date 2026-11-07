@@ -465,6 +465,137 @@ def render_non_argumentative_reader_paragraph(state: Dict[str, Any], chars: int)
     return "\n\n".join(parts)
 
 
+#: #3468 — a cut dump says what exists; it does not re-run the analysis.
+#: Eight items per list is a page the reader finishes, not a wall.
+_CUT_MATERIAL_CAP = 8
+
+
+def _capped_list_block(label: str, clauses: List[str]) -> str:
+    """One #3468 material block: a capped list under a count-honest header."""
+    shown = clauses[:_CUT_MATERIAL_CAP]
+    head = f"**{label} — {len(clauses)} enregistré(s)"
+    if len(clauses) > len(shown):
+        head += f", {len(shown)} listé(s)"
+    head += " :**"
+    return head + "\n" + "\n".join(shown)
+
+
+def render_cut_analysis_material(
+    st: Dict[str, Any], outcome: Optional[Dict[str, Any]] = None
+) -> str:
+    """#3468 — the cut run's dump: recorded material under a named cut.
+
+    A wall-clock bound kills the pipeline mid-DAG and the state IS recovered
+    (#1528) — but the acts are DAG-tail phases and never ran, so the state
+    carries upstream material (extracts, fallacies, stakes) and no act
+    string. Without this section ``pipeline_full_text`` printed four absence
+    lines and nothing else: everything the run paid for was lost to the
+    fiche AND the blind judge at the cut — both read this one producer.
+
+    Everything here comes from the state's recorded fields — one clause per
+    recorded element, absent fields omitted (#3392's rule), never a
+    fabricated act (anti-#1019). An extract goes between « » only when the
+    in-memory document carries it (``normalised_quote_in``, #3389's rule).
+    The stakes read mirrors ``act1_framing``'s: ``description`` then
+    ``stake_type``, a bare string read as itself.
+
+    Returns "" when the state recorded no material — an early cut stays what
+    it is, four named absences, nothing invented to fill it.
+    """
+    from argumentation_analysis.reporting.restitution.quote_fidelity import (
+        normalised_quote_in,
+    )
+
+    text = st.get("raw_text") or ""
+    blocks: List[str] = []
+
+    arguments = st.get("identified_arguments") or {}
+    if isinstance(arguments, dict):
+        extracts = [
+            v.strip() for v in arguments.values() if isinstance(v, str) and v.strip()
+        ]
+        if extracts:
+            blocks.append(
+                _capped_list_block(
+                    "Extraits identifiés",
+                    [
+                        f"« {desc} »" if normalised_quote_in(text, desc) else desc
+                        for desc in extracts
+                    ],
+                )
+            )
+
+    fallacies = st.get("identified_fallacies") or {}
+    if isinstance(fallacies, dict):
+        clauses: List[str] = []
+        for entry in fallacies.values():
+            if not isinstance(entry, dict):
+                continue
+            ftype = str(entry.get("type") or "").strip()
+            why = str(entry.get("justification") or "").strip()
+            if ftype and why:
+                clauses.append(f"{ftype} — {why}")
+            elif ftype:
+                clauses.append(ftype)
+        if clauses:
+            blocks.append(_capped_list_block("Sophismes identifiés", clauses))
+
+    stakes_obj = st.get("stakes_and_stakeholders") or {}
+    stakes: List[str] = []
+    if isinstance(stakes_obj, dict):
+        for s in stakes_obj.get("stakes") or []:
+            desc = ""
+            if isinstance(s, dict):
+                desc = str(s.get("description") or s.get("stake_type") or "")
+            elif isinstance(s, str):
+                desc = s
+            desc = desc.strip()
+            if desc:
+                stakes.append(desc)
+    if stakes:
+        blocks.append(_capped_list_block("Enjeux enregistrés", stakes))
+
+    strategic = st.get("strategic_read") or {}
+    historical = st.get("historical_context") or {}
+    reading = (
+        str(strategic.get("reading") or "").strip()
+        if isinstance(strategic, dict)
+        else ""
+    )
+    situation = (
+        str(historical.get("situation") or "").strip()
+        if isinstance(historical, dict)
+        else ""
+    )
+    if reading or situation:
+        lines = []
+        if reading:
+            lines.append(f"- lecture stratégique enregistrée : {reading}")
+        if situation:
+            lines.append(f"- situation historique enregistrée : {situation}")
+        blocks.append("**Lectures de contexte enregistrées :**\n" + "\n".join(lines))
+
+    if not blocks:
+        return ""
+
+    if str((outcome or {}).get("status") or "").strip() == "partial":
+        intro = (
+            "**Analyse coupée par le budget de temps avant les actes.** Les "
+            "actes sont les dernières phases du parcours : aucun n'a été "
+            "produit. Ce qui suit est le matériel établi en amont, tel "
+            "qu'enregistré dans l'état au moment de la coupe — une pièce "
+            "par élément, rien d'inventé, listes bornées."
+        )
+    else:
+        intro = (
+            "**Aucun acte produit pour ce document.** Les actes sont les "
+            "dernières phases du parcours : aucun n'a eu lieu. Ce qui suit "
+            "est le matériel enregistré dans l'état — une pièce par "
+            "élément, rien d'inventé, listes bornées."
+        )
+    return intro + "\n\n" + "\n\n".join(blocks)
+
+
 def pipeline_full_text(
     st: Dict[str, Any],
     classification: Optional[str],
@@ -526,6 +657,15 @@ def pipeline_full_text(
                     f"*(absent de l'état — {heading.lower()} non produit pour ce document)*"
                 )
             body.append("")
+        # #3468 — a wall-clock cut recovers the state but not the acts (they
+        # are DAG-tail phases): when every act is absent yet the state carries
+        # analysis material, that material is rendered honestly, or four
+        # absence lines are all the fiche and the blind judge ever see.
+        if not any(isinstance(text, str) and text for _, text in acts):
+            cut_block = render_cut_analysis_material(st, outcome)
+            if cut_block:
+                body.append(cut_block)
+                body.append("")
     question = st.get("interpretive_question")
     if isinstance(question, str) and question:
         body.append("### Question interprétative")
