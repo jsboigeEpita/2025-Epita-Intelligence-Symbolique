@@ -1198,7 +1198,10 @@ async def run_conversational_mode(
       * Safety-net timeout (rare — single in-flight call hung past the
         between-turn check): ``success=False``, ``terminates=True``,
         ``terminated_by_budget=True`` (honest partial, never faked into
-        success — anti-#1019).
+        success — anti-#1019). Since #3469 the killed run's partial state
+        still reaches the panel dump (``panel_state`` via the state sink),
+        labelled ``safety_net_partial_state`` — the cut is named, the state
+        is not lost.
     """
     from argumentation_analysis.orchestration.conversational_orchestrator import (
         run_conversational_analysis,
@@ -1210,10 +1213,15 @@ async def run_conversational_mode(
     )
     start = time.time()
     safety_net = _conversational_safety_net_timeout(max_wall_seconds)
+    # #3469: the sink outlives the cancelled coroutine. asyncio.wait_for kills
+    # the run's every local name; the state object it appends here is the one
+    # thing the safety-net branch below can still reach.
+    state_sink: List[Any] = []
     analysis_kwargs: Dict[str, Any] = {
         "text": text,
         "max_wall_seconds": max_wall_seconds,
         "room_policy": room_policy,
+        "state_sink": state_sink,
     }
     if panel_mode:
         # #3378: this flag GENERATES the acts on the state (conversational
@@ -1233,6 +1241,17 @@ async def run_conversational_mode(
             f"safety-net (internal {max_wall_seconds:g}s bound did not exit "
             f"in time) after {duration:.2f}s — recording honest partial."
         )
+        # #3469: recover the partial state the killed run paid for. The
+        # internal bound returns it as a real verdict; the safety net must
+        # not be the one path that loses it to the reader. A kill before the
+        # state existed leaves the sink empty — the absence stays named,
+        # never fabricated.
+        recovered_state = state_sink[-1] if state_sink else None
+        if recovered_state is not None and panel_mode:
+            recovered_state.deanonymized = False
+            recovered_state.set_source_metadata(
+                source_metadata or {"opaque_id": corpus_id}
+            )
         return ModeResult(
             mode="conversational",
             corpus_id=corpus_id,
@@ -1241,6 +1260,12 @@ async def run_conversational_mode(
             terminated_by_budget=True,
             duration_seconds=round(duration, 2),
             error=f"Safety-net timeout (>={safety_net:g}s)",
+            panel_state=recovered_state if panel_mode else None,
+            panel_state_reason=(
+                "safety_net_partial_state"
+                if panel_mode and recovered_state is not None
+                else None
+            ),
             scope_of_work=scope,
         )
     except Exception as exc:
