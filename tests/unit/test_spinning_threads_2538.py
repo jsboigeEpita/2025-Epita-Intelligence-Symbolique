@@ -21,6 +21,15 @@ import pytest
 from tests.nested_pytest import both, run_bounded
 from tests.spinning_threads import describe, left_alive, spinning, verdict_of
 
+# The ai-01 charge tick, in seconds. Every arithmetic witness below passes it
+# EXPLICITLY to ``_credits``/``verdict_of``: those tests state the rule on
+# measured numbers, they do not interrogate the seat. The seat's own
+# resolution is measured by ``thread_time_quantum`` and witnessed there
+# (#3218: a window whose budget is under MIN_TICKS of it is unmeasurable;
+# #3467: on a loaded seat the sample can name a multiple of the tick, and a
+# rule witness that consulted it would red on the load, not on the rule).
+_TICK = 0.015625
+
 
 def _reads_a_mock_stream(stop):
     stream = MagicMock()
@@ -110,18 +119,22 @@ def test_the_relative_rule_catches_what_the_absolute_bar_missed():
     integration.)"""
     from tests.spinning_threads import _credits
 
-    # Spinner ~20 ms, calibration ~40 ms, in the same rationed window.
-    assert _credits(used=0.020, gettable=0.040) is True
+    # Spinner ~20 ms, calibration ~40 ms, in the same rationed window. The
+    # tick is passed explicitly, as in the #3218 witness: the numbers state
+    # the arithmetic; the seat's measured resolution has its own witness
+    # (#3467: on a loaded seat the measurement can name a multiple, and a
+    # rule witness that consulted it would red on the load, not on the rule).
+    assert _credits(used=0.020, gettable=0.040, quantum=_TICK) is True
     # A spinner keeping pace with everything the window offered.
-    assert _credits(used=0.060, gettable=0.060) is True
+    assert _credits(used=0.060, gettable=0.060, quantum=_TICK) is True
     # A waiter's blip is noise, never a spinner (healthy calibration).
-    assert _credits(used=0.002, gettable=0.040) is False
+    assert _credits(used=0.002, gettable=0.040, quantum=_TICK) is False
     # A waiter's blip against a starved calibration: the window carries no
     # signal at all — unmeasurable, the same None as below.
-    assert _credits(used=0.002, gettable=0.004) is None
+    assert _credits(used=0.002, gettable=0.004, quantum=_TICK) is None
     # The calibration itself starved below accounting noise: the window
     # carries no signal — not a pass, not a fail.
-    assert _credits(used=0.020, gettable=0.003) is None
+    assert _credits(used=0.020, gettable=0.003, quantum=_TICK) is None
 
 
 def test_a_window_under_two_charge_ticks_is_unmeasurable():
@@ -155,7 +168,6 @@ _CI_TRAIL = [
     (0.031, 0.094, False),
     (0.016, 0.094, False),
 ]
-_TICK = 0.015625
 
 
 def test_a_live_spinner_squeezed_to_ticks_is_not_cleared():
@@ -166,7 +178,7 @@ def test_a_live_spinner_squeezed_to_ticks_is_not_cleared():
     burner's 5-6, where one tick flips the ratio. On main this assertion
     fails with ``'clear' == 'caught'``: the rule itself, not a missing
     argument."""
-    assert verdict_of(_CI_TRAIL) == "caught"
+    assert verdict_of(_CI_TRAIL, quantum=_TICK) == "caught"
 
 
 def test_a_thread_on_one_tick_per_window_is_still_running():
@@ -175,7 +187,7 @@ def test_a_thread_on_one_tick_per_window_is_still_running():
     cleared. The burnt-then-quiet thread below is the other side of the
     line, and the pair is the control this rule must keep apart."""
     trail = [(0.016, 0.094, False)] * 9
-    assert verdict_of(trail) == "caught"
+    assert verdict_of(trail, quantum=_TICK) == "caught"
 
 
 def test_a_burned_thread_that_went_quiet_is_cleared():
@@ -185,7 +197,7 @@ def test_a_burned_thread_that_went_quiet_is_cleared():
     readings that a scheduler squeeze can produce. Green on main and after
     #3302: this control must never move."""
     trail = [(0.100, 0.100, True)] + [(0.000, 0.100, False)] * 3
-    assert verdict_of(trail) == "clear"
+    assert verdict_of(trail, quantum=_TICK) == "clear"
 
 
 def test_a_measurement_ending_on_a_starved_window_stays_undetermined():
@@ -194,7 +206,7 @@ def test_a_measurement_ending_on_a_starved_window_stays_undetermined():
     not caught by the windows that follow, and the trail that ENDS on an
     unmeasured window stays undetermined. Green on main and after #3302."""
     trail = [(0.047, 0.078, True)] + [(0.000, 0.003, None)] * 7
-    assert verdict_of(trail) == "undetermined"
+    assert verdict_of(trail, quantum=_TICK) == "undetermined"
 
 
 def test_a_quiet_window_is_a_zero_tick_window():
@@ -215,13 +227,217 @@ def test_a_quiet_window_is_a_zero_tick_window():
 def test_the_tick_floor_uses_this_seat_s_thread_clock():
     """#3218: the quantum is measured on the seat, never hard-coded — a
     hard-coded 15.625 ms would state the wrong resolution wherever the seat
-    charges differently (and would silently stop protecting it)."""
-    from tests.spinning_threads import _credits, thread_time_quantum
+    charges differently (and would silently stop protecting it).
+
+    #3467: the seat property is asserted ONLY on a measured sample. A
+    starved sample (the burner saw no charge step inside the ceiling) is
+    reported as unmeasured, with its reads and elapsed time — a property of
+    one starved sample, never a failed seat property; the run skips that
+    measurement, it does not fail on it."""
+    from tests.spinning_threads import (
+        QUANTUM_UNMEASURED,
+        _credits,
+        thread_time_quantum,
+    )
 
     quantum = thread_time_quantum()
+    if isinstance(quantum, dict):
+        detail = quantum[QUANTUM_UNMEASURED]
+        pytest.skip(
+            "this seat's thread-time quantum is unmeasured: the sample "
+            f"starved ({detail['reads']} read(s), "
+            f"{detail['elapsed']:.2f}s elapsed) — a starved sample is not a "
+            "seat property (#3467), so this run reports the absence instead "
+            "of failing it"
+        )
     assert quantum > 0, "the seat exposed no positive thread-time increment"
     assert _credits(used=0.0, gettable=quantum, quantum=quantum) is None
     assert _credits(used=0.0, gettable=2 * quantum, quantum=quantum) is False
+
+
+# #3467 — the starved sample is a distinct outcome, on the public shape and
+# on the pure sampling engine. The born-red of the public shape: a constant
+# reader (no charge step) yields the `unmeasured` key TODAY's code cannot
+# produce — on main the sampler returned 0.0 and the test above read it as a
+# seat property.
+
+
+class _ScriptedClock:
+    """A deterministic clock for the sampling engine: each call advances the
+    scripted amount, so the loop's bounds are exercised without a wall clock
+    or a thread race (the same separation _credits already uses)."""
+
+    def __init__(self, step: float):
+        self._step = step
+        self._now = 0.0
+
+    def __call__(self) -> float:
+        self._now += self._step
+        return self._now
+
+
+def test_a_starved_sample_is_unmeasured_with_its_reads_and_elapsed():
+    """The constant reader — no delta, ever. On main this returned ``0.0``;
+    the public shape must now carry the named absence and its evidence."""
+    from tests.spinning_threads import (
+        QUANTUM_UNMEASURED,
+        sample_charge_deltas,
+        thread_time_quantum,
+    )
+
+    steps, reads, elapsed = sample_charge_deltas(
+        lambda: 0.0,
+        span=0.4,
+        ceiling=1.0,
+        clock=_ScriptedClock(0.1),
+    )
+    assert steps == []
+    assert reads >= 1
+    assert elapsed >= 1.0  # the ceiling ended the sample, not a clock floor
+
+    # The public shape, with the sampler stubbed (no thread, no psutil): the
+    # ONLY outcome a constant reader can produce is the named absence.
+    import tests.spinning_threads as mod
+
+    original = mod.sample_charge_deltas
+    original_burn = mod._burn_until
+    mod.sample_charge_deltas = lambda *a, **k: ([], 7, 1.25)
+    mod._burn_until = lambda stop: None  # no busy thread in a stubbed witness
+    try:
+        outcome = thread_time_quantum()
+    finally:
+        mod.sample_charge_deltas = original
+        mod._burn_until = original_burn
+    assert outcome == {QUANTUM_UNMEASURED: {"reads": 7, "elapsed": 1.25}}
+
+
+def test_two_known_deltas_keep_the_gcd_result():
+    """The measurement is unchanged: two positive deltas of 31.25 ms and
+    46.875 ms gcd to 15.625 ms (never their smallest member). The sample
+    covers the WHOLE span — the reader is read past its second step, so
+    the gcd is taken over every delta the window saw, not the first two
+    (#3467 review: a sample ends on the clock, never on a step count)."""
+    from tests.spinning_threads import (
+        sample_charge_deltas,
+        thread_time_quantum,
+    )
+
+    # Reader sequence: first reading 0.0, then +31.25 ms, then +46.875 ms,
+    # then flat — the loop keeps reading to the span regardless.
+    readings = iter([0.0, 0.03125, 0.078125] + [0.078125] * 20)
+    steps, reads, elapsed = sample_charge_deltas(
+        lambda: next(readings),
+        span=0.4,
+        ceiling=4.0,
+        clock=_ScriptedClock(0.05),
+    )
+    assert steps == [31250, 46875]
+    # The whole span was read — the clock ended the sample, never a step
+    # count. (7 reads nominally; the scripted clock's 0.05 additions round
+    # the 0.4 boundary below once in a while, so one extra flat read.)
+    assert 7 <= reads <= 8
+    assert elapsed >= 0.4  # the span was covered, then the loop ended
+
+    import tests.spinning_threads as mod
+
+    original = mod.sample_charge_deltas
+    original_burn = mod._burn_until
+    mod.sample_charge_deltas = lambda *a, **k: ([31250, 46875], 7, 0.45)
+    mod._burn_until = lambda stop: None
+    try:
+        outcome = thread_time_quantum()
+    finally:
+        mod.sample_charge_deltas = original
+        mod._burn_until = original_burn
+    assert outcome == 0.015625
+    assert not isinstance(outcome, dict)
+
+
+def test_equal_first_deltas_do_not_name_a_multiple_quantum():
+    """Born red (#3467 review): the first two deltas can be the SAME
+    multiple of the seat's step (62.5 ms + 62.5 ms gcds to 62.5 ms — four
+    times the step). A later delta names the step (46.875 ms = 3 steps),
+    so the sample must cover the span and take the gcd of ALL its deltas:
+    15625 µs, never the 62500 the first two alone would decide."""
+    from tests.spinning_threads import (
+        sample_charge_deltas,
+        thread_time_quantum,
+    )
+
+    # +62.5 ms, +62.5 ms, flat, then +46.875 ms — the third delta lands
+    # INSIDE the span, at a read the loop only makes when it keeps going.
+    readings = iter(
+        [0.0, 0.0625, 0.125, 0.125, 0.125, 0.125, 0.171875] + [0.171875] * 20
+    )
+    steps, reads, elapsed = sample_charge_deltas(
+        lambda: next(readings),
+        span=0.4,
+        ceiling=4.0,
+        clock=_ScriptedClock(0.05),
+    )
+    assert steps == [62500, 62500, 46875]  # the span's every delta
+    assert elapsed >= 0.4
+
+    import tests.spinning_threads as mod
+
+    original = mod.sample_charge_deltas
+    original_burn = mod._burn_until
+    mod.sample_charge_deltas = lambda *a, **k: (
+        [62500, 62500, 46875],
+        7,
+        0.45,
+    )
+    mod._burn_until = lambda stop: None
+    try:
+        outcome = thread_time_quantum()
+    finally:
+        mod.sample_charge_deltas = original
+        mod._burn_until = original_burn
+    assert outcome == 0.015625  # gcd(62500, 62500, 46875), not 0.0625
+    assert not isinstance(outcome, dict)
+
+
+def test_a_single_delta_is_not_a_measured_quantum():
+    """One delta could be a MULTIPLE of the seat's step — the gcd of two can
+    name it, one alone cannot. A sample that starves after its first step
+    keeps hunting until the ceiling, then reports unmeasured, not a guessed
+    quantum from one reading."""
+    from tests.spinning_threads import sample_charge_deltas
+
+    readings = iter([0.0, 0.03125] + [0.03125] * 100)  # one step, then flat
+    steps, _, elapsed = sample_charge_deltas(
+        lambda: next(readings),
+        span=0.4,
+        ceiling=1.0,
+        clock=_ScriptedClock(0.1),
+    )
+    assert steps == [31250]  # one step is kept, never enough to decide
+    assert elapsed >= 1.0
+
+
+def test_the_window_caller_never_receives_a_zero_floor(monkeypatch):
+    """#3467's last guarantee: when the sampler reports unmeasured, the
+    per-process floor the window rules use warns with the evidence and
+    falls back to a floor no window can be discarded by — never 0.0."""
+    import tests.spinning_threads as mod
+
+    monkeypatch.setattr(mod, "_QUANTUM", None)
+    monkeypatch.setattr(
+        mod,
+        "thread_time_quantum",
+        lambda *a, **k: {mod.QUANTUM_UNMEASURED: {"reads": 3, "elapsed": 4.0}},
+    )
+    with pytest.warns(UserWarning, match="3467"):
+        floor = mod._quantum()
+    assert floor == 1.0
+    assert floor > 0
+    # The window rules keep their arithmetic on that floor — it is a named
+    # fallback, not an invented zero resolution: a window that carries no
+    # calibration signal is still unmeasurable (None), never a verdict.
+    assert mod._credits(used=0.0, gettable=0.003, quantum=floor) is None
+    # And the floor the callers keep is the warned one, cached per process:
+    # a later window never re-derives a silent zero.
+    assert mod._quantum() == 1.0
 
 
 def test_the_clear_warning_carries_the_windows_that_produced_it():
@@ -288,7 +504,7 @@ def test_an_unmeasured_run_is_not_a_verdict():
     from tests.spinning_threads import verdict_of
 
     # Every window starved below the calibration floor: no verdict at all.
-    assert verdict_of([(0.020, 0.003, None)] * 9) == "undetermined"
+    assert verdict_of([(0.020, 0.003, None)] * 9, quantum=_TICK) == "undetermined"
     # Three used windows, however interleaved with unmeasured ones.
     caught = [
         (0.020, 0.040, True),
@@ -297,12 +513,12 @@ def test_an_unmeasured_run_is_not_a_verdict():
         (0.020, 0.003, None),
         (0.020, 0.040, True),
     ]
-    assert verdict_of(caught) == "caught"
+    assert verdict_of(caught, quantum=_TICK) == "caught"
     # Three measured unused windows in a row: a waiter, definitively.
-    assert verdict_of([(0.002, 0.040, False)] * 3) == "clear"
+    assert verdict_of([(0.002, 0.040, False)] * 3, quantum=_TICK) == "clear"
     # Two used windows then starvation to exhaustion: still no verdict.
     starved = [(0.020, 0.040, True)] * 2 + [(0.020, 0.003, None)] * 7
-    assert verdict_of(starved) == "undetermined"
+    assert verdict_of(starved, quantum=_TICK) == "undetermined"
 
 
 def test_the_undetermined_warning_names_the_thread_and_the_windows():
