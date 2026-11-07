@@ -477,10 +477,20 @@ def pipeline_text_from_state(state: Dict[str, Any], signature: Dict[str, Any]) -
     slice 2) — that is why the signature rides along, and a document the
     campaign classified non-argumentative shows the judge its terminal
     classification instead of an empty string.
+
+    #3470: a ``conversation_real`` signature routes to that engine's own
+    producer — its recorded findings are its arm, and the pipeline's acts
+    vocabulary (four absence lines) would read as this engine's failure
+    when it is its shape.
     """
-    from scripts.dataset.render_campaign_reading_folder import pipeline_full_text
+    from scripts.dataset.render_campaign_reading_folder import (
+        conversation_real_full_text,
+        pipeline_full_text,
+    )
 
     st = state.get("state") or state
+    if (signature.get("provenance") or {}).get("mode") == "conversation_real":
+        return conversation_real_full_text(st, signature.get("outcome") or {})
     return pipeline_full_text(
         st,
         signature.get("document_classification"),
