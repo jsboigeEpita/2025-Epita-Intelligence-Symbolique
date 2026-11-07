@@ -539,6 +539,99 @@ def pipeline_full_text(
     return "\n".join(body)
 
 
+#: #3470 — the conversation_real arm's lists are bounded like every cut dump.
+_CONVERSATION_REAL_CAP = 8
+
+
+def conversation_real_full_text(
+    st: Dict[str, Any], outcome: Optional[Dict[str, Any]] = None
+) -> str:
+    """#3470 — the conversation_real arm: what the run recorded, in its voice.
+
+    The real conversational engine decides in its own ``AnalysisState``: its
+    informal agent records the fallacies it found (types and justifications
+    as it read them), its FOL agent records the formulas and the solver's
+    tri-state verdict. No ``UnifiedAnalysisState``, no restitution acts — so
+    the pipeline's acts vocabulary is not this engine's voice. This producer
+    renders the recorded dict the #3470 adapter builds: one clause per
+    recorded element, absent fields omitted (#3392's rule), never a
+    templated act and never a default verdict — an undecided solver stays
+    « non déterminée », a count of zero is named as zero.
+
+    ``st`` is the normalized adapter dict (``fallacies``,
+    ``fallacies_count``, ``fol``), not a raw orchestrator state.
+    """
+
+    def _capped(label: str, clauses: List[str]) -> str:
+        shown = clauses[:_CONVERSATION_REAL_CAP]
+        head = f"**{label} — {len(clauses)} enregistré(s)"
+        if len(clauses) > len(shown):
+            head += f", {len(shown)} listé(s)"
+        head += " :**"
+        return head + "\n" + "\n".join(f"- {clause}" for clause in shown)
+
+    body: List[str] = [
+        "**Le moteur conversationnel (agents réels) a lu ce document en deux "
+        "temps :** l'agent informel relève les sophismes du texte, puis "
+        "l'agent de logique du premier ordre traduit le texte en formules et "
+        "le solveur tranche leur cohérence. Ce qui suit est ce que le run a "
+        "enregistré — une pièce par élément, rien d'inventé."
+    ]
+
+    fallacies = [f for f in (st.get("fallacies") or []) if isinstance(f, dict)]
+    clauses: List[str] = []
+    for entry in fallacies:
+        ftype = str(entry.get("type") or "").strip()
+        why = str(entry.get("justification") or "").strip()
+        if ftype and why:
+            clauses.append(f"{ftype} — {why}")
+        elif ftype:
+            clauses.append(ftype)
+    if clauses:
+        body.append(_capped("Sophismes relevés par l'agent informel", clauses))
+    else:
+        recorded_count = st.get("fallacies_count")
+        if isinstance(recorded_count, int) and recorded_count > 0:
+            # The run counted findings it did not record entry by entry:
+            # the count is the record, it is rendered as the count.
+            body.append(
+                f"**Sophismes relevés par l'agent informel :** "
+                f"{recorded_count} enregistré(s) par le run."
+            )
+        else:
+            body.append(
+                "**Sophismes relevés par l'agent informel :** aucun "
+                "sophisme enregistré."
+            )
+
+    fol = st.get("fol") or {}
+    formulas = [str(f) for f in (fol.get("formulas") or []) if str(f).strip()]
+    sections: List[str] = []
+    if formulas:
+        sections.append(_capped("Formules traduites par l'agent FOL", formulas))
+    consistency = fol.get("consistency")
+    if consistency is None:
+        verdict = "Cohérence : non déterminée — aucun solveur n'a tranché."
+    elif consistency == 0.0:
+        verdict = "Cohérence : réfutée — le solveur a trouvé une contradiction."
+    else:
+        verdict = "Cohérence : établie par le solveur."
+    message = str(fol.get("consistency_message") or "").strip()
+    if message:
+        verdict += f" Message du solveur : {message}"
+    sections.append(verdict)
+    body.append("\n\n".join(sections))
+
+    errors = [str(e) for e in (st.get("analysis_errors") or []) if str(e).strip()]
+    if errors:
+        body.append(
+            "**Analyse informelle, incidents signalés :** "
+            + " ; ".join(errors[:_CONVERSATION_REAL_CAP])
+        )
+
+    return "\n\n".join(body)
+
+
 def render_fiche(
     facts: Dict[str, Any],
     state: Dict[str, Any],

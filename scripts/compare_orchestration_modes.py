@@ -1457,11 +1457,79 @@ def _conversation_real_kernel():
     return kernel
 
 
+def _first_recorded_str(entry: Dict[str, Any], keys: Sequence[str]) -> str:
+    """First non-empty string among an entry's recorded keys (#3470).
+
+    The run's own readers disagree on key names (``nom`` vs ``type``,
+    ``explication`` vs ``justification``); the adapter reads every key in
+    use, in priority order, and never invents a value.
+    """
+    for key in keys:
+        value = entry.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
+def conversation_real_panel_state(
+    state: Any, completed: Sequence[str]
+) -> Dict[str, Any]:
+    """#3470 — the judge's state dict for a real conversational run: what the
+    orchestrator RECORDED, in its own vocabulary.
+
+    This is the honest adapter the issue names: no ``UnifiedAnalysisState``
+    mimicry, no templated act. The informal agent's raw fallacy entries are
+    normalized to ``{type, justification}`` (each key read with the same
+    multi-key priority the orchestrator's own adapter uses); the FOL step
+    contributes its formulas and the solver's tri-state verdict — ``None``
+    (undecided) is carried as ``None``, never defaulted. ``completed`` is the
+    runner's step list, so a budget-cut run's dict says which steps finished.
+    """
+    results = getattr(state, "agent_results", None) or {}
+    informal = results.get("informal") or {}
+    raw_informal = informal.get("raw_result") or {}
+    fallacies: List[Dict[str, str]] = []
+    for entry in raw_informal.get("fallacies") or []:
+        if not isinstance(entry, dict) or "error" in entry:
+            continue
+        ftype = _first_recorded_str(
+            entry, ("fallacy_type", "type", "nom", "name", "name_fr")
+        )
+        why = _first_recorded_str(
+            entry, ("justification", "explication", "description", "explanation")
+        )
+        if not ftype:
+            continue
+        fallacies.append({"type": ftype, **({"justification": why} if why else {})})
+    fol = results.get("fol_logic") or {}
+    raw_fol = fol.get("raw_result") or {}
+    return {
+        "engine": "conversation_real",
+        "steps_completed": list(completed),
+        "fallacies": fallacies,
+        "fallacies_count": informal.get("fallacies_count"),
+        "analysis_errors": [
+            str(e) for e in (getattr(state, "fallacy_analysis_errors", None) or [])
+        ],
+        "fol": {
+            "formulas": [
+                str(f) for f in (raw_fol.get("formulas") or []) if str(f).strip()
+            ],
+            "formulas_count": fol.get("formulas_count"),
+            "consistency": fol.get("consistency"),
+            "consistency_undetermined": fol.get("consistency_undetermined"),
+            "consistency_message": str(fol.get("consistency_message") or ""),
+        },
+    }
+
+
 async def run_conversation_real_mode(
     text: str,
     corpus_id: str,
     max_wall_seconds: Optional[float] = None,
     kernel_factory: Optional[Callable[[], Any]] = None,
+    panel_mode: bool = False,
+    source_metadata: Optional[Dict[str, str]] = None,
 ) -> ModeResult:
     """Run ConversationOrchestrator in real mode: its informal agent, then its
     FOL agent (LLM formulas checked by a Tweety solver). #2456.
@@ -1567,6 +1635,15 @@ async def run_conversation_real_mode(
         error = "; ".join(missing)[:200]
     else:
         error = None
+    # #3470: the panel sweep captures what the run recorded — the dict the
+    # reading folder renders as this engine's arm. A run that died before
+    # the orchestrator existed (setup failure, demo fallback) returned
+    # above with no panel_state: its absence stays named
+    # (``runner_failed_before_state_capture``), never manufactured.
+    if panel_mode and source_metadata:
+        conv_metadata = dict(source_metadata)
+    else:
+        conv_metadata = {}
     return ModeResult(
         mode="conversation_real",
         corpus_id=corpus_id,
@@ -1582,6 +1659,19 @@ async def run_conversation_real_mode(
         phases_completed=len(completed),
         phases_total=len(CONVERSATION_REAL_STEPS),
         scope_of_work=scope,
+        panel_state=(
+            {
+                **conversation_real_panel_state(state, completed),
+                **({"source_metadata": conv_metadata} if conv_metadata else {}),
+            }
+            if panel_mode
+            else None
+        ),
+        panel_state_reason=(
+            "conversation_real_partial_state"
+            if panel_mode and (timed_out or missing)
+            else None
+        ),
         extra_metrics={
             "steps_completed": completed,
             "real_agent_setup_failures": setup_failures,
@@ -2364,7 +2454,16 @@ PANEL_MODES = (
     "hierarchical_delegation",
 )
 PANEL_STATEFUL_MODES = frozenset(
-    {"pipeline_spectacular", "conversational", "hierarchical_bridge"}
+    {
+        "pipeline_spectacular",
+        "conversational",
+        # #3470: conversation_real decides in its own AnalysisState; the
+        # #3470 adapter hands the judge the recorded dict (fallacies, FOL
+        # formulas, tri-state verdict) — a state the judge can read, not a
+        # UnifiedAnalysisState.
+        "conversation_real",
+        "hierarchical_bridge",
+    }
 )
 PANEL_OUTPUT_ROOT = (
     PROJECT_ROOT
