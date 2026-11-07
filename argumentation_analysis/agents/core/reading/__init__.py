@@ -9,6 +9,10 @@ fields, two labels.
 
 from __future__ import annotations
 
+from argumentation_analysis.agents.core.reading.cross_passage import (
+    build_cross_passage_consistency,
+    cross_passage_note,
+)
 from argumentation_analysis.agents.core.reading.first_reading import (
     ANCHOR_MIN_RUN,
     ANCHOR_MIN_SHARE,
@@ -46,6 +50,8 @@ __all__ = [
     "DefiningMove",
     "FirstReading",
     "anchor_quote_in",
+    "build_cross_passage_consistency",
+    "cross_passage_note",
     "build_first_reading",
     "build_first_reading_prompt",
     "defining_move_spans",

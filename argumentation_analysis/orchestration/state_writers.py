@@ -3427,10 +3427,37 @@ def _write_first_reading_to_state(output: Any, state: Any, ctx: dict[str, Any]) 
         state.defining_moves = payload
 
 
+def _write_cross_passage_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
+    """Persist the cross-passage consistency check (#3432 ask 6b).
+
+    The producer's payload is kept as computed: the solver's verdict, the
+    located pair (two verbatim quotes, two offsets), and the named absence
+    when the check was not reached. No re-derivation here — the writer
+    never re-decides a verdict, it only labels the record.
+    """
+    if not output or not isinstance(output, dict):
+        return
+    payload = {
+        "status": str(output.get("status") or "unreachable"),
+        "reason": str(output.get("reason") or ""),
+        "checked": int(output.get("checked") or 0),
+        "dropped_formulas": int(output.get("dropped_formulas") or 0),
+        "unquoted_slots": list(output.get("unquoted_slots") or []),
+        "pairs_decided": int(output.get("pairs_decided") or 0),
+        "findings": [f for f in (output.get("findings") or []) if isinstance(f, dict)],
+        "basis": "cross_passage_consistency",
+    }
+    if isinstance(state, dict):
+        state["cross_passage_consistency"] = payload
+    elif hasattr(state, "cross_passage_consistency"):
+        state.cross_passage_consistency = payload
+
+
 CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "historical_context": _write_historical_context_to_state,
     "strategic_read": _write_strategic_read_to_state,
     "first_reading": _write_first_reading_to_state,
+    "cross_passage_consistency": _write_cross_passage_to_state,
     "argument_quality": _write_quality_to_state,
     "counter_argument_generation": _write_counter_argument_to_state,
     "belief_maintenance": _write_jtms_to_state,

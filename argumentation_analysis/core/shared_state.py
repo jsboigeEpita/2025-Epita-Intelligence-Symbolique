@@ -994,6 +994,24 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "read_scope": {},
             "basis": "first_reading",
         }
+        # #3432 (ask 6b) — the cross-passage consistency check: the thesis's
+        # own passages (defining_moves slots) translated into a propositional
+        # theory, decided by the wired reasoner. ``status`` is tri-state:
+        # ``inconsistent`` = the solver implicated two positioned passages
+        # (``findings`` carries both quotes and offsets), ``checked`` = no
+        # inconsistency established, ``undecided``/``unreachable`` = the
+        # named absence (#1941), never a fabricated verdict. Consumed by the
+        # Act II/III evidence builders, which render the pair or the absence.
+        self.cross_passage_consistency: Dict[str, Any] = {
+            "status": "unreachable",
+            "reason": "",
+            "checked": 0,
+            "dropped_formulas": 0,
+            "unquoted_slots": [],
+            "pairs_decided": 0,
+            "findings": [],
+            "basis": "cross_passage_consistency",
+        }
         # Track UU #724: specialist commentary + analysis trace
         self.analysis_trace: List[Dict[str, Any]] = (
             []

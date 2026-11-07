@@ -614,6 +614,13 @@ _STRUCT_LIST_SCRUB = {
     # ``dropped_quotes`` and ``read_scope`` (ints/bools) survive — the record
     # of whether the document was read whole is not corpus text.
     "defining_moves": ("moves",),
+    # #3432 — the cross-passage record's findings carry BOTH sides of a
+    # contradicted pair as verbatim document spans. Same verdict as
+    # ``defining_moves`` above: the count of located contradictions crosses,
+    # the quotes' wording does not. ``status``/``reason`` are code-side
+    # closed vocabulary, but the record rides the same one-pass reduction —
+    # one treatment per field, no per-leaf surgery.
+    "cross_passage_consistency": ("findings",),
 }
 
 

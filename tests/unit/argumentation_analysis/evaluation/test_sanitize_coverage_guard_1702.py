@@ -311,8 +311,42 @@ def _canaried_state() -> UnifiedAnalysisState:
         },
         "basis": "first_reading",
     }
+    # #3432 — the cross-passage consistency record: each finding carries BOTH
+    # quotes of a contradicted pair as verbatim document spans (the document's
+    # own words, like defining_moves' quotes above), so the findings list is
+    # reduced to a count by _STRUCT_LIST_SCRUB — the canary plants NL in both
+    # quote leaves to exercise exactly that reduction.
+    s.cross_passage_consistency = {
+        "status": "inconsistent",
+        "reason": "",
+        "checked": 4,
+        "dropped_formulas": 0,
+        "unquoted_slots": [],
+        "pairs_decided": 1,
+        "findings": [
+            {
+                "left": {
+                    "id": "s1",
+                    "slot": "thesis",
+                    "kind": "thesis",
+                    "quote": NL,
+                    "offset": 0,
+                },
+                "right": {
+                    "id": "s2",
+                    "slot": "pillar",
+                    "kind": "claim",
+                    "quote": NL2,
+                    "offset": 20400,
+                },
+                "gap": 20400,
+                "origin": "positioned_pair",
+            }
+        ],
+        "basis": "cross_passage_consistency",
+    }
 
-    # --- dung_frameworks: covered paths (4b/4c) + the GAP sidecar -------------
+    # --- dung_frameworks: covered paths (4b/4c) + the GAP sidecar ------------
     # The real ``extensions`` shape is heterogeneous (``extensions`` = list of
     # lists = the Dung sets; ``all_members`` = flat list), so the value type is
     # ``Any`` — the ``add_dung_framework`` signature narrows it to
@@ -561,6 +595,10 @@ WRITTEN_TOP_LEVEL_FIELDS = frozenset(
         # canaried above and reduced to counts by _STRUCT_LIST_SCRUB: the
         # quotes are verbatim document spans, the readings model prose.
         "defining_moves",
+        # #3432 — the cross-passage consistency record (each finding carries
+        # both quotes of a contradicted pair), canaried above and reduced to
+        # a count by _STRUCT_LIST_SCRUB, same verdict as defining_moves.
+        "cross_passage_consistency",
         "dung_frameworks",
         # #3242 — populated by the real ``_write_fact_extraction_to_state``
         # writer's ``record_anchor_census()`` (#2973): counts, per-producer

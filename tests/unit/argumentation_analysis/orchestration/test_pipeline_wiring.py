@@ -110,8 +110,9 @@ class TestWorkflowFormalPhases:
         # reading after governance; #3395 added the root `first_reading`
         # phase, which the per-argument fallacy pass now depends on;
         # #3387 rework added `semantic_indexing` right after the reading —
-        # the per-argument selection spends its spans).
-        assert len(wf.phases) == 20
+        # the per-argument selection spends its spans); #3432 (ask 6b)
+        # added cross_passage_consistency after the formal lens.
+        assert len(wf.phases) == 21
 
 
 # ============================================================

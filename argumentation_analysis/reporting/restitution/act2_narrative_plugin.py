@@ -139,6 +139,7 @@ from argumentation_analysis.agents.core.governance.coalition_play import (
     coalition_note,  # #3386
 )
 from argumentation_analysis.agents.core.reading import first_reading_note  # #3395
+from argumentation_analysis.agents.core.reading import cross_passage_note  # #3432
 
 logger = logging.getLogger(__name__)
 
@@ -641,6 +642,12 @@ class Act2Evidence:
     # carries no record at all (bare doubles): the prompt then omits the
     # section instead of putting a producer's vocabulary where none ran.
     first_reading: str = ""
+    # #3432 (ask 6b) — the cross-passage consistency block, rendered by its
+    # ONE producer (``cross_passage_note``): the solver's verdict over the
+    # thesis's own passages, with the two verbatim quotes and their
+    # positions, or the named absence (#1941). Empty when the state carries
+    # no record: the prompt omits the section.
+    cross_passage: str = ""
 
 
 @dataclass
@@ -1474,6 +1481,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         # #3395 (acts slice) — the one producer renders the block; the act
         # never re-words the moves in its own vocabulary.
         first_reading=first_reading_note(state),
+        cross_passage=cross_passage_note(state),
     )
 
 
@@ -2650,6 +2658,12 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
     first_reading_block = (
         f"{evidence.first_reading}\n\n" if evidence.first_reading else ""
     )
+    # #3432 (ask 6b) — the cross-passage consistency block, right after the
+    # reading it builds on: a solver verdict is a PREUVE to weave, never an
+    # inventory line. Empty when the state carries no record.
+    cross_passage_block = (
+        f"{evidence.cross_passage}\n\n" if evidence.cross_passage else ""
+    )
 
     prompt = (
         "Tu es l'auteur de l'ACTE II d'un rapport de restitution argumentative.\n"
@@ -2687,6 +2701,7 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
             else ""
         )
         + f"\n{first_reading_block}"
+        + f"{cross_passage_block}"
         f"{reading_block}"
         f"{coverage_note}"
         f"{unattributed_block}"
