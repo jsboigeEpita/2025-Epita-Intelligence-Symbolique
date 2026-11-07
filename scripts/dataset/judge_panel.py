@@ -555,7 +555,7 @@ def _passphrase_or_exit() -> str:
     return passphrase
 
 
-def load_document_texts(panel: Sequence[str]) -> Dict[str, str]:
+def load_document_records(panel: Sequence[str]) -> Dict[str, Dict[str, Any]]:
     """Decrypt the corpus for the panel — in memory only, never persisted.
 
     Dataset privacy rule 5: the definitions are consumed through
@@ -578,10 +578,18 @@ def load_document_texts(panel: Sequence[str]) -> Dict[str, str]:
         b64_derived_key=key.decode("utf-8"),
         raise_on_decrypt_error=True,
     )
+    from scripts.dataset.run_corpus_batch import expand_corpus
+
     try:
-        return document_texts_from_definitions(definitions, panel)
+        docs, _, _ = expand_corpus(list(definitions), 0, list(panel))
+        return {doc["opaque_id"]: doc for doc in docs}
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
+
+
+def load_document_texts(panel: Sequence[str]) -> Dict[str, str]:
+    """The judge's original text-only view of in-memory panel records."""
+    return {key: doc["full_text"] for key, doc in load_document_records(panel).items()}
 
 
 def load_json(path: Path) -> Dict[str, Any]:
