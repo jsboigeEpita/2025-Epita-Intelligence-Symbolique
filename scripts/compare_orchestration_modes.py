@@ -2626,6 +2626,7 @@ async def run_all(
     document_texts: Optional[Dict[str, str]] = None,
     panel_out_dir: Optional[Path] = None,
     panel_judge_model: Optional[str] = None,
+    document_metadata: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> List[ModeResult]:
     """Run selected modes on selected corpora.
 
@@ -2766,13 +2767,14 @@ async def run_all(
                 # its internal bound (C1); hierarchical honest-degrades.
                 # #1760: the conversational room policy rides along for the
                 # steering measurement rows (ignored by every other runner).
-                runner_kwargs = {"max_wall_seconds": max_wall_seconds}
+                runner_kwargs: Dict[str, Any] = {"max_wall_seconds": max_wall_seconds}
                 if mode == "conversational":
                     runner_kwargs["room_policy"] = conv_room_policy
                 if panel_out_dir is not None and mode in PANEL_STATEFUL_MODES:
                     runner_kwargs.update(
                         panel_mode=True,
                         source_metadata={
+                            **(document_metadata or {}).get(corpus_id, {}),
                             "opaque_id": corpus_id,
                             "source_id": corpus_id,
                         },
@@ -2966,6 +2968,7 @@ def main():
         return
 
     document_texts = None
+    document_metadata = None
     panel_out_dir = args.panel_out_dir
     if args.doc_ids is not None or args.panel_file is not None:
         from scripts.dataset.run_corpus_batch import parse_doc_ids
@@ -2978,7 +2981,11 @@ def main():
             parser.error("the panel selection is empty")
         if args.corpora is not None:
             parser.error("--corpora and --doc-ids/--panel-file are exclusive")
-        document_texts = load_panel_documents(panel)
+        from scripts.dataset.judge_panel import load_document_records
+
+        records = load_document_records(panel)
+        document_texts = {key: record["full_text"] for key, record in records.items()}
+        document_metadata = {key: record["metadata"] for key, record in records.items()}
         args.corpora = panel
         args.modes = args.modes or list(PANEL_MODES)
         args.output = args.output or str(PANEL_OUTPUT_ROOT / "comparison.md")
@@ -2999,6 +3006,7 @@ def main():
                 max_wall_seconds=args.max_wall_seconds,
                 conv_room_policy=args.conv_room_policy,
                 document_texts=document_texts,
+                document_metadata=document_metadata,
                 panel_out_dir=panel_out_dir,
                 panel_judge_model=args.panel_judge_model,
             )

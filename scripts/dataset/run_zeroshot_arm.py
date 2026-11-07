@@ -108,7 +108,9 @@ def resolve_arm_endpoint() -> Dict[str, str]:
     return {"api_key": api_key, "base_url": base_url, "model_id": model_id}
 
 
-def build_prompt(doc_text: str) -> str:
+def build_prompt(
+    doc_text: str, source_metadata: Optional[Dict[str, Any]] = None
+) -> str:
     """The zero-shot prompt on the FULL text — no [:8000] cut.
 
     The cut was run_capstone_c1's token-budget compromise and is precisely
@@ -116,18 +118,25 @@ def build_prompt(doc_text: str) -> str:
     If the context window forces a cut, the CAMPAIGN applies the same cut
     to both arms and states it — not this producer silently.
     """
-    return ZEROSHOT_PROMPT.format(text=doc_text)
+    prompt = ZEROSHOT_PROMPT.format(text=doc_text)
+    if source_metadata is None:
+        return prompt
+    header = json.dumps(source_metadata, ensure_ascii=False, sort_keys=True)
+    return f"Métadonnées de la source : {header}\n\n{prompt}"
 
 
 def build_payload(
     model_id: str,
     doc_text: str,
     max_completion_tokens: int = DEFAULT_MAX_COMPLETION_TOKENS,
+    source_metadata: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """One call, no tools, answer allowed to run long."""
     return {
         "model": model_id,
-        "messages": [{"role": "user", "content": build_prompt(doc_text)}],
+        "messages": [
+            {"role": "user", "content": build_prompt(doc_text, source_metadata)}
+        ],
         "max_completion_tokens": max_completion_tokens,
     }
 
@@ -175,12 +184,15 @@ async def call_zeroshot(
     doc_text: str,
     timeout: int,
     max_completion_tokens: int = DEFAULT_MAX_COMPLETION_TOKENS,
+    source_metadata: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """One live call; the verdict (status, body head) is returned, never
     swallowed — a failed document is counted failed, not absent (#2841)."""
     import httpx
 
-    payload = build_payload(endpoint["model_id"], doc_text, max_completion_tokens)
+    payload = build_payload(
+        endpoint["model_id"], doc_text, max_completion_tokens, source_metadata
+    )
     async with httpx.AsyncClient(timeout=timeout) as client:
         response = await client.post(
             f"{endpoint['base_url'].rstrip('/')}/chat/completions",
@@ -244,6 +256,11 @@ async def run_arm(argv: Optional[List[str]] = None) -> int:
         action="store_true",
         help="Print the ladder (ids, lengths) and exit — no network",
     )
+    parser.add_argument(
+        "--with-source-header",
+        action="store_true",
+        help="Prepend the pipeline's source metadata; write to a separate results directory",
+    )
     args = parser.parse_args(argv)
 
     definitions = load_definitions()
@@ -262,7 +279,12 @@ async def run_arm(argv: Optional[List[str]] = None) -> int:
             print(f"  {doc['opaque_id']}  chars={len(doc['full_text'])}")
         return 0
 
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    results_dir = (
+        RESULTS_DIR.with_name(RESULTS_DIR.name + "_with_header")
+        if args.with_source_header
+        else RESULTS_DIR
+    )
+    results_dir.mkdir(parents=True, exist_ok=True)
     endpoint = resolve_arm_endpoint()
     header = provenance_header(
         endpoint["model_id"],
@@ -270,6 +292,9 @@ async def run_arm(argv: Optional[List[str]] = None) -> int:
         args.max_chars,
         max_completion_tokens=args.max_completion_tokens,
     )
+    if args.with_source_header:
+        header["command"] += " --with-source-header"
+        header["source_header"] = True
     print(f"model: {endpoint['model_id']}", flush=True)
     print(f"max_completion_tokens: {args.max_completion_tokens}", flush=True)
 
@@ -279,18 +304,18 @@ async def run_arm(argv: Optional[List[str]] = None) -> int:
     failed = 0
     t_start = time.time()
     for doc in docs:
-        out_path = RESULTS_DIR / f"{doc['opaque_id']}.json"
+        out_path = results_dir / f"{doc['opaque_id']}.json"
         if args.skip_existing and out_path.exists():
             print(f"[{doc['opaque_id']}] skip (existing)", flush=True)
             continue
         attempted += 1
         t0 = time.time()
         try:
+            kwargs = {"max_completion_tokens": args.max_completion_tokens}
+            if args.with_source_header:
+                kwargs["source_metadata"] = doc["metadata"]
             record = await call_zeroshot(
-                endpoint,
-                doc["full_text"],
-                args.timeout,
-                max_completion_tokens=args.max_completion_tokens,
+                endpoint, doc["full_text"], args.timeout, **kwargs
             )
         except Exception as exc:  # network-level failure: named, never silent
             record = {"status_code": 0, "error_body_head": repr(exc)}
