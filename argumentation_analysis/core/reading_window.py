@@ -105,6 +105,16 @@ PER_ARGUMENT_CEILING = 30
 #: never drops, so a short document's pass is byte-identical to today's.
 PER_ARGUMENT_FLOOR = 10
 
+#: #3432 ask 6(a) — the first reading's pillar budget has the same shape as
+#: ``per_argument_unit_budget``. Three is the old flat bound, so a short
+#: document keeps its prompt and state byte-identical. A long document may
+#: rest on more than three distinct supports; the budget says HOW MANY may be
+#: named, never WHICH, and the model still supplies only the thesis's own
+#: supports. Eight is the largest named slot list that leaves room for local
+#: moves under the unchanged MAX_MOVES = 12 (thesis + mechanism included).
+PILLAR_FLOOR = 3
+PILLAR_CEILING = 8
+
 #: #2850 lot 10 — the personas' anchored read: the window was built from the
 #: first reading's defining moves (positions + passages), not from offset 0.
 STATUS_ANCHORED_ON_MOVES = "anchored_on_defining_moves"
@@ -327,6 +337,23 @@ def per_argument_unit_budget(
     function only says HOW MANY, never WHICH.
     """
     k = 2 * (-(-length // capacity))
+    return max(floor, min(ceiling, k))
+
+
+def pillar_budget(
+    length: int,
+    capacity: int = WHOLE_TEXT_CALL_CAPACITY,
+    ceiling: int = PILLAR_CEILING,
+    floor: int = PILLAR_FLOOR,
+) -> int:
+    """#3432 ask 6(a) — how many thesis supports a first reading may name.
+
+    One pillar per capacity-chunk, floored at the former flat three, with a
+    named ceiling. Length buys room for supports the model has identified; it
+    never invents a support, relaxes the citation rule, or raises MAX_MOVES.
+    At the floor the prompt and state keep the pre-#3432 flat-three form.
+    """
+    k = -(-length // capacity)
     return max(floor, min(ceiling, k))
 
 

@@ -60,7 +60,7 @@ what the thesis rests on — the two or three passages of evidence or reasoning
 that carry it — which no line of the render does. Those passages are usually
 far from the thesis one, and the per-argument selection (#3395) prefers the
 units overlapping a defining move, so they were rarely read at all. The third
-slot names them (``slot="pillar"``, at most :data:`MAX_PILLARS`), each with its
+slot names them (``slot="pillar"``, bounded by :func:`pillar_budget`), each with its
 own verbatim quote and a kind from the closed vocabulary; being moves, their
 spans join ``defining_move_spans`` and the selector examines them first. The
 slot points the lenses at the passages that carry the thesis — it does not
@@ -90,6 +90,7 @@ from argumentation_analysis.core.reading_window import (
     STATUS_SELECTED,
     WindowSelection,
     locate_quote,
+    pillar_budget,
     selected_text_and_selection,
 )
 
@@ -122,12 +123,40 @@ MAX_MOVES = 12
 #: model rather than truncated after the fact.
 _PROMPT_MAX_MOVES = MAX_MOVES
 
-#: #3432 — how many pillars the answer may carry. The panel measured 2-3
-#: passages carrying a thesis, and the slot is a reading, not a second list of
-#: local moves: the bound stays DECLARED here (and stated to the model) rather
-#: than raised later, and it never touches ``MAX_MOVES`` — the anti-pendulum
-#: the issue names is « catch the pillars by volume ».
+#: #3432 — the FLOOR of the pillar budget, the former flat bound. Ask 6(a)
+#: scales the bound with the document's length via ``pillar_budget``: a long
+#: document can rest on more than three supports, while a short one keeps its
+#: prompt and state byte-identical. This is a bound on named supports, not a
+#: volume of local moves: ``MAX_MOVES`` stays where it was.
 MAX_PILLARS = 3
+
+#: #3480 rework (R1148) — step 2's bound sentence, at the floor. The paid
+#: probe (0.086 $) measured the model obeying THIS sentence over the hard
+#: rules: with "the two or three passages" still in step 2, it named three
+#: pillars on every long document whatever ``At most N`` said. The wrap is
+#: part of the value so the rendered floor prompt keeps the template's
+#: former bytes exactly; above the floor :func:`pillar_prose` names the
+#: computed budget instead.
+_PILLAR_PROSE_FLOOR = "the two or three passages the\n   thesis would fall without"
+
+
+def pillar_prose(max_pillars: int) -> str:
+    """The sentence step 2 states the pillar bound in (#3480 rework).
+
+    One producer: the caller fills this from its own
+    ``pillar_budget(len(excerpt))`` — the number is never restated here. At
+    or below :data:`MAX_PILLARS` the sentence is the flat-three prompt's own
+    bytes, so a short document's prompt stays byte-identical; above it the
+    sentence NAMES the budget, because a bound the model is not told in the
+    sentence it reads does not bind (the measured defect).
+    """
+    if max_pillars <= MAX_PILLARS:
+        return _PILLAR_PROSE_FLOOR
+    return (
+        "the passages the thesis would fall without, at most\n   "
+        f"{max_pillars} on a document of this length"
+    )
+
 
 #: #3415 ask 4 — the two floors a document passage must clear before it can
 #: anchor a slot whose quote failed the citation rule. Both are DECLARED here,
@@ -233,8 +262,7 @@ specialist sees it. Your job, in this order:
    are often stated late, sometimes once, nowhere near the opening; a reader
    who stopped at the first page would miss them. Each of the two comes with
    its own verbatim quote.
-2. Name the PILLARS the thesis rests on: the two or three passages the
-   thesis would fall without — the evidence it cites, the premise it leans
+2. Name the PILLARS the thesis rests on: {pillar_bound} — the evidence it cites, the premise it leans
    on, the ruling it claims to follow. They are usually FAR from the thesis
    passage, sometimes in another part of the document; that distance is
    exactly why a reader who only looks beside the thesis misses them. Each
@@ -285,7 +313,8 @@ class DefiningMove:
     ``slot`` marks the entries the question asks for FIRST (#3415, #3432): the
     central thesis (``"thesis"``), the mechanism that carries it
     (``"mechanism"``) and each passage the thesis rests on (``"pillar"``,
-    repeated up to :data:`MAX_PILLARS`). Empty for a local move — the record carries the key
+    repeated up to :func:`pillar_budget`). Empty for a local move — the record
+    carries the key
     only when there is a slot to state (honest absence, so a slot-less
     record stays byte-identical to a pre-#3415 one).
 
@@ -581,8 +610,11 @@ def _salvage_array(text: str, key: str) -> Tuple[List[Any], int]:
     return values, malformed
 
 
-def _parse_answer(content: str) -> Tuple[Dict[str, Any], int]:
+def _parse_answer(content: str, max_pillars: int) -> Tuple[Dict[str, Any], int]:
     """The answer dict and the count of objects no path could read.
+
+    ``max_pillars`` is the bound already stated in this call's prompt: the
+    salvage must not silently restore the old flat-three bound on a long text.
 
     Clean parse first; on a document-level ``JSONDecodeError`` the salvage
     path keeps every object that reads on its own, splices a wrapper's
@@ -604,7 +636,7 @@ def _parse_answer(content: str) -> Tuple[Dict[str, Any], int]:
         recovered_pillars, pillar_bad = _salvage_array(text, "pillars")
         malformed += pillar_bad
         if recovered_pillars:
-            spliced["pillars"] = recovered_pillars[:MAX_PILLARS]
+            spliced["pillars"] = recovered_pillars[:max_pillars]
         for key, obj in objects:
             # R1144 — the key that named a slot object is how salvage knows
             # it is the thesis or the mechanism, never a local move. Without
@@ -638,9 +670,19 @@ def _parse_answer(content: str) -> Tuple[Dict[str, Any], int]:
 
 
 def build_first_reading_prompt(excerpt: str) -> str:
-    """The one prompt of the first reading."""
+    """The one prompt of the first reading, with its length-aware pillar bound.
+
+    #3480 rework (R1148) — the bound is computed ONCE and reaches the prompt
+    twice, as the number of the hard rule and as the sentence of step 2
+    (:func:`pillar_prose`): the model obeyed the sentence, never the rule,
+    so both must name the same figure from this single call.
+    """
+    bound = pillar_budget(len(excerpt))
     return FIRST_READING_PROMPT.format(
-        max_moves=_PROMPT_MAX_MOVES, max_pillars=MAX_PILLARS, excerpt=excerpt
+        max_moves=_PROMPT_MAX_MOVES,
+        max_pillars=bound,
+        pillar_bound=pillar_prose(bound),
+        excerpt=excerpt,
     )
 
 
@@ -710,8 +752,9 @@ async def build_first_reading(
         return result
 
     try:
+        max_pillars = pillar_budget(len(excerpt))
         content = await llm_callable(build_first_reading_prompt(excerpt))
-        parsed, malformed = _parse_answer(content or "")
+        parsed, malformed = _parse_answer(content or "", max_pillars)
         raw_moves = parsed.get("moves")
         if not isinstance(raw_moves, list):
             raw_moves = None
@@ -831,10 +874,11 @@ async def build_first_reading(
         # units a recorded move overlaps (``defining_move_spans``): kept at
         # their document order, a pillar would lose its place to a local
         # claim that happens to sit beside the thesis. Bounded by
-        # ``MAX_PILLARS`` and never by loosening ``MAX_MOVES``.
+        # ``pillar_budget(len(excerpt))``, the SAME bound stated to the model;
+        # ``MAX_MOVES`` never moves.
         pillars = parsed.get("pillars")
         if isinstance(pillars, list):
-            for raw in pillars[:MAX_PILLARS]:
+            for raw in pillars[:max_pillars]:
                 pillar_kind = (
                     move_kind(raw.get("kind")) if isinstance(raw, dict) else "other"
                 )
