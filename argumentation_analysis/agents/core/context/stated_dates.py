@@ -26,6 +26,15 @@ parameter. A false refutation is worse than a missed one (it prints
 doubtful token falls on the side of NO floor: URLs, identifiers, decimals and
 digit-grouped quantities are not dated references, and a year announced as
 future is projected in the corpus's languages, not only French.
+
+R1149 review (final rework): a floor is a CALENDAR DATE. The replay of the
+real check on the 20 recorded panel states measured the head firing on 4 —
+only one was the true case, a citation dated to the day. The other floors
+came from years a bare mention supplies: an unmarked legal clause ("may be
+amended after YYYY"), an announced event ("the YYYY <event>"). A year bounds
+the writing date only when a month name, French or English, sits within a
+short window before it. The error stays on the safe side: a doubtful year
+loses its floor and never gains one.
 """
 
 from __future__ import annotations
@@ -63,6 +72,41 @@ _FUTURE_MARKERS = (
 #: How far before the year a projection marker may sit and still count.
 _MARKER_WINDOW = 24
 
+#: Month names that turn a stated year into a CALENDAR DATE (R1149) — the
+#: corpus is not French-only, and the measured true case was an English
+#: "speech of <month> <day>, YYYY". Full names only: an abbreviation is a
+#: doubtful year, and a doubtful year loses its floor, never gains one.
+_MONTH_NAMES = (
+    "janvier",
+    "février",
+    "mars",
+    "avril",
+    "mai",
+    "juin",
+    "juillet",
+    "août",
+    "septembre",
+    "octobre",
+    "novembre",
+    "décembre",
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
+)
+
+#: How far before the year a month name may sit and still carry it (R1149's
+#: measured shapes: "January 15, 2019", "du 14 mars 2019").
+_MONTH_WINDOW = 20
+
 #: Characters of context quoted around a stated year: enough for a render to
 #: name the reference, short enough not to become an excerpt of the text.
 _QUOTE_CONTEXT = 48
@@ -79,13 +123,17 @@ class StatedDate:
 
     ``projected`` is True when a marker says the year is announced as future
     ("d'ici 2088", "by 2088"): a stated date all the same, but never a floor
-    for the writing date.
+    for the writing date. ``calendar`` is True when a month name sits within
+    :data:`_MONTH_WINDOW` characters before the year (R1149): only a calendar
+    date bounds the writing date — a year a bare mention supplies (a legal
+    clause, an announced event) bounds nothing.
     """
 
     year: int
     quote: str
     offset: int
     projected: bool = False
+    calendar: bool = False
 
 
 def _is_year_token(text: str, start: int, end: int) -> bool:
@@ -137,6 +185,19 @@ def _is_projection(text: str, offset: int) -> bool:
     )
 
 
+def _in_calendar_date(text: str, offset: int) -> bool:
+    """Does a month name carry the year at ``offset`` (R1149)?
+
+    The measured true floor was a citation dated to the day ("speech of
+    January 15, 2019", "du 14 mars 2019"); the measured false floors were
+    years a bare mention supplies. A month name within a short window before
+    the year is what separates them. Whole words, case-insensitive (a month
+    opens sentences); a month further away carries nothing.
+    """
+    window = text[max(0, offset - _MONTH_WINDOW) : offset].lower()
+    return any(re.search(rf"\b{re.escape(month)}\b", window) for month in _MONTH_NAMES)
+
+
 def extract_stated_dates(text: str) -> List[StatedDate]:
     """Every explicit YEAR in the text, in order of appearance.
 
@@ -164,19 +225,23 @@ def extract_stated_dates(text: str) -> List[StatedDate]:
                 quote=quote,
                 offset=offset,
                 projected=_is_projection(text, offset),
+                calendar=_in_calendar_date(text, offset),
             )
         )
     return stated
 
 
 def past_cited_bound(stated: Sequence[StatedDate]) -> Optional[StatedDate]:
-    """The latest year the document cites as past — the writing date's floor.
+    """The latest CALENDAR DATE the document cites as past — the writing
+    date's floor.
 
     The document was written at or after this year: it cites it as already
-    past. Projected years are excluded (they bound nothing). Among equal
-    maxima the first occurrence is returned — the one a render names.
+    past. Projected years are excluded (they bound nothing), and so is every
+    year no month name carries (R1149): a bare mention — a legal clause, an
+    announced event — supplies no floor. Among equal maxima the first
+    occurrence is returned — the one a render names.
     """
-    candidates = [entry for entry in stated if not entry.projected]
+    candidates = [entry for entry in stated if entry.calendar and not entry.projected]
     if not candidates:
         return None
     return max(candidates, key=lambda entry: entry.year)

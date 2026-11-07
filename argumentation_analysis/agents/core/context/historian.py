@@ -177,13 +177,20 @@ def _stakes_block(state: Any) -> str:
 def _dates_section(stated: Optional[List[StatedDate]]) -> str:
     """#3479 — the document's own dated references, for the historian's prompt.
 
-    Empty string when the document states no date: the formatted prompt is
-    then byte-identical to the one #3377 defined, which is the no-change
-    control the issue demands. Projections ride too ("d'ici 2088"): they are
-    dates the document states, even though only the past-cited ones bound the
-    writing date below.
+    The section lists exactly the dates that BOUND the writing date — the
+    same filtered set the confrontation reads (R1149: a calendar date, not
+    projected). A year the rule does not bound on must not ride a section
+    whose wording says "a dating you assign it earlier than one of them is
+    impossible": that would hand the historian junk dated references again.
+
+    Empty string when the document states no bounding date: the formatted
+    prompt is then byte-identical to the one #3377 defined, which is the
+    no-change control the issue demands.
     """
-    if not stated:
+    bounding = [
+        entry for entry in (stated or []) if entry.calendar and not entry.projected
+    ]
+    if not bounding:
         return ""
     lines = [
         "Dated references the document itself states (deterministic " "extraction,",
@@ -191,7 +198,7 @@ def _dates_section(stated: Optional[List[StatedDate]]) -> str:
         "each past-cited one — a dating you assign it earlier than one of",
         "them is impossible.",
     ]
-    for entry in stated[:PROMPT_MAX_DATES]:
+    for entry in bounding[:PROMPT_MAX_DATES]:
         lines.append(f"- {entry.year} — « {entry.quote} » (offset {entry.offset})")
     return "\n".join(lines) + "\n\n"
 

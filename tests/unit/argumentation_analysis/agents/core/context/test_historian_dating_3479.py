@@ -35,11 +35,12 @@ from argumentation_analysis.agents.core.context.historian import (
     build_historian_prompt,
 )
 
-#: A synthetic text citing ONE year as already past. Opaque words, invented
-#: year — nothing here comes from the corpus.
+#: A synthetic text citing ONE calendar date (month, day, year) as already
+#: past — R1149: only a calendar date bounds the writing date. Opaque words,
+#: invented date — nothing here comes from the corpus.
 _TEXT_WITH_PAST_DATE = (
-    "Un rappel ouvre le propos : depuis le congrès de 2019, l'assemblée a "
-    "changé de méthode, et chaque délégué s'en souvient. "
+    "Un rappel ouvre le propos : depuis le congrès du 14 mars 2019, "
+    "l'assemblée a changé de méthode, et chaque délégué s'en souvient. "
     + "Une prose neutre continue, sans chiffre ni année d'aucune sorte. " * 40
 )
 _OFFSET_2019 = _TEXT_WITH_PAST_DATE.index("2019")
@@ -107,8 +108,9 @@ class TestTheExtraction:
         assert [entry.year for entry in stated] == [2019]
         entry = stated[0]
         assert entry.offset == _OFFSET_2019
-        assert "congrès de 2019" in entry.quote
+        assert "congrès du 14 mars 2019" in entry.quote
         assert entry.projected is False
+        assert entry.calendar is True
 
     def test_the_bound_is_the_latest_year_cited_as_past(self):
         from argumentation_analysis.agents.core.context.stated_dates import (
@@ -116,7 +118,10 @@ class TestTheExtraction:
             past_cited_bound,
         )
 
-        text = "Le texte évoque 1904 puis, plus loin, l'accord de 1955."
+        text = (
+            "Le texte évoque l'accord du 3 avril 1904 puis, plus loin, "
+            "l'accord du 12 mai 1955."
+        )
 
         bound = past_cited_bound(extract_stated_dates(text))
 
@@ -132,7 +137,7 @@ class TestTheExtraction:
 
         text = (
             "Le plan annonce des objectifs d'ici 2088, mais rappelle aussi "
-            "l'accord de 1955."
+            "l'accord du 12 mai 1955."
         )
 
         stated = extract_stated_dates(text)
@@ -217,13 +222,100 @@ class TestAFloorIsAYear:
 
         text = (
             "La séquence dure 2019,5 secondes ; le rappel ouvre pourtant sur "
-            "le congrès de 1955, cité comme déjà passé."
+            "le congrès du 14 mars 1955, cité comme déjà passé."
         )
 
         bound = past_cited_bound(extract_stated_dates(text))
 
         assert bound is not None
         assert bound.year == 1955
+
+
+class TestAFloorIsACalendarDate:
+    """R1149 review — the replay of the real check on the 20 recorded panel
+    states measured the head firing on 4: only ONE was the true case, a
+    citation dated to the day. The other three floors came from years a bare
+    mention supplies — an unmarked legal clause ("may be amended after
+    YYYY"), an announced event ("the YYYY <event>"). A year is a floor only
+    when it sits in a CALENDAR DATE: a month name, French or English, within
+    a short window before it (the corpus is not French-only). The error
+    stays on the safe side: a doubtful year loses its floor and never gains
+    one. One witness per class, synthetic-only."""
+
+    def test_an_unmarked_legal_clause_is_not_a_dated_reference(self):
+        from argumentation_analysis.agents.core.context.stated_dates import (
+            extract_stated_dates,
+            past_cited_bound,
+        )
+
+        text = (
+            "The terms may be amended after 2025, and the parties accept "
+            "this in advance. No month name carries the year."
+        )
+
+        assert past_cited_bound(extract_stated_dates(text)) is None
+
+    def test_an_announced_event_is_not_a_dated_reference(self):
+        from argumentation_analysis.agents.core.context.stated_dates import (
+            extract_stated_dates,
+            past_cited_bound,
+        )
+
+        text = (
+            "The 2030 summit will gather the delegates, and nothing else "
+            "carries a year."
+        )
+
+        assert past_cited_bound(extract_stated_dates(text)) is None
+
+    def test_a_french_calendar_date_bounds_the_writing_date(self):
+        from argumentation_analysis.agents.core.context.stated_dates import (
+            extract_stated_dates,
+            past_cited_bound,
+        )
+
+        text = "Le rappel ouvre sur le congrès du 14 mars 2019, déjà passé."
+
+        bound = past_cited_bound(extract_stated_dates(text))
+
+        assert bound is not None
+        assert bound.year == 2019
+
+    async def test_a_body_speech_dated_to_the_day_fires(self):
+        """R1149's own witness shape: "speech of <month> <day>, YYYY" against
+        a situation one year earlier — the measured true case."""
+        text = (
+            "The speaker answers the speech of January 15, 2019, and quotes "
+            "it at length before disagreeing. "
+            + "A neutral sentence follows, without any digit. " * 30
+        )
+        payload = {
+            "situation": "Written in early 2018, before the answer.",
+            "items": [],
+        }
+
+        result = await build_historical_context(_state(raw_text=text), _llm(payload))
+
+        dating = result.to_state()["dating"]
+        assert dating["refuted_by"]["year"] == 2019
+        assert dating["model_year"] == 2018
+
+    async def test_the_same_speech_with_a_situation_in_that_year_does_not_fire(
+        self,
+    ):
+        text = (
+            "The speaker answers the speech of January 15, 2019, and quotes "
+            "it at length before disagreeing. "
+            + "A neutral sentence follows, without any digit. " * 30
+        )
+        payload = {
+            "situation": "Written in 2019, weeks after the speech.",
+            "items": [],
+        }
+
+        result = await build_historical_context(_state(raw_text=text), _llm(payload))
+
+        assert "dating" not in result.to_state()
 
 
 # ============================================================================
@@ -242,7 +334,7 @@ class TestThePromptCarriesTheDocumentDates:
 
         (prompt,) = sink
         assert "Dated references the document itself states" in prompt
-        assert "congrès de 2019" in prompt
+        assert "congrès du 14 mars 2019" in prompt
         assert f"(offset {_OFFSET_2019})" in prompt
         assert (
             "a dating you assign it earlier than one of\nthem is impossible" in prompt
@@ -265,7 +357,7 @@ class TestAnImpossibleDatingIsDegradedAndNamed:
         assert dating["model_year"] == 2004
         assert dating["refuted_by"]["year"] == 2019
         assert dating["refuted_by"]["offset"] == _OFFSET_2019
-        assert "congrès de 2019" in dating["refuted_by"]["quote"]
+        assert "congrès du 14 mars 2019" in dating["refuted_by"]["quote"]
 
     async def test_a_range_situation_is_confronted_on_its_latest_year(self):
         """R1148: ``min`` fired as soon as the situation MENTIONED an earlier
@@ -307,7 +399,7 @@ class TestAnImpossibleDatingIsDegradedAndNamed:
         prompt = build_act1_prompt(evidence)
 
         assert "Datation DÉGRADÉE" in prompt
-        assert "congrès de 2019" in prompt
+        assert "congrès du 14 mars 2019" in prompt
         assert f"position {_OFFSET_2019}" in prompt
         # R1148 wording nit: the check proves "at or after", never strictly
         # after — « au plus tôt de » says that, « postérieur à » does not.
@@ -342,7 +434,7 @@ class TestAnImpossibleDatingIsDegradedAndNamed:
                     "model_year": 2004,
                     "refuted_by": {
                         "year": 2019,
-                        "quote": "depuis le congrès de 2019",
+                        "quote": "depuis le congrès du 14 mars 2019",
                         "offset": _OFFSET_2019,
                     },
                 },
