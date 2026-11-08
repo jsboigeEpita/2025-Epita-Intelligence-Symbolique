@@ -14354,7 +14354,30 @@ async def _invoke_cross_passage_consistency(
     return await build_cross_passage_consistency(state, llm)
 
 
-async def _coverage_route_to_lens(item: Any) -> Dict[str, Any]:
+def _coverage_document_frame(item: Any, state: Any) -> Any:
+    """#3492 ask 5 — the #3428 frame around the PASSAGE the review named.
+
+    The walk reads the unit's provenance (offset, the verbatim passage a
+    paraphrase restates) and gets the sentence before and after, so the
+    descent judges the passage AS STATED. ``None`` when the passage maps to no
+    unit: the pre-#3428 prompt, byte for byte, rather than a frame guessed
+    around a passage the run cannot place.
+    """
+    if state is None:
+        return None
+    unit_id = str(getattr(item, "unit_id", "") or "")
+    if not unit_id:
+        return None
+    arguments = getattr(state, "identified_arguments", None)
+    unit_text = arguments.get(unit_id) if isinstance(arguments, dict) else None
+    if not isinstance(unit_text, str) or not unit_text.strip():
+        return None
+    return _document_frame_for_unit(state, unit_id, unit_text) or None
+
+
+async def _coverage_route_to_lens(
+    item: Any, state: Any = None
+) -> Dict[str, Any]:
     """Run the lens an item's class points at, on the passage it named (#3492).
 
     Only the fallacy descent has a passage-level entry point today: the walk
@@ -14365,6 +14388,12 @@ async def _coverage_route_to_lens(item: Any) -> Dict[str, Any]:
     translation entry point that does not exist yet. Those items are recorded
     ``lens_not_wired``: a named absence the acts state, never a verdict
     nothing computed (#1019).
+
+    ``state`` is what the #3428 frame needs (the unit's provenance: offset and
+    the verbatim passage a paraphrase restates). The walk then reads the
+    document AROUND the named passage, not the bare quote — the coordinator's
+    reprise ask 5. No state ⇒ ``document_frame=None`` and the pre-#3428
+    prompts byte for byte.
     """
     if getattr(item, "lens", "") != "fallacy_descent":
         return {
@@ -14394,6 +14423,7 @@ async def _coverage_route_to_lens(item: Any) -> Dict[str, Any]:
         str(getattr(item, "unit_id", "")),
         service,
         taxonomy_path,
+        document_frame=_coverage_document_frame(item, state),
     )
     if not isinstance(finding, dict):
         return {"status": "lens_no_finding", "reason": "walk returned no dict"}
@@ -14410,11 +14440,15 @@ async def _invoke_coverage_review(
 ) -> Dict[str, Any]:
     """Produce ``state.coverage_review`` (#3492).
 
-    After the deep phases, one whole-document pass reads what the analysis
-    EXAMINED — ``analysis_coverage[*]["unit_ids"]``, never the acts — and
-    names at most three supports or qualifiers of the thesis no lens examined,
-    each with a verified verbatim quote. Each is routed to the lens its class
-    points at; a lens with no passage-level entry point is a named absence.
+    After the deep phases, ONE whole-document pass reads the document with the
+    first reading's own window (``FIRST_READING_WINDOW = 0``) and is given the
+    coverage map PER CLASS — the replay of v1's selection on the recorded c4b
+    states showed its 24-candidate sample could not reach any of the three
+    anchors. It names at most three supports or qualifiers of the thesis whose
+    OWN question's lens did not read them, each with a quote verified against
+    ``raw_text``. Each is routed to the lens its class points at, with the
+    #3428 frame around the passage; a lens with no passage-level entry point is
+    a named absence.
     """
     from argumentation_analysis.agents.core.reading import extract_coverage_review
 
@@ -14431,8 +14465,11 @@ async def _invoke_coverage_review(
     if llm is None:
         logger.info("CoverageReview: %s — review not reached.", reason)
 
+    async def _route(item: Any) -> Dict[str, Any]:
+        return await _coverage_route_to_lens(item, state)
+
     return await extract_coverage_review(
-        state=state, llm_callable=llm, dispatcher=_coverage_route_to_lens
+        state=state, llm_callable=llm, dispatcher=_route
     )
 
 

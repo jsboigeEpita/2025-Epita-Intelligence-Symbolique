@@ -1,4 +1,4 @@
-"""#3492 — the coverage reviewer: what no lens read, pointed at the right one.
+"""#3492 — the coverage reviewer: a whole-document pass, per question.
 
 Cycle 4b of the panel (#3374) measured three severe M1 items ON the central
 thesis, one per long document: a passage the same-model zero-shot examines and
@@ -10,13 +10,34 @@ banded, and a support the first reading did not name competes on band position
 alone. When the first reading DOES name a passage, the lenses follow — 46 of
 49 bound moves reach a deep phase on the measured states.
 
-This module applies #3395 a second time, as reviewer of coverage. After the
-deep phases, one whole-document pass is given what the analysis examined —
-``analysis_coverage[*]["unit_ids"]`` (#2966: the ids the phases really
-submitted, never the acts) — and the unexamined candidates. It names at most
-``MAX_ITEMS`` supports or qualifiers of the thesis that no lens examined, each
-with a verbatim quote verified against the candidate's OWN characters, and
-routes each to the lens whose question it raises:
+v1 of this module (PR #3495) sampled 24 candidates out of up to 673 and asked
+the model to pick among them. The coordinator's free replay of its own
+selection on the recorded c4b states measured why that could not work: **0 of
+the 3 anchors** reached the reviewer's prompt. ``arg_123`` had gone through 8
+phases and none had asked its question; ``arg_156`` was excluded by a single
+stakes record; ``arg_664`` was one of 673 candidates of which 24 were shown.
+Three causes, all of design, and this version answers each:
+
+1. the pass reads the DOCUMENT WHOLE, with the first reading's own window
+   (``FIRST_READING_WINDOW = 0`` — no cut, the same read the zero-shot arm
+   gets, #2841 rule 4), and is given the coverage map PER CLASS so it can see
+   what the lens of each question really read;
+2. "examined" is decided PER CLASS, never as the union of every phase:
+   ``COVERAGE_KEYS_BY_CLASS`` is the one table, and it says that today the
+   modal lens records no coverage at all (so nothing counts as examined for a
+   modal question), while the statistical and inferential questions are
+   answered by ``fallacy_per_argument`` and by ``fol_reasoning``/``aspic``. A
+   phase that is not the lens of the class does not examine that class's
+   question — that IS #3492's measurement (a stakes record does not examine a
+   statistical support);
+3. quotes are verified against ``state.raw_text``, so the offset is a
+   DOCUMENT position, and the passage is mapped to an extracted unit by span
+   (the first reading's own rule for its moves) only when the route needs an
+   id. On the recorded c4b states 336 of 1 406 unit texts occur verbatim in
+   the document; the rest are the extractor's paraphrases, and a paraphrase
+   verified against itself would reach the reader as the speaker's words.
+
+Each named passage is routed to the lens whose question it raises:
 
 * an epistemic or modal qualifier (belief versus knowledge) → ``modal``;
 * a quantified or statistical support → ``fallacy_descent``;
@@ -26,14 +47,15 @@ The lens RUN runs through an injected ``dispatcher``: this module owns the
 naming, the verification and the routing decision; the invoke layer owns which
 callable each lens name runs on. A lens the run has no callable for is
 recorded as ``lens_not_wired`` — a named absence carried to the acts, never a
-fabricated finding (#1019, #1941). A named passage without a wired lens still
-reaches the render as an unexamined support: turning a silent omission into a
-stated gap is the point, and printing a verdict nothing computed would be the
-defect this project keeps closing.
+fabricated finding (#1019, #1941). What the review DID read reaches the acts:
+the reviewer's own reading of the passage, attributed to the coverage review
+(the pipeline's reader, not a lens verdict), and the fallacies the walk of the
+class's lens retained, printed with the writer's generic label (#3493 — a leaf
+named by a slogan reaches the reader as the procedure).
 
-Anti-pendulum: no phase's unit budget moves. The pass spends one call on the
-document plus one bounded call per NAMED passage (at most three), and every
-passage it names is a passage no lens had read.
+Anti-pendulum: no phase's unit budget moves, and the candidate cap is not
+raised — it is gone, because the pass no longer samples. The cost is one call
+on the document plus one bounded call per NAMED passage (at most three).
 """
 
 from __future__ import annotations
@@ -41,12 +63,13 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, Set, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple
 
 from argumentation_analysis.agents.core.reading.first_reading import (
     anchor_quote_in,
     defining_moves,
 )
+from argumentation_analysis.utils.taxonomy_loader import generic_fallacy_name
 
 logger = logging.getLogger("CoverageReview")
 
@@ -54,15 +77,6 @@ logger = logging.getLogger("CoverageReview")
 #: bound the #3326 winner reading already uses (1-3 cited items per run): a
 #: wider divergence is a coverage anomaly to surface, not a reading mandate.
 MAX_ITEMS = 3
-
-#: Cap on the candidate briefing. The population of unexamined units runs to
-#: hundreds on a long document; the prompt carries a stratified sample of it
-#: (``select_for_budget``), never a head — the very defect this module closes.
-PROMPT_MAX_CANDIDATES = 24
-
-#: Characters of a candidate shown to the model. The model must copy a quote
-#: verbatim; a passage longer than this is trimmed and says so.
-CANDIDATE_QUOTE_CHARS = 400
 
 COVERAGE_REVIEW_BASIS = "coverage_review"
 
@@ -73,43 +87,61 @@ LENS_BY_CLASS: Dict[str, str] = {
     "inferential": "fol",
 }
 
+#: #3492 reprise — the coverage record keys that answer each class's question.
+#: One table next to ``LENS_BY_CLASS``, and per class, never the union of every
+#: phase: a stakes or quality record does not examine a statistical support.
+#: ``modal`` is empty ON PURPOSE — measured: the run records no modal coverage
+#: key at all, so no passage can count as examined for a modal question. Naming
+#: an absence here is the honest form; the day a modal phase records its
+#: selection, this tuple gains the key and the filter applies by itself.
+COVERAGE_KEYS_BY_CLASS: Dict[str, Tuple[str, ...]] = {
+    "modal": (),
+    "statistical": ("fallacy_per_argument",),
+    "inferential": ("fol_reasoning", "aspic"),
+}
+
 ITEM_CLASSES: Tuple[str, ...] = tuple(LENS_BY_CLASS)
 
 #: Drop reasons — a closed vocabulary, counted, never silently discarded.
-DROP_UNKNOWN_UNIT = "unknown_unit"
-DROP_QUOTE_NOT_VERBATIM = "quote_not_verbatim"
-DROP_UNPOSITIONED = "unpositioned_candidate"
+DROP_QUOTE_NOT_IN_DOCUMENT = "quote_not_in_document"
 DROP_UNKNOWN_CLASS = "unknown_class"
+DROP_EXAMINED_BY_CLASS = "examined_by_class"
 DROP_CAPPED = "capped"
 
-COVERAGE_REVIEW_PROMPT = """Tu relis la couverture d'une analyse. Le document a
-déjà été lu une première fois (thèse et mouvements nommés), puis analysé en
-profondeur par plusieurs lentilles, chacune n'ayant examiné qu'une partie des
-passages. Ta seule question : parmi les passages CANDIDATS ci-dessous, lesquels
-soutiennent ou qualifient LA THÈSE et n'ont été examinés par AUCUNE lentille ?
+COVERAGE_REVIEW_PROMPT = """Tu relis la couverture d'une analyse. Le document
+ci-dessous a déjà été lu une première fois (thèse et mouvements nommés), puis
+analysé en profondeur par plusieurs lentilles, chacune n'ayant examiné qu'une
+partie du document. Ta seule question : quels passages DU DOCUMENT soutiennent
+ou qualifient LA THÈSE et n'ont pas été examinés par la lentille de leur propre
+question ?
 
 Règles strictes :
-- Ne nomme que des passages de la liste CANDIDATS, par leur identifiant.
-- Recopie la citation MOT POUR MOT depuis le texte du candidat : aucune
+- Ne nomme que des passages DU DOCUMENT ci-dessous.
+- Recopie chaque passage MOT POUR MOT depuis le document : aucune
   reformulation, aucune jointure de deux passages.
 - Classe chaque passage dans UNE de ces trois classes, selon la question qu'il
   pose : "modal" (une réserve épistémique : croyance plutôt que savoir, doute,
   modalité), "statistical" (un appui quantifié ou statistique, un taux, une
   part, une comparaison chiffrée), "inferential" (un appui qui porte une
   inférence : prémisse, conséquence, condition).
+- Une phase qui n'est pas la lentille de ta classe n'examine PAS sa question :
+  la carte de couverture dit ce que chaque lentille a réellement lu.
 - Au plus {max_items} passages. Une liste vide est une réponse valide — et la
-  bonne réponse quand aucun candidat ne porte la thèse.
+  bonne réponse quand aucun passage ne porte la thèse.
 - Aucune sortie hors du JSON.
 
 Réponds en français, avec UNIQUEMENT ce JSON, sans balises ni commentaire :
-{{"items": [{{"unit_id": "arg_N", "quote": "citation exacte", "class": "modal",
+{{"items": [{{"quote": "citation exacte du document", "class": "modal",
             "reason": "ce que ce passage fait à la thèse, en une phrase"}}]}}
 
 THÈSE DU DOCUMENT (citée par la première lecture) :
 {thesis}
 
-PASSAGES CANDIDATS (extraits, jamais examinés par une lentille) :
-{candidates}
+CARTE DE COUVERTURE — ce que la lentille de chaque question a réellement lu :
+{coverage_map}
+
+DOCUMENT (en entier) :
+{document}
 """
 
 
@@ -117,11 +149,13 @@ PASSAGES CANDIDATS (extraits, jamais examinés par une lentille) :
 class CoverageItem:
     """One passage the review named, with its verified place and its lens."""
 
-    unit_id: str
     quote: str
     offset: int
     kind: str
     lens: str
+    #: The extracted unit whose span carries the passage, when one does: the
+    #: route needs an id, the reader only needs the document position.
+    unit_id: str = ""
     reason: str = ""
     routed: Dict[str, Any] = field(default_factory=dict)
 
@@ -142,16 +176,16 @@ class CoverageReview:
     """The reviewer's record — an honest absence when the pass could not run.
 
     ``status`` is discriminated on purpose (#3096's lesson): a pass that never
-    reached the model must not read as "completed, nothing unexamined".
-    ``no_candidates`` is the byte-identity control: every support the review
-    could name was already examined, and the acts' prompt is unchanged.
+    reached the model must not read as "completed, nothing unexamined". An
+    ``ok`` status with no item IS the byte-identity control: the reviewer read
+    the document and named nothing, and the acts' prompt is unchanged.
     """
 
     status: str = "no_llm"
     items: List[CoverageItem] = field(default_factory=list)
     examined: int = 0
-    candidates: int = 0
-    briefed: int = 0
+    examined_by_class: Dict[str, int] = field(default_factory=dict)
+    document_chars: int = 0
     dropped: Dict[str, int] = field(default_factory=dict)
     reason: str = ""
     basis: str = COVERAGE_REVIEW_BASIS
@@ -161,8 +195,8 @@ class CoverageReview:
             "status": self.status,
             "items": [item.to_dict() for item in self.items],
             "examined": self.examined,
-            "candidates": self.candidates,
-            "briefed": self.briefed,
+            "examined_by_class": dict(self.examined_by_class),
+            "document_chars": self.document_chars,
             "dropped": dict(self.dropped),
             "reason": self.reason,
             "basis": self.basis,
@@ -180,20 +214,20 @@ def _raw_text(state: Any) -> str:
     return text if isinstance(text, str) else ""
 
 
-def examined_unit_ids(state: Any) -> Tuple[Set[str], int]:
-    """The units the record says a phase really submitted, as one set.
-
-    No allowlist of phase names (#2137's lesson: an allowlist ages). Any
-    ``analysis_coverage`` entry carrying ``unit_ids`` names units a phase put
-    in front of a lens, whatever the phase is called — a new selector is
-    covered the day it starts recording. ``anchor_census`` carries no
-    ``unit_ids`` (it counts provenance), so it cannot contaminate the set.
-    """
+def _coverage_entries(state: Any) -> Dict[str, Any]:
     coverage = _as_state_dict(state, "analysis_coverage")
-    if not isinstance(coverage, dict):
-        return set(), 0
+    return coverage if isinstance(coverage, dict) else {}
+
+
+def examined_unit_ids(state: Any) -> Tuple[Set[str], int]:
+    """Every unit the record says a phase really submitted, as one set.
+
+    Informational only — the FILTER below is per class. Kept because the
+    record states what the analysis examined, whatever the question, and
+    ``anchor_census`` carries no ``unit_ids`` (it counts provenance).
+    """
     examined: Set[str] = set()
-    for entry in coverage.values():
+    for entry in _coverage_entries(state).values():
         if not isinstance(entry, dict):
             continue
         unit_ids = entry.get("unit_ids")
@@ -203,6 +237,33 @@ def examined_unit_ids(state: Any) -> Tuple[Set[str], int]:
             if isinstance(unit_id, str) and unit_id:
                 examined.add(unit_id)
     return examined, len(examined)
+
+
+def examined_unit_ids_for_class(state: Any, kind: str) -> Set[str]:
+    """The units the lens of ONE class really read, from its own keys only.
+
+    ``COVERAGE_KEYS_BY_CLASS`` is the whole decision: a class with no key
+    (``modal`` today) has examined nothing, whatever the other phases did, and
+    a key that is not the class's lens does not count. This is the filter the
+    coordinator's replay asked for — the union filter dropped 2 of the 3
+    anchors before the model saw anything.
+    """
+    keys = COVERAGE_KEYS_BY_CLASS.get(kind, ())
+    if not keys:
+        return set()
+    entries = _coverage_entries(state)
+    examined: Set[str] = set()
+    for key in keys:
+        entry = entries.get(key)
+        if not isinstance(entry, dict):
+            continue
+        unit_ids = entry.get("unit_ids")
+        if not isinstance(unit_ids, (list, tuple)):
+            continue
+        for unit_id in unit_ids:
+            if isinstance(unit_id, str) and unit_id:
+                examined.add(unit_id)
+    return examined
 
 
 def _unit_rows(state: Any) -> List[Dict[str, Any]]:
@@ -219,69 +280,67 @@ def _unit_rows(state: Any) -> List[Dict[str, Any]]:
             continue
         if not text.strip():
             continue
-        entry = provenance.get(unit_id) if isinstance(provenance, dict) else None
+        entry = provenance.get(unit_id)
         offset = entry.get("offset") if isinstance(entry, dict) else None
         if isinstance(offset, bool) or not isinstance(offset, int):
             offset = None
-        source_quote = ""
-        if isinstance(entry, dict):
-            source_quote = str(entry.get("source_quote") or "")
-        rows.append(
-            {
-                "unit_id": unit_id,
-                "text": text,
-                "offset": offset,
-                "source_quote": source_quote,
-            }
-        )
+        rows.append({"unit_id": unit_id, "text": text, "offset": offset})
     rows.sort(key=lambda row: (row["offset"] is None, row["offset"] or 0))
     return rows
 
 
-def unexamined_candidates(state: Any, examined: Set[str]) -> List[Dict[str, Any]]:
-    """The units no phase recorded a submission for, document order.
+def unit_id_at_offset(rows: List[Dict[str, Any]], position: int) -> str:
+    """The unit whose span carries a document position — the reading's rule.
 
-    Positioned units come first (they are the ones a reader can be sent to),
-    then the unpositioned in stable order — the same ordering the selector
-    uses, because an unlocated unit cannot anchor a finding.
+    ``first_reading`` maps a move to a unit by span overlap (``offset <
+    move_end and move_offset < unit_end``). The same rule here: a passage
+    inside a unit's span is that unit's, and a passage no span carries maps to
+    NO unit (``""``). The reader is still sent to the right place by the
+    document offset, and the caller never borrows a neighbour's id — a wrong
+    anchor is worse than none (#1019).
     """
-    return [row for row in _unit_rows(state) if row["unit_id"] not in examined]
+    for row in rows:
+        offset = row["offset"]
+        if not isinstance(offset, int):
+            continue
+        if offset <= position < offset + len(row["text"]):
+            return row["unit_id"]
+    return ""
 
 
-def _briefed_candidates(
-    candidates: Sequence[Dict[str, Any]], text_length: int
-) -> List[Dict[str, Any]]:
-    """The bounded sample of candidates the prompt carries.
-
-    ``select_for_budget`` is the ONE selector (#2850 slice A): stratified over
-    the document, never the head. A population that fits the budget is
-    returned whole, in document order, and the prompt is unchanged.
-    """
-    if len(candidates) <= PROMPT_MAX_CANDIDATES:
-        return list(candidates)
-    # Local import: ``argumentation_analysis.orchestration`` pulls the whole
-    # invoke layer at package import, and the reading package is imported BY
-    # that layer — a module-level import here would close the cycle.
-    from argumentation_analysis.orchestration.selection import (
-        SelectableUnit,
-        select_for_budget,
-    )
-
-    units = [
-        SelectableUnit(
-            unit_id=row["unit_id"],
-            text=row["text"],
-            offset=row["offset"],
+def _coverage_map(state: Any, rows: List[Dict[str, Any]]) -> str:
+    """What the lens of each question really read — ids, with their offsets."""
+    by_id = {row["unit_id"]: row for row in rows}
+    lines: List[str] = []
+    for kind in ITEM_CLASSES:
+        keys = COVERAGE_KEYS_BY_CLASS.get(kind, ())
+        if not keys:
+            lines.append(
+                f'- question « {kind} » : aucune couverture enregistrée pour '
+                "cette lentille — rien n'a été examiné."
+            )
+            continue
+        examined = examined_unit_ids_for_class(state, kind)
+        if not examined:
+            lines.append(
+                f'- question « {kind} » : la lentille n\'a rien enregistré — '
+                "rien n'a été examiné."
+            )
+            continue
+        placed: List[str] = []
+        for unit_id in sorted(examined):
+            row = by_id.get(unit_id)
+            offset = row["offset"] if row else None
+            placed.append(
+                f"{unit_id} (position {offset})"
+                if isinstance(offset, int)
+                else f"{unit_id} (position inconnue)"
+            )
+        lines.append(
+            f'- question « {kind} » : {len(examined)} passages examinés — '
+            + ", ".join(placed)
         )
-        for row in candidates
-    ]
-    selection = select_for_budget(
-        units,
-        PROMPT_MAX_CANDIDATES,
-        text_length=text_length or None,
-    )
-    chosen = {unit.unit_id for unit in selection.selected}
-    return [row for row in candidates if row["unit_id"] in chosen]
+    return "\n".join(lines)
 
 
 def _thesis_quote(state: Any) -> str:
@@ -295,26 +354,15 @@ def _thesis_quote(state: Any) -> str:
     return ""
 
 
-def _candidate_block(candidates: Sequence[Dict[str, Any]]) -> str:
-    lines: List[str] = []
-    for row in candidates:
-        text = str(row["text"]).strip()
-        trimmed = len(text) > CANDIDATE_QUOTE_CHARS
-        if trimmed:
-            text = text[:CANDIDATE_QUOTE_CHARS].rstrip() + " […]"
-        position = row["offset"] if isinstance(row["offset"], int) else "inconnue"
-        lines.append(f"[{row['unit_id']}] (position {position}) : « {text} »")
-    return "\n".join(lines) if lines else "  (aucun candidat)"
-
-
 def build_coverage_review_prompt(
-    thesis: str, candidates: Sequence[Dict[str, Any]]
+    thesis: str, document: str, coverage_map: str
 ) -> str:
-    """The reviewer's one prompt: the thesis, then the unexamined candidates."""
+    """The reviewer's one prompt: the thesis, the map, the WHOLE document."""
     return COVERAGE_REVIEW_PROMPT.format(
         max_items=MAX_ITEMS,
         thesis=f"« {thesis} »",
-        candidates=_candidate_block(candidates),
+        coverage_map=coverage_map,
+        document=document,
     )
 
 
@@ -332,20 +380,20 @@ def _parse_json_object(content: str) -> Optional[Dict[str, Any]]:
     return parsed if isinstance(parsed, dict) else None
 
 
-def _verified_span(candidate_text: str, quote: str) -> Optional[Tuple[str, int]]:
-    """The verbatim span of the candidate the quote names, with its offset.
+def _quote_in_document(document: str, quote: str) -> Optional[Tuple[str, int]]:
+    """The document's own characters for the passage, with their offset.
 
-    Exact match first; failing that, the #3415 locator — which returns a
-    substring of the candidate's own characters, so what reaches the state is
-    always document text and never the model's paraphrase. ``None`` when the
-    two share no run long enough to be the same passage.
+    Exact match first; failing that, the #3415 locator, which returns a
+    substring of the DOCUMENT — never the model's paraphrase. ``None`` when
+    the two share no run long enough to be the same passage: a passage the
+    document does not carry is dropped and counted, never rendered.
     """
     if not quote:
         return None
-    position = candidate_text.find(quote)
+    position = document.find(quote)
     if position >= 0:
         return quote, position
-    return anchor_quote_in(candidate_text, quote)
+    return anchor_quote_in(document, quote)
 
 
 async def _route(
@@ -386,36 +434,41 @@ async def build_coverage_review(
     llm_callable: Optional[Callable[[str], Awaitable[str]]] = None,
     dispatcher: Optional[Callable[[CoverageItem], Awaitable[Dict[str, Any]]]] = None,
 ) -> CoverageReview:
-    """Name the thesis supports no lens examined, then route each to its lens.
+    """Name the thesis supports no lens of their question examined, then route.
 
     ``llm_callable`` and ``dispatcher`` are injected: the invoke layer owns
     the client, the runaway guard and the provider route; this module owns the
     question, the verification and the routing decision. No LLM → status
-    ``no_llm`` and an empty read, never a fabricated one.
+    ``no_llm``; no document → ``no_document`` (a quote cannot be placed in a
+    text the run does not hold); no thesis → ``no_reading``. Never a
+    fabricated review.
     """
     review = CoverageReview()
-    raw_text = _raw_text(state)
-    examined, examined_total = examined_unit_ids(state)
+    document = _raw_text(state)
+    review.document_chars = len(document)
+    _, examined_total = examined_unit_ids(state)
     review.examined = examined_total
-    candidates = unexamined_candidates(state, examined)
-    review.candidates = len(candidates)
-    if not candidates:
-        review.status = "no_candidates"
-        return review
+    review.examined_by_class = {
+        kind: len(examined_unit_ids_for_class(state, kind)) for kind in ITEM_CLASSES
+    }
 
     thesis = _thesis_quote(state)
     if not thesis:
         review.status = "no_reading"
         review.reason = "no thesis move recorded"
         return review
-
+    if not document.strip():
+        review.status = "no_document"
+        review.reason = "raw_text absent — a quote cannot be placed in the document"
+        return review
     if llm_callable is None:
         review.status = "no_llm"
         return review
 
-    briefed = _briefed_candidates(candidates, len(raw_text))
-    review.briefed = len(briefed)
-    prompt = build_coverage_review_prompt(thesis, briefed)
+    rows = _unit_rows(state)
+    prompt = build_coverage_review_prompt(
+        thesis, document, _coverage_map(state, rows)
+    )
 
     try:
         content = (await llm_callable(prompt) or "").strip()
@@ -440,7 +493,6 @@ async def build_coverage_review(
         review.reason = "no items list"
         return review
 
-    by_id = {row["unit_id"]: row for row in candidates}
     dropped: Dict[str, int] = {}
 
     def _drop(reason: str) -> None:
@@ -451,35 +503,35 @@ async def build_coverage_review(
             _drop(DROP_CAPPED)
             continue
         if not isinstance(raw, dict):
-            _drop(DROP_UNKNOWN_UNIT)
+            _drop(DROP_QUOTE_NOT_IN_DOCUMENT)
             continue
-        unit_id = str(raw.get("unit_id") or "").strip()
-        row = by_id.get(unit_id)
-        if row is None:
-            _drop(DROP_UNKNOWN_UNIT)
-            continue
-        offset = row["offset"]
-        if not isinstance(offset, int):
-            # A passage the reader cannot be sent to is not reported as one
-            # (cross_passage's rule): the finding exists, its place does not.
-            _drop(DROP_UNPOSITIONED)
-            continue
-        verified = _verified_span(str(row["text"]), str(raw.get("quote") or ""))
+        verified = _quote_in_document(
+            document, str(raw.get("quote") or "").strip()
+        )
         if verified is None:
-            _drop(DROP_QUOTE_NOT_VERBATIM)
+            # The document does not carry this passage: what the model wrote
+            # was its own words, and printing them as the speaker's is the
+            # defect #3492 exists to close.
+            _drop(DROP_QUOTE_NOT_IN_DOCUMENT)
             continue
-        quote, local = verified
+        quote, position = verified
         kind = str(raw.get("class") or "").strip().lower()
         if kind not in LENS_BY_CLASS:
             _drop(DROP_UNKNOWN_CLASS)
             continue
+        unit_id = unit_id_at_offset(rows, position)
+        if unit_id and unit_id in examined_unit_ids_for_class(state, kind):
+            # The per-lens filter stays: the reviewer must not re-name what
+            # the lens of ITS class did examine.
+            _drop(DROP_EXAMINED_BY_CLASS)
+            continue
         review.items.append(
             CoverageItem(
-                unit_id=unit_id,
                 quote=quote,
-                offset=offset + local,
+                offset=position,
                 kind=kind,
                 lens=LENS_BY_CLASS[kind],
+                unit_id=unit_id,
                 reason=str(raw.get("reason") or "").strip(),
             )
         )
@@ -489,11 +541,11 @@ async def build_coverage_review(
         item.routed = await _route(item, dispatcher)
     review.status = "ok"
     logger.info(
-        "CoverageReview: %d named out of %d unexamined (examined=%d, briefed=%d)",
+        "CoverageReview: %d named in a %d-char document (examined=%d, by class=%s)",
         len(review.items),
-        review.candidates,
+        review.document_chars,
         review.examined,
-        review.briefed,
+        review.examined_by_class,
     )
     return review
 
@@ -503,13 +555,43 @@ async def extract_coverage_review(**kwargs: Any) -> Dict[str, Any]:
     return (await build_coverage_review(**kwargs)).to_state()
 
 
+def _fallacy_label(fallacy: Any) -> str:
+    """One retained fallacy, with the WRITER's label (#3493)."""
+    data = fallacy if isinstance(fallacy, dict) else {}
+    recorded = str(
+        data.get("fallacy")
+        or data.get("type")
+        or data.get("fallacy_type")
+        or ""
+    ).strip()
+    if not recorded:
+        return ""
+    name = generic_fallacy_name(recorded, data.get("taxonomy_path"))
+    family = str(data.get("family") or "").strip()
+    return f"« {name} » (famille {family})" if family else f"« {name} »"
+
+
+def _retained_fallacies(routed: Dict[str, Any]) -> List[Any]:
+    finding = routed.get("finding")
+    if not isinstance(finding, dict):
+        return []
+    fallacies = finding.get("fallacies")
+    return list(fallacies) if isinstance(fallacies, list) else []
+
+
 def coverage_review_note(state: Any) -> str:
     """The block Act II reads — empty when no passage was named.
 
-    Empty on ``no_candidates`` (every support was examined) and on any status
-    that never reached the model: the prompt then omits the section rather
-    than advertising a review that did not run — the #3395 rule, and the
+    Empty on any status that never reached the model, and on an ``ok`` review
+    that named nothing: the prompt then omits the section rather than
+    advertising a review that did not run — the #3395 rule, and the
     byte-identity control the issue asks for.
+
+    What the review DID read reaches the act: each passage, the reviewer's own
+    reading of it ATTRIBUTED to the coverage review (the pipeline's reader,
+    never a lens verdict), and the fallacies the class's walk retained, under
+    the writer's generic label. An unwired lens keeps its line: named, not
+    examined.
     """
     record = _as_state_dict(state, "coverage_review")
     if not isinstance(record, dict):
@@ -521,20 +603,31 @@ def coverage_review_note(state: Any) -> str:
         return ""
 
     lines: List[str] = [
-        "[APPUIS DE LA THÈSE QU'AUCUNE LENTILLE N'AVAIT EXAMINÉS — "
-        "revue de couverture, après les phases profondes]"
+        "[APPUIS DE LA THÈSE QU'AUCUNE LENTILLE N'AVAIT EXAMINÉS — revue de "
+        "couverture, un passage du document lu en entier, après les phases "
+        "profondes]"
     ]
     for item in items:
         quote = str(item.get("quote") or "")
         offset = item.get("offset")
+        if not quote or not isinstance(offset, int):
+            continue
+        lines.append(f"  — « {quote} » (position {offset})")
+        reason = str(item.get("reason") or "").strip()
+        if reason:
+            lines.append(
+                "    La revue de couverture — le lecteur du pipeline, pas une "
+                f"lentille — lit ce passage comme : {reason}"
+            )
         routed_any = item.get("routed")
         routed = routed_any if isinstance(routed_any, dict) else {}
         status = str(routed.get("status") or "")
         lens = str(item.get("lens") or "")
-        if quote and isinstance(offset, int):
-            lines.append(f"  — « {quote} » (position {offset})")
-        else:
-            continue
+        labels = [label for label in map(_fallacy_label, _retained_fallacies(routed)) if label]
+        if labels:
+            lines.append(
+                "    Sophismes retenus sur ce passage : " + " ; ".join(labels)
+            )
         if status == "lens_not_wired":
             lines.append(
                 f"    Aucune lentille câblée pour ce passage ({lens}) : il est "
@@ -545,13 +638,17 @@ def coverage_review_note(state: Any) -> str:
                 f"    Lentille {lens} non concluante ({status}) : le passage "
                 "reste non examiné."
             )
+        elif labels:
+            lines.append(f"    Lentille {lens} : {len(labels)} sophisme(s) retenu(s).")
         else:
-            lines.append(f"    Lentille {lens} : {status}.")
+            lines.append(
+                f"    Lentille {lens} : lue, aucun sophisme retenu sur ce passage."
+            )
     return "\n".join(lines)
 
 
 __all__ = [
-    "CANDIDATE_QUOTE_CHARS",
+    "COVERAGE_KEYS_BY_CLASS",
     "COVERAGE_REVIEW_BASIS",
     "COVERAGE_REVIEW_PROMPT",
     "CoverageItem",
@@ -559,11 +656,11 @@ __all__ = [
     "ITEM_CLASSES",
     "LENS_BY_CLASS",
     "MAX_ITEMS",
-    "PROMPT_MAX_CANDIDATES",
     "build_coverage_review",
     "build_coverage_review_prompt",
     "coverage_review_note",
     "examined_unit_ids",
+    "examined_unit_ids_for_class",
     "extract_coverage_review",
-    "unexamined_candidates",
+    "unit_id_at_offset",
 ]
