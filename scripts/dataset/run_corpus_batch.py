@@ -354,6 +354,27 @@ def parse_doc_ids(
     return ordered
 
 
+def strip_reader_header(text: str) -> Tuple[str, int]:
+    """Remove a leading reader metadata block, retaining the body verbatim.
+
+    The reader header exists in two shapes and both are stripped: fields on
+    separate lines (#3487's original wording) and all fields on one line,
+    separated by spaces — the shape the analysed corpus actually carries
+    (#3490 review: the marker sits mid-line, body right after its single
+    following space). Recognition is by prefix fields, not line anchors: the
+    block must start at offset 0 with ``Title:`` or ``URL Source:`` and carry
+    its ``Markdown Content:`` marker within the first 1 500 characters,
+    whatever separates the fields.
+    """
+    marker = re.search(r"Markdown Content:[^\S\r\n]*(?:\r?\n)?", text)
+    if marker is None or marker.end() > 1500:
+        return text, 0
+    prefix = text[: marker.start()]
+    if not re.match(r"(?:Title|URL Source):", prefix):
+        return text, 0
+    return text[marker.end() :], marker.end()
+
+
 def expand_corpus(
     definitions: List[Dict[str, Any]],
     max_chars: int = 0,
@@ -417,6 +438,7 @@ def expand_corpus(
                 or extract.get("full_text_segment", "")
                 or source_def.get("full_text", "")
             )
+            full_text, reader_header_stripped = strip_reader_header(full_text)
             if not full_text:
                 logger.info(
                     "[%s] skip (extract %d/%d has no text after fallback chain)",
@@ -446,6 +468,7 @@ def expand_corpus(
                     "source_opaque_id": src_oid,
                     "opaque_id": oid,
                     "full_text": full_text,
+                    "reader_header_stripped": reader_header_stripped,
                     "metadata": doc_meta,
                 }
             )
