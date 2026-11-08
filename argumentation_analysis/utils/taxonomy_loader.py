@@ -421,6 +421,45 @@ def taxonomy_token_df(token: str) -> Optional[int]:
     return df.get((token or "").lower(), 0)
 
 
+#: #3493 — a taxonomy leaf whose NAME embeds an example in guillemets
+#: (``Appel à « la France qui se lève tôt »``). Four of the 1 408 rows carry
+#: one; the rule is the SHAPE, never a list of ids, so a taxonomy update that
+#: adds a fifth is covered the day it lands.
+_QUOTED_SEGMENT_RE = re.compile(r"«[^»]*»")
+
+
+def generic_fallacy_name(fallacy_type: str, taxonomy_path: Optional[str] = None) -> str:
+    """The name a WRITER may print for one detection (#3493).
+
+    A leaf name carrying an example in guillemets is not a quotation from the
+    document. Cycle 4b's judge read « la France qui se lève tôt » as the
+    speaker's own appeal on a document that never uses the slogan (M2, 4/6):
+    the writer had received the taxonomy's name for the procedure and wrote it
+    as the text's words. At the writers' entry the fix is subtraction — the
+    leaf's generic line (``desc_fr``, measured present for all four rows)
+    replaces the name, and the label's chain still names the branch. The
+    slogan never reaches a prompt.
+
+    Every other name is returned unchanged, byte for byte. The detector, the
+    state and the export keep the taxonomy's real name: only this
+    writer-facing view changes, and the CSV stays untouched (it is upstream
+    Argumentum data, integrity guard #1956 — a renaming proposal goes to the
+    partner).
+    """
+    name = str(fallacy_type or "")
+    if not _QUOTED_SEGMENT_RE.search(name):
+        return name
+    generic = taxonomy_definition(name, taxonomy_path)
+    if generic:
+        return generic
+    chain = taxonomy_chain(str(taxonomy_path or "")) or []
+    if len(chain) > 1 and not _QUOTED_SEGMENT_RE.search(chain[-2]):
+        return chain[-2]
+    # Unreachable on the vendored file (all four resolve above); a frame
+    # without its example is still true, and the slogan stays out either way.
+    return _QUOTED_SEGMENT_RE.sub("", name).strip(" «»()")
+
+
 def fallacy_taxonomy_label(
     fallacy_type: str,
     family: str,
@@ -440,8 +479,15 @@ def fallacy_taxonomy_label(
     « (famille X — Erreur de raisonnement > …) ». When it merely repeats the
     root, it is not printed twice. ``quoted`` is typography only (the Act II
     movement line quotes the name); it never changes what is named.
+
+    #3493: the head is the WRITER-facing name (:func:`generic_fallacy_name`),
+    so a leaf named by a slogan reaches the writer as the procedure's generic
+    line. A substituted line is a definition, not a name — it is not wrapped
+    in guillemets even where the site quotes names.
     """
-    head = f"« {fallacy_type} »" if quoted else fallacy_type
+    writer_name = generic_fallacy_name(fallacy_type, taxonomy_path)
+    quote_head = quoted and not _QUOTED_SEGMENT_RE.search(str(fallacy_type or ""))
+    head = f"« {writer_name} »" if quote_head else writer_name
     chain = taxonomy_chain(taxonomy_path or "")
     if not chain:
         return f"{head} (famille {family})"

@@ -38,6 +38,9 @@ from argumentation_analysis.core.fallacy_attribution import (  # #3180
     register_test_note,  # #3391
     taxonomy_definition_note,  # #3394
 )
+from argumentation_analysis.utils.taxonomy_loader import (  # #3493
+    generic_fallacy_name,
+)
 from argumentation_analysis.reporting.restitution.figure_scales import (  # #3394
     penalised_sum_on_its_maximum,
     sum_on_its_maximum,
@@ -78,6 +81,22 @@ logger = logging.getLogger("DeepSynthesisAgent")
 # returns at least the incoming belief, so ITS unmarked empty `revised` still
 # reads as not computed (the R1108 dumps).
 _ALWAYS_RUNS_REVISION_METHOD = "fallacy_contraction"
+
+
+def writer_fallacy_type(fdata: Any) -> str:
+    """The leaf name the synthesis writer may print for one record (#3493).
+
+    One function, one producer: the acts' label (``fallacy_taxonomy_label``)
+    reads the same rule, ``generic_fallacy_name``. A leaf whose name embeds an
+    example in guillemets reaches the prompt as the procedure's generic line,
+    never as the text's words — the detector, the state and the export keep
+    the taxonomy's real name.
+    """
+    data = fdata if isinstance(fdata, dict) else {}
+    return generic_fallacy_name(
+        str(data.get("type") or "unknown"), data.get("taxonomy_path")
+    )
+
 
 # #3370 — room a Dung line must keep for its extension lists before printing
 # them; below this the cut is stated as a bare marker instead of a fragment
@@ -704,7 +723,9 @@ class DeepSynthesisAgent(BaseAgent):
                 family = DeepSynthesisAgent._fallacy_family(ftype)
             taxonomy_path = fdata.get("taxonomy_path", "")
             if not taxonomy_path:
-                taxonomy_path = f"fallacy/{family}/{ftype}"
+                # #3493 — the synthesised path is printed by the report, so it
+                # carries the writer-facing name, never an example slogan.
+                taxonomy_path = f"fallacy/{family}/{writer_fallacy_type(fdata)}"
             entries.append(
                 FallacyDiagnosis(
                     fallacy_id=fid,
@@ -746,7 +767,9 @@ class DeepSynthesisAgent(BaseAgent):
                 FallacyDiagnosis(
                     fallacy_id=str(entry.get("id", f"neural_{i}")),
                     family=family,
-                    taxonomy_path=f"fallacy/{family}/{label}",
+                    # #3493 — same rule, no resolution path here: a label
+                    # carrying a quoted example loses it, the frame stays.
+                    taxonomy_path=f"fallacy/{family}/{generic_fallacy_name(label)}",
                     textual_span="",
                     commentary=(
                         f"{entry.get('detector', 'self_hosted_llm')} whole-text "
@@ -2176,9 +2199,15 @@ class DeepSynthesisAgent(BaseAgent):
                 # str(fid) above — str(fid) is the identity on those keys, so
                 # this lookup cannot meet a non-str key (R1058 review note).
                 fdata = fallacies[u.unit_id]
-                ftype = fdata.get("type", "unknown")
+                # #3493 — the writer reads the leaf's generic line; the family
+                # still resolves from the RECORDED name, so the branch reads
+                # exactly as it did.
+                _recorded_type = str(
+                    (fdata if isinstance(fdata, dict) else {}).get("type") or "unknown"
+                )
+                ftype = writer_fallacy_type(fdata)
                 family = fdata.get("family") or DeepSynthesisAgent._fallacy_family(
-                    ftype
+                    _recorded_type
                 )
                 target = fdata.get("target_argument_id", "")
                 # #3390 — whose move it is, in the ONE wording every writer
