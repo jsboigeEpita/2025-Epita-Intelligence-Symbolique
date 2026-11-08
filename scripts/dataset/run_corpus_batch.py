@@ -355,10 +355,18 @@ def parse_doc_ids(
 
 
 def strip_reader_header(text: str) -> Tuple[str, int]:
-    """Remove a leading reader metadata block, retaining the body verbatim."""
-    import re
+    """Remove a leading reader metadata block, retaining the body verbatim.
 
-    marker = re.search(r"(?m)^Markdown Content:[^\S\r\n]*(?:\r?\n|$)", text, 0)
+    The reader header exists in two shapes and both are stripped: fields on
+    separate lines (#3487's original wording) and all fields on one line,
+    separated by spaces — the shape the analysed corpus actually carries
+    (#3490 review: the marker sits mid-line, body right after its single
+    following space). Recognition is by prefix fields, not line anchors: the
+    block must start at offset 0 with ``Title:`` or ``URL Source:`` and carry
+    its ``Markdown Content:`` marker within the first 1 500 characters,
+    whatever separates the fields.
+    """
+    marker = re.search(r"Markdown Content:[^\S\r\n]*(?:\r?\n)?", text)
     if marker is None or marker.end() > 1500:
         return text, 0
     prefix = text[: marker.start()]
