@@ -1142,6 +1142,24 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "findings": [],
             "basis": "cross_passage_consistency",
         }
+        # #3492 — the coverage reviewer: after the deep phases, ONE
+        # whole-document pass names at most three supports or qualifiers of the
+        # thesis that no lens examined (``analysis_coverage[*]["unit_ids"]``
+        # is the examined set). Each named passage carries a verified verbatim
+        # quote, its document offset, the lens its class points at, and what
+        # that lens answered — ``lens_not_wired`` is a named absence, never a
+        # verdict nothing computed (#1019). ``no_candidates`` is the
+        # byte-identity control: every support was already examined.
+        self.coverage_review: Dict[str, Any] = {
+            "status": "no_llm",
+            "items": [],
+            "examined": 0,
+            "candidates": 0,
+            "briefed": 0,
+            "dropped": {},
+            "reason": "",
+            "basis": "coverage_review",
+        }
         # Track UU #724: specialist commentary + analysis trace
         self.analysis_trace: List[Dict[str, Any]] = (
             []

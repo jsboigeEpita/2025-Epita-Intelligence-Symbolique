@@ -1287,6 +1287,20 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             optional=False,
             timeout_seconds=180,
         )
+        # #3492 — the coverage reviewer: AFTER the deep phases (deep_synthesis
+        # is the L10 aggregator; the lenses ran at L1/L2) and BEFORE the acts
+        # that read it. One whole-document pass names at most three supports or
+        # qualifiers of the thesis that NO lens examined — the examined set is
+        # ``analysis_coverage[*]["unit_ids"]``, never the acts — and routes
+        # each to the lens its class points at. Optional: no reading, no LLM or
+        # no candidate leaves the acts' prompt byte-identical.
+        .add_phase(
+            "coverage_review",
+            capability="coverage_review",
+            depends_on=["first_reading", "deep_synthesis"],
+            optional=True,
+            timeout_seconds=300,
+        )
         # L11a — Acte I framing (Epic #1134 / R2 #1136). Mise en situation:
         # genre, enjeux, derived expected fallacy spectrum, game-theoretic read.
         # LLM-conducted + fail-loud, produced BEFORE the microscope (the only
@@ -1314,7 +1328,10 @@ def build_spectacular_workflow() -> WorkflowDefinition:
         .add_phase(
             "act2_narrative",
             capability="act2_narrative",
-            depends_on=["deep_synthesis"],
+            # #3492 — declared read of the coverage review: the act renders
+            # the named unexamined supports (``coverage_review_note``), so the
+            # phase must have run (or skipped, named) before it weaves.
+            depends_on=["deep_synthesis", "coverage_review"],
             optional=False,
             timeout_seconds=180,
         )

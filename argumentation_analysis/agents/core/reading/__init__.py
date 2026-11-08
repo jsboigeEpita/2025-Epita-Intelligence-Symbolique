@@ -9,6 +9,15 @@ fields, two labels.
 
 from __future__ import annotations
 
+from argumentation_analysis.agents.core.reading.coverage_review import (
+    CoverageItem,
+    CoverageReview,
+    build_coverage_review,
+    coverage_review_note,
+    examined_unit_ids,
+    extract_coverage_review,
+    unexamined_candidates,
+)
 from argumentation_analysis.agents.core.reading.cross_passage import (
     build_cross_passage_consistency,
     cross_passage_note,
@@ -63,4 +72,12 @@ __all__ = [
     "move_kind",
     "pillar_budget",
     "pillar_prose",
+    # #3492 — the coverage reviewer: what no lens read, pointed at the right one.
+    "CoverageItem",
+    "CoverageReview",
+    "build_coverage_review",
+    "coverage_review_note",
+    "examined_unit_ids",
+    "extract_coverage_review",
+    "unexamined_candidates",
 ]
