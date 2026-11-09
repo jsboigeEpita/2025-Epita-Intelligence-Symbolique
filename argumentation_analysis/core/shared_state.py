@@ -116,6 +116,14 @@ def locate_unit_span(
     return None, "sans offset (introuvable, même à espaces flexibles)"
 
 
+def _unit_field(entry: Any, name: str) -> Any:
+    """#3502 — un champ, deux porteurs : un dict de provenance, ou un objet
+    qui expose ``offset``/``source_quote`` (``SelectableUnit``)."""
+    if isinstance(entry, dict):
+        return entry.get(name)
+    return getattr(entry, name, None)
+
+
 def unit_extent(entry: Any, text: str) -> Optional[Tuple[int, int]]:
     """#3502 — LA règle d'étendue d'une unité, portée par un seul helper.
 
@@ -132,13 +140,14 @@ def unit_extent(entry: Any, text: str) -> Optional[Tuple[int, int]]:
 
     C'est la règle que ``reading_record.py`` (#3393) appliquait déjà seul
     (``source_quote or text``) ; les autres sites s'y convertissent par
-    ce helper. Rend ``(offset, offset + len(clé))``, ou ``None`` sans
-    décalage entier — pas d'étendue affirmée.
+    ce helper. La porteuse est un dict de provenance ou un objet à champs
+    ``offset``/``source_quote``. Rend ``(offset, offset + len(clé))``, ou
+    ``None`` sans décalage entier — pas d'étendue affirmée.
     """
-    offset = entry.get("offset") if isinstance(entry, dict) else None
+    offset = _unit_field(entry, "offset")
     if isinstance(offset, bool) or not isinstance(offset, int):
         return None
-    quote = entry.get("source_quote") if isinstance(entry, dict) else None
+    quote = _unit_field(entry, "source_quote")
     key = quote if isinstance(quote, str) and quote else str(text)
     return (offset, offset + len(key))
 
