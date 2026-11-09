@@ -116,6 +116,68 @@ def locate_unit_span(
     return None, "sans offset (introuvable, même à espaces flexibles)"
 
 
+# #3491 — le vocabulaire fermé de la FORME d'une unité d'extraction. Une
+# unité dont la source verbatim est une question est marquée
+# ``rhetorical_question`` ; l'absence de clé est l'unité déclarative
+# ordinaire (#1019 — jamais une valeur par défaut).
+ARGUMENT_FORMS: frozenset[str] = frozenset({"rhetorical_question"})
+
+# #3491 — caractères de queue derrière lesquels un « ? » peut se cacher
+# (guillemets français, apostrophes droites/typographiques, parenthèse
+# fermante) après rstrip des espaces.
+_QUESTION_TAIL = " \t\r\n\"'”’«»)]"
+
+
+def ends_as_question(quote: str) -> bool:
+    """#3491 — True quand la citation verbatim EST une question.
+
+    Recensement mesuré sur les 10 états c4b (1406 unités) : 38 unités dont
+    la source contient « ? », et 38/38 reprises comme paraphrase
+    déclarative — l'extracteur gardait le contenu et perdait la force.
+    Ce prédicat est la moitié déterministe du correctif : il décide depuis
+    la CITATION, pas depuis une déclaration du modèle, donc toute unité
+    sourcée-question est marquée quoi que le modèle ait dit.
+    """
+    return quote.rstrip(_QUESTION_TAIL).endswith("?")
+
+
+def extend_question_quote(
+    quote: str, raw_text: str, max_answer_chars: int = 160
+) -> str:
+    """#3491 — porte la réponse devant laquelle la citation s'arrête.
+
+    Défaut mesuré : le ``source_quote`` d'une unité s'arrête au « ? » donc
+    la réponse explicite du locuteur est dans les caractères SUIVANTS du
+    texte, invisible pour toute lentille qui lit la citation. Cette fenêtre
+    déterministe (même courtoisie que #3428 a donnée à la descente)
+    étend la citation stockée par la phrase qui suit quand cette phrase
+    est une RÉPONSE COURTE : non vide, d'au plus ``max_answer_chars``, et
+    terminée par une ponctuation de phrase qui n'EST PAS un autre « ? »
+    (une deuxième question n'est pas une réponse). Tout le reste —
+    continuation longue, autre question, fin de texte, citation
+    introuvable — laisse la citation byte-identique.
+    """
+    span, _tag = locate_unit_span(quote, raw_text)
+    if span is None:
+        return quote
+    window = raw_text[span[1] : span[1] + max_answer_chars + 2]
+    stripped = window.lstrip()
+    if not stripped:
+        return quote
+    cut = None
+    for i, ch in enumerate(stripped):
+        if ch in ".!?…":
+            cut = i + 1
+            break
+    if cut is None:
+        return quote  # pas de fin de phrase dans la fenêtre : pas une réponse courte
+    answer = stripped[:cut]
+    if answer.endswith("?") or len(answer) > max_answer_chars:
+        return quote
+    lead = window[: len(window) - len(stripped)]
+    return quote + lead + answer
+
+
 @dataclass
 class ArgumentProfile:
     """Aggregated view of all analysis data for a single argument."""
@@ -358,6 +420,7 @@ class RhetoricalAnalysisState:
         source_quote: Optional[str] = None,
         offset: Optional[int] = None,
         move_author: Optional[str] = None,
+        form: Optional[str] = None,
     ) -> str:
         """Ajoute un argument identifié et retourne son ID.
 
@@ -381,6 +444,12 @@ class RhetoricalAnalysisState:
         n'est pas écrite, une valeur absente n'est pas défautée (#1019). Le
         champ vit dans ``argument_provenance[arg_id]``, donc seulement quand
         ``producer`` en a ouvert l'entrée.
+
+        #3491 — ``form`` marque la FORCE de l'unité quand sa source verbatim
+        est une question (``rhetorical_question``), même porte fermée que
+        ``move_author``. La décision vient de la citation (``ends_as_question``),
+        pas d'une déclaration du modèle : mesuré sur le recensement c4b,
+        l'extracteur reprenait 38/38 questions en paraphrase déclarative.
         """
         # #3268, porte partagée depuis #3275 : vocabulaire dérivé de
         # ``vars(self)`` dans ``_refuse_field_name_as_content`` — rationale,
@@ -411,6 +480,13 @@ class RhetoricalAnalysisState:
                 entry["source_quote"] = str(source_quote)
             if move_author in MOVE_AUTHORS:
                 entry["move_author"] = str(move_author)
+            # #3491 — la FORME suit la MÊME porte que ``move_author`` juste
+            # au-dessus : vocabulaire fermé (``ARGUMENT_FORMS``), une valeur
+            # hors vocabulaire n'est pas écrite, une valeur absente n'est
+            # pas défautée (#1019). L'absence de la clé EST l'unité
+            # déclarative ordinaire.
+            if form in ARGUMENT_FORMS:
+                entry["form"] = str(form)
             self.argument_provenance[arg_id] = entry
         state_logger.info(f"Argument ajouté: {arg_id} - '{description[:60]}...'")
         state_logger.debug(

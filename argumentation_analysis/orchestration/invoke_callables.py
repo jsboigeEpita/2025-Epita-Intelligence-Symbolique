@@ -9800,6 +9800,32 @@ _MOVE_AUTHOR_INSTRUCTION = (
     "does not let you tell."
 )
 
+# #3491 — a question keeps its FORCE, never its bare content. Measured on
+# the panel (`5075cd82/arg_3`): the extractor restates a rhetorical question
+# as the declarative assertion of its CONTENT, the answer sits right after
+# the (verbatim, correct) source_quote so it stays outside it, and the
+# inverted unit feeds ~80 downstream fields — Act III listed among the
+# speaker's certainties a proposition he explicitly DENIES right after
+# asking. Same family as #3428 (a paraphrase changed the modality at the
+# descent); this one changes the polarity at the extractor. The writer's
+# deterministic half (``ends_as_question`` + the answer window) marks the
+# form from the QUOTE alone; this instruction is the model's half: say the
+# position the speaker actually holds, which for an answered question is
+# the ANSWER's polarity, not the question's content.
+_QUESTION_FORCE_INSTRUCTION = (
+    " A question in the text is a position the speaker asserts BY ASKING "
+    "it, never a flat assertion of the question's content. When an item's "
+    "source is a question: state in 'text' the position the speaker "
+    "actually holds - when the text answers its own question, that answer "
+    "IS the position (a question answered with a negative is a DENIAL, "
+    "never an affirmation of what the question asks); when the text does "
+    "not answer it, keep the item AS a question (interrogative form). "
+    "NEVER restate a question's content as the speaker's declarative "
+    "assertion. For such an item add 'form': 'rhetorical_question', and "
+    "make 'source_quote' the verbatim question WITH the answer when the "
+    "answer follows in the text."
+)
+
 
 async def _extraction_call_one_window(
     client: Any,
@@ -9992,10 +10018,11 @@ async def _invoke_fact_extraction(
             "(3) noting rhetorical strategies used (without labeling them as fallacies). "
             + _OPPOSING_POSITIONS_INSTRUCTION
             + _MOVE_AUTHOR_INSTRUCTION
+            + _QUESTION_FORCE_INSTRUCTION
             + lang_clause
             + " Respond with ONLY a JSON object:\n"
             '{"arguments": [{"text": "arg description", "source_quote": "exact quote...", '
-            '"move_author": "speaker|reported"}], '
+            '"move_author": "speaker|reported", "form": "rhetorical_question"}], '
             '"claims": [{"text": "claim description", "source_quote": "exact quote..."}], '
             '"summary": "brief analysis summary"}'
         )
