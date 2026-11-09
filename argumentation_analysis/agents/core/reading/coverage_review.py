@@ -16,32 +16,54 @@ selection on the recorded c4b states measured why that could not work: **0 of
 the 3 anchors** reached the reviewer's prompt. ``arg_123`` had gone through 8
 phases and none had asked its question; ``arg_156`` was excluded by a single
 stakes record; ``arg_664`` was one of 673 candidates of which 24 were shown.
-Three causes, all of design, and this version answers each:
+v2 read the DOCUMENT WHOLE and was given the coverage map PER CLASS — gate (a)
+passed, gate (b) still named **0 of 3** anchors, and the coordinator's two
+later variants measured why:
 
-1. the pass reads the DOCUMENT WHOLE, with the first reading's own window
-   (``FIRST_READING_WINDOW = 0`` — no cut, the same read the zero-shot arm
-   gets, #2841 rule 4), and is given the coverage map PER CLASS so it can see
-   what the lens of each question really read;
-2. "examined" is decided PER CLASS, never as the union of every phase:
-   ``COVERAGE_KEYS_BY_CLASS`` is the one table, and it says that today the
-   modal lens records no coverage at all (so nothing counts as examined for a
-   modal question), while the statistical and inferential questions are
-   answered by ``fallacy_per_argument`` and by ``fol_reasoning``/``aspic``. A
-   phase that is not the lens of the class does not examine that class's
-   question — that IS #3492's measurement (a stakes record does not examine a
-   statistical support);
-3. quotes are verified against ``state.raw_text``, so the offset is a
-   DOCUMENT position, and the passage is mapped to an extracted unit by span
-   (the first reading's own rule for its moves) only when the route needs an
-   id. On the recorded c4b states 336 of 1 406 unit texts occur verbatim in
-   the document; the rest are the extractor's paraphrases, and a paraphrase
-   verified against itself would reach the reader as the speaker's words.
+1. the coverage map made every belief verb eligible ("modal: nothing was
+   examined"), and a reviewer asked for the thesis's SUPPORTS does not look
+   for what the zero-shot finds: each anchor is an ARGUMENT WITH ITS OWN
+   CONCLUSION, named in the zero-shot's argument-by-argument map, not a
+   support of the single thesis;
+2. on long documents the per-class filter cuts almost nothing (1 of 44): the
+   deep lenses read 10 to 31 units of 165-739, so "unexamined" is nearly
+   every passage. The binding constraint is how many passages the pass ROUTES
+   and RENDERS, not which ones qualify;
+3. the three-anchor measure ranks them 11, 3 and 8 of 15 — a cap of three
+   cannot carry two of them.
+
+This version therefore ENUMERATES, and filters in code:
+
+* the reviewer is asked the zero-shot's own question — the arguments a
+  complete analysis would examine one by one, ranked by how decisive they
+  are for a careful reader, each with a verbatim quote, what it concludes on
+  its own, and a class. The coverage map is gone from the prompt: the pass
+  reads the DOCUMENT WHOLE (``FIRST_READING_WINDOW = 0``, #2841 rule 4) and
+  does not need to be told what a lens read, because the decision is
+  deterministic code;
+* "examined" is decided PER CLASS, never as the union of every phase:
+  ``COVERAGE_KEYS_BY_CLASS`` is the one table, and it says that today the
+  modal lens records no coverage at all (so nothing counts as examined for a
+  modal question), while the statistical, persuasion and inferential
+  questions are answered by ``fallacy_per_argument`` and by
+  ``fol_reasoning``/``aspic``. A phase that is not the lens of the class
+  does not examine that class's question — that IS #3492's measurement (a
+  stakes record does not examine a statistical support);
+* quotes are verified against ``state.raw_text``, so the offset is a
+  DOCUMENT position, and the passage is mapped to an extracted unit by span
+  (the first reading's own rule for its moves) only when the route needs an
+  id. On the recorded c4b states 336 of 1 406 unit texts occur verbatim in
+  the document; the rest are the extractor's paraphrases, and a paraphrase
+  verified against itself would reach the reader as the speaker's words.
 
 Each named passage is routed to the lens whose question it raises:
 
 * an epistemic or modal qualifier (belief versus knowledge) → ``modal``;
 * a quantified or statistical support → ``fallacy_descent``;
-* a support carrying an inference → ``fol``.
+* a support carrying an inference → ``fol``;
+* a persuasion or manipulation move → ``fallacy_descent`` (the only
+  passage-level lens wired today; v2's three-class table had no home for the
+  ``e67ad261`` anchor — the coordinator's own defect, measured).
 
 The lens RUN runs through an injected ``dispatcher``: this module owns the
 naming, the verification and the routing decision; the invoke layer owns which
@@ -53,9 +75,10 @@ the reviewer's own reading of the passage, attributed to the coverage review
 class's lens retained, printed with the writer's generic label (#3493 — a leaf
 named by a slogan reaches the reader as the procedure).
 
-Anti-pendulum: no phase's unit budget moves, and the candidate cap is not
-raised — it is gone, because the pass no longer samples. The cost is one call
-on the document plus one bounded call per NAMED passage (at most three).
+Anti-pendulum: no phase's unit budget moves. The cost is one call on the
+document plus one bounded call per NAMED passage; the enumeration is capped at
+``MAX_ITEMS``, and the Act II note renders ONE line per item so the prompt
+grows by the items named, not by a template per item.
 """
 
 from __future__ import annotations
@@ -73,10 +96,12 @@ from argumentation_analysis.utils.taxonomy_loader import generic_fallacy_name
 
 logger = logging.getLogger("CoverageReview")
 
-#: Cap on the passages the review names. Three is the measured divergence
-#: bound the #3326 winner reading already uses (1-3 cited items per run): a
-#: wider divergence is a coverage anomaly to surface, not a reading mandate.
-MAX_ITEMS = 3
+#: The enumeration width. R1155 measured the three anchors at ranks 11, 3 and
+#: 8 of 15 in the zero-shot's own argument map, so a cap of three kept only one
+#: of them: the budget is decided from that measure, not from the #3326
+#: divergence bound v2 used. 15 is the rank ceiling of the measured map, and
+#: the note renders one line per item.
+MAX_ITEMS = 15
 
 COVERAGE_REVIEW_BASIS = "coverage_review"
 
@@ -85,6 +110,11 @@ LENS_BY_CLASS: Dict[str, str] = {
     "modal": "modal",
     "statistical": "fallacy_descent",
     "inferential": "fol",
+    # R1155 — the fourth class the coordinator's three-class table lacked: a
+    # persuasion or manipulation move drives the decisive event on one measured
+    # anchor and fits none of the other three. ``fallacy_descent`` is the only
+    # passage-level lens wired today.
+    "persuasion": "fallacy_descent",
 }
 
 #: #3492 reprise — the coverage record keys that answer each class's question.
@@ -98,6 +128,10 @@ COVERAGE_KEYS_BY_CLASS: Dict[str, Tuple[str, ...]] = {
     "modal": (),
     "statistical": ("fallacy_per_argument",),
     "inferential": ("fol_reasoning", "aspic"),
+    # Same lens as ``statistical``: the descent is what reads a passage for
+    # manipulative moves today, so its record is the one that says whether the
+    # passage was examined.
+    "persuasion": ("fallacy_per_argument",),
 }
 
 ITEM_CLASSES: Tuple[str, ...] = tuple(LENS_BY_CLASS)
@@ -108,37 +142,36 @@ DROP_UNKNOWN_CLASS = "unknown_class"
 DROP_EXAMINED_BY_CLASS = "examined_by_class"
 DROP_CAPPED = "capped"
 
-COVERAGE_REVIEW_PROMPT = """Tu relis la couverture d'une analyse. Le document
-ci-dessous a déjà été lu une première fois (thèse et mouvements nommés), puis
-analysé en profondeur par plusieurs lentilles, chacune n'ayant examiné qu'une
-partie du document. Ta seule question : quels passages DU DOCUMENT soutiennent
-ou qualifient LA THÈSE et n'ont pas été examinés par la lentille de leur propre
-question ?
+COVERAGE_REVIEW_PROMPT = """Tu lis ce document pour une analyse complète. Ne
+cherche pas seulement les appuis de la thèse : liste les ARGUMENTS qu'une
+analyse complète examinerait un par un, chacun avec sa propre conclusion.
 
 Règles strictes :
-- Ne nomme que des passages DU DOCUMENT ci-dessous.
-- Recopie chaque passage MOT POUR MOT depuis le document : aucune
+- Chaque argument est une position autonome : dis ce qu'il conclut PAR
+  LUI-MÊME, et pas seulement ce qu'il apporte à la thèse.
+- Recopie la citation MOT POUR MOT depuis le document : aucune
   reformulation, aucune jointure de deux passages.
-- Classe chaque passage dans UNE de ces trois classes, selon la question qu'il
-  pose : "modal" (une réserve épistémique : croyance plutôt que savoir, doute,
-  modalité), "statistical" (un appui quantifié ou statistique, un taux, une
-  part, une comparaison chiffrée), "inferential" (un appui qui porte une
-  inférence : prémisse, conséquence, condition).
-- Une phase qui n'est pas la lentille de ta classe n'examine PAS sa question :
-  la carte de couverture dit ce que chaque lentille a réellement lu.
-- Au plus {max_items} passages. Une liste vide est une réponse valide — et la
-  bonne réponse quand aucun passage ne porte la thèse.
+- Ordonne du plus décisif au moins décisif : d'abord ce qu'un lecteur attentif
+  perdrait le plus à voir manquer.
+- Classe chaque argument dans UNE de ces quatre classes, selon la question
+  qu'il pose : "modal" (une réserve épistémique : croyance plutôt que savoir,
+  doute, modalité), "statistical" (un appui quantifié ou statistique, un
+  taux, une part, une comparaison chiffrée), "inferential" (un appui qui
+  porte une inférence : prémisse, conséquence, condition), "persuasion" (un
+  mouvement de persuasion ou de manipulation : appel à l'émotion ou à
+  l'autorité, cadrage, homme de paille).
+- Au plus {max_items} arguments, tous du document. Une liste vide est une
+  réponse valide — et la bonne réponse quand le document n'argumente pas.
 - Aucune sortie hors du JSON.
 
 Réponds en français, avec UNIQUEMENT ce JSON, sans balises ni commentaire :
-{{"items": [{{"quote": "citation exacte du document", "class": "modal",
-            "reason": "ce que ce passage fait à la thèse, en une phrase"}}]}}
+{{"items": [{{"quote": "citation exacte du document",
+            "conclusion": "ce que cet argument conclut par lui-même",
+            "class": "modal",
+            "reason": "pourquoi le manquer coûte au lecteur, en une phrase"}}]}}
 
-THÈSE DU DOCUMENT (citée par la première lecture) :
+THÈSE QUE LA PREMIÈRE LECTURE A CITÉE (un repère, pas un filtre) :
 {thesis}
-
-CARTE DE COUVERTURE — ce que la lentille de chaque question a réellement lu :
-{coverage_map}
 
 DOCUMENT (en entier) :
 {document}
@@ -157,6 +190,12 @@ class CoverageItem:
     #: route needs an id, the reader only needs the document position.
     unit_id: str = ""
     reason: str = ""
+    #: R1155 — what the argument concludes ON ITS OWN (the enumeration's own
+    #: field: an argument is not only a support of the thesis), and the rank
+    #: the reviewer gave it (1 = most decisive). Recorded, never re-sorted:
+    #: the model's order IS the measure the budget was set from.
+    conclusion: str = ""
+    rank: int = 0
     routed: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -167,6 +206,8 @@ class CoverageItem:
             "class": self.kind,
             "lens": self.lens,
             "reason": self.reason,
+            "conclusion": self.conclusion,
+            "rank": self.rank,
             "routed": dict(self.routed),
         }
 
@@ -308,41 +349,6 @@ def unit_id_at_offset(rows: List[Dict[str, Any]], position: int) -> str:
     return ""
 
 
-def _coverage_map(state: Any, rows: List[Dict[str, Any]]) -> str:
-    """What the lens of each question really read — ids, with their offsets."""
-    by_id = {row["unit_id"]: row for row in rows}
-    lines: List[str] = []
-    for kind in ITEM_CLASSES:
-        keys = COVERAGE_KEYS_BY_CLASS.get(kind, ())
-        if not keys:
-            lines.append(
-                f"- question « {kind} » : aucune couverture enregistrée pour "
-                "cette lentille — rien n'a été examiné."
-            )
-            continue
-        examined = examined_unit_ids_for_class(state, kind)
-        if not examined:
-            lines.append(
-                f"- question « {kind} » : la lentille n'a rien enregistré — "
-                "rien n'a été examiné."
-            )
-            continue
-        placed: List[str] = []
-        for unit_id in sorted(examined):
-            row = by_id.get(unit_id)
-            offset = row["offset"] if row else None
-            placed.append(
-                f"{unit_id} (position {offset})"
-                if isinstance(offset, int)
-                else f"{unit_id} (position inconnue)"
-            )
-        lines.append(
-            f"- question « {kind} » : {len(examined)} passages examinés — "
-            + ", ".join(placed)
-        )
-    return "\n".join(lines)
-
-
 def _thesis_quote(state: Any) -> str:
     """The thesis the first reading named, verbatim, or an empty string."""
     for move in defining_moves(state):
@@ -354,12 +360,18 @@ def _thesis_quote(state: Any) -> str:
     return ""
 
 
-def build_coverage_review_prompt(thesis: str, document: str, coverage_map: str) -> str:
-    """The reviewer's one prompt: the thesis, the map, the WHOLE document."""
+def build_coverage_review_prompt(thesis: str, document: str) -> str:
+    """The reviewer's one prompt: the thesis as a marker, the WHOLE document.
+
+    R1155 — no coverage map: the enumeration asks the zero-shot's own
+    question, and the "was it examined by its class" decision is code. The
+    thesis stays as a marker of the document's reading, never as the filter
+    (the filter was what made a reviewer look for supports instead of
+    arguments).
+    """
     return COVERAGE_REVIEW_PROMPT.format(
         max_items=MAX_ITEMS,
         thesis=f"« {thesis} »",
-        coverage_map=coverage_map,
         document=document,
     )
 
@@ -464,7 +476,7 @@ async def build_coverage_review(
         return review
 
     rows = _unit_rows(state)
-    prompt = build_coverage_review_prompt(thesis, document, _coverage_map(state, rows))
+    prompt = build_coverage_review_prompt(thesis, document)
 
     try:
         content = (await llm_callable(prompt) or "").strip()
@@ -494,7 +506,7 @@ async def build_coverage_review(
     def _drop(reason: str) -> None:
         dropped[reason] = dropped.get(reason, 0) + 1
 
-    for raw in raw_items:
+    for rank, raw in enumerate(raw_items, start=1):
         if len(review.items) >= MAX_ITEMS:
             _drop(DROP_CAPPED)
             continue
@@ -527,6 +539,11 @@ async def build_coverage_review(
                 lens=LENS_BY_CLASS[kind],
                 unit_id=unit_id,
                 reason=str(raw.get("reason") or "").strip(),
+                conclusion=str(raw.get("conclusion") or "").strip(),
+                # R1155 — the model's OWN order, not the post-filter order:
+                # the rank is the measure the budget was set from, and it must
+                # survive a drop later in the list.
+                rank=rank,
             )
         )
 
@@ -578,11 +595,13 @@ def coverage_review_note(state: Any) -> str:
     advertising a review that did not run — the #3395 rule, and the
     byte-identity control the issue asks for.
 
-    What the review DID read reaches the act: each passage, the reviewer's own
-    reading of it ATTRIBUTED to the coverage review (the pipeline's reader,
-    never a lens verdict), and the fallacies the class's walk retained, under
-    the writer's generic label. An unwired lens keeps its line: named, not
-    examined.
+    What the review DID read reaches the act, ONE line per item (R1155 — the
+    prompt grows by the items named, not by a template per item): the passage,
+    its document position and the rank the reviewer gave it, what the argument
+    concludes on its own, the reviewer's reading of it ATTRIBUTED to the
+    coverage review (the pipeline's reader, never a lens verdict), and the
+    fallacies the class's walk retained under the writer's generic label. An
+    unwired lens keeps its clause: named, not examined.
     """
     record = _as_state_dict(state, "coverage_review")
     if not isinstance(record, dict):
@@ -594,8 +613,8 @@ def coverage_review_note(state: Any) -> str:
         return ""
 
     lines: List[str] = [
-        "[APPUIS DE LA THÈSE QU'AUCUNE LENTILLE N'AVAIT EXAMINÉS — revue de "
-        "couverture, un passage du document lu en entier, après les phases "
+        "[ARGUMENTS QU'AUCUNE LENTILLE DE LEUR QUESTION N'AVAIT EXAMINÉS — "
+        "revue de couverture, lecture du document entier, après les phases "
         "profondes]"
     ]
     for item in items:
@@ -603,38 +622,49 @@ def coverage_review_note(state: Any) -> str:
         offset = item.get("offset")
         if not quote or not isinstance(offset, int):
             continue
-        lines.append(f"  — « {quote} » (position {offset})")
-        reason = str(item.get("reason") or "").strip()
-        if reason:
-            lines.append(
-                "    La revue de couverture — le lecteur du pipeline, pas une "
-                f"lentille — lit ce passage comme : {reason}"
-            )
+        kind = str(item.get("class") or "")
+        lens = str(item.get("lens") or "")
+        place = f"position {offset}"
+        rank = item.get("rank")
+        if isinstance(rank, int) and not isinstance(rank, bool) and rank > 0:
+            place += f", rang {rank}"
+        head = f"  — « {quote} » ({place}, classe {kind} → lentille {lens})"
+        conclusion = str(item.get("conclusion") or "").strip()
+        if conclusion:
+            head += f" — conclut : {conclusion}"
+
         routed_any = item.get("routed")
         routed = routed_any if isinstance(routed_any, dict) else {}
         status = str(routed.get("status") or "")
-        lens = str(item.get("lens") or "")
         labels = [
             label for label in map(_fallacy_label, _retained_fallacies(routed)) if label
         ]
+        clauses: List[str] = []
+        reason = str(item.get("reason") or "").strip()
+        if reason:
+            clauses.append(
+                "la revue de couverture — le lecteur du pipeline, pas une "
+                f"lentille — le retient parce que : {reason}"
+            )
         if labels:
-            lines.append("    Sophismes retenus sur ce passage : " + " ; ".join(labels))
+            clauses.append("sophismes retenus : " + " ; ".join(labels))
         if status == "lens_not_wired":
-            lines.append(
-                f"    Aucune lentille câblée pour ce passage ({lens}) : il est "
-                "nommé, non examiné — ne lui prête pas de verdict."
+            clauses.append(
+                f"aucune lentille câblée pour ce passage ({lens}) : il est "
+                "nommé, non examiné — ne lui prête pas de verdict"
             )
         elif status in ("lens_error", "lens_no_finding"):
-            lines.append(
-                f"    Lentille {lens} non concluante ({status}) : le passage "
-                "reste non examiné."
+            clauses.append(
+                f"lentille {lens} non concluante ({status}) : le passage reste "
+                "non examiné"
             )
         elif labels:
-            lines.append(f"    Lentille {lens} : {len(labels)} sophisme(s) retenu(s).")
+            clauses.append(f"lentille {lens} : {len(labels)} sophisme(s) retenu(s)")
         else:
-            lines.append(
-                f"    Lentille {lens} : lue, aucun sophisme retenu sur ce passage."
+            clauses.append(
+                f"lentille {lens} : lue, aucun sophisme retenu sur ce passage"
             )
+        lines.append(head + " ; " + " ; ".join(clauses) + ".")
     return "\n".join(lines)
 
 

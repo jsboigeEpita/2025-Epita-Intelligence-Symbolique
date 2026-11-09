@@ -1,21 +1,28 @@
-"""#3492 reprise — the coverage reviewer reads the DOCUMENT, per question.
+"""#3492 reprise — the coverage reviewer enumerates, then code filters.
 
-The coordinator's replay of v1's own selection on the recorded c4b states
-measured **0 of 3 anchors** reaching the reviewer's prompt: a union filter
-dropped two of them, 24 candidates out of 673 could not contain the third, and
-quotes were verified against unit texts that are verbatim in the document for
-336 of 1 406 units only.
+The coordinator's replay of the recorded c4b states measured **0 of 3 anchors**
+reaching the reviewer's prompt, then why: the coverage map made every belief
+verb eligible, and a reviewer asked for the thesis's SUPPORTS does not look for
+what the zero-shot finds — an ARGUMENT WITH ITS OWN CONCLUSION. Two more
+measures settled the design: on long documents the per-class filter cuts almost
+nothing (1 of 44), and the three anchors rank 11, 3 and 8 of 15.
 
-These witnesses pin the four answers, and the render:
+These witnesses pin the rework:
 
-* the reviewer is given the WHOLE document — including a passage no extraction
-  produced, which is what the zero-shot arm read and the pipeline could not;
-* "examined" is decided PER CLASS: a stakes record does not examine a
+* the reviewer is asked the zero-shot's own question — the arguments a complete
+  analysis would examine one by one — over the WHOLE document, including a
+  passage no extraction produced, and the coverage map is GONE from the prompt;
+* the budget is 15 (the rank ceiling of the measured map), and the three
+  measured anchors survive at their own ranks;
+* "examined" is decided PER CLASS in code: a stakes record does not examine a
   statistical support, and a modal question has no coverage key at all;
+* a fourth class (``persuasion``) has a home — the descent — because one
+  measured anchor was a manipulation move and fitted none of the three;
 * a quote is verified against ``raw_text``, so a paraphrase of the extractor's
   is dropped and counted rather than printed as the speaker's words;
-* the acts print the reviewer's own reading, attributed, and the fallacies the
-  class's lens retained, under the writer's generic label (#3493).
+* the acts print the reviewer's own reading, attributed, ONE line per item, and
+  the fallacies the class's lens retained under the writer's generic label
+  (#3493).
 
 The document and its passages are made up: no corpus text, no source name. The
 taxonomy leaf used for the label witness is the repository's own vendored data.
@@ -34,6 +41,7 @@ from argumentation_analysis.agents.core.reading.coverage_review import (
     DROP_EXAMINED_BY_CLASS,
     DROP_QUOTE_NOT_IN_DOCUMENT,
     DROP_UNKNOWN_CLASS,
+    LENS_BY_CLASS,
     MAX_ITEMS,
     build_coverage_review,
     coverage_review_note,
@@ -129,12 +137,15 @@ def make_state(
 
 
 def reply(*items):
-    """A model reply naming (quote, class[, reason]) triples."""
+    """A model reply naming (quote, class[, reason[, conclusion]]) tuples."""
     payload = []
     for item in items:
         quote, kind = item[0], item[1]
         reason = item[2] if len(item) > 2 else "raison synthétique"
-        payload.append({"quote": quote, "class": kind, "reason": reason})
+        entry = {"quote": quote, "class": kind, "reason": reason}
+        if len(item) > 3:
+            entry["conclusion"] = item[3]
+        payload.append(entry)
     return json.dumps({"items": payload})
 
 
@@ -199,7 +210,8 @@ async def test_a_passage_no_unit_carries_is_named_without_borrowing_an_id():
     assert review.items[0].unit_id == ""
 
 
-async def test_the_prompt_carries_the_coverage_map_per_class():
+async def test_the_prompt_asks_for_an_enumeration_and_carries_no_coverage_map():
+    """R1155 — the map made every belief verb eligible and named no anchor."""
     state = make_state(
         coverage={
             "fallacy_per_argument": {"unit_ids": ["arg_2"]},
@@ -211,12 +223,17 @@ async def test_the_prompt_carries_the_coverage_map_per_class():
     await build_coverage_review(state, llm, FakeDispatcher())
 
     prompt = llm.prompts[0]
-    assert "question « modal »" in prompt
-    # Measured: the run records no modal coverage key — nothing was examined.
-    assert "aucune couverture enregistrée" in prompt
-    assert "question « statistical »" in prompt
-    assert f"arg_2 (position {ANCHOR_OFFSET})" in prompt
-    # A record that is not the class's lens is not coverage for it.
+    # The reader's own question: arguments, each with its own conclusion.
+    assert "conclusion" in prompt
+    assert "PAR" in prompt and "LUI-MÊME" in prompt
+    # The four classes, and the budget, are stated to the model.
+    for kind in ("modal", "statistical", "inferential", "persuasion"):
+        assert f'"{kind}"' in prompt
+    assert f"Au plus {MAX_ITEMS} arguments" in prompt
+    # The coverage map is GONE: no per-class record, no unit id, no offset.
+    assert "question «" not in prompt
+    assert "aucune couverture enregistrée" not in prompt
+    assert f"arg_2 (position {ANCHOR_OFFSET})" not in prompt
     assert "arg_3 (position" not in prompt
 
 
@@ -228,6 +245,15 @@ def test_the_class_table_says_what_each_question_counts():
     assert COVERAGE_KEYS_BY_CLASS["statistical"] == ("fallacy_per_argument",)
     assert "fol_reasoning" in COVERAGE_KEYS_BY_CLASS["inferential"]
     assert "aspic" in COVERAGE_KEYS_BY_CLASS["inferential"]
+    # R1155 — the fourth class shares the descent's record: that is the lens
+    # that reads a passage for manipulative moves today.
+    assert COVERAGE_KEYS_BY_CLASS["persuasion"] == ("fallacy_per_argument",)
+
+
+def test_the_four_classes_are_the_closed_vocabulary_and_each_has_a_lens():
+    expected = {"modal", "statistical", "inferential", "persuasion"}
+    assert set(COVERAGE_KEYS_BY_CLASS) == expected
+    assert set(LENS_BY_CLASS) == expected
 
 
 def test_the_per_class_set_ignores_every_other_phase():
@@ -343,7 +369,9 @@ def test_unit_id_at_offset_follows_the_reading_overlap_rule():
 
 async def test_the_named_items_are_capped_and_the_overflow_counted():
     state = make_state()
-    sentences = [f"Passage numéro {index} du document." for index in range(1, 6)]
+    sentences = [
+        f"Passage numéro {index} du document." for index in range(1, MAX_ITEMS + 3)
+    ]
     state.raw_text = DOCUMENT + " " + " ".join(sentences)
     review = await build_coverage_review(
         state,
@@ -352,6 +380,53 @@ async def test_the_named_items_are_capped_and_the_overflow_counted():
     )
     assert len(review.items) == MAX_ITEMS
     assert review.dropped.get(DROP_CAPPED) == 2
+
+
+async def test_the_budget_carries_the_three_anchors_at_ranks_3_8_and_11():
+    """R1155 — measured at ranks 11, 3 and 8 of 15: a cap of three kept one.
+
+    The rank is the MODEL's own order, recorded as given: the budget was set
+    from that measure, so the witness replays it rather than assuming it.
+    """
+    state = make_state()
+    extra = [
+        f"Passage secondaire numéro {index} du document." for index in range(1, 16)
+    ]
+    state.raw_text = DOCUMENT + " " + " ".join(extra)
+    entries = list(extra)
+    for rank, quote in {3: ANCHOR, 8: INFER, 11: UNEXTRACTED}.items():
+        entries[rank - 1] = quote
+
+    review = await build_coverage_review(
+        state, FakeLLM(reply(*[(text, "modal") for text in entries])), FakeDispatcher()
+    )
+
+    by_rank = {item.rank: item.quote for item in review.items}
+    assert by_rank[3] == ANCHOR
+    assert by_rank[8] == INFER
+    assert by_rank[11] == UNEXTRACTED
+    assert len(review.items) == MAX_ITEMS
+    assert not review.dropped.get(DROP_CAPPED)
+
+
+async def test_a_persuasion_move_is_the_fourth_class_and_routes_to_the_descent():
+    """R1155 — one measured anchor was a manipulation move with no home."""
+    state = make_state()
+    review = await build_coverage_review(
+        state, FakeLLM(reply((UNEXTRACTED, "persuasion"))), FakeDispatcher()
+    )
+    assert len(review.items) == 1
+    assert review.items[0].kind == "persuasion"
+    assert review.items[0].lens == "fallacy_descent"
+
+
+async def test_a_persuasion_passage_the_descent_read_is_dropped_and_counted():
+    state = make_state(coverage={"fallacy_per_argument": {"unit_ids": ["arg_2"]}})
+    review = await build_coverage_review(
+        state, FakeLLM(reply((ANCHOR, "persuasion"))), FakeDispatcher()
+    )
+    assert review.items == []
+    assert review.dropped.get(DROP_EXAMINED_BY_CLASS) == 1
 
 
 async def test_an_unknown_class_is_dropped_never_routed_by_default():
@@ -452,6 +527,31 @@ async def test_an_unwired_lens_still_carries_the_reviewers_reading():
     assert "pas une lentille" in note
     assert "câblée" in note
     assert "verdict" in note
+
+
+async def test_the_note_renders_one_line_per_item_with_its_rank_and_conclusion():
+    """R1155 — the Act II prompt grows by the items named, not per item."""
+    state = make_state()
+    review = await build_coverage_review(
+        state,
+        FakeLLM(
+            reply(
+                (ANCHOR, "statistical", "la raison A", "l'argument conclut B"),
+                (UNEXTRACTED, "modal", "la raison C", "l'argument conclut D"),
+            )
+        ),
+        FakeDispatcher(status="lens_not_wired"),
+    )
+    state.coverage_review = review.to_state()
+
+    note = coverage_review_note(state)
+    lines = [line for line in note.splitlines() if line.strip()]
+
+    assert len(lines) == 1 + 2  # one header, then exactly one line per item
+    assert "rang 1" in lines[1] and "rang 2" in lines[2]
+    assert "conclut : l'argument conclut B" in lines[1]
+    assert "la raison A" in lines[1]
+    assert "position" in lines[1] and "classe statistical" in lines[1]
 
 
 # --- ask 5 + the invoke layer: the walk reads the passage IN its frame ----
