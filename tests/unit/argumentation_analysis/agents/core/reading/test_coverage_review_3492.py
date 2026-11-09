@@ -332,9 +332,10 @@ def test_unit_id_at_offset_follows_the_reading_overlap_rule():
     assert unit_id_at_offset(rows, 109) == "arg_2"
     # Between spans, and before the first: no id rather than a neighbour's.
     assert unit_id_at_offset(rows, 50) == ""
-    assert unit_id_at_offset(
-        [{"unit_id": "arg_2", "text": "y" * 10, "offset": 100}], 5
-    ) == ""
+    assert (
+        unit_id_at_offset([{"unit_id": "arg_2", "text": "y" * 10, "offset": 100}], 5)
+        == ""
+    )
 
 
 # --- the honesty rules around the naming ----------------------------------
@@ -380,9 +381,7 @@ async def test_without_a_thesis_the_pass_has_no_question():
 async def test_without_a_document_the_quote_cannot_be_placed():
     """No document, no verification — and no review that pretends otherwise."""
     llm = FakeLLM(reply((UNEXTRACTED, "modal")))
-    review = await build_coverage_review(
-        make_state(raw_text=""), llm, FakeDispatcher()
-    )
+    review = await build_coverage_review(make_state(raw_text=""), llm, FakeDispatcher())
     assert review.status == "no_document"
     assert review.items == []
     assert llm.prompts == []
@@ -390,9 +389,7 @@ async def test_without_a_document_the_quote_cannot_be_placed():
 
 async def test_an_empty_review_leaves_the_acts_prompt_byte_identical():
     state = make_state()
-    review = await build_coverage_review(
-        state, FakeLLM(reply()), FakeDispatcher()
-    )
+    review = await build_coverage_review(state, FakeLLM(reply()), FakeDispatcher())
     assert review.status == "ok"
     assert review.items == []
     state.coverage_review = review.to_state()
@@ -483,9 +480,7 @@ async def test_the_invoke_walks_a_statistical_item_with_its_document_frame(
         walked.append((unit_id, quote, document_frame))
         return {"fallacies": [{"fallacy_type": "synthetic", "family": "synthetic"}]}
 
-    ic = _patch_invoke(
-        monkeypatch, FakeLLM(reply((ANCHOR, "statistical"))), walk
-    )
+    ic = _patch_invoke(monkeypatch, FakeLLM(reply((ANCHOR, "statistical"))), walk)
     state = make_state()
 
     out = await ic._invoke_coverage_review(DOCUMENT, {"_state_object": state})
@@ -542,9 +537,7 @@ async def test_the_writer_persists_the_review_as_computed(monkeypatch):
     async def walk(*args, **kwargs):
         return {"fallacies": []}
 
-    ic = _patch_invoke(
-        monkeypatch, FakeLLM(reply((ANCHOR, "statistical"))), walk
-    )
+    ic = _patch_invoke(monkeypatch, FakeLLM(reply((ANCHOR, "statistical"))), walk)
     state = make_state(record={})
 
     out = await ic._invoke_coverage_review(DOCUMENT, {"_state_object": state})

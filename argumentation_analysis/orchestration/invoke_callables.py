@@ -14375,9 +14375,7 @@ def _coverage_document_frame(item: Any, state: Any) -> Any:
     return _document_frame_for_unit(state, unit_id, unit_text) or None
 
 
-async def _coverage_route_to_lens(
-    item: Any, state: Any = None
-) -> Dict[str, Any]:
+async def _coverage_route_to_lens(item: Any, state: Any = None) -> Dict[str, Any]:
     """Run the lens an item's class points at, on the passage it named (#3492).
 
     Only the fallacy descent has a passage-level entry point today: the walk

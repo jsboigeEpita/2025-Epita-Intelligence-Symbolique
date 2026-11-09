@@ -304,7 +304,7 @@ def unit_id_at_offset(rows: List[Dict[str, Any]], position: int) -> str:
         if not isinstance(offset, int):
             continue
         if offset <= position < offset + len(row["text"]):
-            return row["unit_id"]
+            return str(row["unit_id"])
     return ""
 
 
@@ -316,14 +316,14 @@ def _coverage_map(state: Any, rows: List[Dict[str, Any]]) -> str:
         keys = COVERAGE_KEYS_BY_CLASS.get(kind, ())
         if not keys:
             lines.append(
-                f'- question « {kind} » : aucune couverture enregistrée pour '
+                f"- question « {kind} » : aucune couverture enregistrée pour "
                 "cette lentille — rien n'a été examiné."
             )
             continue
         examined = examined_unit_ids_for_class(state, kind)
         if not examined:
             lines.append(
-                f'- question « {kind} » : la lentille n\'a rien enregistré — '
+                f"- question « {kind} » : la lentille n'a rien enregistré — "
                 "rien n'a été examiné."
             )
             continue
@@ -337,7 +337,7 @@ def _coverage_map(state: Any, rows: List[Dict[str, Any]]) -> str:
                 else f"{unit_id} (position inconnue)"
             )
         lines.append(
-            f'- question « {kind} » : {len(examined)} passages examinés — '
+            f"- question « {kind} » : {len(examined)} passages examinés — "
             + ", ".join(placed)
         )
     return "\n".join(lines)
@@ -354,9 +354,7 @@ def _thesis_quote(state: Any) -> str:
     return ""
 
 
-def build_coverage_review_prompt(
-    thesis: str, document: str, coverage_map: str
-) -> str:
+def build_coverage_review_prompt(thesis: str, document: str, coverage_map: str) -> str:
     """The reviewer's one prompt: the thesis, the map, the WHOLE document."""
     return COVERAGE_REVIEW_PROMPT.format(
         max_items=MAX_ITEMS,
@@ -466,9 +464,7 @@ async def build_coverage_review(
         return review
 
     rows = _unit_rows(state)
-    prompt = build_coverage_review_prompt(
-        thesis, document, _coverage_map(state, rows)
-    )
+    prompt = build_coverage_review_prompt(thesis, document, _coverage_map(state, rows))
 
     try:
         content = (await llm_callable(prompt) or "").strip()
@@ -505,9 +501,7 @@ async def build_coverage_review(
         if not isinstance(raw, dict):
             _drop(DROP_QUOTE_NOT_IN_DOCUMENT)
             continue
-        verified = _quote_in_document(
-            document, str(raw.get("quote") or "").strip()
-        )
+        verified = _quote_in_document(document, str(raw.get("quote") or "").strip())
         if verified is None:
             # The document does not carry this passage: what the model wrote
             # was its own words, and printing them as the speaker's is the
@@ -559,10 +553,7 @@ def _fallacy_label(fallacy: Any) -> str:
     """One retained fallacy, with the WRITER's label (#3493)."""
     data = fallacy if isinstance(fallacy, dict) else {}
     recorded = str(
-        data.get("fallacy")
-        or data.get("type")
-        or data.get("fallacy_type")
-        or ""
+        data.get("fallacy") or data.get("type") or data.get("fallacy_type") or ""
     ).strip()
     if not recorded:
         return ""
@@ -623,11 +614,11 @@ def coverage_review_note(state: Any) -> str:
         routed = routed_any if isinstance(routed_any, dict) else {}
         status = str(routed.get("status") or "")
         lens = str(item.get("lens") or "")
-        labels = [label for label in map(_fallacy_label, _retained_fallacies(routed)) if label]
+        labels = [
+            label for label in map(_fallacy_label, _retained_fallacies(routed)) if label
+        ]
         if labels:
-            lines.append(
-                "    Sophismes retenus sur ce passage : " + " ; ".join(labels)
-            )
+            lines.append("    Sophismes retenus sur ce passage : " + " ; ".join(labels))
         if status == "lens_not_wired":
             lines.append(
                 f"    Aucune lentille câblée pour ce passage ({lens}) : il est "
