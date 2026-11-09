@@ -12,23 +12,30 @@ speaker's certainties a proposition he explicitly DENIES. Census on the
 38/38 restated as declarative unit texts; 1 carries the explicit answer.
 
 The fix has a deterministic half (the writer decides FROM THE QUOTE —
-``ends_as_question`` marks the form whatever the model said, and
+``ends_as_question`` decides that the quote is a question, and
 ``extend_question_quote`` carries the short answer into the stored
 provenance, #3428's courtesy applied at the extractor) and a model half
 (``_QUESTION_FORCE_INSTRUCTION``: the position stated is the ANSWER's
 polarity when the text answers, else the item stays a question).
+
+#3499 — the first version of the window crossed speech turns: 15 of the 27
+extensions on the panel carried, as the speaker's answer, the NEXT speaker's
+line (12) or a stage direction or audience reaction (3). The window is now
+bounded at the turn boundary, and the ``form`` field of the first version is
+gone: it had no reader, the extended citation is the mark.
 
 These witnesses are synthetic (invented prose, no dataset content, no
 paid call — the measurement on the 38 census units is the coordinator's).
 Three contracts:
 
 1. ``TestInstructionReachesTheWire`` — the instruction is threaded into
-   the production system prompt (1745 wire-pin pattern).
-2. ``TestQuestionForceAtTheWriter`` — the deterministic half: answered
-   question → extended quote + form mark; unanswered → form mark, quote
-   untouched; declarative → byte-identical to today, no form key.
-3. ``TestAddArgumentFormGate`` / ``TestQuestionHelpers`` — the closed
-   vocabulary and the window's edge cases.
+   the production system prompt (1745 wire-pin pattern) and carries the
+   turn rule, not a ``form`` field.
+2. ``TestQuestionForceAtTheWriter`` — the deterministic half: an answered
+   question in the SAME turn → extended quote; a turn boundary → quote
+   untouched; a declarative unit → byte-identical to today, no extra key.
+3. ``TestTurnBoundary`` / ``TestQuestionHelpers`` — the boundary rule and
+   the window's edge cases.
 """
 
 from __future__ import annotations
@@ -37,8 +44,12 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from argumentation_analysis.core.shared_state import (
     UnifiedAnalysisState,
+    _is_speaker_designation,
+    _turn_boundary_offset,
     ends_as_question,
     extend_question_quote,
 )
@@ -113,16 +124,31 @@ class TestInstructionReachesTheWire:
             "the #3491 instruction is not threaded into the extraction " "system prompt"
         )
 
+    def test_the_instruction_bounds_the_answer_to_the_same_turn(self):
+        """#3499 — the model is told what the writer enforces.
+
+        The first version asked for a ``form`` field with no reader; the
+        instruction now names the boundary the window applies.
+        """
+        import argumentation_analysis.orchestration.invoke_callables as mod
+
+        instruction = mod._QUESTION_FORCE_INSTRUCTION
+        assert "SAME speaker's" in instruction
+        assert "same speech turn" in instruction
+        assert "stage direction" in instruction
+        assert "'form'" not in instruction
+
 
 class TestQuestionForceAtTheWriter:
     """Contract 2 — the deterministic half, decided from the QUOTE.
 
-    The model's own 'form' statement is OVERRIDDEN when the quote is a
-    question (census: 38/38 declarative restatements — trusting the model
-    here is trusting the defect), and never invented when it is not.
+    The model's own statement is not consulted: when the quote is a question,
+    the writer extends it with the short answer of the SAME turn (census:
+    38/38 declarative restatements — trusting the model here is trusting the
+    defect), and never invents anything when the turn ends.
     """
 
-    def test_answered_question_quote_carries_the_answer_and_the_form(self):
+    def test_answered_question_quote_carries_the_answer(self):
         state = UnifiedAnalysisState(_DOC_ANSWERED)
         arg_id = _write_one_argument(
             state,
@@ -133,16 +159,15 @@ class TestQuestionForceAtTheWriter:
             },
         )
         prov = state.argument_provenance[arg_id]
-        # The form is marked — decided from the quote, the model said nothing.
-        assert prov.get("form") == "rhetorical_question"
         # The stored quote now CONTAINS the explicit answer that the bare
         # question stopped in front of (the measured defect).
         assert prov["source_quote"].startswith(_Q_ANSWERED)
         assert _A_ANSWERED in prov["source_quote"]
 
-    def test_model_declarative_text_still_gets_the_question_form(self):
+    def test_the_declarative_restatement_is_carried_by_the_quote_alone(self):
         """The census shape: the model ALREADY restated the question as a
-        declarative unit — the quote still decides the form."""
+        declarative unit — the quote still carries the answer, and no
+        ``form`` key is written (it had no reader, #3499)."""
         state = UnifiedAnalysisState(_DOC_ANSWERED)
         arg_id = _write_one_argument(
             state,
@@ -151,7 +176,82 @@ class TestQuestionForceAtTheWriter:
                 "source_quote": _Q_ANSWERED,
             },
         )
-        assert state.argument_provenance[arg_id].get("form") == ("rhetorical_question")
+        prov = state.argument_provenance[arg_id]
+        assert _A_ANSWERED in prov["source_quote"]
+        assert "form" not in prov
+
+    def test_the_next_speakers_line_is_never_carried(self):
+        """#3499, leaked class 1 — measured on 12 of the 27 extensions."""
+        doc = "Qui paie la facture ?\nJean Dupont : Nous la paierons tous."
+        state = UnifiedAnalysisState(doc)
+        arg_id = _write_one_argument(
+            state,
+            {
+                "text": "Question sur le payeur",
+                "source_quote": "Qui paie la facture ?",
+            },
+        )
+        prov = state.argument_provenance[arg_id]
+        assert prov["source_quote"] == "Qui paie la facture ?"
+
+    def test_a_stage_direction_is_never_carried(self):
+        """#3499, leaked class 2 — measured on 3 of the 27 extensions."""
+        doc = "Qui paie la facture ? (Applaudissements nourris.) La séance continue."
+        state = UnifiedAnalysisState(doc)
+        arg_id = _write_one_argument(
+            state,
+            {
+                "text": "Question sur le payeur",
+                "source_quote": "Qui paie la facture ?",
+            },
+        )
+        assert state.argument_provenance[arg_id]["source_quote"] == (
+            "Qui paie la facture ?"
+        )
+
+    def test_an_audience_reaction_is_never_carried(self):
+        doc = "Qui paie la facture ? [Rires dans la salle.] La séance continue."
+        state = UnifiedAnalysisState(doc)
+        arg_id = _write_one_argument(
+            state,
+            {
+                "text": "Question sur le payeur",
+                "source_quote": "Qui paie la facture ?",
+            },
+        )
+        assert state.argument_provenance[arg_id]["source_quote"] == (
+            "Qui paie la facture ?"
+        )
+
+    def test_a_dialogue_dash_line_is_never_carried(self):
+        doc = "Qui paie la facture ?\n— Nous tous, évidemment."
+        state = UnifiedAnalysisState(doc)
+        arg_id = _write_one_argument(
+            state,
+            {
+                "text": "Question sur le payeur",
+                "source_quote": "Qui paie la facture ?",
+            },
+        )
+        assert state.argument_provenance[arg_id]["source_quote"] == (
+            "Qui paie la facture ?"
+        )
+
+    def test_a_blank_line_ends_the_turn(self):
+        """One panel document separates its turns this way — alone it is not
+        enough, hence the two label witnesses above."""
+        doc = "Qui paie la facture ?\n\nNous la paierons tous."
+        state = UnifiedAnalysisState(doc)
+        arg_id = _write_one_argument(
+            state,
+            {
+                "text": "Question sur le payeur",
+                "source_quote": "Qui paie la facture ?",
+            },
+        )
+        assert state.argument_provenance[arg_id]["source_quote"] == (
+            "Qui paie la facture ?"
+        )
 
     def test_second_question_is_not_an_answer(self):
         doc = (
@@ -168,7 +268,6 @@ class TestQuestionForceAtTheWriter:
             },
         )
         prov = state.argument_provenance[arg_id]
-        assert prov.get("form") == "rhetorical_question"
         # A second question is not an answer: the quote stays the question.
         assert prov["source_quote"] == "Est-ce que le programme a tenu ses promesses ?"
 
@@ -183,7 +282,6 @@ class TestQuestionForceAtTheWriter:
             },
         )
         prov = state.argument_provenance[arg_id]
-        assert prov.get("form") == "rhetorical_question"
         assert prov["source_quote"] == "Qui paie la prochaine facture ?"
 
     def test_long_continuation_is_not_a_short_answer(self):
@@ -203,11 +301,10 @@ class TestQuestionForceAtTheWriter:
             },
         )
         prov = state.argument_provenance[arg_id]
-        assert prov.get("form") == "rhetorical_question"
         # > max_answer_chars: not a short answer, the quote is untouched.
         assert prov["source_quote"] == "Le programme a-t-il tenu ses promesses ?"
 
-    def test_unlocatable_quote_still_marked_quote_untouched(self):
+    def test_unlocatable_quote_quote_untouched(self):
         doc = "Un texte sans la question citée."
         state = UnifiedAnalysisState(doc)
         arg_id = _write_one_argument(
@@ -218,7 +315,6 @@ class TestQuestionForceAtTheWriter:
             },
         )
         prov = state.argument_provenance[arg_id]
-        assert prov.get("form") == "rhetorical_question"
         assert prov["source_quote"] == "Où sont passés les millions annoncés ?"
 
     def test_declarative_unit_is_byte_identical_to_before(self):
@@ -231,49 +327,69 @@ class TestQuestionForceAtTheWriter:
                 "source_quote": quote,
             },
         )
-        # No form key (absence IS the declarative unit, #1019), and the
-        # stored text keeps the exact pre-#3491 format.
+        # No extra key, and the stored text keeps the exact pre-#3491 format.
         assert "form" not in state.argument_provenance[arg_id]
         assert state.identified_arguments[arg_id] == (
             "Les emplois annoncés sont des transferts " f'[quote: "{quote}"]'
         )
 
-    def test_no_quote_no_form_no_window(self):
+    def test_no_quote_no_window(self):
         state = UnifiedAnalysisState(_DOC_ANSWERED)
         arg_id = _write_one_argument(state, {"text": "Une unité sans citation"})
         assert "form" not in state.argument_provenance[arg_id]
         assert "source_quote" not in state.argument_provenance[arg_id]
 
 
-class TestAddArgumentFormGate:
-    """Contract 3a — closed vocabulary, same gate as ``move_author``."""
+class TestTheFormFieldIsGone:
+    """Contract 3a — #3499: the field had no reader, so it is removed."""
 
-    def test_vocabulary_form_is_written(self):
-        state = UnifiedAnalysisState("x ?")
-        arg_id = state.add_argument(
-            "d", producer="llm_extract", form="rhetorical_question"
+    def test_add_argument_takes_no_form_keyword(self):
+        state = UnifiedAnalysisState("Qui paie ? Non !")
+        with pytest.raises(TypeError):
+            state.add_argument(  # type: ignore[call-arg]
+                "d", producer="llm_extract", form="rhetorical_question"
+            )
+
+
+class TestTurnBoundary:
+    """Contract 3b — the boundary rule, on its own."""
+
+    def test_a_speaker_designation_is_recognised(self):
+        assert _is_speaker_designation("Jean Dupont")
+        assert _is_speaker_designation("Le Maire")
+        assert _is_speaker_designation("M. Dupont")
+
+    def test_a_sentence_with_a_colon_is_not_a_designation(self):
+        assert not _is_speaker_designation("les trois taux")
+        assert not _is_speaker_designation("Il dit")
+        assert not _is_speaker_designation("Vraiment, oui")
+        assert not _is_speaker_designation(
+            "Un libellé beaucoup trop long pour être une désignation de locuteur"
         )
-        assert state.argument_provenance[arg_id]["form"] == "rhetorical_question"
+        assert not _is_speaker_designation("")
 
-    def test_out_of_vocabulary_form_is_dropped(self):
-        state = UnifiedAnalysisState("x")
-        arg_id = state.add_argument("d", producer="llm_extract", form="poem")
-        assert "form" not in state.argument_provenance[arg_id]
+    def test_the_boundary_is_the_first_marker_only(self):
+        window = " Oui, absolument. Jean Dupont : autre chose."
+        # The label is INSIDE the first sentence's prose, not at a line start:
+        # the boundary rule reads line openings, so it reports the next line.
+        assert _turn_boundary_offset(window) is None
 
-    def test_absent_form_is_not_defaulted(self):
-        state = UnifiedAnalysisState("x")
-        arg_id = state.add_argument("d", producer="llm_extract")
-        assert "form" not in state.argument_provenance[arg_id]
-
-    def test_form_requires_producer_entry(self):
-        state = UnifiedAnalysisState("x")
-        arg_id = state.add_argument("d", form="rhetorical_question")
-        assert arg_id in state.identified_arguments
-        assert arg_id not in state.argument_provenance
+    @pytest.mark.parametrize(
+        "window",
+        [
+            "\nJean Dupont : Oui.",
+            "\n\nOui.",
+            " (Applaudissements.)",
+            " [Rires.]",
+            "\n— Oui.",
+        ],
+    )
+    def test_each_marker_bounds_the_window(self, window):
+        assert _turn_boundary_offset(window) is not None
 
 
 class TestQuestionHelpers:
-    """Contract 3b — the two predicates on their own."""
+    """Contract 3c — the predicates on their own."""
 
     def test_ends_as_question_shapes(self):
         assert ends_as_question("Qui paie ?")

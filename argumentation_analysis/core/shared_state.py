@@ -116,16 +116,70 @@ def locate_unit_span(
     return None, "sans offset (introuvable, même à espaces flexibles)"
 
 
-# #3491 — le vocabulaire fermé de la FORME d'une unité d'extraction. Une
-# unité dont la source verbatim est une question est marquée
-# ``rhetorical_question`` ; l'absence de clé est l'unité déclarative
-# ordinaire (#1019 — jamais une valeur par défaut).
-ARGUMENT_FORMS: frozenset[str] = frozenset({"rhetorical_question"})
-
 # #3491 — caractères de queue derrière lesquels un « ? » peut se cacher
 # (guillemets français, apostrophes droites/typographiques, parenthèse
 # fermante) après rstrip des espaces.
 _QUESTION_TAIL = " \t\r\n\"'”’«»)]"
+
+#: #3499 — la fenêtre d'extension s'arrête à la FRONTIÈRE DE TOUR. Mesuré sur
+#: le panel : 15 des 27 extensions la franchissaient, 12 en avalant la ligne du
+#: locuteur suivant et 3 une didascalie ou une réaction du public — la réponse
+#: citée était alors la parole d'un AUTRE. La ligne vide seule ne suffit pas
+#: (un document du panel sépare ses tours ainsi, les autres non).
+_TURN_LABEL_MAX = 60
+_BLANK_LINE = re.compile(r"\n[ \t\r]*\n")
+
+
+def _is_speaker_designation(label: str) -> bool:
+    """Une désignation de locuteur — « Jean Dupont », « Le Maire ».
+
+    Pas une phrase qui contient deux-points : la ponctuation de phrase
+    l'exclut, le nombre de mots la borne, et chaque mot commence par une
+    majuscule. Le prix d'un faux positif est une extension NON faite (la
+    citation reste byte-identique), jamais une parole attribuée au mauvais
+    locuteur.
+    """
+    label = label.strip()
+    if not label or len(label) > _TURN_LABEL_MAX:
+        return False
+    if any(ch in label for ch in "!?;…,"):
+        return False
+    words = [word for word in label.split() if word]
+    if not 1 <= len(words) <= 4:
+        return False
+    return all(word[0].isupper() for word in words)
+
+
+def _turn_boundary_offset(window: str) -> Optional[int]:
+    """L'index où le tour du locuteur s'arrête dans ``window``, sinon ``None``.
+
+    Trois marqueurs, ceux que la mesure a trouvés : la ligne vide, la ligne
+    du locuteur suivant, et la didascalie (parenthèse ou crochet en tête de
+    ligne — « (Applaudissements) », « [Rires] »). Le premier rencontré borne
+    la fenêtre.
+    """
+    offsets: List[int] = []
+    blank = _BLANK_LINE.search(window)
+    if blank is not None:
+        offsets.append(blank.start())
+    position = 0
+    for index, line in enumerate(window.splitlines(keepends=True)):
+        stripped = line.lstrip()
+        head = position + (len(line) - len(stripped))
+        if stripped[:1] in ("(", "["):
+            offsets.append(head)
+            break
+        # Un tiret de dialogue en tête de LIGNE ouvre un autre locuteur ; le
+        # tiret au début de la fenêtre, lui, prolonge la phrase du locuteur.
+        if index > 0 and stripped[:1] in ("—", "–"):
+            offsets.append(head)
+            break
+        label, sep, _rest = stripped.partition(":")
+        if sep and _is_speaker_designation(label):
+            offsets.append(head)
+            break
+        position += len(line)
+    return min(offsets) if offsets else None
 
 
 def ends_as_question(quote: str) -> bool:
@@ -151,16 +205,24 @@ def extend_question_quote(
     texte, invisible pour toute lentille qui lit la citation. Cette fenêtre
     déterministe (même courtoisie que #3428 a donnée à la descente)
     étend la citation stockée par la phrase qui suit quand cette phrase
-    est une RÉPONSE COURTE : non vide, d'au plus ``max_answer_chars``, et
-    terminée par une ponctuation de phrase qui n'EST PAS un autre « ? »
-    (une deuxième question n'est pas une réponse). Tout le reste —
-    continuation longue, autre question, fin de texte, citation
-    introuvable — laisse la citation byte-identique.
+    est une RÉPONSE COURTE **du même tour** : non vide, d'au plus
+    ``max_answer_chars``, et terminée par une ponctuation de phrase qui
+    n'EST PAS un autre « ? » (une deuxième question n'est pas une réponse).
+    Tout le reste — continuation longue, autre question, fin de texte,
+    citation introuvable — laisse la citation byte-identique.
+
+    #3499 — la fenêtre est d'abord BORNÉE au tour du locuteur
+    (``_turn_boundary_offset``) : sans cela 15 des 27 extensions du panel
+    citaient la ligne du locuteur suivant ou une didascalie comme la réponse
+    du locuteur. Une réponse à cheval sur deux tours n'est pas une réponse.
     """
     span, _tag = locate_unit_span(quote, raw_text)
     if span is None:
         return quote
     window = raw_text[span[1] : span[1] + max_answer_chars + 2]
+    boundary = _turn_boundary_offset(window)
+    if boundary is not None:
+        window = window[:boundary]
     stripped = window.lstrip()
     if not stripped:
         return quote
@@ -420,7 +482,6 @@ class RhetoricalAnalysisState:
         source_quote: Optional[str] = None,
         offset: Optional[int] = None,
         move_author: Optional[str] = None,
-        form: Optional[str] = None,
     ) -> str:
         """Ajoute un argument identifié et retourne son ID.
 
@@ -445,11 +506,11 @@ class RhetoricalAnalysisState:
         champ vit dans ``argument_provenance[arg_id]``, donc seulement quand
         ``producer`` en a ouvert l'entrée.
 
-        #3491 — ``form`` marque la FORCE de l'unité quand sa source verbatim
-        est une question (``rhetorical_question``), même porte fermée que
-        ``move_author``. La décision vient de la citation (``ends_as_question``),
-        pas d'une déclaration du modèle : mesuré sur le recensement c4b,
-        l'extracteur reprenait 38/38 questions en paraphrase déclarative.
+        #3491 — la FORCE d'une unité sourcée-question ne demande aucun champ :
+        la citation étendue (``extend_question_quote``) la porte, et le
+        lecteur qui veut la force lit la citation. Le champ ``form`` de la
+        première version n'avait aucun lecteur — retiré plutôt que gardé
+        (#3499).
         """
         # #3268, porte partagée depuis #3275 : vocabulaire dérivé de
         # ``vars(self)`` dans ``_refuse_field_name_as_content`` — rationale,
@@ -480,13 +541,6 @@ class RhetoricalAnalysisState:
                 entry["source_quote"] = str(source_quote)
             if move_author in MOVE_AUTHORS:
                 entry["move_author"] = str(move_author)
-            # #3491 — la FORME suit la MÊME porte que ``move_author`` juste
-            # au-dessus : vocabulaire fermé (``ARGUMENT_FORMS``), une valeur
-            # hors vocabulaire n'est pas écrite, une valeur absente n'est
-            # pas défautée (#1019). L'absence de la clé EST l'unité
-            # déclarative ordinaire.
-            if form in ARGUMENT_FORMS:
-                entry["form"] = str(form)
             self.argument_provenance[arg_id] = entry
         state_logger.info(f"Argument ajouté: {arg_id} - '{description[:60]}...'")
         state_logger.debug(

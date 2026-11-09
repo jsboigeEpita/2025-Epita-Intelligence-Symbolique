@@ -9821,9 +9821,10 @@ _QUESTION_FORCE_INSTRUCTION = (
     "never an affirmation of what the question asks); when the text does "
     "not answer it, keep the item AS a question (interrogative form). "
     "NEVER restate a question's content as the speaker's declarative "
-    "assertion. For such an item add 'form': 'rhetorical_question', and "
-    "make 'source_quote' the verbatim question WITH the answer when the "
-    "answer follows in the text."
+    "assertion. Make 'source_quote' the verbatim question, extended with "
+    "the answer's first sentence ONLY when that answer is the SAME "
+    "speaker's, in the same speech turn - never the next speaker's line, "
+    "never a stage direction or a reaction of the audience."
 )
 
 
@@ -10022,7 +10023,7 @@ async def _invoke_fact_extraction(
             + lang_clause
             + " Respond with ONLY a JSON object:\n"
             '{"arguments": [{"text": "arg description", "source_quote": "exact quote...", '
-            '"move_author": "speaker|reported", "form": "rhetorical_question"}], '
+            '"move_author": "speaker|reported"}], '
             '"claims": [{"text": "claim description", "source_quote": "exact quote..."}], '
             '"summary": "brief analysis summary"}'
         )

@@ -1825,22 +1825,23 @@ def _write_fact_extraction_to_state(
                 quote = str(arg.get("source_quote", "") or "").strip()
                 if text:
                     arg_text = text
-                    form = arg.get("form")
                     if quote:
                         # #3491 — a unit whose verbatim source IS a question
-                        # keeps its force. The mark is decided FROM the quote
+                        # keeps its force. The decision is taken FROM the quote
                         # (``ends_as_question``), never from a model statement,
-                        # so every question-sourced unit is marked whatever
+                        # so every question-sourced unit is extended whatever
                         # the extractor said (census: 38/38 restated as bare
                         # declarative paraphrase). The same window carries the
                         # answer the quote stops in front of (#3428's courtesy
                         # for the descent, applied at the extractor): the
                         # speaker's explicit answer was measured sitting OUTSIDE
                         # the stored quote, invisible to every lens that reads
-                        # it.
+                        # it. #3499 — the window is bounded at the turn
+                        # boundary, and no ``form`` field is written: the
+                        # extended citation is the mark, and the first version's
+                        # field had no reader.
                         if ends_as_question(quote):
                             quote = extend_question_quote(quote, raw_text)
-                            form = "rhetorical_question"
                         arg_text = f'{text} [quote: "{quote[:100]}"]'
                     # #3162 item 2 — the extraction's own statement about whose
                     # position the unit carries travels with the unit. Anything
@@ -1858,7 +1859,6 @@ def _write_fact_extraction_to_state(
                         move_author=(
                             stated_author if isinstance(stated_author, str) else None
                         ),
-                        form=form if isinstance(form, str) else None,
                     )
                     _record_assert_move(state, arg_id, quote, raw_text)
             elif isinstance(arg, str) and arg.strip():
