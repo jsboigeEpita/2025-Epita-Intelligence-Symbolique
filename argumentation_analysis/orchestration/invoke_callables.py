@@ -14382,19 +14382,33 @@ def _coverage_document_frame(item: Any, state: Any) -> Any:
 _COVERAGE_LENS_LOGIC: Dict[str, str] = {"modal": "modal", "fol": "first_order"}
 
 
-async def _coverage_translate_passage(quote: str, lens: str) -> Dict[str, Any]:
-    """One passage → the formula the class's arm consumes (#3496).
+async def _coverage_translate_passage(
+    quote: str,
+    lens: str,
+    *,
+    shared_atoms: Optional[List[str]] = None,
+    context_note: str = "",
+) -> Dict[str, Any]:
+    """One passage → the formula the class's arm consumes (#3496, #3500).
 
     Composes what the phases already use — ``NLToLogicTranslator`` — on a
-    SINGLE passage instead of the stratified six-unit selection. No verdict
-    here: a translation that fails validation is NAMED, never coerced into a
-    formula the solver would then "answer" (#1019).
+    SINGLE passage instead of the stratified six-unit selection, UNDER the
+    run's own vocabulary: the modal arm constrains its atoms to the KB's
+    (``shared_atoms``, #1396's coherence lever), the FOL arm carries the run's
+    signature in the system prompt (``context_note``). No verdict here: a
+    translation that fails validation is NAMED, never coerced into a formula
+    the solver would then "answer" (#1019).
     """
     logic_type = _COVERAGE_LENS_LOGIC[lens]
     from argumentation_analysis.services.nl_to_logic import NLToLogicTranslator
 
     translator = NLToLogicTranslator(max_retries=2, logic_type=logic_type)
-    result = await translator.translate(quote, logic_type=logic_type)
+    result = await translator.translate(
+        quote,
+        logic_type=logic_type,
+        shared_atoms=shared_atoms,
+        context_note=context_note,
+    )
     formula = str(getattr(result, "formula", "") or "").strip()
     if not bool(getattr(result, "is_valid", False)) or not formula:
         reason = str(getattr(result, "validation_message", "") or "").strip()
@@ -14406,32 +14420,159 @@ async def _coverage_translate_passage(quote: str, lens: str) -> Dict[str, Any]:
 
 
 def _coverage_run_kb_formulas(state: Any, logic_type: str) -> List[str]:
-    """The run's OWN valid formulas of that logic — the phase's KB (#3496).
+    """The run's OWN valid formulas of that logic — the phase's KB (#3496, #3500).
 
-    Read from ``state.nl_to_logic_translations``, which the ``nl_to_logic``
-    writer populates. The passage-level arm composes the run's own material
+    Read where the phases RECORD it: ``fol_analysis_results[*].formulas`` and
+    ``modal_analysis_results[*].formulas`` — on the 10 recorded panel states
+    these carry the 93 FOL and 52 modal formulas (9/10 states each), while
+    ``nl_to_logic_translations`` is propositional only (52/52). The
+    translations list stays a source: it is a recorded formula of that logic
+    when it carries one. The passage-level arm composes the run's own material
     instead of translating the document a second time, and a formula the run
-    itself rejected (``is_valid is False``) never enters the KB it contradicts.
+    itself rejected (``is_valid is False`` where the entry carries it) never
+    enters the KB it contradicts.
     """
-    translations = getattr(state, "nl_to_logic_translations", None)
-    if not isinstance(translations, list):
-        return []
-    wanted = "modal" if logic_type == "modal" else "first_order"
     formulas: List[str] = []
-    for entry in translations:
-        if not isinstance(entry, dict):
-            continue
-        kind = str(entry.get("logic_type") or "").strip().lower()
-        if kind in ("fol", "first_order"):
-            kind = "first_order"
-        if kind != wanted:
-            continue
-        if entry.get("is_valid") is False:
-            continue
-        formula = str(entry.get("formula") or "").strip()
-        if formula:
-            formulas.append(formula)
+    seen: Dict[str, None] = {}
+    results_field = (
+        "modal_analysis_results" if logic_type == "modal" else "fol_analysis_results"
+    )
+    results = getattr(state, results_field, None)
+    if isinstance(results, (list, tuple)):
+        for entry in results:
+            if not isinstance(entry, dict):
+                continue
+            if entry.get("is_valid") is False:
+                continue
+            entry_formulas = entry.get("formulas")
+            if not isinstance(entry_formulas, (list, tuple)):
+                continue
+            for formula in entry_formulas:
+                text = str(formula or "").strip()
+                if text:
+                    seen.setdefault(text, None)
+    translations = getattr(state, "nl_to_logic_translations", None)
+    if isinstance(translations, list):
+        wanted = "modal" if logic_type == "modal" else "first_order"
+        for entry in translations:
+            if not isinstance(entry, dict):
+                continue
+            kind = str(entry.get("logic_type") or "").strip().lower()
+            if kind in ("fol", "first_order"):
+                kind = "first_order"
+            if kind != wanted:
+                continue
+            if entry.get("is_valid") is False:
+                continue
+            formula = str(entry.get("formula") or "").strip()
+            if formula:
+                seen.setdefault(formula, None)
+    formulas = list(seen)
     return formulas
+
+
+def _coverage_modal_atoms(formulas: List[str]) -> List[str]:
+    """The atoms of modal formulas under ``build_modal_kb``'s normalisation.
+
+    The declarations the KB builder emits are one ``type(atom)`` per atom, in
+    first-seen order — so the declarations ARE the atom inventory, under the
+    same normalisation the solver probe applies (#3500).
+    """
+    from argumentation_analysis.agents.core.logic.modal_kb_identifier_normalizer import (
+        build_modal_kb,
+    )
+
+    declarations, _renamed = build_modal_kb(list(formulas))
+    prefix = "type("
+    return [d[len(prefix) : -1] for d in declarations if d.startswith(prefix)]
+
+
+def _coverage_fol_signature_note(state: Any) -> str:
+    """The run's FOL signature, said to the translator (#3500).
+
+    ``fol_shared_signature`` carries the sorts, predicates and constants the
+    run's own FOL pass extracted. Without them in the prompt, the passage's
+    formula invents its own vocabulary and shares no symbol with the KB —
+    under which « does not contradict » holds by construction. Empty when the
+    run carries no signature: the prompt stays byte for byte.
+    """
+    signature = getattr(state, "fol_shared_signature", None)
+    if not isinstance(signature, dict) or not signature:
+        return ""
+    predicates: Set[str] = set()
+    constants: Set[str] = set()
+    for data in signature.values():
+        if not isinstance(data, dict):
+            continue
+        preds = data.get("predicates")
+        if isinstance(preds, dict):
+            predicates.update(str(name) for name in preds if name)
+        raw = data.get("constants_raw")
+        if isinstance(raw, dict):
+            constants.update(str(name) for name in raw if name)
+        sorts = data.get("sorts")
+        if isinstance(sorts, dict):
+            for members in sorts.values():
+                if isinstance(members, (list, tuple)):
+                    constants.update(str(name) for name in members if name)
+    if not predicates and not constants:
+        return ""
+    parts: List[str] = []
+    if predicates:
+        parts.append("prédicats : " + ", ".join(sorted(predicates)[:24]))
+    if constants:
+        parts.append("constantes : " + ", ".join(sorted(constants)[:24]))
+    return (
+        "Signature FOL du run — réutilise ces symboles quand le passage en "
+        "parle, pour que la formule partage le vocabulaire de la base ("
+        + " ; ".join(parts)
+        + ")."
+    )
+
+
+def _coverage_fol_symbols(formulas: List[str]) -> Set[str]:
+    """The declared predicates and constants of FOL formulas, one normalisation.
+
+    ``extract_fol_metadata`` is the phases' own extractor and the ONE function
+    that renames (#2468: no call site reads the renaming maps); its declared
+    ``predicates`` and ``constants`` are the vocabulary the formulas use under
+    that normalisation (#3500). Deterministic per surface name, so the same
+    symbol on both sides of the count lands on the same declared name.
+    """
+    from argumentation_analysis.agents.core.logic.fol_logic_agent import (
+        FOLLogicAgent,
+    )
+
+    meta = FOLLogicAgent.extract_fol_metadata(
+        [FOLLogicAgent.unicode_to_ascii_fol(f) for f in formulas]
+    )
+    names: Set[str] = set()
+    predicates = meta.get("predicates")
+    if isinstance(predicates, dict):
+        names.update(str(name) for name in predicates if name)
+    constants = meta.get("constants")
+    if isinstance(constants, (set, frozenset, list, tuple)):
+        names.update(str(name) for name in constants if name)
+    return names
+
+
+def _coverage_shared_symbols(
+    run_kb: List[str], passage_formula: str, logic_type: str
+) -> int:
+    """How many symbols the passage formula shares with the run's KB (#3500).
+
+    Modal: atoms under ``build_modal_kb``'s normalisation. FOL: surface
+    predicates and constants under ``extract_fol_metadata``. The count MEASURES
+    the sharing on the formulas themselves — it does not assume it from the
+    signature the prompt carried.
+    """
+    if logic_type == "modal":
+        kb_atoms = set(_coverage_modal_atoms(run_kb))
+        passage_atoms = set(_coverage_modal_atoms([passage_formula]))
+        return len(kb_atoms & passage_atoms)
+    kb_symbols = _coverage_fol_symbols(run_kb)
+    passage_symbols = _coverage_fol_symbols([passage_formula])
+    return len(kb_symbols & passage_symbols)
 
 
 async def _coverage_check_logic_kb(formulas: List[str], lens: str) -> Dict[str, Any]:
@@ -14516,9 +14657,20 @@ async def _coverage_run_logic_lens(item: Any, state: Any, lens: str) -> Dict[str
                 "a passage alone cannot be contradicted"
             ),
         }
+    # #3500 — the passage is translated UNDER the run's vocabulary, so the
+    # formula it yields can actually meet the KB's symbols.
+    shared_atoms: Optional[List[str]] = None
+    context_note = ""
+    if logic_type == "modal":
+        shared_atoms = _coverage_modal_atoms(run_kb)
+    else:
+        context_note = _coverage_fol_signature_note(state)
     try:
         translation = await _coverage_translate_passage(
-            str(getattr(item, "quote", "")), lens
+            str(getattr(item, "quote", "")),
+            lens,
+            shared_atoms=shared_atoms,
+            context_note=context_note,
         )
     except Exception as e:  # pragma: no cover - provider failures
         return {
@@ -14533,10 +14685,26 @@ async def _coverage_run_logic_lens(item: Any, state: Any, lens: str) -> Dict[str
             "reason": f"passage untranslatable: {translation.get('reason')}",
             "untranslatable": True,
         }
+    passage_formula = str(translation["formula"])
+    shared = _coverage_shared_symbols(run_kb, passage_formula, logic_type)
+    if shared == 0:
+        # #3500 — a formula with no symbol in common with the KB cannot
+        # contradict it: the solver's « consistent » would hold by
+        # construction. That is a named absence, never a verdict, and the
+        # solver is not asked a vacuous question.
+        return {
+            "lens": lens,
+            "status": "lens_no_finding",
+            "reason": (
+                f"{logic_type}: the passage shares no symbol with the run's "
+                "base, so no consistency verdict can be read"
+            ),
+            "formula": passage_formula,
+            "shared_symbols": 0,
+            "no_shared_symbols": True,
+        }
     try:
-        check = await _coverage_check_logic_kb(
-            run_kb + [str(translation["formula"])], lens
-        )
+        check = await _coverage_check_logic_kb(run_kb + [passage_formula], lens)
     except Exception as e:  # pragma: no cover - JVM/solver failures
         return {
             "lens": lens,
@@ -14554,9 +14722,10 @@ async def _coverage_run_logic_lens(item: Any, state: Any, lens: str) -> Dict[str
         "lens": lens,
         "status": "answered",
         "logic_type": logic_type,
-        "formula": str(translation["formula"]),
+        "formula": passage_formula,
         "consistent": consistent,
         "verdict": verdict,
+        "shared_symbols": shared,
         "message": str(check.get("message") or ""),
     }
 

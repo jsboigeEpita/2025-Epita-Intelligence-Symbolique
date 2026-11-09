@@ -626,32 +626,40 @@ def _retained_fallacies(routed: Dict[str, Any]) -> List[Any]:
 
 
 def _logic_verdict_clause(lens: str, finding: Dict[str, Any]) -> str:
-    """What a modal or FOL lens answered, said for what it IS (#3496).
+    """What a modal or FOL lens answered, said for what it IS (#3496, #3500).
 
     The verdict is a consistency one: the passage, translated, contradicts the
     run's own KB of that logic or does not. It is NOT an entailment verdict —
     no conclusion formula is translated — and the wording never borrows the
-    word of one.
+    word of one. #3500: the clause carries the MEASURED shared-symbol count,
+    the vocabulary over which the verdict is readable at all.
     """
     formula = str(finding.get("formula") or "")
     verdict = str(finding.get("verdict") or "")
+    shared = finding.get("shared_symbols")
+    shared_txt = ""
+    if isinstance(shared, int) and not isinstance(shared, bool) and shared > 0:
+        shared_txt = (
+            f" — {shared} symbole(s) partagé(s) avec la base du run, la "
+            "mesure du vocabulaire commun"
+        )
     if verdict == "contradicts_run_kb":
         return (
             f"lentille {lens} : le passage se traduit en « {formula} » et "
             "CONTREDIT la base formelle du run — il n'y répète pas une thèse, "
-            "il la met en cause"
+            f"il la met en cause{shared_txt}"
         )
     if verdict == "consistent_with_run_kb":
         return (
             f"lentille {lens} : le passage se traduit en « {formula} » et ne "
             "contredit pas la base formelle du run (cohérence, pas implication : "
-            "aucune conclusion n'a été dérivée)"
+            f"aucune conclusion n'a été dérivée){shared_txt}"
         )
     message = str(finding.get("message") or "").strip()
     tail = f" ({message})" if message else ""
     return (
         f"lentille {lens} : passage traduit en « {formula} », verdict indécis"
-        f"{tail} — le passage reste non conclu"
+        f"{tail}{shared_txt} — le passage reste non conclu"
     )
 
 
@@ -732,6 +740,18 @@ def coverage_review_note(state: Any) -> str:
                 clauses.append(
                     f"lentille {lens} : aucune traduction formelle valide du "
                     f"passage ({finding.get('reason')}) — il reste non examiné"
+                )
+            elif finding.get("no_shared_symbols"):
+                # #3500 — the consistency question is only readable over a
+                # shared vocabulary: without one, « consistent » holds by
+                # construction, and that vacuous truth must not reach the
+                # reader as a verdict.
+                clauses.append(
+                    f"lentille {lens} : le passage se traduit (« "
+                    f"{finding.get('formula')} ») mais ne partage aucun symbole "
+                    "avec la base formelle du run — aucun verdict de cohérence "
+                    "ne peut être lu (« cohérent » ne vaudrait alors rien) ; "
+                    "le passage reste non examiné"
                 )
             else:
                 clauses.append(

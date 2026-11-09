@@ -63,6 +63,30 @@ def make_state(translations=None):
     )
 
 
+def make_panel_state(
+    *,
+    translations=None,
+    fol_results=None,
+    modal_results=None,
+    fol_signature=None,
+):
+    """#3500 — the state AS THE PANEL RECORDS IT.
+
+    Measured on the 10 recorded c4b states (R1156 review):
+    ``nl_to_logic_translations`` is propositional only (52/52), while the FOL
+    and modal formulas live in ``fol_analysis_results`` (93 formulas, 9/10
+    states) and ``modal_analysis_results`` (52 formulas, 9/10 states), with
+    the run's FOL signature in ``fol_shared_signature``. A test double richer
+    than the recorded shape passed an arm that answers nothing on any panel
+    document.
+    """
+    state = make_state(translations)
+    state.fol_analysis_results = list(fol_results or [])
+    state.modal_analysis_results = list(modal_results or [])
+    state.fol_shared_signature = dict(fol_signature or {})
+    return state
+
+
 def reply(quote, kind):
     return json.dumps(
         {"items": [{"quote": quote, "class": kind, "reason": "raison synthétique"}]}
@@ -88,8 +112,9 @@ def _patch_persona(monkeypatch, content):
 def _patch_lenses(monkeypatch, *, translated="[](p)", consistent=False, message="msg"):
     seen = {}
 
-    async def translate(quote, lens):
+    async def translate(quote, lens, **kwargs):
         seen["translate"] = (quote, lens)
+        seen["translate_kwargs"] = kwargs
         return {"status": "translated", "formula": translated, "logic_type": lens}
 
     async def check(formulas, lens):
@@ -102,12 +127,17 @@ def _patch_lenses(monkeypatch, *, translated="[](p)", consistent=False, message=
 
 
 async def test_a_modal_item_reaches_the_modal_lens(monkeypatch):
-    """The named absence becomes a solver answer, and the note says what it is."""
+    """The named absence becomes a solver answer, and the note says what it is.
+
+    #3500: the passage's translation SHARES the KB's atom — under the shared-
+    vocabulary rule a disjoint translation is a named absence, not a verdict,
+    so the synthetic formulas must overlap for the solver leg to be pinned.
+    """
     state = make_state(
         [{"logic_type": "modal", "formula": "[](rain)", "is_valid": True}]
     )
     _patch_persona(monkeypatch, reply(QUOTE, "modal"))
-    seen = _patch_lenses(monkeypatch, translated="[](p)", consistent=False)
+    seen = _patch_lenses(monkeypatch, translated="[](rain)", consistent=False)
 
     out = await ic._invoke_coverage_review(DOCUMENT, {"_state_object": state})
 
@@ -118,12 +148,12 @@ async def test_a_modal_item_reaches_the_modal_lens(monkeypatch):
     assert routed["finding"]["consistent"] is False
     # The passage was translated once, by the class's lens, against the run's KB.
     assert seen["translate"] == (QUOTE, "modal")
-    assert seen["check"] == (["[](rain)", "[](p)"], "modal")
+    assert seen["check"] == (["[](rain)", "[](rain)"], "modal")
 
     state.coverage_review = out
     note = coverage_review_note(state)
     assert "CONTREDIT" in note
-    assert "[](p)" in note
+    assert "[](rain)" in note
     # A logic lens is NOT a fallacy lens: the note must not speak its language.
     assert "sophisme" not in note
 
@@ -177,7 +207,7 @@ async def test_an_untranslatable_passage_is_named_not_verdicted(monkeypatch):
     )
     _patch_persona(monkeypatch, reply(QUOTE, "modal"))
 
-    async def translate(quote, lens):
+    async def translate(quote, lens, **kwargs):
         return {"status": "untranslatable", "reason": "parse error on the formula"}
 
     async def check(formulas, lens):  # pragma: no cover - must not run
@@ -241,3 +271,135 @@ async def test_a_penalty_free_absence_of_state_is_unchanged(monkeypatch):
     out = await ic._invoke_coverage_review(DOCUMENT, {})
     assert out["status"] == "unreachable"
     assert out["reason"] == "no_shared_state"
+
+
+# --- #3500 — the KB is read where the phases record it, under the run's vocabulary
+
+
+def test_the_kb_reads_the_fields_the_phases_record():
+    """Born red on the pre-#3500 head: ``fol_analysis_results`` and
+    ``modal_analysis_results`` were never read, so the arm answered nothing on
+    any panel document. The ``is_valid`` exclusion applies where an entry
+    carries it, and a non-list ``formulas`` is skipped, not crashed on."""
+    state = make_panel_state(
+        fol_results=[
+            {"formulas": ["Rejete(a)", ""], "is_valid": False},
+            {"formulas": ["Dirige(b)"]},
+            "junk",
+            {"formulas": "not-a-list"},
+        ],
+        modal_results=[{"formulas": ["[](pluie)"]}, {"formulas": []}],
+    )
+    assert ic._coverage_run_kb_formulas(state, "first_order") == ["Dirige(b)"]
+    assert ic._coverage_run_kb_formulas(state, "modal") == ["[](pluie)"]
+
+
+async def test_a_modal_item_reads_the_kb_the_phases_recorded(monkeypatch):
+    """The recorded shape reaches the solver, not only the test double's."""
+    state = make_panel_state(
+        translations=[
+            {"logic_type": "propositional", "formula": "p", "is_valid": True}
+        ],
+        modal_results=[
+            {
+                "id": "modal_1",
+                "formulas": ["[](pluie)"],
+                "valid": True,
+                "modalities": [],
+            }
+        ],
+    )
+    _patch_persona(monkeypatch, reply(QUOTE, "modal"))
+    seen = _patch_lenses(monkeypatch, translated="[](pluie)", consistent=False)
+
+    out = await ic._invoke_coverage_review(DOCUMENT, {"_state_object": state})
+
+    routed = out["items"][0]["routed"]
+    assert routed["status"] == "answered"
+    # The solver probed the RECORDED formula plus the passage's.
+    assert seen["check"][0] == ["[](pluie)", "[](pluie)"]
+    assert routed["finding"]["shared_symbols"] == 1
+
+
+async def test_the_passage_is_translated_under_the_runs_vocabulary(monkeypatch):
+    """Without a shared vocabulary the consistency verdict holds by
+    construction — so the translation is CONSTRAINED to the run's own symbols:
+    the modal arm passes the KB's atoms, the FOL arm carries the run's
+    signature in the system prompt."""
+    modal_state = make_panel_state(
+        modal_results=[
+            {
+                "id": "modal_1",
+                "formulas": ["[](pluie)"],
+                "valid": True,
+                "modalities": [],
+            }
+        ]
+    )
+    _patch_persona(monkeypatch, reply(QUOTE, "modal"))
+    seen = _patch_lenses(monkeypatch, translated="[](pluie)", consistent=True)
+
+    await ic._invoke_coverage_review(DOCUMENT, {"_state_object": modal_state})
+    assert seen["translate_kwargs"].get("shared_atoms") == ["pluie"]
+
+    fol_state = make_panel_state(
+        fol_results=[
+            {
+                "id": "fol_1",
+                "formulas": ["Dirige(a)"],
+                "consistent": True,
+                "inferences": [],
+                "confidence": 0.0,
+            }
+        ],
+        fol_signature={
+            "default": {
+                "sorts": {"Personne": ["a", "b"]},
+                "predicates": {"Dirige": 1},
+                "constants_raw": {"a": "person", "b": "person"},
+            }
+        },
+    )
+    _patch_persona(monkeypatch, reply(QUOTE, "inferential"))
+    seen = _patch_lenses(monkeypatch, translated="Dirige(b)", consistent=True)
+
+    out = await ic._invoke_coverage_review(DOCUMENT, {"_state_object": fol_state})
+    note_context = str(seen["translate_kwargs"].get("context_note") or "")
+    assert "Dirige" in note_context
+    assert "a" in note_context
+    routed = out["items"][0]["routed"]
+    assert routed["status"] == "answered"
+    assert routed["finding"]["shared_symbols"] == 1
+
+
+async def test_a_passage_sharing_no_symbol_is_a_named_absence(monkeypatch):
+    """A formula with no symbol in common with the KB cannot contradict it:
+    the solver would return « consistent » by construction. That vacuous truth
+    is a NAMED absence, never a verdict — and the solver is not asked."""
+    state = make_panel_state(
+        modal_results=[
+            {
+                "id": "modal_1",
+                "formulas": ["[](pluie)"],
+                "valid": True,
+                "modalities": [],
+            }
+        ]
+    )
+    _patch_persona(monkeypatch, reply(QUOTE, "modal"))
+    seen = _patch_lenses(monkeypatch, translated="[](soleil)", consistent=True)
+
+    out = await ic._invoke_coverage_review(DOCUMENT, {"_state_object": state})
+
+    routed = out["items"][0]["routed"]
+    assert routed["status"] == "lens_no_finding"
+    assert routed["finding"]["no_shared_symbols"] is True
+    assert routed["finding"]["shared_symbols"] == 0
+    assert "shares no symbol" in routed["finding"]["reason"]
+    assert "check" not in seen  # no vacuous question to the solver
+
+    state.coverage_review = out
+    note = coverage_review_note(state)
+    assert "ne partage aucun symbole" in note
+    assert "ne contredit pas" not in note
+    assert "CONTREDIT" not in note
