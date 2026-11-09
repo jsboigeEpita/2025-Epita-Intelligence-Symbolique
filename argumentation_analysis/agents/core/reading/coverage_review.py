@@ -92,6 +92,7 @@ from argumentation_analysis.agents.core.reading.first_reading import (
     anchor_quote_in,
     defining_moves,
 )
+from argumentation_analysis.core.shared_state import unit_extent
 from argumentation_analysis.utils.taxonomy_loader import generic_fallacy_name
 
 logger = logging.getLogger("CoverageReview")
@@ -325,7 +326,20 @@ def _unit_rows(state: Any) -> List[Dict[str, Any]]:
         offset = entry.get("offset") if isinstance(entry, dict) else None
         if isinstance(offset, bool) or not isinstance(offset, int):
             offset = None
-        rows.append({"unit_id": unit_id, "text": text, "offset": offset})
+        source_quote = entry.get("source_quote") if isinstance(entry, dict) else None
+        if not isinstance(source_quote, str) or not source_quote:
+            source_quote = None
+        # #3502 — the extent key travels with the row: the offset writer
+        # located the SOURCE QUOTE (locate_unit_span), so the span that
+        # carries a position is the quote's, never the paraphrase's.
+        rows.append(
+            {
+                "unit_id": unit_id,
+                "text": text,
+                "offset": offset,
+                "source_quote": source_quote,
+            }
+        )
     rows.sort(key=lambda row: (row["offset"] is None, row["offset"] or 0))
     return rows
 
@@ -339,12 +353,18 @@ def unit_id_at_offset(rows: List[Dict[str, Any]], position: int) -> str:
     NO unit (``""``). The reader is still sent to the right place by the
     document offset, and the caller never borrows a neighbour's id — a wrong
     anchor is worse than none (#1019).
+
+    #3502 — the span is the ONE extent rule, ``unit_extent``: the source
+    quote's length when the provenance located one, the text's otherwise
+    (``kb_heuristic`` units, whose text is the document chunk). The
+    paraphrase runs longer than the passage (median ×2.62 on the panel),
+    so measuring by the text handed positions to the wrong unit.
     """
     for row in rows:
-        offset = row["offset"]
-        if not isinstance(offset, int):
+        extent = unit_extent(row, str(row.get("text") or ""))
+        if extent is None:
             continue
-        if offset <= position < offset + len(row["text"]):
+        if extent[0] <= position < extent[1]:
             return str(row["unit_id"])
     return ""
 

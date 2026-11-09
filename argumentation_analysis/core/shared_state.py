@@ -116,6 +116,33 @@ def locate_unit_span(
     return None, "sans offset (introuvable, même à espaces flexibles)"
 
 
+def unit_extent(entry: Any, text: str) -> Optional[Tuple[int, int]]:
+    """#3502 — LA règle d'étendue d'une unité, portée par un seul helper.
+
+    Le décalage est celui que l'écrivain de provenance a localisé, et la
+    LONGUEUR est celle de la clé qu'il a localisée : la citation source
+    quand la provenance en porte une, le texte sinon. Mesuré sur les 10
+    états du panel (R1156) : pour 643 unités porteuses d'une citation, la
+    paraphrase dépasse le vrai passage en médiane de ×2,62, et 156
+    positions tombées juste après le passage étaient attribuées à la
+    mauvaise unité par la règle ``offset + len(texte)``. Pour les unités
+    ``kb_heuristic`` — sans citation, décalage enregistré par le
+    producteur — le texte EST le fragment du document, donc sa longueur
+    est la bonne étendue : le repli reste, il est nommé.
+
+    C'est la règle que ``reading_record.py`` (#3393) appliquait déjà seul
+    (``source_quote or text``) ; les autres sites s'y convertissent par
+    ce helper. Rend ``(offset, offset + len(clé))``, ou ``None`` sans
+    décalage entier — pas d'étendue affirmée.
+    """
+    offset = entry.get("offset") if isinstance(entry, dict) else None
+    if isinstance(offset, bool) or not isinstance(offset, int):
+        return None
+    quote = entry.get("source_quote") if isinstance(entry, dict) else None
+    key = quote if isinstance(quote, str) and quote else str(text)
+    return (offset, offset + len(key))
+
+
 # #3491 — caractères de queue derrière lesquels un « ? » peut se cacher
 # (guillemets français, apostrophes droites/typographiques, parenthèse
 # fermante) après rstrip des espaces.

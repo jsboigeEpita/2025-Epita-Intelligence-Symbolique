@@ -43,6 +43,7 @@ from argumentation_analysis.agents.core.reading.coverage_review import (
     DROP_UNKNOWN_CLASS,
     LENS_BY_CLASS,
     MAX_ITEMS,
+    _unit_rows,
     build_coverage_review,
     coverage_review_note,
     examined_unit_ids,
@@ -362,6 +363,69 @@ def test_unit_id_at_offset_follows_the_reading_overlap_rule():
         unit_id_at_offset([{"unit_id": "arg_2", "text": "y" * 10, "offset": 100}], 5)
         == ""
     )
+
+
+def test_the_span_is_measured_by_the_passage_not_the_paraphrase():
+    """#3502, born red on the pre-fix head: the extent rule of #3393.
+
+    A unit with a short source quote and a long paraphrase, and a second
+    unit starting right after the quote. A position between the quote's
+    end and the paraphrase's end belongs to the SECOND unit — the
+    paraphrase rule (``offset + len(text)``) attributed it to the first,
+    which is the 156/643 misattribution the coordinator measured on the
+    panel states.
+    """
+    rows = [
+        {
+            "unit_id": "arg_1",
+            "text": "Longue paraphrase du premier passage [quote: « court »]",
+            "offset": 0,
+            "source_quote": "court",
+        },
+        {"unit_id": "arg_2", "text": "y" * 10, "offset": 5},
+    ]
+    # Inside the quote: the first unit's.
+    assert unit_id_at_offset(rows, 2) == "arg_1"
+    # The quote's end is the second unit's start, and so is everything
+    # past it — even inside the paraphrase's length.
+    assert unit_id_at_offset(rows, 5) == "arg_2"
+    assert unit_id_at_offset(rows, 6) == "arg_2"
+
+
+def test_the_row_carries_the_quote_the_provenance_located():
+    """The wiring witness: ``_unit_rows`` reads the provenance's own key.
+
+    The offset writer locates the SOURCE QUOTE (``locate_unit_span``), so
+    the span that carries a position is the quote's, not the paraphrase
+    stored in ``identified_arguments``. Without the quote in the row the
+    helper would fall back to the text and the defect would survive.
+    """
+    paraphrase = "Longue paraphrase du premier passage [quote: « court »]"
+    state = make_state(
+        units={"arg_1": paraphrase, "arg_2": "y" * 10},
+        provenance={
+            "arg_1": {
+                "producer": "llm_extract",
+                "offset": 0,
+                "source_quote": "court",
+            },
+            "arg_2": {"producer": "llm_extract", "offset": 5},
+        },
+    )
+    rows = _unit_rows(state)
+    assert unit_id_at_offset(rows, 2) == "arg_1"
+    assert unit_id_at_offset(rows, 6) == "arg_2"
+    # kb_heuristic shape: no source quote, the text IS the document chunk.
+    kb_state = make_state(
+        units={"arg_1": "x" * 10, "arg_2": "y" * 10},
+        provenance={
+            "arg_1": {"producer": "kb_heuristic", "offset": 0},
+            "arg_2": {"producer": "kb_heuristic", "offset": 100},
+        },
+    )
+    kb_rows = _unit_rows(kb_state)
+    assert unit_id_at_offset(kb_rows, 9) == "arg_1"
+    assert unit_id_at_offset(kb_rows, 100) == "arg_2"
 
 
 # --- the honesty rules around the naming ----------------------------------
