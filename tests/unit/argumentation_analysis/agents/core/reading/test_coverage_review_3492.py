@@ -759,7 +759,12 @@ async def test_the_invoke_walks_a_statistical_item_with_its_document_frame(
 
 
 async def test_the_invoke_names_a_modal_item_without_inventing_a_lens(monkeypatch):
-    """The modal arm reads the run's population — its item stays a named gap."""
+    """No run KB of that logic ⇒ a named absence, and never the descent.
+
+    #3496 wired a passage-level entry point for the modal arm, but a passage
+    alone cannot be contradicted: with no modal formula in the run, the item
+    is reported unexamined rather than answered by the wrong lens.
+    """
     walked = []
 
     async def walk(*args, **kwargs):  # pragma: no cover - must not run
@@ -771,7 +776,9 @@ async def test_the_invoke_names_a_modal_item_without_inventing_a_lens(monkeypatc
     out = await ic._invoke_coverage_review(DOCUMENT, {"_state_object": state})
 
     assert out["status"] == "ok"
-    assert out["items"][0]["routed"]["status"] == "lens_not_wired"
+    routed = out["items"][0]["routed"]
+    assert routed["status"] == "lens_no_finding"
+    assert "cannot be contradicted" in routed["finding"]["reason"]
     assert walked == []
 
 

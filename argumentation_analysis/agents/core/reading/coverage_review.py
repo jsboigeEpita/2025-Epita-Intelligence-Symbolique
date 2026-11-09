@@ -625,6 +625,36 @@ def _retained_fallacies(routed: Dict[str, Any]) -> List[Any]:
     return list(fallacies) if isinstance(fallacies, list) else []
 
 
+def _logic_verdict_clause(lens: str, finding: Dict[str, Any]) -> str:
+    """What a modal or FOL lens answered, said for what it IS (#3496).
+
+    The verdict is a consistency one: the passage, translated, contradicts the
+    run's own KB of that logic or does not. It is NOT an entailment verdict —
+    no conclusion formula is translated — and the wording never borrows the
+    word of one.
+    """
+    formula = str(finding.get("formula") or "")
+    verdict = str(finding.get("verdict") or "")
+    if verdict == "contradicts_run_kb":
+        return (
+            f"lentille {lens} : le passage se traduit en « {formula} » et "
+            "CONTREDIT la base formelle du run — il n'y répète pas une thèse, "
+            "il la met en cause"
+        )
+    if verdict == "consistent_with_run_kb":
+        return (
+            f"lentille {lens} : le passage se traduit en « {formula} » et ne "
+            "contredit pas la base formelle du run (cohérence, pas implication : "
+            "aucune conclusion n'a été dérivée)"
+        )
+    message = str(finding.get("message") or "").strip()
+    tail = f" ({message})" if message else ""
+    return (
+        f"lentille {lens} : passage traduit en « {formula} », verdict indécis"
+        f"{tail} — le passage reste non conclu"
+    )
+
+
 def coverage_review_note(state: Any) -> str:
     """The block Act II reads — empty when no passage was named.
 
@@ -674,6 +704,8 @@ def coverage_review_note(state: Any) -> str:
         routed_any = item.get("routed")
         routed = routed_any if isinstance(routed_any, dict) else {}
         status = str(routed.get("status") or "")
+        finding_any = routed.get("finding")
+        finding = finding_any if isinstance(finding_any, dict) else {}
         labels = [
             label for label in map(_fallacy_label, _retained_fallacies(routed)) if label
         ]
@@ -686,16 +718,26 @@ def coverage_review_note(state: Any) -> str:
             )
         if labels:
             clauses.append("sophismes retenus : " + " ; ".join(labels))
-        if status == "lens_not_wired":
+        if finding.get("verdict"):
+            # #3496 — a logic lens answered a CONSISTENCY question; it must not
+            # be rendered in the fallacy vocabulary, nor as a bare "read".
+            clauses.append(_logic_verdict_clause(lens, finding))
+        elif status == "lens_not_wired":
             clauses.append(
                 f"aucune lentille câblée pour ce passage ({lens}) : il est "
                 "nommé, non examiné — ne lui prête pas de verdict"
             )
         elif status in ("lens_error", "lens_no_finding"):
-            clauses.append(
-                f"lentille {lens} non concluante ({status}) : le passage reste "
-                "non examiné"
-            )
+            if finding.get("untranslatable"):
+                clauses.append(
+                    f"lentille {lens} : aucune traduction formelle valide du "
+                    f"passage ({finding.get('reason')}) — il reste non examiné"
+                )
+            else:
+                clauses.append(
+                    f"lentille {lens} non concluante ({status}) : le passage reste "
+                    "non examiné"
+                )
         elif labels:
             clauses.append(f"lentille {lens} : {len(labels)} sophisme(s) retenu(s)")
         else:

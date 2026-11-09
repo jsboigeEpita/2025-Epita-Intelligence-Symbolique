@@ -239,6 +239,7 @@ __all__ = [
     "_invoke_cross_passage_consistency",
     "_invoke_coverage_review",
     "_coverage_route_to_lens",
+    "_coverage_run_logic_lens",
     "_invoke_nl_to_logic",
     "_invoke_modal_logic",
     "_invoke_dung_extensions",
@@ -14375,17 +14376,201 @@ def _coverage_document_frame(item: Any, state: Any) -> Any:
     return _document_frame_for_unit(state, unit_id, unit_text) or None
 
 
+#: #3496 — the two classes whose arm can now be reached PER PASSAGE, and the
+#: logic each one's arm consumes. ``inferential`` points at FOL, ``modal`` at
+#: the modal handler: the same two arms the phases already run.
+_COVERAGE_LENS_LOGIC: Dict[str, str] = {"modal": "modal", "fol": "first_order"}
+
+
+async def _coverage_translate_passage(quote: str, lens: str) -> Dict[str, Any]:
+    """One passage → the formula the class's arm consumes (#3496).
+
+    Composes what the phases already use — ``NLToLogicTranslator`` — on a
+    SINGLE passage instead of the stratified six-unit selection. No verdict
+    here: a translation that fails validation is NAMED, never coerced into a
+    formula the solver would then "answer" (#1019).
+    """
+    logic_type = _COVERAGE_LENS_LOGIC[lens]
+    from argumentation_analysis.services.nl_to_logic import NLToLogicTranslator
+
+    translator = NLToLogicTranslator(max_retries=2, logic_type=logic_type)
+    result = await translator.translate(quote, logic_type=logic_type)
+    formula = str(getattr(result, "formula", "") or "").strip()
+    if not bool(getattr(result, "is_valid", False)) or not formula:
+        reason = str(getattr(result, "validation_message", "") or "").strip()
+        return {
+            "status": "untranslatable",
+            "reason": (reason or "no valid formula")[:200],
+        }
+    return {"status": "translated", "formula": formula, "logic_type": logic_type}
+
+
+def _coverage_run_kb_formulas(state: Any, logic_type: str) -> List[str]:
+    """The run's OWN valid formulas of that logic — the phase's KB (#3496).
+
+    Read from ``state.nl_to_logic_translations``, which the ``nl_to_logic``
+    writer populates. The passage-level arm composes the run's own material
+    instead of translating the document a second time, and a formula the run
+    itself rejected (``is_valid is False``) never enters the KB it contradicts.
+    """
+    translations = getattr(state, "nl_to_logic_translations", None)
+    if not isinstance(translations, list):
+        return []
+    wanted = "modal" if logic_type == "modal" else "first_order"
+    formulas: List[str] = []
+    for entry in translations:
+        if not isinstance(entry, dict):
+            continue
+        kind = str(entry.get("logic_type") or "").strip().lower()
+        if kind in ("fol", "first_order"):
+            kind = "first_order"
+        if kind != wanted:
+            continue
+        if entry.get("is_valid") is False:
+            continue
+        formula = str(entry.get("formula") or "").strip()
+        if formula:
+            formulas.append(formula)
+    return formulas
+
+
+async def _coverage_check_logic_kb(formulas: List[str], lens: str) -> Dict[str, Any]:
+    """The run's own consistency probe on the passage plus its KB (#3496).
+
+    The modal arm builds its KB with ``build_modal_kb`` (the legaliser #2471
+    gave the modal paths) and probes ``ModalHandler.is_modal_kb_consistent``;
+    the FOL arm pairs the signature ``extract_fol_metadata`` derives with
+    ``TweetyBridge.check_consistency`` — the two routes the phases themselves
+    take, composed rather than forked.
+
+    The verdict is the solver's and stays tri-state: ``None`` is "undecided",
+    never a fabricated ``True`` (#1019).
+    """
+    if lens == "modal":
+        from argumentation_analysis.agents.core.logic.modal_handler import (
+            ModalHandler,
+        )
+        from argumentation_analysis.agents.core.logic.modal_kb_identifier_normalizer import (
+            build_modal_kb,
+        )
+        from argumentation_analysis.agents.core.logic.tweety_initializer import (
+            TweetyInitializer,
+        )
+
+        declarations, kb_formulas = build_modal_kb(list(formulas))
+        belief_set = "\n".join(declarations + kb_formulas)
+        from argumentation_analysis.agents.core.logic.tweety_bridge import (
+            TweetyBridge,
+        )
+
+        # The pipeline usually arrives with the JVM already up (the FOL arm
+        # built a bridge before this pass). The coverage pass may be the FIRST
+        # Tweety caller on a short run, so the bridge is constructed here —
+        # that is what starts the JVM (#1219: ``TweetyInitializer()`` alone
+        # leaves the modal parser None, and ``ModalHandler`` cannot be built).
+        TweetyBridge()
+        initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
+        initializer.initialize_modal_components()  # type: ignore[no-untyped-call]
+        handler = ModalHandler(initializer_instance=initializer)
+        verdict, message = await asyncio.to_thread(
+            handler.is_modal_kb_consistent, belief_set
+        )
+    else:
+        from argumentation_analysis.agents.core.logic.fol_logic_agent import (
+            FOLLogicAgent,
+        )
+        from argumentation_analysis.agents.core.logic.tweety_bridge import (
+            TweetyBridge,
+        )
+
+        meta = FOLLogicAgent.extract_fol_metadata(
+            [FOLLogicAgent.unicode_to_ascii_fol(f) for f in formulas]
+        )
+        belief_set = "\n".join(meta["signature_lines"] + [""] + meta["formulas"])
+        bridge = TweetyBridge()
+        verdict, message = await asyncio.to_thread(
+            bridge.check_consistency, belief_set, "first_order"
+        )
+    return {"consistent": verdict, "message": str(message or "")[:300]}
+
+
+async def _coverage_run_logic_lens(item: Any, state: Any, lens: str) -> Dict[str, Any]:
+    """A modal or inferential passage gets a solver answer (#3496).
+
+    The question this arm can answer honestly is the one a passage-level
+    consistency probe asks: does the passage, translated, CONTRADICT the run's
+    own KB of that logic? A passage alone cannot be contradicted, so an empty
+    run KB is a NAMED absence — never the vacuous "consistent" a KB of one
+    formula would return. It does NOT answer entailment: no conclusion formula
+    is translated, and the note says so rather than borrowing the FOL arm's
+    prestige for a verdict it did not compute.
+    """
+    logic_type = _COVERAGE_LENS_LOGIC[lens]
+    run_kb = _coverage_run_kb_formulas(state, logic_type)
+    if not run_kb:
+        return {
+            "lens": lens,
+            "status": "lens_no_finding",
+            "reason": (
+                f"{logic_type}: the run translated no formula of this logic — "
+                "a passage alone cannot be contradicted"
+            ),
+        }
+    try:
+        translation = await _coverage_translate_passage(
+            str(getattr(item, "quote", "")), lens
+        )
+    except Exception as e:  # pragma: no cover - provider failures
+        return {
+            "lens": lens,
+            "status": "lens_error",
+            "reason": f"{type(e).__name__}: {e}",
+        }
+    if translation.get("status") != "translated":
+        return {
+            "lens": lens,
+            "status": "lens_no_finding",
+            "reason": f"passage untranslatable: {translation.get('reason')}",
+            "untranslatable": True,
+        }
+    try:
+        check = await _coverage_check_logic_kb(
+            run_kb + [str(translation["formula"])], lens
+        )
+    except Exception as e:  # pragma: no cover - JVM/solver failures
+        return {
+            "lens": lens,
+            "status": "lens_error",
+            "reason": f"{type(e).__name__}: {e}",
+        }
+    consistent = check.get("consistent")
+    if consistent is False:
+        verdict = "contradicts_run_kb"
+    elif consistent is True:
+        verdict = "consistent_with_run_kb"
+    else:
+        verdict = "undecided"
+    return {
+        "lens": lens,
+        "status": "answered",
+        "logic_type": logic_type,
+        "formula": str(translation["formula"]),
+        "consistent": consistent,
+        "verdict": verdict,
+        "message": str(check.get("message") or ""),
+    }
+
+
 async def _coverage_route_to_lens(item: Any, state: Any = None) -> Dict[str, Any]:
     """Run the lens an item's class points at, on the passage it named (#3492).
 
-    Only the fallacy descent has a passage-level entry point today: the walk
-    the per-argument pass and the #3326 winner reading already share
-    (``_walk_single_fallacy_unit``). The modal and FOL arms read the RUN's
-    translated population — a phase-wide KB built from ``nl_to_logic`` — not
-    an arbitrary passage, so a passage cannot be handed to them without a
-    translation entry point that does not exist yet. Those items are recorded
-    ``lens_not_wired``: a named absence the acts state, never a verdict
-    nothing computed (#1019).
+    Three arms today: the fallacy descent has the walk the per-argument pass
+    and the #3326 winner reading already share (``_walk_single_fallacy_unit``);
+    the modal and FOL arms reach the passage through the entry points #3496
+    added (``_coverage_run_logic_lens``), which translate ONE passage and probe
+    it against the run's own KB of that logic. A lens with no passage-level
+    entry point stays a named absence — never a verdict nothing computed
+    (#1019).
 
     ``state`` is what the #3428 frame needs (the unit's provenance: offset and
     the verbatim passage a paraphrase restates). The walk then reads the
@@ -14393,13 +14578,15 @@ async def _coverage_route_to_lens(item: Any, state: Any = None) -> Dict[str, Any
     reprise ask 5. No state ⇒ ``document_frame=None`` and the pre-#3428
     prompts byte for byte.
     """
-    if getattr(item, "lens", "") != "fallacy_descent":
+    lens = getattr(item, "lens", "")
+    if lens in _COVERAGE_LENS_LOGIC:
+        # #3496 — the modal and FOL arms now have passage-level entry points;
+        # the named absence they used to record is closed here.
+        return await _coverage_run_logic_lens(item, state, lens)
+    if lens != "fallacy_descent":
         return {
             "status": "lens_not_wired",
-            "reason": (
-                f"{getattr(item, 'lens', '?')}: the wired arm reads the run's "
-                "translated population, not a single passage"
-            ),
+            "reason": f"{lens or '?'}: no passage-level entry point for this lens",
         }
     taxonomy_path = os.path.join(
         os.path.dirname(os.path.dirname(__file__)),
