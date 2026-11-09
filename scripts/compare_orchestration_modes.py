@@ -1946,8 +1946,90 @@ async def run_hierarchical_bridge_mode(
     )
 
 
+def delegation_panel_state(
+    result: Any, *, partial: bool = False, planned: Optional[int] = None
+) -> Dict[str, Any]:
+    """#3472 — the judge's state dict for a delegation run: what the 3-tier
+    chain RECORDED, in its own vocabulary.
+
+    This is the honest adapter the issue names (the same shape #3470 gave
+    conversation_real): no ``UnifiedAnalysisState`` mimicry, no templated
+    act. Each operational task contributes its capability, its status, its
+    productivity weight (``_task_productivity`` — the SAME predicate the
+    orchestrator's verdict uses, #1550: a task that produced AND admitted a
+    partial gap keeps both truths) and, when it has one, its product; the
+    strategic conclusion rides along as the string it is, degraded or not
+    (CC #1531 suppresses nothing — the judge reads a degradation report AS a
+    report). A budget-cut run passes ``partial=True``: its conclusion does
+    not exist (it is emitted AFTER the task loop) and stays ``None``, with
+    the counts of the tasks that finished — the absence stays named with its
+    task counts, exactly as the issue words it.
+    """
+    from argumentation_analysis.orchestration.hierarchical.delegation_orchestrator import (
+        _task_productivity,
+    )
+
+    res = result if isinstance(result, dict) else {}
+    objectives = [
+        {
+            "id": str(o.get("id", "") or ""),
+            "description": str(o.get("description", "") or ""),
+        }
+        for o in (res.get("objectives") or [])
+        if isinstance(o, dict)
+    ]
+    tasks: List[Dict[str, Any]] = []
+    productive = failed = degraded_tasks = 0
+    for r in res.get("operational_results") or []:
+        if not isinstance(r, dict):
+            continue
+        entry: Dict[str, Any] = {
+            "task_id": r.get("task_id"),
+            "objective_id": r.get("objective_id"),
+            "status": r.get("status"),
+            "capability": r.get("capability"),
+            "productivity": _task_productivity(r),
+        }
+        if r.get("status") == "failed":
+            entry["reason"] = r.get("reason")
+            failed += 1
+        if r.get("outputs") is not None:
+            entry["outputs"] = r.get("outputs")
+        if r.get("degradation_reasons"):
+            entry["degradation_reasons"] = list(r["degradation_reasons"])
+            degraded_tasks += 1
+        if entry["productivity"] > 0:
+            productive += 1
+        tasks.append(entry)
+    planned_total = planned if planned is not None else res.get("tasks_created")
+    if not isinstance(planned_total, int) or isinstance(planned_total, bool):
+        planned_total = len(tasks)
+    return {
+        "engine": "hierarchical_delegation",
+        "objectives": objectives,
+        "task_assignments": [
+            a for a in (res.get("task_assignments") or []) if isinstance(a, dict)
+        ],
+        "tasks": tasks,
+        "conclusion": res.get("conclusion"),
+        "degraded": bool(res.get("degraded")),
+        "degradation_reasons": list(res.get("degradation_reasons") or []),
+        "task_counts": {
+            "planned": planned_total,
+            "productive": productive,
+            "failed": failed,
+            "degraded": degraded_tasks,
+        },
+        "partial": bool(partial),
+    }
+
+
 async def run_hierarchical_delegation_mode(
-    text: str, corpus_id: str, max_wall_seconds: Optional[float] = None
+    text: str,
+    corpus_id: str,
+    max_wall_seconds: Optional[float] = None,
+    panel_mode: bool = False,
+    source_metadata: Optional[Dict[str, str]] = None,
 ) -> ModeResult:
     """Run hierarchical analysis via the delegation mode (M3, RA-10 #1069).
 
@@ -2032,6 +2114,19 @@ async def run_hierarchical_delegation_mode(
             # AFTER the loop), so the row decides on completed tasks alone —
             # nothing finished ⇒ honestly sterile.
             scope_of_work=scope,
+            # #3472: the finished tasks ARE the partial verdict — the judge
+            # reads them with their counts, and the absent conclusion stays
+            # named (``partial: True``), never invented.
+            panel_state=(
+                delegation_panel_state(
+                    {"operational_results": list(partial)},
+                    partial=True,
+                    planned=recorded["planned"],
+                )
+                if panel_mode
+                else None
+            ),
+            panel_state_reason=("budget_expired_partial_tasks" if panel_mode else None),
             extra_metrics={
                 "tasks_completed": completed,
                 "tasks_failed": failed,
@@ -2105,6 +2200,17 @@ async def run_hierarchical_delegation_mode(
     if isinstance(result, dict) and not run_degraded:
         verdict_artifact = result.get("conclusion") or result.get("strategic_decision")
 
+    # #3472: the productive tasks and the conclusion become a judge-readable
+    # state — the same honest adapter conversation_real received (#3470). A
+    # degraded run's conclusion rides along TOO: CC #1531 keeps it in the
+    # orchestrator's result, and the adapter renders it as the degradation
+    # report it is; only its status as a verdict artifact changes (above).
+    panel_state = None
+    if panel_mode:
+        panel_state = delegation_panel_state(result)
+        if source_metadata:
+            panel_state["source_metadata"] = dict(source_metadata)
+
     return ModeResult(
         mode="hierarchical_delegation",
         corpus_id=corpus_id,
@@ -2114,6 +2220,7 @@ async def run_hierarchical_delegation_mode(
         phases_completed=phases_completed,
         phases_total=phases_total,
         scope_of_work=scope,
+        panel_state=panel_state,
         extra_metrics={
             "objectives_count": len(objectives),
             "verdict_artifact": verdict_artifact,
@@ -2487,6 +2594,11 @@ PANEL_STATEFUL_MODES = frozenset(
         # formulas, tri-state verdict) — a state the judge can read, not a
         # UnifiedAnalysisState.
         "conversation_real",
+        # #3472: the delegation engine records its tasks and its strategic
+        # conclusion in its own vocabulary; the #3472 adapter hands the judge
+        # that record — the same shape #3470 gave conversation_real, never a
+        # UnifiedAnalysisState mimicry.
+        "hierarchical_delegation",
         "hierarchical_bridge",
     }
 )
