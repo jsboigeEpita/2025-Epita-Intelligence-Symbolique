@@ -1,0 +1,48 @@
+{
+  "key": "e28c5c1736369a16fd492e7cc73c566320af76099c3b1c4378e5c4ea2af587b5",
+  "value": {
+    "id": "chatcmpl-EiMD5tWaLZUKttN6QqSfCoeP70lSn",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"L'invocation de la protection ou de l'avenir des enfants constituerait une justification pertinente de la position défendue sur la réforme des retraites.\",\"main_thesis\":\"L'argument « pensez à vos enfants » détourne le débat des questions techniques relatives au financement et relève d'un appel à l'émotion.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794240515,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 282,
+      "prompt_tokens": 291,
+      "total_tokens": 573,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 196,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

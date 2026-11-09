@@ -1,0 +1,48 @@
+{
+  "key": "6a7a0c5eb27822a08081d7c26dfa02b32e8d864321da069987277eeed2007771",
+  "value": {
+    "id": "chatcmpl-EiMPbaHXuWgxK4tH1D9nhkX195QrX",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Deux idées distinctes sont présentes : la dissimulation alléguée des effets secondaires (points 1 et 3) et l’appel aux décennies de recherche clinique (point 2). Le point 3 reprend substantiellement le point 1, tandis que le point 2 apporte une idée différente.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794241291,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 171,
+      "prompt_tokens": 296,
+      "total_tokens": 467,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 91,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

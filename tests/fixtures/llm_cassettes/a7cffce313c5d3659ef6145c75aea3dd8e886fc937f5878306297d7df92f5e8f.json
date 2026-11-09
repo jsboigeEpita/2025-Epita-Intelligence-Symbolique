@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"forall X: (Homme(X) => Mortel(X))\",\n    \"Homme(socrate)\"\n  ],\n  \"predicates\": {\n    \"Homme\": \"est un homme\",\n    \"Mortel\": \"est mortel\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La première phrase affirme que tout individu qui est un homme est mortel. La seconde affirme que Socrate est un homme.\"\n}",
+      "content": "{\n  \"formulas\": [\n    \"forall X: (Homme(X) => Mortel(X))\",\n    \"Homme(socrate)\"\n  ],\n  \"predicates\": {\n    \"Homme\": \"est un homme\",\n    \"Mortel\": \"est mortel\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La phrase « Tous les hommes sont mortels » se formalise par une implication universelle : pour tout X, si X est un homme, alors X est mortel. La phrase « Socrate est un homme » devient le fait Homme(socrate).\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EgUK3ubRMOA3q8vLzFZphTlmiuPic",
-        "created": 1793795043,
+        "id": "chatcmpl-EiMK792ewAidvzCLtFUcWpj9iANlT",
+        "created": 1794240951,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 286,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 131,
+          "completion_tokens": 158,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 15,
+            "reasoning_tokens": 14,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

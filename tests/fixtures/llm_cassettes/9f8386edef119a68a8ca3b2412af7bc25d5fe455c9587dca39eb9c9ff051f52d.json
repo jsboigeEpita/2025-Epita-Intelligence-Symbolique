@@ -6,36 +6,26 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_iQkDMIDouLaE1exPpBQ46xex",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"498\"}"
-        },
-        {
-          "id": "call_PSsTAryUbEXYfNa3Lk83H0KE",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"505\"}"
-        },
-        {
-          "id": "call_qmCY9quSGegR2uVVxYx97VKz",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"497\"}"
+          "id": "call_B3Pd4mZS62HG5MUP91ReXuvv",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"497\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"Les deux énoncés exercent une pression fondée sur le statut social et le rôle d’expert plutôt que sur des raisons : le premier traite l’unanimité des experts comme preuve suffisante, et le second disqualifie l’avis des non-experts. Cela correspond au conditionnement social, sans indication d’abus de pouvoir, d’isolement ou d’une autre sous-catégorie plus spécifique.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EgUFXm1VtBbXUQALNSFKvWOW9Pq7z",
-        "created": 1793794763,
+        "id": "chatcmpl-EiMGElpjnW7QgyoLKAZKujwvm8zWB",
+        "created": 1794240710,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 2358,
+          "prompt_tokens": 2424,
           "prompt_tokens_details": {
             "audio_tokens": 0,
             "cache_write_tokens": 986,
-            "cached_tokens": 1369,
+            "cached_tokens": 1435,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 76,
+          "completion_tokens": 125,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

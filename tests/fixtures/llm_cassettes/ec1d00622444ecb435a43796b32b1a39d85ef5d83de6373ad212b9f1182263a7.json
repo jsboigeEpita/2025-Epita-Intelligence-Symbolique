@@ -1,0 +1,50 @@
+{
+  "key": "ec1d00622444ecb435a43796b32b1a39d85ef5d83de6373ad212b9f1182263a7",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_bnrIjzKqkuFQwcHzbG1f8Cg7",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"513\"}"
+        },
+        {
+          "id": "call_LhDUkSrtURPWCYHVzU4uJZCk",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"514\"}"
+        },
+        {
+          "id": "call_5Vt5M22aO3RC0CA6IY1h16s6",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\": \"512\", \"matches\": false, \"justification\": \"Le texte ne décrit aucune modulation du ton, du volume, du rythme ou autre procédé paralinguistique ; il présente plutôt un appel à l'autorité et une disqualification de l'avis des non-experts.\", \"move_author\": \"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EiMGNoBvV8TLjlu51hPD6S0bAgpt8",
+        "created": 1794240719,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2131,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 693,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 132,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

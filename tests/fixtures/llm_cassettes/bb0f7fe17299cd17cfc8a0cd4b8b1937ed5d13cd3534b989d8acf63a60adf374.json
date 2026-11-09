@@ -1,0 +1,48 @@
+{
+  "key": "bb0f7fe17299cd17cfc8a0cd4b8b1937ed5d13cd3534b989d8acf63a60adf374",
+  "value": {
+    "id": "chatcmpl-EiMPBLBEP06KrXxz2tiBzNfj9Ua2j",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse affirme que la dissimulation des effets secondaires des vaccins est une théorie du complot sans fondement. Une digression secondaire et localisée évoque l’immunité collective et la protection des personnes non vaccinables, sans réfuter directement la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794241265,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 130,
+      "prompt_tokens": 311,
+      "total_tokens": 441,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 55,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

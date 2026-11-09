@@ -1,0 +1,48 @@
+{
+  "key": "1a3e412b702afd2ce9b8469ac0ae131ad0c58c12ee2122986ab7135ed7c62c6e",
+  "value": {
+    "id": "chatcmpl-EiMJyOTF6GcNd8jHJ3pkTrB3qbnMG",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.65,\"fairness_assessment\":\"La méthode est équitable si les parties évaluent les trois options selon des critères communs, notamment l’impact, les besoins des usagers, la durabilité et les coûts. Une décision majoritaire seule pourrait toutefois négliger les compromis et les minorités.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"agent_1\",\"position\":\"Favorable à consacrer toute la subvention à l’élargissement du fonds de livres jeunesse.\",\"influence\":0.3},{\"agent\":\"agent_2\",\"position\":\"Favorable à consacrer toute la subvention à la création d’un espace numérique avec ordinateurs en libre accès.\",\"influence\":0.4},{\"agent\":\"agent_3\",\"position\":\"Favorable à une répartition égale de la subvention entre les livres et l’espace numérique.\",\"influence\":0.3}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"Les trois options répondent à des besoins légitimes, mais les contre-arguments montrent qu’aucune ne s’impose clairement. Un processus de choix social, fondé sur des critères transparents et un classement ou une notation des options, permettrait de comparer les préférences collectives. La solution devrait privilégier un compromis ajusté aux besoins et aux coûts réels plutôt qu’une division égale arbitraire, éventuellement avec une répartition modulée ou un financement progressif.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794240942,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 405,
+      "prompt_tokens": 520,
+      "total_tokens": 925,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 89,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

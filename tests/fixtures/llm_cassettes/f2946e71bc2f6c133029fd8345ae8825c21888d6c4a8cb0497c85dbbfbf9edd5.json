@@ -1,0 +1,40 @@
+{
+  "key": "f2946e71bc2f6c133029fd8345ae8825c21888d6c4a8cb0497c85dbbfbf9edd5",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_3W8fZ1dX4RprdBoTA044vIA9",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"71\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L’énoncé présente l’affirmation du président comme un succès incontestable en s’appuyant uniquement sur son statut d’autorité, sans fournir ni examiner de faits économiques.\",\"move_author\":\"speaker\",\"document_statement\":\"« Le president affirme que la politique economique est un succes incontestable. »\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EiMF1TIOgp4oo54fS43nN3o0ctRug",
+        "created": 1794240635,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2396,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 958,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 95,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -6,36 +6,26 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_VYsEVg2vnUxZqrCzEW3gC5nL",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"892\"}"
-        },
-        {
-          "id": "call_QREF6ema0SlQcdeF4plCKJBw",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"893\"}"
-        },
-        {
-          "id": "call_NTtjKOXKSnaXbrtd82cl7bhN",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"895\"}"
+          "id": "call_5Uy0c9gMGL11eujxnWkkvDUD",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"891\",\"matches\":false,\"justification\":\"Les énoncés ne présentent pas principalement une situation de manière inexacte par minimisation ou exagération. Ils commettent plutôt un appel à l'autorité et une disqualification de l'avis des non-experts, qui ne relèvent pas de cette branche.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EgUGPrelcpLtlaEqJDVSPe1AW4czO",
-        "created": 1793794817,
+        "id": "chatcmpl-EiMHHYodWLP0B21XQmnpmBfCWuXLQ",
+        "created": 1794240775,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 2055,
+          "prompt_tokens": 2121,
           "prompt_tokens_details": {
             "audio_tokens": 0,
             "cache_write_tokens": 683,
-            "cached_tokens": 1369,
+            "cached_tokens": 1435,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 76,
+          "completion_tokens": 92,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

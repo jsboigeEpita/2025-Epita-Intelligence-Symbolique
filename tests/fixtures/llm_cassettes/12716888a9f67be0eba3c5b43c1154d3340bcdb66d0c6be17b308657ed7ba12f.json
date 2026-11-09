@@ -1,0 +1,48 @@
+{
+  "key": "12716888a9f67be0eba3c5b43c1154d3340bcdb66d0c6be17b308657ed7ba12f",
+  "value": {
+    "id": "chatcmpl-EiMHNDvQwvOKF4YooH4lSUzNTwg1G",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"formulas\":[\"(forall X: (Expert(X) => Unanimous(X))) => (exists Y: (True(Y)))\",\"forall X: ((!Expert(X)) => (!OpinionCounts(X)))\"]}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794240781,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 455,
+      "prompt_tokens": 223,
+      "total_tokens": 678,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 403,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

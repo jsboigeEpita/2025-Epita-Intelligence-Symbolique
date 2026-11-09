@@ -6,36 +6,26 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_f3mfajAEk8RWo2nKPavW7L0J",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"192\"}"
-        },
-        {
-          "id": "call_5LAUBqKjvh6FsliWio3IX86u",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"193\"}"
-        },
-        {
-          "id": "call_SufmQLxEVLESg5S82iQN66cX",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"202\"}"
+          "id": "call_CrzjmCVbYiQ1wMojPaKGjuLV",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"191\",\"matches\":false,\"justification\":\"Les deux arguments ne rendent pas l’information volontairement obscure ni ne recourent à un langage complexe pour masquer des faits. Ils relèvent plutôt d’un appel à l’autorité et d’une disqualification de l’avis selon le statut de l’interlocuteur, dans une autre branche de la taxonomie.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EgUFsxtZJ2skLUryS5Qgvo7yWT6lc",
-        "created": 1793794784,
+        "id": "chatcmpl-EiMGYptKSwP1ZNFfpBEJ21fcwk9Xu",
+        "created": 1794240730,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 2267,
+          "prompt_tokens": 2333,
           "prompt_tokens_details": {
             "audio_tokens": 0,
             "cache_write_tokens": 895,
-            "cached_tokens": 1369,
+            "cached_tokens": 1435,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 76,
+          "completion_tokens": 99,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

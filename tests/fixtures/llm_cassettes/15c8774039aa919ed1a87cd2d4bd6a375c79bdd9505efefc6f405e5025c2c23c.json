@@ -1,0 +1,40 @@
+{
+  "key": "15c8774039aa919ed1a87cd2d4bd6a375c79bdd9505efefc6f405e5025c2c23c",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_ut2986DzDP7pUeqshLOI83BQ",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1361\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"L’énoncé rapporte simplement l’affirmation du président selon laquelle la politique économique est un succès incontestable. Il ne relève ni contradiction, ni incohérence, ni attaque des principes de l’interlocuteur ; aucun sous-type de cette branche ne s’applique.\",\"move_author\":\"reported\",\"move_author_label\":\"le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EiMF5Cioad2Q5eAqqiCs6u9pD0xiK",
+        "created": 1794240639,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2320,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 882,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 102,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

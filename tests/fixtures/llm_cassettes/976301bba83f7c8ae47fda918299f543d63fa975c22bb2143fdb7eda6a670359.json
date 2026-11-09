@@ -6,26 +6,36 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_8rJ9jDVOFFvxjF09BbJ5JNg9",
-          "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"1352\",\"matches\":false,\"justification\":\"Le texte contient un argument d'autorité et une disqualification des non-experts, mais il ne discrédite pas un adversaire au moyen d'informations préjudiciables; aucune spécialisation de l'empoisonnement du puits ne correspond.\",\"move_author\":\"speaker\"}"
+          "id": "call_63vhBLUcHnbh1x39LS6q125r",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"1353\"}"
+        },
+        {
+          "id": "call_Cnz2IoybvAl8aLSU3RuPzC59",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"1354\"}"
+        },
+        {
+          "id": "call_ctT1VoO0wtBHZ8icOAy9lYU2",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"1357\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EgUGHxzBuf9YZqBLjfMtrJ6EMW7BA",
-        "created": 1793794809,
+        "id": "chatcmpl-EiMH2ksOA2LZCWoqEpO9rHdrO8j2Y",
+        "created": 1794240760,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 2185,
+          "prompt_tokens": 2251,
           "prompt_tokens_details": {
             "audio_tokens": 0,
             "cache_write_tokens": 813,
-            "cached_tokens": 1369,
+            "cached_tokens": 1435,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 87,
+          "completion_tokens": 79,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

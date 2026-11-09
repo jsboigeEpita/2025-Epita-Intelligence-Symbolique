@@ -1,14 +1,14 @@
 {
   "key": "1bf8f20e3631fad71394ea7e0120332b29323197648663f38d770d74d06a6b8f",
   "value": {
-    "id": "chatcmpl-EgUPGvd7625CzyziKFgwHPCe8oPga",
+    "id": "chatcmpl-EiMP0S8CgOxmUm06g7yNWZWuBjpWU",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":1.0,\"exhibit\":\"La thèse affirme que les vaccins sont indispensables à la santé publique, et aucune digression n’est identifiée : toutes les propositions servent directement cette thèse.\"}",
+          "content": "{\"score\":1.0,\"exhibit\":\"La thèse affirme que les vaccins sont indispensables à la santé publique, et aucune digression n’est identifiée.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793795366,
+    "created": 1794241254,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 81,
+      "completion_tokens": 75,
       "prompt_tokens": 255,
-      "total_tokens": 336,
+      "total_tokens": 330,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 28,
+        "reasoning_tokens": 31,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

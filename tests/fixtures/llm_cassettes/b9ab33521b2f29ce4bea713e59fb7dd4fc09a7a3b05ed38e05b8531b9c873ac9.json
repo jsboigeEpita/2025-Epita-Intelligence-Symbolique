@@ -6,26 +6,26 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_6cTbxuEek6jPQpj1QUskfOLm",
+          "id": "call_ekPmz461JOGwC6K5eyk18IVr",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"696\",\"matches\":false,\"justification\":\"La phrase rapporte simplement une affirmation du président; elle ne fournit pas de raisonnement incohérent ni de prémisses permettant d'identifier une sous-catégorie plus spécifique.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+          "arguments": "{\"node_pk\":\"759\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L’affirmation du président qualifie la politique économique de « succès incontestable » sans fournir aucun élément de preuve dans le texte; il s’agit d’une conclusion hâtive.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EgUEN76gJbb2wLQuJGQu0bVpGOm41",
-        "created": 1793794691,
+        "id": "chatcmpl-EiMF187DkLrDoAQu2IDjbKQss97rl",
+        "created": 1794240635,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 2261,
+          "prompt_tokens": 2327,
           "prompt_tokens_details": {
             "audio_tokens": 0,
             "cache_write_tokens": 889,
-            "cached_tokens": 1369,
+            "cached_tokens": 1435,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 77,
+          "completion_tokens": 83,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

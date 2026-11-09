@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"start_marker\": \"La déclaration cruciale sur l'économie verte\",\n  \"end_marker\": \"ici.\",\n  \"explanation\": \"Le texte source est presque entièrement constitué de texte factice (« Lorem ipsum »). Le seul passage explicitement consacré à l'économie verte est la phrase « La déclaration cruciale sur l'économie verte est enfouie ici. ». Les marqueurs proposés délimitent précisément cette phrase.\"\n}",
+      "content": "{\n  \"start_marker\": \"La déclaration cruciale sur l'économie verte est enfouie ici.\",\n  \"end_marker\": \"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.\",\n  \"explanation\": \"Le texte source ne contient pas de véritable section intitulée « Le point sur l'économie verte ». Le seul passage explicitement consacré à ce thème est la phrase « La déclaration cruciale sur l'économie verte est enfouie ici. ». Le marqueur de fin correspond à la phrase Lorem ipsum immédiatement consécutive dans la source ; il doit être interprété comme la première occurrence suivant le marqueur de début.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EgUNKZ3jJPl8YJy6QpDo5tLW2BfWM",
-        "created": 1793795246,
+        "id": "chatcmpl-EiMNOR2SLgVc7iDYZzbZymkpFIA8E",
+        "created": 1794241154,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 6801,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 353,
+          "completion_tokens": 669,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 257,
+            "reasoning_tokens": 511,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

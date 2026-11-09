@@ -1,0 +1,48 @@
+{
+  "key": "7274c6ce4c0c6346217c51b1c4b36151d10e03c3a07e8d60963cbbf78cd7e576",
+  "value": {
+    "id": "chatcmpl-EiMQk5f936WWlfnwqoFDy0Acgo3bf",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Le système judiciaire peut commettre des erreurs, ce qui rend possible la condamnation ou l’exécution d’innocents.\",\"main_thesis\":\"La peine de mort est justifiée parce qu’elle dissuade les crimes les plus graves, que les progrès de l’ADN réduisent le risque d’erreur judiciaire et que certains criminels irrécupérables représentent un danger permanent pour la société.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794241362,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 170,
+      "prompt_tokens": 285,
+      "total_tokens": 455,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 64,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

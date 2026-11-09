@@ -1,14 +1,14 @@
 {
   "key": "dbac6048e65fc363ec80f8ee6b4ace65f2487feced5ff2562a56f3dd450a2c6f",
   "value": {
-    "id": "chatcmpl-EgUSsZWGNf0U5ZuqEs1XoHkV5LXC3",
+    "id": "chatcmpl-EiMS44tdIYFkI6ikAV0mi1DDP4utk",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Les sceptiques soutiennent que le climat a toujours changé.\",\"main_thesis\":\"Le changement climatique actuel est exceptionnellement rapide et les activités humaines en sont une cause majeure.\"}",
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Le climat a toujours changé.\",\"main_thesis\":\"Le changement climatique actuel est exceptionnellement rapide et les activités humaines en sont responsables.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793795590,
+    "created": 1794241444,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 129,
+      "completion_tokens": 87,
       "prompt_tokens": 277,
-      "total_tokens": 406,
+      "total_tokens": 364,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 73,
+        "reasoning_tokens": 39,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

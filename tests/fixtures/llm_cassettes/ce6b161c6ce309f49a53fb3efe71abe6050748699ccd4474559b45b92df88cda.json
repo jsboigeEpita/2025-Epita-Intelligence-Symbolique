@@ -6,26 +6,26 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_0tRZ1uJQCjOngFs4VXdhdbrk",
+          "id": "call_ZhENtItFnXwXRhT2kwzeaBHI",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"2\",\"matches\":true,\"confidence\":\"medium\",\"justification\":\"L’affirmation catégorique de succès incontestable ne fournit aucun élément probant ni données permettant de l’étayer; elle présente une conclusion générale comme auto-évidente.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+          "arguments": "{\"node_pk\":\"2\",\"matches\":true,\"confidence\":\"medium\",\"justification\":\"L’énoncé affirme que la politique économique est un succès incontestable sans fournir de preuves ni données; il présente donc une conclusion générale insuffisamment étayée.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\",\"document_statement\":\"\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EgUENE8qtZXIE8zujNlVb9b38NdS1",
-        "created": 1793794691,
+        "id": "chatcmpl-EiMF1QMiNYqn7R1CiMAeCXgi8eSPY",
+        "created": 1794240635,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 2434,
+          "prompt_tokens": 2500,
           "prompt_tokens_details": {
             "audio_tokens": 0,
             "cache_write_tokens": 1062,
-            "cached_tokens": 1369,
+            "cached_tokens": 1435,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 81,
+          "completion_tokens": 85,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

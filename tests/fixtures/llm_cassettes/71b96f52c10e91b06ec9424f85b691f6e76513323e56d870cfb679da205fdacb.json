@@ -1,0 +1,48 @@
+{
+  "key": "71b96f52c10e91b06ec9424f85b691f6e76513323e56d870cfb679da205fdacb",
+  "value": {
+    "id": "chatcmpl-EiMCmWSgEDVFl6Qc7hQwKRadJk527",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Le débat porte sur les différentes modalités de réforme des retraites, et non sur leur suppression.\\n2. Le ministre des Finances prévoit que le déficit atteindra 2,3 % du PIB d’ici 2030.\\n3. Cette projection repose sur une hypothèse de croissance optimiste de 1,8 % par an.\\n4. Présenter le débat comme portant sur la suppression des retraites constitue un homme de paille.\\n5. L’appel à l’émotion consistant à dire « pensez à vos enfants » détourne le débat des questions techniques de financement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794240496,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 353,
+      "prompt_tokens": 297,
+      "total_tokens": 650,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 217,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

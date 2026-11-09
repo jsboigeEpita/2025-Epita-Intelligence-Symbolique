@@ -1,0 +1,40 @@
+{
+  "key": "45935bb8494db738d2adb5b5b0a1b2380ffb135b1dff0339bba6367bdb03fde7",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_WuHgL63OCdMTawEJTaMGgh9B",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"452\",\"matches\":false,\"justification\":\"Le texte invoque l'unanimité des experts et exclut l'avis des non-experts; il ne déstabilise pas l'interlocuteur pour reformuler ensuite une demande plus acceptable. Le nœud Perturbation-recadrage ne correspond donc pas.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EiMG0u09bow1gkHPCNn4aD535t3Gs",
+        "created": 1794240696,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1365,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1362,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 94,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"TestMemoire(test3)\",\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"TestMemoire\": \"est le test mémoire numéro 3\",\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La première phrase identifie le test mémoire numéro 3. La seconde affirme que tout objet qui est un test est important.\"\n}",
+      "content": "{\n  \"formulas\": [\n    \"Test(test_memoire_numero_3)\",\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"Le texte affirme l'existence d'un test identifié comme « test mémoire numéro 3 », représenté par la constante test_memoire_numero_3. La phrase « Tous les tests sont importants » est traduite par une implication universelle : pour tout X, si X est un test, alors X est important.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EgUKMvKk4wHHlwt0f7y5ZAuGYfxbu",
-        "created": 1793795062,
+        "id": "chatcmpl-EiMKTCol6TtE6CsyPVIpvvkIlgZKY",
+        "created": 1794240973,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 285,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 342,
+          "completion_tokens": 285,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 216,
+            "reasoning_tokens": 130,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }
