@@ -1,0 +1,48 @@
+{
+  "key": "70b4fa3fba51a1cd380695e870c26c0bc2a71bc8b7db51353074251b542a7ed0",
+  "value": {
+    "id": "chatcmpl-EiMCji3W8rqFQ1ai6LJsQeze45X2s",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Le gouvernement présente le fait de travailler plus longtemps comme étant « dans l’ordre des choses », ce qui constitue un sophisme naturaliste selon les syndicats.\\n2. Affirmer que le système s’effondrera dans cinq ans si aucune mesure n’est prise immédiatement constitue un appel à la peur.\\n3. La projection d’un déficit atteignant 2,3 % du PIB d’ici 2030 repose sur des hypothèses de croissance jugées optimistes, de 1,8 % par an.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794240493,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 313,
+      "prompt_tokens": 298,
+      "total_tokens": 611,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 193,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

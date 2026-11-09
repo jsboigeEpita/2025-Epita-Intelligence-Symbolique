@@ -1,0 +1,40 @@
+{
+  "key": "8ee7c909472cd15844f2bd7c486b383b31ada2c33b45b1c8844169524700c3d2",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_NSmkYV1yIg2HBgXWAQ8Fy5Hu",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"442\",\"matches\":false,\"justification\":\"Le texte ne met pas en scène une séquence où l'interlocuteur est d'abord effrayé puis rassuré; il s'agit plutôt d'un appel à l'autorité et d'une disqualification de l'avis des non-experts. Le seul sous-cas proposé, le porte-au-nez, ne correspond pas.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EiMGAKgGK09oJWUu9ZdrtRTtbQAUZ",
+        "created": 1794240706,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2034,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 596,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 101,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -6,26 +6,36 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_7zYf5v1NMUmTDqIYeFZLaZFv",
-          "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"1280\",\"matches\":false,\"justification\":\"L'énoncé est une simple affirmation rapportée d'un succès économique, sans indication qu'il s'agit d'une obstruction du débat ni d'une esquive argumentative.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+          "id": "call_cBUDkBTyeP0ZjNLOpOHb0K1H",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"1281\"}"
+        },
+        {
+          "id": "call_Eu2NGBHqWhTvNAsZVtloXCPf",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"1312\"}"
+        },
+        {
+          "id": "call_v1GColpekxFyADH5PddHFFrF",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"1360\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EgUENkZNrjppAFwLOsPcds0rQFbvX",
-        "created": 1793794691,
+        "id": "chatcmpl-EiMF10pGBQt5Et2UCxAIcuOKxPyqD",
+        "created": 1794240635,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 2253,
+          "prompt_tokens": 2319,
           "prompt_tokens_details": {
             "audio_tokens": 0,
             "cache_write_tokens": 881,
-            "cached_tokens": 1369,
+            "cached_tokens": 1435,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 76,
+          "completion_tokens": 79,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

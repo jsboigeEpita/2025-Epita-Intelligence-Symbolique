@@ -1,0 +1,40 @@
+{
+  "key": "e72612eb23e4c49c633711535b829c0d3357d4ec95b76f3fbf77cc1faa06985c",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_YGKuhiwtIZccW4d1vD6MOM5S",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1312\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"La phrase affirme simplement que le président présente la politique économique comme un succès incontestable. Elle ne perturbe pas le débat, n'évite aucune question et ne détourne pas le sujet.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EiMF3P2L08o1kHjy28XinGL7BdzfJ",
+        "created": 1794240637,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2404,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 966,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 86,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

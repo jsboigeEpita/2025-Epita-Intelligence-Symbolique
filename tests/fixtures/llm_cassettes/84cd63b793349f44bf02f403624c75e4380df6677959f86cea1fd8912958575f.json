@@ -6,41 +6,26 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_yAFlMoOwA5EOVL79w6pcp5Vn",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"361\"}"
-        },
-        {
-          "id": "call_7woKHc1jmcYkTiRJpng2Mqsr",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"364\"}"
-        },
-        {
-          "id": "call_z2pCfy6yRjKYTCUREUKIiJbR",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"360\"}"
-        },
-        {
-          "id": "call_uUWSgFo3i3vVoSdUJfk81lNY",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"363\"}"
+          "id": "call_45h8DUtugivx6KJysFPgjCiO",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"359\",\"matches\":false,\"justification\":\"Les deux arguments invoquent une unanimité d'experts et excluent les non-experts, mais ne présentent pas progressivement un objectif caché ni une substitution graduelle de position.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EgUFkUNfBIaPL3AxWxigiiyJILXrh",
-        "created": 1793794776,
+        "id": "chatcmpl-EiMGS3uZidZpFb7I72SI15viS1Q2e",
+        "created": 1794240724,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 2309,
+          "prompt_tokens": 2375,
           "prompt_tokens_details": {
             "audio_tokens": 0,
             "cache_write_tokens": 937,
-            "cached_tokens": 1369,
+            "cached_tokens": 1435,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 95,
+          "completion_tokens": 71,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

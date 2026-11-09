@@ -1,0 +1,48 @@
+{
+  "key": "16a182a7ea78ec8a15face04b154803f13a49b340f9e2a20e05f23383deb9aaf",
+  "value": {
+    "id": "chatcmpl-EiMS4Wm9decKX2PHIncwxyxRG8CpR",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne relie le constat d’une hausse de 1,1 degré depuis l’ère préindustrielle à la conclusion qu’il est nécessaire d’agir en faveur du climat, mais le verdict indique un saut logique net : la nécessité d’agir ne découle pas directement de la prémisse fournie.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794241444,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 129,
+      "prompt_tokens": 286,
+      "total_tokens": 415,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 45,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

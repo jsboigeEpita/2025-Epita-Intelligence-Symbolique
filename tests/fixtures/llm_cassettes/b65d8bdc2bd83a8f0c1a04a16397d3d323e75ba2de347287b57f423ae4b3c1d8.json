@@ -1,0 +1,40 @@
+{
+  "key": "b65d8bdc2bd83a8f0c1a04a16397d3d323e75ba2de347287b57f423ae4b3c1d8",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_ZA1f3GAjzlqjcvK7SBQTiFQg",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"801\",\"matches\":false,\"justification\":\"Le texte ne présente pas de définition complexe ou obscure. Il commet plutôt un appel à l'autorité et un argument ad hominem/dismissal de l'avis des non-experts, mais cela ne relève pas du défaut d'élucidation.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EiMGuEB0ESERG4dDYWKboVcf058CV",
+        "created": 1794240752,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1400,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1397,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 89,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

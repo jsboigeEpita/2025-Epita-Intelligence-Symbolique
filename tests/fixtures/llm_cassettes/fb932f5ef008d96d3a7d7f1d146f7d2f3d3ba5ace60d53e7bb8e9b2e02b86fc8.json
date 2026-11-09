@@ -6,26 +6,26 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_CNeFxNWBacJwqXisehJ3ffj2",
+          "id": "call_PW4hDlmdsRvYiX74p4cpvTMr",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"699\",\"confidence\":\"high\",\"matches\":false,\"justification\":\"Les arguments présentent plutôt un appel à l'autorité et une disqualification de l'avis des non-experts, sans circularité : la conclusion n'est pas présupposée dans ses prémisses.\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"699\",\"matches\":false,\"justification\":\"Les deux arguments ne sont pas circulaires : ils invoquent l'unanimité supposée des experts et disqualifient l'avis des non-experts. Il s'agit plutôt d'un appel à l'autorité et d'un empoisonnement du puits, pas d'une conclusion présupposée par ses prémisses.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EgUG1hMb1YbIV62YPVNLund5Rb68X",
-        "created": 1793794793,
+        "id": "chatcmpl-EiMGfMV3CvyEJPklolEWLGmHNVLaY",
+        "created": 1794240737,
         "system_fingerprint": null,
         "usage": {
-          "prompt_tokens": 1960,
+          "prompt_tokens": 2026,
           "prompt_tokens_details": {
             "audio_tokens": 0,
             "cache_write_tokens": 588,
-            "cached_tokens": 1369,
+            "cached_tokens": 1435,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 79,
+          "completion_tokens": 102,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

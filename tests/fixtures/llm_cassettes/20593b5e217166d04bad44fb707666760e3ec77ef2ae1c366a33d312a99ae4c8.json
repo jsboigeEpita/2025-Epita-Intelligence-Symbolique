@@ -1,0 +1,70 @@
+{
+  "key": "20593b5e217166d04bad44fb707666760e3ec77ef2ae1c366a33d312a99ae4c8",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_dqJzT3AtZmgeLHdJx0ggbX2H",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"442\"}"
+        },
+        {
+          "id": "call_8v5rzdqy60rAwChpqn8wN7jM",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"444\"}"
+        },
+        {
+          "id": "call_5qPz4WpRCSJxQUS60LF8Ovec",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"445\"}"
+        },
+        {
+          "id": "call_zmMy5EswMTiC4v7GpS572iDX",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"447\"}"
+        },
+        {
+          "id": "call_meMA0n0UYsNfc1QrYIQRzHyE",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"448\"}"
+        },
+        {
+          "id": "call_3Pmiku6h0ZbG1LfO5AsBoK7p",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"450\"}"
+        },
+        {
+          "id": "call_hDzRFZIITzkDhQ4J6vNaI1xo",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"451\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EiMG55Y82lare0hw0TkQxFmYlWgdj",
+        "created": 1794240701,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2355,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 917,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 152,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

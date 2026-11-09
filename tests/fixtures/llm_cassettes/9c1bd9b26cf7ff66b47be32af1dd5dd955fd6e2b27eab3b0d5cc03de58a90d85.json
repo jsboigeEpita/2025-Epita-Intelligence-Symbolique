@@ -1,14 +1,14 @@
 {
   "key": "9c1bd9b26cf7ff66b47be32af1dd5dd955fd6e2b27eab3b0d5cc03de58a90d85",
   "value": {
-    "id": "chatcmpl-EgUPQ6I1nwZrq719jDfEVDRZQ1VR1",
+    "id": "chatcmpl-EiMPB5itJFkBpHLcOqJLik4pobiYx",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"distinct_points\":\"1. Les vaccins sont indispensables à la santé publique.\\n2. Les études scientifiques montrent que la vaccination a éradiqué la variole.\\n3. Les études scientifiques montrent que la vaccination a considérablement réduit la polio.\"}",
+          "content": "{\"distinct_points\":\"1. Les vaccins sont indispensables à la santé publique.\\n2. La vaccination a éradiqué la variole et a considérablement réduit la polio, selon les études scientifiques.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1793795376,
+    "created": 1794241265,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 165,
+      "completion_tokens": 100,
       "prompt_tokens": 192,
-      "total_tokens": 357,
+      "total_tokens": 292,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 103,
+        "reasoning_tokens": 48,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

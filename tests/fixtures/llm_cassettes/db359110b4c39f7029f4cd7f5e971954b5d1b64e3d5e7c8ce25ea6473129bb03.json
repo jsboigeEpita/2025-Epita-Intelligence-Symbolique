@@ -1,0 +1,48 @@
+{
+  "key": "db359110b4c39f7029f4cd7f5e971954b5d1b64e3d5e7c8ce25ea6473129bb03",
+  "value": {
+    "id": "chatcmpl-EiMCJkBXiHTaHVcpnq0lHi4x8r2aF",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Obstacle localisé : le terme spécialisé « argument d’autorité » est utilisé sans explication. Verdict : obstacle résolvable par le contexte, le sens global restant accessible.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794240467,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 80,
+      "prompt_tokens": 247,
+      "total_tokens": 327,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 26,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

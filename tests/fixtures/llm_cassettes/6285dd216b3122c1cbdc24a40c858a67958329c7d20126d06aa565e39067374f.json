@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\"fallacy_name\":\"Lapalissade\",\"taxonomy_pk\":\"31\",\"explanation\":\"Le texte énonce des évidences ou banalités sans développer de raisonnement ni de conclusion argumentative ; la catégorie la plus spécifique correspondante est la lapalissade.\",\"confidence\":0.94,\"move_author\":\"speaker\",\"move_author_label\":\"speaker\"}",
+      "content": "{\"fallacy_name\":\"Lapalissade\",\"taxonomy_pk\":\"31\",\"explanation\":\"Le texte énonce des évidences banales (« Le soleil brille », « Il fait beau ») sans apporter d’argument substantiel ; cela correspond à une lapalissade.\",\"confidence\":0.98,\"move_author\":\"speaker\",\"move_author_label\":\"speaker\"}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EgUDZlT1zDeFd8KrMoWYWSTh7I7gq",
-        "created": 1793794641,
+        "id": "chatcmpl-EiMEGNubWYBibr5dbOHf344NcPOE8",
+        "created": 1794240588,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 23156,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 401,
+          "completion_tokens": 358,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 323,
+            "reasoning_tokens": 276,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

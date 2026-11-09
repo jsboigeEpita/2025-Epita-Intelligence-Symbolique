@@ -1,0 +1,40 @@
+{
+  "key": "2d713072cce99c2c84b8129423d60743d63e5ed18e33a4812abc5db67ccae014",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_0rV3GQYS6wQffRmVHKhORtIb",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1353\",\"matches\":false,\"justification\":\"Le texte ne pose aucune question insinuant une accusation. Il avance plutôt des affirmations sur l'unanimité des experts et l'exclusion des non-experts, ce qui relève d'autres raisonnements potentiellement fallacieux, mais pas de cette catégorie.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EiMH42NaHGV4AV9zrKbUhzd6n5Nb2",
+        "created": 1794240762,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1366,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1363,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 92,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}
