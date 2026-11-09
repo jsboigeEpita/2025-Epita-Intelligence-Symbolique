@@ -621,6 +621,14 @@ _STRUCT_LIST_SCRUB = {
     # closed vocabulary, but the record rides the same one-pass reduction —
     # one treatment per field, no per-leaf surgery.
     "cross_passage_consistency": ("findings",),
+    # #3492 — the coverage review's items each carry a quote verified against
+    # ``raw_text`` (the document's own words, like the two entries above) AND
+    # the reviewer's reason (model prose), plus the lens walk's retained
+    # fallacies nested under ``routed``. Same verdict: the count of named
+    # passages crosses, no wording does. ``examined_by_class`` (arg_N ids),
+    # ``dropped`` (ints) and the closed-vocabulary ``status``/``reason`` ride
+    # through untouched.
+    "coverage_review": ("items",),
 }
 
 
