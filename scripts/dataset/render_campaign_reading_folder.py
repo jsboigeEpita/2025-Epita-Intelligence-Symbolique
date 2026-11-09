@@ -772,6 +772,192 @@ def conversation_real_full_text(
     return "\n\n".join(body)
 
 
+#: #3472 — the delegation arm's lists are bounded like every arm dump.
+_DELEGATION_ARM_CAP = 8
+_DELEGATION_ARM_FIELD_CHARS = 400
+
+
+def _delegation_product_lines(outputs: Any) -> List[str]:
+    """One bounded line per recorded product field — the task's own record.
+
+    The delegation engine's products are heterogeneous (each capability
+    returns its own shape), so unlike the conversation_real arm there is no
+    per-field schema to name: a string is rendered as the string, a list as
+    its items (a dict item rendered by its scalar fields), a nested dict by
+    its scalar fields. Empty lists are NAMED as empty — a capability that
+    honestly found nothing produced zero, and zero is a record (#1550's rule,
+    already the orchestrator's own).
+    """
+
+    def _scalar_fields(item: Dict[str, Any]) -> str:
+        parts = []
+        for key, value in item.items():
+            if isinstance(value, (str, int, float, bool)):
+                text = str(value).strip()
+                if text:
+                    parts.append(f"{key}={text[:_DELEGATION_ARM_FIELD_CHARS]}")
+            if len(parts) >= _DELEGATION_ARM_CAP:
+                break
+        return ", ".join(parts)
+
+    lines: List[str] = []
+    if isinstance(outputs, str):
+        text = outputs.strip()
+        return [text[:_DELEGATION_ARM_FIELD_CHARS]] if text else []
+    if not isinstance(outputs, dict):
+        return lines
+    for key, value in list(outputs.items())[:_DELEGATION_ARM_CAP]:
+        if value is None:
+            continue
+        if isinstance(value, str):
+            text = value.strip()
+            if text:
+                lines.append(f"- {key} : {text[:_DELEGATION_ARM_FIELD_CHARS]}")
+        elif isinstance(value, list):
+            if not value:
+                lines.append(f"- {key} : aucun élément enregistré.")
+                continue
+            for item in value[:_DELEGATION_ARM_CAP]:
+                if isinstance(item, dict):
+                    fields = _scalar_fields(item)
+                    lines.append(
+                        f"- {key} : {fields}" if fields else f"- {key} : (enregistré)"
+                    )
+                else:
+                    text = str(item).strip()
+                    if text:
+                        lines.append(f"- {key} : {text[:_DELEGATION_ARM_FIELD_CHARS]}")
+            if len(value) > _DELEGATION_ARM_CAP:
+                lines.append(
+                    f"- {key} : … {len(value) - _DELEGATION_ARM_CAP} autre(s) non listé(s)."
+                )
+        elif isinstance(value, dict):
+            fields = _scalar_fields(value)
+            lines.append(f"- {key} : {fields}" if fields else f"- {key} : (enregistré)")
+        else:
+            lines.append(f"- {key} : {value}")
+    return lines
+
+
+def hierarchical_delegation_full_text(
+    st: Dict[str, Any], outcome: Optional[Dict[str, Any]] = None
+) -> str:
+    """#3472 — the hierarchical_delegation arm: what the run recorded, in its voice.
+
+    The delegation engine decides in its own vocabulary — not acts: the
+    strategic tier fixes objectives, the tactical tier decomposes them into
+    tasks, each task executes one capability of the registry and returns its
+    product, and the strategic tier concludes. The pipeline's acts vocabulary
+    (four absence lines) is therefore not this engine's voice: rendering it
+    here would read the engine's shape as the pipeline's failure. This
+    producer renders the dict the #3472 adapter builds: one block per
+    recorded task, the strategic conclusion as what it is — and a degraded or
+    budget-cut run keeps its verdict NAMED with its task counts, exactly as
+    the issue words it, never a manufactured act (#1019).
+
+    ``st`` is the normalized adapter dict (``objectives``, ``tasks``,
+    ``conclusion``, ``degraded``, ``task_counts``, ``partial``), not a raw
+    orchestrator result.
+    """
+    tasks = [t for t in (st.get("tasks") or []) if isinstance(t, dict)]
+    counts = st.get("task_counts") or {}
+    body: List[str] = []
+
+    planned = counts.get("planned")
+    planned_txt = str(planned) if isinstance(planned, int) else str(len(tasks))
+    body.append(
+        "**La chaîne de délégation (stratégique → tactique → opérationnel) a lu "
+        "ce document :** le niveau stratégique fixe ses objectifs, le niveau "
+        "tactique les décompose en tâches, chaque tâche exécute une capacité "
+        f"du registre ({len(tasks)} tâche(s) enregistrée(s) sur "
+        f"{planned_txt} prévue(s)). Ce qui suit est ce que le run a "
+        "enregistré — une pièce par tâche, rien d'inventé."
+    )
+
+    objectives = [o for o in (st.get("objectives") or []) if isinstance(o, dict)]
+    if objectives:
+        lines = []
+        for objective in objectives[:_DELEGATION_ARM_CAP]:
+            oid = str(objective.get("id") or "").strip()
+            desc = str(objective.get("description") or "").strip()
+            line = oid or desc
+            if oid and desc:
+                line = f"{oid} — {desc[:_DELEGATION_ARM_FIELD_CHARS]}"
+            if line:
+                lines.append(f"- {line}")
+        if lines:
+            body.append("**Objectifs stratégiques enregistrés :**\n" + "\n".join(lines))
+
+    for task in tasks:
+        tid = str(task.get("task_id") or "tâche").strip() or "tâche"
+        capability = str(task.get("capability") or "").strip()
+        cap_txt = f" ({capability})" if capability else ""
+        status = task.get("status")
+        productivity = task.get("productivity")
+        if status == "failed":
+            reason = str(task.get("reason") or "").strip() or "échec"
+            body.append(f"**Tâche {tid}{cap_txt} — échec :** {reason}")
+            continue
+        reasons = [
+            str(r) for r in (task.get("degradation_reasons") or []) if str(r).strip()
+        ]
+        product_lines = _delegation_product_lines(task.get("outputs"))
+        if reasons and productivity:
+            head = f"**Tâche {tid}{cap_txt} — produite, manque signalé ({'; '.join(reasons)}) :**"
+        elif reasons:
+            head = (
+                f"**Tâche {tid}{cap_txt} — aucune production ({'; '.join(reasons)}) :**"
+            )
+        else:
+            head = f"**Tâche {tid}{cap_txt} — produite :**"
+        if product_lines:
+            body.append(head + "\n" + "\n".join(product_lines))
+        else:
+            # A clean task that honestly found nothing is a record of zero,
+            # not an absence (#1550): say the zero, in the engine's words.
+            body.append(head + " aucun élément enregistré.")
+
+    conclusion = st.get("conclusion")
+    if isinstance(conclusion, str) and conclusion.strip():
+        if st.get("degraded"):
+            body.append(
+                "**Conclusion du run :** « "
+                + conclusion.strip()
+                + " » — aucune tâche n'a produit d'analyse ; c'est un "
+                "signalement de dégradation, pas un verdict sur le document."
+            )
+            reasons = [
+                str(r) for r in (st.get("degradation_reasons") or []) if str(r).strip()
+            ]
+            if reasons:
+                body.append(
+                    "**Manques signalés :** "
+                    + " ; ".join(reasons[:_DELEGATION_ARM_CAP])
+                )
+        else:
+            body.append("**Conclusion stratégique :** " + conclusion.strip())
+    elif st.get("partial"):
+        body.append(
+            "**Conclusion stratégique :** non produite — le run a été coupé "
+            "au mur de temps avant la fin de la boucle des tâches (la "
+            "conclusion est émise après). Les tâches terminées avant la "
+            "coupe sont listées ci-dessus ; aucune conclusion n'est inventée."
+        )
+
+    productive = counts.get("productive")
+    failed = counts.get("failed")
+    degraded = counts.get("degraded")
+    if isinstance(productive, int):
+        body.append(
+            f"**Comptes de tâches :** {productive} productive(s), "
+            f"{failed if isinstance(failed, int) else 0} échec(s), "
+            f"{degraded if isinstance(degraded, int) else 0} avec manque "
+            f"signalé, sur {planned_txt} prévue(s)."
+        )
+
+    return "\n\n".join(body)
+
+
 def render_fiche(
     facts: Dict[str, Any],
     state: Dict[str, Any],

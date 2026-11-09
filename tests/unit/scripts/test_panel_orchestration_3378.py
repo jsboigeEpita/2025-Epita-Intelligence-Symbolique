@@ -76,8 +76,14 @@ class TestPanelInputAndJudgeContract:
             harness.write_panel_mode_artifacts(result, tmp_path)
 
     def test_a_stateless_engine_has_an_honest_absence(self):
+        # #3472: hierarchical_delegation left this class — its adapter hands
+        # the judge the run's own record, so it is in the stateful set and a
+        # result WITHOUT a panel_state now names the runner, not the engine
+        # (``runner_failed_before_state_capture``). A mode still outside the
+        # set keeps the engine absence.
+        assert "hierarchical_delegation" in harness.PANEL_STATEFUL_MODES
         result = harness.ModeResult(
-            mode="hierarchical_delegation", corpus_id="doc_A", success=True
+            mode="pipeline_standard", corpus_id="doc_A", success=True
         )
 
         assert (

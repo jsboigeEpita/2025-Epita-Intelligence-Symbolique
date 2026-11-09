@@ -482,15 +482,23 @@ def pipeline_text_from_state(state: Dict[str, Any], signature: Dict[str, Any]) -
     producer — its recorded findings are its arm, and the pipeline's acts
     vocabulary (four absence lines) would read as this engine's failure
     when it is its shape.
+    #3472: same rule for ``hierarchical_delegation`` — the 3-tier chain's
+    recorded tasks and strategic conclusion are its arm; it has no acts by
+    design, so the acts vocabulary would read its shape as the pipeline's
+    failure.
     """
     from scripts.dataset.render_campaign_reading_folder import (
         conversation_real_full_text,
+        hierarchical_delegation_full_text,
         pipeline_full_text,
     )
 
     st = state.get("state") or state
-    if (signature.get("provenance") or {}).get("mode") == "conversation_real":
+    provenance_mode = (signature.get("provenance") or {}).get("mode")
+    if provenance_mode == "conversation_real":
         return conversation_real_full_text(st, signature.get("outcome") or {})
+    if provenance_mode == "hierarchical_delegation":
+        return hierarchical_delegation_full_text(st, signature.get("outcome") or {})
     return pipeline_full_text(
         st,
         signature.get("document_classification"),
