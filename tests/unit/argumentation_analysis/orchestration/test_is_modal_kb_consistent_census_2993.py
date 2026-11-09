@@ -12,7 +12,9 @@ raw or hand-declared KBs at the #2993 fix: the external modal lane
 TweetyBridge fallback raw-joined), and ``ModalLogicAgent.validate_argument``
 (inline ``type()`` loop that declared reserved words, missed
 uppercase-initial atoms and emitted illegal ``type(heavy_rain)``
-identifiers). Both now build through ``build_modal_kb``.
+identifiers). Both now build through ``build_modal_kb``. The coverage pass
+(#3496) is a third caller that claims the legaliser: it probes one passage
+against the run's own modal formulas.
 
 The remaining rows are reason-only: ``_invoke_modal_logic`` builds through
 on its nl path (#1224/#2471) and joins its pre-typed direct-formulas input
@@ -103,6 +105,18 @@ def census() -> Dict[Tuple[str, str], str]:
 # gone fails as ``stale`` — delete the row, do not keep dead debt.
 
 ALLOWED: Dict[Tuple[str, str], Tuple[bool, str]] = {
+    (
+        "argumentation_analysis/orchestration/invoke_callables.py",
+        "_coverage_check_logic_kb",
+    ): (
+        True,
+        "#3496: the coverage pass probes ONE passage against the run's own "
+        "modal formulas; the joined base builds via build_modal_kb — a raw "
+        "join would hit exactly the MlParser signature defect of #2993, and "
+        "this is a NEW caller reached on runs where the pass is the first "
+        "Tweety caller (the bridge is constructed before the handler for "
+        "that reason)",
+    ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
         "_invoke_modal_logic",
