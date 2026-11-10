@@ -301,6 +301,9 @@ class TestSpectacularWorkflowGolden:
         # first reading is a root phase here too — without it the producer
         # never runs and every state prints the no_llm absence note.
         "first_reading",
+        # #3492: the whole-document coverage pass, after the deep phases and
+        # before Act II, which renders what it named.
+        "coverage_review",
         # #3432 (ask 6b): the distant-contradiction check over the first
         # reading's slots — the reasoner decides, Act II renders the pair.
         "cross_passage_consistency",
@@ -380,8 +383,10 @@ class TestSpectacularWorkflowGolden:
         # #3387 rework: +1 semantic_indexing (the index queried by the
         # reading, whose spans the per-argument selection spends). 43 → 44.
         # #3432 (ask 6b) adds cross_passage_consistency. 44 → 45.
+        # #3492 adds coverage_review: after the deep phases, one whole-document
+        # pass names the thesis supports no lens examined. 45 → 46.
         wf = build_spectacular_workflow()
-        assert len(wf.phases) == 45
+        assert len(wf.phases) == 46
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -418,9 +423,12 @@ class TestSpectacularWorkflowGolden:
         # #3326: fallacy_winner_reading lands after governance (L8), and
         # deep_synthesis now READS it — one level later itself (L9), pushing
         # act2_narrative and act3_conclusion down one each. 10 → 12.
+        # #3492: coverage_review depends on first_reading + deep_synthesis and
+        # act2_narrative now reads it, so it sits between L10 and the acts
+        # instead of beside them. 12 → 13.
         wf = build_spectacular_workflow()
         levels = wf.get_execution_order()
-        assert len(levels) == 12
+        assert len(levels) == 13
 
     def test_extract_is_sole_entry_point(self):
         wf = build_spectacular_workflow()
@@ -844,7 +852,8 @@ class TestWorkflowCatalogGolden:
         # 42 → 43.
         # #3387 rework: +1 semantic_indexing (index queried by the reading).
         # 43 → 44. #3432 (ask 6b): +1 cross_passage_consistency. 44 → 45.
-        assert len(catalog["spectacular"].phases) == 45
+        # #3492: +1 coverage_review (the whole-document pass). 45 → 46.
+        assert len(catalog["spectacular"].phases) == 46
 
     def test_catalog_includes_sherlock_modern(self):
         catalog = get_workflow_catalog()

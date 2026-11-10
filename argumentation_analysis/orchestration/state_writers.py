@@ -3482,11 +3482,41 @@ def _write_cross_passage_to_state(output: Any, state: Any, ctx: dict[str, Any]) 
         state.cross_passage_consistency = payload
 
 
+def _write_coverage_review_to_state(
+    output: Any, state: Any, ctx: dict[str, Any]
+) -> None:
+    """Persist the coverage review (#3492).
+
+    The producer's payload is kept as computed: which passages were named,
+    each with its verified quote, its offset and what its lens answered. No
+    re-derivation here — a writer that re-decided a routing verdict would be
+    a second producer.
+    """
+    if not output or not isinstance(output, dict):
+        return
+    dropped = output.get("dropped")
+    payload = {
+        "status": str(output.get("status") or "no_llm"),
+        "items": [i for i in (output.get("items") or []) if isinstance(i, dict)],
+        "examined": int(output.get("examined") or 0),
+        "candidates": int(output.get("candidates") or 0),
+        "briefed": int(output.get("briefed") or 0),
+        "dropped": dict(dropped) if isinstance(dropped, dict) else {},
+        "reason": str(output.get("reason") or ""),
+        "basis": "coverage_review",
+    }
+    if isinstance(state, dict):
+        state["coverage_review"] = payload
+    elif hasattr(state, "coverage_review"):
+        state.coverage_review = payload
+
+
 CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "historical_context": _write_historical_context_to_state,
     "strategic_read": _write_strategic_read_to_state,
     "first_reading": _write_first_reading_to_state,
     "cross_passage_consistency": _write_cross_passage_to_state,
+    "coverage_review": _write_coverage_review_to_state,
     "argument_quality": _write_quality_to_state,
     "counter_argument_generation": _write_counter_argument_to_state,
     "belief_maintenance": _write_jtms_to_state,

@@ -63,6 +63,7 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_strategic_read,
     _invoke_first_reading,
     _invoke_cross_passage_consistency,
+    _invoke_coverage_review,
     _invoke_act3_conclusion,
     _invoke_external_fol_solver,
     _invoke_external_modal_solver,
@@ -618,6 +619,29 @@ def setup_registry(
         registered.append("cross_passage_consistency_service")
     except Exception as e:
         skipped.append(("cross_passage_consistency_service", str(e)))
+
+    # --- Coverage reviewer (#3492, Epic #3374) ---
+    try:
+        registry.register_service(
+            name="coverage_review_service",
+            service_class=type("coverage_review_service", (), {}),
+            capabilities=["coverage_review"],
+            metadata={
+                "description": (
+                    "Revue de couverture après les phases profondes : relit ce "
+                    "que l'analyse a EXAMINÉ (analysis_coverage[*].unit_ids) et "
+                    "nomme au plus trois appuis ou réserves de la thèse qu'aucune "
+                    "lentille n'a lus, chacun avec une citation vérifiée ; chaque "
+                    "passage est routé vers la lentille de sa classe (modale, "
+                    "descente des sophismes, FOL). Une lentille non câblée est "
+                    "dite, jamais simulée (#1019)."
+                )
+            },
+            invoke=_invoke_coverage_review,
+        )
+        registered.append("coverage_review_service")
+    except Exception as e:
+        skipped.append(("coverage_review_service", str(e)))
 
     # --- Historian persona (#3377, Epic #3374) ---
     try:

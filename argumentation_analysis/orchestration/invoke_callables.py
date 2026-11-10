@@ -237,6 +237,8 @@ __all__ = [
     "_invoke_propositional_logic",
     "_invoke_fol_reasoning",
     "_invoke_cross_passage_consistency",
+    "_invoke_coverage_review",
+    "_coverage_route_to_lens",
     "_invoke_nl_to_logic",
     "_invoke_modal_logic",
     "_invoke_dung_extensions",
@@ -8977,7 +8979,9 @@ def _document_statements_for_unit(
         return []
 
 
-def _document_frame_for_unit(state: Any, unit_id: str, unit_text: str) -> Dict[str, str]:
+def _document_frame_for_unit(
+    state: Any, unit_id: str, unit_text: str
+) -> Dict[str, str]:
     """#3428 — the document's frame AROUND one unit, or ``{}``.
 
     The per-unit descent reads the extracted unit alone; cycle 2 measured
@@ -10102,9 +10106,7 @@ async def _invoke_fact_extraction(
                 _offsets = chunked_reading_offsets(
                     len(input_text), _capacity, start=_extraction_selection.offset
                 )
-                _readings = [
-                    input_text[o : o + _capacity] for o in _offsets
-                ]
+                _readings = [input_text[o : o + _capacity] for o in _offsets]
                 _planned_spans = [
                     (o, min(o + _capacity, len(input_text))) for o in _offsets
                 ]
@@ -14350,6 +14352,123 @@ async def _invoke_cross_passage_consistency(
         logger.info("CrossPassageConsistency: %s — check not reached.", reason)
 
     return await build_cross_passage_consistency(state, llm)
+
+
+def _coverage_document_frame(item: Any, state: Any) -> Any:
+    """#3492 ask 5 — the #3428 frame around the PASSAGE the review named.
+
+    The walk reads the unit's provenance (offset, the verbatim passage a
+    paraphrase restates) and gets the sentence before and after, so the
+    descent judges the passage AS STATED. ``None`` when the passage maps to no
+    unit: the pre-#3428 prompt, byte for byte, rather than a frame guessed
+    around a passage the run cannot place.
+    """
+    if state is None:
+        return None
+    unit_id = str(getattr(item, "unit_id", "") or "")
+    if not unit_id:
+        return None
+    arguments = getattr(state, "identified_arguments", None)
+    unit_text = arguments.get(unit_id) if isinstance(arguments, dict) else None
+    if not isinstance(unit_text, str) or not unit_text.strip():
+        return None
+    return _document_frame_for_unit(state, unit_id, unit_text) or None
+
+
+async def _coverage_route_to_lens(item: Any, state: Any = None) -> Dict[str, Any]:
+    """Run the lens an item's class points at, on the passage it named (#3492).
+
+    Only the fallacy descent has a passage-level entry point today: the walk
+    the per-argument pass and the #3326 winner reading already share
+    (``_walk_single_fallacy_unit``). The modal and FOL arms read the RUN's
+    translated population — a phase-wide KB built from ``nl_to_logic`` — not
+    an arbitrary passage, so a passage cannot be handed to them without a
+    translation entry point that does not exist yet. Those items are recorded
+    ``lens_not_wired``: a named absence the acts state, never a verdict
+    nothing computed (#1019).
+
+    ``state`` is what the #3428 frame needs (the unit's provenance: offset and
+    the verbatim passage a paraphrase restates). The walk then reads the
+    document AROUND the named passage, not the bare quote — the coordinator's
+    reprise ask 5. No state ⇒ ``document_frame=None`` and the pre-#3428
+    prompts byte for byte.
+    """
+    if getattr(item, "lens", "") != "fallacy_descent":
+        return {
+            "status": "lens_not_wired",
+            "reason": (
+                f"{getattr(item, 'lens', '?')}: the wired arm reads the run's "
+                "translated population, not a single passage"
+            ),
+        }
+    taxonomy_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        "data",
+        "argumentum_fallacies_taxonomy.csv",
+    )
+    if not os.path.isfile(taxonomy_path):
+        return {"status": "lens_not_wired", "reason": "taxonomy file not found"}
+    try:
+        from argumentation_analysis.core.llm_service import create_llm_service
+
+        service = create_llm_service(
+            service_id="coverage_review_route", force_authentic=True
+        )
+    except Exception as e:  # pragma: no cover - provider construction
+        return {"status": "lens_error", "reason": f"{type(e).__name__}: {e}"}
+    finding = await _walk_single_fallacy_unit(
+        str(getattr(item, "quote", "")),
+        str(getattr(item, "unit_id", "")),
+        service,
+        taxonomy_path,
+        document_frame=_coverage_document_frame(item, state),
+    )
+    if not isinstance(finding, dict):
+        return {"status": "lens_no_finding", "reason": "walk returned no dict"}
+    if finding.get("error") or finding.get("timed_out"):
+        return {
+            "status": "lens_error",
+            "reason": str(finding.get("error") or "timeout"),
+        }
+    return {"status": "answered", "fallacies": finding.get("fallacies") or []}
+
+
+async def _invoke_coverage_review(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Produce ``state.coverage_review`` (#3492).
+
+    After the deep phases, ONE whole-document pass reads the document with the
+    first reading's own window (``FIRST_READING_WINDOW = 0``) and is given the
+    coverage map PER CLASS — the replay of v1's selection on the recorded c4b
+    states showed its 24-candidate sample could not reach any of the three
+    anchors. It names at most three supports or qualifiers of the thesis whose
+    OWN question's lens did not read them, each with a quote verified against
+    ``raw_text``. Each is routed to the lens its class points at, with the
+    #3428 frame around the passage; a lens with no passage-level entry point is
+    a named absence.
+    """
+    from argumentation_analysis.agents.core.reading import extract_coverage_review
+
+    state = context.get("_state_object") or context.get("unified_state")
+    if state is None:
+        return {
+            "status": "unreachable",
+            "reason": "no_shared_state",
+            "items": [],
+            "basis": "coverage_review",
+        }
+
+    llm, reason = _build_persona_callable("coverage_review")
+    if llm is None:
+        logger.info("CoverageReview: %s — review not reached.", reason)
+
+    async def _route(item: Any) -> Dict[str, Any]:
+        return await _coverage_route_to_lens(item, state)
+
+    return await extract_coverage_review(
+        state=state, llm_callable=llm, dispatcher=_route
+    )
 
 
 async def _invoke_strategic_read(

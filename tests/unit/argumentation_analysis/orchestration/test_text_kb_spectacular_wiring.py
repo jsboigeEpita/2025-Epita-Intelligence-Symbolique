@@ -80,7 +80,8 @@ class TestSpectacularWorkflowPhases:
         # #3387 rework: +1 semantic_indexing (the index queried by the
         # reading, whose spans the per-argument selection spends). 43 → 44.
         # #3432 (ask 6b) adds cross_passage_consistency. 44 → 45.
-        assert len(wf.phases) == 45
+        # #3492 adds coverage_review (whole-document pass). 45 → 46.
+        assert len(wf.phases) == 46
 
 
 class TestInvokeCallables:

@@ -51,7 +51,9 @@ class TestSpectacularWorkflowDAG:
         # reading, whose spans the per-argument selection spends). 43 → 44.
         # #3432 (ask 6b) adds cross_passage_consistency: the thesis's own
         # passages, decided by the wired propositional reasoner. 44 → 45.
-        assert len(wf.phases) == 45
+        # #3492 adds coverage_review: after the deep phases, one whole-document
+        # pass names the thesis supports no lens examined. 45 → 46.
+        assert len(wf.phases) == 46
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -101,6 +103,10 @@ class TestSpectacularWorkflowDAG:
             "tweety_interpretation",
             "belief_revision",
             "deep_synthesis",
+            # #3492: the coverage review — after the deep phases, one
+            # whole-document pass names what no lens examined, and act2
+            # renders it.
+            "coverage_review",
             # Restitution acts (Epic #1134): R2 framing + R3 narrative + R4 conclusion.
             "act1_framing",
             "act2_narrative",

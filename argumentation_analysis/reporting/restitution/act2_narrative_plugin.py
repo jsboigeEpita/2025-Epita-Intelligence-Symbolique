@@ -140,6 +140,7 @@ from argumentation_analysis.agents.core.governance.coalition_play import (
 )
 from argumentation_analysis.agents.core.reading import first_reading_note  # #3395
 from argumentation_analysis.agents.core.reading import cross_passage_note  # #3432
+from argumentation_analysis.agents.core.reading import coverage_review_note  # #3492
 
 logger = logging.getLogger(__name__)
 
@@ -648,6 +649,14 @@ class Act2Evidence:
     # positions, or the named absence (#1941). Empty when the state carries
     # no record: the prompt omits the section.
     cross_passage: str = ""
+    # #3492 — the coverage review's block, rendered by its ONE producer
+    # (``coverage_review_note``): the supports or qualifiers of the thesis no
+    # lens examined, each with its quote, its position and what its lens
+    # answered — or the named absence of a lens for that class. EMPTY when the
+    # review named nothing (every support was examined, or the pass never
+    # reached the model): the prompt omits the section and stays byte-identical
+    # to the pre-#3492 one (the issue's control).
+    coverage_review: str = ""
 
 
 @dataclass
@@ -1482,6 +1491,8 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         # never re-words the moves in its own vocabulary.
         first_reading=first_reading_note(state),
         cross_passage=cross_passage_note(state),
+        # #3492 — same single-producer rule: the act never re-words the review.
+        coverage_review=coverage_review_note(state),
     )
 
 
@@ -2664,6 +2675,14 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
     cross_passage_block = (
         f"{evidence.cross_passage}\n\n" if evidence.cross_passage else ""
     )
+    # #3492 — the coverage review's block: the supports or qualifiers of the
+    # thesis no lens examined, and what the routed lens answered (or the honest
+    # "nommé, non examiné" of a class with no wired lens). Empty when the
+    # review named nothing: the prompt is then byte-identical to the pre-#3492
+    # one.
+    coverage_review_block = (
+        f"{evidence.coverage_review}\n\n" if evidence.coverage_review else ""
+    )
 
     prompt = (
         "Tu es l'auteur de l'ACTE II d'un rapport de restitution argumentative.\n"
@@ -2702,6 +2721,7 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         )
         + f"\n{first_reading_block}"
         + f"{cross_passage_block}"
+        + f"{coverage_review_block}"
         f"{reading_block}"
         f"{coverage_note}"
         f"{unattributed_block}"

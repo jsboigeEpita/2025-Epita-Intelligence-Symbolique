@@ -345,6 +345,34 @@ def _canaried_state() -> UnifiedAnalysisState:
         ],
         "basis": "cross_passage_consistency",
     }
+    # #3492 — the coverage review: each named passage carries a quote that is
+    # a verbatim document span AND the reviewer's own reason, with the lens
+    # walk's fallacies nested under ``routed`` — so the items list is reduced
+    # to a count by _STRUCT_LIST_SCRUB. The canary plants NL in both prose
+    # leaves (and one nested explanation) to exercise exactly that reduction.
+    s.coverage_review = {
+        "status": "ok",
+        "items": [
+            {
+                "unit_id": "arg_2",
+                "quote": NL,
+                "offset": 20400,
+                "class": "statistical",
+                "lens": "fallacy_descent",
+                "reason": NL2,
+                "routed": {
+                    "status": "answered",
+                    "fallacies": [{"explanation": NL, "problematic_quote": NL2}],
+                },
+            }
+        ],
+        "examined": 3,
+        "examined_by_class": {"statistical": ["arg_3"]},
+        "document_chars": 20480,
+        "dropped": {"quote_not_in_document": 1},
+        "reason": "",
+        "basis": "coverage_review",
+    }
 
     # --- dung_frameworks: covered paths (4b/4c) + the GAP sidecar ------------
     # The real ``extensions`` shape is heterogeneous (``extensions`` = list of
@@ -599,6 +627,11 @@ WRITTEN_TOP_LEVEL_FIELDS = frozenset(
         # both quotes of a contradicted pair), canaried above and reduced to
         # a count by _STRUCT_LIST_SCRUB, same verdict as defining_moves.
         "cross_passage_consistency",
+        # #3492 — the coverage review's named passages (a verbatim quote, the
+        # reviewer's reason, the lens walk's fallacies under ``routed``),
+        # canaried above and reduced to a count by _STRUCT_LIST_SCRUB, same
+        # verdict as defining_moves and cross_passage_consistency.
+        "coverage_review",
         "dung_frameworks",
         # #3242 — populated by the real ``_write_fact_extraction_to_state``
         # writer's ``record_anchor_census()`` (#2973): counts, per-producer

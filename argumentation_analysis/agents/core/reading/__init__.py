@@ -9,6 +9,17 @@ fields, two labels.
 
 from __future__ import annotations
 
+from argumentation_analysis.agents.core.reading.coverage_review import (
+    COVERAGE_KEYS_BY_CLASS,
+    CoverageItem,
+    CoverageReview,
+    build_coverage_review,
+    coverage_review_note,
+    examined_unit_ids,
+    examined_unit_ids_for_class,
+    extract_coverage_review,
+    unit_id_at_offset,
+)
 from argumentation_analysis.agents.core.reading.cross_passage import (
     build_cross_passage_consistency,
     cross_passage_note,
@@ -63,4 +74,14 @@ __all__ = [
     "move_kind",
     "pillar_budget",
     "pillar_prose",
+    # #3492 — the coverage reviewer: a whole-document pass, per question.
+    "COVERAGE_KEYS_BY_CLASS",
+    "CoverageItem",
+    "CoverageReview",
+    "build_coverage_review",
+    "coverage_review_note",
+    "examined_unit_ids",
+    "examined_unit_ids_for_class",
+    "extract_coverage_review",
+    "unit_id_at_offset",
 ]
