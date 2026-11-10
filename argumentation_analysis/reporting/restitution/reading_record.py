@@ -21,6 +21,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, NamedTuple, Optional
 
+from argumentation_analysis.core.shared_state import unit_extent
+
 from .formal_derivation import is_real_formula
 from .fr_accord import accord
 
@@ -399,11 +401,12 @@ def _whole_text_basis(state: Any, source_chars: int) -> str:
             # #3393 — the extent ends where the last unit ENDS, the sites'
             # own convention (``offset + len(text)``, #3136): the basis line
             # took the last unit's START for the end and said 0.00–0.75
-            # next to site lines saying 0.00–1.00 for the same units. The
-            # key is the one the offset writer located (shared_state's
-            # locate rule): the source quote when it exists, the text else.
-            key = str(p.get("source_quote") or identified.get(arg_id) or "")
-            ends.append(min(off + len(key), source_chars))
+            # next to site lines saying 0.00–1.00 for the same units. Since
+            # #3502 the key is read by the ONE extent rule
+            # (``shared_state.unit_extent``): the source quote when it
+            # exists, the text else — same behaviour, one helper.
+            extent = unit_extent(p, str(identified.get(arg_id) or ""))
+            ends.append(min(extent[1] if extent else off, source_chars))
     parts = " + ".join(
         f"{v} {PRODUCER_LABELS_FR.get(k, k)}" for k, v in sorted(by_prod.items())
     )

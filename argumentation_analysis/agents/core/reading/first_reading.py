@@ -93,6 +93,7 @@ from argumentation_analysis.core.reading_window import (
     pillar_budget,
     selected_text_and_selection,
 )
+from argumentation_analysis.core.shared_state import unit_extent
 
 logger = logging.getLogger("FirstReading")
 
@@ -1069,8 +1070,8 @@ DOCUMENT_STATEMENT_AFTER_UNIT = 400
 
 def document_statements_for_unit(
     state: Any,
+    entry: Any,
     unit_text: str = "",
-    offset: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
     """#3416 (ask 2) — what the document ITSELF says about a unit's claim.
 
@@ -1086,14 +1087,22 @@ def document_statements_for_unit(
       ``DOCUMENT_STATEMENT_AFTER_UNIT`` characters after the unit's end: the
       passage around the claim, the way the speaker restates it next.
 
+    #3502 — the unit's extent is its PASSAGE, read from the provenance
+    ``entry`` by ``shared_state.unit_extent``: the source quote when the
+    entry carries one, the text otherwise. The paraphrase the descent hands
+    over runs ×2.6 past the located passage in the median (the coordinator's
+    panel measure), and a concession recorded in that overrun is the document
+    speaking about the NEXT passage — not carried here.
+
     No geometry (no offset on either side) means no statement: a citation
     that cannot be placed is not evidence about this claim (the same rule as
     ``defining_move_spans``). Nothing recorded means nothing carried — the
     caller's behaviour is then byte-identical to the pre-#3416 path.
     """
-    if not isinstance(offset, int) or isinstance(offset, bool):
+    extent = unit_extent(entry, unit_text)
+    if extent is None:
         return []
-    unit_end = offset + len(unit_text or "")
+    unit_start, unit_end = extent
     statements: List[Dict[str, Any]] = []
     for move in defining_moves(state):
         if str(move.get("kind") or "") != "concession":
@@ -1107,7 +1116,7 @@ def document_statements_for_unit(
         ):
             continue
         move_end = move_offset + len(quote)
-        if offset < move_end and move_offset < unit_end:
+        if unit_start < move_end and move_offset < unit_end:
             relation = "overlap"
         elif unit_end <= move_offset <= unit_end + DOCUMENT_STATEMENT_AFTER_UNIT:
             relation = "adjacent"

@@ -8948,8 +8948,9 @@ def _document_statements_for_unit(
     """#3416 — the document's own words about ONE unit's claim, or ``[]``.
 
     Reads the first reading's recorded concessions (``state.defining_moves``)
-    against the unit's PROVENANCE offset and keeps the ones that overlap the
-    unit or sit immediately after it (``document_statements_for_unit``).
+    against the unit's PROVENANCE entry — offset AND source quote, the one
+    extent rule of #3502 — and keeps the ones that overlap the unit's passage
+    or sit immediately after it (``document_statements_for_unit``).
     Offsets come from ``state.argument_provenance`` — never from a search of
     the unit text in the document: repeated phrases would cite the wrong
     sentence, and a wrong citation is worse than none (#1019).
@@ -8969,7 +8970,7 @@ def _document_statements_for_unit(
             document_statements_for_unit,
         )
 
-        return document_statements_for_unit(state, unit_text=unit_text, offset=offset)
+        return document_statements_for_unit(state, entry, unit_text=unit_text)
     except Exception as exc:  # a reading helper must never sink the walk
         logger.warning(
             "document statements unavailable for %s: %s: %s",

@@ -27,6 +27,8 @@ from collections import Counter
 from dataclasses import dataclass, replace
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from argumentation_analysis.core.shared_state import unit_extent
+
 __all__ = [
     "SelectableUnit",
     "SelectionResult",
@@ -189,12 +191,15 @@ def _band_extent(
 def _positioned_spans(
     positioned: Sequence[SelectableUnit], text_length: Optional[int]
 ) -> List[Tuple[int, int]]:
-    """#3393 — each positioned unit COVERS ``[offset, offset + len(text))``.
+    """#3393 — each positioned unit COVERS the extent ``unit_extent`` reads.
 
-    A unit is not a point: the extent ends where its last unit ENDS,
-    clamped to the text. The old span took the last unit's START for the
-    extent's end, so the coverage side said 0.00–0.73 where the reading
-    record's own site lines — ``offset + len(unit.text)`` since #3136 —
+    A unit is not a point, and since #3502 its extent is its PASSAGE — the
+    source quote when the unit carries one, the text otherwise — under the
+    one rule of ``shared_state.unit_extent``: the paraphrase ``text`` runs
+    ×2.6 past the located passage in the median (the coordinator's panel
+    measure), and counting the overrun overstated the coverage figure. The
+    old span took the last unit's START for the extent's end, so the
+    coverage side said 0.00–0.73 where the reading record's own site lines
     said 0.00–1.00 for the same units: two producers, two truths, one
     wrong. Empty list without a text length (the caller's span/uncovered
     then render ``None``, the same honesty rule as before).
@@ -203,10 +208,10 @@ def _positioned_spans(
         return []
     spans: List[Tuple[int, int]] = []
     for u in positioned:
-        off = u.offset
-        if off is None:
+        extent = unit_extent(u, str(u.text or ""))
+        if extent is None:
             continue
-        spans.append((int(off), min(int(off) + len(u.text or ""), text_length)))
+        spans.append((int(extent[0]), min(int(extent[1]), text_length)))
     return spans
 
 

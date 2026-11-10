@@ -38,11 +38,15 @@ from argumentation_analysis.core.fallacy_attribution import (
 )
 from argumentation_analysis.plugins.exploration_plugin import ExplorationPlugin
 
-
 # --- fixtures ---------------------------------------------------------------
 
 #: The unit the descent reads: a claim, no caveat inside it.
 UNIT_TEXT = "La mesure est juste et nous la maintenons."
+
+#: #3502 — the unit's provenance entry at offset 0, WITHOUT a source quote:
+#: for a quoteless unit the text IS the passage (``unit_extent``'s named
+#: fallback), so these controls keep the pre-#3502 geometry on purpose.
+_ENTRY = {"offset": 0}
 
 #: What the DOCUMENT says two sentences later — invented filler, the shape of
 #: the August method's concession: the speaker qualifies the claim herself.
@@ -179,9 +183,7 @@ class TestTheDocumentStatementsAreLocated:
 
     def test_a_concession_overlapping_the_unit_is_carried(self):
         state = _state([_concession(offset=5)])
-        statements = document_statements_for_unit(
-            state, unit_text=UNIT_TEXT, offset=0
-        )
+        statements = document_statements_for_unit(state, _ENTRY, unit_text=UNIT_TEXT)
         assert [s["relation"] for s in statements] == ["overlap"]
         assert statements[0]["quote"] == CONCESSION_TEXT
         assert statements[0]["source"] == "first_reading_concession"
@@ -190,35 +192,58 @@ class TestTheDocumentStatementsAreLocated:
         """The August method's case: the speaker concedes in the NEXT
         sentence — just past the unit's end, still about the claim."""
         state = _state([_concession(offset=len(UNIT_TEXT) + 12)])
-        statements = document_statements_for_unit(
-            state, unit_text=UNIT_TEXT, offset=0
-        )
+        statements = document_statements_for_unit(state, _ENTRY, unit_text=UNIT_TEXT)
         assert [s["relation"] for s in statements] == ["adjacent"]
 
     def test_a_concession_too_far_away_is_not_about_this_claim(self):
         state = _state(
             [_concession(offset=len(UNIT_TEXT) + DOCUMENT_STATEMENT_AFTER_UNIT + 1)]
         )
-        assert document_statements_for_unit(state, unit_text=UNIT_TEXT, offset=0) == []
+        assert document_statements_for_unit(state, _ENTRY, unit_text=UNIT_TEXT) == []
 
     def test_moves_that_are_not_concessions_are_not_carried(self):
         """Only a concession says what the document grants about the claim;
         a thesis or a refutation would be someone else's words about
         something else."""
         state = _state([_concession(offset=0, kind="thesis")])
-        assert document_statements_for_unit(state, unit_text=UNIT_TEXT, offset=0) == []
+        assert document_statements_for_unit(state, _ENTRY, unit_text=UNIT_TEXT) == []
 
     def test_no_geometry_means_no_statement(self):
         """A citation that cannot be placed is not evidence about this claim
         (the same rule as ``defining_move_spans``)."""
         state = _state([_concession(offset=None)])
-        assert document_statements_for_unit(state, unit_text=UNIT_TEXT, offset=0) == []
+        assert document_statements_for_unit(state, _ENTRY, unit_text=UNIT_TEXT) == []
         assert (
             document_statements_for_unit(
-                _state([_concession(offset=0)]), unit_text=UNIT_TEXT, offset=None
+                _state([_concession(offset=0)]), {"offset": None}, unit_text=UNIT_TEXT
             )
             == []
         )
+
+    def test_a_concession_in_the_paraphrase_overrun_is_not_about_this_unit(self):
+        """#3502, born red on the pre-fix head — the unit ends where its
+        PASSAGE ends, not where the paraphrase the descent hands over ends.
+
+        On the coordinator's panel measure the paraphrase runs ×2.6 past the
+        located source quote in the median: a concession recorded in that
+        overrun is the document speaking about the NEXT passage, not about
+        this claim. Under the entry rule (``shared_state.unit_extent``) the
+        concession is neither overlap nor adjacent — not carried. The control
+        keeps the claim's own words: a concession INSIDE the passage still
+        is.
+        """
+        quote = "La mesure tient."
+        paraphrase = quote + " — " + "reformulation de l'extracteur " * 40
+        entry = {"offset": 0, "source_quote": quote}
+        overrun = len(quote) + DOCUMENT_STATEMENT_AFTER_UNIT + 1
+        assert overrun < len(paraphrase), "the concession must sit inside the overrun"
+        state = _state([_concession(offset=overrun)])
+        assert document_statements_for_unit(state, entry, unit_text=paraphrase) == []
+        inside = _state([_concession(offset=2)])
+        assert [
+            s["relation"]
+            for s in document_statements_for_unit(inside, entry, unit_text=paraphrase)
+        ] == ["overlap"]
 
 
 class TestTheGuardedSetIsClosed:
@@ -520,9 +545,7 @@ class TestTheOneShotFallbackReadsItToo:
             )
         )
         result = json.loads(
-            await plugin._run_one_shot(
-                UNIT_TEXT, [{"quote": CONCESSION_TEXT}]
-            )
+            await plugin._run_one_shot(UNIT_TEXT, [{"quote": CONCESSION_TEXT}])
         )
         assert result["fallacies"] == []
         assert result["exploration_method"] == "one_shot_refuted_by_document"
@@ -546,7 +569,9 @@ class TestTheOneShotFallbackReadsItToo:
             captured.append(
                 plugin.llm_service.get_chat_message_content.call_args.kwargs[
                     "chat_history"
-                ].messages[-1].content
+                ]
+                .messages[-1]
+                .content
             )
         assert captured[0] == captured[1]
         assert "THE DOCUMENT ITSELF SAYS" not in captured[0]

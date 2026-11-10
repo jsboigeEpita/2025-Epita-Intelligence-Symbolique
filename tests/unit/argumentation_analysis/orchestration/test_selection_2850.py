@@ -13,6 +13,7 @@ import pytest
 from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 from argumentation_analysis.orchestration.selection import (
     SelectableUnit,
+    _positioned_spans,
     merged_population_units,
     select_for_budget,
 )
@@ -250,3 +251,43 @@ class TestTextBandsAndSpan2887:
         # #3393 — end of the extent = end of the last unit (20000 + len("tb")).
         assert sel.span == (100 / 40000, 20002 / 40000)
         assert sel.bands_covered == 2 and sel.bands_total == 3
+
+
+class TestTheSpanIsThePassageNotTheParaphrase3502:
+    """#3502, born red on the pre-fix head — the extent rule reaches selection.
+
+    A unit that carries a source quote is covered by its PASSAGE, not by the
+    extractor's paraphrase (``text``): on the coordinator's panel measure the
+    paraphrase runs ×2.6 past the located passage in the median, so the
+    coverage extent overstated its end. Under the one extent rule
+    (``shared_state.unit_extent``, #3502) the span ends where the quote ends,
+    and the space between quote end and paraphrase end belongs to whatever
+    the document puts there — a second unit, not this one's overrun.
+    """
+
+    def test_a_quoted_units_span_ends_at_the_quote(self):
+        paraphrase = "La reformulation de l'extracteur depasse le passage " * 12
+        units = [
+            SelectableUnit(
+                unit_id="a", text=paraphrase, offset=0, source_quote="court passage"
+            ),
+            SelectableUnit(unit_id="b", text="tb", offset=len("court passage")),
+        ]
+        spans = _positioned_spans(units, 60000)
+        # quote len 13 ("court passage") — NOT len(paraphrase): a second unit
+        # starts right after the quote and holds that space in its own right.
+        assert spans == [(0, 13), (13, 15)]
+
+    def test_the_coverage_figure_no_longer_counts_the_overrun(self):
+        """The measured effect on the panel was the figure: the span fraction
+        said the selection read further into the text than the passages it
+        located. Same population, through the selector."""
+        paraphrase = "La reformulation de l'extracteur depasse le passage " * 12
+        units = [
+            SelectableUnit(
+                unit_id="a", text=paraphrase, offset=0, source_quote="court passage"
+            ),
+            SelectableUnit(unit_id="b", text="tb", offset=len("court passage")),
+        ]
+        sel = select_for_budget(units, 5, text_length=60000)
+        assert sel.span == (0 / 60000, 15 / 60000)
