@@ -753,6 +753,22 @@ def coverage_review_note(state: Any) -> str:
                     "ne peut être lu (« cohérent » ne vaudrait alors rien) ; "
                     "le passage reste non examiné"
                 )
+            elif finding.get("kb_alone") == "inconsistent":
+                # R1157 — the KB-alone control: a base already inconsistent
+                # on its own makes every passage "contradict" by construction.
+                # The reader is told WHY nothing is readable, never given the
+                # by-construction "contradiction".
+                clauses.append(
+                    f"lentille {lens} : la base formelle du run est déjà "
+                    "incohérente à elle seule — un passage ne peut pas la "
+                    "contredire de façon lisible ; le passage reste non examiné"
+                )
+            elif finding.get("kb_alone") == "undecided":
+                clauses.append(
+                    f"lentille {lens} : la base formelle du run est indécise "
+                    "à elle seule — aucun verdict de cohérence ne peut être "
+                    "lu ; le passage reste non examiné"
+                )
             else:
                 clauses.append(
                     f"lentille {lens} non concluante ({status}) : le passage reste "

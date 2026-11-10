@@ -14379,7 +14379,13 @@ def _coverage_document_frame(item: Any, state: Any) -> Any:
 #: #3496 — the two classes whose arm can now be reached PER PASSAGE, and the
 #: logic each one's arm consumes. ``inferential`` points at FOL, ``modal`` at
 #: the modal handler: the same two arms the phases already run.
-_COVERAGE_LENS_LOGIC: Dict[str, str] = {"modal": "modal", "fol": "first_order"}
+#: #3500/R1157 — the value handed to ``NLToLogicTranslator`` is the
+#: TRANSLATOR's vocabulary ("fol"), never the bridge's "first_order": the
+#: translator's prompt selection maps every out-of-vocabulary value onto the
+#: MODAL system prompt, so "first_order" silently translated FOL passages
+#: under the modal contract — 35/35 untranslatable on the replay. The bridge
+#: keeps its own word where the bridge is called.
+_COVERAGE_LENS_LOGIC: Dict[str, str] = {"modal": "modal", "fol": "fol"}
 
 
 async def _coverage_translate_passage(
@@ -14443,6 +14449,13 @@ def _coverage_run_kb_formulas(state: Any, logic_type: str) -> List[str]:
             if not isinstance(entry, dict):
                 continue
             if entry.get("is_valid") is False:
+                continue
+            # R1157 — only what the run DECIDED enters the KB: an entry whose
+            # own recorded verdict is None ("Constant … has not been
+            # declared") carried its refusal into the whole concatenated base
+            # — 9/9 FOL states rendered undecided. An entry that records no
+            # verdict key (the modal shape) stays: its own probe decides.
+            if "consistent" in entry and not isinstance(entry["consistent"], bool):
                 continue
             entry_formulas = entry.get("formulas")
             if not isinstance(entry_formulas, (list, tuple)):
@@ -14656,6 +14669,40 @@ async def _coverage_run_logic_lens(item: Any, state: Any, lens: str) -> Dict[str
                 f"{logic_type}: the run translated no formula of this logic — "
                 "a passage alone cannot be contradicted"
             ),
+        }
+    # R1157 — the KB-alone control, BEFORE any passage verdict: a base
+    # inconsistent on its own (one panel state: 26 formulas, recorded False)
+    # makes every passage "contradict" by construction, and an undecided base
+    # answers nothing. Both are named absences, and the passage is not even
+    # translated.
+    try:
+        kb_alone_check = await _coverage_check_logic_kb(list(run_kb), lens)
+    except Exception as e:  # pragma: no cover - JVM/solver failures
+        return {
+            "lens": lens,
+            "status": "lens_error",
+            "reason": f"{type(e).__name__}: {e}",
+        }
+    kb_alone_verdict = kb_alone_check.get("consistent")
+    if kb_alone_verdict is False:
+        return {
+            "lens": lens,
+            "status": "lens_no_finding",
+            "reason": (
+                f"{logic_type}: the run's base is already inconsistent on "
+                "its own — no passage can readably contradict it"
+            ),
+            "kb_alone": "inconsistent",
+        }
+    if kb_alone_verdict is None:
+        return {
+            "lens": lens,
+            "status": "lens_no_finding",
+            "reason": (
+                f"{logic_type}: the run's base is undecided on its own — no "
+                "consistency verdict can be read"
+            ),
+            "kb_alone": "undecided",
         }
     # #3500 — the passage is translated UNDER the run's vocabulary, so the
     # formula it yields can actually meet the KB's symbols.

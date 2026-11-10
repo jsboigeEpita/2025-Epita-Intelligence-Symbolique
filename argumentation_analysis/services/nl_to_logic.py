@@ -266,6 +266,24 @@ MODAL_RETRY_PROMPT = (
 
 # ── Service class ────────────────────────────────────────────────────────
 
+#: #3500/R1157 — the translator's OWN vocabulary. ``first_order`` is the
+#: BRIDGE's word (``TweetyBridge.check_consistency``); handing it to the
+#: translator silently selected the MODAL system prompt for what was a FOL
+#: translation (the prompt selection maps every out-of-vocabulary value onto
+#: modal), so 35/35 FOL coverage passages came back untranslatable. A value
+#: outside this tuple now RAISES — calling code fixes its own value, the
+#: translator never coerces it into another logic's contract.
+SUPPORTED_LOGIC_TYPES: Tuple[str, ...] = ("propositional", "fol", "modal")
+
+
+def _require_supported_logic_type(logic_type: str) -> None:
+    if logic_type not in SUPPORTED_LOGIC_TYPES:
+        raise ValueError(
+            f"logic_type {logic_type!r} is outside the translator's vocabulary "
+            f"{SUPPORTED_LOGIC_TYPES} — fix the calling code's value; it is "
+            "never coerced into another logic's prompt"
+        )
+
 
 class NLToLogicTranslator:
     """Translates natural language arguments to formal logic with validation.
@@ -284,6 +302,7 @@ class NLToLogicTranslator:
         max_retries: int = 3,
         logic_type: str = "propositional",
     ):
+        _require_supported_logic_type(logic_type)
         self.max_retries = max_retries
         self.logic_type = logic_type
 
@@ -314,6 +333,7 @@ class NLToLogicTranslator:
             TranslationResult with formula, validity, and metadata.
         """
         lt = logic_type or self.logic_type
+        _require_supported_logic_type(lt)
 
         # Try LLM-based translation with retry loop
         try:
@@ -362,6 +382,7 @@ class NLToLogicTranslator:
             TranslationBatchResult with all translations and consistency info.
         """
         lt = logic_type or self.logic_type
+        _require_supported_logic_type(lt)
         translations = []
 
         for arg_text in arguments[:10]:  # Cap at 10
@@ -612,7 +633,8 @@ class NLToLogicTranslator:
         start = text.find("{")
         end = text.rfind("}") + 1
         if start >= 0 and end > start:
-            return json.loads(text[start:end])
+            parsed: Dict[str, Any] = json.loads(text[start:end])
+            return parsed
         return {}
 
     # ── Validation ───────────────────────────────────────────────────

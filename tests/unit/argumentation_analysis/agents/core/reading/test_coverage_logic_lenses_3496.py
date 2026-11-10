@@ -25,6 +25,8 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 
+import pytest
+
 from argumentation_analysis.agents.core.reading.coverage_review import (
     coverage_review_note,
 )
@@ -109,8 +111,11 @@ def _patch_persona(monkeypatch, content):
     )
 
 
-def _patch_lenses(monkeypatch, *, translated="[](p)", consistent=False, message="msg"):
+def _patch_lenses(
+    monkeypatch, *, translated="[](p)", consistent=False, message="msg", kb_alone=True
+):
     seen = {}
+    calls = {"n": 0}
 
     async def translate(quote, lens, **kwargs):
         seen["translate"] = (quote, lens)
@@ -118,8 +123,13 @@ def _patch_lenses(monkeypatch, *, translated="[](p)", consistent=False, message=
         return {"status": "translated", "formula": translated, "logic_type": lens}
 
     async def check(formulas, lens):
+        # R1157 — the probe is called on the KB ALONE first, then on the KB
+        # plus the passage. The double answers each leg with its own verdict.
+        calls["n"] += 1
         seen["check"] = (list(formulas), lens)
-        return {"consistent": consistent, "message": message}
+        seen["check_calls"] = calls["n"]
+        verdict = kb_alone if calls["n"] == 1 else consistent
+        return {"consistent": verdict, "message": message}
 
     monkeypatch.setattr(ic, "_coverage_translate_passage", translate)
     monkeypatch.setattr(ic, "_coverage_check_logic_kb", check)
@@ -168,7 +178,10 @@ async def test_an_inferential_item_reaches_the_fol_lens(monkeypatch):
     routed = out["items"][0]["routed"]
     assert routed["status"] == "answered"
     assert routed["finding"]["verdict"] == "consistent_with_run_kb"
-    assert routed["finding"]["logic_type"] == "first_order"
+    # R1157 — the finding speaks the TRANSLATOR's vocabulary ("fol"), never
+    # the bridge's "first_order": that value silently selected the MODAL
+    # system prompt for FOL passages.
+    assert routed["finding"]["logic_type"] == "fol"
     assert seen["translate"] == (QUOTE, "fol")
     assert seen["check"] == (["P(a)", "Q(a)"], "fol")
 
@@ -206,12 +219,18 @@ async def test_an_untranslatable_passage_is_named_not_verdicted(monkeypatch):
         [{"logic_type": "modal", "formula": "[](rain)", "is_valid": True}]
     )
     _patch_persona(monkeypatch, reply(QUOTE, "modal"))
+    checks = {"n": 0}
 
     async def translate(quote, lens, **kwargs):
         return {"status": "untranslatable", "reason": "parse error on the formula"}
 
-    async def check(formulas, lens):  # pragma: no cover - must not run
-        raise AssertionError("a KB was probed without a translated passage")
+    async def check(formulas, lens):
+        # R1157 — the KB-ALONE control probe is legitimate and passes; the
+        # KB-plus-passage probe must never run on an untranslatable passage.
+        checks["n"] += 1
+        if checks["n"] > 1:  # pragma: no cover - must not run
+            raise AssertionError("a KB was probed without a translated passage")
+        return {"consistent": True, "message": "readable alone"}
 
     monkeypatch.setattr(ic, "_coverage_translate_passage", translate)
     monkeypatch.setattr(ic, "_coverage_check_logic_kb", check)
@@ -396,10 +415,142 @@ async def test_a_passage_sharing_no_symbol_is_a_named_absence(monkeypatch):
     assert routed["finding"]["no_shared_symbols"] is True
     assert routed["finding"]["shared_symbols"] == 0
     assert "shares no symbol" in routed["finding"]["reason"]
-    assert "check" not in seen  # no vacuous question to the solver
+    # The KB-alone control probe ran (once, on the KB only); the solver was
+    # never asked the VACUOUS question — KB plus a disjoint passage.
+    assert seen["check_calls"] == 1
+    assert seen["check"][0] == ["[](pluie)"]
 
     state.coverage_review = out
     note = coverage_review_note(state)
     assert "ne partage aucun symbole" in note
     assert "ne contredit pas" not in note
     assert "CONTREDIT" not in note
+
+
+# --- R1157 — the translator's own vocabulary, and the KB the run DECIDED ---
+
+
+async def test_the_fol_coverage_translation_sends_the_fol_system_prompt(monkeypatch):
+    """R1157 — born red on this head. NO injected translator: only the
+    completion seam is patched, the REAL translator runs, and the messages it
+    sends are captured. ``_COVERAGE_LENS_LOGIC['fol']`` was ``'first_order'``
+    — a value outside the translator's vocabulary — so the prompt selection
+    silently fell to the MODAL system prompt and the FOL validator rejected
+    what came back: 35/35 untranslatable on the coordinator's paid replay."""
+    import argumentation_analysis.services.nl_to_logic as ntl
+
+    captured = []
+
+    async def fake_completion(client, model=None, messages=None, **kwargs):
+        captured.append([dict(m) for m in messages])
+        # An EMPTY formula: the validator refuses it in one guard, no JVM,
+        # no retry loop past the prompt this witness pins.
+        message = SimpleNamespace(content=json.dumps({"formula": ""}))
+        return SimpleNamespace(choices=[SimpleNamespace(message=message)])
+
+    monkeypatch.setattr(ntl, "cached_raw_chat_completion", fake_completion)
+    monkeypatch.setattr(
+        ntl, "resolve_chat_endpoint", lambda: ("key", "http://synthetic", "model")
+    )
+    import argumentation_analysis.core.utils.network_utils as network_utils
+
+    monkeypatch.setattr(
+        network_utils, "build_async_openai_client", lambda **kwargs: object()
+    )
+
+    out = await ic._coverage_translate_passage(QUOTE, "fol")
+
+    assert captured, "the real translator made no completion call"
+    system = captured[0][0]
+    assert system["role"] == "system"
+    assert ntl.FOL_SYSTEM_PROMPT in system["content"]
+    assert ntl.MODAL_SYSTEM_PROMPT not in system["content"]
+    # The empty formula is refused honestly — the witness pins the PROMPT,
+    # and the status says the translation did not fake one.
+    assert out["status"] == "untranslatable"
+
+
+async def test_the_translator_raises_on_a_logic_type_outside_its_vocabulary():
+    """R1157 — a value from calling code is never coerced into another
+    logic's prompt: ``first_order`` (the bridge's vocabulary) silently
+    selected the MODAL system prompt before; it now raises, at every entry
+    the calling code can reach."""
+    from argumentation_analysis.services.nl_to_logic import NLToLogicTranslator
+
+    for supported in ("propositional", "fol", "modal"):
+        NLToLogicTranslator(logic_type=supported)  # the three stay accepted
+    with pytest.raises(ValueError, match="logic_type"):
+        NLToLogicTranslator(logic_type="first_order")
+    translator = NLToLogicTranslator()
+    with pytest.raises(ValueError, match="logic_type"):
+        await translator.translate("un argument", logic_type="first_order")
+    with pytest.raises(ValueError, match="logic_type"):
+        await translator.translate_batch(["un argument"], logic_type="first_order")
+
+
+def test_an_entry_the_run_did_not_decide_stays_out_of_the_kb():
+    """R1157 — one FOL entry whose recorded verdict is None ("Constant … has
+    not been declared") carried its refusal into the whole concatenated KB:
+    9/9 states rendered the FOL base undecided. Only the entries the run
+    DECIDED enter (consistent True or False); an entry that records no
+    verdict key (the modal shape) stays — its own probe decides."""
+    state = make_panel_state(
+        fol_results=[
+            {"formulas": ["Dirige(a)"], "consistent": True},
+            {"formulas": ["Rejete(b)"], "consistent": None},
+            {"formulas": ["Tient(c)"], "consistent": False},
+            {"formulas": ["Autre(d)"]},
+            {"formulas": ["Vide(e)"], "is_valid": False},
+        ]
+    )
+    assert ic._coverage_run_kb_formulas(state, "fol") == [
+        "Dirige(a)",
+        "Tient(c)",
+        "Autre(d)",
+    ]
+
+
+async def test_an_inconsistent_kb_alone_never_yields_contradicts_run_kb(monkeypatch):
+    """R1157 — a run KB inconsistent ON ITS OWN (one state: 26 formulas,
+    recorded False) makes every passage "contradict" by construction. The
+    control runs BEFORE any passage verdict: a named absence, and the passage
+    is not even translated."""
+    state = make_panel_state(
+        fol_results=[{"formulas": ["Dirige(a)", "Rejete(a)"], "consistent": False}]
+    )
+    _patch_persona(monkeypatch, reply(QUOTE, "inferential"))
+    seen = _patch_lenses(monkeypatch, kb_alone=False, consistent=False)
+
+    out = await ic._invoke_coverage_review(DOCUMENT, {"_state_object": state})
+
+    routed = out["items"][0]["routed"]
+    assert routed["status"] == "lens_no_finding"
+    assert routed["finding"].get("kb_alone") == "inconsistent"
+    assert routed["finding"].get("verdict") != "contradicts_run_kb"
+    assert "translate" not in seen  # nothing was translated for nothing
+
+    state.coverage_review = out
+    note = coverage_review_note(state)
+    assert "déjà incohérente à elle seule" in note
+    assert "CONTREDIT" not in note
+
+
+async def test_an_undecided_kb_alone_is_a_named_absence(monkeypatch):
+    """The undecided twin: a base the solver cannot read answers nothing,
+    whatever the passage says."""
+    state = make_panel_state(
+        fol_results=[{"formulas": ["Dirige(a)"], "consistent": True}]
+    )
+    _patch_persona(monkeypatch, reply(QUOTE, "inferential"))
+    seen = _patch_lenses(monkeypatch, kb_alone=None, consistent=True)
+
+    out = await ic._invoke_coverage_review(DOCUMENT, {"_state_object": state})
+
+    routed = out["items"][0]["routed"]
+    assert routed["status"] == "lens_no_finding"
+    assert routed["finding"].get("kb_alone") == "undecided"
+    assert "translate" not in seen
+
+    state.coverage_review = out
+    note = coverage_review_note(state)
+    assert "indécise à elle seule" in note
