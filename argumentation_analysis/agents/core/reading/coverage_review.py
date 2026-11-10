@@ -359,14 +359,32 @@ def unit_id_at_offset(rows: List[Dict[str, Any]], position: int) -> str:
     (``kb_heuristic`` units, whose text is the document chunk). The
     paraphrase runs longer than the passage (median ×2.62 on the panel),
     so measuring by the text handed positions to the wrong unit.
+
+    R1157 — when several spans carry the same position, the MOST SPECIFIC
+    covering unit wins: shortest extent first, then earliest offset. The
+    rows arrive sorted by offset, and first-covering handed a ``kb_heuristic``
+    chunk (text-as-chunk, whole pages long) the positions of every quoted
+    unit nested inside it — 327 of 392 quoted units' last quote char mapped
+    to a chunk on the coordinator's replay, and 5 of 56 items survived the
+    per-lens drop as "no lens read this" while the class's lens HAD examined
+    the specific unit. A chunk still owns the positions no extracted unit
+    carries: its row stays, it only loses the nesting ties.
     """
+    best_id = ""
+    best_extent: Optional[Tuple[int, int]] = None
     for row in rows:
         extent = unit_extent(row, str(row.get("text") or ""))
         if extent is None:
             continue
-        if extent[0] <= position < extent[1]:
-            return str(row["unit_id"])
-    return ""
+        if not (extent[0] <= position < extent[1]):
+            continue
+        if best_extent is None or (
+            extent[1] - extent[0],
+            extent[0],
+        ) < (best_extent[1] - best_extent[0], best_extent[0]):
+            best_extent = extent
+            best_id = str(row["unit_id"])
+    return best_id
 
 
 def _thesis_quote(state: Any) -> str:

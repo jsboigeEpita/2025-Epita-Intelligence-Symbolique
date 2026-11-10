@@ -428,6 +428,100 @@ def test_the_row_carries_the_quote_the_provenance_located():
     assert unit_id_at_offset(kb_rows, 100) == "arg_2"
 
 
+# --- R1157 — the most specific covering unit wins the position ------------
+
+#: The replay's own geometry: a kb_heuristic chunk over [0, 1000) and a
+#: quoted unit nested at [200, 200+len(QUOTE)).
+TIE_QUOTE = "un passage cité mot pour mot par l'extraction"
+ONLY_CHUNK = "voici une phrase que seule l'unité tampon porte"
+TIE_DOC = "a" * 200 + TIE_QUOTE + " " + ONLY_CHUNK + " " + "c" * 705
+TIE_UNITS = {
+    # kb_heuristic: no source quote, the text IS the document chunk.
+    "chunk_1": TIE_DOC[:1000],
+    "arg_q": "Une paraphrase de l'extracteur, plus longue que la citation.",
+}
+TIE_PROVENANCE = {
+    "chunk_1": {"producer": "kb_heuristic", "offset": 0},
+    "arg_q": {
+        "producer": "llm_extract",
+        "offset": 200,
+        "source_quote": TIE_QUOTE,
+    },
+}
+
+
+def test_the_most_specific_covering_unit_wins():
+    """R1157 — born red on this head: nested extents, shortest wins.
+
+    The rows arrive sorted by offset, so first-covering gave the kb_heuristic
+    chunk every position of every quoted unit it swallows — 327 of 392 quoted
+    units' last quote char mapped to a chunk on the coordinator's replay. The
+    tie-break among covering rows: shortest extent first, then earliest
+    offset. A chunk still owns the positions no extracted unit carries.
+    """
+    rows = [
+        {"unit_id": "chunk_1", "text": "x" * 1000, "offset": 0},
+        {
+            "unit_id": "arg_q",
+            "text": "paraphrase",
+            "offset": 200,
+            "source_quote": "q" * 40,
+        },
+    ]
+    assert unit_id_at_offset(rows, 210) == "arg_q"
+    assert unit_id_at_offset(rows, 199) == "chunk_1"
+    # Past the quote's end, the position is back to the chunk's alone.
+    assert unit_id_at_offset(rows, 240) == "chunk_1"
+    # Equal lengths: the earlier offset wins.
+    same_len = [
+        {"unit_id": "a", "text": "12345", "offset": 0},
+        {"unit_id": "b", "text": "67890", "offset": 3},
+    ]
+    assert unit_id_at_offset(same_len, 4) == "a"
+    assert unit_id_at_offset(same_len, 5) == "b"
+
+
+async def test_an_item_the_specific_unit_carries_is_dropped_as_examined():
+    """R1157 — born red on this head: the drop must read the SPECIFIC unit.
+
+    The chunk over [0, 1000) swallowed the quoted unit at [200, 200+44); the
+    drop read the chunk's id, which no lens examined, so the item survived
+    and falsely said "no lens read this" while the class's lens had examined
+    the quoted unit — 5 of 56 items on the coordinator's replay.
+    """
+    assert TIE_DOC.index(TIE_QUOTE) == 200  # the geometry is what it claims
+    state = make_state(
+        raw_text=TIE_DOC,
+        units=dict(TIE_UNITS),
+        provenance={key: dict(value) for key, value in TIE_PROVENANCE.items()},
+        coverage={"fallacy_per_argument": {"unit_ids": ["arg_q"]}},
+    )
+    review = await build_coverage_review(
+        state, FakeLLM(reply((TIE_QUOTE, "statistical"))), FakeDispatcher()
+    )
+    assert review.items == []
+    assert review.dropped.get(DROP_EXAMINED_BY_CLASS) == 1
+
+
+async def test_a_position_only_the_chunk_carries_still_maps_to_the_chunk():
+    """The other side of the rule: the chunk keeps what no unit carries.
+
+    Dropping the kb_heuristic rows would fix the nesting defect by creating a
+    worse one — positions only the chunk covers would map to no unit at all.
+    """
+    state = make_state(
+        raw_text=TIE_DOC,
+        units=dict(TIE_UNITS),
+        provenance={key: dict(value) for key, value in TIE_PROVENANCE.items()},
+        coverage={"fallacy_per_argument": {"unit_ids": ["arg_q"]}},
+    )
+    review = await build_coverage_review(
+        state, FakeLLM(reply((ONLY_CHUNK, "statistical"))), FakeDispatcher()
+    )
+    assert len(review.items) == 1
+    assert review.items[0].unit_id == "chunk_1"
+
+
 # --- the honesty rules around the naming ----------------------------------
 
 
