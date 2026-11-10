@@ -140,7 +140,11 @@ from argumentation_analysis.agents.core.governance.coalition_play import (
 )
 from argumentation_analysis.agents.core.reading import first_reading_note  # #3395
 from argumentation_analysis.agents.core.reading import cross_passage_note  # #3432
-from argumentation_analysis.agents.core.reading import coverage_review_note  # #3492
+from argumentation_analysis.agents.core.reading import (  # #3492
+    coverage_item_line,  # #3505
+    coverage_items_by_unit,  # #3505
+    coverage_review_note,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -367,6 +371,12 @@ class ArgEvidence:
     # « non examinée » et « ensemble inconnu » ne se racontent pas pareil.
     fallacy_examined: Optional[bool] = None
     quality_examined: Optional[bool] = None
+    # #3505 — the coverage review's findings bound to THIS unit: each line is
+    # the review's own wording (``coverage_item_line``), so the attribution
+    # rides the line wherever it renders. A finding that reaches its
+    # movement's beat is dropped from the standalone block — one home per
+    # finding, or the reader meets it twice.
+    coverage_lines: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -1366,6 +1376,22 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
     # writer is asked to discuss (attack target, counter target, governance
     # winner) reaches it whole up to the cited budget; every other unit
     # keeps the short cap, so the prompt does not grow with N.
+    # #3505 — the review's findings enter the movement grouping: each item
+    # whose span maps to an extracted unit is bound to that unit's argument
+    # (hence to its movement), rendered by the review's own line builder so
+    # the attribution rides the line. The items no unit carries stay in the
+    # block (the closing beat's material) — one home per finding.
+    coverage_lines_by_arg: Dict[str, List[str]] = {}
+    for unit_id, cov_items in coverage_items_by_unit(state).items():
+        if unit_id not in args:
+            continue
+        bound = [
+            line
+            for line in (coverage_item_line(it, bullet="") for it in cov_items)
+            if line
+        ]
+        if bound:
+            coverage_lines_by_arg[unit_id] = bound
     cited = cited_unit_ids(state)
     for arg_id, desc in args.items():
         key = movement_key_by_arg[arg_id]
@@ -1410,6 +1436,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
                 quality_examined=(
                     None if quality_sample is None else str(arg_id) in quality_sample
                 ),
+                coverage_lines=coverage_lines_by_arg.get(str(arg_id), []),
             )
         )
 
@@ -1492,7 +1519,12 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         first_reading=first_reading_note(state),
         cross_passage=cross_passage_note(state),
         # #3492 — same single-producer rule: the act never re-words the review.
-        coverage_review=coverage_review_note(state),
+        # #3505 — the findings bound to a movement are excluded from the
+        # block: one home per finding (the movement's beat), the block keeps
+        # what no movement carries.
+        coverage_review=coverage_review_note(
+            state, exclude_unit_ids=set(coverage_lines_by_arg)
+        ),
     )
 
 
@@ -2242,6 +2274,11 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                     f"arguments extraits ne retient pas {a.arg_id} dans "
                     f"l'extension acceptée (sémantique {a.dung_rejected})."
                 )
+            for cov_line in a.coverage_lines:
+                # #3505 — the review's finding on the argument it was named
+                # for: the beat carries it, the attribution rides the line
+                # (the review's own wording — « pas une lentille »).
+                lines.append(f"      Examen de couverture : {cov_line}")
         blocks.append("\n".join(lines))
 
     # --- #1621: detections the movement enumeration structurally cannot carry ---
@@ -2683,6 +2720,33 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
     coverage_review_block = (
         f"{evidence.coverage_review}\n\n" if evidence.coverage_review else ""
     )
+    # #3505 — the binding rule rides the consigne ONLY when the review named
+    # something (a line on a movement or a passage in the block): an empty
+    # review leaves the prompt byte-identical to the pre-#3492 one — the
+    # issue's control.
+    coverage_active = bool(evidence.coverage_review) or any(
+        a.coverage_lines for mvt in evidence.movements for a in mvt.arguments
+    )
+    coverage_consigne = (
+        # #3505 — a finding is matter for the BEAT it serves, never an
+        # inventory line: the binding the consigne lacked (0 of 33
+        # coverage-only labels reached the prose while about half of the
+        # deep-phase ones did). The wording keeps each finding what it is:
+        # a consistency verdict stays one, a named absence stays one.
+        "- Les lignes « Examen de couverture » d'un mouvement sont des "
+        "constats de la revue de couverture — le lecteur du pipeline qui a "
+        "relu le document ENTIER après les phases profondes, pas une "
+        "lentille : tisse chacun dans le battement du mouvement qu'il "
+        "servira, en gardant ce qu'il dit (un verdict de cohérence reste un "
+        "verdict de cohérence, aucune conclusion n'en sort ; une absence "
+        "nommée reste « nommé, non examiné »). Les constats qu'aucun "
+        "mouvement ne porte (le bloc [ARGUMENTS QU'AUCUNE LENTILLE…]) "
+        "reçoivent UN SEUL battement de clôture qui les nomme, chacun une "
+        "fois, tissés au fil du texte — jamais une énumération point par "
+        "point.\n"
+        if coverage_active
+        else ""
+    )
 
     prompt = (
         "Tu es l'auteur de l'ACTE II d'un rapport de restitution argumentative.\n"
@@ -2824,6 +2888,7 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         "faiblesse — il a tourné sans rien distinguer.\n"
         "- Si un mouvement n'a ni sophisme ni verdict formel (les soutiens), "
         "dis ce qui le tient (le caractère, la cohérence).\n"
+        f"{coverage_consigne}"
         # #3158 — le contre-argument est le canal de l'objection ; CHAQUE
         # ligne en porte la provenance (option (b), R1109).
         "- Toute ligne de contre-argument porte "
