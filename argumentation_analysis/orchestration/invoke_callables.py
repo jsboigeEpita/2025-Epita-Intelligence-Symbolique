@@ -11522,12 +11522,15 @@ async def _invoke_fol_reasoning(
                         _nl_batch_units = [
                             u.unit_id for u in _fol_selection.selected[:4]
                         ]
+                        from argumentation_analysis.services.nl_to_logic import (
+                            TranslationResult as _NLTranslationResult,
+                        )
+
                         for t in valid:
-                            for f in t.formula.split(";"):
-                                f = f.strip()
-                                if f:
-                                    formulas.append(f)
-                                    formula_units.append(list(_nl_batch_units))
+                            # R1158 — the ONE reader of the joined contract.
+                            for f in _NLTranslationResult.split_formulas(t.formula):
+                                formulas.append(f)
+                                formula_units.append(list(_nl_batch_units))
                         # #3030 residual (coord review R1088): mirror of the
                         # PL gesture — when this arm produces, re-record the
                         # coverage over the units it ATTEMPTED (the 4-unit
@@ -14733,7 +14736,20 @@ async def _coverage_run_logic_lens(item: Any, state: Any, lens: str) -> Dict[str
             "untranslatable": True,
         }
     passage_formula = str(translation["formula"])
-    shared = _coverage_shared_symbols(run_kb, passage_formula, logic_type)
+    from argumentation_analysis.services.nl_to_logic import TranslationResult
+
+    # R1158 — the translator's FOL contract is a JOINED string ("; ".join):
+    # a passage can carry several statements. The shared-symbol count and the
+    # probe both read the SPLIT list, never the whole string as one formula
+    # (7/7 multi-formula translations were refused by the parser as one).
+    passage_formulas = TranslationResult.split_formulas(passage_formula)
+    if logic_type == "modal":
+        kb_symbols = set(_coverage_modal_atoms(run_kb))
+        passage_symbols = set(_coverage_modal_atoms(passage_formulas))
+    else:
+        kb_symbols = _coverage_fol_symbols(run_kb)
+        passage_symbols = _coverage_fol_symbols(passage_formulas)
+    shared = len(kb_symbols & passage_symbols)
     if shared == 0:
         # #3500 — a formula with no symbol in common with the KB cannot
         # contradict it: the solver's « consistent » would hold by
@@ -14751,7 +14767,7 @@ async def _coverage_run_logic_lens(item: Any, state: Any, lens: str) -> Dict[str
             "no_shared_symbols": True,
         }
     try:
-        check = await _coverage_check_logic_kb(run_kb + [passage_formula], lens)
+        check = await _coverage_check_logic_kb(run_kb + passage_formulas, lens)
     except Exception as e:  # pragma: no cover - JVM/solver failures
         return {
             "lens": lens,
@@ -14759,6 +14775,25 @@ async def _coverage_run_logic_lens(item: Any, state: Any, lens: str) -> Dict[str
             "reason": f"{type(e).__name__}: {e}",
         }
     consistent = check.get("consistent")
+    check_message = str(check.get("message") or "")
+    if consistent is None and check_message.startswith("Degraded:"):
+        # R1158 — a REFUSAL of the run's route is not a verdict: the parser
+        # rejected the belief base, or the reasoner is absent (#1634's
+        # contract — no structured signal at the handler, the prefix is the
+        # only one, pinned by a witness). Never `answered`: the message stays
+        # in the finding as its trace, the note says in French what happened,
+        # and « verdict indécis » stays reserved to a solver that RAN.
+        return {
+            "lens": lens,
+            "status": "lens_no_finding",
+            "reason": (
+                f"{logic_type}: the consistency route refused to answer — "
+                "a solver did not decide"
+            ),
+            "route_error": True,
+            "formula": passage_formula,
+            "message": check_message,
+        }
     if consistent is False:
         verdict = "contradicts_run_kb"
     elif consistent is True:

@@ -125,11 +125,23 @@ def _patch_lenses(
     async def check(formulas, lens):
         # R1157 — the probe is called on the KB ALONE first, then on the KB
         # plus the passage. The double answers each leg with its own verdict.
+        # R1158 — ``consistent`` may be a dict keyed by the KB+passage tuple:
+        # different passages can then yield different outcomes in one test.
         calls["n"] += 1
         seen["check"] = (list(formulas), lens)
         seen["check_calls"] = calls["n"]
-        verdict = kb_alone if calls["n"] == 1 else consistent
-        return {"consistent": verdict, "message": message}
+        if calls["n"] == 1:
+            verdict = kb_alone
+        elif isinstance(consistent, dict):
+            verdict = consistent[tuple(formulas)]
+        else:
+            verdict = consistent
+        if isinstance(verdict, tuple):
+            # (verdict, message) — a refusal carries its own route message.
+            verdict, msg = verdict
+        else:
+            msg = message
+        return {"consistent": verdict, "message": msg}
 
     monkeypatch.setattr(ic, "_coverage_translate_passage", translate)
     monkeypatch.setattr(ic, "_coverage_check_logic_kb", check)
@@ -254,7 +266,7 @@ async def test_an_undecided_solver_says_undecided(monkeypatch):
         monkeypatch,
         translated="Q(a)",
         consistent=None,
-        message="Degraded: reasoner absent",
+        message="Prover9: search exhausted, no model found",
     )
 
     out = await ic._invoke_coverage_review(DOCUMENT, {"_state_object": state})
@@ -265,7 +277,10 @@ async def test_an_undecided_solver_says_undecided(monkeypatch):
     state.coverage_review = out
     note = coverage_review_note(state)
     assert "verdict indécis" in note
-    assert "Degraded" in note
+    # R1158 — the solver's raw message is the finding's trace, never the
+    # note's prose: Act II is not handed a solver's wording to paraphrase.
+    assert "Prover9" not in note
+    assert "search exhausted" not in note
 
 
 def test_the_run_kb_reads_only_its_own_logic_and_only_valid_formulas():
@@ -554,3 +569,139 @@ async def test_an_undecided_kb_alone_is_a_named_absence(monkeypatch):
     state.coverage_review = out
     note = coverage_review_note(state)
     assert "indécise à elle seule" in note
+
+
+# --- R1158 — the translator's joined contract, and a refusal is not a verdict ---
+
+
+async def test_two_formulas_joined_by_a_semicolon_reach_the_probe_as_two(monkeypatch):
+    """R1158 — born red on this head: the translator's FOL contract is ONE
+    string of formulas joined by `; ` (nl_to_logic.py:556). The coverage arm
+    passed it whole to the probe: 7 of 7 multi-formula translations sharing
+    the KB's vocabulary were refused by Tweety's PARSER (never a solver),
+    where every single-formula one answered. The accessor splits once, the
+    shared-symbol count and the probe both read the LIST.
+    """
+    state = make_panel_state(
+        fol_results=[{"formulas": ["Dirige(a)"], "consistent": True}]
+    )
+    _patch_persona(monkeypatch, reply(QUOTE, "inferential"))
+    seen = _patch_lenses(
+        monkeypatch, translated="Dirige(a) ; Tient(b)", consistent=True
+    )
+
+    out = await ic._invoke_coverage_review(DOCUMENT, {"_state_object": state})
+
+    routed = out["items"][0]["routed"]
+    assert routed["status"] == "answered"
+    # The probe received the KB, then TWO formulas — never the joined string.
+    assert seen["check"][0] == ["Dirige(a)", "Dirige(a)", "Tient(b)"]
+    # The shared-symbol count reads the list too: Dirige is in the KB.
+    assert routed["finding"]["shared_symbols"] >= 1
+
+
+async def test_the_accessor_splits_the_translators_joined_contract():
+    """The one place the contract lives: a property on TranslationResult,
+    used by the coverage arm and by the FOL phase — split on `;`, stripped,
+    non-empty. A single formula comes back a one-element list."""
+    from argumentation_analysis.services.nl_to_logic import TranslationResult
+
+    result = TranslationResult(
+        original_text="synthetic",
+        formula="P(a) ;  Q(b) ;;  R(c) ",
+        logic_type="fol",
+        is_valid=True,
+    )
+    assert result.formulas == ["P(a)", "Q(b)", "R(c)"]
+    single = TranslationResult(
+        original_text="synthetic", formula="P(a)", logic_type="fol", is_valid=True
+    )
+    assert single.formulas == ["P(a)"]
+    empty = TranslationResult(
+        original_text="synthetic", formula="", logic_type="fol", is_valid=False
+    )
+    assert empty.formulas == []
+
+
+DEGRADED_PARSER_MSG = (
+    "Degraded: FOL consistency check error (Erreur de parsing Tweety: "
+    "org.tweetyproject.logics.fol.parser.ParserException: Unknown object) "
+)
+
+
+async def test_a_refusal_of_the_runs_route_is_never_an_answered_verdict(monkeypatch):
+    """R1158 — born red on this head: `(None, "Degraded: …")` (the #1634
+    contract) is the route REFUSING (parser exception, reasoner absent), not
+    a solver that ran and did not decide. Three items, one bridge double: the
+    degraded one is a named absence whose note carries neither the exception
+    nor the marker; the disjoint-vocabulary one keeps the #3500 absence; the
+    decided one keeps its undecided verdict — the anti-pendulum control.
+    """
+    disjoint_quote = "un passage sans rapport avec le vocabulaire formel"
+    undecided_quote = "un passage qui porte un prédicat Vide"
+    state = make_panel_state(
+        fol_results=[
+            {"formulas": ["Dirige(a)", "Vide(b)"], "consistent": True},
+        ]
+    )
+    state.raw_text = f"{DOCUMENT} {disjoint_quote} {undecided_quote}"
+    items = [
+        {"quote": QUOTE, "class": "inferential", "reason": "r1"},
+        {"quote": disjoint_quote, "class": "inferential", "reason": "r2"},
+        {"quote": undecided_quote, "class": "inferential", "reason": "r3"},
+    ]
+    monkeypatch.setattr(
+        ic,
+        "_build_persona_callable",
+        lambda persona: (FakeLLM(json.dumps({"items": items})), ""),
+    )
+
+    async def translate(quote, lens, **kwargs):
+        # The disjoint passage shares NO symbol with the KB — its refusal
+        # must be the #3500 no-shared absence, not the route refusal.
+        formula = {
+            QUOTE: "Dirige(a)",
+            disjoint_quote: "Soleil(x)",
+            undecided_quote: "Vide(y)",
+        }[quote]
+        return {"status": "translated", "formula": formula, "logic_type": "fol"}
+
+    monkeypatch.setattr(ic, "_coverage_translate_passage", translate)
+
+    async def check(formulas, lens):
+        if list(formulas) == ["Dirige(a)", "Vide(b)"]:
+            # The KB-alone control: readable on its own.
+            return {"consistent": True, "message": "readable alone"}
+        if "Vide(y)" in formulas:
+            return {"consistent": None, "message": "solver exhausted, no model"}
+        if "Dirige(a)" in formulas:
+            # Item 1 — the route REFUSES on the KB-plus-passage leg.
+            return {"consistent": None, "message": DEGRADED_PARSER_MSG}
+        return {"consistent": True, "message": "readable alone"}
+
+    monkeypatch.setattr(ic, "_coverage_check_logic_kb", check)
+
+    out = await ic._invoke_coverage_review(state.raw_text, {"_state_object": state})
+
+    assert out["status"] == "ok"
+    assert len(out["items"]) == 3
+
+    # Item 1 — the route refused: a named absence, never `answered`.
+    refused = out["items"][0]["routed"]
+    assert refused["status"] != "answered"
+    assert refused["finding"].get("route_error") is True
+    state.coverage_review = out
+    note = coverage_review_note(state)
+    assert "ParserException" not in note
+    assert "Degraded" not in note
+
+    # Item 2 — disjoint vocabulary: the #3500 absence is preserved, not the
+    # route refusal.
+    disjoint = out["items"][1]["routed"]
+    assert disjoint["finding"].get("no_shared_symbols") is True
+
+    # Item 3 — a solver that ran and did not decide: the undecided verdict
+    # stays, message included.
+    undecided = out["items"][2]["routed"]
+    assert undecided["status"] == "answered"
+    assert undecided["finding"]["verdict"] == "undecided"

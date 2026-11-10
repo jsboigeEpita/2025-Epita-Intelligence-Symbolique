@@ -655,11 +655,12 @@ def _logic_verdict_clause(lens: str, finding: Dict[str, Any]) -> str:
             "contredit pas la base formelle du run (cohérence, pas implication : "
             f"aucune conclusion n'a été dérivée){shared_txt}"
         )
-    message = str(finding.get("message") or "").strip()
-    tail = f" ({message})" if message else ""
+    # R1158 — an undecided verdict comes from a SOLVER that ran; its raw
+    # message never reaches Act II (a Java exception is the finding's trace,
+    # not the reader's prose).
     return (
         f"lentille {lens} : passage traduit en « {formula} », verdict indécis"
-        f"{tail}{shared_txt} — le passage reste non conclu"
+        f"{shared_txt} — le passage reste non conclu"
     )
 
 
@@ -740,6 +741,16 @@ def coverage_review_note(state: Any) -> str:
                 clauses.append(
                     f"lentille {lens} : aucune traduction formelle valide du "
                     f"passage ({finding.get('reason')}) — il reste non examiné"
+                )
+            elif finding.get("route_error"):
+                # R1158 — the route REFUSED (parser rejection, reasoner
+                # absent): no solver decided, so the note never says
+                # « verdict indécis », and the raw exception stays in the
+                # finding, out of the reader's prose.
+                clauses.append(
+                    f"lentille {lens} : la route de cohérence a refusé de "
+                    "répondre (rejet du parseur ou raisonneur indisponible) — "
+                    "aucun solveur n'a tranché ; le passage reste non examiné"
                 )
             elif finding.get("no_shared_symbols"):
                 # #3500 — the consistency question is only readable over a

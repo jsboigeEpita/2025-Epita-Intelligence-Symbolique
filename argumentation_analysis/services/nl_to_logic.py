@@ -140,6 +140,25 @@ class TranslationResult:
     variables: Dict[str, str] = field(default_factory=dict)
     confidence: float = 0.0
 
+    @staticmethod
+    def split_formulas(formula: str) -> List[str]:
+        """#3500/R1158 — the ONE reader of the translator's joined contract.
+
+        The FOL branch of ``_translate_with_llm`` builds ``formula`` as
+        ``"; ".join(formulas)`` (:556) — a passage can honestly carry several
+        statements. Reading it whole handed Tweety's parser ONE unparseable
+        formula where several were intended (7/7 multi-formula translations
+        refused on the coordinator's replay). Split on ``;``, strip, drop
+        empties. Propositional results are single-formula on the panel — the
+        accessor returns them as a one-element list, no behavioural change.
+        """
+        return [f.strip() for f in formula.split(";") if f.strip()]
+
+    @property
+    def formulas(self) -> List[str]:
+        """The split list — the same contract as ``split_formulas``."""
+        return self.split_formulas(self.formula)
+
 
 @dataclass
 class TranslationBatchResult:
@@ -713,7 +732,7 @@ class NLToLogicTranslator:
             return True, f"Valid modal belief set (parsed, Tweety): {dec_msg}"
         else:
             # FOL: build signature from metadata and validate all formulas together
-            fol_formulas = [f.strip() for f in formula.split(";") if f.strip()]
+            fol_formulas = TranslationResult.split_formulas(formula)
 
             if fol_metadata and (
                 fol_metadata.get("sorts") or fol_metadata.get("constants_raw")
@@ -972,7 +991,7 @@ class NLToLogicTranslator:
 
     def _validate_fol_python(self, formula: str) -> Tuple[bool, str]:
         """Basic FOL syntax validation."""
-        fol_formulas = [f.strip() for f in formula.split(";") if f.strip()]
+        fol_formulas = TranslationResult.split_formulas(formula)
         if not fol_formulas:
             return False, "No formulas found"
 
