@@ -625,6 +625,45 @@ def _retained_fallacies(routed: Dict[str, Any]) -> List[Any]:
     return list(fallacies) if isinstance(fallacies, list) else []
 
 
+def _logic_verdict_clause(lens: str, finding: Dict[str, Any]) -> str:
+    """What a modal or FOL lens answered, said for what it IS (#3496, #3500).
+
+    The verdict is a consistency one: the passage, translated, contradicts the
+    run's own KB of that logic or does not. It is NOT an entailment verdict —
+    no conclusion formula is translated — and the wording never borrows the
+    word of one. #3500: the clause carries the MEASURED shared-symbol count,
+    the vocabulary over which the verdict is readable at all.
+    """
+    formula = str(finding.get("formula") or "")
+    verdict = str(finding.get("verdict") or "")
+    shared = finding.get("shared_symbols")
+    shared_txt = ""
+    if isinstance(shared, int) and not isinstance(shared, bool) and shared > 0:
+        shared_txt = (
+            f" — {shared} symbole(s) partagé(s) avec la base du run, la "
+            "mesure du vocabulaire commun"
+        )
+    if verdict == "contradicts_run_kb":
+        return (
+            f"lentille {lens} : le passage se traduit en « {formula} » et "
+            "CONTREDIT la base formelle du run — il n'y répète pas une thèse, "
+            f"il la met en cause{shared_txt}"
+        )
+    if verdict == "consistent_with_run_kb":
+        return (
+            f"lentille {lens} : le passage se traduit en « {formula} » et ne "
+            "contredit pas la base formelle du run (cohérence, pas implication : "
+            f"aucune conclusion n'a été dérivée){shared_txt}"
+        )
+    # R1158 — an undecided verdict comes from a SOLVER that ran; its raw
+    # message never reaches Act II (a Java exception is the finding's trace,
+    # not the reader's prose).
+    return (
+        f"lentille {lens} : passage traduit en « {formula} », verdict indécis"
+        f"{shared_txt} — le passage reste non conclu"
+    )
+
+
 def coverage_review_note(state: Any) -> str:
     """The block Act II reads — empty when no passage was named.
 
@@ -674,6 +713,8 @@ def coverage_review_note(state: Any) -> str:
         routed_any = item.get("routed")
         routed = routed_any if isinstance(routed_any, dict) else {}
         status = str(routed.get("status") or "")
+        finding_any = routed.get("finding")
+        finding = finding_any if isinstance(finding_any, dict) else {}
         labels = [
             label for label in map(_fallacy_label, _retained_fallacies(routed)) if label
         ]
@@ -686,16 +727,64 @@ def coverage_review_note(state: Any) -> str:
             )
         if labels:
             clauses.append("sophismes retenus : " + " ; ".join(labels))
-        if status == "lens_not_wired":
+        if finding.get("verdict"):
+            # #3496 — a logic lens answered a CONSISTENCY question; it must not
+            # be rendered in the fallacy vocabulary, nor as a bare "read".
+            clauses.append(_logic_verdict_clause(lens, finding))
+        elif status == "lens_not_wired":
             clauses.append(
                 f"aucune lentille câblée pour ce passage ({lens}) : il est "
                 "nommé, non examiné — ne lui prête pas de verdict"
             )
         elif status in ("lens_error", "lens_no_finding"):
-            clauses.append(
-                f"lentille {lens} non concluante ({status}) : le passage reste "
-                "non examiné"
-            )
+            if finding.get("untranslatable"):
+                clauses.append(
+                    f"lentille {lens} : aucune traduction formelle valide du "
+                    f"passage ({finding.get('reason')}) — il reste non examiné"
+                )
+            elif finding.get("route_error"):
+                # R1158 — the route REFUSED (parser rejection, reasoner
+                # absent): no solver decided, so the note never says
+                # « verdict indécis », and the raw exception stays in the
+                # finding, out of the reader's prose.
+                clauses.append(
+                    f"lentille {lens} : la route de cohérence a refusé de "
+                    "répondre (rejet du parseur ou raisonneur indisponible) — "
+                    "aucun solveur n'a tranché ; le passage reste non examiné"
+                )
+            elif finding.get("no_shared_symbols"):
+                # #3500 — the consistency question is only readable over a
+                # shared vocabulary: without one, « consistent » holds by
+                # construction, and that vacuous truth must not reach the
+                # reader as a verdict.
+                clauses.append(
+                    f"lentille {lens} : le passage se traduit (« "
+                    f"{finding.get('formula')} ») mais ne partage aucun symbole "
+                    "avec la base formelle du run — aucun verdict de cohérence "
+                    "ne peut être lu (« cohérent » ne vaudrait alors rien) ; "
+                    "le passage reste non examiné"
+                )
+            elif finding.get("kb_alone") == "inconsistent":
+                # R1157 — the KB-alone control: a base already inconsistent
+                # on its own makes every passage "contradict" by construction.
+                # The reader is told WHY nothing is readable, never given the
+                # by-construction "contradiction".
+                clauses.append(
+                    f"lentille {lens} : la base formelle du run est déjà "
+                    "incohérente à elle seule — un passage ne peut pas la "
+                    "contredire de façon lisible ; le passage reste non examiné"
+                )
+            elif finding.get("kb_alone") == "undecided":
+                clauses.append(
+                    f"lentille {lens} : la base formelle du run est indécise "
+                    "à elle seule — aucun verdict de cohérence ne peut être "
+                    "lu ; le passage reste non examiné"
+                )
+            else:
+                clauses.append(
+                    f"lentille {lens} non concluante ({status}) : le passage reste "
+                    "non examiné"
+                )
         elif labels:
             clauses.append(f"lentille {lens} : {len(labels)} sophisme(s) retenu(s)")
         else:

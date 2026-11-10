@@ -239,6 +239,7 @@ __all__ = [
     "_invoke_cross_passage_consistency",
     "_invoke_coverage_review",
     "_coverage_route_to_lens",
+    "_coverage_run_logic_lens",
     "_invoke_nl_to_logic",
     "_invoke_modal_logic",
     "_invoke_dung_extensions",
@@ -11521,12 +11522,15 @@ async def _invoke_fol_reasoning(
                         _nl_batch_units = [
                             u.unit_id for u in _fol_selection.selected[:4]
                         ]
+                        from argumentation_analysis.services.nl_to_logic import (
+                            TranslationResult as _NLTranslationResult,
+                        )
+
                         for t in valid:
-                            for f in t.formula.split(";"):
-                                f = f.strip()
-                                if f:
-                                    formulas.append(f)
-                                    formula_units.append(list(_nl_batch_units))
+                            # R1158 — the ONE reader of the joined contract.
+                            for f in _NLTranslationResult.split_formulas(t.formula):
+                                formulas.append(f)
+                                formula_units.append(list(_nl_batch_units))
                         # #3030 residual (coord review R1088): mirror of the
                         # PL gesture — when this arm produces, re-record the
                         # coverage over the units it ATTEMPTED (the 4-unit
@@ -14375,17 +14379,449 @@ def _coverage_document_frame(item: Any, state: Any) -> Any:
     return _document_frame_for_unit(state, unit_id, unit_text) or None
 
 
+#: #3496 — the two classes whose arm can now be reached PER PASSAGE, and the
+#: logic each one's arm consumes. ``inferential`` points at FOL, ``modal`` at
+#: the modal handler: the same two arms the phases already run.
+#: #3500/R1157 — the value handed to ``NLToLogicTranslator`` is the
+#: TRANSLATOR's vocabulary ("fol"), never the bridge's "first_order": the
+#: translator's prompt selection maps every out-of-vocabulary value onto the
+#: MODAL system prompt, so "first_order" silently translated FOL passages
+#: under the modal contract — 35/35 untranslatable on the replay. The bridge
+#: keeps its own word where the bridge is called.
+_COVERAGE_LENS_LOGIC: Dict[str, str] = {"modal": "modal", "fol": "fol"}
+
+
+async def _coverage_translate_passage(
+    quote: str,
+    lens: str,
+    *,
+    shared_atoms: Optional[List[str]] = None,
+    context_note: str = "",
+) -> Dict[str, Any]:
+    """One passage → the formula the class's arm consumes (#3496, #3500).
+
+    Composes what the phases already use — ``NLToLogicTranslator`` — on a
+    SINGLE passage instead of the stratified six-unit selection, UNDER the
+    run's own vocabulary: the modal arm constrains its atoms to the KB's
+    (``shared_atoms``, #1396's coherence lever), the FOL arm carries the run's
+    signature in the system prompt (``context_note``). No verdict here: a
+    translation that fails validation is NAMED, never coerced into a formula
+    the solver would then "answer" (#1019).
+    """
+    logic_type = _COVERAGE_LENS_LOGIC[lens]
+    from argumentation_analysis.services.nl_to_logic import NLToLogicTranslator
+
+    translator = NLToLogicTranslator(max_retries=2, logic_type=logic_type)
+    result = await translator.translate(
+        quote,
+        logic_type=logic_type,
+        shared_atoms=shared_atoms,
+        context_note=context_note,
+    )
+    formula = str(getattr(result, "formula", "") or "").strip()
+    if not bool(getattr(result, "is_valid", False)) or not formula:
+        reason = str(getattr(result, "validation_message", "") or "").strip()
+        return {
+            "status": "untranslatable",
+            "reason": (reason or "no valid formula")[:200],
+        }
+    return {"status": "translated", "formula": formula, "logic_type": logic_type}
+
+
+def _coverage_run_kb_formulas(state: Any, logic_type: str) -> List[str]:
+    """The run's OWN valid formulas of that logic — the phase's KB (#3496, #3500).
+
+    Read where the phases RECORD it: ``fol_analysis_results[*].formulas`` and
+    ``modal_analysis_results[*].formulas`` — on the 10 recorded panel states
+    these carry the 93 FOL and 52 modal formulas (9/10 states each), while
+    ``nl_to_logic_translations`` is propositional only (52/52). The
+    translations list stays a source: it is a recorded formula of that logic
+    when it carries one. The passage-level arm composes the run's own material
+    instead of translating the document a second time, and a formula the run
+    itself rejected (``is_valid is False`` where the entry carries it) never
+    enters the KB it contradicts.
+    """
+    formulas: List[str] = []
+    seen: Dict[str, None] = {}
+    results_field = (
+        "modal_analysis_results" if logic_type == "modal" else "fol_analysis_results"
+    )
+    results = getattr(state, results_field, None)
+    if isinstance(results, (list, tuple)):
+        for entry in results:
+            if not isinstance(entry, dict):
+                continue
+            if entry.get("is_valid") is False:
+                continue
+            # R1157 — only what the run DECIDED enters the KB: an entry whose
+            # own recorded verdict is None ("Constant … has not been
+            # declared") carried its refusal into the whole concatenated base
+            # — 9/9 FOL states rendered undecided. An entry that records no
+            # verdict key (the modal shape) stays: its own probe decides.
+            if "consistent" in entry and not isinstance(entry["consistent"], bool):
+                continue
+            entry_formulas = entry.get("formulas")
+            if not isinstance(entry_formulas, (list, tuple)):
+                continue
+            for formula in entry_formulas:
+                text = str(formula or "").strip()
+                if text:
+                    seen.setdefault(text, None)
+    translations = getattr(state, "nl_to_logic_translations", None)
+    if isinstance(translations, list):
+        wanted = "modal" if logic_type == "modal" else "first_order"
+        for entry in translations:
+            if not isinstance(entry, dict):
+                continue
+            kind = str(entry.get("logic_type") or "").strip().lower()
+            if kind in ("fol", "first_order"):
+                kind = "first_order"
+            if kind != wanted:
+                continue
+            if entry.get("is_valid") is False:
+                continue
+            formula = str(entry.get("formula") or "").strip()
+            if formula:
+                seen.setdefault(formula, None)
+    formulas = list(seen)
+    return formulas
+
+
+def _coverage_modal_atoms(formulas: List[str]) -> List[str]:
+    """The atoms of modal formulas under ``build_modal_kb``'s normalisation.
+
+    The declarations the KB builder emits are one ``type(atom)`` per atom, in
+    first-seen order — so the declarations ARE the atom inventory, under the
+    same normalisation the solver probe applies (#3500).
+    """
+    from argumentation_analysis.agents.core.logic.modal_kb_identifier_normalizer import (
+        build_modal_kb,
+    )
+
+    declarations, _renamed = build_modal_kb(list(formulas))
+    prefix = "type("
+    return [d[len(prefix) : -1] for d in declarations if d.startswith(prefix)]
+
+
+def _coverage_fol_signature_note(state: Any) -> str:
+    """The run's FOL signature, said to the translator (#3500).
+
+    ``fol_shared_signature`` carries the sorts, predicates and constants the
+    run's own FOL pass extracted. Without them in the prompt, the passage's
+    formula invents its own vocabulary and shares no symbol with the KB —
+    under which « does not contradict » holds by construction. Empty when the
+    run carries no signature: the prompt stays byte for byte.
+    """
+    signature = getattr(state, "fol_shared_signature", None)
+    if not isinstance(signature, dict) or not signature:
+        return ""
+    predicates: Set[str] = set()
+    constants: Set[str] = set()
+    for data in signature.values():
+        if not isinstance(data, dict):
+            continue
+        preds = data.get("predicates")
+        if isinstance(preds, dict):
+            predicates.update(str(name) for name in preds if name)
+        raw = data.get("constants_raw")
+        if isinstance(raw, dict):
+            constants.update(str(name) for name in raw if name)
+        sorts = data.get("sorts")
+        if isinstance(sorts, dict):
+            for members in sorts.values():
+                if isinstance(members, (list, tuple)):
+                    constants.update(str(name) for name in members if name)
+    if not predicates and not constants:
+        return ""
+    parts: List[str] = []
+    if predicates:
+        parts.append("prédicats : " + ", ".join(sorted(predicates)[:24]))
+    if constants:
+        parts.append("constantes : " + ", ".join(sorted(constants)[:24]))
+    return (
+        "Signature FOL du run — réutilise ces symboles quand le passage en "
+        "parle, pour que la formule partage le vocabulaire de la base ("
+        + " ; ".join(parts)
+        + ")."
+    )
+
+
+def _coverage_fol_symbols(formulas: List[str]) -> Set[str]:
+    """The declared predicates and constants of FOL formulas, one normalisation.
+
+    ``extract_fol_metadata`` is the phases' own extractor and the ONE function
+    that renames (#2468: no call site reads the renaming maps); its declared
+    ``predicates`` and ``constants`` are the vocabulary the formulas use under
+    that normalisation (#3500). Deterministic per surface name, so the same
+    symbol on both sides of the count lands on the same declared name.
+    """
+    from argumentation_analysis.agents.core.logic.fol_logic_agent import (
+        FOLLogicAgent,
+    )
+
+    meta = FOLLogicAgent.extract_fol_metadata(
+        [FOLLogicAgent.unicode_to_ascii_fol(f) for f in formulas]
+    )
+    names: Set[str] = set()
+    predicates = meta.get("predicates")
+    if isinstance(predicates, dict):
+        names.update(str(name) for name in predicates if name)
+    constants = meta.get("constants")
+    if isinstance(constants, (set, frozenset, list, tuple)):
+        names.update(str(name) for name in constants if name)
+    return names
+
+
+def _coverage_shared_symbols(
+    run_kb: List[str], passage_formula: str, logic_type: str
+) -> int:
+    """How many symbols the passage formula shares with the run's KB (#3500).
+
+    Modal: atoms under ``build_modal_kb``'s normalisation. FOL: surface
+    predicates and constants under ``extract_fol_metadata``. The count MEASURES
+    the sharing on the formulas themselves — it does not assume it from the
+    signature the prompt carried.
+    """
+    if logic_type == "modal":
+        kb_atoms = set(_coverage_modal_atoms(run_kb))
+        passage_atoms = set(_coverage_modal_atoms([passage_formula]))
+        return len(kb_atoms & passage_atoms)
+    kb_symbols = _coverage_fol_symbols(run_kb)
+    passage_symbols = _coverage_fol_symbols([passage_formula])
+    return len(kb_symbols & passage_symbols)
+
+
+async def _coverage_check_logic_kb(formulas: List[str], lens: str) -> Dict[str, Any]:
+    """The run's own consistency probe on the passage plus its KB (#3496).
+
+    The modal arm builds its KB with ``build_modal_kb`` (the legaliser #2471
+    gave the modal paths) and probes ``ModalHandler.is_modal_kb_consistent``;
+    the FOL arm pairs the signature ``extract_fol_metadata`` derives with
+    ``TweetyBridge.check_consistency`` — the two routes the phases themselves
+    take, composed rather than forked.
+
+    The verdict is the solver's and stays tri-state: ``None`` is "undecided",
+    never a fabricated ``True`` (#1019).
+    """
+    if lens == "modal":
+        from argumentation_analysis.agents.core.logic.modal_handler import (
+            ModalHandler,
+        )
+        from argumentation_analysis.agents.core.logic.modal_kb_identifier_normalizer import (
+            build_modal_kb,
+        )
+        from argumentation_analysis.agents.core.logic.tweety_initializer import (
+            TweetyInitializer,
+        )
+
+        declarations, kb_formulas = build_modal_kb(list(formulas))
+        belief_set = "\n".join(declarations + kb_formulas)
+        from argumentation_analysis.agents.core.logic.tweety_bridge import (
+            TweetyBridge,
+        )
+
+        # The pipeline usually arrives with the JVM already up (the FOL arm
+        # built a bridge before this pass). The coverage pass may be the FIRST
+        # Tweety caller on a short run, so the bridge is constructed here —
+        # that is what starts the JVM (#1219: ``TweetyInitializer()`` alone
+        # leaves the modal parser None, and ``ModalHandler`` cannot be built).
+        TweetyBridge()
+        initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
+        initializer.initialize_modal_components()  # type: ignore[no-untyped-call]
+        handler = ModalHandler(initializer_instance=initializer)
+        verdict, message = await asyncio.to_thread(
+            handler.is_modal_kb_consistent, belief_set
+        )
+    else:
+        from argumentation_analysis.agents.core.logic.fol_logic_agent import (
+            FOLLogicAgent,
+        )
+        from argumentation_analysis.agents.core.logic.tweety_bridge import (
+            TweetyBridge,
+        )
+
+        meta = FOLLogicAgent.extract_fol_metadata(
+            [FOLLogicAgent.unicode_to_ascii_fol(f) for f in formulas]
+        )
+        belief_set = "\n".join(meta["signature_lines"] + [""] + meta["formulas"])
+        bridge = TweetyBridge()
+        verdict, message = await asyncio.to_thread(
+            bridge.check_consistency, belief_set, "first_order"
+        )
+    return {"consistent": verdict, "message": str(message or "")[:300]}
+
+
+async def _coverage_run_logic_lens(item: Any, state: Any, lens: str) -> Dict[str, Any]:
+    """A modal or inferential passage gets a solver answer (#3496).
+
+    The question this arm can answer honestly is the one a passage-level
+    consistency probe asks: does the passage, translated, CONTRADICT the run's
+    own KB of that logic? A passage alone cannot be contradicted, so an empty
+    run KB is a NAMED absence — never the vacuous "consistent" a KB of one
+    formula would return. It does NOT answer entailment: no conclusion formula
+    is translated, and the note says so rather than borrowing the FOL arm's
+    prestige for a verdict it did not compute.
+    """
+    logic_type = _COVERAGE_LENS_LOGIC[lens]
+    run_kb = _coverage_run_kb_formulas(state, logic_type)
+    if not run_kb:
+        return {
+            "lens": lens,
+            "status": "lens_no_finding",
+            "reason": (
+                f"{logic_type}: the run translated no formula of this logic — "
+                "a passage alone cannot be contradicted"
+            ),
+        }
+    # R1157 — the KB-alone control, BEFORE any passage verdict: a base
+    # inconsistent on its own (one panel state: 26 formulas, recorded False)
+    # makes every passage "contradict" by construction, and an undecided base
+    # answers nothing. Both are named absences, and the passage is not even
+    # translated.
+    try:
+        kb_alone_check = await _coverage_check_logic_kb(list(run_kb), lens)
+    except Exception as e:  # pragma: no cover - JVM/solver failures
+        return {
+            "lens": lens,
+            "status": "lens_error",
+            "reason": f"{type(e).__name__}: {e}",
+        }
+    kb_alone_verdict = kb_alone_check.get("consistent")
+    if kb_alone_verdict is False:
+        return {
+            "lens": lens,
+            "status": "lens_no_finding",
+            "reason": (
+                f"{logic_type}: the run's base is already inconsistent on "
+                "its own — no passage can readably contradict it"
+            ),
+            "kb_alone": "inconsistent",
+        }
+    if kb_alone_verdict is None:
+        return {
+            "lens": lens,
+            "status": "lens_no_finding",
+            "reason": (
+                f"{logic_type}: the run's base is undecided on its own — no "
+                "consistency verdict can be read"
+            ),
+            "kb_alone": "undecided",
+        }
+    # #3500 — the passage is translated UNDER the run's vocabulary, so the
+    # formula it yields can actually meet the KB's symbols.
+    shared_atoms: Optional[List[str]] = None
+    context_note = ""
+    if logic_type == "modal":
+        shared_atoms = _coverage_modal_atoms(run_kb)
+    else:
+        context_note = _coverage_fol_signature_note(state)
+    try:
+        translation = await _coverage_translate_passage(
+            str(getattr(item, "quote", "")),
+            lens,
+            shared_atoms=shared_atoms,
+            context_note=context_note,
+        )
+    except Exception as e:  # pragma: no cover - provider failures
+        return {
+            "lens": lens,
+            "status": "lens_error",
+            "reason": f"{type(e).__name__}: {e}",
+        }
+    if translation.get("status") != "translated":
+        return {
+            "lens": lens,
+            "status": "lens_no_finding",
+            "reason": f"passage untranslatable: {translation.get('reason')}",
+            "untranslatable": True,
+        }
+    passage_formula = str(translation["formula"])
+    from argumentation_analysis.services.nl_to_logic import TranslationResult
+
+    # R1158 — the translator's FOL contract is a JOINED string ("; ".join):
+    # a passage can carry several statements. The shared-symbol count and the
+    # probe both read the SPLIT list, never the whole string as one formula
+    # (7/7 multi-formula translations were refused by the parser as one).
+    passage_formulas = TranslationResult.split_formulas(passage_formula)
+    if logic_type == "modal":
+        kb_symbols = set(_coverage_modal_atoms(run_kb))
+        passage_symbols = set(_coverage_modal_atoms(passage_formulas))
+    else:
+        kb_symbols = _coverage_fol_symbols(run_kb)
+        passage_symbols = _coverage_fol_symbols(passage_formulas)
+    shared = len(kb_symbols & passage_symbols)
+    if shared == 0:
+        # #3500 — a formula with no symbol in common with the KB cannot
+        # contradict it: the solver's « consistent » would hold by
+        # construction. That is a named absence, never a verdict, and the
+        # solver is not asked a vacuous question.
+        return {
+            "lens": lens,
+            "status": "lens_no_finding",
+            "reason": (
+                f"{logic_type}: the passage shares no symbol with the run's "
+                "base, so no consistency verdict can be read"
+            ),
+            "formula": passage_formula,
+            "shared_symbols": 0,
+            "no_shared_symbols": True,
+        }
+    try:
+        check = await _coverage_check_logic_kb(run_kb + passage_formulas, lens)
+    except Exception as e:  # pragma: no cover - JVM/solver failures
+        return {
+            "lens": lens,
+            "status": "lens_error",
+            "reason": f"{type(e).__name__}: {e}",
+        }
+    consistent = check.get("consistent")
+    check_message = str(check.get("message") or "")
+    if consistent is None and check_message.startswith("Degraded:"):
+        # R1158 — a REFUSAL of the run's route is not a verdict: the parser
+        # rejected the belief base, or the reasoner is absent (#1634's
+        # contract — no structured signal at the handler, the prefix is the
+        # only one, pinned by a witness). Never `answered`: the message stays
+        # in the finding as its trace, the note says in French what happened,
+        # and « verdict indécis » stays reserved to a solver that RAN.
+        return {
+            "lens": lens,
+            "status": "lens_no_finding",
+            "reason": (
+                f"{logic_type}: the consistency route refused to answer — "
+                "a solver did not decide"
+            ),
+            "route_error": True,
+            "formula": passage_formula,
+            "message": check_message,
+        }
+    if consistent is False:
+        verdict = "contradicts_run_kb"
+    elif consistent is True:
+        verdict = "consistent_with_run_kb"
+    else:
+        verdict = "undecided"
+    return {
+        "lens": lens,
+        "status": "answered",
+        "logic_type": logic_type,
+        "formula": passage_formula,
+        "consistent": consistent,
+        "verdict": verdict,
+        "shared_symbols": shared,
+        "message": str(check.get("message") or ""),
+    }
+
+
 async def _coverage_route_to_lens(item: Any, state: Any = None) -> Dict[str, Any]:
     """Run the lens an item's class points at, on the passage it named (#3492).
 
-    Only the fallacy descent has a passage-level entry point today: the walk
-    the per-argument pass and the #3326 winner reading already share
-    (``_walk_single_fallacy_unit``). The modal and FOL arms read the RUN's
-    translated population — a phase-wide KB built from ``nl_to_logic`` — not
-    an arbitrary passage, so a passage cannot be handed to them without a
-    translation entry point that does not exist yet. Those items are recorded
-    ``lens_not_wired``: a named absence the acts state, never a verdict
-    nothing computed (#1019).
+    Three arms today: the fallacy descent has the walk the per-argument pass
+    and the #3326 winner reading already share (``_walk_single_fallacy_unit``);
+    the modal and FOL arms reach the passage through the entry points #3496
+    added (``_coverage_run_logic_lens``), which translate ONE passage and probe
+    it against the run's own KB of that logic. A lens with no passage-level
+    entry point stays a named absence — never a verdict nothing computed
+    (#1019).
 
     ``state`` is what the #3428 frame needs (the unit's provenance: offset and
     the verbatim passage a paraphrase restates). The walk then reads the
@@ -14393,13 +14829,15 @@ async def _coverage_route_to_lens(item: Any, state: Any = None) -> Dict[str, Any
     reprise ask 5. No state ⇒ ``document_frame=None`` and the pre-#3428
     prompts byte for byte.
     """
-    if getattr(item, "lens", "") != "fallacy_descent":
+    lens = getattr(item, "lens", "")
+    if lens in _COVERAGE_LENS_LOGIC:
+        # #3496 — the modal and FOL arms now have passage-level entry points;
+        # the named absence they used to record is closed here.
+        return await _coverage_run_logic_lens(item, state, lens)
+    if lens != "fallacy_descent":
         return {
             "status": "lens_not_wired",
-            "reason": (
-                f"{getattr(item, 'lens', '?')}: the wired arm reads the run's "
-                "translated population, not a single passage"
-            ),
+            "reason": f"{lens or '?'}: no passage-level entry point for this lens",
         }
     taxonomy_path = os.path.join(
         os.path.dirname(os.path.dirname(__file__)),
