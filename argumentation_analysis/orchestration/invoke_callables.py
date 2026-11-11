@@ -9715,18 +9715,29 @@ def _extract_arguments_for_parallel(
 
 
 def _normalize_items_with_quotes(items: list[Any]) -> list[Dict[str, Any]]:
-    """Normalize argument/claim items: accept both str and dict with source_quote."""
+    """Normalize argument/claim items: accept both str and dict with source_quote.
+
+    #3513 — a stated ``move_author`` survives the rebuild. This normalizer is
+    the k-window merge's door: it used to keep ``text`` and ``source_quote``
+    only, so the field the extraction prompt asks for (#3265) and the writer
+    passes (#3162) was stripped one hop before either — measured 0 of 1,487
+    ``argument_provenance`` entries carrying it in the 10 c5 states. The
+    vocabulary gate stays where it was: ``add_argument`` drops an
+    out-of-vocabulary value, never this rebuild.
+    """
     result = []
     for item in items:
         if isinstance(item, str):
             result.append({"text": item, "source_quote": ""})
         elif isinstance(item, dict):
-            result.append(
-                {
-                    "text": str(item.get("text", item.get("content", ""))),
-                    "source_quote": str(item.get("source_quote", "")),
-                }
-            )
+            entry = {
+                "text": str(item.get("text", item.get("content", ""))),
+                "source_quote": str(item.get("source_quote", "")),
+            }
+            author = item.get("move_author")
+            if isinstance(author, str) and author.strip():
+                entry["move_author"] = author.strip()
+            result.append(entry)
     return result
 
 
@@ -9801,9 +9812,11 @@ _OPPOSING_POSITIONS_INSTRUCTION = (
 _MOVE_AUTHOR_INSTRUCTION = (
     " For each extracted item, state WHOSE position it carries with "
     "'move_author': 'speaker' when the item states the analysed text's own "
-    "position, 'reported' when the item states a position the text reports, "
-    "cites or argues against (a third party's). Omit the key when the text "
-    "does not let you tell."
+    "position - including a view it ascribes to another party only in order "
+    "to attack it (#3429: an ascription is a move, not a relay); 'reported' "
+    "when the item is a position actually held by another party that the "
+    "text relays, cites or answers. Omit the key when the text does not let "
+    "you tell."
 )
 
 # #3491 — a question keeps its FORCE, never its bare content. Measured on

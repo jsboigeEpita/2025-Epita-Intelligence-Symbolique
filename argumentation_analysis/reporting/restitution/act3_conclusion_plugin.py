@@ -109,13 +109,13 @@ from argumentation_analysis.agents.core.counter_argument.definitions import (
     strategy_label_fr,  # #3328 leg 2: enum value -> FR name, free text -> ""
 )
 from argumentation_analysis.core.fallacy_attribution import (  # #3180
-    MOVE_AUTHOR_REPORTED,  # #3162 item 2 — whose position a unit carries
     confidence_of,  # #3231
     detector_confidence_note,  # #3231
     DETECTION_STANDING_RULE,  # #3248
     is_reported_move,
     is_speaker_move,
     move_author_label_of,
+    reported_position_qualifier,  # #3513 — one qualifier reader, every surface
     taxonomy_definition_note,  # #3394
 )
 from argumentation_analysis.orchestration.fol_cause import (  # #3237
@@ -1012,6 +1012,7 @@ def _collect_weak_points(
     pl_causes: Optional[List[str]] = None,
     citable_refs: Optional[Set[str]] = None,
     primary_semantics: Optional[str] = None,
+    state: Any = None,
 ) -> List[StructuringWeakPoint]:
     """Collect the structuring weak points the reader can target (real-in-state).
 
@@ -1080,7 +1081,19 @@ def _collect_weak_points(
         points.append(
             StructuringWeakPoint(
                 source="dung",
-                label=f"argument rejeté par le cadre de Dung (sémantique {semantics})",
+                # #3513 — the rejection line says whose position fell: a
+                # REPORTED position the graph rejects is that camp's defeat
+                # (the speaker may even be the attacker), never a weakened
+                # support of the analysed text. The shared qualifier reads the
+                # raw provenance; an unstated author changes nothing.
+                label=(
+                    f"argument rejeté par le cadre de Dung (sémantique {semantics})"
+                    + (
+                        reported_position_qualifier(state, str(arg_id))
+                        if state is not None
+                        else ""
+                    )
+                ),
                 target_arg_id=str(arg_id),
                 # #1908: the accepted/rejected meaning is shared with Act II —
                 # one helper (dung_reader), so the acts cannot diverge.
@@ -1994,7 +2007,12 @@ def _aba_finding(state: Any) -> Optional[StructuredArgFinding]:
             a = _truncate(str(assumption).strip(), _FORMALISM_NODE_CAP)
             c = _truncate(str(contrary).strip(), _FORMALISM_NODE_CAP)
             if a and c:
-                pairs.append(f"« {a} » a pour contraire « {c} »")
+                # #3513 — the contraries are keyed by unit id (#3014), so the
+                # shared qualifier resolves them exactly as it resolves a
+                # SETAF target: a contrary of a REPORTED position names whose
+                # camp the relation touches, never a guess.
+                side = reported_position_qualifier(state, str(assumption).strip())
+                pairs.append(f"« {a} »{side} a pour contraire « {c} »")
                 if len(pairs) >= _ABA_CONTRARY_PAIR_CAP:
                     break
         if len(pairs) >= _ABA_CONTRARY_PAIR_CAP:
@@ -2039,27 +2057,19 @@ def _setaf_coalitions_by_target(
 
 _SETAF_REPORTED_QUALIFIER = "(position rapportée)"
 
+#: #3513 — SETAF, Dung and ABA verdict lines read ONE qualifier function
+#: (``reported_position_qualifier``), which lives beside the closed vocabulary
+#: it reads. The local alias above is kept for the existing #3162 witnesses;
+#: the function itself is the single reader.
+
 
 def _setaf_target_side(state: Any, target: str) -> str:
-    """#3162 item 2 — the target's stated side, or nothing when unmeasured.
+    """#3162 item 2 — kept as the SETAF call shape; the read is shared.
 
-    Reads ``argument_provenance[target]["move_author"]`` **raw**, never through
-    ``move_author_of()``: that predicate's ``speaker`` default is the fallacy
-    reader's historical attribution, and a unit's provenance carries no such
-    history — an absent field means "not stated" and must render as no
-    qualifier at all (#1019). Only the two closed vocabulary values are
-    considered, and only ``reported`` changes the line.
+    #3513 — the body moved to ``fallacy_attribution.reported_position_qualifier``
+    so the Dung and ABA surfaces read the same raw provenance the same way.
     """
-    provenance = getattr(state, "argument_provenance", None)
-    if not isinstance(provenance, dict):
-        return ""
-    entry = provenance.get(target)
-    if not isinstance(entry, dict):
-        return ""
-    value = entry.get("move_author")
-    if isinstance(value, str) and value.strip() == MOVE_AUTHOR_REPORTED:
-        return f" {_SETAF_REPORTED_QUALIFIER}"
-    return ""
+    return reported_position_qualifier(state, target)
 
 
 def _setaf_finding(state: Any) -> Optional[StructuredArgFinding]:
@@ -3063,6 +3073,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         pl_causes,
         citable_refs=_citable_dung_refs,
         primary_semantics=_primary_dung_semantics,
+        state=state,
     )
     counter_strategies: List[CounterStrategy] = []
     for ca in counters:
@@ -3820,15 +3831,19 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
         )
 
     # #3162 item 2 — the reading rule follows the qualifier it governs. A
-    # SETAF line qualified « (position rapportée) » says the target is a
-    # position the text reports/cites; the writer inverted exactly that into
-    # "the speaker's case stands poorly". Conditional on the qualifier: a
-    # briefing with no such line gets no rule (never instruct the writer about
-    # a side nothing stated, and never claim a side a line did not carry).
+    # line qualified « (position rapportée) » says the unit is a position the
+    # text reports/cites; the writer inverted exactly that into "the
+    # speaker's case stands poorly". #3513 — the qualifier now rides Dung and
+    # ABA lines too, so the rule follows it on EVERY surface: any structured
+    # finding statement or any weak-point label carrying it brings the rule.
+    # Conditional on the qualifier: a briefing with no such line gets no rule
+    # (never instruct the writer about a side nothing stated, and never claim
+    # a side a line did not carry).
     setaf_side_rule = ""
     if any(
-        f.capability == "setaf_reasoning" and _SETAF_REPORTED_QUALIFIER in f.statement
-        for f in evidence.structured_findings
+        _SETAF_REPORTED_QUALIFIER in f.statement for f in evidence.structured_findings
+    ) or any(
+        _SETAF_REPORTED_QUALIFIER in (wp.label or "") for wp in evidence.weak_points
     ):
         setaf_side_rule = _SETAF_REPORTED_POSITION_RULE
 
