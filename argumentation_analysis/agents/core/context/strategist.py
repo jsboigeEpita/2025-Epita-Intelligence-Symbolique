@@ -54,6 +54,7 @@ from argumentation_analysis.agents.core.reading import (
 # reading package exports the producers, not this predicate, and #3430 must not
 # depend on a surface another change is editing.
 from argumentation_analysis.agents.core.reading.first_reading import quote_occurs_in
+from argumentation_analysis.core.metadata_prompt import metadata_prompt_value
 from argumentation_analysis.core.reading_window import locate_quote, persona_reading
 
 logger = logging.getLogger("Strategist")
@@ -394,11 +395,13 @@ def _stakes_block(state: Any) -> str:
 
 def build_strategist_prompt(state: Any, excerpt: str) -> str:
     metadata = getattr(state, "source_metadata", {}) or {}
+    # #3512 — an unrecorded field renders as an instruction, never as the
+    # corpus placeholder: the model copies what the prompt shows.
     return STRATEGIST_PROMPT.format(
-        speaker=metadata.get("speaker", "unknown"),
-        venue=metadata.get("venue", "unknown"),
-        topic=metadata.get("topic", "unknown"),
-        era=metadata.get("era", metadata.get("date_or_year", "unknown")),
+        speaker=metadata_prompt_value(metadata, "speaker"),
+        venue=metadata_prompt_value(metadata, "venue"),
+        topic=metadata_prompt_value(metadata, "topic"),
+        era=metadata_prompt_value(metadata, "era", "date_or_year"),
         stakes_block=_stakes_block(state),
         excerpt=excerpt,
     )

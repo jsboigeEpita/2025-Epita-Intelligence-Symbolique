@@ -18,6 +18,7 @@ import json
 import logging
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
+from argumentation_analysis.core.metadata_prompt import metadata_prompt_value
 from argumentation_analysis.core.reading_window import (
     LLM_EXTRACTION_WINDOW,
     selected_text,
@@ -144,13 +145,13 @@ class StakesExtractor:
 
         prompt = EXTRACTION_PROMPT.format(
             arguments_block=arguments_block,
-            speaker=source_metadata.get("speaker", "unknown"),
-            venue=source_metadata.get("venue", "unknown"),
-            topic=source_metadata.get("topic", "unknown"),
-            era=source_metadata.get(
-                "era", source_metadata.get("date_or_year", "unknown")
-            ),
-            language=source_metadata.get("language", "unknown"),
+            # #3512 — an unrecorded field renders as an instruction, never as
+            # the corpus placeholder: the model copies what the prompt shows.
+            speaker=metadata_prompt_value(source_metadata, "speaker"),
+            venue=metadata_prompt_value(source_metadata, "venue"),
+            topic=metadata_prompt_value(source_metadata, "topic"),
+            era=metadata_prompt_value(source_metadata, "era", "date_or_year"),
+            language=metadata_prompt_value(source_metadata, "language"),
             name_instruction=name_instruction,
             excerpt=excerpt,
         )
