@@ -14573,25 +14573,6 @@ def _coverage_fol_symbols(formulas: List[str]) -> Set[str]:
     return names
 
 
-def _coverage_shared_symbols(
-    run_kb: List[str], passage_formula: str, logic_type: str
-) -> int:
-    """How many symbols the passage formula shares with the run's KB (#3500).
-
-    Modal: atoms under ``build_modal_kb``'s normalisation. FOL: surface
-    predicates and constants under ``extract_fol_metadata``. The count MEASURES
-    the sharing on the formulas themselves — it does not assume it from the
-    signature the prompt carried.
-    """
-    if logic_type == "modal":
-        kb_atoms = set(_coverage_modal_atoms(run_kb))
-        passage_atoms = set(_coverage_modal_atoms([passage_formula]))
-        return len(kb_atoms & passage_atoms)
-    kb_symbols = _coverage_fol_symbols(run_kb)
-    passage_symbols = _coverage_fol_symbols([passage_formula])
-    return len(kb_symbols & passage_symbols)
-
-
 async def _coverage_check_logic_kb(formulas: List[str], lens: str) -> Dict[str, Any]:
     """The run's own consistency probe on the passage plus its KB (#3496).
 

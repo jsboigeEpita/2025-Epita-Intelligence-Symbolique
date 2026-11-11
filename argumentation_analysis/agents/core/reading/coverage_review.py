@@ -625,6 +625,19 @@ def _retained_fallacies(routed: Dict[str, Any]) -> List[Any]:
     return list(fallacies) if isinstance(fallacies, list) else []
 
 
+def _one_line(text: str) -> str:
+    """Collapse runs of whitespace, line breaks included, into one space (#3504).
+
+    The RENDER's own rule, never the state's: a free-text field that carries a
+    line break would split the item's line, and Act II would read the fragment
+    as a line of its own (19 continuation lines for 45 items on the
+    coordinator's replay). The recorded field keeps its form — the quote stays
+    verbatim for anchoring (``anchor_quote_in``), the formula stays what the
+    solver read. No truncation: length is a separate question.
+    """
+    return " ".join(text.split())
+
+
 def _logic_verdict_clause(lens: str, finding: Dict[str, Any]) -> str:
     """What a modal or FOL lens answered, said for what it IS (#3496, #3500).
 
@@ -632,9 +645,11 @@ def _logic_verdict_clause(lens: str, finding: Dict[str, Any]) -> str:
     run's own KB of that logic or does not. It is NOT an entailment verdict —
     no conclusion formula is translated — and the wording never borrows the
     word of one. #3500: the clause carries the MEASURED shared-symbol count,
-    the vocabulary over which the verdict is readable at all.
+    the vocabulary over which the verdict is readable at all. #3504: the
+    formula renders on the item's line — the SOLVER's own string keeps its
+    line breaks in the finding.
     """
-    formula = str(finding.get("formula") or "")
+    formula = _one_line(str(finding.get("formula") or ""))
     verdict = str(finding.get("verdict") or "")
     shared = finding.get("shared_symbols")
     shared_txt = ""
@@ -685,6 +700,9 @@ def coverage_item_line(item: Dict[str, Any], bullet: str = "— ") -> str:
     offset = item.get("offset")
     if not quote or not isinstance(offset, int) or isinstance(offset, bool):
         return ""
+    # #3504 — every free-text field renders on the ONE line; the recorded
+    # field keeps its form.
+    quote = _one_line(quote)
     kind = str(item.get("class") or "")
     lens = str(item.get("lens") or "")
     place = f"position {offset}"
@@ -692,7 +710,7 @@ def coverage_item_line(item: Dict[str, Any], bullet: str = "— ") -> str:
     if isinstance(rank, int) and not isinstance(rank, bool) and rank > 0:
         place += f", rang {rank}"
     head = f"{bullet}« {quote} » ({place}, classe {kind} → lentille {lens})"
-    conclusion = str(item.get("conclusion") or "").strip()
+    conclusion = _one_line(str(item.get("conclusion") or ""))
     if conclusion:
         head += f" — conclut : {conclusion}"
 
@@ -702,10 +720,12 @@ def coverage_item_line(item: Dict[str, Any], bullet: str = "— ") -> str:
     finding_any = routed.get("finding")
     finding = finding_any if isinstance(finding_any, dict) else {}
     labels = [
-        label for label in map(_fallacy_label, _retained_fallacies(routed)) if label
+        _one_line(label)
+        for label in map(_fallacy_label, _retained_fallacies(routed))
+        if label
     ]
     clauses: List[str] = []
-    reason = str(item.get("reason") or "").strip()
+    reason = _one_line(str(item.get("reason") or ""))
     if reason:
         clauses.append(
             "la revue de couverture — le lecteur du pipeline, pas une "
@@ -726,7 +746,8 @@ def coverage_item_line(item: Dict[str, Any], bullet: str = "— ") -> str:
         if finding.get("untranslatable"):
             clauses.append(
                 f"lentille {lens} : aucune traduction formelle valide du "
-                f"passage ({finding.get('reason')}) — il reste non examiné"
+                f"passage ({_one_line(str(finding.get('reason') or ''))}) — "
+                "il reste non examiné"
             )
         elif finding.get("route_error"):
             # R1158 — the route REFUSED (parser rejection, reasoner
@@ -745,7 +766,8 @@ def coverage_item_line(item: Dict[str, Any], bullet: str = "— ") -> str:
             # reader as a verdict.
             clauses.append(
                 f"lentille {lens} : le passage se traduit (« "
-                f"{finding.get('formula')} ») mais ne partage aucun symbole "
+                f"{_one_line(str(finding.get('formula') or ''))} ») mais ne "
+                "partage aucun symbole "
                 "avec la base formelle du run — aucun verdict de cohérence "
                 "ne peut être lu (« cohérent » ne vaudrait alors rien) ; "
                 "le passage reste non examiné"
