@@ -865,22 +865,35 @@ def build_anthropic_batch_request(
 def batch_item_record(line: Dict[str, Any]) -> Dict[str, Any]:
     """One results line, in the record shape ``call_judge`` returns.
 
-    A succeeded line is normalised exactly like the synchronous response
-    (same field names, same token columns). An errored line is a FAILED
-    document — status 0 like a network-level failure, the error's type and
-    message named in ``error_body_head`` — never an empty verdict.
+    The real wire (#3497, measured on the first paid batch): each JSONL
+    line is ``{"custom_id", "result": {"type", …}}`` and the variant rides
+    on ``result.type``:
+    - ``succeeded``: the Message object is nested at ``result.message``
+      (``content``, ``usage``, ``model``, ``stop_reason``) — normalised
+      exactly like the synchronous response, same field names, same token
+      columns;
+    - ``errored``: an ``ErrorResponse`` at ``result.error`` whose details
+      are at ``result.error.error`` (``type``, ``message``);
+    - ``canceled`` / ``expired``: ``result`` carries only ``type``.
+    A non-succeeded line is a FAILED document — status 0 like a
+    network-level failure, the type and the error's own type and message
+    named in ``error_body_head`` — never an empty verdict.
     """
-    if str(line.get("type") or "") != "succeeded":
-        error = line.get("error") or {}
+    result = line.get("result") or {}
+    item_type = str(result.get("type") or "")
+    if item_type != "succeeded":
+        error_response = result.get("error") or {}
+        error = error_response.get("error") or {}
         return {
             "status_code": 0,
             "error_body_head": (
-                f"batch item errored ({error.get('type')}): " f"{error.get('message')}"
+                f"batch item {item_type or 'unknown'} "
+                f"({error.get('type')}): {error.get('message')}"
             ),
         }
-    result = line.get("result") or {}
-    blocks = result.get("content") or []
-    usage = result.get("usage") or {}
+    message = result.get("message") or {}
+    blocks = message.get("content") or []
+    usage = message.get("usage") or {}
     return {
         "status_code": 200,
         "answer": "".join(
@@ -889,8 +902,8 @@ def batch_item_record(line: Dict[str, Any]) -> Dict[str, Any]:
         "prompt_tokens": usage.get("input_tokens", 0),
         "completion_tokens": usage.get("output_tokens", 0),
         "usage": usage,
-        "answered_model": result.get("model"),
-        "stop_reason": result.get("stop_reason"),
+        "answered_model": message.get("model"),
+        "stop_reason": message.get("stop_reason"),
     }
 
 
@@ -902,14 +915,17 @@ def batch_terminal_failure(
 ) -> Dict[str, Dict[str, Any]]:
     """Every document failed, the batch's terminal state named — never silent.
 
-    ``canceled`` and ``expired`` are the batch's own terminal states;
-    ``poll_timeout`` is the waiter's budget running out while the batch is
-    still in progress. In every case each document's record says WHY, so the
-    table names it and the exit code counts it.
+    The only terminal *processing status* is ``ended``; a batch cancelled or
+    expired still ends, and its cancelled/expired requests arrive as result
+    line types (``batch_item_record``). ``poll_timeout`` is the waiter's own
+    budget running out while the batch is still processing: its message
+    names the resume flag, because a batch that outlives the waiter keeps
+    its results for 29 days — ``--batch-id`` reads them back without a
+    second spend.
     """
     reason = (
         f"batch poll timeout after {after_seconds}s (batch {batch_id} still "
-        "in progress — no result was read)"
+        f"in progress — no result was read; resume with --batch-id {batch_id})"
         if state == "poll_timeout"
         else f"batch {state} before completion (batch {batch_id}): no result exists"
     )
@@ -923,15 +939,19 @@ async def call_judge_batch(
     batch_timeout: int = ANTHROPIC_BATCH_TIMEOUT_SECONDS,
     poll_seconds: int = ANTHROPIC_BATCH_POLL_SECONDS,
     _transport: Optional[Any] = None,
+    batch_id: Optional[str] = None,
 ) -> Tuple[Dict[str, Dict[str, Any]], float]:
-    """The whole panel through ONE batch: submit, wait, retrieve, map.
+    """The whole panel through ONE batch: submit (or resume), wait, map.
 
-    #3497's plumbing: a single waiter polls the batch on a bounded cadence
-    until a terminal state (``ended``, ``canceled``, ``expired``) or its own
-    budget runs out; every terminal state is reported, and a document whose
-    request errored inside an ``ended`` batch is a failed document, counted
-    and named — never an empty verdict. Returns the per-document records in
-    the shape ``call_judge`` returns, plus the wall time the batch took.
+    #3497's plumbing: a single waiter polls the batch's
+    ``processing_status`` on a bounded cadence until ``ended`` or its own
+    budget runs out. A document whose request errored, canceled or expired
+    inside an ``ended`` batch is a failed document, counted and named —
+    never an empty verdict. ``batch_id`` resumes an already-submitted batch
+    (its results live 29 days): no submit, no second spend; its
+    ``custom_id`` set must equal the panel's, else a loud refusal BEFORE
+    any record is produced. Returns the per-document records in the shape
+    ``call_judge`` returns, plus the wall time the batch took.
     """
     import httpx
 
@@ -944,25 +964,34 @@ async def call_judge_batch(
     v1 = anthropic_messages_url(endpoint["base_url"]).rsplit("/messages", 1)[0]
     t0 = time.time()
     try:
-        response = await transport.post(
-            f"{v1}/messages/batches",
-            json=build_anthropic_batch_request(endpoint, prompts),
-            headers=headers,
-        )
-        if response.status_code != 200:
-            head = response.text[:500]
-            return (
-                {
-                    doc_id: {
-                        "status_code": 0,
-                        "error_body_head": f"batch submit failed "
-                        f"({response.status_code}): {head}",
-                    }
-                    for doc_id in prompts
-                },
-                round(time.time() - t0, 1),
+        if batch_id:
+            # Resume: the batch was paid for by an earlier run whose waiter
+            # died or timed out. Nothing is submitted again.
+            print(f"resuming batch {batch_id} (no submit)", flush=True)
+        else:
+            response = await transport.post(
+                f"{v1}/messages/batches",
+                json=build_anthropic_batch_request(endpoint, prompts),
+                headers=headers,
             )
-        batch_id = str((response.json() or {}).get("id") or "")
+            if response.status_code != 200:
+                head = response.text[:500]
+                return (
+                    {
+                        doc_id: {
+                            "status_code": 0,
+                            "error_body_head": f"batch submit failed "
+                            f"({response.status_code}): {head}",
+                        }
+                        for doc_id in prompts
+                    },
+                    round(time.time() - t0, 1),
+                )
+            batch_id = str((response.json() or {}).get("id") or "")
+        # The id is logged BEFORE the first poll: if the waiter dies or its
+        # budget runs out, this line is what makes the paid batch resumable
+        # (--batch-id), instead of surviving only inside a failure text.
+        print(f"batch id: {batch_id}", flush=True)
         # The waiter's budget, expressed in POLLS: ``batch_timeout`` seconds
         # at the polling cadence. A cadence of zero must still bound the
         # loop (one poll per second of budget), or a test transport that
@@ -990,13 +1019,15 @@ async def call_judge_batch(
                     },
                     round(time.time() - t0, 1),
                 )
-            status = str((status_response.json() or {}).get("status") or "")
-            if status in ("canceled", "expired"):
-                return (
-                    batch_terminal_failure(list(prompts), status, batch_id),
-                    round(time.time() - t0, 1),
-                )
-            if status == "ended":
+            # The real wire carries ``processing_status`` — values
+            # in_progress | canceling | ended. ``canceled``/``expired`` are
+            # NOT statuses: a cancelled batch still ends, and its requests
+            # arrive as result line types. Reading ``status`` instead was
+            # the defect that made a 2-min batch look like a 1-hour timeout.
+            processing_status = str(
+                (status_response.json() or {}).get("processing_status") or ""
+            )
+            if processing_status == "ended":
                 results_response = await transport.get(
                     f"{v1}/messages/batches/{batch_id}/results", headers=headers
                 )
@@ -1013,6 +1044,23 @@ async def call_judge_batch(
                         },
                         round(time.time() - t0, 1),
                     )
+                lines = []
+                for raw_line in results_response.text.splitlines():
+                    raw_line = raw_line.strip()
+                    if raw_line:
+                        lines.append(json.loads(raw_line))
+                custom_ids = {str(line.get("custom_id") or "") for line in lines} - {""}
+                # Resume safety: a batch that is not THIS panel's is a loud
+                # refusal, never a partial table (which would read another
+                # run's verdicts as this run's). A brand-new run keeps the
+                # original per-document « no result line » naming.
+                if custom_ids - set(prompts):
+                    unexpected = ", ".join(sorted(custom_ids - set(prompts)))
+                    raise ValueError(
+                        f"batch {batch_id} carries custom_id(s) outside the "
+                        f"panel: {unexpected} — refusing to map another "
+                        f"batch's results onto this run"
+                    )
                 records = {
                     doc_id: {
                         "status_code": 0,
@@ -1021,11 +1069,7 @@ async def call_judge_batch(
                     }
                     for doc_id in prompts
                 }
-                for raw_line in results_response.text.splitlines():
-                    raw_line = raw_line.strip()
-                    if not raw_line:
-                        continue
-                    line = json.loads(raw_line)
+                for line in lines:
                     doc_id = str(line.get("custom_id") or "")
                     if doc_id in records:
                         records[doc_id] = batch_item_record(line)
@@ -2010,6 +2054,14 @@ async def run(
         "its documents, named",
     )
     parser.add_argument(
+        "--batch-id",
+        default=None,
+        help="#3497: resume an already-submitted batch (results live 29 "
+        "days) — no submit, no second spend. Implies --anthropic-batch. "
+        "The batch's custom_id set must not stray outside the panel, else "
+        "the run refuses before writing any record",
+    )
+    parser.add_argument(
         "--judge-temperature",
         type=parse_temperature,
         default=None,
@@ -2286,7 +2338,7 @@ async def run(
         **resolve_judge_endpoint(args.judge_model),
         "temperature": args.judge_temperature,
     }
-    if args.anthropic_batch:
+    if args.anthropic_batch or args.batch_id:
         if endpoint["family"] != "anthropic":
             parser.error(
                 f"--anthropic-batch routes a judge through the Message Batches "
@@ -2299,18 +2351,23 @@ async def run(
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
     # #3497 — the whole panel through ONE batch when the flag is set: one
-    # submit, one waiter, one retrieval; every document's record then flows
-    # through the same row builder as a synchronous call. A batch-level
-    # failure (submit refused, canceled, expired, waiter timeout) fails every
-    # document, counted and named — never an empty verdict.
+    # submit (or a resume via --batch-id), one waiter, one retrieval; every
+    # document's record then flows through the same row builder as a
+    # synchronous call. A batch-level failure (submit refused, waiter
+    # timeout) fails every document, counted and named — never an empty
+    # verdict. A resume that is not this panel's batch refuses loudly.
     batch_records: Optional[Dict[str, Dict[str, Any]]] = None
     batch_elapsed = 0.0
-    if args.anthropic_batch:
+    if args.anthropic_batch or args.batch_id:
         try:
             batch_records, batch_elapsed = await judge_batch_call(
-                endpoint, prompts, args.timeout, args.batch_timeout
+                endpoint,
+                prompts,
+                args.timeout,
+                args.batch_timeout,
+                batch_id=args.batch_id,
             )
-        except Exception as exc:  # network-level: named, never silent
+        except Exception as exc:  # network-level or refusal: named, never silent
             batch_records = {
                 doc_id: {"status_code": 0, "error_body_head": repr(exc)}
                 for doc_id in prompts
@@ -2333,7 +2390,6 @@ async def run(
         elapsed = (
             batch_elapsed if batch_records is not None else round(time.time() - t0, 1)
         )
-        elapsed = round(time.time() - t0, 1)
         row = _judge_one(
             doc_id,
             doc["pipeline_text"],
@@ -2405,8 +2461,10 @@ async def run(
             + f" --judge-temperature {_temperature_arg(args.judge_temperature)}"
             + (" --allow-degraded-arm" if args.allow_degraded_arm else "")
             # #3497 — the recorded line re-runs the SAME route: the batch
-            # flag and a non-default budget ride in the command.
+            # flag and a non-default budget ride in the command; a resumed
+            # run re-runs as a resume of the same batch.
             + (" --anthropic-batch" if args.anthropic_batch else "")
+            + (f" --batch-id {args.batch_id}" if args.batch_id else "")
             + (
                 f" --batch-timeout {args.batch_timeout}"
                 if args.batch_timeout != ANTHROPIC_BATCH_TIMEOUT_SECONDS
@@ -2414,6 +2472,12 @@ async def run(
             )
         ),
     }
+    if batch_records is not None:
+        # The batch's wall time once in META (per-row elapsed_seconds carries
+        # it too), and which batch a resume read.
+        meta["batch_elapsed_seconds"] = batch_elapsed
+        if args.batch_id:
+            meta["resumed_batch_id"] = args.batch_id
     # #3417 — the meta rides beside the rows, so a re-render names this pass's
     # judge, route and command without reading them back out of a table.
     (args.out_dir / META_FILENAME).write_text(
