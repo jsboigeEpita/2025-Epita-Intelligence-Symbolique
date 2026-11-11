@@ -36,6 +36,7 @@ from argumentation_analysis.agents.core.context.stated_dates import (
     stated_years,
 )
 from argumentation_analysis.agents.core.reading import defining_moves
+from argumentation_analysis.core.metadata_prompt import metadata_prompt_value
 from argumentation_analysis.core.reading_window import persona_reading
 
 logger = logging.getLogger("Historian")
@@ -215,12 +216,14 @@ def build_historian_prompt(
     defined — a document that states no date changes nothing.
     """
     metadata = getattr(state, "source_metadata", {}) or {}
+    # #3512 — an unrecorded field renders as an instruction, never as the
+    # corpus placeholder: the model copies what the prompt shows.
     return HISTORIAN_PROMPT.format(
-        speaker=metadata.get("speaker", "unknown"),
-        venue=metadata.get("venue", "unknown"),
-        topic=metadata.get("topic", "unknown"),
-        era=metadata.get("era", metadata.get("date_or_year", "unknown")),
-        language=metadata.get("language", "unknown"),
+        speaker=metadata_prompt_value(metadata, "speaker"),
+        venue=metadata_prompt_value(metadata, "venue"),
+        topic=metadata_prompt_value(metadata, "topic"),
+        era=metadata_prompt_value(metadata, "era", "date_or_year"),
+        language=metadata_prompt_value(metadata, "language"),
         stakes_block=_stakes_block(state),
         dates_section=_dates_section(stated_dates),
         excerpt=excerpt,

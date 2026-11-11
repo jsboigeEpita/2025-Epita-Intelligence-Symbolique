@@ -34,6 +34,7 @@ from argumentation_analysis.agents.core.context.historian import (
     build_historical_context,
     build_historian_prompt,
 )
+from argumentation_analysis.core.metadata_prompt import NOT_RECORDED_IN_METADATA
 
 #: A synthetic text citing ONE calendar date (month, day, year) as already
 #: past — R1149: only a calendar date bounds the writing date. Opaque words,
@@ -519,13 +520,16 @@ class TestATextWithoutStatedDateChangesNothing:
         # ``dates_section=""`` is a no-op on BOTH sides of the change: the
         # #3377 template ignores the unused kwarg, the #3479 template renders
         # the empty section as nothing — the formatted prompt is the same
-        # bytes either way.
+        # bytes either way. #3512 renders the three unrecorded fields
+        # through the metadata helper, so the expected bytes carry the
+        # not-recorded instruction where the template once showed
+        # ``unknown``.
         assert prompt == HISTORIAN_PROMPT.format(
             speaker="Speaker_A",
             venue="assembly",
-            topic="unknown",
-            era="unknown",
-            language="unknown",
+            topic=NOT_RECORDED_IN_METADATA,
+            era=NOT_RECORDED_IN_METADATA,
+            language=NOT_RECORDED_IN_METADATA,
             stakes_block="  (aucun enjeu extrait)",
             dates_section="",
             excerpt="EXTRAIT FIXE",

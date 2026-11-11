@@ -56,7 +56,9 @@ _SEGMENT_DOCUMENTED = (
 # absent case hands the writer (the fix's core: the reader receives the
 # sentence, never the rule).
 _RULE_MARKER = "LE LOCUTEUR SE NOMME UNIQUEMENT D'APRÈS LA LIGNE LOCUTEUR"
-_READER_PHRASE = "la source ne documente pas le locuteur"
+_READER_PHRASE = (
+    "la métadonnée n'enregistre pas de locuteur et la lecture n'en identifie aucun"
+)
 
 _STAKEHOLDER_SPEAKER = [
     {"name": _SPEAKER_INFERRED, "role": "speaker", "stance": "pour"}
@@ -155,7 +157,9 @@ def test_a_metadata_speaker_reading_unknown_is_not_documentation():
 def test_an_undocumented_speaker_is_told_absent_with_a_reader_facing_phrase():
     """No producer has anything: every act says so with the same line, and
     the rule hands the writer the exact sentence a reader can receive —
-    « la source ne documente pas le locuteur » — instead of an instruction
+    « la métadonnée n'enregistre pas de locuteur et la lecture n'en
+    identifie aucun » (#3512: the sentence says what was measured, never
+    what the source documents) — instead of an instruction
     the writer may copy to the reader."""
     p1, p2, p3 = _prompts(_state())
     for p in (p1, p2, p3):

@@ -76,9 +76,10 @@ SPEAKER_NAMING_RULE = (
     "  « métadonnée enregistrée » → nomme-le comme un fait enregistré ;\n"
     "  « INFÉRÉE du texte » → nomme-le en disant l'inférence (« le texte\n"
     "  présente le locuteur comme … », avec la prudence deux-voix de la\n"
-    "  ligne) ; « non documenté » → n'invente aucun nom et écris au lecteur,\n"
-    "  tel quel : « la source ne documente pas le locuteur ». Le lecteur\n"
-    "  reçoit cette phrase — jamais la règle qui la produit."
+    "  ligne) ; « non documenté » → n'invente aucun nom et écris au lecteur, tel quel :\n"
+    "  « la métadonnée n'enregistre pas de locuteur et la lecture n'en identifie aucun »\n"
+    "  — la phrase dit ce qui a été mesuré, jamais ce que la source documente.\n"
+    "  Le lecteur reçoit cette phrase — jamais la règle qui la produit."
 )
 
 
