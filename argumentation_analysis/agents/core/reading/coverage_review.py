@@ -92,8 +92,12 @@ from argumentation_analysis.agents.core.reading.first_reading import (
     anchor_quote_in,
     defining_moves,
 )
+from argumentation_analysis.core.fallacy_attribution import detector_confidence_note
 from argumentation_analysis.core.shared_state import unit_extent
-from argumentation_analysis.utils.taxonomy_loader import generic_fallacy_name
+from argumentation_analysis.utils.taxonomy_loader import (
+    fallacy_taxonomy_label,
+    generic_fallacy_name,
+)
 
 logger = logging.getLogger("CoverageReview")
 
@@ -679,7 +683,9 @@ def _logic_verdict_clause(lens: str, finding: Dict[str, Any]) -> str:
     )
 
 
-def coverage_item_line(item: Dict[str, Any], bullet: str = "— ") -> str:
+def coverage_item_line(
+    item: Dict[str, Any], bullet: str = "— ", *, include_labels: bool = True
+) -> str:
     """One named passage said in full — the SAME line for both its homes.
 
     #3505 — the review's finding has two possible homes, and one producer:
@@ -695,6 +701,13 @@ def coverage_item_line(item: Dict[str, Any], bullet: str = "— ") -> str:
     ``bullet`` prefixes the passage (« — » in the block, empty on a movement
     line, whose channel label already opens the sentence). ``""`` when the
     item carries no placeable passage — the caller skips it, never invents one.
+
+    #3505 part 2 — ``include_labels=False`` on the movement line: a retained
+    fallacy's label then has exactly one home, its own procédé line
+    (:func:`coverage_procede_lines`), and this sentence keeps the passage, the
+    reason and the lens status. The block keeps the labels (``True``): a
+    passage no movement carries has no procédé line, so the block line is the
+    label's only home.
     """
     quote = str(item.get("quote") or "")
     offset = item.get("offset")
@@ -731,7 +744,7 @@ def coverage_item_line(item: Dict[str, Any], bullet: str = "— ") -> str:
             "la revue de couverture — le lecteur du pipeline, pas une "
             f"lentille — le retient parce que : {reason}"
         )
-    if labels:
+    if labels and include_labels:
         clauses.append("sophismes retenus : " + " ; ".join(labels))
     if finding.get("verdict"):
         # #3496 — a logic lens answered a CONSISTENCY question; it must not
@@ -798,6 +811,57 @@ def coverage_item_line(item: Dict[str, Any], bullet: str = "— ") -> str:
     else:
         clauses.append(f"lentille {lens} : lue, aucun sophisme retenu sur ce passage")
     return head + " ; " + " ; ".join(clauses) + "."
+
+
+def coverage_procede_lines(item: Dict[str, Any]) -> List[str]:
+    """One procédé line per fallacy the coverage walk retained (#3505 part 2).
+
+    The coordinator's measure on part 1: 0 of 21 coverage-only labels reach the
+    prose, while about 40 % of the deep labels do — the deep detections travel
+    as their own « Procédé : » lines (label, detector confidence,
+    justification) and the writer names that channel; the review's labels rode
+    at the tail of the long binding sentence and the writer kept its reason and
+    dropped them. So each retained fallacy now renders as its OWN procédé line,
+    on the argument its passage was named for, built by the same label producer
+    as a deep detection (``fallacy_taxonomy_label``), carrying the same
+    standing rule (``detector_confidence_note`` — unmeasured prints as
+    unmeasured, never a default), its own explanation, and the attribution
+    INSIDE the line: the review read the whole document after the deep phases,
+    no deep phase found this.
+
+    One line per fallacy, ``[]`` when the walk retained nothing — the caller
+    adds nothing then. No entry in ``identified_fallacies`` (the attribution
+    stays the review's; the downstream counters stay untouched) and no consigne
+    sentence: the binding is structural, or it does not hold the next time the
+    prompt grows.
+    """
+    routed_any = item.get("routed")
+    routed = routed_any if isinstance(routed_any, dict) else {}
+    lines: List[str] = []
+    for fallacy in _retained_fallacies(routed):
+        data = fallacy if isinstance(fallacy, dict) else {}
+        ftype = str(
+            data.get("fallacy_type") or data.get("type") or data.get("fallacy") or ""
+        ).strip()
+        if not ftype:
+            continue
+        label = fallacy_taxonomy_label(
+            ftype, str(data.get("family") or ""), data.get("taxonomy_path"), quoted=True
+        )
+        raw_conf = data.get("confidence")
+        confidence = (
+            float(raw_conf)
+            if isinstance(raw_conf, (int, float)) and not isinstance(raw_conf, bool)
+            else None
+        )
+        explanation = str(data.get("explanation") or "").strip()
+        lines.append(
+            "Procédé relevé par la revue de couverture (lecture du document "
+            "entier après les phases profondes), pas par les phases profondes : "
+            f"{label} — {detector_confidence_note(confidence)}. "
+            f"Justification : {explanation}"
+        )
+    return lines
 
 
 def coverage_items_by_unit(state: Any) -> Dict[str, List[Dict[str, Any]]]:
@@ -889,6 +953,7 @@ __all__ = [
     "build_coverage_review_prompt",
     "coverage_item_line",
     "coverage_items_by_unit",
+    "coverage_procede_lines",
     "coverage_review_note",
     "examined_unit_ids",
     "examined_unit_ids_for_class",

@@ -143,6 +143,7 @@ from argumentation_analysis.agents.core.reading import cross_passage_note  # #34
 from argumentation_analysis.agents.core.reading import (  # #3492
     coverage_item_line,  # #3505
     coverage_items_by_unit,  # #3505
+    coverage_procede_lines,  # #3505 part 2
     coverage_review_note,
 )
 
@@ -377,6 +378,12 @@ class ArgEvidence:
     # movement's beat is dropped from the standalone block — one home per
     # finding, or the reader meets it twice.
     coverage_lines: List[str] = field(default_factory=list)
+    # #3505 part 2 — the fallacies the coverage walk retained on THIS unit,
+    # one procédé line each: the channel the writer already names for deep
+    # detections, so the labels stop riding at the tail of the binding
+    # sentence. Attribution rides the line (``coverage_procede_lines``); the
+    # label's one home — the binding sentence drops the labels it carries.
+    coverage_procedes: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -1382,16 +1389,26 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
     # the attribution rides the line. The items no unit carries stay in the
     # block (the closing beat's material) — one home per finding.
     coverage_lines_by_arg: Dict[str, List[str]] = {}
+    # #3505 part 2 — each fallacy the walk retained on a BOUND item reaches the
+    # procédé channel as its own line (one home per label); the binding
+    # sentence answers for the passage, the reason and the lens status only.
+    coverage_procedes_by_arg: Dict[str, List[str]] = {}
     for unit_id, cov_items in coverage_items_by_unit(state).items():
         if unit_id not in args:
             continue
         bound = [
             line
-            for line in (coverage_item_line(it, bullet="") for it in cov_items)
+            for line in (
+                coverage_item_line(it, bullet="", include_labels=False)
+                for it in cov_items
+            )
             if line
         ]
         if bound:
             coverage_lines_by_arg[unit_id] = bound
+        procedes = [line for it in cov_items for line in coverage_procede_lines(it)]
+        if procedes:
+            coverage_procedes_by_arg[unit_id] = procedes
     cited = cited_unit_ids(state)
     for arg_id, desc in args.items():
         key = movement_key_by_arg[arg_id]
@@ -1437,6 +1454,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
                     None if quality_sample is None else str(arg_id) in quality_sample
                 ),
                 coverage_lines=coverage_lines_by_arg.get(str(arg_id), []),
+                coverage_procedes=coverage_procedes_by_arg.get(str(arg_id), []),
             )
         )
 
@@ -2243,6 +2261,13 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                     f"— {detector_confidence_note(fl.confidence)}. "
                     f"Justification : {fl.justification}"
                 )
+            for cov_proc in a.coverage_procedes:
+                # #3505 part 2 — a fallacy the coverage walk retained travels
+                # as its own procédé line, beside the deep detections, in the
+                # channel the writer names: same label producer, same standing
+                # rule, its explanation, the attribution inside the line. No
+                # consigne sentence rides on it — the channel is the binding.
+                lines.append(f"      {cov_proc}")
             for ca in a.counter_args:
                 # #1668/#3328 leg 2: strategy is free text; only a KNOWN enum
                 # value prints (its French name), anything else renders as an
