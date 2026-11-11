@@ -371,6 +371,57 @@ class TestTheBatchPass:
         for doc_id in PANEL:
             assert rows[doc_id]["elapsed_seconds"] == 42.0
 
+    def test_a_resume_bills_at_the_batch_price(self, tmp_path):
+        """R1162: --batch-id implies the batch route on the COST site too —
+        the resumed rows used to record the full synchronous price."""
+        from argumentation_analysis.services.model_prices import price_tokens
+
+        rc, _meta, rows = self._run(
+            tmp_path, FakeBatch(), extra=("--batch-id", "msgbatch_paid123")
+        )
+        assert rc == 0
+        sync_price = price_tokens("claude-sonnet-5-5", 2000, 400)
+        if sync_price is None:
+            pytest.skip("claude-sonnet-5-5 unpriced in the table")
+        assert rows[PANEL[0]]["judge_cost"] == pytest.approx(sync_price * 0.5)
+
+    def test_the_dry_run_says_the_batch_route_and_half_the_estimate(
+        self, tmp_path, capsys
+    ):
+        """R1162: --anthropic-batch --dry-run certifies the run it will run —
+        the batch route and half the synchronous estimate, not named-anthropic
+        at the full price."""
+
+        def printed_cost(out):
+            for line in out.splitlines():
+                if line.startswith("estimated judge cost:"):
+                    return float(line.split(":", 1)[1].replace("$", "").strip())
+            pytest.fail("no estimated judge cost line in the dry-run output")
+
+        world_b = _with_panel_file(make_world(tmp_path / "b"))
+        batch = FakeBatch()
+        rc_b = asyncio.run(
+            jp.run(
+                _argv(world_b, extra=("--anthropic-batch", "--dry-run")),
+                judge_batch_call=batch,
+            )
+        )
+        assert rc_b == 0
+        assert batch.calls == []  # a dry-run certifies, it never calls
+        out_b = capsys.readouterr().out
+        assert "route=anthropic-batch" in out_b
+        cost_b = printed_cost(out_b)
+
+        world_s = _with_panel_file(make_world(tmp_path / "s"))
+        rc_s = asyncio.run(
+            jp.run(_argv(world_s, extra=("--dry-run",)), judge_call=FakeJudge())
+        )
+        assert rc_s == 0
+        out_s = capsys.readouterr().out
+        assert "route=test" in out_s  # the resolver's own route, unoverridden
+        cost_s = printed_cost(out_s)
+        assert cost_b == pytest.approx(cost_s * 0.5, abs=5e-5)
+
     def test_a_batch_carrying_a_foreign_custom_id_is_refused_loudly(self):
         """A resumed batch that is not THIS panel's: a loud ValueError, no
         verdicts mapped onto this run — the witness runs the real wire."""

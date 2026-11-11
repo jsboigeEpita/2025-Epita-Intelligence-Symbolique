@@ -2218,6 +2218,9 @@ async def run(
     estimate = estimate_judge_cost(
         args.judge_model, [len(prompt) for prompt in prompts.values()]
     )
+    # R1162 — one derivation of the batch route, read everywhere: a resume
+    # (--batch-id) implies it exactly like --anthropic-batch does.
+    batch_route = args.anthropic_batch or bool(args.batch_id)
 
     if args.dry_run:
         print(f"judge: {args.judge_model} ({judge_family})", flush=True)
@@ -2232,9 +2235,10 @@ async def run(
         # paid pass would hit, before any call is made, so the exit code
         # says what the paid pass would have said.
         dry_endpoint = resolve_judge_endpoint(args.judge_model)
+        dry_route = "anthropic-batch" if batch_route else dry_endpoint["route"]
         print(
             f"judge route: family={dry_endpoint['family']} "
-            f"host={dry_endpoint['host']} route={dry_endpoint['route']}",
+            f"host={dry_endpoint['host']} route={dry_route}",
             flush=True,
         )
         print(f"seed: {args.seed}", flush=True)
@@ -2255,9 +2259,12 @@ async def run(
                 flush=True,
             )
         unpriced = estimate is None
+        shown_estimate = estimate
+        if batch_route and estimate is not None:
+            shown_estimate = round(estimate * ANTHROPIC_BATCH_FACTOR, 4)
         print(
             f"estimated judge cost: "
-            f"{'unpriced (the model is not in the price table)' if unpriced else f'{estimate:.4f} $'}",
+            f"{'unpriced (the model is not in the price table)' if unpriced else f'{shown_estimate:.4f} $'}",
             flush=True,
         )
         print("dry-run: no call made", flush=True)
@@ -2338,7 +2345,7 @@ async def run(
         **resolve_judge_endpoint(args.judge_model),
         "temperature": args.judge_temperature,
     }
-    if args.anthropic_batch or args.batch_id:
+    if batch_route:
         if endpoint["family"] != "anthropic":
             parser.error(
                 f"--anthropic-batch routes a judge through the Message Batches "
@@ -2358,7 +2365,7 @@ async def run(
     # verdict. A resume that is not this panel's batch refuses loudly.
     batch_records: Optional[Dict[str, Dict[str, Any]]] = None
     batch_elapsed = 0.0
-    if args.anthropic_batch or args.batch_id:
+    if batch_route:
         try:
             batch_records, batch_elapsed = await judge_batch_call(
                 endpoint,
@@ -2427,7 +2434,9 @@ async def run(
         )
         # #3497 — the batch route bills input and output at half the
         # synchronous price; the table's number is what the pass costs.
-        if observed is not None and args.anthropic_batch:
+        # R1162 — batch_route (not the flag alone): a resume bills at the
+        # batch price too — the tokens were already paid on that batch.
+        if observed is not None and batch_route:
             observed *= ANTHROPIC_BATCH_FACTOR
         row["judge_cost"] = round(observed, 6) if observed is not None else None
         rows.append(row)
