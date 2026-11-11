@@ -833,7 +833,8 @@ def coverage_procede_lines(item: Dict[str, Any]) -> List[str]:
     adds nothing then. No entry in ``identified_fallacies`` (the attribution
     stays the review's; the downstream counters stay untouched) and no consigne
     sentence: the binding is structural, or it does not hold the next time the
-    prompt grows.
+    prompt grows. #3505 part 3: the label and the explanation go through
+    ``_one_line`` (#3504) — a line break in either renders as one line.
     """
     routed_any = item.get("routed")
     routed = routed_any if isinstance(routed_any, dict) else {}
@@ -845,8 +846,13 @@ def coverage_procede_lines(item: Dict[str, Any]) -> List[str]:
         ).strip()
         if not ftype:
             continue
-        label = fallacy_taxonomy_label(
-            ftype, str(data.get("family") or ""), data.get("taxonomy_path"), quoted=True
+        label = _one_line(
+            fallacy_taxonomy_label(
+                ftype,
+                str(data.get("family") or ""),
+                data.get("taxonomy_path"),
+                quoted=True,
+            )
         )
         raw_conf = data.get("confidence")
         confidence = (
@@ -854,7 +860,7 @@ def coverage_procede_lines(item: Dict[str, Any]) -> List[str]:
             if isinstance(raw_conf, (int, float)) and not isinstance(raw_conf, bool)
             else None
         )
-        explanation = str(data.get("explanation") or "").strip()
+        explanation = _one_line(str(data.get("explanation") or ""))
         lines.append(
             "Procédé relevé par la revue de couverture (lecture du document "
             "entier après les phases profondes), pas par les phases profondes : "
@@ -862,6 +868,41 @@ def coverage_procede_lines(item: Dict[str, Any]) -> List[str]:
             f"Justification : {explanation}"
         )
     return lines
+
+
+def coverage_family_by_unit(state: Any) -> Dict[str, str]:
+    """The movement key a review-retained fallacy assigns its unit (#3505 p3).
+
+    The part-2 measure: every fallacy-bearing item sat in ``non examinés`` —
+    arguments no deep detection reached, which the writer sums up as « no
+    reader examined these ». That sentence is false for an argument the
+    REVIEW examined and retained a fallacy on. So such an argument leaves
+    ``non examinés`` and joins the movement of that fallacy's family, by the
+    SAME rule the deep detections use: sorted family names, the first one;
+    ``""`` (the caller's ``hors taxonomie``) when the fallacy has no family.
+    A unit with a deep detection keeps the deep family (the caller checks
+    ``fallacy_by_arg`` first); a lens-only item moves nothing; a family-less
+    fallacy invents none.
+    """
+    by_unit: Dict[str, str] = {}
+    for unit_id, items in coverage_items_by_unit(state).items():
+        families: List[str] = []
+        unnamed = False
+        for item in items:
+            routed_any = item.get("routed")
+            routed = routed_any if isinstance(routed_any, dict) else {}
+            for fallacy in _retained_fallacies(routed):
+                data = fallacy if isinstance(fallacy, dict) else {}
+                family = str(data.get("family") or "").strip()
+                if family:
+                    families.append(family)
+                else:
+                    unnamed = True
+        if families:
+            by_unit[unit_id] = sorted(set(families))[0]
+        elif unnamed:
+            by_unit[unit_id] = ""  # the caller's « hors taxonomie »
+    return by_unit
 
 
 def coverage_items_by_unit(state: Any) -> Dict[str, List[Dict[str, Any]]]:
@@ -953,6 +994,7 @@ __all__ = [
     "build_coverage_review_prompt",
     "coverage_item_line",
     "coverage_items_by_unit",
+    "coverage_family_by_unit",
     "coverage_procede_lines",
     "coverage_review_note",
     "examined_unit_ids",

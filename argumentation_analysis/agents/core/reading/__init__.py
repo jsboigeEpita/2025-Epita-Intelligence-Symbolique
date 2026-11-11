@@ -14,6 +14,7 @@ from argumentation_analysis.agents.core.reading.coverage_review import (
     CoverageItem,
     CoverageReview,
     build_coverage_review,
+    coverage_family_by_unit,  # #3505 part 3
     coverage_item_line,  # #3505
     coverage_items_by_unit,  # #3505
     coverage_procede_lines,  # #3505 part 2
@@ -82,6 +83,7 @@ __all__ = [
     "CoverageItem",
     "CoverageReview",
     "build_coverage_review",
+    "coverage_family_by_unit",
     "coverage_item_line",
     "coverage_items_by_unit",
     "coverage_procede_lines",

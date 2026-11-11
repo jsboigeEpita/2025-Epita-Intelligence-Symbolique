@@ -141,6 +141,7 @@ from argumentation_analysis.agents.core.governance.coalition_play import (
 from argumentation_analysis.agents.core.reading import first_reading_note  # #3395
 from argumentation_analysis.agents.core.reading import cross_passage_note  # #3432
 from argumentation_analysis.agents.core.reading import (  # #3492
+    coverage_family_by_unit,  # #3505 part 3
     coverage_item_line,  # #3505
     coverage_items_by_unit,  # #3505
     coverage_procede_lines,  # #3505 part 2
@@ -1350,12 +1351,21 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
     # which units it saw, so no unit can be called holding.
     fallacy_sample = _sampled_unit_ids(state, "fallacy_per_argument")
     quality_sample = _sampled_unit_ids(state, "quality")
+    # #3505 part 3 — an argument the deep phases did not examine, on which the
+    # coverage walk retained a fallacy, LEAVES « non examinés »: the movement
+    # says what was found (the fallacy's family, by the deep rule), the procédé
+    # line says who found it (the review). Otherwise the writer's one-sentence
+    # summary of « non examinés » — no reader examined these — would be false
+    # for exactly the arguments the review examined.
+    coverage_family = coverage_family_by_unit(state)
     movement_key_by_arg: Dict[str, str] = {}
     for arg_id in args:
         flist = fallacy_by_arg.get(arg_id, [])
         if flist:
             families = sorted({f.family for f in flist if f.family})
             key = families[0] if families else _HORS_TAXONOMIE
+        elif str(arg_id) in coverage_family:
+            key = coverage_family[str(arg_id)] or _HORS_TAXONOMIE
         elif fallacy_sample is None:
             key = _ECHANTILLON_NON_ENREGISTRE
         elif str(arg_id) in fallacy_sample:
