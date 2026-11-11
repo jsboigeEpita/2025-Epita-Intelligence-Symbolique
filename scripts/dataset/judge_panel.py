@@ -810,6 +810,243 @@ def anthropic_messages_url(base_url: str) -> str:
     return f"{base}/messages"
 
 
+# --- #3497: the Anthropic judge through the Message Batches API ------------
+#
+# Half price on input and output for passes that are not latency-bound: the
+# six passes run after the pipeline and the consensus is computed offline
+# (#3423), so the judge's wall time is nobody's dependency. The Batch API is
+# Anthropic-native (``/v1/messages/batches``), outside the OpenAI-compatible
+# surface the judge uses synchronously.
+
+#: The Message Batches discount, applied to input and output alike.
+ANTHROPIC_BATCH_FACTOR = 0.5
+#: One waiter, polling on a bounded cadence — never a tight loop.
+ANTHROPIC_BATCH_POLL_SECONDS = 30
+#: The waiter's own budget: a batch that outlives it fails its documents,
+#: counted and named (#3497 clause 3 — never an empty verdict).
+ANTHROPIC_BATCH_TIMEOUT_SECONDS = 3600
+
+
+def anthropic_judge_payload(endpoint: Dict[str, Any], prompt: str) -> Dict[str, Any]:
+    """The Anthropic body ONE judging call posts — both wires' producer.
+
+    #3497: the synchronous call and every batch request build their body
+    here, so « same request content » is by construction, and the witness
+    only has to measure it: the batch entry's ``params`` equal the
+    synchronous payload, transport fields (``custom_id``) apart.
+    """
+    payload: Dict[str, Any] = {
+        "model": endpoint["model_id"],
+        "max_tokens": JUDGE_MAX_TOKENS,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    # #3423 — the sampling temperature rides on the endpoint. ``None`` leaves
+    # the provider's default, which is what every pass before #3423 ran on.
+    if endpoint.get("temperature") is not None:
+        payload["temperature"] = endpoint["temperature"]
+    return payload
+
+
+def build_anthropic_batch_request(
+    endpoint: Dict[str, Any], prompts: Dict[str, str]
+) -> Dict[str, Any]:
+    """The one batch the pass submits: a request per document, in panel order."""
+    return {
+        "requests": [
+            {
+                "custom_id": doc_id,
+                "params": anthropic_judge_payload(endpoint, prompts[doc_id]),
+            }
+            for doc_id in prompts
+        ]
+    }
+
+
+def batch_item_record(line: Dict[str, Any]) -> Dict[str, Any]:
+    """One results line, in the record shape ``call_judge`` returns.
+
+    A succeeded line is normalised exactly like the synchronous response
+    (same field names, same token columns). An errored line is a FAILED
+    document — status 0 like a network-level failure, the error's type and
+    message named in ``error_body_head`` — never an empty verdict.
+    """
+    if str(line.get("type") or "") != "succeeded":
+        error = line.get("error") or {}
+        return {
+            "status_code": 0,
+            "error_body_head": (
+                f"batch item errored ({error.get('type')}): " f"{error.get('message')}"
+            ),
+        }
+    result = line.get("result") or {}
+    blocks = result.get("content") or []
+    usage = result.get("usage") or {}
+    return {
+        "status_code": 200,
+        "answer": "".join(
+            part.get("text", "") for part in blocks if part.get("type") == "text"
+        ),
+        "prompt_tokens": usage.get("input_tokens", 0),
+        "completion_tokens": usage.get("output_tokens", 0),
+        "usage": usage,
+        "answered_model": result.get("model"),
+        "stop_reason": result.get("stop_reason"),
+    }
+
+
+def batch_terminal_failure(
+    doc_ids: Sequence[str],
+    state: str,
+    batch_id: str,
+    after_seconds: Optional[int] = None,
+) -> Dict[str, Dict[str, Any]]:
+    """Every document failed, the batch's terminal state named — never silent.
+
+    ``canceled`` and ``expired`` are the batch's own terminal states;
+    ``poll_timeout`` is the waiter's budget running out while the batch is
+    still in progress. In every case each document's record says WHY, so the
+    table names it and the exit code counts it.
+    """
+    reason = (
+        f"batch poll timeout after {after_seconds}s (batch {batch_id} still "
+        "in progress — no result was read)"
+        if state == "poll_timeout"
+        else f"batch {state} before completion (batch {batch_id}): no result exists"
+    )
+    return {doc_id: {"status_code": 0, "error_body_head": reason} for doc_id in doc_ids}
+
+
+async def call_judge_batch(
+    endpoint: Dict[str, Any],
+    prompts: Dict[str, str],
+    timeout: int = 600,
+    batch_timeout: int = ANTHROPIC_BATCH_TIMEOUT_SECONDS,
+    poll_seconds: int = ANTHROPIC_BATCH_POLL_SECONDS,
+    _transport: Optional[Any] = None,
+) -> Tuple[Dict[str, Dict[str, Any]], float]:
+    """The whole panel through ONE batch: submit, wait, retrieve, map.
+
+    #3497's plumbing: a single waiter polls the batch on a bounded cadence
+    until a terminal state (``ended``, ``canceled``, ``expired``) or its own
+    budget runs out; every terminal state is reported, and a document whose
+    request errored inside an ``ended`` batch is a failed document, counted
+    and named — never an empty verdict. Returns the per-document records in
+    the shape ``call_judge`` returns, plus the wall time the batch took.
+    """
+    import httpx
+
+    transport = _transport or httpx.AsyncClient(timeout=timeout)
+    headers = {
+        "x-api-key": endpoint["api_key"],
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+    v1 = anthropic_messages_url(endpoint["base_url"]).rsplit("/messages", 1)[0]
+    t0 = time.time()
+    try:
+        response = await transport.post(
+            f"{v1}/messages/batches",
+            json=build_anthropic_batch_request(endpoint, prompts),
+            headers=headers,
+        )
+        if response.status_code != 200:
+            head = response.text[:500]
+            return (
+                {
+                    doc_id: {
+                        "status_code": 0,
+                        "error_body_head": f"batch submit failed "
+                        f"({response.status_code}): {head}",
+                    }
+                    for doc_id in prompts
+                },
+                round(time.time() - t0, 1),
+            )
+        batch_id = str((response.json() or {}).get("id") or "")
+        # The waiter's budget, expressed in POLLS: ``batch_timeout`` seconds
+        # at the polling cadence. A cadence of zero must still bound the
+        # loop (one poll per second of budget), or a test transport that
+        # never answers would spin forever.
+        max_polls = (
+            max(1, batch_timeout // poll_seconds)
+            if poll_seconds > 0
+            else max(1, batch_timeout)
+        )
+        polls = 0
+        while True:
+            status_response = await transport.get(
+                f"{v1}/messages/batches/{batch_id}", headers=headers
+            )
+            if status_response.status_code != 200:
+                head = status_response.text[:500]
+                return (
+                    {
+                        doc_id: {
+                            "status_code": 0,
+                            "error_body_head": f"batch status read failed "
+                            f"({status_response.status_code}): {head}",
+                        }
+                        for doc_id in prompts
+                    },
+                    round(time.time() - t0, 1),
+                )
+            status = str((status_response.json() or {}).get("status") or "")
+            if status in ("canceled", "expired"):
+                return (
+                    batch_terminal_failure(list(prompts), status, batch_id),
+                    round(time.time() - t0, 1),
+                )
+            if status == "ended":
+                results_response = await transport.get(
+                    f"{v1}/messages/batches/{batch_id}/results", headers=headers
+                )
+                if results_response.status_code != 200:
+                    head = results_response.text[:500]
+                    return (
+                        {
+                            doc_id: {
+                                "status_code": 0,
+                                "error_body_head": f"batch results read failed "
+                                f"({results_response.status_code}): {head}",
+                            }
+                            for doc_id in prompts
+                        },
+                        round(time.time() - t0, 1),
+                    )
+                records = {
+                    doc_id: {
+                        "status_code": 0,
+                        "error_body_head": f"no result line for this document "
+                        f"in batch {batch_id}",
+                    }
+                    for doc_id in prompts
+                }
+                for raw_line in results_response.text.splitlines():
+                    raw_line = raw_line.strip()
+                    if not raw_line:
+                        continue
+                    line = json.loads(raw_line)
+                    doc_id = str(line.get("custom_id") or "")
+                    if doc_id in records:
+                        records[doc_id] = batch_item_record(line)
+                return records, round(time.time() - t0, 1)
+            if polls >= max_polls:
+                return (
+                    batch_terminal_failure(
+                        list(prompts),
+                        "poll_timeout",
+                        batch_id,
+                        after_seconds=polls * poll_seconds or polls,
+                    ),
+                    round(time.time() - t0, 1),
+                )
+            await asyncio.sleep(poll_seconds)
+            polls += 1
+    finally:
+        if _transport is None:
+            await transport.aclose()
+
+
 async def call_judge(
     endpoint: Dict[str, Any], prompt: str, timeout: int = 600
 ) -> Dict[str, Any]:
@@ -822,11 +1059,7 @@ async def call_judge(
     import httpx
 
     if endpoint["family"] == "anthropic":
-        payload: Dict[str, Any] = {
-            "model": endpoint["model_id"],
-            "max_tokens": JUDGE_MAX_TOKENS,
-            "messages": [{"role": "user", "content": prompt}],
-        }
+        payload: Dict[str, Any] = anthropic_judge_payload(endpoint, prompt)
         headers = {
             "x-api-key": endpoint["api_key"],
             "anthropic-version": "2023-06-01",
@@ -1744,6 +1977,7 @@ async def run(
     argv: Optional[List[str]] = None,
     judge_call: Callable[..., Any] = call_judge,
     document_loader: Optional[Callable[[Sequence[str]], Dict[str, str]]] = None,
+    judge_batch_call: Callable[..., Any] = call_judge_batch,
 ) -> int:
     parser = argparse.ArgumentParser(description="#3375 blind judge — v1 panel")
     parser.add_argument(
@@ -1757,6 +1991,24 @@ async def run(
     parser.add_argument("--zeroshot-dir", type=Path, default=DEFAULT_ZEROSHOT_DIR)
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--timeout", type=int, default=600)
+    parser.add_argument(
+        "--anthropic-batch",
+        action="store_true",
+        help="#3497: route an Anthropic judge's passes through the Message "
+        "Batches API — half price on input and output, same bodies, same "
+        "records; a request that errors or expires is a failed document, "
+        "counted and named. Refused for a non-Anthropic judge (the batch "
+        "API is Anthropic-native)",
+    )
+    parser.add_argument(
+        "--batch-timeout",
+        type=int,
+        default=ANTHROPIC_BATCH_TIMEOUT_SECONDS,
+        help="#3497: the batch waiter's own budget in seconds (the batch is "
+        "polled every "
+        f"{ANTHROPIC_BATCH_POLL_SECONDS}s); a batch that outlives it fails "
+        "its documents, named",
+    )
     parser.add_argument(
         "--judge-temperature",
         type=parse_temperature,
@@ -2034,16 +2286,53 @@ async def run(
         **resolve_judge_endpoint(args.judge_model),
         "temperature": args.judge_temperature,
     }
+    if args.anthropic_batch:
+        if endpoint["family"] != "anthropic":
+            parser.error(
+                f"--anthropic-batch routes a judge through the Message Batches "
+                f"API, which is Anthropic-native — the judge "
+                f"{args.judge_model!r} resolves to family {endpoint['family']!r}"
+            )
+        # #3497 — the provenance says the batch route; the bodies, the parser
+        # and the gates stay the synchronous ones.
+        endpoint["route"] = "anthropic-batch"
     args.out_dir.mkdir(parents=True, exist_ok=True)
+
+    # #3497 — the whole panel through ONE batch when the flag is set: one
+    # submit, one waiter, one retrieval; every document's record then flows
+    # through the same row builder as a synchronous call. A batch-level
+    # failure (submit refused, canceled, expired, waiter timeout) fails every
+    # document, counted and named — never an empty verdict.
+    batch_records: Optional[Dict[str, Dict[str, Any]]] = None
+    batch_elapsed = 0.0
+    if args.anthropic_batch:
+        try:
+            batch_records, batch_elapsed = await judge_batch_call(
+                endpoint, prompts, args.timeout, args.batch_timeout
+            )
+        except Exception as exc:  # network-level: named, never silent
+            batch_records = {
+                doc_id: {"status_code": 0, "error_body_head": repr(exc)}
+                for doc_id in prompts
+            }
 
     rows: List[Dict[str, Any]] = []
     for doc in documents:
         doc_id = doc["opaque_id"]
         t0 = time.time()
-        try:
-            record = await judge_call(endpoint, prompts[doc_id], args.timeout)
-        except Exception as exc:  # network-level: named, never silent
-            record = {"status_code": 0, "error_body_head": repr(exc)}
+        if batch_records is not None:
+            record = batch_records.get(doc_id) or {
+                "status_code": 0,
+                "error_body_head": "no record returned for this document",
+            }
+        else:
+            try:
+                record = await judge_call(endpoint, prompts[doc_id], args.timeout)
+            except Exception as exc:  # network-level: named, never silent
+                record = {"status_code": 0, "error_body_head": repr(exc)}
+        elapsed = (
+            batch_elapsed if batch_records is not None else round(time.time() - t0, 1)
+        )
         elapsed = round(time.time() - t0, 1)
         row = _judge_one(
             doc_id,
@@ -2080,6 +2369,10 @@ async def run(
             record.get("prompt_tokens", 0) or 0,
             record.get("completion_tokens", 0) or 0,
         )
+        # #3497 — the batch route bills input and output at half the
+        # synchronous price; the table's number is what the pass costs.
+        if observed is not None and args.anthropic_batch:
+            observed *= ANTHROPIC_BATCH_FACTOR
         row["judge_cost"] = round(observed, 6) if observed is not None else None
         rows.append(row)
         (args.out_dir / f"{doc_id}.json").write_text(
@@ -2111,6 +2404,14 @@ async def run(
             + f" --seed {args.seed}"
             + f" --judge-temperature {_temperature_arg(args.judge_temperature)}"
             + (" --allow-degraded-arm" if args.allow_degraded_arm else "")
+            # #3497 — the recorded line re-runs the SAME route: the batch
+            # flag and a non-default budget ride in the command.
+            + (" --anthropic-batch" if args.anthropic_batch else "")
+            + (
+                f" --batch-timeout {args.batch_timeout}"
+                if args.batch_timeout != ANTHROPIC_BATCH_TIMEOUT_SECONDS
+                else ""
+            )
         ),
     }
     # #3417 — the meta rides beside the rows, so a re-render names this pass's
