@@ -37,6 +37,10 @@ from typing import Any, Awaitable, Dict, List, Mapping, Sequence, Tuple
 
 _STRIDE = 500
 _PUNCT_RE = re.compile(r"[,;:]")
+#: #3517 — a word is a non-whitespace run. The fold applied to each run is
+#: the citation rule's own (``normalise_for_citation``); the split only
+#: fixes where a word begins and ends, so the offsets stay the document's.
+_WORD_RE = re.compile(r"\S+")
 # Per-kchar sub-clause punctuation threshold, calibrated in the gap between
 # the known TOC head (1.33/kchar) and the weakest known prose point
 # (9.33/kchar); the acceptance artifact re-checks both calibration points.
@@ -643,14 +647,63 @@ def head_selection(text: str, window: int) -> WindowSelection:
     return WindowSelection(0, window, STATUS_SELECTED)
 
 
-def locate_quote(text: str, quote: str) -> int:
-    """#3376 — the offset of a verbatim quote, or -1 when it is not there.
+def folded_words(text: str) -> List[Tuple[str, int, int]]:
+    """#3517 — ``(folded, start, end)`` per word: the citation rule's own
+    fold, carrying the ORIGINAL text's offsets.
 
-    Exact match first. A model reproduces the wording but not always the line
-    breaks, so a second pass lets any whitespace run stand for any other.
-    Nothing else is normalised: a quote that merely resembles the text is not
-    evidence, and centring a window on an approximate match would put the
-    descent somewhere the candidate was not found.
+    The folding is ``normalise_for_citation`` per non-whitespace run and
+    nothing more (#3389, #3465): case, typographic apostrophes and quotation
+    marks, markdown markup. No stemming, no punctuation stripping, no
+    stop-word removal — a word the two texts do not spell the same way is a
+    different word, which is what keeps every consumer of this fold on the
+    right side of "no fuzzy matching". Because only the CHARACTERS are
+    folded, never the layout, the offsets address the document itself: this
+    is the seam the locator (#3517) and the anchor scan (#3415) share, so
+    "found" and "anchored" read the same words.
+
+    #3517 note: the LOCATOR reads the rule's fold at character level
+    (``folded_with_offsets``), because the rule matches substrings, not
+    words; this word view is the anchor scan's (#3415). Both apply the same
+    ``normalise_for_citation`` — one fold, two granularities.
+
+    Imported lazily: the citation rule lives in the reporting package, and
+    the window module must stay importable where nothing renders.
+    """
+    from argumentation_analysis.reporting.restitution.quote_fidelity import (
+        normalise_for_citation,
+    )
+
+    words: List[Tuple[str, int, int]] = []
+    for match in _WORD_RE.finditer(text or ""):
+        folded = normalise_for_citation(match.group(0))
+        if folded:
+            words.append((folded, match.start(), match.end()))
+    return words
+
+
+def locate_quote(text: str, quote: str) -> int:
+    """#3376/#3517 — the offset of a quote the document carries, or -1.
+
+    Three passes, strongest first:
+
+    1. **Exact match** — byte-identical, the offset ``text.find`` returns.
+    2. **Whitespace runs** (#3376) — a model reproduces the wording but not
+       the line breaks, so any whitespace run stands for any other.
+    3. **The citation rule's fold** (#3517) — the rule that decides whether
+       the quote "occurs" (#3389, #3465: case, typographic apostrophes and
+       quotation marks, markdown markup, elision gaps ``[…]``) decides
+       whether it can be located: a quote the rule accepts has an offset.
+       Before this pass the two disagreed, and 11 % of the first reading's
+       kept entries rendered with ``offset: None`` — kept by the rule,
+       positioned by nothing, invisible to every span consumer (the
+       selector's priority, the residue, the descent window).
+
+    The fold is the rule's, character for character — never a resemblance
+    score, never a relaxed rule. An elided quote locates at its FIRST
+    fragment's start; the later fragments must follow in order, each after
+    the previous one's end, exactly as ``occurs_in_document`` requires. The
+    returned offset addresses the document (``text[offset:]`` starts the
+    passage), never a folded copy.
     """
     if not text or not quote:
         return -1
@@ -661,10 +714,45 @@ def locate_quote(text: str, quote: str) -> int:
     if index >= 0:
         return index
     tokens = [re.escape(token) for token in needle.split()]
-    if not tokens:
+    if tokens:
+        match = re.search(r"\s+".join(tokens), text)
+        if match:
+            return match.start()
+    return _locate_folded(text, needle)
+
+
+def _locate_folded(text: str, needle: str) -> int:
+    """The citation-rule pass of :func:`locate_quote` — the rule, with a map.
+
+    The SAME fragments :func:`occurs_in_document` searches for, in the SAME
+    folded document, in the SAME order — read through
+    ``folded_with_offsets``, which keeps every folded character's original
+    position. The predicate "the rule accepts ⟹ the locator finds" holds by
+    construction (one fold, one fragment producer, one search), and the
+    answer is the DOCUMENT offset of the first fragment's first character —
+    never an offset into the folded copy.
+    """
+    from argumentation_analysis.reporting.restitution.quote_fidelity import (
+        citation_fragments,
+        folded_with_offsets,
+    )
+
+    fragments = citation_fragments(needle)
+    if not fragments:
         return -1
-    match = re.search(r"\s+".join(tokens), text)
-    return match.start() if match else -1
+    haystack, offsets = folded_with_offsets(text)
+    if not haystack:
+        return -1
+    cursor = 0
+    first = -1
+    for fragment in fragments:
+        found = haystack.find(fragment, cursor)
+        if found < 0:
+            return -1
+        if first < 0:
+            first = found
+        cursor = found + len(fragment)
+    return offsets[first]
 
 
 def descent_selection(

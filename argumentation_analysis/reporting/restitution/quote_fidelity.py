@@ -129,16 +129,102 @@ def normalise_for_citation(text: Any) -> str:
     Markdown markup is the same class of form: a judge that quotes the
     rendered text has still quoted the text. Markup folds, CONTENT never
     does — no fuzzy matching, and the length floor of the caller stays.
+
+    Delegates to :func:`folded_with_offsets` — the fold is ONE
+    implementation, and the reading-window locator (#3517) reads the same
+    characters through the offsets it keeps.
+    """
+    return folded_with_offsets(text)[0]
+
+
+def _drop_matches(
+    pattern: "re.Pattern[str]", s: str, offsets: List[int]
+) -> Tuple[str, List[int]]:
+    """``pattern.sub("", s)`` with each surviving character's offset kept."""
+    out_chars: List[str] = []
+    out_offsets: List[int] = []
+    pos = 0
+    for match in pattern.finditer(s):
+        out_chars.append(s[pos : match.start()])
+        out_offsets.extend(offsets[pos : match.start()])
+        pos = match.end()
+    out_chars.append(s[pos:])
+    out_offsets.extend(offsets[pos:])
+    return "".join(out_chars), out_offsets
+
+
+def folded_with_offsets(text: Any) -> Tuple[str, List[int]]:
+    """``(folded, offsets)`` — the fold of :func:`normalise_for_citation`
+    where ``offsets[i]`` is the position ``folded[i]`` came from.
+
+    #3517 — the rule decides whether a quote "occurs"; the reading-window
+    locator must decide WHERE, on the same acceptance, so the fold here is
+    the rule's own (same order, same regexes) and additionally remembers
+    each surviving character's original index. A match found in ``folded``
+    then names the document's position it sits at, and "the rule accepts"
+    and "the locator finds" cannot drift apart: both read this one string.
+
+    The steps mirror :func:`normalise_for_citation` exactly — markup
+    characters dropped anywhere, structural markers dropped at line starts,
+    typographic fold, whitespace runs collapsed to one space, stripped,
+    casefolded — with offsets carried through each step. ``casefold`` runs
+    per character (it can expand, e.g. ``ß`` → ``ss``; every expansion
+    carries its source's offset).
     """
     if not text:
-        return ""
-    markup_folded = _MD_LINE_RE.sub("", _MD_CHARS_RE.sub("", str(text)))
-    return _WS_RE.sub(" ", markup_folded.translate(_FOLD)).strip().casefold()
+        return "", []
+    raw = str(text)
+    offsets = list(range(len(raw)))
+    # markup characters dropped anywhere, THEN structural markers at line
+    # starts — the order normalise_for_citation applies them in.
+    folded, offsets = _drop_matches(_MD_CHARS_RE, raw, offsets)
+    folded, offsets = _drop_matches(_MD_LINE_RE, folded, offsets)
+    out_chars: List[str] = []
+    out_offsets: List[int] = []
+    space_pending = False
+    for char, offset in zip(folded, offsets):
+        for piece in char.translate(_FOLD):
+            if piece.isspace():
+                # one whitespace run → one space, emitted only when a
+                # non-space follows it (leading runs strip for free,
+                # trailing runs never emit)
+                space_pending = True
+            else:
+                if space_pending and out_chars:
+                    out_chars.append(" ")
+                    out_offsets.append(offset)
+                space_pending = False
+                for folded_char in piece.casefold():
+                    out_chars.append(folded_char)
+                    out_offsets.append(offset)
+    return "".join(out_chars), out_offsets
+
+
+def split_on_elision_gaps(span: Any) -> List[str]:
+    """The span's pieces between its elision gaps ``[…]``, raw and in order.
+
+    #3517 — ONE splitter for the rule and its users: :func:`_fragments`
+    normalises the pieces for comparison, and the reading-window locator
+    folds each piece itself because it needs the DOCUMENT's offsets, not the
+    folded copy's. A span without a gap is the span.
+    """
+    return [p for p in _GAP_RE.split(str(span or "")) if p and p.strip()]
+
+
+def citation_fragments(span: Any) -> List[str]:
+    """The span's comparison fragments — ONE producer for the rule and its users.
+
+    #3517 — :func:`occurs_in_document` searches these fragments in the folded
+    document; the reading-window locator searches the SAME fragments in the
+    SAME folded document (:func:`folded_with_offsets`), so "the rule accepts"
+    and "the locator finds" are one predicate, not two that can drift.
+    """
+    return _fragments(str(span or ""))
 
 
 def _fragments(span: str) -> List[str]:
     """The span split on its elision gaps, each fragment normalised."""
-    parts = [normalise_for_citation(p) for p in _GAP_RE.split(span)]
+    parts = [normalise_for_citation(p) for p in split_on_elision_gaps(span)]
     return [p for p in parts if p]
 
 

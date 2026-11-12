@@ -89,6 +89,7 @@ from argumentation_analysis.core.reading_window import (
     FIRST_READING_WINDOW,
     STATUS_SELECTED,
     WindowSelection,
+    folded_words,
     inventory_budget,
     locate_quote,
     per_argument_unit_budget,
@@ -172,10 +173,6 @@ def pillar_prose(max_pillars: int) -> str:
 #: repo refuses.
 ANCHOR_MIN_RUN = 8
 ANCHOR_MIN_SHARE = 0.5
-
-#: One word, kept with its ORIGINAL offsets: the anchor must return the
-#: document's characters, never a normalised copy of them.
-_WORD_RE = re.compile(r"\S+")
 
 #: French words the model tends to answer with, mapped to the vocabulary. The
 #: kind is a hint about the move, not a verdict: a synonym is not an error.
@@ -972,24 +969,12 @@ def quote_occurs_in(text: str, quote: str) -> bool:
 def _folded_words(text: str) -> List[Tuple[str, int, int]]:
     """``(folded, start, end)`` per word — the fold, with original offsets.
 
-    The folding is the citation rule's own (``normalise_for_citation``: case,
-    typographic apostrophes and quotation marks) and nothing more: no stemming,
-    no punctuation stripping, no stop-word removal. A word the two texts do not
-    spell the same way is a different word, even where a human reader would
-    call it the same one — that is what keeps the anchor from being a fuzzy
-    match. Because only the CHARACTERS are folded, never the layout, the
-    offsets address the document itself.
+    #3517 — the implementation lives in :func:`reading_window.folded_words`
+    now: the locator and the anchor are the same question ("where do these
+    folded words sit in the document?") and must read the same fold. This
+    name stays as the anchor module's local handle on it.
     """
-    from argumentation_analysis.reporting.restitution.quote_fidelity import (
-        normalise_for_citation,
-    )
-
-    words: List[Tuple[str, int, int]] = []
-    for match in _WORD_RE.finditer(text or ""):
-        folded = normalise_for_citation(match.group(0))
-        if folded:
-            words.append((folded, match.start(), match.end()))
-    return words
+    return folded_words(text)
 
 
 def anchor_quote_in(text: str, quote: str) -> Optional[Tuple[str, int]]:
