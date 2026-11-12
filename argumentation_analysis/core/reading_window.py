@@ -115,6 +115,15 @@ PER_ARGUMENT_FLOOR = 10
 PILLAR_FLOOR = 3
 PILLAR_CEILING = 8
 
+#: #3511 — the floors of the first reading's INVENTORY budget (how many
+#: entries the reading may NAME, slots and local moves together). The floor
+#: is the RENDER cap — ``first_reading.MAX_MOVES``, 12; the guard test pins
+#: the pair so they cannot drift. The ceiling is the per-argument family's
+#: own (``PER_ARGUMENT_CEILING``): the inventory never outgrows the pass
+#: that examines what it names (``max(k(L), named)`` at the selector).
+INVENTORY_FLOOR = 12
+INVENTORY_CEILING = PER_ARGUMENT_CEILING
+
 #: #2850 lot 10 — the personas' anchored read: the window was built from the
 #: first reading's defining moves (positions + passages), not from offset 0.
 STATUS_ANCHORED_ON_MOVES = "anchored_on_defining_moves"
@@ -354,6 +363,30 @@ def pillar_budget(
     At the floor the prompt and state keep the pre-#3432 flat-three form.
     """
     k = -(-length // capacity)
+    return max(floor, min(ceiling, k))
+
+
+def inventory_budget(
+    length: int,
+    capacity: int = WHOLE_TEXT_CALL_CAPACITY,
+    ceiling: int = INVENTORY_CEILING,
+    floor: int = INVENTORY_FLOOR,
+) -> int:
+    """#3511 — how many entries the first reading's inventory may name.
+
+    Two entries per capacity-chunk — the per-argument pass's own density
+    (``per_argument_unit_budget``): the inventory scales with the document
+    the way the examination does, so a reading that names the chain's
+    gestures is also a reading whose pass buys room to examine them
+    (``max(k(L), named)`` at the selector seam). The floor is the render
+    cap: a short document's inventory is exactly what the note can show,
+    and the NOTE stays at 12 lines whatever the inventory carries
+    (``first_reading.MAX_MOVES``, render-only since #3511 — one constant,
+    one meaning). This says HOW MANY may be named, never WHICH: the model
+    still names the gestures, and the citation rule still discards a quote
+    the document does not carry.
+    """
+    k = 2 * (-(-length // capacity))
     return max(floor, min(ceiling, k))
 
 

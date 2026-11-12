@@ -146,7 +146,11 @@ async def test_a_real_state_is_read_whole_and_its_window_is_recorded(monkeypatch
     state = UnifiedAnalysisState(long_doc)
     model = _FakeModel(_answer(("concession", "Il concède le coût.", CONCESSION)))
     monkeypatch.setattr(
-        invoke_callables, "_build_persona_callable", lambda name: (model, None)
+        invoke_callables,
+        "_build_persona_callable",
+        # #3511 — the site passes the reading's own completion cap; the stub
+        # accepts the production signature and ignores it.
+        lambda name, **kwargs: (model, None),
     )
 
     payload = await invoke_callables._invoke_first_reading(
