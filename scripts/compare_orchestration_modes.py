@@ -1712,6 +1712,35 @@ async def run_conversation_real_mode(
     )
 
 
+def attach_bridge_restitution(
+    result: Optional[Dict[str, Any]],
+    state: Any,
+    panel_mode: bool,
+) -> None:
+    """Render the verdict from the acts the bridge's own plan produced (#3471).
+
+    The acts are phases of the bridge's workflow now, so this function only
+    ASSEMBLES what they wrote into the state. It deliberately does not call
+    the act generators: that entry point
+    (``generate_and_render_for_conversational_state``) exists for engines that
+    have no act phases, and calling it here would generate every act a second
+    time.
+    """
+    if not panel_mode or state is None:
+        return
+    from argumentation_analysis.reporting.restitution.pipeline_adapter import (
+        render_spectacular_restitution,
+    )
+
+    try:
+        report = render_spectacular_restitution(state)
+    except Exception as exc:
+        logger.warning("Bridge restitution render failed (named, non-fatal): %s", exc)
+        report = None
+    if isinstance(result, dict):
+        result["restitution_report"] = report
+
+
 async def run_hierarchical_bridge_mode(
     text: str,
     corpus_id: str,
@@ -1811,6 +1840,9 @@ async def run_hierarchical_bridge_mode(
         state=state,
         state_writers=state_writers,
         checkpoint_callback=checkpoint_callback,
+        # #3471 — the plan itself carries the restitution acts. Only the panel
+        # asks for them: a comparison run that is not judged pays no act.
+        include_restitution=panel_mode,
     )
     try:
         if max_wall_seconds is not None:
@@ -1883,22 +1915,10 @@ async def run_hierarchical_bridge_mode(
         )
 
     if panel_mode and state is not None:
-        # The bridge's strategic planner never requests the restitution acts:
-        # its keyword map covers analysis capabilities only (#3378 trace). Use
-        # the same state→acts producer as the conversational engine, after the
-        # bridge's own phases. No phase is invented and no act is templated.
-        from argumentation_analysis.reporting.restitution.conversational_adapter import (
-            generate_and_render_for_conversational_state,
-        )
-
-        try:
-            report = await generate_and_render_for_conversational_state(state, text)
-            if isinstance(result, dict):
-                result["restitution_report"] = report
-        except Exception as exc:
-            logger.warning("Bridge restitution failed (named, non-fatal): %s", exc)
-            if isinstance(result, dict):
-                result["restitution_report"] = None
+        # The bridge's own plan asks for the restitution acts (#3471): the
+        # engine runs them as phases, so a run cut by the budget keeps the
+        # acts it finished. The harness only assembles the readable verdict.
+        attach_bridge_restitution(result, state, panel_mode)
 
     return ModeResult(
         mode="hierarchical_bridge",

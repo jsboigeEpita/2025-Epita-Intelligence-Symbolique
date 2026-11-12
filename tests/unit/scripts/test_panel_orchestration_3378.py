@@ -213,24 +213,27 @@ class TestStateBearingEnginesExposeTheirRealState:
         assert state.deanonymized is False
         assert state.source_metadata["opaque_id"] == "doc_A"
 
-    def test_the_bridge_builds_its_acts_after_its_own_phases(self):
+    def test_the_bridge_renders_its_natively_planned_acts(self):
         calls = []
         observed = {}
 
         async def fake_hierarchical(**kwargs):
             observed.update(kwargs)
+            assert kwargs["include_restitution"] is True
             calls.append("phases")
+            state = kwargs["state"]
+            state.act1_framing = "Cadrage synthétique."
+            state.act2_narrative = "Récit synthétique."
+            state.act3_conclusion = "Conclusion synthétique."
             return {
-                "summary": {"completed": 2, "total": 2},
+                "summary": {"completed": 3, "total": 3},
                 "objectives": [{"id": "o1"}],
                 "conclusion": "Conclusion synthétique.",
             }
 
-        async def fake_generate(state, text):
-            calls.append("acts")
-            state.act1_framing = "Cadrage synthétique."
-            state.act2_narrative = "Récit synthétique."
-            state.act3_conclusion = "Conclusion synthétique."
+        def fake_render(state):
+            assert state.act3_conclusion == "Conclusion synthétique."
+            calls.append("render")
             return object()
 
         async def drive():
@@ -242,9 +245,9 @@ class TestStateBearingEnginesExposeTheirRealState:
                 ".run_hierarchical_analysis",
                 side_effect=fake_hierarchical,
             ), patch(
-                "argumentation_analysis.reporting.restitution.conversational_adapter"
-                ".generate_and_render_for_conversational_state",
-                side_effect=fake_generate,
+                "argumentation_analysis.reporting.restitution.pipeline_adapter"
+                ".render_spectacular_restitution",
+                side_effect=fake_render,
             ):
                 return await harness.run_hierarchical_bridge_mode(
                     SYNTHETIC_TEXT,
@@ -255,7 +258,7 @@ class TestStateBearingEnginesExposeTheirRealState:
                 )
 
         result = asyncio.run(drive())
-        assert calls == ["phases", "acts"]
+        assert calls == ["phases", "render"]
         assert result.panel_state is observed["state"]
         assert result.panel_state.act1_framing == "Cadrage synthétique."
         assert result.panel_state_reason == "completed"

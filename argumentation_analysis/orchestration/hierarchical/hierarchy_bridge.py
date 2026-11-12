@@ -200,6 +200,7 @@ _OBJECTIVE_CAPABILITY_MAP: Dict[str, List[str]] = {
     "qualité": ["argument_quality"],
     "synthétiser": ["deep_synthesis"],
     "synthèse": ["deep_synthesis"],
+    "restitution": ["act1_framing", "act2_narrative", "act3_conclusion"],
 }
 
 
