@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "## 🕯️ Enquête au Manoir Tudor — Dossier n°1\n\nLa pluie frappe les hautes fenêtres du **Manoir Tudor**. À 22 h 17, un cri a retenti dans la bibliothèque.\n\nLe maître des lieux, **Sir Alistair Tudor**, a été retrouvé mort près de son bureau. La porte était verrouillée de l’intérieur, mais une fenêtre donnant sur les jardins est entrouverte. Une coupe de cristal brisée repose au sol. L’horloge du bureau s’est arrêtée à **22 h 05**.\n\n### Suspects présents au manoir\n\n- **Lady Eleanor Tudor**, l’épouse de la victime  \n- **Victor Tudor**, son neveu  \n- **Dr Helena Moore**, médecin de famille  \n- **Jonathan Reed**, avocat de Sir Alistair  \n- **Martha Bell**, gouvernante du manoir  \n- **Edward Crane**, jardinier  \n\n### Lieux accessibles\n\n- La bibliothèque, scène du crime  \n- Le salon rouge  \n- La salle à manger  \n- Le bureau privé  \n- La serre  \n- Les quartiers du personnel  \n- Les jardins détrempés  \n\nTous les suspects sont actuellement réunis dans le salon rouge. Personne ne peut quitter le manoir.\n\n**Que faites-vous en premier ?**\n\n1. Examiner minutieusement le corps et la scène du crime  \n2. Interroger Lady Eleanor Tudor  \n3. Interroger Victor Tudor  \n4. Interroger le Dr Moore  \n5. Interroger Jonathan Reed  \n6. Interroger Martha Bell  \n7. Interroger Edward Crane  \n8. Fouiller le bureau privé",
+      "content": "## 🕯️ Enquête au Manoir Tudor\n\nLa pluie fouette les vitres du vieux manoir. À **22 h 17**, un cri retentit dans l’aile est.\n\nLorsque vous arrivez dans le **bureau Tudor**, vous découvrez **Sir Alistair Blackwood**, propriétaire des lieux, étendu près de son bureau. Il a été frappé à la tête avec un objet contondant. La porte était verrouillée de l’intérieur, mais une fenêtre est entrouverte.\n\n### Les suspects présents au manoir\n\n- **Lady Eleanor Blackwood**, l’épouse de la victime  \n- **Victor Blackwood**, son fils héritier  \n- **Clara Hastings**, la secrétaire personnelle  \n- **Dr Julian Moore**, médecin de famille  \n- **Edward Finch**, majordome  \n- **Martha Bell**, gouvernante  \n\n### Premiers éléments observés\n\n- Une **trace de boue** près de la fenêtre  \n- Un **verre de whisky brisé** sur le tapis  \n- Une page arrachée du **journal intime** de Sir Alistair  \n- L’horloge du bureau arrêtée à **22 h 03**  \n- Une odeur persistante de **fumée de cheminée**, bien que le feu soit presque éteint  \n\nLe commissaire local vous laisse diriger l’enquête.\n\n**Que souhaitez-vous faire ?**  \n1. Examiner le corps  \n2. Fouiller le bureau  \n3. Inspecter la fenêtre et la cheminée  \n4. Interroger un suspect  \n5. Réunir tout le monde pour établir les alibis",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EiMN5ZkUc1SpHg3PnF3DS6FmLal89",
-        "created": 1794241135,
+        "id": "chatcmpl-EjCnd7pgmdVGPBGEf1uIrzEeUCyrO",
+        "created": 1794442669,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 29,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 429,
+          "completion_tokens": 383,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 90,
+            "reasoning_tokens": 44,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

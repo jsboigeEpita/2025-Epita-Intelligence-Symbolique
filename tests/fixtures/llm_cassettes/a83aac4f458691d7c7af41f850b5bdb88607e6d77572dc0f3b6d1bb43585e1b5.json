@@ -1,14 +1,14 @@
 {
   "key": "a83aac4f458691d7c7af41f850b5bdb88607e6d77572dc0f3b6d1bb43585e1b5",
   "value": {
-    "id": "chatcmpl-EiMCdTB2csvVXGhCBsXNCZM8p6gzp",
+    "id": "chatcmpl-EjCeHN9cOKiRt92x8CoulC2X0rclg",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":1.0,\"exhibit\":\"La chaîne relie l’hypothèse de croissance optimiste de 1,8 % par an au fait que la projection du déficit est fragilisée ; le verdict est une progression logique.\"}",
+          "content": "{\"score\":0.5,\"exhibit\":\"La chaîne relie l’existence d’hypothèses de croissance optimistes à l’idée que la projection du déficit est fragilisée ; l’inférence est présente, mais le lien entre optimisme des hypothèses et fragilité n’est pas entièrement explicité.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794240487,
+    "created": 1794442089,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 126,
+      "completion_tokens": 119,
       "prompt_tokens": 274,
-      "total_tokens": 400,
+      "total_tokens": 393,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 66,
+        "reasoning_tokens": 46,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

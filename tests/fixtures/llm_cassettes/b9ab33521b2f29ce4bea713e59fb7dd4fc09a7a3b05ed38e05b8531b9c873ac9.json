@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_ekPmz461JOGwC6K5eyk18IVr",
+          "id": "call_4kA7YqUi9cxDUHRSWZIW6cK1",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"759\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L’affirmation du président qualifie la politique économique de « succès incontestable » sans fournir aucun élément de preuve dans le texte; il s’agit d’une conclusion hâtive.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+          "arguments": "{\"node_pk\":\"759\",\"matches\":true,\"confidence\":\"medium\",\"justification\":\"L'affirmation présente le succès de la politique économique comme « incontestable » sans fournir la moindre preuve ni prémisse justificative. Il s'agit d'une conclusion hâtive, plus spécifique que la catégorie générale d'erreur de raisonnement.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\",\"document_statement\":\"« la politique economique est un succes incontestable »\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EiMF187DkLrDoAQu2IDjbKQss97rl",
-        "created": 1794240635,
+        "id": "chatcmpl-EjCgI4IxLXEfwOM4VhQSElxGMGzRC",
+        "created": 1794442214,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2327,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 83,
+          "completion_tokens": 111,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

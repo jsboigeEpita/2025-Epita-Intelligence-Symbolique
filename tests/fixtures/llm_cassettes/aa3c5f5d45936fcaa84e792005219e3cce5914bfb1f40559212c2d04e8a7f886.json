@@ -1,0 +1,48 @@
+{
+  "key": "aa3c5f5d45936fcaa84e792005219e3cce5914bfb1f40559212c2d04e8a7f886",
+  "value": {
+    "id": "chatcmpl-EjCquoiJ3vh36HiXC8hlXiOxjW9mY",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les trois points présentent des idées distinctes : fiabilité accrue des preuves ADN et réduction des erreurs judiciaires ; fonction dissuasive de la peine de mort ; dangerosité durable de certains criminels. Les points 2 et 3 soutiennent tous deux la peine de mort, mais reposent sur des justifications différentes et ne se répètent pas en substance.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794442872,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 151,
+      "prompt_tokens": 303,
+      "total_tokens": 454,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 56,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

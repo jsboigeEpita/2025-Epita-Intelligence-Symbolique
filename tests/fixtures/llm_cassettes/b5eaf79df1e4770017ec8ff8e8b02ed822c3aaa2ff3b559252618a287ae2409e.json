@@ -1,0 +1,48 @@
+{
+  "key": "b5eaf79df1e4770017ec8ff8e8b02ed822c3aaa2ff3b559252618a287ae2409e",
+  "value": {
+    "id": "chatcmpl-EjCeKwQSk9yJTwH9laRHr0o38Ryuq",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. La projection du déficit est fragilisée parce qu’elle repose sur des hypothèses de croissance jugées optimistes, notamment une croissance annuelle de 1,8 %.\\n2. Le gouvernement commettrait un sophisme naturaliste en affirmant que travailler plus longtemps est « dans l’ordre des choses ».\\n3. Le gouvernement commettrait un homme de paille en présentant le débat comme une opposition à la suppression des retraites, alors que personne ne propose de les supprimer, mais seulement de les réformer différemment.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794442092,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 192,
+      "prompt_tokens": 296,
+      "total_tokens": 488,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 66,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

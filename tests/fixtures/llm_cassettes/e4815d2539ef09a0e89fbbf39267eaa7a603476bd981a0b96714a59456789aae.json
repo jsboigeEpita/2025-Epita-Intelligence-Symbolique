@@ -6,26 +6,26 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_GS7yKjSY7vpAA8hIkr1BVEcG",
-          "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"3\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"L’énoncé se limite à affirmer que la politique économique est un « succès incontestable », sans fournir aucun élément probant pour établir cette conclusion. Il s’agit d’une affirmation qui n’apporte rien à la construction d’un argument convaincant.\",\"move_author\":\"reported\",\"move_author_label\":\"le président\"}"
+          "id": "call_mW4CfopZBYCWVOhR9885CMQa",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\":\"2\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EiMF1mvJOVVX3ap4Cqu9WXkKe3O7B",
-        "created": 1794240635,
+        "id": "chatcmpl-EjCgIhWGiysXcAYYLdtS9b2TopW9c",
+        "created": 1794442214,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2330,
           "prompt_tokens_details": {
             "audio_tokens": 0,
-            "cache_write_tokens": 2327,
-            "cached_tokens": 0,
+            "cache_write_tokens": 892,
+            "cached_tokens": 1435,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 97,
+          "completion_tokens": 22,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

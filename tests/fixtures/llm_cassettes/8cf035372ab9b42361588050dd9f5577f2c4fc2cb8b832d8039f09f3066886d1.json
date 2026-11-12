@@ -1,0 +1,48 @@
+{
+  "key": "8cf035372ab9b42361588050dd9f5577f2c4fc2cb8b832d8039f09f3066886d1",
+  "value": {
+    "id": "chatcmpl-EjCmcj8IWHjGj9UenM6XpSWu3qHBz",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points présentent des éléments distincts : l’organisation du tournoi, ses effets attendus sur la visibilité et le recrutement, puis une alternative d’investissement dans le matériel. Aucune redondance substantielle n’est localisée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794442606,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 118,
+      "prompt_tokens": 302,
+      "total_tokens": 420,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 53,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

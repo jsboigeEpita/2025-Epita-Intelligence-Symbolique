@@ -6,25 +6,25 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_oeu9gojn410RB1FdbsXavE8x",
+          "id": "call_cXwrCfnHB6ZuXkOmTmiSLFxQ",
           "name": "Exploration-explore_branch",
           "arguments": "{\"node_pk\": \"357\"}"
         },
         {
-          "id": "call_U7z5H1A6fiIf6XfyR5EbZXv0",
+          "id": "call_TCAhIeJLoh0XxI7Azym7j3m1",
           "name": "Exploration-explore_branch",
           "arguments": "{\"node_pk\": \"420\"}"
         },
         {
-          "id": "call_xeyQGSHXrGx3RtpSnM4uDzdu",
+          "id": "call_PiOWnlNJ4uXTC8iyB9NYzDks",
           "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"511\"}"
+          "arguments": "{\"node_pk\": \"356\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EiMFuQAguCrzfEx7Bs9x1qCGxDe4p",
-        "created": 1794240690,
+        "id": "chatcmpl-EjChVga4x7hNE0QA8nI9LBYOlBbA1",
+        "created": 1794442289,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2650,

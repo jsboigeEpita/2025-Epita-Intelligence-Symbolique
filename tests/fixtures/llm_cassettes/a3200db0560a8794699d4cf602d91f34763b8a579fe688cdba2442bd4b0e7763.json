@@ -1,14 +1,14 @@
 {
   "key": "a3200db0560a8794699d4cf602d91f34763b8a579fe688cdba2442bd4b0e7763",
   "value": {
-    "id": "chatcmpl-EiMP8Vfesld9vXzRHCEs9XWiCm7h7",
+    "id": "chatcmpl-EjCpKJSuW6Xk5d31dqp6OCHHL4OXg",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne relie les résultats historiques de la vaccination contre la variole et la polio à la conclusion que les vaccins sont indispensables pour la santé publique, mais le verdict identifie un saut logique net entre ces prémisses et cette conclusion.\"}",
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne relie des preuves d’efficacité des vaccins contre la variole et la polio à la conclusion qu’ils sont indispensables pour la santé publique, mais cette conclusion ne découle pas directement des prémisses : saut logique net.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794241262,
+    "created": 1794442774,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 112,
+      "completion_tokens": 129,
       "prompt_tokens": 275,
-      "total_tokens": 387,
+      "total_tokens": 404,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 43,
+        "reasoning_tokens": 62,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

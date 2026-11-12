@@ -1,0 +1,48 @@
+{
+  "key": "a16b925b3916fde162180fb2449222f1459b8adfa23de5912ddef5e6b51c0d87",
+  "value": {
+    "id": "chatcmpl-EjCdvXyCDPCsmJzYbsMnR5hKDBEgH",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.2,\"exhibit\":\"Obstacles localisés : jargon technique non défini (« sophisme naturaliste », « appel à la peur ») et sigle non développé (« PIB »). Verdict : opacité réelle ; le sens est seulement partiellement reconstructible.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794442067,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 100,
+      "prompt_tokens": 270,
+      "total_tokens": 370,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 33,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

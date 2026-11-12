@@ -1,0 +1,40 @@
+{
+  "key": "f1e0af6978dfa4281c4e15d5da7be0a64194a6fd80de1612ccfd8f8abf4a684d",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_7XnQI0utRuFEBsb1DgMl0EuW",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"323\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L'argument 2 disqualifie l'avis des non-experts en le présentant comme indigne de compter, plutôt que d'examiner ses raisons. Il s'agit d'un appel au mépris, sans sous-type plus spécifique de ridicule, honte ou dégoût.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EjChB78KVV1PP2XLIbHMDYTpvlgeO",
+        "created": 1794442269,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2180,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 742,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 95,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

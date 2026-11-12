@@ -1,0 +1,48 @@
+{
+  "key": "0bcb0f4d87280fe7cd0527fb6095c8de383393c374c6f539df0e4e16722589bd",
+  "value": {
+    "id": "chatcmpl-EjCqsOOppOWqLoKP9wO4AqbG1GEjn",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_semantic_redundancy\":true,\"redundancy_verdict\":\"redondance_sémantique\",\"located_redundancy\":\"Point 1, répété dans la première phrase et dans la phrase citée\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794442870,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 152,
+      "prompt_tokens": 415,
+      "total_tokens": 567,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 95,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

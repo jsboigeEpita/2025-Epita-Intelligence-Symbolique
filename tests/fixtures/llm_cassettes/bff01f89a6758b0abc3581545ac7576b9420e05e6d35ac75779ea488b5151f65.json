@@ -1,14 +1,14 @@
 {
   "key": "bff01f89a6758b0abc3581545ac7576b9420e05e6d35ac75779ea488b5151f65",
   "value": {
-    "id": "chatcmpl-EiMSCllVDBA10y7g6etuBOc3PVl8i",
+    "id": "chatcmpl-EjCrs6HnXK7DnqhHmFRfeRsWxkb8V",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_chain\":true,\"premises\":\"Les mesures de température globale montrent une augmentation de 1,1 degré depuis l’ère préindustrielle ; le changement actuel est d’une vitesse sans précédent ; les modèles prédictifs sont unanimes sur l’impact des activités humaines.\",\"conclusion\":\"Le changement climatique actuel ne se réduit pas au fait que le climat a toujours changé : il est sans précédent par sa vitesse et est causé en partie par les activités humaines.\"}",
+          "content": "{\"has_chain\":true,\"premises\":\"Les mesures de température globale montrent une augmentation de 1,1 °C depuis l’ère préindustrielle, à une vitesse sans précédent, et les modèles prédictifs sont unanimes sur l’impact des activités humaines.\",\"conclusion\":\"Le changement climatique actuel est exceptionnellement rapide et est largement dû aux activités humaines, de sorte que l’affirmation selon laquelle le climat a toujours changé est insuffisante ou trompeuse.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794241452,
+    "created": 1794442932,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 271,
+      "completion_tokens": 208,
       "prompt_tokens": 269,
-      "total_tokens": 540,
+      "total_tokens": 477,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 166,
+        "reasoning_tokens": 101,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

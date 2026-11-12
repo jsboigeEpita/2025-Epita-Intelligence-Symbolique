@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_gzRNmb6l8EB9BMIIw0fVw3yD",
+          "id": "call_7Xp05pvJTM8mhrwAQ4V4VFa7",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"1378\",\"matches\":true,\"justification\":\"Le texte évalue la vérité d'une affirmation selon l'identité ou le statut de ceux qui la soutiennent (« les experts ») et exclut l'avis des non-experts (« votre avis ne compte pas »), sans examiner le bien-fondé de la proposition. Il s'agit bien d'un appel à l'identité, même si l'autorité des experts pourrait parfois constituer un élément pertinent lorsqu'elle est correctement justifiée.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"1378\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L'argument 2 discrédite l'avis d'une personne uniquement parce qu'elle n'appartient pas à la communauté des experts, au lieu d'examiner les raisons avancées. L'argument 1 invoque en outre l'unanimité des experts comme preuve suffisante, mais l'argument 2 correspond directement à l'appel à l'identité.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EiMH0jKQW5ZKls2zuclsN0j0HFNp3",
-        "created": 1794240758,
+        "id": "chatcmpl-EjCiAsgasDAx4bXjKsyiGXGxFnLAP",
+        "created": 1794442330,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1389,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 128,
+          "completion_tokens": 115,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

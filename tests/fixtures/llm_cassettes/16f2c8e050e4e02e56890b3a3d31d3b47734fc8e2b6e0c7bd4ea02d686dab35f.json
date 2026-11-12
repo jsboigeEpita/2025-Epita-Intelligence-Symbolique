@@ -1,0 +1,48 @@
+{
+  "key": "16f2c8e050e4e02e56890b3a3d31d3b47734fc8e2b6e0c7bd4ea02d686dab35f",
+  "value": {
+    "id": "chatcmpl-EjCjUytYnILHqcj5UrnDtPBgrpvwR",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La prémisse indique que l’option C consacre 1000 euros au tournoi réduit et 1000 euros au matériel ; elle permet d’inférer que l’option C propose un compromis hybride répartissant les 2000 euros à parts égales entre ces deux éléments. Verdict : progression_logique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794442412,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 164,
+      "prompt_tokens": 293,
+      "total_tokens": 457,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 81,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

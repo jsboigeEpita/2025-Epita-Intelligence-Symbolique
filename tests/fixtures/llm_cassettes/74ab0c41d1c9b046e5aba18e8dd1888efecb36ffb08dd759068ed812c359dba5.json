@@ -1,0 +1,48 @@
+{
+  "key": "74ab0c41d1c9b046e5aba18e8dd1888efecb36ffb08dd759068ed812c359dba5",
+  "value": {
+    "id": "chatcmpl-EjCeIDWkWNKjpNqfFn3u8zKSt3KCp",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La chaîne relie le rejet de l’argument d’autorité à la conclusion que l’affirmation constitue un sophisme et ne justifie pas valablement une action immédiate. L’inférence est présente, mais elle est imparfaite, car l’invalidité de l’argument d’autorité ne suffit pas nécessairement à établir que toute l’affirmation est un sophisme.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794442090,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 173,
+      "prompt_tokens": 299,
+      "total_tokens": 472,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 74,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

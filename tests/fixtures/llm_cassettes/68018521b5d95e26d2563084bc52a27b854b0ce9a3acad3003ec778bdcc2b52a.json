@@ -1,14 +1,14 @@
 {
   "key": "68018521b5d95e26d2563084bc52a27b854b0ce9a3acad3003ec778bdcc2b52a",
   "value": {
-    "id": "chatcmpl-EiMRuUhIKotPplxShkxNQK5LUDj5T",
+    "id": "chatcmpl-EjCrhWE7sZlsj22tMsm7farhpTkI1",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_digression\":true,\"relevance_verdict\":\"digression_localisée\",\"located_digression\":\"Ceux qui minimisent la crise climatique utilisent souvent des donnees selectives pour soutenir leur position.\"}",
+          "content": "{\"has_digression\":true,\"relevance_verdict\":\"digression_localisée\",\"located_digression\":\"Ceux qui minimisent la crise climatique utilisent souvent des données sélectives pour soutenir leur position.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794241434,
+    "created": 1794442921,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 104,
+      "completion_tokens": 106,
       "prompt_tokens": 333,
-      "total_tokens": 437,
+      "total_tokens": 439,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 51,
+        "reasoning_tokens": 53,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

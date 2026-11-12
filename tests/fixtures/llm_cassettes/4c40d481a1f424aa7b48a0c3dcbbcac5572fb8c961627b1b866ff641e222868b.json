@@ -1,14 +1,14 @@
 {
   "key": "4c40d481a1f424aa7b48a0c3dcbbcac5572fb8c961627b1b866ff641e222868b",
   "value": {
-    "id": "chatcmpl-EiMRwz1hG4N0CKYk9z9jKJ5I1O1LG",
+    "id": "chatcmpl-EjCris9BEYo4mfXZli6uLjcc0uRzl",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":0.5,\"exhibit\":\"La thèse affirme que la transition énergétique est nécessaire et économiquement avantageuse à long terme. Une digression localisée porte sur l’usage sélectif des données par les minimisateurs de la crise climatique ; elle est liée au débat climatique, mais ne démontre pas directement l’avantage économique de la transition.\"}",
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse soutient que la transition énergétique est nécessaire et économiquement avantageuse à long terme. Une digression localisée porte sur le fait que les détracteurs de la crise climatique utilisent parfois des données sélectives ; elle reste liée au débat climatique, mais ne démontre pas directement l’avantage économique de la transition.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794241436,
+    "created": 1794442922,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 220,
+      "completion_tokens": 149,
       "prompt_tokens": 276,
-      "total_tokens": 496,
+      "total_tokens": 425,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 137,
+        "reasoning_tokens": 62,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

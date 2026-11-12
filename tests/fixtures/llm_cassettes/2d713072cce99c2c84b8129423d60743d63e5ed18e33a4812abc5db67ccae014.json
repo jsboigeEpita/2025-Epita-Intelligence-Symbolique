@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_0rV3GQYS6wQffRmVHKhORtIb",
+          "id": "call_DfQuFlqXYIAMeKzY4R0ZnrEE",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"1353\",\"matches\":false,\"justification\":\"Le texte ne pose aucune question insinuant une accusation. Il avance plutôt des affirmations sur l'unanimité des experts et l'exclusion des non-experts, ce qui relève d'autres raisonnements potentiellement fallacieux, mais pas de cette catégorie.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"1353\",\"matches\":false,\"justification\":\"Le texte ne pose aucune question insinuant une accusation. Il affirme plutôt un appel à l'autorité et une disqualification de l'avis des non-experts, qui ne correspondent pas à cette catégorie.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EiMH42NaHGV4AV9zrKbUhzd6n5Nb2",
-        "created": 1794240762,
+        "id": "chatcmpl-EjCiEgvGzSGlxhBqyU9PM6JASXdkX",
+        "created": 1794442334,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1366,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 92,
+          "completion_tokens": 80,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

@@ -1,0 +1,40 @@
+{
+  "key": "902609e8056105d4f668af0bf0395e94870e57482491d326885e7a7969ad359e",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_VhoIFSF2Uf3vS9gLZA4jEYhL",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"339\",\"matches\":false,\"justification\":\"Le texte ne suscite pas principalement l’indignation morale ni ne présente une action comme immorale. Il avance plutôt un appel à l’autorité et une disqualification de l’avis des non-experts, qui ne relèvent pas de cet appel à la panique morale.\",\"confidence\":\"high\",\"move_author\":\"speaker\",\"register_test\":\"proportionate\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EjCh89GjPeLTwbRjSDpuuCcu5nN2W",
+        "created": 1794442266,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1350,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1347,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 103,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

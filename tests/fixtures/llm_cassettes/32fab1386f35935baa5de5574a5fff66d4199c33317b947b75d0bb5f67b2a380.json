@@ -1,14 +1,14 @@
 {
   "key": "32fab1386f35935baa5de5574a5fff66d4199c33317b947b75d0bb5f67b2a380",
   "value": {
-    "id": "chatcmpl-EiMCn9WZgxGr2TJrWLYJvyOhaJxjs",
+    "id": "chatcmpl-EjCeHEw2wY64ciPnG2kOYCp8WpPfS",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Jargon argumentatif non défini : « homme de paille » et « appel à l’émotion ». Aucun anaphorique non résolvable ni phrase excessivement emboîtée.\"}",
+          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Jargon d’argumentation non défini : « homme de paille » et « appel à l’émotion ». Aucun anaphorique non résolvable ni phrase excessivement emboîtée.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794240497,
+    "created": 1794442089,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 245,
+      "completion_tokens": 212,
       "prompt_tokens": 289,
-      "total_tokens": 534,
+      "total_tokens": 501,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 185,
+        "reasoning_tokens": 150,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

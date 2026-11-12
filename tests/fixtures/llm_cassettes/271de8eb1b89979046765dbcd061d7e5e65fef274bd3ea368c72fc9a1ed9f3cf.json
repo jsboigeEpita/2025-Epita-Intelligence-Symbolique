@@ -1,0 +1,48 @@
+{
+  "key": "271de8eb1b89979046765dbcd061d7e5e65fef274bd3ea368c72fc9a1ed9f3cf",
+  "value": {
+    "id": "chatcmpl-EjCeBEJ5g7oK71DqHsfmmh2plqJSd",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"L'affirmation selon laquelle, sans action immédiate, le système de retraites s'effondrera dans cinq ans repose sur un argument d'autorité qui ne tient pas compte des différences structurelles entre les systèmes et constitue un appel à la peur.\",\"conclusion\":\"Cette affirmation est un sophisme et ne constitue pas une justification valable de la nécessité d'agir maintenant.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794442083,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 403,
+      "prompt_tokens": 302,
+      "total_tokens": 705,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 308,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

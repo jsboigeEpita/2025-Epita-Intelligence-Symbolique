@@ -1,0 +1,48 @@
+{
+  "key": "596084b8d643600e022a283097e8b9d6538f280262c6bcdcc45475e7c762cb36",
+  "value": {
+    "id": "chatcmpl-EjCqpLMzwc4k2Y1xGF9i4EYISr6hc",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Prémisses : la peine de mort aurait un effet dissuasif contre les crimes les plus graves, et les avancées en ADN réduiraient considérablement le risque d’erreur judiciaire. Conclusion : la peine de mort est justifiée. Verdict : saut logique, car les prémisses ne suffisent pas à établir la justification de la peine de mort.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794442867,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 128,
+      "prompt_tokens": 285,
+      "total_tokens": 413,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 35,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

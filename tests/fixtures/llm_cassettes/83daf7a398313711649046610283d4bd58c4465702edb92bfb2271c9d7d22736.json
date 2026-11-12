@@ -1,7 +1,7 @@
 {
   "key": "83daf7a398313711649046610283d4bd58c4465702edb92bfb2271c9d7d22736",
   "value": {
-    "id": "chatcmpl-EiMOyTDc8MG9Nf8JN9eg7Ka6sV1E3",
+    "id": "chatcmpl-EjCpBzqdRFNy8JkM2PzQp6NGy16nr",
     "choices": [
       {
         "finish_reason": "stop",
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794241252,
+    "created": 1794442765,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 63,
+      "completion_tokens": 58,
       "prompt_tokens": 219,
-      "total_tokens": 282,
+      "total_tokens": 277,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 28,
+        "reasoning_tokens": 23,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

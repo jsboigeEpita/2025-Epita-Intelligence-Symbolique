@@ -1,0 +1,40 @@
+{
+  "key": "060ca41b2cc02fc297fc67beef2aa100af4b1baf20c198167330ed3b8e1ed7fc",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_Jj3fjvsup0QB8q0J2ve8IF5o",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"890\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L’affirmation présente comme incontestable le succès de la politique économique, sans fournir d’éléments permettant de distinguer les faits vrais des faits faux ou déformés. Elle relève ici d’une semi-vérité au niveau disponible.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\",\"document_statement\":\"Le président affirme que la politique économique est un succès incontestable.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EjCgUBS2NpONqX6RCaZDsiNCQ6hdk",
+        "created": 1794442226,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2443,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1005,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 111,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

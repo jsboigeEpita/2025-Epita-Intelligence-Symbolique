@@ -1,0 +1,40 @@
+{
+  "key": "e424f3c33076691f2a46c690ae367276d1e56b9b4c5162822927747daa0cf969",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_2p7nju4g1ep9Qf8MQtay9YeT",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"352\",\"matches\":false,\"justification\":\"Le texte ne propose aucun service ou avantage en échange du soutien à l'argument. Il invoque plutôt l'unanimité supposée des experts et exclut les non-experts, ce qui peut relever d'une autre branche (appel à l'autorité ou ad hominem), mais pas de l'appel à la réciprocité.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EjChJYzSsXc7kyZ06pZyVFZy60ik7",
+        "created": 1794442277,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1371,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1368,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 107,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

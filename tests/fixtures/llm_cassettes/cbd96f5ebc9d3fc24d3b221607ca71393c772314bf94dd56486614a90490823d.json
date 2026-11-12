@@ -1,0 +1,48 @@
+{
+  "key": "cbd96f5ebc9d3fc24d3b221607ca71393c772314bf94dd56486614a90490823d",
+  "value": {
+    "id": "chatcmpl-EjCeoCjyEhdvAks3VprmAze2URQaJ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points portent sur des défauts argumentatifs distincts : le premier critique un appel à l’émotion qui détourne des questions techniques, tandis que le second dénonce un homme de paille attribuant à l’opposition une proposition inexistante. Aucune redondance substantielle n’est localisée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794442122,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 124,
+      "prompt_tokens": 301,
+      "total_tokens": 425,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 41,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

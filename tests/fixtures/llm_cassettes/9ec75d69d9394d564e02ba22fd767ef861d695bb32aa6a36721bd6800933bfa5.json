@@ -1,0 +1,33 @@
+{
+  "key": "9ec75d69d9394d564e02ba22fd767ef861d695bb32aa6a36721bd6800933bfa5",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"query_ideas\":[{\"formula\":\"[](logic_coherent)\"},{\"formula\":\"<>(find_proof)\"}]}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EjCom6u98KkT95tLZ0CgdvcIf5qKq",
+        "created": 1794442740,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 207,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 63,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 31,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "key": "ce3a1ee5768af55c9ac17f49a69a170b9874cbcb4892265221760e7c9675c3ca",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_YRXqBkoRujoYsmThVnk3G5U7",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"827\",\"matches\":false,\"justification\":\"L’énoncé ne se contredit pas lui-même et n’utilise pas un concept tout en le niant; il affirme seulement que la politique économique est un succès, avec une qualification catégorique.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EjCgPp00OQC9HEzMlZjZsE1ZMrSlf",
+        "created": 1794442221,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2008,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 570,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 83,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

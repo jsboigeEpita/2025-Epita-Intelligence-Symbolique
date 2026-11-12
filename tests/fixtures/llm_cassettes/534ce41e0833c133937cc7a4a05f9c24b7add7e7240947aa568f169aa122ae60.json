@@ -1,14 +1,14 @@
 {
   "key": "534ce41e0833c133937cc7a4a05f9c24b7add7e7240947aa568f169aa122ae60",
   "value": {
-    "id": "chatcmpl-EiMCAMsFCN1fQs37AxglAidIvwKA7",
+    "id": "chatcmpl-EjCdpuV6invcUyaAgb0P7ByVabQO7",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Jargon technique non défini : « PIB » n’est pas explicité ; « homme de paille » et « appel à l’émotion » sont des termes d’analyse argumentative employés sans explication accessible. Aucun anaphore non résolvable ni phrase excessivement emboîtée.\"}",
+          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Jargon argumentatif non défini : « homme de paille » et « appel à l'émotion » sont employés sans explication accessible.\"}\n",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794240458,
+    "created": 1794442061,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 218,
+      "completion_tokens": 223,
       "prompt_tokens": 343,
-      "total_tokens": 561,
+      "total_tokens": 566,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 139,
+        "reasoning_tokens": 172,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

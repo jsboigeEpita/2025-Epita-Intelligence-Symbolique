@@ -1,0 +1,45 @@
+{
+  "key": "f4275ed3964ace622bbcb88a16e7b1c3aad5ce66bc4758046c54aab9f8fa344a",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_WoFZLwzkkbLE7SJdMSuCPJeD",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\": \"820\", \"confidence\": \"high\", \"matches\": true, \"justification\": \"« succès incontestable » est un terme sous-entendu et catégorique qui donne l'illusion d'une évaluation précise sans critères ni preuves; il oriente le débat en faveur du président.\", \"move_author\": \"reported\", \"move_author_label\": \"Le président\"}"
+        },
+        {
+          "id": "call_9pUNIi23IvcdZ9dwBW9abPmZ",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\": \"821\", \"confidence\": \"medium\", \"matches\": false, \"justification\": \"Le texte ne montre pas qu'un sens particulier et inattendu soit attribué aux termes; le problème relève plutôt du caractère vague et catégorique de « incontestable ».\", \"move_author\": \"reported\", \"move_author_label\": \"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EjCgNS0q9633XPwk8bKr9qp779rfW",
+        "created": 1794442219,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2205,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 767,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 178,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

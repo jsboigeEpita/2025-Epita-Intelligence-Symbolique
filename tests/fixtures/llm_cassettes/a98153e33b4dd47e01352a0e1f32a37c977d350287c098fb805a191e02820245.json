@@ -1,0 +1,48 @@
+{
+  "key": "a98153e33b4dd47e01352a0e1f32a37c977d350287c098fb805a191e02820245",
+  "value": {
+    "id": "chatcmpl-EjCdrGGdPnemhuDhn54mUjQq8NO42",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"obstacle_genuinely_opaque\":true,\"clarity_verdict\":\"opaque_réel\",\"reasoning\":\"Le contexte permet d’inférer l’idée générale de « sophisme naturaliste » et d’« homme de paille », mais il ne donne pas le sens précis de ces notions ni l’expansion de « PIB », ce qui maintient une opacité réelle.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794442063,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 317,
+      "prompt_tokens": 408,
+      "total_tokens": 725,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 229,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
