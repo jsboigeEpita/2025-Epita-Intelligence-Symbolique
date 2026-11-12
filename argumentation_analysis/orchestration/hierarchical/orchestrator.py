@@ -35,6 +35,18 @@ from argumentation_analysis.core.capability_registry import CapabilityRegistry
 logger = logging.getLogger("HierarchicalOrchestrator")
 
 
+# The strategic tier writes analysis objectives; it never asks for the
+# readable verdict, because its vocabulary is the analysis vocabulary. This is
+# the objective a caller adds to the plan when it wants the restitution acts
+# (#3471). Its wording is what ``_OBJECTIVE_CAPABILITY_MAP`` resolves to the
+# three act capabilities, in order, and the bridge chains them sequentially.
+RESTITUTION_OBJECTIVE: Dict[str, str] = {
+    "id": "restitution",
+    "description": "Produire la restitution",
+    "priority": "high",
+}
+
+
 class HierarchicalOrchestrator:
     """
     Orchestrates analysis using the hierarchical (Strategic → Lego) bridge.
@@ -79,6 +91,7 @@ class HierarchicalOrchestrator:
         state: Optional[Any] = None,
         state_writers: Optional[Dict[str, Any]] = None,
         checkpoint_callback: Optional[Callable[..., None]] = None,
+        include_restitution: bool = False,
         **kwargs: Any,
     ) -> Dict[str, Any]:
         """
@@ -86,6 +99,13 @@ class HierarchicalOrchestrator:
 
         Args:
             text: The argument text to analyze.
+            include_restitution: Ask the plan itself for the restitution acts
+                (#3471). The strategic tier generates analysis objectives only;
+                with this flag a single ``restitution`` objective is added to
+                them before translation, so the acts are phases of this
+                workflow instead of an append made after it. Off by default:
+                a caller that never asked for a readable verdict pays for no
+                act.
             state: Optional analysis-state object passed BY REFERENCE to the
                 executor. CB #1528 item 2: the caller keeps the reference, so
                 a run torn by an external ``asyncio.wait_for`` still leaves
@@ -141,6 +161,16 @@ class HierarchicalOrchestrator:
             )
 
         logger.info(f"  → {len(objectives)} objectives generated")
+
+        if include_restitution and not any(
+            "restitution" in obj.get("description", "").lower() for obj in objectives
+        ):
+            # Request the act chain once, as part of the bridge's own plan.
+            objectives = [*objectives, dict(RESTITUTION_OBJECTIVE)]
+            logger.info(
+                "  → restitution requested natively "
+                f"({len(objectives)} objectives with the added act chain)"
+            )
 
         # --- Phase 2: Translate objectives → WorkflowDefinition ---
         logger.info("Phase 2: Translating objectives into WorkflowDefinition")
@@ -257,6 +287,7 @@ async def run_hierarchical_analysis(
     state: Optional[Any] = None,
     state_writers: Optional[Dict[str, Any]] = None,
     checkpoint_callback: Optional[Callable[..., None]] = None,
+    include_restitution: bool = False,
     **kwargs: Any,
 ) -> Dict[str, Any]:
     """
@@ -299,6 +330,15 @@ async def run_hierarchical_analysis(
                 "checkpoint_callback (fired per completed operational task) "
                 "to observe incremental progress."
             )
+        if include_restitution:
+            # The acts read a shared state; this mode has none (see above), so
+            # the request cannot be honoured. Rejecting it keeps the caller
+            # from believing a readable verdict was planned.
+            raise ValueError(
+                "hierarchical mode='delegation' cannot plan the restitution "
+                "acts: it has no shared-state surface for them to write into. "
+                "Use mode='bridge'."
+            )
         return await run_delegation_analysis(
             text,
             capability_registry=capability_registry,
@@ -318,5 +358,6 @@ async def run_hierarchical_analysis(
         state=state,
         state_writers=state_writers,
         checkpoint_callback=checkpoint_callback,
+        include_restitution=include_restitution,
         **kwargs,
     )
