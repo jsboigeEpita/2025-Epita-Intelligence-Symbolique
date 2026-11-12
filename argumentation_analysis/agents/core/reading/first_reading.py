@@ -120,12 +120,12 @@ MOVE_KINDS = (
 #: How many move LINES the NOTE shows (#3511: render-only). The state may
 #: carry more — :func:`inventory_budget` bounds what the reading names — but
 #: a reader's first page stays a page: the note shows the slots first, then
-#: the moves the examination reached, then a sample spread over the document,
-#: and says « N gestes nommés, M montrés ici » when it truncates. Before
-#: #3511 this constant also capped the inventory and the prompt — one
-#: number, two meanings: the render bar could not measure the inventory
-#: (the panel measured 9-12 named where the zero-shot names 11-18, the
-#: module full on 3 of 6 long documents).
+#: the moves the examination reached and a lens retained a finding on, then
+#: a sample spread over the document, and says « N gestes nommés, M montrés
+#: ici » when it truncates. Before #3511 this constant also capped the
+#: inventory and the prompt — one number, two meanings: the render bar could
+#: not measure the inventory (the panel measured 9-12 named where the
+#: zero-shot names 11-18, the module full on 3 of 6 long documents).
 MAX_MOVES = 12
 
 #: #3432 — the FLOOR of the pillar budget, the former flat bound. Ask 6(a)
@@ -273,13 +273,12 @@ specialist sees it. Your job, in this order:
    exactly why a reader who only looks beside the thesis misses them. Each
    pillar comes with its own verbatim quote and a kind from the closed
    vocabulary.
-3. Then the chain's own gestures, each named BY ITS KIND: the speaker's
-   rebuttal of an opponent, a distinction or a concession the speaker
-   grants, the move that opens or turns each part, and the closing or
-   perorative move. Spread them over the WHOLE document: a gesture from
-   the end matters as much as one from the opening, and no stretch of the
-   document is left unrepresented while another is named twice. When you
-   must choose, importance breaks the tie — it never replaces the spread.
+3. Then EVERY argument the text carries, exhaustively: wherever it sits in
+   the document — opening, middle or end, beside the thesis or far from it —
+   name it. Each argument comes with ONE verbatim anchor in the text's own
+   language, of 8 to 40 words, copied from the document: the anchor is where
+   the argument lives, and an argument whose anchor you cannot quote verbatim
+   is omitted rather than guessed.
 
 Hard rules:
 - One call, one pass. Say what the text DOES, not what it should have done.
@@ -308,7 +307,7 @@ Answer in French, with ONLY this JSON — no fences, no commentary:
               "quote": "a verbatim span of the document, usually far from the thesis"}}],
  "moves": [{{"kind": "concession|device|claim|audience|threat|dilemma|other",
              "reading": "one sentence naming the move",
-             "quote": "a verbatim span of the document"}}]}}
+             "quote": "a verbatim span of the document, 8 to 40 words — the argument's anchor"}}]}}
 
 Document:
 {excerpt}
@@ -1080,19 +1079,20 @@ def defining_move_spans(state: Any) -> List[Tuple[int, int]]:
     return spans
 
 
-def examined_unit_budget(state: Any) -> Optional[int]:
-    """#3511 — the per-argument budget once the reading has named its
-    gestures: ``max(k(L), named)``.
+def examined_unit_budget(state: Any, bound: Optional[int] = None) -> Optional[int]:
+    """#3511 (R1164 rework) — the per-argument budget once the reading has
+    named its arguments: ``min(N, max(k(L), named))``.
 
     A function of the STATE deliberately, so the coordinator replays panel
-    states through this one seam, free: the reading names N gestures, the
-    pass buys N slots of examination (or k(L) when k(L) is larger — the
-    named never REDUCE the budget). "Examined" is the selector's own word —
-    at least one selected unit overlapping the move's span — and the floor's
-    headroom pays for the head (k(L) floors at 10: a reading that names 12
-    buys 12, two units above k(L), and one that names 30 buys the ceiling).
-    The selector records the residue this budget still leaves (« nommé, non
-    examiné » with its reason), never a silent truncation.
+    states through this one seam, free. The named never REDUCE the budget
+    (``max(k(L), named)``) — and the pass never outnames the inventory
+    (``min`` against ``N``, the inventory bound, defaulting to
+    :func:`inventory_budget` over the same text): examining more arguments
+    than were named would spend units the reading never pointed at. The
+    R1164 replay measured this configuration at 20/39 passages examined
+    against 12/39 with the pass capped at 30. ``bound`` is the seam's own
+    injection point — a replay or a witness states the bound it wants; the
+    production call site passes the state alone.
 
     ``None`` when the state carries no readable text: the caller keeps its
     own length fallback rather than inventing a number here.
@@ -1102,7 +1102,10 @@ def examined_unit_budget(state: Any) -> Optional[int]:
         raw = state.get("raw_text")
     if not isinstance(raw, str) or not raw:
         return None
-    return max(per_argument_unit_budget(len(raw)), len(defining_moves(state)))
+    inventory = bound if bound is not None else inventory_budget(len(raw))
+    return min(
+        inventory, max(per_argument_unit_budget(len(raw)), len(defining_moves(state)))
+    )
 
 
 #: #3416 — how far AFTER a unit's end a recorded concession still counts as
@@ -1342,7 +1345,9 @@ def _spread_sample(pool: List[int], count: int) -> List[int]:
 
 
 def _shown_move_indices(
-    moves: List[Dict[str, Any]], unexamined: Optional[frozenset]
+    moves: List[Dict[str, Any]],
+    unexamined: Optional[frozenset],
+    findings: Optional[frozenset] = None,
 ) -> List[int]:
     """#3511 — which moves the page shows, and in what order.
 
@@ -1350,12 +1355,17 @@ def _shown_move_indices(
     #3431 render). Over it the page is CHOSEN, never cut from the tail:
 
     1. the slots — thesis, mechanism, pillars — in document order;
-    2. the gestures the examination reached (``unexamined`` is a measured
-       set) in document order;
+    2. the moves the examination reached AND a lens retained a finding on
+       (``findings`` is a measured set), spread-sampled over the document
+       — never the first ``room`` of them (R1164 review §3: with
+       ``k_eff`` every positioned move is meant to be reached, so
+       "reached" stops discriminating and fills from the head);
     3. a positional sample of the remainder (:func:`_spread_sample`).
 
     ``unexamined is None`` (no selection recorded) skips tier 2: the note
     shows the slots and a spread, and claims no examination it cannot read.
+    ``findings`` empty is a MEASURED « no lens retained anything » — tier 2
+    is then empty and the spread carries the page.
     """
     if len(moves) <= MAX_MOVES:
         return list(range(len(moves)))
@@ -1368,10 +1378,29 @@ def _shown_move_indices(
         return slot_idx[:MAX_MOVES]
     if unexamined is None:
         return slot_idx + _spread_sample(rest_idx, room)
-    reached = [i for i in rest_idx if i not in unexamined]
-    unreached = [i for i in rest_idx if i in unexamined]
-    take = reached[:room]
-    return slot_idx + take + _spread_sample(unreached, room - len(take))
+    carried = findings or frozenset()
+    finding = [i for i in rest_idx if i not in unexamined and i in carried]
+    rest3 = [i for i in rest_idx if i not in set(finding)]
+    take = _spread_sample(finding, room)
+    return slot_idx + take + _spread_sample(rest3, room - len(take))
+
+
+def _finding_move_indices(state: Any) -> frozenset:
+    """#3511 (R1164 review §3) — the moves a lens retained a finding on.
+
+    ONE predicate, reused not copied: ``named_moves_with_retained_finding``
+    (orchestration/selection.py) binds #3510's ``coverage_family_by_unit``
+    — an argument the review's walk retained a fallacy on — to the named
+    moves by the selector's own overlap rule. Imported lazily: the render
+    path pulls its dependencies at call time, like ``quote_fidelity``
+    (``quote_occurs_in``), so importing this module never drags the
+    orchestration package in.
+    """
+    from argumentation_analysis.orchestration.selection import (
+        named_moves_with_retained_finding,
+    )
+
+    return named_moves_with_retained_finding(state)
 
 
 def first_reading_note(state: Any) -> str:
@@ -1434,17 +1463,18 @@ def first_reading_note(state: Any) -> str:
         extent = f"fenêtre lue : {window} caractères à partir du {offset}"
     # #3511 — the page stays a page: at most MAX_MOVES move lines. Under the
     # cap every gesture shows, in document order (the #3431 render,
-    # byte-identical). Over it the page is chosen — the slots, then what the
-    # examination reached, then a spread — and the count line says what is
-    # not shown, never a silent truncation.
+    # byte-identical). Over it the page is chosen — the slots, then the moves
+    # the examination reached and a lens retained a finding on, then a spread
+    # — and the count line says what is not shown, never a silent truncation.
     unexamined = _unexamined_move_indices(state)
-    shown_idx = _shown_move_indices(moves, unexamined)
+    shown_idx = _shown_move_indices(moves, unexamined, _finding_move_indices(state))
     truncating = len(shown_idx) < len(moves)
     if truncating:
         order_line = (
             "  Ordre : thèse, mécanisme et piliers d'abord, puis les gestes "
-            "que l'examen a atteints, puis un échantillon étalé sur le "
-            "document — la position de chaque geste est dans sa ligne."
+            "que l'examen a atteints et dont une lentille a retenu un "
+            "constat, puis un échantillon étalé sur le document — la "
+            "position de chaque geste est dans sa ligne."
         )
     else:
         # #3431 ask 2 — the order is STATED, because the record beneath it

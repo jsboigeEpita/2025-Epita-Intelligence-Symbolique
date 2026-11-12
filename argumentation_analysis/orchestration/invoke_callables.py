@@ -80,6 +80,7 @@ from argumentation_analysis.orchestration.selection import (
     SelectableUnit,
     coverage_figure,
     merged_population_units,
+    named_move_residue,
     select_for_budget,
     state_text_length,
 )
@@ -9628,101 +9629,6 @@ def _selection_priority_spans(state_obj: Any) -> List[Tuple[int, int]]:
     return spans
 
 
-def _unit_spans(units: Sequence[Any]) -> List[Tuple[int, int]]:
-    """The positioned units' ``(start, end)`` spans — the geometry #3511 reads.
-
-    An unpositioned unit contributes nothing: "overlapping" is a claim about
-    the text, and a unit without an offset cannot make it (the same rule as
-    ``defining_move_spans``).
-    """
-    spans = []
-    for u in units:
-        offset = getattr(u, "offset", None)
-        text = getattr(u, "text", "") or ""
-        if not isinstance(offset, int) or isinstance(offset, bool) or not text:
-            continue
-        spans.append((offset, offset + len(text)))
-    return spans
-
-
-def _named_move_residue(
-    state_obj: Any,
-    selected_units: Sequence[Any],
-    population_units: Sequence[Any],
-) -> Dict[str, Any]:
-    """#3511 — which named gestures the examined set reached, and why the
-    others did not: « nommé, non examiné » WITH its reason, never a silent
-    truncation.
-
-    Over ``defining_moves(state_obj)`` (the same list, the same sort, the
-    note reads indices against): a move is EXAMINED when at least one
-    selected unit's span overlaps its span. The residue's reason is closed:
-
-    * ``unpositioned`` — the move carries no located quote: no span, no
-      overlap, nothing to examine against;
-    * ``budget`` — the population holds an overlapping unit but the
-      selection did not buy it;
-    * ``no_overlapping_unit`` — the extraction never produced a unit there:
-      the move is named, the pass had nothing to examine.
-
-    Opaque by construction (kind, slot, index, reason — never a quote): the
-    record joins the coverage entry, which renders to the reader.
-    """
-    from argumentation_analysis.agents.core.reading import defining_moves
-
-    moves = defining_moves(state_obj)
-    if not moves:
-        return {}
-    selected_spans = _unit_spans(selected_units)
-    population_spans = _unit_spans(population_units)
-
-    def _overlaps(span: Tuple[int, int], spans: List[Tuple[int, int]]) -> bool:
-        start, end = span
-        return any(s < end and start < e for s, e in spans)
-
-    examined: List[int] = []
-    unexamined: List[Dict[str, Any]] = []
-    for index, move in enumerate(moves):
-        offset = move.get("offset")
-        quote = str(move.get("quote") or "")
-        if not isinstance(offset, int) or isinstance(offset, bool) or not quote:
-            unexamined.append(
-                {
-                    "index": index,
-                    "kind": str(move.get("kind") or ""),
-                    "slot": str(move.get("slot") or ""),
-                    "reason": "unpositioned",
-                }
-            )
-            continue
-        span = (offset, offset + len(quote))
-        if _overlaps(span, selected_spans):
-            examined.append(index)
-        elif _overlaps(span, population_spans):
-            unexamined.append(
-                {
-                    "index": index,
-                    "kind": str(move.get("kind") or ""),
-                    "slot": str(move.get("slot") or ""),
-                    "reason": "budget",
-                }
-            )
-        else:
-            unexamined.append(
-                {
-                    "index": index,
-                    "kind": str(move.get("kind") or ""),
-                    "slot": str(move.get("slot") or ""),
-                    "reason": "no_overlapping_unit",
-                }
-            )
-    return {
-        "named_moves_total": len(moves),
-        "named_moves_examined": examined,
-        "named_unexamined": unexamined,
-    }
-
-
 def _extract_arguments_for_parallel(
     input_text: str, context: Dict[str, Any]
 ) -> List[tuple[str, str]]:
@@ -9766,13 +9672,15 @@ def _extract_arguments_for_parallel(
             # many, so a long document's tail enters the pass instead of being
             # rationed away by a number picked in March.
             #
-            # #3511 — k_eff: the budget is raised to the named gestures
-            # (``max(k(L), named)``, ``examined_unit_budget`` in
+            # #3511 (R1164) — k_eff: the examination FOLLOWS the inventory
+            # (``min(N, max(k(L), named))``, ``examined_unit_budget`` in
             # first_reading — a function of the state so the coordinator
             # replays panel states through the one seam). Every named move
             # must be examined; the residue this still leaves is recorded
-            # (« nommé, non examiné » with its reason), never dropped
-            # silently.
+            # (« nommé, non examiné » with its reason) by the ONE producer
+            # in selection.py — the selector's own overlap rule, shared
+            # with the winner-reading writer (#3326) so a second coverage
+            # write cannot erase it.
             from argumentation_analysis.agents.core.reading import (
                 examined_unit_budget,
             )
@@ -9800,7 +9708,7 @@ def _extract_arguments_for_parallel(
                     span=selection.span,
                     largest_uncovered_stretch=selection.largest_uncovered_stretch,
                     unit_ids=[u.unit_id for u in selection.selected],
-                    extra_fields=_named_move_residue(
+                    extra_fields=named_move_residue(
                         state_obj, selection.selected, population
                     ),
                 )

@@ -38,6 +38,8 @@ __all__ = [
     "coverage_figure",
     "stratified_position",
     "merged_population_units",
+    "named_move_residue",
+    "named_moves_with_retained_finding",
     "state_text_length",
 ]
 
@@ -794,3 +796,142 @@ def merged_population_units(
             for i, a in enumerate(fallback_args)
         ]
     return []
+
+
+def _positioned(units: Sequence[SelectableUnit]) -> List[SelectableUnit]:
+    """The units that claim a position — the only ones "overlap" can read."""
+    return [
+        u for u in units if isinstance(u.offset, int) and not isinstance(u.offset, bool)
+    ]
+
+
+def named_move_residue(
+    state: Any,
+    selected_units: Sequence[SelectableUnit],
+    population_units: Sequence[SelectableUnit],
+) -> Dict[str, Any]:
+    """#3511 (R1164 review §1+§2) — which named moves the examined set
+    reached, and why the others did not: « nommé, non examiné » WITH its
+    reason, never a silent truncation.
+
+    The ONE producer, beside the geometry it reads: both writers call it —
+    the per-argument selection (``invoke_callables``) and the winner reading
+    (``_write_fallacy_winner_reading_to_state``, #3326), the latter on the
+    MERGED selection, because ``record_analysis_coverage`` rebuilds the
+    entry from scratch and a second write with ``added_by`` alone would
+    erase this record (the measured defect: the keys gone on 5 of the 6
+    long documents in c5).
+
+    "Examined" is the selector's OWN word — ``_unit_overlaps_spans`` over
+    ``_population_starts``, the same predicate ``_prefer_priority`` uses —
+    never a paraphrase extent (the R1164 review §2: the paraphrase runs
+    ~2.6× past the passage in the median, and counted 5 moves examined the
+    selector's rule does not reach). Over ``defining_moves(state)`` (the
+    same list, the same sort, the note reads indices against), a move is
+    EXAMINED when at least one selected unit overlaps its span; the
+    residue's reason is closed:
+
+    * ``unpositioned`` — the move carries no located quote: no span, no
+      overlap, nothing to examine against;
+    * ``budget`` — the population holds an overlapping unit but the
+      selection did not buy it;
+    * ``no_overlapping_unit`` — the extraction never produced a unit there:
+      the move is named, the pass had nothing to examine.
+
+    Opaque by construction (kind, slot, index, reason — never a quote): the
+    record joins the coverage entry, which renders to the reader. ``{}``
+    when no move was named (a state the reading never ran on keeps its
+    byte-identical record).
+    """
+    from argumentation_analysis.agents.core.reading import defining_moves
+
+    moves = defining_moves(state)
+    if not moves:
+        return {}
+    population = _positioned(population_units)
+    # ``_population_starts`` reads the (unit, offset) pairs the selector's
+    # own paths carry; the pair's int is the same offset the unit holds.
+    starts = _population_starts([(u, u.offset or 0) for u in population])
+    selected = _positioned(selected_units)
+
+    examined: List[int] = []
+    unexamined: List[Dict[str, Any]] = []
+    for index, move in enumerate(moves):
+        offset = move.get("offset")
+        quote = str(move.get("quote") or "")
+        if not isinstance(offset, int) or isinstance(offset, bool) or not quote:
+            unexamined.append(
+                {
+                    "index": index,
+                    "kind": str(move.get("kind") or ""),
+                    "slot": str(move.get("slot") or ""),
+                    "reason": "unpositioned",
+                }
+            )
+            continue
+        span = (offset, offset + len(quote))
+        if any(_unit_overlaps_spans(u, [span], starts) for u in selected):
+            examined.append(index)
+        elif any(_unit_overlaps_spans(u, [span], starts) for u in population):
+            unexamined.append(
+                {
+                    "index": index,
+                    "kind": str(move.get("kind") or ""),
+                    "slot": str(move.get("slot") or ""),
+                    "reason": "budget",
+                }
+            )
+        else:
+            unexamined.append(
+                {
+                    "index": index,
+                    "kind": str(move.get("kind") or ""),
+                    "slot": str(move.get("slot") or ""),
+                    "reason": "no_overlapping_unit",
+                }
+            )
+    return {
+        "named_moves_total": len(moves),
+        "named_moves_examined": examined,
+        "named_unexamined": unexamined,
+    }
+
+
+def named_moves_with_retained_finding(state: Any) -> frozenset:
+    """#3511 (R1164 review §3) — the named moves a lens retained a finding on.
+
+    The #3510 predicate, REUSED not copied: ``coverage_family_by_unit``
+    reads the coverage review's retained fallacies per unit; this binds
+    them to the named moves by the selector's own overlap rule
+    (``_unit_overlaps_spans`` over ``_population_starts`` — the same
+    geometry ``named_move_residue`` reads, so "examined" and "carries a
+    finding" name the same spans). Returns indices into
+    ``defining_moves(state)`` order; empty is a measured « no lens
+    retained anything on a named move » (no review record, or none bound).
+    """
+    from argumentation_analysis.agents.core.reading import (
+        coverage_family_by_unit,
+        defining_moves,
+    )
+
+    finding_units = coverage_family_by_unit(state)
+    if not finding_units:
+        return frozenset()
+    moves = defining_moves(state)
+    if not moves:
+        return frozenset()
+    population = _positioned(merged_population_units(state))
+    starts = _population_starts([(u, u.offset or 0) for u in population])
+    carried = set()
+    for index, move in enumerate(moves):
+        offset = move.get("offset")
+        quote = str(move.get("quote") or "")
+        if not isinstance(offset, int) or isinstance(offset, bool) or not quote:
+            continue
+        span = (offset, offset + len(quote))
+        if any(
+            u.unit_id in finding_units and _unit_overlaps_spans(u, [span], starts)
+            for u in population
+        ):
+            carried.add(index)
+    return frozenset(carried)

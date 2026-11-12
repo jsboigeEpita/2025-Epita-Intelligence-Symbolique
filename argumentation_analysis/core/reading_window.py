@@ -115,14 +115,17 @@ PER_ARGUMENT_FLOOR = 10
 PILLAR_FLOOR = 3
 PILLAR_CEILING = 8
 
-#: #3511 — the floors of the first reading's INVENTORY budget (how many
-#: entries the reading may NAME, slots and local moves together). The floor
-#: is the RENDER cap — ``first_reading.MAX_MOVES``, 12; the guard test pins
-#: the pair so they cannot drift. The ceiling is the per-argument family's
-#: own (``PER_ARGUMENT_CEILING``): the inventory never outgrows the pass
-#: that examines what it names (``max(k(L), named)`` at the selector).
+#: #3511 — the first reading's INVENTORY budget, its two declared ends. The
+#: floor is the RENDER cap — ``first_reading.MAX_MOVES``, 12; the guard test
+#: pins the pair so they cannot drift. The ceiling is the R1164 probe's own
+#: measure: asked the zero-shot's question, one draw named 29 to 73
+#: arguments on the panel's six long documents, and 80 is that observed
+#: maximum plus ~10 %. It is no longer the per-argument family's ceiling
+#: (the former tie, 30): the examination now FOLLOWS the inventory
+#: (``min(N, max(k(L), named))`` at the selector), so tying the inventory
+#: down to the pass's ration would ration the inventory by the pass again.
 INVENTORY_FLOOR = 12
-INVENTORY_CEILING = PER_ARGUMENT_CEILING
+INVENTORY_CEILING = 80
 
 #: #2850 lot 10 — the personas' anchored read: the window was built from the
 #: first reading's defining moves (positions + passages), not from offset 0.
@@ -368,26 +371,28 @@ def pillar_budget(
 
 def inventory_budget(
     length: int,
-    capacity: int = WHOLE_TEXT_CALL_CAPACITY,
     ceiling: int = INVENTORY_CEILING,
     floor: int = INVENTORY_FLOOR,
 ) -> int:
-    """#3511 — how many entries the first reading's inventory may name.
+    """#3511 (R1164 rework) — how many entries the first reading's inventory
+    may name (slots and local moves together).
 
-    Two entries per capacity-chunk — the per-argument pass's own density
-    (``per_argument_unit_budget``): the inventory scales with the document
-    the way the examination does, so a reading that names the chain's
-    gestures is also a reading whose pass buys room to examine them
-    (``max(k(L), named)`` at the selector seam). The floor is the render
-    cap: a short document's inventory is exactly what the note can show,
-    and the NOTE stays at 12 lines whatever the inventory carries
-    (``first_reading.MAX_MOVES``, render-only since #3511 — one constant,
-    one meaning). This says HOW MANY may be named, never WHICH: the model
-    still names the gestures, and the citation rule still discards a quote
-    the document does not carry.
+    **No density**: the R1164 probe asked the zero-shot's question and the
+    model named 29 arguments on a ~5k-character document — it does not ration
+    arguments by length — so the bound no longer scales with the document.
+    What remains is the pair of ends: every document gets the ceiling (the
+    probe's observed maximum, 73, plus ~10 %, a bound the completion cap
+    already holds — 73 arguments answered in ~4.2k completion tokens under
+    8192), and the floor stays DECLARED as the pinned invariant with the
+    render cap (``INVENTORY_FLOOR == first_reading.MAX_MOVES``, the guard
+    test), never as a smaller bound a short document would get. The NOTE
+    stays at 12 lines whatever the inventory carries (``MAX_MOVES``,
+    render-only — one constant, one meaning). This says HOW MANY may be
+    named, never WHICH: the model still names the arguments, and the
+    citation rule still discards a quote the document does not carry.
     """
-    k = 2 * (-(-length // capacity))
-    return max(floor, min(ceiling, k))
+    del length  # no density: the bound does not scale with the document
+    return max(floor, ceiling)
 
 
 #: #2850 lot 10 — the personas' read: at most this many chars of each

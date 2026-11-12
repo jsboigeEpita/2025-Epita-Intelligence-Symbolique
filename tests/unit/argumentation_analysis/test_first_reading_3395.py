@@ -226,18 +226,24 @@ async def test_the_same_quote_named_twice_is_one_move():
 
 
 async def test_the_moves_are_bounded():
+    # #3511 (R1164) — the bound the parse enforces is the INVENTORY (80,
+    # the probe's own measure), no longer the render cap: the record keeps
+    # what the model was told it may name, the note chooses what it shows.
+    from argumentation_analysis.core.reading_window import inventory_budget
+
     doc = " ".join(
-        f"Phrase numéro {i} du document, avec ses virgules." for i in range(60)
+        f"Phrase numéro {i} du document, avec ses virgules." for i in range(90)
     )
+    assert inventory_budget(len(doc)) == 80
     moves = [
         ("claim", f"Lecture {i}.", f"Phrase numéro {i} du document")
-        for i in range(reading().MAX_MOVES + 5)
+        for i in range(85)
     ]
     result = await reading().build_first_reading(
         _state(doc), _FakeModel(_answer(*moves))
     )
 
-    assert len(result.moves) == reading().MAX_MOVES
+    assert len(result.moves) == 80
 
 
 # ---------------------------------------------------------------------------

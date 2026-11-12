@@ -1221,6 +1221,7 @@ def _write_fallacy_winner_reading_to_state(
     from argumentation_analysis.orchestration.selection import (
         coverage_figure,
         merged_population_units,
+        named_move_residue,
         state_text_length,
     )
 
@@ -1245,6 +1246,14 @@ def _write_fallacy_winner_reading_to_state(
     for i in fresh:
         added_by[i] = "vote_winner_reading"
 
+    # #3511 (R1164 review §1) — the residue is RECOMPUTED over the merged
+    # selection, never copied forward: ``record_analysis_coverage`` rebuilds
+    # the entry from scratch, so an ``extra_fields`` holding ``added_by``
+    # alone would erase the named-moves record (the measured defect: the
+    # keys gone on 5 of the 6 long documents in c5) — and the units this
+    # writer adds can reach a named move, which only the recompute can say.
+    # One producer (``selection.named_move_residue``), the same call the
+    # per-argument selection makes, on the selector's own overlap rule.
     state.record_analysis_coverage(
         "fallacy_per_argument",
         len(merged_ids),
@@ -1254,7 +1263,10 @@ def _write_fallacy_winner_reading_to_state(
         span=span,
         largest_uncovered_stretch=stretch,
         unit_ids=merged_ids,
-        extra_fields={"added_by": added_by},
+        extra_fields={
+            **named_move_residue(state, selected, units),
+            "added_by": added_by,
+        },
     )
     state.add_trace_entry(
         phase="fallacy_winner_reading",

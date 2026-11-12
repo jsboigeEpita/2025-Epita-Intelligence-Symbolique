@@ -174,6 +174,7 @@ async def test_a_short_document_keeps_the_flat_three_state_and_prompt() -> None:
     from argumentation_analysis.agents.core.reading.first_reading import (
         FIRST_READING_PROMPT,
     )
+    from argumentation_analysis.core.reading_window import inventory_budget
 
     short_document = f"{_THESIS}\n\n{_PILLARS[0]}\n\n{_MECHANISM}\n\n{_LOCAL}"
     answer = json.dumps(
@@ -202,7 +203,10 @@ async def test_a_short_document_keeps_the_flat_three_state_and_prompt() -> None:
     assert "two or three" in model.prompts[0]  # at the floor, and only there
     assert model.prompts == [
         FIRST_READING_PROMPT.format(
-            max_moves=module.MAX_MOVES,
+            # #3511 (R1164) — the seam is still pinned byte for byte; the
+            # stated bound is the INVENTORY (80, flat), no longer the
+            # render cap the floor used to double as.
+            max_moves=inventory_budget(len(short_document)),
             max_pillars=module.MAX_PILLARS,
             pillar_bound=(
                 "the two or three passages the\n   thesis would fall without"
