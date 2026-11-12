@@ -805,6 +805,78 @@ def _positioned(units: Sequence[SelectableUnit]) -> List[SelectableUnit]:
     ]
 
 
+def anchored_units_for_named_moves(
+    state: Any, population: Sequence[SelectableUnit]
+) -> List[SelectableUnit]:
+    """#3518 — the units the first reading's anchors supply where the
+    extraction cut none.
+
+    A named, positioned move whose span no population unit overlaps (the
+    selector's own predicate — ``_unit_overlaps_spans`` over
+    ``_population_starts``, the same geometry the residue reads) could never
+    be examined, whatever the budget: there was nothing to examine. The
+    anchor is verbatim and located (#3516), so the move SUPPLIES the unit:
+    ``text`` and ``source_quote`` are the anchor (the descent window, #3376,
+    centres on it), ``offset`` is the move's, ``producer`` names the first
+    reading. One unit per passage: a later move over an already-anchored
+    passage adds nothing. The id is the move's index in ``defining_moves``
+    order — the same index the residue records — so every reader joins on it
+    without a second mapping, and it cannot collide with the extraction's
+    ``arg_N``/``paragraph_N`` namespaces.
+
+    ONE producer, deterministic from the state: every consumer that must
+    resolve these ids (the per-argument population, the coverage review's
+    rows, the tier-2 binding, the fallacy target guard, the winner writer)
+    re-derives the same list through this function. ``[]`` when the reading
+    named nothing or every named move already overlaps a unit — the
+    population stays byte-identical (the #3518 control).
+    """
+    from argumentation_analysis.agents.core.reading import (
+        FIRST_READING_BASIS,
+        defining_moves,
+    )
+
+    moves = defining_moves(state)
+    if not moves:
+        return []
+    positioned = _positioned(list(population))
+    starts = _population_starts([(u, u.offset or 0) for u in positioned])
+    anchored: List[SelectableUnit] = []
+    for index, move in enumerate(moves):
+        offset = move.get("offset")
+        quote = str(move.get("quote") or "")
+        if not isinstance(offset, int) or isinstance(offset, bool) or not quote:
+            continue
+        span = (offset, offset + len(quote))
+        if any(_unit_overlaps_spans(u, [span], starts) for u in positioned):
+            continue
+        if any(
+            (u.offset or 0) < span[1]
+            and (u.offset or 0) + len(u.source_quote or "") > span[0]
+            for u in anchored
+        ):
+            continue
+        anchored.append(
+            SelectableUnit(
+                unit_id=f"reading_{index}",
+                text=quote,
+                producer=FIRST_READING_BASIS,
+                offset=offset,
+                source_quote=quote,
+            )
+        )
+    return anchored
+
+
+def anchored_unit_ids(state: Any) -> frozenset:
+    """The anchored units' ids, derived on the merged population — the ONE
+    membership rule for writers that resolve a unit id (#3518: the fallacy
+    target guard). Re-deriving is safe: the producer is deterministic from
+    the state."""
+    merged = merged_population_units(state)
+    return frozenset(u.unit_id for u in anchored_units_for_named_moves(state, merged))
+
+
 def named_move_residue(
     state: Any,
     selected_units: Sequence[SelectableUnit],
@@ -920,7 +992,13 @@ def named_moves_with_retained_finding(state: Any) -> frozenset:
     moves = defining_moves(state)
     if not moves:
         return frozenset()
-    population = _positioned(merged_population_units(state))
+    # #3518 — the population the tier-2 binds through carries the anchored
+    # units: a finding retained on one (``reading_N``, #3510's keying) must
+    # reach its move, or the examination this PR buys would carry no finding.
+    merged = merged_population_units(state)
+    population = _positioned(
+        list(merged) + anchored_units_for_named_moves(state, merged)
+    )
     starts = _population_starts([(u, u.offset or 0) for u in population])
     carried = set()
     for index, move in enumerate(moves):

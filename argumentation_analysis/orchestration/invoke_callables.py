@@ -78,6 +78,7 @@ from argumentation_analysis.orchestration.fol_cause import (
 from argumentation_analysis.orchestration.kb_atom_renaming import rename_atoms_apart
 from argumentation_analysis.orchestration.selection import (
     SelectableUnit,
+    anchored_units_for_named_moves,
     coverage_figure,
     merged_population_units,
     named_move_residue,
@@ -9658,6 +9659,20 @@ def _extract_arguments_for_parallel(
                 for u in merged_population_units(state_obj)
                 if len(u.text.strip()) > 20
             ]
+            # #3518 — the inventory supplies a unit where the extraction cut
+            # none. A named move no unit of THIS population overlaps could
+            # never be examined (the residue filed it no_overlapping_unit);
+            # its verbatim, located anchor (#3516) becomes the unit — the
+            # budget already reserves room for every named move (#3516's
+            # max(k(L), named)), the population just never carried anything
+            # at that span. The predicate is the selector's own, read on the
+            # population the selector actually uses (post-filter), and a
+            # passage already carrying a unit — or an anchored unit — gets
+            # no second one. States without such moves keep a byte-identical
+            # population, selection and record.
+            population = population + anchored_units_for_named_moves(
+                state_obj, population
+            )
             # #3395 — the units that overlap a defining move from the first
             # reading are examined first: the report has already named them, so
             # the units the descent reads should be the ones that matter. No
