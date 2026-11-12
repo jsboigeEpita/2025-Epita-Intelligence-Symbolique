@@ -80,6 +80,7 @@ from argumentation_analysis.orchestration.selection import (
     SelectableUnit,
     coverage_figure,
     merged_population_units,
+    named_move_residue,
     select_for_budget,
     state_text_length,
 )
@@ -525,6 +526,18 @@ _EXTRACTION_MAX_ATTEMPTS = max(1, _env_number("EXTRACTION_MAX_ATTEMPTS", 3, int)
 # retry (levier 2) only masks the truncation probabilistically. Override via
 # EXTRACTION_MAX_TOKENS=8192 (set 0 to omit the param entirely).
 _EXTRACTION_MAX_TOKENS = _env_number("EXTRACTION_MAX_TOKENS", 8192, int)
+
+# #3511 — the FIRST READING's own completion cap, named apart from the
+# extraction constant above: a capacity is an INPUT bound (chars per chunk,
+# ``WHOLE_TEXT_CALL_CAPACITY``); this is an OUTPUT bound on the reading's one
+# answer. The inventory at its ceiling (30 moves + thesis, mechanism and 8
+# pillars) measures ≈ 9 k characters of JSON ≈ 2.8 k tokens; 8192 leaves
+# ~2.9× headroom, so a ``finish_reason == "length"`` can only be a degenerate
+# answer — which the panel witness reports per document. Before #3511 the
+# call carried NO completion cap: the provider's own default decided where
+# the inventory ended, unrecorded. Override via FIRST_READING_MAX_TOKENS
+# (set 0 to omit the parameter entirely).
+_FIRST_READING_MAX_TOKENS = _env_number("FIRST_READING_MAX_TOKENS", 8192, int)
 
 
 async def _guarded_chat_completion(client: Any, **kwargs: Any) -> Any:
@@ -9658,8 +9671,27 @@ def _extract_arguments_for_parallel(
             # the priority spans still decide WHICH units — this only says how
             # many, so a long document's tail enters the pass instead of being
             # rationed away by a number picked in March.
+            #
+            # #3511 (R1164) — k_eff: the examination FOLLOWS the inventory
+            # (``min(N, max(k(L), named))``, ``examined_unit_budget`` in
+            # first_reading — a function of the state so the coordinator
+            # replays panel states through the one seam). Every named move
+            # must be examined; the residue this still leaves is recorded
+            # (« nommé, non examiné » with its reason) by the ONE producer
+            # in selection.py — the selector's own overlap rule, shared
+            # with the winner-reading writer (#3326) so a second coverage
+            # write cannot erase it.
+            from argumentation_analysis.agents.core.reading import (
+                examined_unit_budget,
+            )
+
             _doc_length = state_text_length(state_obj) or len(input_text)
-            _unit_budget = per_argument_unit_budget(_doc_length)
+            _fr_budget = examined_unit_budget(state_obj)
+            _unit_budget = (
+                _fr_budget
+                if _fr_budget is not None
+                else per_argument_unit_budget(_doc_length)
+            )
             selection = select_for_budget(
                 population,
                 _unit_budget,
@@ -9676,6 +9708,9 @@ def _extract_arguments_for_parallel(
                     span=selection.span,
                     largest_uncovered_stretch=selection.largest_uncovered_stretch,
                     unit_ids=[u.unit_id for u in selection.selected],
+                    extra_fields=named_move_residue(
+                        state_obj, selection.selected, population
+                    ),
                 )
             result = [(u.unit_id, u.text.strip()) for u in selection.selected]
             if result:
@@ -14236,13 +14271,20 @@ async def _invoke_act2_narrative(
 _PersonaCallable = Callable[[str], Awaitable[str]]
 
 
-def _build_persona_callable(site: str) -> Tuple[Optional[_PersonaCallable], str]:
+def _build_persona_callable(
+    site: str, max_completion_tokens: Optional[int] = None
+) -> Tuple[Optional[_PersonaCallable], str]:
     """Resolve the route once; return ``(prompt -> str callable, reason)``.
 
     ``reason`` is non-empty when no callable could be built (no route): the
     personas then return their ``no_llm`` status, which is an honest empty — not
     a degraded phase. The callable funnels through ``_guarded_chat_completion``
     so a persona call counts against the per-run ceiling like every other.
+
+    ``max_completion_tokens`` (#3511) is the site's OWN output cap — the first
+    reading passes one so its inventory's end is a DECISION, not the
+    provider's default. ``None`` (every other persona) sends no cap, exactly
+    as before.
     """
     try:
         llm_client, model_id = _get_openai_client()
@@ -14252,6 +14294,8 @@ def _build_persona_callable(site: str) -> Tuple[Optional[_PersonaCallable], str]
         return None, "no LLM route resolved"
 
     sampling = sampling_kwargs(_resolve_llm_route()[1], dict(_get_determinism_params()))
+    if max_completion_tokens:
+        sampling = {**sampling, "max_completion_tokens": max_completion_tokens}
 
     async def _call(prompt: str) -> str:
         response = await _guarded_chat_completion(
@@ -14324,7 +14368,12 @@ async def _invoke_first_reading(
     if state is None:
         return {"error": "No shared state available for the first reading"}
 
-    llm, reason = _build_persona_callable("first_reading")
+    # #3511 — the reading's OWN completion cap, not the extraction capacity
+    # constant: the inventory's end is decided here, and the panel witness
+    # reads ``finish_reason`` per document against it.
+    llm, reason = _build_persona_callable(
+        "first_reading", max_completion_tokens=_FIRST_READING_MAX_TOKENS or None
+    )
     if llm is None:
         logger.info("FirstReading: %s — empty read.", reason)
 

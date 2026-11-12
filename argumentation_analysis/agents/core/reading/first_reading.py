@@ -89,7 +89,9 @@ from argumentation_analysis.core.reading_window import (
     FIRST_READING_WINDOW,
     STATUS_SELECTED,
     WindowSelection,
+    inventory_budget,
     locate_quote,
+    per_argument_unit_budget,
     pillar_budget,
     selected_text_and_selection,
 )
@@ -115,14 +117,16 @@ MOVE_KINDS = (
     "other",
 )
 
-#: How many moves the state carries. A reading, not a summary of the document:
-#: the panel's documents yield three to six defining moves, and an unbounded
-#: list would crowd the acts' prompts with what the lenses can already see.
+#: How many move LINES the NOTE shows (#3511: render-only). The state may
+#: carry more — :func:`inventory_budget` bounds what the reading names — but
+#: a reader's first page stays a page: the note shows the slots first, then
+#: the moves the examination reached and a lens retained a finding on, then
+#: a sample spread over the document, and says « N gestes nommés, M montrés
+#: ici » when it truncates. Before #3511 this constant also capped the
+#: inventory and the prompt — one number, two meanings: the render bar could
+#: not measure the inventory (the panel measured 9-12 named where the
+#: zero-shot names 11-18, the module full on 3 of 6 long documents).
 MAX_MOVES = 12
-
-#: How many moves the prompt asks for — a bound on the answer, stated to the
-#: model rather than truncated after the fact.
-_PROMPT_MAX_MOVES = MAX_MOVES
 
 #: #3432 — the FLOOR of the pillar budget, the former flat bound. Ask 6(a)
 #: scales the bound with the document's length via ``pillar_budget``: a long
@@ -269,9 +273,12 @@ specialist sees it. Your job, in this order:
    exactly why a reader who only looks beside the thesis misses them. Each
    pillar comes with its own verbatim quote and a kind from the closed
    vocabulary.
-3. Then the other moves the document makes, most important first. A local
-   move — a claim, a concession, an audience address, a threat, a dilemma —
-   comes only after the thesis, the mechanism and the pillars.
+3. Then EVERY argument the text carries, exhaustively: wherever it sits in
+   the document — opening, middle or end, beside the thesis or far from it —
+   name it. Each argument comes with ONE verbatim anchor in the text's own
+   language, of 8 to 40 words, copied from the document: the anchor is where
+   the argument lives, and an argument whose anchor you cannot quote verbatim
+   is omitted rather than guessed.
 
 Hard rules:
 - One call, one pass. Say what the text DOES, not what it should have done.
@@ -300,7 +307,7 @@ Answer in French, with ONLY this JSON — no fences, no commentary:
               "quote": "a verbatim span of the document, usually far from the thesis"}}],
  "moves": [{{"kind": "concession|device|claim|audience|threat|dilemma|other",
              "reading": "one sentence naming the move",
-             "quote": "a verbatim span of the document"}}]}}
+             "quote": "a verbatim span of the document, 8 to 40 words — the argument's anchor"}}]}}
 
 Document:
 {excerpt}
@@ -671,16 +678,22 @@ def _parse_answer(content: str, max_pillars: int) -> Tuple[Dict[str, Any], int]:
 
 
 def build_first_reading_prompt(excerpt: str) -> str:
-    """The one prompt of the first reading, with its length-aware pillar bound.
+    """The one prompt of the first reading, with its length-aware bounds.
 
-    #3480 rework (R1148) — the bound is computed ONCE and reaches the prompt
-    twice, as the number of the hard rule and as the sentence of step 2
-    (:func:`pillar_prose`): the model obeyed the sentence, never the rule,
+    #3480 rework (R1148) — the pillar bound is computed ONCE and reaches the
+    prompt twice, as the number of the hard rule and as the sentence of step
+    2 (:func:`pillar_prose`): the model obeyed the sentence, never the rule,
     so both must name the same figure from this single call.
+
+    #3511 — the total bound is the INVENTORY budget (:func:`inventory_budget`),
+    computed from the same excerpt: a bound the model is not told does not
+    bind (the #3480 lesson, at the inventory's scale). It is never the render
+    cap — ``MAX_MOVES`` says what the NOTE shows, not what the reading may
+    name.
     """
     bound = pillar_budget(len(excerpt))
     return FIRST_READING_PROMPT.format(
-        max_moves=_PROMPT_MAX_MOVES,
+        max_moves=inventory_budget(len(excerpt)),
         max_pillars=bound,
         pillar_bound=pillar_prose(bound),
         excerpt=excerpt,
@@ -754,6 +767,11 @@ async def build_first_reading(
 
     try:
         max_pillars = pillar_budget(len(excerpt))
+        # #3511 — the inventory bound the PROMPT stated is the bound the
+        # parse enforces: what the model was told it may name is what the
+        # state may carry. The render cap (``MAX_MOVES``) never truncates
+        # the record — the note chooses what it shows, and says so.
+        max_inventory = inventory_budget(len(excerpt))
         content = await llm_callable(build_first_reading_prompt(excerpt))
         parsed, malformed = _parse_answer(content or "", max_pillars)
         raw_moves = parsed.get("moves")
@@ -889,13 +907,13 @@ async def build_first_reading(
                     # not a verdict, and refusing it would lose the passage.
                     pillar_kind = "claim"
                 _keep(raw, pillar_kind, "pillar")
-                if len(moves) >= MAX_MOVES:
+                if len(moves) >= max_inventory:
                     break
         for raw in raw_moves or []:
             if not isinstance(raw, dict):
                 continue
             _keep(raw, move_kind(raw.get("kind")), "")
-            if len(moves) >= MAX_MOVES:
+            if len(moves) >= max_inventory:
                 break
 
         # A move the model repeated (same quote) is one move: the reading is
@@ -1059,6 +1077,35 @@ def defining_move_spans(state: Any) -> List[Tuple[int, int]]:
             continue
         spans.append((offset, offset + len(quote)))
     return spans
+
+
+def examined_unit_budget(state: Any, bound: Optional[int] = None) -> Optional[int]:
+    """#3511 (R1164 rework) — the per-argument budget once the reading has
+    named its arguments: ``min(N, max(k(L), named))``.
+
+    A function of the STATE deliberately, so the coordinator replays panel
+    states through this one seam, free. The named never REDUCE the budget
+    (``max(k(L), named)``) — and the pass never outnames the inventory
+    (``min`` against ``N``, the inventory bound, defaulting to
+    :func:`inventory_budget` over the same text): examining more arguments
+    than were named would spend units the reading never pointed at. The
+    R1164 replay measured this configuration at 20/39 passages examined
+    against 12/39 with the pass capped at 30. ``bound`` is the seam's own
+    injection point — a replay or a witness states the bound it wants; the
+    production call site passes the state alone.
+
+    ``None`` when the state carries no readable text: the caller keeps its
+    own length fallback rather than inventing a number here.
+    """
+    raw = getattr(state, "raw_text", None)
+    if isinstance(state, dict):
+        raw = state.get("raw_text")
+    if not isinstance(raw, str) or not raw:
+        return None
+    inventory = bound if bound is not None else inventory_budget(len(raw))
+    return min(
+        inventory, max(per_argument_unit_budget(len(raw)), len(defining_moves(state)))
+    )
 
 
 #: #3416 — how far AFTER a unit's end a recorded concession still counts as
@@ -1253,6 +1300,109 @@ def _reader_position_fr(offset: Any, text_length: Any) -> str:
     return f", {part} ({percent} %)"
 
 
+def _unexamined_move_indices(state: Any) -> Optional[frozenset]:
+    """#3511 — the indices (in ``defining_moves`` order) the examined set did
+    NOT reach.
+
+    Read from the selector's coverage record: the selector computes the
+    residue over the SAME list with the SAME sort, so an index here is an
+    index there. ``None`` when no selection was recorded (a state the
+    per-argument pass never ran on, an older snapshot): the caller shows no
+    « atteint par l'examen » tier rather than inventing the claim. An empty
+    frozenset is a MEASURED « every named move was reached ».
+    """
+    coverage = getattr(state, "analysis_coverage", None)
+    if isinstance(state, dict):
+        coverage = state.get("analysis_coverage")
+    if not isinstance(coverage, dict):
+        return None
+    entry = coverage.get("fallacy_per_argument")
+    if not isinstance(entry, dict):
+        return None
+    residue = entry.get("named_unexamined")
+    if not isinstance(residue, list):
+        return None
+    return frozenset(
+        i
+        for i in (item.get("index") for item in residue if isinstance(item, dict))
+        if isinstance(i, int) and not isinstance(i, bool)
+    )
+
+
+def _spread_sample(pool: List[int], count: int) -> List[int]:
+    """An even-position sample of ``pool`` (already in document order).
+
+    The positional stratum of the page (#3511 ask 4): when the note cannot
+    show every gesture, the ones it does show still stand for the whole
+    document — first, middle and last — instead of crowding the head.
+    """
+    if count <= 0 or not pool:
+        return []
+    if len(pool) <= count:
+        return list(pool)
+    step = len(pool) / count
+    return [pool[min(len(pool) - 1, round(i * step))] for i in range(count)]
+
+
+def _shown_move_indices(
+    moves: List[Dict[str, Any]],
+    unexamined: Optional[frozenset],
+    findings: Optional[frozenset] = None,
+) -> List[int]:
+    """#3511 — which moves the page shows, and in what order.
+
+    Under :data:`MAX_MOVES` every gesture shows, in document order (the
+    #3431 render). Over it the page is CHOSEN, never cut from the tail:
+
+    1. the slots — thesis, mechanism, pillars — in document order;
+    2. the moves the examination reached AND a lens retained a finding on
+       (``findings`` is a measured set), spread-sampled over the document
+       — never the first ``room`` of them (R1164 review §3: with
+       ``k_eff`` every positioned move is meant to be reached, so
+       "reached" stops discriminating and fills from the head);
+    3. a positional sample of the remainder (:func:`_spread_sample`).
+
+    ``unexamined is None`` (no selection recorded) skips tier 2: the note
+    shows the slots and a spread, and claims no examination it cannot read.
+    ``findings`` empty is a MEASURED « no lens retained anything » — tier 2
+    is then empty and the spread carries the page.
+    """
+    if len(moves) <= MAX_MOVES:
+        return list(range(len(moves)))
+    slot_idx = [i for i, m in enumerate(moves) if _slot_label(str(m.get("slot") or ""))]
+    rest_idx = [
+        i for i, m in enumerate(moves) if not _slot_label(str(m.get("slot") or ""))
+    ]
+    room = MAX_MOVES - len(slot_idx)
+    if room <= 0:
+        return slot_idx[:MAX_MOVES]
+    if unexamined is None:
+        return slot_idx + _spread_sample(rest_idx, room)
+    carried = findings or frozenset()
+    finding = [i for i in rest_idx if i not in unexamined and i in carried]
+    rest3 = [i for i in rest_idx if i not in set(finding)]
+    take = _spread_sample(finding, room)
+    return slot_idx + take + _spread_sample(rest3, room - len(take))
+
+
+def _finding_move_indices(state: Any) -> frozenset:
+    """#3511 (R1164 review §3) — the moves a lens retained a finding on.
+
+    ONE predicate, reused not copied: ``named_moves_with_retained_finding``
+    (orchestration/selection.py) binds #3510's ``coverage_family_by_unit``
+    — an argument the review's walk retained a fallacy on — to the named
+    moves by the selector's own overlap rule. Imported lazily: the render
+    path pulls its dependencies at call time, like ``quote_fidelity``
+    (``quote_occurs_in``), so importing this module never drags the
+    orchestration package in.
+    """
+    from argumentation_analysis.orchestration.selection import (
+        named_moves_with_retained_finding,
+    )
+
+    return named_moves_with_retained_finding(state)
+
+
 def first_reading_note(state: Any) -> str:
     """The labelled block a writer prepends to its own prompt (#3395 ask 3).
 
@@ -1311,21 +1461,44 @@ def first_reading_note(state: Any) -> str:
         window = scope.get("window")
         offset = scope.get("offset")
         extent = f"fenêtre lue : {window} caractères à partir du {offset}"
-    lines = [
-        "LECTURE PREMIÈRE — un seul lecteur, sur le texte entier, avant les "
-        "instruments. Ce sont des GESTES DU TEXTE, pas un verdict d'instrument : "
-        "ne les présente jamais comme un sophisme ni comme une note.",
-        f"  Portée : {extent}.",
+    # #3511 — the page stays a page: at most MAX_MOVES move lines. Under the
+    # cap every gesture shows, in document order (the #3431 render,
+    # byte-identical). Over it the page is chosen — the slots, then the moves
+    # the examination reached and a lens retained a finding on, then a spread
+    # — and the count line says what is not shown, never a silent truncation.
+    unexamined = _unexamined_move_indices(state)
+    shown_idx = _shown_move_indices(moves, unexamined, _finding_move_indices(state))
+    truncating = len(shown_idx) < len(moves)
+    if truncating:
+        order_line = (
+            "  Ordre : thèse, mécanisme et piliers d'abord, puis les gestes "
+            "que l'examen a atteints et dont une lentille a retenu un "
+            "constat, puis un échantillon étalé sur le document — la "
+            "position de chaque geste est dans sa ligne."
+        )
+    else:
         # #3431 ask 2 — the order is STATED, because the record beneath it
         # stores the thesis and mechanism slots first (#3420) while this note
         # lists the gestures as the document lays them out: a writer told
         # nothing was reading the first slot as the opening (measured, panel
         # cycle 2: a thesis at 94 % read as the speech's opening call).
-        "  Ordre : celui du document, du premier geste au dernier.",
+        order_line = "  Ordre : celui du document, du premier geste au dernier."
+    lines = [
+        "LECTURE PREMIÈRE — un seul lecteur, sur le texte entier, avant les "
+        "instruments. Ce sont des GESTES DU TEXTE, pas un verdict d'instrument : "
+        "ne les présente jamais comme un sophisme ni comme une note.",
+        f"  Portée : {extent}.",
+        order_line,
     ]
+    if truncating:
+        lines.append(
+            f"  {len(moves)} gestes nommés, {len(shown_idx)} montrés ici — "
+            "échantillonné, pas exhaustif."
+        )
     malformed = record.get("malformed_moves") or 0
     text_length = scope.get("text_length")
-    for move in moves:
+    for i in shown_idx:
+        move = moves[i]
         offset = move.get("offset")
         # #3431 ask 1 — the position in the READER's terms (share of the text
         # and its part), never a raw character offset a writer cannot place

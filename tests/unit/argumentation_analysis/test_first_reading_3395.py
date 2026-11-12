@@ -146,7 +146,11 @@ async def test_a_real_state_is_read_whole_and_its_window_is_recorded(monkeypatch
     state = UnifiedAnalysisState(long_doc)
     model = _FakeModel(_answer(("concession", "Il concède le coût.", CONCESSION)))
     monkeypatch.setattr(
-        invoke_callables, "_build_persona_callable", lambda name: (model, None)
+        invoke_callables,
+        "_build_persona_callable",
+        # #3511 — the site passes the reading's own completion cap; the stub
+        # accepts the production signature and ignores it.
+        lambda name, **kwargs: (model, None),
     )
 
     payload = await invoke_callables._invoke_first_reading(
@@ -222,18 +226,24 @@ async def test_the_same_quote_named_twice_is_one_move():
 
 
 async def test_the_moves_are_bounded():
+    # #3511 (R1164) — the bound the parse enforces is the INVENTORY (80,
+    # the probe's own measure), no longer the render cap: the record keeps
+    # what the model was told it may name, the note chooses what it shows.
+    from argumentation_analysis.core.reading_window import inventory_budget
+
     doc = " ".join(
-        f"Phrase numéro {i} du document, avec ses virgules." for i in range(60)
+        f"Phrase numéro {i} du document, avec ses virgules." for i in range(90)
     )
+    assert inventory_budget(len(doc)) == 80
     moves = [
         ("claim", f"Lecture {i}.", f"Phrase numéro {i} du document")
-        for i in range(reading().MAX_MOVES + 5)
+        for i in range(85)
     ]
     result = await reading().build_first_reading(
         _state(doc), _FakeModel(_answer(*moves))
     )
 
-    assert len(result.moves) == reading().MAX_MOVES
+    assert len(result.moves) == 80
 
 
 # ---------------------------------------------------------------------------
