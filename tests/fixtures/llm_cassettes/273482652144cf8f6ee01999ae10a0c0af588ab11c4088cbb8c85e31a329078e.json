@@ -1,0 +1,40 @@
+{
+  "key": "273482652144cf8f6ee01999ae10a0c0af588ab11c4088cbb8c85e31a329078e",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_rcDluGYjQu8mYgC5IA6iAzW4",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"355\",\"matches\":false,\"justification\":\"Le texte invoque l’unanimité des experts et exclut l’avis des non-experts, ce qui relève plutôt d’un appel à l’autorité et d’un argument ad hominem/disqualification, non du rejet de toute information contradictoire pour préserver le statu quo caractéristique de cet appel à l’ignorance assumée.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EjChLix4MM4g5LaadrAwuWZGbYNKl",
+        "created": 1794442279,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1358,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1355,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 108,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

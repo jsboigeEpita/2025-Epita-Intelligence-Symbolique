@@ -1,0 +1,48 @@
+{
+  "key": "3815a1f73af6099f6fdd13edfde629ca3891f1b44ef109c3742d31c1fce58172",
+  "value": {
+    "id": "chatcmpl-EjCeMh6gqZBbUtgSUdR87jdz70h49",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Obstacles localisés : jargon d’argumentation non défini (« homme de paille » et « appel à l’émotion ») ; aucun anaphorique non résolvable ni phrase excessivement emboîtée. Verdict : obstacle résolvable par le contexte, avec un sens globalement accessible.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794442094,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 75,
+      "prompt_tokens": 265,
+      "total_tokens": 340,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

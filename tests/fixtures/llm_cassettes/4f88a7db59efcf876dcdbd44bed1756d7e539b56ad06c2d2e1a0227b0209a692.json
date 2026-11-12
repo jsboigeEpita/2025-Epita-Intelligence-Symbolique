@@ -1,0 +1,40 @@
+{
+  "key": "4f88a7db59efcf876dcdbd44bed1756d7e539b56ad06c2d2e1a0227b0209a692",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_aNsnOycUHimgr8Nf19pKuJ8o",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"856\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L’expression « succès incontestable » est vague et non définie : elle ne précise ni les critères, ni les indicateurs, ni la période permettant d’évaluer le succès de la politique économique.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EjCgIDWJ2rJ1lys867KH69J43DyOO",
+        "created": 1794442214,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2438,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1000,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 86,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "key": "b5d92ce68ff4724db84ca8a7b526fd873a689818c14126fb14a42ef28ae7ff2d",
+  "value": {
+    "id": "chatcmpl-EjCqmI4taeSgMnn34BaPUl2HCw28U",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\":false,\"structure_verdict\":\"saut_logique\",\"reasoning\":\"Les prémisses établissent une réduction du risque d’erreur et un effet dissuasif allégué, mais ne suffisent pas à conclure que la peine de mort est moralement justifiée ou devrait être maintenue sans prémisses normatives et comparatives supplémentaires.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794442864,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 153,
+      "prompt_tokens": 401,
+      "total_tokens": 554,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 69,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

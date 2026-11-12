@@ -144,6 +144,37 @@ def move_author_label_of(entry: Any) -> str:
     return ""
 
 
+#: #3513 — the qualifier a verdict line carries when the unit it names is a
+#: position another party actually holds and the text relays (#3429). One
+#: constant beside the vocabulary it renders, so the Dung, ABA and SETAF
+#: surfaces print the same words.
+REPORTED_POSITION_QUALIFIER = "(position rapportée)"
+
+
+def reported_position_qualifier(state: Any, unit: str) -> str:
+    """#3513 — the verdict-line qualifier for ``unit``, or nothing.
+
+    Reads ``argument_provenance[unit]["move_author"]`` **raw**, never through
+    :func:`move_author_of`: that predicate's ``speaker`` default is the
+    fallacy reader's historical attribution, and a unit's provenance carries
+    no such history — an absent field means "not stated" and must render as
+    no qualifier at all (#1019). Only ``reported`` changes the line. Every
+    verdict surface that names a unit (Dung rejections, ABA contraries,
+    SETAF targets) reads THIS function, so a defeat of a reported position
+    reads the same whichever frame computed it.
+    """
+    provenance = getattr(state, "argument_provenance", None)
+    if not isinstance(provenance, dict):
+        return ""
+    entry = provenance.get(unit)
+    if not isinstance(entry, dict):
+        return ""
+    value = entry.get("move_author")
+    if isinstance(value, str) and value.strip() == MOVE_AUTHOR_REPORTED:
+        return f" {REPORTED_POSITION_QUALIFIER}"
+    return ""
+
+
 def move_author_note(entry: Any) -> str:
     """The ONE French clause a briefing prints for a non-speaker move (#3390).
 

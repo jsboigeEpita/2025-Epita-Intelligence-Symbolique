@@ -6,15 +6,25 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_rJIppXVFaxB38HvnLS776cYd",
-          "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"299\",\"matches\":false,\"justification\":\"Les arguments invoquent l’unanimité des experts et l’exclusion des non-experts; ils relèvent plutôt d’un appel à l’autorité et d’un argument ad hominem, non d’un appel à l’émotion.\",\"move_author\":\"speaker\",\"register_test\":\"proportionate\"}"
+          "id": "call_yxf9DuG78t1fPOS5z5PEGEjv",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"300\"}"
+        },
+        {
+          "id": "call_p4U6XEFe2x8nK0mC5b6BWSi7",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"322\"}"
+        },
+        {
+          "id": "call_HlaMlO0oFY88DetFqFoYV9JG",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"340\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EiMFt7kYMGlJWgo4oKyIOiKdkWPNE",
-        "created": 1794240689,
+        "id": "chatcmpl-EjCh2IFmBEkfqbqgbh5tgDAU3J5d2",
+        "created": 1794442260,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2519,
@@ -25,7 +35,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 90,
+          "completion_tokens": 76,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

@@ -1,14 +1,14 @@
 {
   "key": "63ef9d10255ce5e7c1cd12b70cd4249734a2530f81f8860639f9ce7fe6a62b2b",
   "value": {
-    "id": "chatcmpl-EiMCgVGfFGJTz4iX9So9cWioAzuwV",
+    "id": "chatcmpl-EjCeDQUurkBManj3KMBdxgnElPEsp",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_chain\":false,\"premises\":\"\",\"conclusion\":\"\"}",
+          "content": "{\"has_chain\":true,\"premises\":\"Personne n'a proposé de supprimer les retraites ; les propositions portent seulement sur des modalités différentes de réforme.\",\"conclusion\":\"Présenter le débat comme portant sur la suppression des retraites constitue un homme de paille.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794240490,
+    "created": 1794442085,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 241,
+      "completion_tokens": 340,
       "prompt_tokens": 337,
-      "total_tokens": 578,
+      "total_tokens": 677,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 218,
+        "reasoning_tokens": 277,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

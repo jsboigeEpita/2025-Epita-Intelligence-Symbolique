@@ -1,0 +1,40 @@
+{
+  "key": "6e71010ef82663bd6b34cbc4496ce43140bd9780e2c820884f5a8215a66a2c4b",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_xciE6s7GT2ffDqFlBUJlG96s",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"972\",\"matches\":false,\"justification\":\"La phrase affirme simplement que le président considère la politique économique comme un succès incontestable. Elle ne décrit pas une focalisation qui ferait négliger un élément significatif; la cécité d’inattention n’est donc pas établie.\",\"confidence\":\"high\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EjCgMYH7h51njooYYsI8PkzUAX8Un",
+        "created": 1794442218,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1356,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1353,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 95,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

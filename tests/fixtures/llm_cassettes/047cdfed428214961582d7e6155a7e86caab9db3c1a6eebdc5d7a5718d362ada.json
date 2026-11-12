@@ -1,14 +1,14 @@
 {
   "key": "047cdfed428214961582d7e6155a7e86caab9db3c1a6eebdc5d7a5718d362ada",
   "value": {
-    "id": "chatcmpl-EiMCwn1O8qYHuuAzKebvVdA2ZWcbn",
+    "id": "chatcmpl-EjCeONjo6fwDXQwtEA8T0QzfA1zRu",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_thesis\":true,\"thesis\":\"L'invocation des enfants constitue un appel à l'émotion qui détourne la discussion des questions techniques relatives au financement des retraites.\",\"digressions\":\"\"}",
+          "content": "{\"has_thesis\":true,\"thesis\":\"L'invocation des enfants constitue un appel à l'émotion qui détourne la discussion des questions techniques relatives au financement.\",\"digressions\":\"La proposition selon laquelle l'opposition dénonce un homme de paille, car personne n'aurait proposé de supprimer les retraites mais seulement de les réformer différemment.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794240506,
+    "created": 1794442096,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 226,
+      "completion_tokens": 242,
       "prompt_tokens": 270,
-      "total_tokens": 496,
+      "total_tokens": 512,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 173,
+        "reasoning_tokens": 156,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

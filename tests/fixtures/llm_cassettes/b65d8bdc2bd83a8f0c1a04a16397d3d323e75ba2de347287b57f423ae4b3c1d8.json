@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_ZA1f3GAjzlqjcvK7SBQTiFQg",
+          "id": "call_gxB7XtSG4wLikIUSHWvn0ahk",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"801\",\"matches\":false,\"justification\":\"Le texte ne présente pas de définition complexe ou obscure. Il commet plutôt un appel à l'autorité et un argument ad hominem/dismissal de l'avis des non-experts, mais cela ne relève pas du défaut d'élucidation.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"801\",\"matches\":false,\"justification\":\"Le texte ne propose pas de définitions complexes ou obscures. Il commet plutôt un appel à l'autorité et une disqualification de l'avis des non-experts, mais cela ne relève pas du défaut d'élucidation.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EiMGuEB0ESERG4dDYWKboVcf058CV",
-        "created": 1794240752,
+        "id": "chatcmpl-EjCi5j9tDpAsKOBa0c93DD7oWF7SD",
+        "created": 1794442325,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1400,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 89,
+          "completion_tokens": 86,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"exists X: (Idee(X) && Incolore(X) && Verte(X) && DortFurieusement(X))\"\n  ],\n  \"predicates\": {\n    \"Idee\": \"est une idée\",\n    \"Incolore\": \"est incolore\",\n    \"Verte\": \"est verte\",\n    \"DortFurieusement\": \"dort furieusement\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La phrase affirme l'existence d'au moins une idée qui est à la fois incolore et verte, et qui dort furieusement. Le quantificateur existentiel est donc utilisé. L'étrangeté sémantique de l'énoncé n'empêche pas sa formalisation logique.\"\n}",
+      "content": "{\n  \"formulas\": [\n    \"exists X: (Idee(X) && Incolore(X) && Verte(X) && DortFurieusement(X))\"\n  ],\n  \"predicates\": {\n    \"Idee\": \"est une idée\",\n    \"Incolore\": \"est incolore\",\n    \"Verte\": \"est verte\",\n    \"DortFurieusement\": \"dort furieusement\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La phrase affirme l'existence d'au moins une idée qui est à la fois incolore et verte, et qui dort furieusement. L'article indéfini pluriel est représenté par un quantificateur existentiel.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EiMK9iXoUDnmx3gJGEafFCcGcYn3n",
-        "created": 1794240953,
+        "id": "chatcmpl-EjClCtOQi2bj4k9C6FELEQq2IuFly",
+        "created": 1794442518,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 286,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 556,
+          "completion_tokens": 365,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 373,
+            "reasoning_tokens": 197,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

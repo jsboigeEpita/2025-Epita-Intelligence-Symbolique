@@ -6,26 +6,26 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_fTfNNHCCK2Pi3ycGGgluXzHb",
+          "id": "call_RbneubphjHkqUlA9bSaHUk1v",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"800\",\"matches\":true,\"confidence\":\"medium\",\"justification\":\"L’expression « succès incontestable » est vague et hyperbolique, sans critères ni éléments permettant de déterminer ce qui serait contestable ou non.\",\"move_author\":\"reported\",\"move_author_label\":\"le président\"}"
+          "arguments": "{\"node_pk\":\"798\",\"matches\":true,\"confidence\":\"medium\",\"justification\":\"L'affirmation présente la réussite de la politique économique comme « incontestable » sans fournir de critères ni d'éléments permettant d'étayer cette caractérisation; le terme catégorique sert à convaincre.\",\"move_author\":\"speaker\",\"document_statement\":\"Le président affirme que la politique économique est un succès incontestable.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EiMF1qEjlduNnOTIsH35qlDeQKYdM",
-        "created": 1794240635,
+        "id": "chatcmpl-EjCgIrzKDPwIFZQlO4IvJK6OIoWZx",
+        "created": 1794442214,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2297,
           "prompt_tokens_details": {
             "audio_tokens": 0,
-            "cache_write_tokens": 859,
-            "cached_tokens": 1435,
+            "cache_write_tokens": 2294,
+            "cached_tokens": 0,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 75,
+          "completion_tokens": 97,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

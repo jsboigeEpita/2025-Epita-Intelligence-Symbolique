@@ -1,0 +1,48 @@
+{
+  "key": "3b5af5a03dc5ad0e2f8efda83cfd03345f3028638d059f4c2ef4026f7cb683b5",
+  "value": {
+    "id": "chatcmpl-EjCpeMNeQjvDhQsC0sxvy3LTAj2nx",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points 1, 2 et 3 apportent des idées distinctes : danger allégué, éradication de la variole et réduction de la polio. Le point 4 est incomplet, mais aucune redondance substantielle identifiable n’est démontrée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794442794,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 125,
+      "prompt_tokens": 295,
+      "total_tokens": 420,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 48,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

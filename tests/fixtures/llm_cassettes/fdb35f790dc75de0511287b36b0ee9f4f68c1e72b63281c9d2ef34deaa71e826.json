@@ -1,0 +1,48 @@
+{
+  "key": "fdb35f790dc75de0511287b36b0ee9f4f68c1e72b63281c9d2ef34deaa71e826",
+  "value": {
+    "id": "chatcmpl-EjCs6Z1dtWJZvby681bo0gmURhum8",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les trois points sont distincts : le premier présente l’argument des sceptiques, le deuxième établit l’ampleur du réchauffement actuel, et le troisième souligne sa vitesse exceptionnelle. Les points 2 et 3 portent tous deux sur le changement climatique actuel, mais ils apportent des informations différentes (ampleur versus rapidité) et ne sont pas redondants.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794442946,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 195,
+      "prompt_tokens": 299,
+      "total_tokens": 494,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 98,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

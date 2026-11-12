@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"Test(test_memoire_numero_6)\",\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La première phrase identifie un test précis, représenté par la constante test_memoire_numero_6. La seconde affirme que tout objet qui est un test est important, ce qui se traduit par une implication universelle.\"\n}",
+      "content": "{\n  \"formulas\": [\n    \"TestMemoire(test_memoire_6)\",\n    \"Numero(test_memoire_6, six)\",\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"TestMemoire\": \\\"est un test mémoire\\\",\n    \"Numero\": \\\"a pour numéro\\\",\n    \"Test\": \\\"est un test\\\",\n    \"Important\": \\\"est important\\\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La première phrase identifie un test mémoire particulier, représenté par la constante test_memoire_6, auquel on associe le numéro six. La seconde phrase signifie que tout objet qui est un test est important.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EiMKm5O9Vw0cCXaO1b3kwR3WBp7c0",
-        "created": 1794240992,
+        "id": "chatcmpl-EjCldVYdJJ9cJRxGzefDffRRUvbO6",
+        "created": 1794442545,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 285,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 348,
+          "completion_tokens": 528,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 212,
+            "reasoning_tokens": 357,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

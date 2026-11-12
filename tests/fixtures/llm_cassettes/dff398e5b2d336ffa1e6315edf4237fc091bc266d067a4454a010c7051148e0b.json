@@ -1,0 +1,40 @@
+{
+  "key": "dff398e5b2d336ffa1e6315edf4237fc091bc266d067a4454a010c7051148e0b",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_NjrAH1CXnRCaL7TweBEVhZrm",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"700\",\"matches\":false,\"justification\":\"Le texte invoque l'unanimité des experts comme argument d'autorité et exclut les avis non experts; il ne présuppose pas la conclusion de manière circulaire. Le désaccord avec les arguments d'autorité relève d'une autre branche, pas du cercle cartésien.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EjChmojBw9QtEuEQga8JYOGh5NVNu",
+        "created": 1794442306,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1406,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1403,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 97,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "key": "ed3056403a9b7931f0f190ceb07b0dfef703a7eb74aaced1ed40f4ab1098b5e4",
+  "value": {
+    "id": "chatcmpl-EjCrqRESoRMEpGk4R60BXuXoAXUkH",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse porte sur l’usage de données sélectives par les minimisateurs de la crise climatique. Une digression localisée affirme que la transition énergétique est nécessaire et économiquement avantageuse à long terme, ce qui concerne le climat mais ne soutient pas directement la thèse sur la sélection des données.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794442930,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 209,
+      "prompt_tokens": 279,
+      "total_tokens": 488,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 127,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

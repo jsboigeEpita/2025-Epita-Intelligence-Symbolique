@@ -1,0 +1,40 @@
+{
+  "key": "7785c4fc43eeabcd3f90a10f384efbc6db3f770a19e78cdc52a3dc18ed64bbff",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_kJrDq5dBP2EHeGNQkdc3F78A",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"183\",\"matches\":false,\"justification\":\"Le texte commet plutôt un appel à l'autorité et une disqualification de l'opinion des non-experts. Il ne suppose pas explicitement la conclusion déjà vraie; l'unanimité alléguée des experts est présentée comme une justification, même si elle peut être insuffisante ou non étayée. La pétition de principe n'est donc pas le meilleur diagnostic.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EjChfU1wVr8uqQdUTy0dNlhq7qVf6",
+        "created": 1794442299,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1381,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1378,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 117,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,14 +1,14 @@
 {
   "key": "fe636ade229646d5fe78cd69db75f3979447090e4d3ddf0516544e55fa9b4053",
   "value": {
-    "id": "chatcmpl-EiMDOft0aCoP1y3rVxdZzUcNJVNRH",
+    "id": "chatcmpl-EjCejzqBnt0DPntA31UHriXCa0xhW",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"distinct_points\":\"1. L’opposition dénonce un homme de paille : personne n’a proposé de supprimer les retraites, mais seulement de les réformer différemment.\\n2. L’invocation des enfants constitue un appel à l’émotion qui détourne le débat des questions techniques relatives au financement.\"}",
+          "content": "{\"distinct_points\":\"1. L'invocation des enfants (« pensez à vos enfants ») est un appel à l'émotion qui détourne la discussion des questions techniques de financement.\\n2. L'opposition dénonce un homme de paille : personne n'a proposé de supprimer les retraites, mais seulement de les réformer différemment.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794240534,
+    "created": 1794442117,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 131,
+      "completion_tokens": 153,
       "prompt_tokens": 243,
-      "total_tokens": 374,
+      "total_tokens": 396,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 55,
+        "reasoning_tokens": 71,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

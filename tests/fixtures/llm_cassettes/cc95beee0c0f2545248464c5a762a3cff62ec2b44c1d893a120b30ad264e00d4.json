@@ -1,14 +1,14 @@
 {
   "key": "cc95beee0c0f2545248464c5a762a3cff62ec2b44c1d893a120b30ad264e00d4",
   "value": {
-    "id": "chatcmpl-EiMPSZa7zRuP3EwUNViRawlK7NtXy",
+    "id": "chatcmpl-EjCpckbXEC66yCVeCL3TnQs4SXu3O",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":0.2,\"exhibit\":\"La thèse affirme que des taux de vaccination élevés protègent les personnes ne pouvant pas être vaccinées grâce à l’immunité collective. Une digression localisée affirme sans fondement que les produits pharmaceutiques cachent les effets secondaires, ce qui est hors sujet et dilue l’argument.\"}",
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse soutient que des taux de vaccination élevés protègent les personnes ne pouvant pas être vaccinées grâce à l’immunité collective. Une digression localisée affirme, sans lien direct avec cette thèse, que les produits pharmaceutiques cachent les effets secondaires et qualifie cette idée de théorie du complot.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794241282,
+    "created": 1794442792,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 127,
+      "completion_tokens": 203,
       "prompt_tokens": 293,
-      "total_tokens": 420,
+      "total_tokens": 496,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 45,
+        "reasoning_tokens": 116,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

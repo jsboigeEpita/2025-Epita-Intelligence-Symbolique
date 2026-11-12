@@ -1,14 +1,14 @@
 {
   "key": "6931c0cc58c4439606b4b07cf135d71664cfa957bd5159084ac5e99a518b9665",
   "value": {
-    "id": "chatcmpl-EiMDF6ct8Scc0XnfwI5NBnGaGuFwk",
+    "id": "chatcmpl-EjCebF4fkOAw6im1lR9v1DxkbyFi8",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_chain\":true,\"premises\":\"Le recours à l’argument « pensez à vos enfants » constitue un appel à l’émotion. Un appel à l’émotion détourne le débat des questions techniques de financement.\",\"conclusion\":\"L’invocation des enfants détourne la discussion des questions techniques relatives au financement.\"}",
+          "content": "{\"has_chain\":true,\"premises\":\"Le recours à l’argument « pensez à vos enfants » constitue un appel à l’émotion.\",\"conclusion\":\"Il détourne le débat des questions techniques relatives au financement.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794240525,
+    "created": 1794442109,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 245,
+      "completion_tokens": 259,
       "prompt_tokens": 283,
-      "total_tokens": 528,
+      "total_tokens": 542,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 170,
+        "reasoning_tokens": 205,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

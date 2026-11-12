@@ -1,14 +1,14 @@
 {
   "key": "82267de4b7cbe51208f584a770ad2c6c8d3bf483e33c593174591aa1bbac55e3",
   "value": {
-    "id": "chatcmpl-EiMCK5SmFTLQrnFyBhtTn5grJrsb6",
+    "id": "chatcmpl-EjCdwa2HdK6cxZZe9vl6LDP0ssy5P",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_thesis\":true,\"thesis\":\"Le débat porte sur les différentes modalités de réforme des retraites, et non sur leur suppression.\",\"digressions\":\"\"}",
+          "content": "{\"has_thesis\":true,\"thesis\":\"Le débat porte sur les différentes modalités de réforme des retraites, et non sur leur suppression ; il doit se concentrer sur les questions techniques de financement plutôt que sur des arguments émotionnels.\",\"digressions\":\"\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794240468,
+    "created": 1794442068,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 349,
+      "completion_tokens": 549,
       "prompt_tokens": 324,
-      "total_tokens": 673,
+      "total_tokens": 873,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 305,
+        "reasoning_tokens": 486,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

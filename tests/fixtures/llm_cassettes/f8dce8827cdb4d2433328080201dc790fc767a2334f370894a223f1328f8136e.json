@@ -1,0 +1,48 @@
+{
+  "key": "f8dce8827cdb4d2433328080201dc790fc767a2334f370894a223f1328f8136e",
+  "value": {
+    "id": "chatcmpl-EjCe3Kz2mqXzSuntC0wS3jL5eSVLB",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Le système de retraites s'effondrera dans cinq ans si aucune mesure n'est prise maintenant.\",\"main_thesis\":\"L'affirmation selon laquelle le système de retraites s'effondrera dans cinq ans est un argument d'autorité et un appel à la peur, qui ne tient pas compte des différences structurelles entre les systèmes.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794442075,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 260,
+      "prompt_tokens": 310,
+      "total_tokens": 570,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 168,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "key": "f641bc8ac57c450c3b5ea8b6e2cf8779fc81fedb4e70248587df3e4c1482fc4d",
+  "value": {
+    "id": "chatcmpl-EjCjI5o6dgVbwMpRlzPFMvWl3oprt",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse défend l’option C comme compromis hybride en partageant les 2000 euros à parts égales entre un tournoi réduit et du matériel. La mention de l’option B, consacrée uniquement au matériel pédagogique et aux échiquiers neufs, constitue une digression localisée et hors sujet.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794442400,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 200,
+      "prompt_tokens": 310,
+      "total_tokens": 510,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 116,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

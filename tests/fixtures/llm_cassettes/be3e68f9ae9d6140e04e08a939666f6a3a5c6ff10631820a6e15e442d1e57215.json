@@ -6,26 +6,26 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_Fc0v1ilqDo1JhoImOA1V9loh",
+          "id": "call_nGmLJEOw5Glhklx4xgfXeqbu",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"175\",\"matches\":false,\"justification\":\"La phrase énonce seulement une affirmation sur le succès de la politique économique, sans indice suffisant de manipulation, de technique rhétorique ou d'appel émotionnel. Elle ne permet pas d'établir une fallacie d'influence.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+          "arguments": "{\"node_pk\":\"175\",\"matches\":false,\"justification\":\"La phrase rapporte une affirmation du président, mais ne fournit pas assez de contexte pour établir une manipulation, une technique rhétorique ou un appel émotionnel fallacieux.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EiMF1wRLk5BYief2UnVBR9g3UP7n9",
-        "created": 1794240635,
+        "id": "chatcmpl-EjCgIavdAxEjTNZw3sdfI8IMUvhY2",
+        "created": 1794442214,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2319,
           "prompt_tokens_details": {
             "audio_tokens": 0,
-            "cache_write_tokens": 2316,
-            "cached_tokens": 0,
+            "cache_write_tokens": 881,
+            "cached_tokens": 1435,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 90,
+          "completion_tokens": 76,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

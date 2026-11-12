@@ -1,0 +1,40 @@
+{
+  "key": "d644295cbaca894b8449ed560d4c943a882a1ed4a71bce48eff9e887053852b8",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_gBO7CrhItLWJ3ROPaM3r388O",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"832\",\"matches\":false,\"justification\":\"L’énoncé rapporte simplement que le président qualifie la politique économique de succès incontestable. Il peut s’agir d’une affirmation discutable ou insuffisamment étayée, mais cela ne constitue pas en soi un sophisme philosophique, qui concerne des problèmes dans l’application de la logique à la connaissance.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EjCgNdr6Xr1ZRyhGJIIYCfrvXgtEe",
+        "created": 1794442219,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1381,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1378,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 106,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

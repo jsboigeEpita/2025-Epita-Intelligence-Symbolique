@@ -1,14 +1,14 @@
 {
   "key": "cb2c8982c7b2861f32b1c0bebd65f6cec5aafcccdbf50726814c7dc8ac19ae72",
   "value": {
-    "id": "chatcmpl-EiMRqxgae5cGWbdmcksaY39FVmTAj",
+    "id": "chatcmpl-EjCrdmRRQR7oBgZJgfLc0T3VfJUMY",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Jargon technique non défini : « modèles prédictifs » est utilisé sans expliquer clairement ce que ce terme désigne.\"}",
+          "content": "{\"has_clarity_obstacle\":false,\"obstacles\":\"\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794241430,
+    "created": 1794442917,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 236,
+      "completion_tokens": 195,
       "prompt_tokens": 275,
-      "total_tokens": 511,
+      "total_tokens": 470,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 189,
+        "reasoning_tokens": 172,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

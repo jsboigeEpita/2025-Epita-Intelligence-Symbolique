@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\"propositions\":[\"logic_coherence\",\"find_proof\"],\"modal_formulas\":[\"[](logic_coherence)\",\"<>(find_proof)\"]}",
+      "content": "{\"propositions\":[\"logic_coherent\",\"find_proof\"],\"modal_formulas\":[\"[](logic_coherent)\",\"<>(find_proof)\"]}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EiMOVofy69qsZRC3anSloHpguMLq4",
-        "created": 1794241223,
+        "id": "chatcmpl-EjCokZKZM5NqQiRYmgArbWzRgGGgh",
+        "created": 1794442738,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 308,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 92,
+          "completion_tokens": 83,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 53,
+            "reasoning_tokens": 44,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

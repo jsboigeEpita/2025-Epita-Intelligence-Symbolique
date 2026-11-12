@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_45h8DUtugivx6KJysFPgjCiO",
+          "id": "call_nh5eqRjgMWgXqUirq73otqRI",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"359\",\"matches\":false,\"justification\":\"Les deux arguments invoquent une unanimité d'experts et excluent les non-experts, mais ne présentent pas progressivement un objectif caché ni une substitution graduelle de position.\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"359\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"Les deux arguments invoquent l'unanimité et excluent les non-experts, mais ne présentent pas progressivement un objectif caché ni une substitution graduelle destinée à masquer une conclusion finale. Cette branche ne correspond donc pas.\",\"move_author\":\"speaker\",\"document_statement\":\"\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EiMGS3uZidZpFb7I72SI15viS1Q2e",
-        "created": 1794240724,
+        "id": "chatcmpl-EjChapK75cI833zn5EVFWCsReIOid",
+        "created": 1794442294,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2375,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 71,
+          "completion_tokens": 88,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
