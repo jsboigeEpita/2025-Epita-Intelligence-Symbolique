@@ -186,7 +186,11 @@ class TestPersonaReading:
         assert extra["moves_total"] == 0 and extra["moves_read"] == 0
 
     def test_unpositioned_moves_are_reported_as_such_not_invented(self):
-        text = _text(5_000)
+        # #3522 — a document ABOVE one call keeps the intent this witness
+        # has always pinned: no position to anchor on means the opening
+        # window, never a guessed one. (Below one call the document is now
+        # read whole — ``test_persona_reading_3522`` pins that branch.)
+        text = _text(20_000)
         moves = [{"kind": "thesis", "reading": "thèse", "quote": "", "offset": None}]
         excerpt, selection, _ = persona_reading(text, moves)
         # No position to anchor on → the fallback window, never a guessed one.
