@@ -3086,37 +3086,46 @@ async def _invoke_governance(
             or g_sensitivity["blocs"]
         ):
             governance_verdict["coalition"] = g_sensitivity
-        # #3386 (b) — the declared profile's manipulability, from the SAME
-        # engine the strategist phase uses (#3385's compute_manipulability —
-        # imported, not copied). #3524: the finding is a BENEFICIAL move — the
-        # first two-player coalition that can install a winner both members
-        # rank above the baseline, else the first such single-player pivot.
-        # On a profile with a Condorcet winner the engine keeps none (every
-        # change needs at least one mover it harms), so the field is honestly
-        # absent rather than populated by an anti-interest witness.
+        # #3386 (b) + #3530 — the declared profile's manipulability, from the
+        # SAME engine the strategist phase uses (#3385's
+        # compute_manipulability — imported, not copied). #3524 made a witness
+        # a BENEFICIAL move; the Condorcet block then keeps none on every
+        # profile — structurally, a change needs a mover it harms — and it is
+        # never computed without a Condorcet winner, so its kept lists can no
+        # longer feed this field. #3530 (coordinator decision of 13/11, option
+        # b restricted to Borda) adds the points rule: the finding is the first
+        # single-player witness (the stronger claim), else the first pair, on
+        # the Borda block. The record names its rule so the render can state
+        # « si l'issue se réglait aux points » and the two winners apart.
         g_manip = compute_manipulability(
             {a.name: list(a.preferences) for a in g_agents}, list(g_options)
         )
+        g_borda = g_manip.get("borda") or {}
         g_finding = None
-        if g_manip.get("coalitions"):
-            first = g_manip["coalitions"][0]
-            g_finding = {
-                "kind": "coalition",
-                "players": list(first["players"]),
-                "report": first["report"],
-                "winner": first["winner"],
-            }
-        elif g_manip.get("single_player"):
-            first = g_manip["single_player"][0]
+        if g_borda.get("single_player"):
+            first = g_borda["single_player"][0]
             g_finding = {
                 "kind": "single_player",
                 "players": [first["player"]],
-                "report": first["reports"],
+                "report": " > ".join(str(name) for name in first.get("ballot") or []),
+                "winner": first["winner"],
+            }
+        elif g_borda.get("coalitions"):
+            first = g_borda["coalitions"][0]
+            g_finding = {
+                "kind": "coalition",
+                "players": list(first["players"]),
+                "report": " / ".join(
+                    " > ".join(str(name) for name in ballot)
+                    for ballot in first.get("ballots") or []
+                ),
                 "winner": first["winner"],
             }
         if g_finding is not None:
-            g_finding["baseline"] = g_manip.get("winner")
-            g_finding["engine"] = g_manip.get("engine")
+            g_finding["rule"] = "borda"
+            g_finding["baseline"] = g_borda.get("winner")
+            g_finding["condorcet_winner"] = g_manip.get("winner")
+            g_finding["engine"] = g_borda.get("engine")
             g_finding["status"] = g_manip.get("status")
             governance_verdict["manipulability"] = g_finding
         # #2850 R1107 — the vote names the population it was decided over,

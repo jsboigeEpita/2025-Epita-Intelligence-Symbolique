@@ -549,9 +549,10 @@ def _format_strategic_block(read: Dict[str, Any]) -> str:
         dropped = int(game.get("dropped_against_interest") or 0)
         if not game.get("single_player") and not game.get("coalitions"):
             lines.append(
-                "  Aucun pivot CALCULÉ : profil non manipulable par un joueur "
-                "seul ni par une paire — aucun déplacement du gagnant vers une "
-                "option que tous ses porteurs préfèrent."
+                "  Aucun pivot CALCULÉ sous la règle de Condorcet : profil non "
+                "manipulable par un joueur seul ni par une paire — aucun "
+                "déplacement du gagnant vers une option que tous ses porteurs "
+                "préfèrent."
             )
         if dropped:
             # #3524 — the removed candidates are counted, never silent: a
@@ -565,6 +566,49 @@ def _format_strategic_block(read: Dict[str, Any]) -> str:
                 "actuel — ce n'est pas une manipulation, ne la présente pas "
                 "comme telle."
             )
+        # #3530 — the points rule, conditional on a witness. The decision of
+        # 13/11 keeps the Condorcet winner as the OUTCOME and adds Borda as a
+        # stated hypothesis, so the line opens with it and says when the two
+        # winners differ. A capped enumeration states its bound: silence there
+        # would read as "not manipulable", which the block never measured.
+        borda = game.get("borda") or {}
+        if isinstance(borda, dict) and borda.get("status") == "capped":
+            lines.append(
+                "  Énumération aux points (Borda) BORNÉE : "
+                f"{borda.get('permutations_per_player')} permutations par "
+                "joueur, au-delà de la borne de l'énumération complète — aucun "
+                "déplacement comparé ; ne conclus pas à la non-manipulabilité "
+                "aux points."
+            )
+        elif isinstance(borda, dict) and borda.get("winner"):
+            head = (
+                "  Si l'issue se réglait aux points (Borda) — gagnant CALCULÉ : "
+                f"« {borda['winner']} »"
+            )
+            condorcet = game.get("winner")
+            if condorcet and condorcet != borda["winner"]:
+                head += f" ; le gagnant de Condorcet est « {condorcet} »"
+            lines.append(head)
+            for pivot in (borda.get("single_player") or [])[:_PIVOT_LINES]:
+                ballot = " > ".join(str(name) for name in pivot.get("ballot") or [])
+                lines.append(
+                    f"  Pivot aux points (Borda) : {pivot.get('player')} "
+                    f"pourrait reporter « {ballot} » et faire gagner "
+                    f"« {pivot.get('winner')} », que son bulletin classe devant "
+                    f"« {borda['winner']} »"
+                )
+            for coalition in (borda.get("coalitions") or [])[:_COALITION_LINES]:
+                pair = " + ".join(str(name) for name in coalition.get("players") or [])
+                ballots = " et ".join(
+                    "« " + " > ".join(str(name) for name in ballot) + " »"
+                    for ballot in (coalition.get("ballots") or [])
+                )
+                lines.append(
+                    f"  Coalition aux points (Borda) : {pair} pourraient "
+                    f"reporter {ballots} et faire gagner "
+                    f"« {coalition.get('winner')} », que leurs bulletins "
+                    f"classent devant « {borda['winner']} »"
+                )
     elif status:
         lines.append(
             f"  Calcul : non concluant ({status}) — ne présente AUCUN gagnant."

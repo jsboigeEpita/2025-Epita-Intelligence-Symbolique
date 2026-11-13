@@ -305,12 +305,22 @@ class TestTheVerdictCarriesCoalitionAndManipulability:
         assert coalition["ballots_moved"] == []
         assert coalition["blocs"] == []
         assert "winner_cast" not in coalition
-        # #3524 — the verdict carries no manipulability finding here: the 13
-        # witnesses the pre-#3524 engine produced on this profile all install
-        # a winner their movers rank below arg_2, so the corrected engine
-        # keeps none. Honest absence, not a missing measurement — the record
-        # of the moves lives in the engine's dropped counter (13).
-        assert "manipulability" not in verdict
+        # #3524 removed the 13 anti-interest Condorcet witnesses. #3530 gives
+        # the field its producer back on the rule where a beneficial move
+        # exists: the points (Borda) block keeps one pair on this profile —
+        # elector_vertu_d and elector_vertu_e, neither able alone, both ranking
+        # arg_3 above arg_2 on their own honest ballots. The Condorcet kept
+        # lists stay empty (structural, #3524/#3529), and the finding names the
+        # rule it was computed under.
+        finding = verdict["manipulability"]
+        assert finding["rule"] == "borda"
+        assert finding["kind"] == "coalition"
+        assert finding["players"] == ["elector_vertu_d", "elector_vertu_e"]
+        assert finding["winner"] == "arg_3"
+        assert finding["baseline"] == "arg_2"
+        # The outcome rule did not move: the points and Condorcet winners agree
+        # on this profile, and the render must not imply a disagreement.
+        assert finding["condorcet_winner"] == "arg_2"
 
     @pytest.mark.asyncio
     async def test_the_record_carries_the_coalition_and_no_phantom_finding(
@@ -325,11 +335,14 @@ class TestTheVerdictCarriesCoalitionAndManipulability:
         assert record["coalition"]["stance_dependent"] is True
         assert record["coalition"]["plays"] == 15
         assert record["coalition"]["winner_declared"] == "arg_2"
-        # #3524 — no manipulability entry: the engine found no beneficial
-        # witness (see TestTheManipulabilityFindingUsesThe3385Engine). A
-        # record that stored the old anti-interest coalition here would name
-        # a manipulation nobody has a reason to make.
-        assert "manipulability" not in record
+        # #3530 — the record carries the points-rule witness the verdict built
+        # (the pair above): the field has a producer again, and the rule
+        # travels with it so the acts can say « si l'issue se réglait aux
+        # points » instead of presenting a hypothesis as the players' stance.
+        stored = record["manipulability"]
+        assert stored["rule"] == "borda"
+        assert stored["players"] == ["elector_vertu_d", "elector_vertu_e"]
+        assert stored["baseline"] == "arg_2"
 
     def test_a_vote_without_a_play_adds_no_phantom_fields(self) -> None:
         """Honest absence: a bare vote (no play keys) stores neither field."""
@@ -530,7 +543,9 @@ class TestTheNotePrintsOnlyAChange:
 @pytest.mark.parametrize("act", ["act2", "act3"])
 class TestTheBlockReachesTheActs:
     @pytest.mark.asyncio
-    async def test_the_planted_record_prints_no_flip_and_no_pivot(self, act: str) -> None:
+    async def test_the_planted_record_prints_no_flip_and_names_the_points_witness(
+        self, act: str
+    ) -> None:
         """Born red on review 2 — the fifteen plays claim no flip.
 
         An earlier revision varied only the stance shift, and on this profile
@@ -538,11 +553,11 @@ class TestTheBlockReachesTheActs:
         that seat rotation contradicts (all three arguments win somewhere in
         the real family). The coalition line must disappear.
 
-        #3524 — the declared-profile pivot disappears too: the coalition the
-        old engine reported here installs arg_3, which both movers rank below
-        arg_2, so the corrected engine keeps no witness and the record carries
-        no manipulability entry. What this test still witnesses is the #3418
-        review-2 rule: a stance-dependent play prints no flip.
+        #3524 removed the anti-interest Condorcet witnesses; #3530 reopened the
+        field under the Borda rule, where this profile carries one beneficial
+        pair. The flip still must not print (the play is stance-dependent),
+        and what survives is the points-rule witness, stated as a hypothesis —
+        never as the players' stance.
         """
         output = await _handler_output(_PLANTED_QUALITY)
         assert output["governance_verdict"]["coalition"]["stance_dependent"] is True
@@ -553,7 +568,9 @@ class TestTheBlockReachesTheActs:
         }
         block = _deliberation(_PROMPTS[act](state))
         assert "Jeu de coalitions" not in block
-        assert "Manipulabilité" not in block
+        assert "Manipulabilité" in block
+        assert "si l'issue se réglait aux points (Borda)" in block
+        assert "elector_vertu_d et elector_vertu_e" in block
 
     @pytest.mark.asyncio
     async def test_the_control_passage_is_byte_identical(self, act: str) -> None:

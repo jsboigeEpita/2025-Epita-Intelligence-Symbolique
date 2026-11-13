@@ -33,6 +33,7 @@ still cannot launder a deduction into a quotation.
 
 from __future__ import annotations
 
+import itertools
 import json
 import logging
 from dataclasses import dataclass, field
@@ -273,6 +274,222 @@ def _strictly_prefers(ballot: List[str], new_winner: str, baseline: str) -> bool
         return False
 
 
+#: #3530 — the Borda block's two bounds, named because they decide what the
+#: block can claim. A Borda misreport is ANY complete ballot, so the
+#: single-player space is ``m!`` per player and a pair's is ``(m!)²``. The
+#: enumeration is exhaustive while ``m! <= BORDA_PERMUTATION_CAP`` (six options)
+#: and while the profiles scored stay under ``BORDA_TRIAL_CAP``; a bound that
+#: bites is written on the block (``exhaustive: False``), never silent — a cut
+#: enumeration says nothing about the moves it never scored.
+BORDA_PERMUTATION_CAP = 720
+BORDA_TRIAL_CAP = 50_000
+
+
+def _borda_contribution(ballot: List[str], options: List[str]) -> Dict[str, int]:
+    """What one ballot adds to each option's Borda score (n-1 for top, …)."""
+    width = len(options)
+    return {
+        name: width - index - 1 for index, name in enumerate(ballot) if name in options
+    }
+
+
+def _borda_scores(ballots: List[List[str]], options: List[str]) -> Dict[str, int]:
+    scores = {name: 0 for name in options}
+    for ballot in ballots:
+        for name, value in _borda_contribution(ballot, options).items():
+            scores[name] += value
+    return scores
+
+
+def _unique_top(scores: Dict[str, int]) -> Optional[str]:
+    """The single highest-scoring option, or ``None`` on a tie at the top."""
+    if not scores:
+        return None
+    top = max(scores.values())
+    winners = [name for name, value in scores.items() if value == top]
+    return winners[0] if len(winners) == 1 else None
+
+
+def borda_winner(ballots: List[List[str]], options: List[str]) -> Optional[str]:
+    """The honest Borda winner: unique, or ``None`` on a tie at the top.
+
+    #3530 — a tie at the top is "no winner", never an invented tie-break: the
+    classic Borda rule names a single winner, and picking the first of several
+    tied options would be a choice the profile does not make.
+
+    The agent-based ``governance_methods.borda_count`` stays the adapter the
+    plugin dispatches; this is the ballot-list form the strategist's engine
+    needs, with the tie made explicit rather than folded into ``max``.
+    """
+    return _unique_top(_borda_scores(ballots, options))
+
+
+def _borda_block(
+    players: List[str], ballots: List[List[str]], options: List[str]
+) -> Dict[str, Any]:
+    """#3530 — where the outcome can move if it were settled on points (Borda).
+
+    The Condorcet block above answers the same question for a pairwise
+    outcome, and #3524 measured it structurally empty on every profile that has
+    a Condorcet winner. The coordinator's decision of 13/11 (option b,
+    restricted to Borda) is to keep the Condorcet winner as the outcome and add
+    this second rule on top, because Borda is single-voter manipulable where
+    Condorcet is not (measured: 6 of 18 recorded profiles carry a witness,
+    against 0 of 12 for Condorcet).
+
+    A witness is a misreport that leaves its mover strictly better off — the
+    same interest check as the Condorcet block, read on the mover's own honest
+    ballot. The enumeration covers EVERY complete ballot (``m!`` per player),
+    not only "some option first": a Borda manipulation often works by burying a
+    rival, which no promote-first enumeration reaches. A pair is formed only
+    when NEITHER member can move the outcome alone — an individual witness is
+    the stronger, simpler finding, and a pair behind it adds nothing.
+
+    One witness per ``(player, winner)`` is kept, in permutation order: the
+    claim is "this player can install this winner beneficially", not "here are
+    all the ballots that do it". Every ballot that moved the winner and failed
+    the interest check is counted (``moved_not_kept``; a pair is counted once,
+    like the Condorcet block), never silent.
+    """
+    permutations = [list(perm) for perm in itertools.permutations(options)]
+    per_player = len(permutations)
+    block: Dict[str, Any] = {
+        "winner": None,
+        "status": "no_borda_winner",
+        "single_player": [],
+        "coalitions": [],
+        "ballots_examined": 0,
+        "moved_not_kept": 0,
+        "pairs_examined": 0,
+        "pairs_moved_not_kept": 0,
+        "permutations_per_player": per_player,
+        "exhaustive": True,
+        "bound": {
+            "permutations_per_player": BORDA_PERMUTATION_CAP,
+            "ballots": BORDA_TRIAL_CAP,
+        },
+        "engine": "governance.social_choice.borda_winner",
+    }
+    base = _borda_scores(ballots, options)
+    baseline = _unique_top(base)
+    block["winner"] = baseline
+    if baseline is None:
+        return block
+    needed = per_player * len(players)
+    if per_player > BORDA_PERMUTATION_CAP or needed > BORDA_TRIAL_CAP:
+        # The bound bites BEFORE any ballot is scored: a partial single-player
+        # enumeration would be an arbitrary slice of the space, and the block
+        # must not let a reader read "no witness found" as "none exists".
+        block["status"] = "capped"
+        block["exhaustive"] = False
+        block["ballots_required"] = needed
+        return block
+
+    block["status"] = "ok"
+    old = [_borda_contribution(ballot, options) for ballot in ballots]
+    contributions = [
+        _borda_contribution(permutation, options) for permutation in permutations
+    ]
+
+    def trial(
+        first: int,
+        first_contribution: Dict[str, int],
+        second: int = -1,
+        second_contribution: Optional[Dict[str, int]] = None,
+    ) -> Optional[str]:
+        scores = dict(base)
+        for name, value in old[first].items():
+            scores[name] -= value
+        for name, value in first_contribution.items():
+            scores[name] += value
+        if second >= 0 and second_contribution is not None:
+            for name, value in old[second].items():
+                scores[name] -= value
+            for name, value in second_contribution.items():
+                scores[name] += value
+        return _unique_top(scores)
+
+    examined = 0
+    single_players = set()
+    for index, player in enumerate(players):
+        kept_winners = set()
+        for permutation, contribution in zip(permutations, contributions):
+            examined += 1
+            winner = trial(index, contribution)
+            if winner is None or winner == baseline:
+                continue
+            if _strictly_prefers(ballots[index], winner, baseline):
+                if winner not in kept_winners:
+                    kept_winners.add(winner)
+                    block["single_player"].append(
+                        {
+                            "player": player,
+                            "ballot": list(permutation),
+                            "winner": winner,
+                        }
+                    )
+            else:
+                block["moved_not_kept"] += 1
+        if kept_winners:
+            single_players.add(player)
+    block["ballots_examined"] = examined
+
+    # Pairs: only where NEITHER member can move the outcome alone (the pair is
+    # then the weakest useful finding), and only while the trial budget lasts.
+    pairs_examined = 0
+    budget = BORDA_TRIAL_CAP - examined
+    for first in range(len(players)):
+        if players[first] in single_players:
+            continue
+        for second in range(first + 1, len(players)):
+            if players[second] in single_players:
+                continue
+            moved = False
+            found = None
+            cut = False
+            for first_permutation, first_contribution in zip(
+                permutations, contributions
+            ):
+                for second_permutation, second_contribution in zip(
+                    permutations, contributions
+                ):
+                    if pairs_examined >= budget:
+                        cut = True
+                        break
+                    pairs_examined += 1
+                    winner = trial(
+                        first, first_contribution, second, second_contribution
+                    )
+                    if winner is None or winner == baseline:
+                        continue
+                    moved = True
+                    if _strictly_prefers(
+                        ballots[first], winner, baseline
+                    ) and _strictly_prefers(ballots[second], winner, baseline):
+                        found = {
+                            "players": [players[first], players[second]],
+                            "ballots": [
+                                list(first_permutation),
+                                list(second_permutation),
+                            ],
+                            "winner": winner,
+                        }
+                        break
+                if found is not None or cut:
+                    break
+            if found is not None:
+                block["coalitions"].append(found)
+            elif moved:
+                block["pairs_moved_not_kept"] += 1
+            if cut:
+                block["exhaustive"] = False
+                break
+        if not block["exhaustive"]:
+            break
+    block["pairs_examined"] = pairs_examined
+    return block
+
+
 def compute_manipulability(
     preferences: Dict[str, List[str]], options: List[str]
 ) -> Dict[str, Any]:
@@ -317,6 +534,17 @@ def compute_manipulability(
     0 witness kept. The paragraph above the lists must not be read as "no
     manipulation exists at any coalition size" — it is the bound of this
     enumeration (at most two movers, promoting a target first).
+
+    #3530 — the Condorcet block above is structurally empty, so the finding
+    that can actually be rendered comes from the second block: ``borda``
+    (see :func:`_borda_block`), where a beneficial misreport exists (6 of the
+    18 recorded profiles with a Borda winner, against 0 of 12 for Condorcet).
+    The Condorcet winner remains the OUTCOME (``winner``); the Borda winner,
+    its own witnesses and the enumeration's bound live under ``borda``, and
+    the two winners' disagreement is stated where the line is rendered.
+    ``dropped_against_interest`` on this dict stays the CONDORCET counter — the
+    Borda block counts its own (``moved_not_kept``), because a ballot and a
+    promote-first move are not the same unit.
 
     Pure and deterministic — same profile, same dict. Bounded by
     ``MAX_PLAYERS``; the output states when the bound bit.
@@ -373,6 +601,12 @@ def compute_manipulability(
     if len(players) < 2 or len(options) < 2:
         result["status"] = "insufficient_profile"
         return result
+
+    # #3530 — the Borda block runs on EVERY usable profile, including the ones
+    # whose Condorcet contest cycles: the decision of 13/11 keeps the Condorcet
+    # winner as the OUTCOME and adds the points rule on top, so a profile with
+    # no Condorcet winner can still carry a Borda winner and a Borda witness.
+    result["borda"] = _borda_block(players, ballots, options)
 
     if completed_by_player:
         # At least one scored ballot carries options the player never ranked:
