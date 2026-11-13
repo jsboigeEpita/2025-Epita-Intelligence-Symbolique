@@ -140,6 +140,13 @@ STATUS_ANCHORED_ON_MOVES = "anchored_on_defining_moves"
 #: fallback instead of presenting the head as a choice.
 STATUS_HEAD_FALLBACK_NO_MOVES = "head_fallback_no_first_reading"
 
+#: #3522 — the document fitted ONE call (its length plus the header under
+#: ``capacity``) and was read WHOLE. The measured defect this replaces: a
+#: 5 049-character document was read to 1 225 characters as the first
+#: reading named more moves, because the merged passages were cut at their
+#: head (cycle 6, `state.reading_window_status`).
+STATUS_WHOLE_DOCUMENT = "whole_document"
+
 
 @dataclass(frozen=True)
 class WindowSelection:
@@ -404,6 +411,15 @@ def inventory_budget(
 #: over a long document still fit one call.
 PERSONA_PASSAGE_MAX = 1200
 
+#: #3522 — the share of one call the anchored passages must keep. The c5
+#: panel measured about 3 600 characters actually read on the long
+#: documents; c6 fell to about 2 950 as the anchors header grew with the
+#: inventory (#3516) and took half the call. The header is fitted so the
+#: passages keep at least this share whenever the capacity can hold it —
+#: each passage's marker is paid for first, so the share is characters of
+#: TEXT, not budget spent on the `[passage i — position N]` lines.
+PERSONA_PASSAGE_SHARE = 3600
+
 #: #2850 lot 10 — how much text on each side of a move's own span the
 #: passage carries, when the budget allows it.
 PERSONA_PASSAGE_PAD = 300
@@ -426,7 +442,7 @@ _PERSONA_SLOT_LABELS_FR = {
 }
 
 
-def _anchors_header(moves: Sequence[Mapping[str, Any]], cap: int) -> str:
+def _anchors_header_lines(moves: Sequence[Mapping[str, Any]]) -> List[str]:
     """One line per defining move: role (or kind), position, reading.
 
     The header is what makes the passages readable as a whole — a reader
@@ -458,10 +474,127 @@ def _anchors_header(moves: Sequence[Mapping[str, Any]], cap: int) -> str:
             else "position non localisée"
         )
         lines.append(f"- [{label}] {where} : {reading}")
-    header = "\n".join(lines)
-    if len(header) > cap:
-        header = header[: max(0, cap - 1)].rstrip() + "…"
-    return header
+    return lines
+
+
+def _fit_anchors_header(
+    moves: Sequence[Mapping[str, Any]], cap: int
+) -> Tuple[str, int]:
+    """#3522 — the anchors header, fitted by WHOLE LINES to ``cap``.
+
+    Returns the header text and how many moves it actually names. The
+    previous form cut the joined text at ``cap``, which printed half a
+    reading as if it were a move's whole label; stopping on a line boundary
+    keeps every printed line truthful, and the count lets the record say how
+    many moves travelled with the read. When not even one line fits, the
+    first is truncated and keeps the ellipsis — an anchor named partially
+    beats no anchor at all, and the record says how many were carried.
+
+    The ROLES are fitted first — the thesis, the mechanism, the pillars
+    (#3442) — and the local moves take what is left. Fitted in document
+    order, a long document's header kept its first lines only: replayed on
+    the recorded panel states, the five long documents had 9 of their 43
+    role-bearing moves labelled where the half-call header labelled 21 — a
+    thesis stated late, or one the locator could not place (it sorts last),
+    fell off before any local move did. Roles first, the same states label
+    33 of the 43. Priority decides WHICH lines travel; they are printed in
+    the order the moves were given, so the header stays a map of the text.
+    """
+    if cap <= 0:
+        return "", 0
+    lines = _anchors_header_lines(moves)
+    if not lines:
+        return "", 0
+    roles = [
+        index
+        for index, move in enumerate(moves)
+        if str(move.get("slot") or "").strip() in _PERSONA_SLOT_LABELS_FR
+    ]
+    role_set = set(roles)
+    by_priority = roles + [
+        index for index in range(len(lines)) if index not in role_set
+    ]
+    kept: List[int] = []
+    used = 0
+    for index in by_priority:
+        cost = len(lines[index]) + (1 if kept else 0)
+        if used + cost > cap:
+            break
+        kept.append(index)
+        used += cost
+    if not kept:
+        return lines[by_priority[0]][: max(0, cap - 1)].rstrip() + "…", 1
+    return "\n".join(lines[index] for index in sorted(kept)), len(kept)
+
+
+def _windowed_passage(
+    text: str,
+    start: int,
+    end: int,
+    allowance: int,
+    anchors: Sequence[Tuple[int, int]],
+) -> Tuple[str, int, int, int]:
+    """#3522 — read a merged span without cutting it at its head.
+
+    A span short enough is read whole. A longer one is windowed around the
+    anchors it carries: each anchor's own quote is included, and what is
+    left of the allowance is shared around them. The defect this replaces
+    cut the merged span at its first ``allowance`` characters, so when many
+    moves merged into one span — exactly what more named moves produce — the
+    persona read the span's head and none of the moves past it.
+
+    Returns ``(chunk, first_offset, last_offset, anchors_carried)``. The
+    allowance stays a hard bound: a quote longer than the whole allowance
+    (far past the citation rule's 8-40 words) is the only thing cut, and the
+    separators count against it.
+    """
+    if end - start <= allowance:
+        return text[start:end], start, end, len(anchors)
+    if not anchors:
+        return text[start : start + allowance], start, start + allowance, 0
+
+    # The separators between windows are part of the allowance: reserving
+    # them up front is what lets every anchor get a window instead of the
+    # last ones falling off the end by three characters each.
+    separator_room = 3 * max(0, len(anchors) - 1)
+    share = max(1, (allowance - separator_room) // len(anchors))
+    windows: List[Tuple[int, int]] = []
+    # In document order, whatever order the moves were listed in: the merge
+    # below compares each window with the PREVIOUS one, which only means
+    # something left to right. Unsorted, a window starting before its
+    # predecessor was swallowed by it and its anchor left the read.
+    for anchor_start, anchor_end in sorted(anchors):
+        own = max(0, anchor_end - anchor_start)
+        extra = max(0, (share - own) // 2) if share > own else 0
+        window_start = max(start, anchor_start - extra)
+        window_end = min(end, anchor_end + extra)
+        if windows and window_start <= windows[-1][1]:
+            windows[-1] = (windows[-1][0], max(windows[-1][1], window_end))
+        else:
+            windows.append((window_start, window_end))
+
+    picked: List[Tuple[int, int]] = []
+    used = 0
+    for window_start, window_end in windows:
+        length = window_end - window_start
+        separator = 3 if picked else 0  # " … "
+        if picked and used + separator + length > allowance:
+            break
+        if not picked and length > allowance:
+            window_end = window_start + allowance
+            length = allowance
+        picked.append((window_start, window_end))
+        used += separator + length
+
+    if not picked:
+        return "", start, start, 0
+    chunk = " … ".join(text[a:b] for a, b in picked)
+    carried = sum(
+        1
+        for anchor_start, anchor_end in anchors
+        if any(a <= anchor_start and anchor_end <= b for a, b in picked)
+    )
+    return chunk, picked[0][0], picked[-1][1], carried
 
 
 def _merge_spans(spans: List[Tuple[int, int]]) -> List[Tuple[int, int]]:
@@ -487,9 +620,12 @@ def persona_reading(
     around those positions follows — the whole excerpt within one call's
     ``capacity``.
 
+    * the document fits ``capacity`` with its header → ``STATUS_WHOLE_DOCUMENT``:
+      the whole text is read, never a cut of it (#3522);
     * positioned moves → ``STATUS_ANCHORED_ON_MOVES``: merged passages around
-      the spans, stratified by position when the budget cannot carry them
-      all (the extra block says ``windows`` read of ``moves_total``);
+      the spans, windowed around each anchor instead of cut at the passage's
+      head, and stratified by position when the budget cannot carry them all
+      (the extra block says ``windows`` read of ``moves_total``);
     * no usable position (the first reading failed, found nothing, or could
       not place its quotes) → ``STATUS_HEAD_FALLBACK_NO_MOVES``: the opening
       window survives, and the record says it is a fallback, not a choice.
@@ -503,6 +639,7 @@ def persona_reading(
         raise ValueError(f"capacity must be positive, got {capacity}")
 
     moves = [m for m in (moves or []) if isinstance(m, _MappingABC)]
+    anchors: List[Tuple[int, int]] = []
     positioned: List[Tuple[int, int]] = []
     for move in moves:
         offset = move.get("offset")
@@ -511,6 +648,7 @@ def persona_reading(
         if offset < 0 or offset > len(text):
             continue
         quote = str(move.get("quote") or "")
+        anchors.append((offset, min(len(text), offset + len(quote))))
         positioned.append(
             (
                 max(0, offset - PERSONA_PASSAGE_PAD),
@@ -518,6 +656,26 @@ def persona_reading(
             )
         )
     positioned = [span for span in positioned if span[1] > span[0]]
+    total_moves = len(anchors)
+
+    # #3522 ask 1 — a document that fits ONE call is read whole. The header
+    # takes whatever room is left, fitted by whole lines; the text wins the
+    # argument over the labels, because the labels are only readable by
+    # looking at the text they point into. This is measured, not a taste:
+    # the panel's two short documents fit, and c6 read them to 1 225 chars.
+    if text and len(text) + 2 <= capacity:
+        header, header_moves = _fit_anchors_header(moves, capacity - len(text) - 2)
+        excerpt = f"{header}\n\n{text}" if header else text
+        return (
+            excerpt,
+            WindowSelection(0, len(text), STATUS_WHOLE_DOCUMENT),
+            {
+                "windows": 1,
+                "chars_read": len(text),
+                "moves_total": len(moves),
+                "moves_read": header_moves,
+            },
+        )
 
     if not positioned:
         excerpt = text[:window]
@@ -527,44 +685,63 @@ def persona_reading(
             {"chars_read": len(excerpt), "moves_total": len(moves), "moves_read": 0},
         )
 
-    header = _anchors_header(moves, cap=max(0, capacity // 2))
-    remaining = capacity - len(header) - 2  # the blank line under the header
     merged = _merge_spans(positioned)
-    total_moves = sum(
-        1
-        for move in moves
-        if isinstance(move.get("offset"), int)
-        and not isinstance(move.get("offset"), bool)
-    )
 
     # A passage needs its marker ("[passage i — position N]\n") plus text:
     # below the floor, read fewer moves — stratified by position — rather
     # than emit markers with nothing under them.
     marker_room = 40
-    per = remaining // max(1, len(merged))
-    if per < _PERSONA_PASSAGE_FLOOR + marker_room:
+
+    # #3522 ask 3 — the header never starves the passages. It is fitted to
+    # what the c5 share leaves once every passage's marker is paid for; the
+    # half-call ceiling survives as the upper bound, and a capacity too small
+    # to hold the share at all keeps the previous split.
+    passage_need = PERSONA_PASSAGE_SHARE + len(merged) * marker_room
+    if passage_need + 2 < capacity:
+        header_cap = min(capacity // 2, capacity - passage_need - 2)
+    else:
+        header_cap = capacity // 2
+    header, _header_moves = _fit_anchors_header(moves, max(0, header_cap))
+    remaining = capacity - len(header) - 2  # the blank line under the header
+
+    def _per_passage(span_count: int) -> int:
+        # #3522 — a passage's marker is part of what it costs, so the marker
+        # is paid BEFORE the text is shared out. The old division spent the
+        # whole budget on text and then found no room for the markers it had
+        # already promised, which is how the read fell under its share.
+        if span_count <= 0:
+            return 0
+        return (remaining - span_count * marker_room) // span_count
+
+    per = _per_passage(len(merged))
+    if per < _PERSONA_PASSAGE_FLOOR:
         fit = max(1, remaining // (_PERSONA_PASSAGE_FLOOR + marker_room))
         if fit < len(merged):
             step = len(merged) / fit
             picked = sorted({int(i * step) for i in range(fit)})
             merged = [merged[i] for i in picked]
-            per = remaining // len(merged)
+        per = max(1, _per_passage(len(merged)))
 
     per = max(1, min(PERSONA_PASSAGE_MAX, per))
     chunks: List[str] = []
     read_spans: List[Tuple[int, int]] = []
     used = 0
+    moves_read = 0
     for index, (start, end) in enumerate(merged):
         marker = f"[passage {index + 1} — position {start}]\n"
         allowance = min(per, remaining - used - len(marker) - 2)
         if allowance <= 0:
             break
-        chunk = text[start:end][:allowance]
+        inside = [a for a in anchors if a[0] >= start and a[1] <= end]
+        chunk, first, last, carried = _windowed_passage(
+            text, start, end, allowance, inside
+        )
         if not chunk:
             continue
         chunks.append(f"{marker}{chunk}")
-        read_spans.append((start, start + len(chunk)))
+        read_spans.append((first, last))
         used += len(marker) + len(chunk) + 2
+        moves_read += carried
 
     body = "\n\n".join(chunks)
     excerpt = f"{header}\n\n{body}" if header else body
@@ -578,7 +755,7 @@ def persona_reading(
             "windows": len(chunks),
             "chars_read": chars_read,
             "moves_total": total_moves,
-            "moves_read": len(chunks),
+            "moves_read": moves_read,
         },
     )
 
