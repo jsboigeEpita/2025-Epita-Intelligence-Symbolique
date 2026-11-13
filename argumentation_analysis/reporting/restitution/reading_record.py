@@ -104,6 +104,11 @@ _STATUS_PHRASES_FR = {
     "anchored_on_defining_moves": (
         "lecture ancrée sur les mouvements de la première lecture"
     ),
+    # #3522 — a persona's read of a document that fits one call. Like the
+    # anchored read it has its own branch below (it carries the count); the
+    # phrase is what keeps the token off the reader surface if the branch is
+    # ever bypassed.
+    "whole_document": "document lu en entier",
 }
 
 
@@ -514,6 +519,14 @@ def format_reading_line(line: ReadingLine, source_chars: int) -> str:
             f"« {label} » : {read} des {source_chars} caractères — "
             "aucune première lecture exploitable, repli sur la fenêtre "
             "d'ouverture"
+        )
+    elif line.status == "whole_document":
+        # #3522 — the sentence the one-window sites already use for a whole
+        # read (#3393), with the count the record carries: the persona read
+        # the document, not a bound of it.
+        base = (
+            f"« {label} » : document lu en entier "
+            f"({line.chars_read or source_chars} caractères)"
         )
     elif line.status != "selected":
         phrase = _STATUS_PHRASES_FR.get(line.status, line.status)

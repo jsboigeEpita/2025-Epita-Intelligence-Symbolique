@@ -489,21 +489,42 @@ def _fit_anchors_header(
     many moves travelled with the read. When not even one line fits, the
     first is truncated and keeps the ellipsis — an anchor named partially
     beats no anchor at all, and the record says how many were carried.
+
+    The ROLES are fitted first — the thesis, the mechanism, the pillars
+    (#3442) — and the local moves take what is left. Fitted in document
+    order, a long document's header kept its first lines only: replayed on
+    the recorded panel states, the five long documents had 9 of their 43
+    role-bearing moves labelled where the half-call header labelled 21 — a
+    thesis stated late, or one the locator could not place (it sorts last),
+    fell off before any local move did. Roles first, the same states label
+    33 of the 43. Priority decides WHICH lines travel; they are printed in
+    the order the moves were given, so the header stays a map of the text.
     """
     if cap <= 0:
         return "", 0
-    kept: List[str] = []
+    lines = _anchors_header_lines(moves)
+    if not lines:
+        return "", 0
+    roles = [
+        index
+        for index, move in enumerate(moves)
+        if str(move.get("slot") or "").strip() in _PERSONA_SLOT_LABELS_FR
+    ]
+    role_set = set(roles)
+    by_priority = roles + [
+        index for index in range(len(lines)) if index not in role_set
+    ]
+    kept: List[int] = []
     used = 0
-    for line in _anchors_header_lines(moves):
-        cost = len(line) + (1 if kept else 0)
-        if used + cost <= cap:
-            kept.append(line)
-            used += cost
-            continue
-        if not kept:
-            kept.append(line[: max(0, cap - 1)].rstrip() + "…")
-        break
-    return "\n".join(kept), len(kept)
+    for index in by_priority:
+        cost = len(lines[index]) + (1 if kept else 0)
+        if used + cost > cap:
+            break
+        kept.append(index)
+        used += cost
+    if not kept:
+        return lines[by_priority[0]][: max(0, cap - 1)].rstrip() + "…", 1
+    return "\n".join(lines[index] for index in sorted(kept)), len(kept)
 
 
 def _windowed_passage(
@@ -538,7 +559,11 @@ def _windowed_passage(
     separator_room = 3 * max(0, len(anchors) - 1)
     share = max(1, (allowance - separator_room) // len(anchors))
     windows: List[Tuple[int, int]] = []
-    for anchor_start, anchor_end in anchors:
+    # In document order, whatever order the moves were listed in: the merge
+    # below compares each window with the PREVIOUS one, which only means
+    # something left to right. Unsorted, a window starting before its
+    # predecessor was swallowed by it and its anchor left the read.
+    for anchor_start, anchor_end in sorted(anchors):
         own = max(0, anchor_end - anchor_start)
         extra = max(0, (share - own) // 2) if share > own else 0
         window_start = max(start, anchor_start - extra)

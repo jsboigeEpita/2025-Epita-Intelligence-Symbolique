@@ -15,6 +15,8 @@ These witnesses are synthetic and free: no LLM, no network, no corpus.
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from argumentation_analysis.core.reading_window import (
@@ -142,6 +144,34 @@ class TestNoHeadCut:
         assert text[700:1_400] in excerpt, "the merged span is contiguous"
         assert " … " not in excerpt, "a span that fits is never windowed"
 
+    def test_the_windows_do_not_depend_on_the_order_the_moves_arrive_in(self):
+        """``defining_moves`` hands the moves in document order, and the
+        windowing merged neighbouring windows assuming it. Replayed on a
+        recorded panel state with the moves reversed, one document's read
+        fell from 3 693 to 2 492 characters and its quotes found from 16 to
+        9: a window that starts before the previous one swallowed it. The
+        read is a function of the moves, not of the order they were listed
+        in."""
+        tokens = [
+            (f"JETON{index:02d}QUOTE", 1_000 + index * 100) for index in range(10)
+        ]
+        text = self._tokenised(20_000, tokens)
+        moves = [
+            {
+                "kind": "claim",
+                "reading": f"m{index}",
+                "quote": token,
+                "offset": position,
+            }
+            for index, (token, position) in enumerate(tokens)
+        ]
+
+        excerpt, _, extra = persona_reading(text, list(reversed(moves)), capacity=2_000)
+
+        for token, _ in tokens:
+            assert token in excerpt, f"listing order dropped {token}"
+        assert extra["moves_read"] == len(tokens)
+
 
 class TestHeaderDoesNotStarvePassages:
     def test_the_long_documents_keep_at_least_the_c5_share(self):
@@ -171,3 +201,70 @@ class TestHeaderDoesNotStarvePassages:
             assert line.startswith("- ["), "every header line is an anchor line"
             assert line.endswith("…") is False, "no half-line is presented as whole"
         assert extra["moves_read"] > 0
+
+    def _long_document_with_late_roles(self):
+        text = _text(60_000)
+        moves = _spread_moves(text, 30, reading="lecture détaillée du mouvement " * 4)
+        moves[20].update(kind="thesis", slot="thesis")
+        moves[24].update(slot="mechanism")
+        moves[27].update(slot="pillar")
+        moves[29].update(slot="pillar")
+        return text, moves
+
+    def test_the_roles_travel_before_the_local_moves(self):
+        """Fitted under what the passages leave, the header cannot name every
+        move of a long document. Fitted in document order it kept the first
+        lines: replayed on the recorded panel states, the five long documents
+        had 9 of their 43 role-bearing moves labelled, where the half-call
+        header labelled 21 — the thesis and the mechanism sit late in a text
+        and fell off first. The roles are what make the passages readable as
+        a whole (#3442): they are fitted first (33 of 43 on the same states),
+        the local moves take what is left."""
+        text, moves = self._long_document_with_late_roles()
+
+        excerpt, selection, _ = persona_reading(text, moves)
+
+        assert selection.status == STATUS_ANCHORED_ON_MOVES
+        header = excerpt.split("\n\n", 1)[0]
+        assert "- [thèse centrale] position" in header
+        assert "- [mécanisme] position" in header
+        assert header.count("- [pilier de la thèse (claim)] position") == 2
+        assert len(header.splitlines()) > 4, "local moves take the room left"
+
+    def test_the_header_keeps_document_order_whatever_was_fitted_first(self):
+        """Priority decides WHICH lines travel, never where they sit: the
+        header stays a map of the text, positions ascending."""
+        text, moves = self._long_document_with_late_roles()
+
+        excerpt, _, _ = persona_reading(text, moves)
+
+        header = excerpt.split("\n\n", 1)[0]
+        positions = [
+            int(match.group(1))
+            for match in (
+                re.search(r"position (\d+)", line) for line in header.splitlines()
+            )
+            if match
+        ]
+        assert len(positions) == len(header.splitlines())
+        assert positions == sorted(positions)
+
+    def test_an_unplaced_role_is_named_too(self):
+        """A role whose quote the locator could not place sorts last in
+        ``defining_moves``. It carries no passage, so the header is the only
+        place the persona can learn the document has that thesis."""
+        text, moves = self._long_document_with_late_roles()
+        moves.append(
+            {
+                "kind": "thesis",
+                "slot": "thesis",
+                "reading": "thèse non localisée",
+                "quote": "",
+                "offset": None,
+            }
+        )
+
+        excerpt, _, _ = persona_reading(text, moves)
+
+        header = excerpt.split("\n\n", 1)[0]
+        assert "- [thèse centrale] position non localisée : thèse non" in header
