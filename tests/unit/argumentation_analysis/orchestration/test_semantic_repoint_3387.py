@@ -255,17 +255,24 @@ class TestTheRetrievalReachesPastTheHead:
 
     def test_the_recorded_span_makes_the_selector_take_the_far_unit(self) -> None:
         """The reader half: a span recorded by the phase reaches
-        ``select_for_budget`` and pulls a unit the head budget skips."""
+        ``select_for_budget`` and pulls a unit the base budget skips.
+
+        #3523 — the span sits on ``unité 27`` (offset 2716, band 3): the
+        nested target order takes it only when the span is present. The
+        former witness used ``unité 20`` at (2000, 2200); since #3523 the
+        base band-2 target at 1/2 (offset 2000) lands on that exact unit,
+        so it no longer distinguishes the two runs — the property is the
+        same, the witness moved to a unit the base still skips."""
         units = [f"unité {i} du document" for i in range(40)]
-        spans = [(2000, 2200)]
+        spans = [(2700, 2760)]
         with_spans = select_for_budget(
             _positions(units), 5, text_length=4000, priority_spans=spans
         )
         without = select_for_budget(_positions(units), 5, text_length=4000)
         assert any(
-            u.text == "unité 20 du document" for u in with_spans.selected
+            u.text == "unité 27 du document" for u in with_spans.selected
         ), "le span prioritaire n'a pas été dépensé"
-        assert not any(u.text == "unité 20 du document" for u in without.selected)
+        assert not any(u.text == "unité 27 du document" for u in without.selected)
 
 
 def _positions(units: List[str]):

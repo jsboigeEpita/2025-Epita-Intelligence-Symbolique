@@ -9684,11 +9684,15 @@ def _extract_arguments_for_parallel(
             # the same hint: see ``_selection_priority_spans``.
 
             # #2850 lot 10 — the budget is k(L), not a flat 10: two units per
-            # capacity-chunk, floored at 10, ceilinged at 30 (declared in
-            # ``reading_window.PER_ARGUMENT_CEILING``). The stratification and
-            # the priority spans still decide WHICH units — this only says how
-            # many, so a long document's tail enters the pass instead of being
-            # rationed away by a number picked in March.
+            # capacity-chunk, floored at 10, ceilinged at 45 (#3523: the c6
+            # same-side replay put 45 at 12/33 against 7.6 expected, with the
+            # added units at chance past it — the ceiling, not an unbounded
+            # k(L); declared in ``reading_window.PER_ARGUMENT_CEILING``). The
+            # stratification and the priority spans still decide WHICH units —
+            # this only says how many, so a long document's tail enters the
+            # pass instead of being rationed away by a number picked in March.
+            # The selection is NESTED (#3523): a raise adds units and never
+            # drops an examined one.
             #
             # #3511 (R1164) — k_eff: the examination FOLLOWS the inventory
             # (``min(N, max(k(L), named))``, ``examined_unit_budget`` in

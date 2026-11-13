@@ -98,12 +98,21 @@ FIRST_READING_WINDOW = 0
 # --- #2850 lot 10: the whole text, in k calls (dispatch R1144). ---
 
 #: Declared ceiling of the per-argument budget k(L) (dispatch R1144: "k(L)
-#: instead of a flat 10, with a declared ceiling"). 30 is the extraction k
-#: of the panel's longest document (179,139 chars): at two units per
-#: capacity-chunk the longest panel document asks 60 and is rationed to 30 —
-#: the ration is stratified by position (``select_for_budget``), and the
+#: instead of a flat 10, with a declared ceiling"). Raised 30 → 45 by #3523
+#: on the cycle-6 measure, in the form the coordinator's R1167 note settled
+#: (the ceiling at 45, not k(L) without a ceiling): on the recorded c6
+#: states, 32 of 33 judge passages the pass never examined are overlapped by
+#: NO move of the reading's inventory, so the remaining limit is k(L)
+#: itself; replayed against a same-side random control (a passage the run
+#: did not examine is redrawn where that run did not examine either), 45
+#: covers 12 of the 33 against 7.6 expected — 1.58×, and on the four long
+#: documents the first fifteen added units aim about 2.6× better than
+#: chance, while past 45 the extra units are AT chance (1.31× at 60, 1.07×
+#: at 90). 45 is therefore where the measure stops paying, not a round
+#: number. The ration stays stratified (``select_for_budget``, NESTED since
+#: #3523 so the raise adds examined units and never withdraws one) and the
 #: coverage record says k of N, never a silent drop.
-PER_ARGUMENT_CEILING = 30
+PER_ARGUMENT_CEILING = 45
 
 #: #2850 lot 10 — the per-argument floor: today's flat 10. Below it k(L)
 #: never drops, so a short document's pass is byte-identical to today's.

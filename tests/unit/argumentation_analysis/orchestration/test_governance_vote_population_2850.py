@@ -33,8 +33,9 @@ from argumentation_analysis.orchestration.state_writers import (
     _write_governance_to_state,
 )
 
-#: The vote's population — a strict subset of the merged population, and
-#: deliberately NOT the conflict's six units.
+#: The vote's population — the quality profile's keys, a strict subset of the
+#: merged population. Whether they also fall inside the conflict's own
+#: selection is geometry (#3523): not pinned either way.
 _VOTE_IDS = ["arg_2", "arg_7", "arg_11"]
 
 
@@ -106,11 +107,19 @@ async def test_the_vote_records_its_own_population_apart_from_the_conflicts():
     assert vote["N"] == 12
 
     # Two populations, two keys — the conflict's record is NOT the vote's.
-    # Said plainly (#3293, review nit): the conflict's six units do not NAME
-    # the vote's three. The two sets do overlap (arg_2 is in both here), so
-    # the claim is containment, not a total disjointness that would be false.
+    # A copy of the conflict record would carry k=6 and its six ids; this one
+    # carries k=3 and the quality phase's own options — the two assertions
+    # above are what distinguishes the producers.
     assert vote["unit_ids"] != conflict["unit_ids"]
-    assert not set(_VOTE_IDS) <= set(conflict["unit_ids"])
+
+    # #3523 — a former witness here asserted the conflict's six units do NOT
+    # contain the vote's three (a #3293 review nit). That held only under the
+    # re-spaced target grid: the conflict's k=6 selection is geometry, and the
+    # nested order simply happens to name all three quality units on this
+    # fixture, so the claim was an accident of the grid, not a property of
+    # #2850. Removed rather than inverted: the inverse would be the same
+    # accident read backwards, and a copy of the conflict's record is already
+    # excluded by ``vote["k"] == 3`` and the id set above.
 
 
 @pytest.mark.asyncio
