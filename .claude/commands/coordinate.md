@@ -36,7 +36,6 @@ Adressage : toujours `machine-id:workspace-id` (ex `myia-po-2025:2025-Epita-Inte
    → lit les ACKs et notifications des workers (si timeout, retry × 2 puis skip).
 4. **État GitHub** :
    ```bash
-   export GH_TOKEN=$(grep "^GH_TOKEN=" .env | cut -d= -f2)
    gh pr list --state open --json number,title,author,headRefName,statusCheckRollup
    gh issue list --state open --limit 30 --json number,title,labels
    git log --oneline -5
@@ -60,6 +59,8 @@ Adressage : toujours `machine-id:workspace-id` (ex `myia-po-2025:2025-Epita-Inte
 - "Je sais quoi dispatcher" → lire si un autre agent a déjà commencé/abandonné
 
 **Incident référence** (2026-05-17, CoursIA EPITA) : 6 reviews postées en duplicate + conflit avec un autre agent reviewer parce que les comments existants n'avaient pas été lus.
+
+**Avant de citer un chiffre, de lancer un run payé, de croire un garde ou de merger** : `docs/guides/MEASUREMENT_DISCIPLINE.md`.
 
 ## Phase 3 — Merger ce qui est mergeable
 
@@ -173,13 +174,15 @@ jamais utiliser `-c user.email`, ça ne change rien au fond.
 
 ```bash
 gh auth switch -u jsboigeEpita
-gh pr merge N --squash --delete-branch
+gh pr merge N --squash --delete-branch --subject "<type(scope): titre> (#N)" --body-file <corps relu>
 ```
+
+Sans `--subject`/`--body-file`, le squash reprend le message du commit de **branche**, pas le corps de PR relu (#1503).
 
 **Si `mergeStateStatus: BLOCKED` malgré CI verte et concerns adressés** (état machine GitHub artefactuel — reviews "commented" jamais dismissed) :
 
 ```bash
-gh pr merge N --admin --squash --delete-branch
+gh pr merge N --admin --squash --delete-branch --subject "<type(scope): titre> (#N)" --body-file <corps relu>
 ```
 
 **MAIS** uniquement après lecture body+reviews+comments+diff et vérification explicite que tous les concerns bloquants sont adressés. Documenter dans le dashboard append.
@@ -201,16 +204,7 @@ Note le hash de tête (`$NEW_MAIN`) pour le dispatch (Phase 5).
 1. Une issue READY existe pour cette lane
 2. Le worker n'a pas déjà une tâche en cours
 
-Vérifie chaque lane :
-
-```bash
-# Lane po-2025
-gh pr list --author "po-2025" --state open
-# Lane po-2023
-gh pr list --author "po-2023" --state open
-```
-
-Si un worker a 0 PR ouverte → dispatcher immédiatement.
+L'occupation d'une lane se lit sur le dashboard workspace (`[CLAIMED]`, `[DONE]`), dans l'inbox et dans les commentaires de l'issue visée — pas dans le champ `author` de GitHub, constant pour toute la flotte. Lane sans tâche en cours → dispatcher immédiatement.
 
 ### Workers tasking — règles
 
@@ -227,7 +221,7 @@ roosync_messages(
   subject: "[Rxxx DISPATCH] Track YY #ZZZ — bref titre",
   priority: "HIGH",
   tags: ["TASK", "EPIC-NNN", "TRACK-YY"],
-  body: "**De**: Claude Code @ myia-ai-01:2025-Epita-Intelligence-Symbolique\n\n**Round**: Rxxx\n**Mandate user**: [si applicable]\n\n## Contexte\n[2-3 lignes — qu'est-ce qui vient de merger, où en est l'Epic]\n\n## Ton dispatch — Track YY\n\n**Issue**: https://github.com/jsboigeEpita/2025-Epita-Intelligence-Symbolique/issues/ZZZ\n**Base**: main `$NEW_MAIN`\n**Goal**: [1 phrase]\n\n**Périmètre**:\n1. [fichier/module]\n2. [fichier/module]\n\n**DoD**:\n- [ ] [critère mesurable]\n- [ ] [critère mesurable]\n\n**Privacy HARD**:\n- IDs opaques (corpus_A, Speaker_A) dans PR/commit/dashboard\n- Aucun raw_text dans state\n\n**Anti-pendule**:\n- [ce qui serait un faux-fix à éviter]\n\nACK STP ou push directement avec mention #ZZZ.\n\n🤖 Coordinator ai-01 — Rxxx"
+  body: "**De**: Claude Code @ myia-ai-01:2025-Epita-Intelligence-Symbolique\n\n**Round**: Rxxx\n**Mandate user**: [si applicable]\n\n## Contexte\n[2-3 lignes — qu'est-ce qui vient de merger, où en est l'Epic]\n\n## Ton dispatch — Track YY\n\n**Issue**: https://github.com/jsboigeEpita/2025-Epita-Intelligence-Symbolique/issues/ZZZ\n**Base**: main `$NEW_MAIN`\n**Goal**: [1 phrase]\n\n**Périmètre**:\n1. [fichier/module]\n2. [fichier/module]\n\n**DoD**:\n- [ ] [critère mesurable]\n- [ ] [critère mesurable]\n\n**Privacy HARD**:\n- IDs opaques (corpus_A, Speaker_A) dans PR/commit/issue\n- Aucun raw_text dans state\n\n**Anti-pendule**:\n- [ce qui serait un faux-fix à éviter]\n\nACK STP ou push directement avec mention #ZZZ.\n\n🤖 Coordinator ai-01 — Rxxx"
 )
 ```
 
@@ -258,28 +252,15 @@ roosync_dashboard(
 
 **Si le dashboard timeout (1s MCP limit)** : Le post est trop long. Re-essayer avec une version courte. Le détail complet est déjà dans les messages roosync envoyés aux workers.
 
-## Phase 7 — Re-arm cron + ScheduleWakeup
+## Phase 7 — Re-arm cron
 
-**Cron 3h coordinateur** (fleet-wide standard, mandate user 2026-05-15) :
-
-```
-CronCreate(cron: "13 */3 * * *", prompt: "/coordinate", recurring: true)
-```
-
-**ScheduleWakeup ~1h** (ping-pong actif, mandate user 2026-05-19) : Si session interactive et tu coordonnes/exécutes un ping-pong, re-arme à chaque fin de turn pour ne pas casser la coordination.
+**`CronList` d'abord.** Un job récurrent `/coordinate` existe déjà → ne rien créer. Aucun → en créer **exactement un**, à la cadence fixée par le user : elle se lit dans la dernière consigne user ou la passation, jamais dans ce fichier. Minute hors `:00`.
 
 ```
-ScheduleWakeup(
-  delaySeconds: 3540,
-  prompt: "/coordinate",
-  reason: "Rxxx ping-pong: [résumé en 1 phrase]"
-)
+CronCreate(cron: "<minute> */<N> * * *", prompt: "/coordinate", recurring: true)
 ```
 
-**Ne PAS re-armer ScheduleWakeup si** :
-- Session non-interactive (scheduled worker, méta-analyste, cron)
-- Pas de cluster actif (workspace single-machine ou aucun worker dispatched)
-- Handoff explicite documenté à un autre agent
+Publier l'ID du cron sur le dashboard workspace.
 
 ## Phase 8 — Présenter à l'utilisateur
 
@@ -287,7 +268,7 @@ Si la session est interactive, **termine par 2-4 phrases** :
 - Qu'est-ce qui a été mergé
 - Quelles tracks ont été dispatchées (workers + issues)
 - État Epic(s) active(s) (X/Y DoD items)
-- Prochain tick (cron + wakeup)
+- Prochain tick (cron)
 
 Format : court, factuel, pas de narration interne.
 
@@ -320,7 +301,7 @@ Pour suivre l'état d'avancement : compter les tracks fermées vs ouvertes par E
 
 ## Privacy discipline (HARD)
 
-Dans **TOUT** commit / PR / dashboard / chat / titre d'issue :
+Sur toute surface **indexée par GitHub** — commit, PR, issue (titre, corps, commentaires) :
 - IDs opaques uniquement : `corpus_A`, `Speaker_A`, `era_A`, `Authority_X`
 - Jamais le nom du locuteur, du document, de l'auteur, de la date du discours
 - `_scrub_state_for_export` + `_global_entity_scrub` + audit `grep` pre-merge
@@ -336,11 +317,7 @@ gh auth switch -u jsboigeEpita
 gh auth status  # confirme "jsboigeEpita" actif
 ```
 
-Ne pas relier sur `GH_TOKEN` env var seul — il n'override pas le keyring. Prefix mandatory pour gh commands :
-
-```bash
-export GH_TOKEN=$(grep "^GH_TOKEN=" .env | cut -d= -f2)
-```
+Ne pas se reposer sur le `GH_TOKEN` de `.env` — il n'override pas le keyring.
 
 ## CoursIA — 3 missions d'accompagnement (standing, cross-workspace)
 
