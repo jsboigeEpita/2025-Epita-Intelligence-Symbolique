@@ -117,8 +117,11 @@ async def test_a_document_past_thirty_thousand_characters_is_read_whole():
     model = _FakeModel(_answer(("thesis", "Il pose sa thèse.", CONCESSION)))
     result = await reading().build_first_reading(_state(long_doc), model)
 
-    assert len(model.prompts) == 1
+    # #3511(b) — the whole read is ONE call; later calls, when there are
+    # any, are the second pass reading BARE STRETCHES — strict substrings,
+    # never the whole document again.
     assert long_doc in model.prompts[0], "the WHOLE text reaches the prompt"
+    assert all(long_doc not in p for p in model.prompts[1:])
     assert result.read_scope["whole_document"] is True
     assert result.read_scope["window"] == len(long_doc)
 
@@ -158,8 +161,10 @@ async def test_a_real_state_is_read_whole_and_its_window_is_recorded(monkeypatch
     )
     _write_first_reading_to_state(payload, state, {})
 
-    assert len(model.prompts) == 1, "the model is called once"
+    assert len(model.prompts) >= 1, "the model is called"
     assert long_doc in model.prompts[0], "the WHOLE text reaches the prompt"
+    # #3511(b) — after the whole read, only bare stretches are re-read.
+    assert all(long_doc not in p for p in model.prompts[1:])
     record = state.defining_moves
     assert record["status"] == "ok", record
     assert record["read_scope"]["whole_document"] is True
@@ -236,8 +241,7 @@ async def test_the_moves_are_bounded():
     )
     assert inventory_budget(len(doc)) == 80
     moves = [
-        ("claim", f"Lecture {i}.", f"Phrase numéro {i} du document")
-        for i in range(85)
+        ("claim", f"Lecture {i}.", f"Phrase numéro {i} du document") for i in range(85)
     ]
     result = await reading().build_first_reading(
         _state(doc), _FakeModel(_answer(*moves))

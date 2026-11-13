@@ -66,6 +66,23 @@ spans join ``defining_move_spans`` and the selector examines them first. The
 slot points the lenses at the passages that carry the thesis — it does not
 judge them, and it does not raise ``MAX_MOVES`` to catch them by volume.
 
+**The second pass over the bare stretches** (#3511(b), coordinator decision
+13/11). Cycle 6 and the three coordinator draws measured that ONE whole-document
+draw names 20-46 moves but leaves long stretches with no anchor at all: a
+single draw cannot certify the reading (26/11/20/14/19 of 39 across draws),
+the longest document stays at 0 of 11 in every variant, and the misses sit in
+the stretches the draw left bare — repeating the same call is measured not to
+repair it. After the whole-document reading, a stretch of the document that no
+anchored move covers, longer than the document's own even-coverage gap
+(:func:`bare_stretch_spans`), gets its own reading call asking the first
+reading's own question, and the moves it returns join the inventory with a
+second-pass marker — same citation rule, whole-document offsets. The pass is
+bounded in number by the document's own chunk count
+(:func:`second_pass_call_bound`): a document the pipeline reads in one
+capacity chunk issues no second call at all, and the bite of the bound is
+recorded on the state and stated in the note. A document with no bare
+stretch issues no second call and keeps a byte-identical inventory.
+
 What the thesis LEAVES OUT is not a reading of the text: it belongs to the
 historian and strategist personas (#3377), labelled ``model_knowledge``, and
 never to this module.
@@ -87,7 +104,9 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 from argumentation_analysis.core.reading_window import (
     FIRST_READING_WINDOW,
+    PER_ARGUMENT_CEILING,
     STATUS_SELECTED,
+    WHOLE_TEXT_CALL_CAPACITY,
     WindowSelection,
     folded_words,
     inventory_budget,
@@ -173,6 +192,12 @@ def pillar_prose(max_pillars: int) -> str:
 #: repo refuses.
 ANCHOR_MIN_RUN = 8
 ANCHOR_MIN_SHARE = 0.5
+
+#: #3511(b) — the provenance marker of a move the second pass named. The move
+#: is still a first-reading move (same ``basis``, same label in the note); the
+#: marker says WHICH pass named it, so the record and the replay can tell a
+#: bare-stretch repair from a whole-draw name without a second inventory.
+SECOND_PASS_MARKER = "second"
 
 #: French words the model tends to answer with, mapped to the vocabulary. The
 #: kind is a hint about the move, not a verdict: a synonym is not an error.
@@ -343,6 +368,7 @@ class DefiningMove:
     basis: str = FIRST_READING_BASIS
     slot: str = ""
     anchor: str = ""
+    reading_pass: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         payload = {
@@ -356,6 +382,10 @@ class DefiningMove:
             payload["slot"] = self.slot
         if self.anchor:
             payload["anchor"] = self.anchor
+        if self.reading_pass:
+            # #3511(b) — the second-pass marker. Only a move the second pass
+            # named carries it: a first-pass-only record stays byte-identical.
+            payload["pass"] = self.reading_pass
         return payload
 
     def span(self) -> Optional[Tuple[int, int]]:
@@ -393,6 +423,7 @@ class FirstReading:
     status: str = "no_llm"
     error: str = ""
     read_scope: Dict[str, Any] = field(default_factory=dict)
+    second_pass: Dict[str, Any] = field(default_factory=dict)
 
     def to_state(self) -> Dict[str, Any]:
         payload = {
@@ -406,6 +437,11 @@ class FirstReading:
             payload["malformed_moves"] = self.malformed_moves
         if self.dropped_slots:
             payload["dropped_slots"] = [dict(entry) for entry in self.dropped_slots]
+        # #3511(b) — the second pass's own record, ONLY when the pass ran: a
+        # document with no bare stretch (or a text the pipeline reads in one
+        # capacity chunk) keeps a byte-identical payload.
+        if self.second_pass:
+            payload["second_pass"] = dict(self.second_pass)
         # #3395 — ``error`` only when there IS one: the writers' shared guard
         # treats the presence of the key as a failed invoke (the #3377
         # convention), so an empty string here would make every successful
@@ -938,12 +974,28 @@ async def build_first_reading(
         result.dropped_quotes = dropped
         result.malformed_moves = malformed
         result.status = "ok"
+        # #3511(b) — the second pass over the bare stretches, only after a
+        # successful whole-document reading: a FAILED reading is degraded,
+        # not bare. A document with no bare stretch (or a one-chunk
+        # document, or a reading that anchored nothing) returns from the
+        # pass unchanged — byte-identical inventory, no record key.
+        try:
+            await _second_reading_pass(result, raw_text, llm_callable, max_inventory)
+        except Exception as e:  # pragma: no cover - defensive
+            logger.warning("SecondReading pass failed whole: %s", e)
         logger.info(
-            "FirstReading: %d move(s), %d dropped, %d malformed, whole_document=%s",
+            "FirstReading: %d move(s), %d dropped, %d malformed, whole_document=%s"
+            "%s",
             len(result.moves),
             result.dropped_quotes,
             result.malformed_moves,
             result.read_scope.get("whole_document"),
+            (
+                f", second pass: {result.second_pass['calls']} call(s), "
+                f"{result.second_pass['moves_kept']} move(s) kept"
+                if result.second_pass
+                else ""
+            ),
         )
     except Exception as e:  # pragma: no cover - provider failures
         result.status = "llm_error"
@@ -1027,6 +1079,247 @@ def anchor_quote_in(text: str, quote: str) -> Optional[Tuple[str, int]]:
     return text[start:end], start
 
 
+# --- #3511(b): the second pass over the bare stretches -----------------------
+
+
+def _merged_anchor_spans(moves: List[Dict[str, Any]]) -> List[Tuple[int, int]]:
+    """The anchored moves' spans, merged — one anchor group per covered run.
+
+    Overlapping and adjacent quotes (the c7 panel states carry consecutive
+    anchored quotes) are one coverage run: they leave ONE stretch between
+    them, not a shard per quote. Only positioned moves contribute — an
+    unanchored slot has no span, and a span it never earned would shrink the
+    document's bare stretches by invention.
+    """
+    spans = []
+    for move in moves:
+        offset = move.get("offset")
+        quote = str(move.get("quote") or "")
+        if isinstance(offset, int) and not isinstance(offset, bool) and quote:
+            spans.append((offset, offset + len(quote)))
+    spans.sort()
+    merged: List[Tuple[int, int]] = []
+    for start, end in spans:
+        if merged and start <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+        else:
+            merged.append((start, end))
+    return merged
+
+
+def bare_stretch_spans(
+    raw_text: str, moves: List[Dict[str, Any]]
+) -> Tuple[List[Tuple[int, int]], int]:
+    """#3511(b) — the document's bare stretches, and the gap that defines one.
+
+    A stretch is BARE when it is a maximal span no anchored move covers,
+    LONGER than the document's own even-coverage gap ``L / (k + 1)`` — with
+    ``k`` merged anchor groups, an even reading leaves every one of the
+    ``k + 1`` anchor-free segments at that length, so a segment above it
+    carries more than its proportional share of unnamed text: it is where the
+    single whole-document draw's names ran out. Both terms are the document's
+    own (its length and the anchors its reading produced) — no threshold
+    tuned on the panel. ``k = 0`` (nothing anchored) gives a gap of ``L`` and
+    no stretch at all: re-asking the same question on the same failed read is
+    the measured non-repair (coordinator R1166).
+
+    Returns ``(stretches, gap)`` with the stretches LONGEST FIRST (ties by
+    document position) — the order the bounded pass reads them in, so the
+    longest hole is always the first repaired whatever the bound.
+    """
+    length = len(raw_text)
+    merged = _merged_anchor_spans(moves)
+    gap = length // (len(merged) + 1)
+    segments: List[Tuple[int, int]] = []
+    previous = 0
+    for start, end in merged:
+        if start > previous:
+            segments.append((previous, start))
+        previous = max(previous, end)
+    if previous < length:
+        segments.append((previous, length))
+    bare = [(s, e) for s, e in segments if e - s > gap]
+    bare.sort(key=lambda span: (-(span[1] - span[0]), span[0]))
+    return bare, gap
+
+
+def second_pass_call_bound(text_length: int) -> int:
+    """#3511(b) — how many second-pass calls a document may spend.
+
+    One call per capacity chunk BEYOND THE FIRST (the pipeline's own reading
+    unit, ``WHOLE_TEXT_CALL_CAPACITY``): a document the pipeline reads in a
+    single chunk issues no second call at all — one pass over a one-chunk
+    document has already attended all of it — and a multi-chunk document can
+    never spend more calls re-reading its holes than it spends chunks reading
+    itself. The bound is the document's own, like the gap; when it bites, the
+    state records the stretches left unread (:func:`_second_reading_pass`).
+    """
+    if text_length <= WHOLE_TEXT_CALL_CAPACITY:
+        return 0
+    return -(-text_length // WHOLE_TEXT_CALL_CAPACITY) - 1
+
+
+SECOND_READING_PROMPT = """You are reading ONE STRETCH of a longer document, once, whole. \
+The document's central thesis has already been named by an earlier pass over the whole text:
+{thesis_context}
+
+Your job: name EVERY argument this stretch carries, exhaustively: wherever it
+sits in the stretch — opening, middle or end — name it. Each argument comes
+with ONE verbatim anchor in the text's own language, of 8 to 40 words, copied
+from the stretch: the anchor is where the argument lives, and an argument
+whose anchor you cannot quote verbatim is omitted rather than guessed.
+
+Hard rules:
+- One call, one pass. Say what the text DOES, not what it should have done.
+- No verdict. Never say whether a move is a fallacy, valid, good or bad: the
+  instruments decide that afterwards.
+- Do not restate the thesis and do not quote from outside the stretch.
+- Every entry carries a VERBATIM quote copied from the stretch, character for
+  character: no translation, no paraphrase, no ellipsis, no two passages
+  joined. A quote the stretch does not carry is discarded by the pipeline.
+- Do not date, place or situate the document in history. Another reader does
+  that.
+- At most {max_moves} entries. Fewer is a valid answer; an empty list of
+  moves is valid.
+
+Answer in French, with ONLY this JSON — no fences, no commentary:
+{{"moves": [{{"kind": "concession|device|claim|audience|threat|dilemma|other",
+             "reading": "one sentence naming the move",
+             "quote": "a verbatim span of the stretch, 8 to 40 words — the argument's anchor"}}]}}
+
+Stretch:
+{excerpt}
+"""
+
+
+def build_second_reading_prompt(
+    stretch: str, thesis_reading: str, max_moves: int
+) -> str:
+    """The second pass's one prompt: the stretch, the thesis the first pass
+    named, and the first reading's own exhaustive question.
+
+    The thesis is CONTEXT, never a slot to fill: the pass exists to name what
+    the whole-document draw left bare, not to re-decide the centre. Its quote
+    is deliberately absent — a model handed the verbatim centre echoes it, and
+    the containment rule (:func:`_second_reading_pass`) would drop the echo.
+    """
+    context = (
+        f"« {thesis_reading} »"
+        if thesis_reading
+        else "no central thesis was named by the earlier pass."
+    )
+    return SECOND_READING_PROMPT.format(
+        thesis_context=context, max_moves=max_moves, excerpt=stretch
+    )
+
+
+async def _second_reading_pass(
+    result: FirstReading,
+    raw_text: str,
+    llm_callable: Callable[[str], Awaitable[str]],
+    max_inventory: int,
+) -> None:
+    """Read the bare stretches and join their moves to the inventory.
+
+    #3511(b), the coordinator decision of 13/11. Called only after a
+    successful whole-document reading — a FAILED reading is degraded, not
+    bare. For every bare stretch the bound allows, longest first:
+
+    * the call asks the first reading's own question over the stretch, with
+      the thesis the first pass named as context;
+    * every returned entry passes the SAME citation rule (``quote_occurs_in``
+      against the whole document) and locates by the same locator, so its
+      offset is a whole-document offset by construction;
+    * a quote whose anchor does not land INSIDE its stretch is not kept (it
+      echoes the context or another passage — the call was about the
+      stretch), a quote another move already carries is not kept (one move
+      per passage, across passes), and the inventory's declared bound still
+      caps the total — what the bound excludes is counted, never silently
+      dropped;
+    * the kept moves carry :data:`SECOND_PASS_MARKER` provenance.
+
+    A stretch call that raises costs its stretch (``failed_calls``), never
+    the reading: the first pass's inventory stands. The record is written on
+    ``result.second_pass`` — the gap, the bound, each qualifying stretch with
+    whether the pass read it, and the counts — and the note states the bite
+    of the bound (:func:`first_reading_note`).
+    """
+    bare, gap = bare_stretch_spans(raw_text, [m.to_dict() for m in result.moves])
+    bound = second_pass_call_bound(len(raw_text))
+    record: Dict[str, Any] = {
+        "gap": gap,
+        "call_bound": bound,
+        "stretches": [],
+        "calls": 0,
+        "moves_kept": 0,
+        "dropped_quotes": 0,
+        "malformed": 0,
+        "failed_calls": 0,
+    }
+    if not bare or bound <= 0:
+        return
+
+    thesis = next((m.reading for m in result.moves if m.slot == "thesis"), "")
+    seen = {m.quote for m in result.moves if m.quote}
+    for start, end in bare:
+        read_flag = len(record["stretches"]) < bound
+        record["stretches"].append(
+            {"offset": start, "length": end - start, "read": read_flag}
+        )
+        if not read_flag:
+            continue  # the bound bites: the stretch is recorded, not read
+        record["calls"] += 1
+        try:
+            content = await llm_callable(
+                build_second_reading_prompt(
+                    raw_text[start:end], thesis, inventory_budget(end - start)
+                )
+            )
+            parsed, malformed = _parse_answer(content or "", 0)
+            record["malformed"] += malformed
+            raw_moves = parsed.get("moves")
+        except Exception as e:  # pragma: no cover - provider failures
+            record["failed_calls"] += 1
+            logger.warning("SecondReading stretch %d-%d failed: %s", start, end, e)
+            continue
+        if not isinstance(raw_moves, list):
+            continue
+        for raw in raw_moves:
+            if not isinstance(raw, dict):
+                record["malformed"] += 1
+                continue
+            reading = str(raw.get("reading", "") or "").strip()
+            quote = str(raw.get("quote", "") or "").strip()
+            if not reading or not quote:
+                record["dropped_quotes"] += 1
+                continue
+            if len(result.moves) >= max_inventory:
+                record["inventory_capped"] = record.get("inventory_capped", 0) + 1
+                continue
+            if not quote_occurs_in(raw_text, quote):
+                record["dropped_quotes"] += 1
+                continue
+            index = locate_quote(raw_text, quote)
+            if index < 0 or not (start <= index < end) or quote in seen:
+                # Outside the stretch it was asked about (an echo of the
+                # context or another passage), or a passage another move
+                # already anchors: one move per passage, across passes.
+                record["dropped_quotes"] += 1
+                continue
+            seen.add(quote)
+            result.moves.append(
+                DefiningMove(
+                    kind=move_kind(raw.get("kind")),
+                    reading=reading,
+                    quote=quote,
+                    offset=index,
+                    reading_pass=SECOND_PASS_MARKER,
+                )
+            )
+            record["moves_kept"] += 1
+    result.second_pass = record
+
+
 async def extract_first_reading(**kwargs: Any) -> Dict[str, Any]:
     """State-shaped wrapper: the dict the invoke returns and the writer persists."""
     return (await build_first_reading(**kwargs)).to_state()
@@ -1066,7 +1359,7 @@ def defining_move_spans(state: Any) -> List[Tuple[int, int]]:
 
 def examined_unit_budget(state: Any, bound: Optional[int] = None) -> Optional[int]:
     """#3511 (R1164 rework) — the per-argument budget once the reading has
-    named its arguments: ``min(N, max(k(L), named))``.
+    named its arguments: ``min(N, PER_ARGUMENT_CEILING, max(k(L), named))``.
 
     A function of the STATE deliberately, so the coordinator replays panel
     states through this one seam, free. The named never REDUCE the budget
@@ -1079,8 +1372,14 @@ def examined_unit_budget(state: Any, bound: Optional[int] = None) -> Optional[in
     injection point — a replay or a witness states the bound it wants; the
     production call site passes the state alone.
 
-    ``None`` when the state carries no readable text: the caller keeps its
-    own length fallback rather than inventing a number here.
+    #3511(b) — the ceiling term. The second pass can push the named count
+    past ``k(L)``'s ceiling (the c7 draws already named 46 on one document;
+    a bare-stretch pass adds more), and the pass's real cost is the units it
+    then examines (~0.019 $ per unit, #3523): the coordinator's decision
+    caps the EXAMINED count at :data:`PER_ARGUMENT_CEILING` whatever the
+    named count reaches. Named moves beyond the cap are not lost — they land
+    in the residue (« nommé, non examiné », reason ``budget``) beside the
+    one producer that records it.
     """
     raw = getattr(state, "raw_text", None)
     if isinstance(state, dict):
@@ -1089,7 +1388,9 @@ def examined_unit_budget(state: Any, bound: Optional[int] = None) -> Optional[in
         return None
     inventory = bound if bound is not None else inventory_budget(len(raw))
     return min(
-        inventory, max(per_argument_unit_budget(len(raw)), len(defining_moves(state)))
+        inventory,
+        PER_ARGUMENT_CEILING,
+        max(per_argument_unit_budget(len(raw)), len(defining_moves(state))),
     )
 
 
@@ -1514,6 +1815,28 @@ def first_reading_note(state: Any) -> str:
         # #3415 ask 2 — a malformed object costs its own move, never the
         # reading; what was lost is stated, not hidden.
         lines.append(f"  {malformed} objet(s) illisible(s) : geste(s) perdu(s).")
+    second = record.get("second_pass")
+    if isinstance(second, dict) and second.get("calls"):
+        # #3511(b) — the pass that read the bare stretches states itself:
+        # how many stretches were re-read after the whole-document reading,
+        # and — the coordinator's ask — that the call bound BIT, with the
+        # count it left unread. A pass that did not run says nothing (the
+        # note stays byte-identical).
+        capped = sum(
+            1
+            for s in second.get("stretches") or []
+            if isinstance(s, dict) and not s.get("read")
+        )
+        line = (
+            f"  Passe seconde : {second.get('calls')} tranche(s) relue(s) "
+            "après la lecture d'ensemble"
+        )
+        if capped:
+            line += (
+                f", {capped} tranche(s) nue(s) au-delà de la borne d'appels "
+                f"({second.get('call_bound')})"
+            )
+        lines.append(line + ".")
     for lost in record.get("dropped_slots") or []:
         # #3415 ask 4 — the slot is NAMED. « 1 geste écarté » could not tell
         # the central thesis from a local claim, which is how the probe read

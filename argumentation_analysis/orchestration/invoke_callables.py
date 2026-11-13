@@ -9695,10 +9695,14 @@ def _extract_arguments_for_parallel(
             # drops an examined one.
             #
             # #3511 (R1164) — k_eff: the examination FOLLOWS the inventory
-            # (``min(N, max(k(L), named))``, ``examined_unit_budget`` in
-            # first_reading — a function of the state so the coordinator
-            # replays panel states through the one seam). Every named move
-            # must be examined; the residue this still leaves is recorded
+            # (``min(N, PER_ARGUMENT_CEILING, max(k(L), named))``,
+            # ``examined_unit_budget`` in first_reading — a function of the
+            # state so the coordinator replays panel states through the one
+            # seam). Every named move must be examined; the #3511(b) second
+            # pass over the bare stretches can push the named count past
+            # ``k(L)``'s ceiling, and the ceiling term keeps the EXAMINED
+            # count — the pass's real cost, ~0.019 $ per unit (#3523) —
+            # under it. The residue this still leaves is recorded
             # (« nommé, non examiné » with its reason) by the ONE producer
             # in selection.py — the selector's own overlap rule, shared
             # with the winner-reading writer (#3326) so a second coverage

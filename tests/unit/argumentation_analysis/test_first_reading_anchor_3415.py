@@ -314,6 +314,10 @@ class TestTheLostSlotIsNamed:
 #: The measured record of a clean reading (every quote verbatim). The fixture
 #: was run against the FROZEN pre-ask-4 module and the working one: both
 #: produce exactly this payload — the anchor leaves the ordinary path alone.
+#: #3511(b) — this document carries two bare stretches, so the second pass
+#: runs and records itself (the record is intended state, not drift: the
+#: echoed quotes land outside their stretch and are counted, none kept —
+#: the three moves are byte-identical).
 _CONTROL_RECORD = {
     "moves": [
         {
@@ -350,6 +354,19 @@ _CONTROL_RECORD = {
         "whole_document": True,
     },
     "basis": "first_reading",
+    "second_pass": {
+        "gap": 3116,
+        "call_bound": 2,
+        "stretches": [
+            {"offset": 5537, "length": 5444, "read": True},
+            {"offset": 67, "length": 5375, "read": True},
+        ],
+        "calls": 2,
+        "moves_kept": 0,
+        "dropped_quotes": 2,
+        "malformed": 0,
+        "failed_calls": 0,
+    },
 }
 
 _CONTROL_NOTE = (
@@ -366,7 +383,10 @@ _CONTROL_NOTE = (
     "  - thèse centrale : la reforme protege ses commanditaires — "
     f"« {_DOC_THESIS} », vers le milieu du texte (44 %)\n"
     "  - mécanisme : le risque est delegue aux petits porteurs — "
-    f"« {_DOC_MECHANISM} », vers la fin du texte (88 %)"
+    f"« {_DOC_MECHANISM} », vers la fin du texte (88 %)\n"
+    # #3511(b) — the pass that read the bare stretches states itself; the
+    # bound (2) did not bite (both stretches read).
+    "  Passe seconde : 2 tranche(s) relue(s) après la lecture d'ensemble."
 )
 
 
