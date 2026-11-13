@@ -3091,10 +3091,9 @@ async def _invoke_governance(
         # imported, not copied). #3524: the finding is a BENEFICIAL move — the
         # first two-player coalition that can install a winner both members
         # rank above the baseline, else the first such single-player pivot.
-        # On a profile with a Condorcet winner the engine keeps none (the
-        # movers a change can come from are always the harmed ones), so the
-        # field is honestly absent rather than populated by an anti-interest
-        # witness.
+        # On a profile with a Condorcet winner the engine keeps none (every
+        # change needs at least one mover it harms), so the field is honestly
+        # absent rather than populated by an anti-interest witness.
         g_manip = compute_manipulability(
             {a.name: list(a.preferences) for a in g_agents}, list(g_options)
         )

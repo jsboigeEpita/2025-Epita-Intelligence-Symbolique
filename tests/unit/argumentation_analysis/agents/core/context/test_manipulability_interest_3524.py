@@ -12,16 +12,20 @@ counting what it removed.
 The kept lists come out empty on every profile that HAS a Condorcet winner,
 and that is structural, not an accident of the fixtures: to install a winner
 ``T`` the movers must make ``T`` beat the baseline pairwise, and a ballot can
-only raise its contribution to ``T``-over-baseline by flipping against the
-baseline — i.e. only by belonging to a player who ranked the baseline first.
-Every mover a change can come from is a harmed one, so no beneficial witness
-can exist at any coalition size. What carries the measurement is therefore
+only raise its contribution to ``T``-over-baseline by flipping that contest —
+i.e. only by belonging to a player who ranked the baseline ABOVE ``T`` (not
+necessarily first). Every change needs at least one mover it harms, so no
+witness whose movers ALL gain can exist at any coalition size
+(``TestTheKeptListsAreEmptyOnEveryProfileWithAWinner`` measures it instead of
+asserting it). What carries the measurement is therefore
 ``dropped_against_interest`` (with the bound stated where it is rendered), and
 the positive branch of the check is exercised directly: the predicate on a
 ballot, and the writer on a record carrying such a witness.
 """
 
 from __future__ import annotations
+
+import itertools
 
 import pytest
 
@@ -122,6 +126,71 @@ class TestTheInterestCheckRemovesAntiInterestWitnesses:
         assert game["dropped_against_interest"] == 0
 
 
+class TestTheKeptListsAreEmptyOnEveryProfileWithAWinner:
+    """The structural claim of the engine's docstring, measured.
+
+    A docstring that says "no witness can exist" is a claim about every
+    profile; three fixtures do not carry it. The complete profiles of three
+    options are few enough to enumerate, and the same sweep run once on 3
+    options x 5 players and 4 options x 3 and 4 players found the same zero
+    (133 776 profiles with a winner in all).
+    """
+
+    @pytest.mark.parametrize(
+        "players,with_winner,dropped", [(3, 204, 1116), (4, 576, 1872)]
+    )
+    def test_no_complete_profile_keeps_a_witness(
+        self, players: int, with_winner: int, dropped: int
+    ) -> None:
+        rankings = [list(order) for order in itertools.permutations(_OPTIONS)]
+        seen = removed = 0
+        for combo in itertools.product(rankings, repeat=players):
+            profile = {f"P{index}": list(b) for index, b in enumerate(combo)}
+            game = compute_manipulability(profile, _OPTIONS)
+            if game["winner"] is None:
+                continue
+            seen += 1
+            removed += game["dropped_against_interest"]
+            assert game["single_player"] == [], profile
+            assert game["coalitions"] == [], profile
+        # The population control: the sweep did meet profiles with a winner,
+        # and moves to drop — an empty loop would pass the two asserts above.
+        assert (seen, removed) == (with_winner, dropped)
+
+    def test_the_harmed_mover_need_not_rank_the_baseline_first(self) -> None:
+        """The reason is "ranked the baseline ABOVE the target", not "first".
+
+        P1 ranks C first and A second. Reporting B first makes B win, at
+        P1's expense (A sits above B on P1's ballot). A check that read "the
+        mover's first choice is not the baseline" would keep this as a
+        manipulation; the engine drops it.
+        """
+        profile = {
+            "P1": ["C", "A", "B"],
+            "P2": ["A", "B", "C"],
+            "P3": ["B", "A", "C"],
+        }
+        game = compute_manipulability(profile, _OPTIONS)
+
+        assert game["winner"] == "A"
+        assert profile["P1"][0] != "A"
+        assert {"player": "P1", "reports": "B", "winner": "B"} not in game[
+            "single_player"
+        ]
+        assert game["single_player"] == []
+        assert game["dropped_against_interest"] > 0
+
+    def test_a_pair_with_one_member_who_gains_is_still_not_a_witness(self) -> None:
+        """BOTH members, not one: P3 ranks B above A and gains when P1 and P3
+        install B, but P1 pays for it. The render says "au moins un des
+        porteurs" for that reason — in a dropped pair one member may gain."""
+        game = compute_manipulability(_SINGLE_MOVES_AGAINST_INTEREST, _OPTIONS)
+
+        assert _strictly_prefers(_SINGLE_MOVES_AGAINST_INTEREST["P3"], "B", "A")
+        assert not _strictly_prefers(_SINGLE_MOVES_AGAINST_INTEREST["P1"], "B", "A")
+        assert game["coalitions"] == []
+
+
 class TestTheCountIsTheOldEnumeration:
     @staticmethod
     def _old_enumeration(profile: dict) -> int:
@@ -209,9 +278,7 @@ class TestTheWriterNeverClaimsAnAntiInterestMove:
             "status": "ok",
             "winner": "A",
             "single_player": [],
-            "coalitions": [
-                {"players": ["P1", "P2"], "report": "B", "winner": "B"}
-            ],
+            "coalitions": [{"players": ["P1", "P2"], "report": "B", "winner": "B"}],
             "dropped_against_interest": 0,
         }
         block = self._block(game)
@@ -246,6 +313,9 @@ class TestTheWriterNeverClaimsAnAntiInterestMove:
 
         assert "Déplacements ÉCARTÉS (13)" in block
         assert "DERRIÈRE le gagnant actuel" in block
+        # The bound that is true of every dropped move: one mover harmed, not
+        # necessarily all of them.
+        assert "au moins un des porteurs de chaque déplacement" in block
         assert "profil non manipulable par un joueur seul ni par une paire" in block
 
 

@@ -551,17 +551,19 @@ def _format_strategic_block(read: Dict[str, Any]) -> str:
             lines.append(
                 "  Aucun pivot CALCULÉ : profil non manipulable par un joueur "
                 "seul ni par une paire — aucun déplacement du gagnant vers une "
-                "option que ses porteurs préfèrent."
+                "option que tous ses porteurs préfèrent."
             )
         if dropped:
             # #3524 — the removed candidates are counted, never silent: a
             # reader who sees only the empty list would conclude the profile
-            # was never tested.
+            # was never tested. "Au moins un" is the measured bound: in a
+            # dropped pair one member may gain, never both.
             lines.append(
                 f"  Déplacements ÉCARTÉS ({dropped}) : des bulletins modifiés "
-                "y feraient gagner une autre option, mais elle est classée "
-                "DERRIÈRE le gagnant actuel par les porteurs du déplacement — "
-                "ce n'est pas une manipulation, ne la présente pas comme telle."
+                "y feraient gagner une autre option, mais au moins un des "
+                "porteurs de chaque déplacement la classe DERRIÈRE le gagnant "
+                "actuel — ce n'est pas une manipulation, ne la présente pas "
+                "comme telle."
             )
     elif status:
         lines.append(

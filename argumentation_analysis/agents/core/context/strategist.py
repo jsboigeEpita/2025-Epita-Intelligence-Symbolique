@@ -306,12 +306,17 @@ def compute_manipulability(
     the kept lists are empty for a structural reason: to install a winner
     ``T`` the movers must make ``T`` beat the baseline pairwise, and a ballot
     contributes more to ``T``-over-baseline than it did honestly only by
-    flipping against the baseline — i.e. only from a player who ranked the
-    baseline first. Every mover a change can come from is therefore a harmed
-    one, so the counter, not the empty list, carries the measurement: "N moves
-    exist, each costs its own movers". The paragraph above the lists must not
-    be read as "no manipulation exists at any coalition size" — it is the
-    bound of this enumeration (at most two movers, promoting a target first).
+    flipping that contest — i.e. only from a player who ranked the baseline
+    ABOVE ``T`` (not necessarily first). Every change therefore needs at
+    least one mover it harms: a single mover is always harmed, and a pair
+    never has two members who gain (one of them may — a pair is kept only
+    when BOTH do). So the counter, not the empty list, carries the
+    measurement: "N moves exist, each costs at least one of its own movers".
+    Measured exhaustively on the complete profiles of 3 options × 3 to 5
+    players and 4 options × 3 and 4 players: 133 776 profiles with a winner,
+    0 witness kept. The paragraph above the lists must not be read as "no
+    manipulation exists at any coalition size" — it is the bound of this
+    enumeration (at most two movers, promoting a target first).
 
     Pure and deterministic — same profile, same dict. Bounded by
     ``MAX_PLAYERS``; the output states when the bound bit.
