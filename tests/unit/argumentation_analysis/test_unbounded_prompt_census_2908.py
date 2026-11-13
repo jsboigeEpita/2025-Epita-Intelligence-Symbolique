@@ -278,6 +278,19 @@ def census():
 ALLOWED = {
     # --- bounded upstream: the interpolated value is already a slice/unit ---
     (
+        "argumentation_analysis/core/reading_window.py",
+        "fstring",
+        "text",
+        1,
+    ): (
+        "persona_reading, whole-document arm (#3522) — the text rides the "
+        "excerpt unsliced, and only under the arm's own guard "
+        "len(text) + 2 <= capacity (one call); a slice here would cut what "
+        "the arm exists to read whole. Witness, one character either side "
+        "of the guard: test_persona_reading_3522.py::"
+        "test_the_whole_read_stops_exactly_where_one_call_ends"
+    ),
+    (
         "argumentation_analysis/orchestration/invoke_callables.py",
         "fstring",
         "input_text",

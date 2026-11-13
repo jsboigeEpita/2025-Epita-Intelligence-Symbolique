@@ -92,6 +92,27 @@ class TestWholeReadWhenItFits:
         assert selection.offset == 0
         assert selection.window == len(text)
 
+    @pytest.mark.parametrize("capacity", [1_000, WHOLE_TEXT_CALL_CAPACITY])
+    def test_the_whole_read_stops_exactly_where_one_call_ends(self, capacity):
+        """The whole-document arm puts the text in the excerpt unsliced, so
+        its own guard is the only thing holding the prompt under one call.
+        The unbounded-prompt census (#2908) registers the site on that guard:
+        this is the guard's witness, one character either side of it."""
+        fits = _text(capacity - 2)
+        excerpt, selection, _ = persona_reading(
+            fits, _spread_moves(fits, 12), capacity=capacity
+        )
+        assert selection.status == STATUS_WHOLE_DOCUMENT
+        assert fits in excerpt
+        assert len(excerpt) <= capacity
+
+        over = _text(capacity - 1)
+        excerpt, selection, _ = persona_reading(
+            over, _spread_moves(over, 12), capacity=capacity
+        )
+        assert selection.status != STATUS_WHOLE_DOCUMENT
+        assert over not in excerpt
+
 
 class TestNoHeadCut:
     def _tokenised(self, length: int, tokens):
