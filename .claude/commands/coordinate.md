@@ -223,7 +223,7 @@ L'issue ouverte au label `queue` porte la file ordonnée de chaque lane. Seul le
 - Le message de dispatch pointe vers la file et ne nomme que ses premiers items, sans recopier
   la liste.
 - Une décision qui change le périmètre d'une issue s'écrit en commentaire sur cette issue, titré
-  « State on <date> », avec les sections Delivered, Still not true on `main`, Superseded in the
+  `State on <date>`, avec les sections Delivered, Still not true on `main`, Superseded in the
   text above, Decision, Next step, Where. Le tracker est alors le plan : une décision restée dans
   un message ou dans la mémoire d'une session n'atteint pas le round suivant.
 

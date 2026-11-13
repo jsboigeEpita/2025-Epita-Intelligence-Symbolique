@@ -183,7 +183,7 @@ arbitrage et fait travailler deux agents l'un contre l'autre.
    Prends le premier item de ta lane qui n'est ni barré (`~~…~~`) ni revendiqué. Lis son issue
    en entier : `gh issue view <numéro>` pour le corps, `gh issue view <numéro> --comments` pour
    les commentaires (hors terminal, `--comments` n'affiche pas le corps). Lis son dernier
-   commentaire « State on <date> » avant le corps : ce commentaire peut le rendre caduc.
+   commentaire `State on <date>` avant le corps : ce commentaire peut le rendre caduc.
    Revendique l'item selon le §2, sur sa propre issue et au dashboard. Si ta lane compte moins
    de trois items ouverts, dis-le en commentaire sur l'issue `queue`. Les critères 1 à 4
    ci-dessous ne servent que si la liste de ta lane est vide : tous ses items barrés ou
