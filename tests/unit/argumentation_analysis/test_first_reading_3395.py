@@ -161,14 +161,33 @@ async def test_a_real_state_is_read_whole_and_its_window_is_recorded(monkeypatch
     )
     _write_first_reading_to_state(payload, state, {})
 
-    assert len(model.prompts) >= 1, "the model is called"
+    # R1167 — pinned to the measured count, not a floor: the whole-document
+    # draw plus the ONE bare stretch this document leaves (the fake model
+    # answers the same payload for both calls; the stretch's CONCESSION is
+    # the document's second occurrence, a different passage).
+    assert len(model.prompts) == 2, "the model is called"
     assert long_doc in model.prompts[0], "the WHOLE text reaches the prompt"
     # #3511(b) — after the whole read, only bare stretches are re-read.
     assert all(long_doc not in p for p in model.prompts[1:])
     record = state.defining_moves
     assert record["status"] == "ok", record
     assert record["read_scope"]["whole_document"] is True
-    assert [m["quote"] for m in record["moves"]] == [CONCESSION]
+    # One move per PASSAGE (R1167 finding 2): the same words occur at 41 and
+    # at 262 — two passages, two moves, the second marked with its pass.
+    assert [(m["quote"], m.get("pass", "")) for m in record["moves"]] == [
+        (CONCESSION, ""),
+        (CONCESSION, "second"),
+    ]
+    assert len({m["offset"] for m in record["moves"]}) == 2
+    # R1167 finding 1 (the blocking one), through the writer this test
+    # already exercises: the second pass's record REACHES the state — the
+    # writer is the only path from the phase output into defining_moves —
+    # and the note, which reads the state, prints the line.
+    assert record["second_pass"]["calls"] == 1
+    assert record["second_pass"]["moves_kept"] == 1
+    from argumentation_analysis.agents.core.reading import first_reading_note
+
+    assert "Passe seconde : 1 tranche(s) relue(s)" in first_reading_note(state)
     window = state.reading_window_status["first_reading"]
     assert window["offset"] == 0
     assert window["window"] == len(long_doc), "the recorded window is the text"

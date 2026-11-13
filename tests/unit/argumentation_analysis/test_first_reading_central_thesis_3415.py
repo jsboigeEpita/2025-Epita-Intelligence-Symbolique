@@ -218,7 +218,16 @@ class TestTheQuestionNamesTheThesisAndMechanismFirst:
         assert mech.offset > len(doc) // 2
         # The slots come first; the local moves survive after them.
         assert [m.slot for m in result.moves[:2]] == ["thesis", "mechanism"]
-        assert len(result.moves) == 4
+        # #3511(b) (R1167): the same scripted answer replays on the pass's
+        # stretch calls, and the local quotes sit in the repeated filler —
+        # each read stretch keeps its OWN occurrence of them, marked second
+        # pass. The first pass's inventory is still exactly four moves; what
+        # the pass kept is counted on its record (the same words in two
+        # passages are two passages).
+        first_pass = [m for m in result.moves if not m.reading_pass]
+        assert len(first_pass) == 4
+        assert all(m.reading_pass for m in result.moves[len(first_pass) :])
+        assert result.second_pass["moves_kept"] == len(result.moves) - len(first_pass)
 
 
 # ---------------------------------------------------------------------------
@@ -237,7 +246,11 @@ class TestOneBadObjectCostsItsOwnMove:
         assert result.status == "ok"
         # The whole-answer parse fails (a trailing comma inside one object):
         # per-object salvage keeps the two slots and the two good moves.
-        assert len(result.moves) == 4
+        # #3511(b) (R1167): four is the FIRST pass's inventory — the pass's
+        # stretch reads replay the same answer and append marked moves.
+        first_pass = [m for m in result.moves if not m.reading_pass]
+        assert len(first_pass) == 4
+        assert all(m.reading_pass for m in result.moves[len(first_pass) :])
         quotes = {m.quote for m in result.moves}
         assert _THESIS in quotes and _MECHANISM in quotes
         assert _LOCAL_1 in quotes and _LOCAL_2 in quotes
@@ -269,8 +282,11 @@ class TestOneBadObjectCostsItsOwnMove:
         )
         assert result.status == "ok"
         assert result.malformed_moves == 1
-        assert [m.slot for m in result.moves] == ["thesis", "", ""]
-        assert [m.kind for m in result.moves] == ["thesis", "claim", "concession"]
+        # The slot/kind pins are the FIRST pass's inventory: the second
+        # pass's marked moves sit after it (#3511(b), R1167).
+        first_pass = [m for m in result.moves if not m.reading_pass]
+        assert [m.slot for m in first_pass] == ["thesis", "", ""]
+        assert [m.kind for m in first_pass] == ["thesis", "claim", "concession"]
         quotes = {m.quote for m in result.moves}
         assert _THESIS in quotes and _LOCAL_1 in quotes and _LOCAL_2 in quotes
         assert _MECHANISM not in quotes

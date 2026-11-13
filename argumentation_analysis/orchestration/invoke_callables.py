@@ -9610,15 +9610,18 @@ def _selection_priority_spans(state_obj: Any) -> List[Tuple[int, int]]:
 
     Two hints of the SAME kind — ranges the report can already name:
 
-    - the first reading's positioned moves (``defining_move_spans``, #3395);
+    - the FIRST reading's positioned moves (``first_pass_move_spans``, #3395;
+      #3511(b) revision R1167: the second pass's moves join the inventory and
+      the population, never the priority — a full inventory of priority spans
+      measured as no priority at all, the selection falling back to chance);
     - the passages the document-scale retrieval ranked against that same
       reading (#3387), recorded as offsets on the state.
 
     They are concatenated, not merged or re-ranked: the selector decides.
     """
-    from argumentation_analysis.agents.core.reading import defining_move_spans
+    from argumentation_analysis.agents.core.reading import first_pass_move_spans
 
-    spans: List[Tuple[int, int]] = list(defining_move_spans(state_obj))
+    spans: List[Tuple[int, int]] = list(first_pass_move_spans(state_obj))
     for span in getattr(state_obj, "semantic_priority_spans", []) or []:
         if not isinstance(span, (list, tuple)) or len(span) != 2:
             continue

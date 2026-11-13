@@ -321,14 +321,29 @@ async def test_the_bound_bites_and_both_the_record_and_the_note_say_so():
 
 async def test_a_failed_stretch_call_costs_its_stretch_not_the_reading():
     """Provider failure on a stretch: counted, and the first pass's
-    inventory stands untouched."""
+    inventory stands untouched. R1167 finding 3: an attempt that raised is
+    not a re-read — ``calls`` counts the stretches actually read (0 here),
+    the failed ones say their own count, and the note states the failure
+    instead of printing « relue(s) » over a dead provider."""
     doc = _four_anchor_document()
     result = _anchored(doc, [0, 1, 2, 3])
     before = [m.to_dict() for m in result.moves]
     await _second_reading_pass(result, doc, _RaisingLLM(), 80)
     assert result.second_pass["failed_calls"] == 2
-    assert result.second_pass["calls"] == 2
+    assert result.second_pass["calls"] == 0
     assert [m.to_dict() for m in result.moves] == before
+    state = SimpleNamespace(
+        raw_text=doc,
+        defining_moves={
+            "status": "ok",
+            "read_scope": {"whole_document": True},
+            "moves": [m.to_dict() for m in result.moves],
+            "second_pass": result.second_pass,
+        },
+    )
+    note = first_reading_note(state)
+    assert "Passe seconde : 0 tranche(s) relue(s)" in note
+    assert "2 appel(s) en échec" in note
 
 
 # --- the same citation rule, the same locator, whole-document offsets ---------
@@ -466,3 +481,223 @@ def test_under_the_ceiling_the_formula_is_unchanged():
     doc = _parts_document(10, 5100)
     # named 40, k(L) 18: the pre-(b) pins' case, unchanged by the cap term.
     assert examined_unit_budget(_budget_state(doc, 40)) == 40
+
+
+# --- R1167 revision: the writer, the slice locator, the share, the priority ---
+
+
+def test_the_writer_carries_the_second_pass_and_only_when_it_ran():
+    """R1167 finding 1, the blocking one. The writer is the ONLY path from
+    the phase output into ``state.defining_moves``; its closed key list
+    dropped the record, so the « Passe seconde » line never printed in
+    production even though the PR body said it did. A payload WITH a record
+    gives a state that carries it; a payload without one keeps the
+    byte-identical pre-(b) shape."""
+    from argumentation_analysis.orchestration.state_writers import (
+        _write_first_reading_to_state,
+    )
+
+    payload_with = {
+        "moves": [{"kind": "claim", "reading": "g", "quote": "q", "offset": 3}],
+        "dropped_quotes": 0,
+        "status": "ok",
+        "read_scope": {"whole_document": True},
+        "second_pass": {
+            "calls": 1,
+            "stretches": [{"offset": 9, "length": 99, "read": True}],
+        },
+    }
+    # The real state declares its fields — the writer only writes on an
+    # attribute the state already carries (``hasattr``), so the witness
+    # mirrors that shape instead of a bare namespace.
+    state = SimpleNamespace(defining_moves=None)
+    _write_first_reading_to_state(payload_with, state, {})
+    assert state.defining_moves["second_pass"]["calls"] == 1
+    assert "Passe seconde : 1 tranche(s) relue(s)" in first_reading_note(state)
+
+    payload_without = {k: v for k, v in payload_with.items() if k != "second_pass"}
+    state2 = SimpleNamespace(defining_moves=None)
+    _write_first_reading_to_state(payload_without, state2, {})
+    assert "second_pass" not in state2.defining_moves
+    assert "Passe seconde" not in first_reading_note(state2)
+
+
+async def test_a_quote_the_document_also_carries_earlier_is_kept_at_its_stretch():
+    """R1167 finding 2's own repro: the same phrase anchored at ~100 and
+    present again inside a bare stretch. The old document-first locator
+    returned the FIRST occurrence, the containment test rejected it, and the
+    pass lost the argument it was sent to find — ``moves_kept: 0,
+    dropped_quotes: 1``. The slice locator keeps the stretch's own
+    occurrence, at a whole-document offset."""
+    doc = _marker(999) + " " + _four_anchor_document()  # the words ALSO sit at 0
+    result = _anchored(doc, [0, 1, 2, 3])
+    llm = _ScriptedLLM(
+        [
+            _answer(
+                [
+                    {
+                        "kind": "claim",
+                        "reading": "l occurrence de la tranche",
+                        "quote": _marker(999),
+                    }
+                ]
+            ),
+            _answer([]),
+        ]
+    )
+    await _second_reading_pass(result, doc, llm, 80)
+    kept = [m for m in result.moves if m.reading == "l occurrence de la tranche"]
+    assert kept, "the stretch's own occurrence was dropped"
+    offset = kept[0].offset
+    stretch = next(s for s in result.second_pass["stretches"] if s["read"])
+    assert stretch["offset"] <= offset < stretch["offset"] + stretch["length"]
+    assert offset > 0, "located at the document's first occurrence, not the stretch's"
+    assert result.second_pass["dropped_quotes"] == 0
+
+
+def _shared_document(per_stretch: int = 4) -> str:
+    """Four anchors; the two longest stretches (the two the bound reads)
+    each carry ``per_stretch`` planted markers of their own."""
+    f1, f2, f3, f4 = (_filler(4600), _filler(4100), _filler(4100), _filler(3300))
+
+    def plant(filler: str, base: int, count: int) -> str:
+        step = len(filler) // (count + 1)
+        for i in range(count):
+            at = step * (i + 1)
+            filler = filler[:at] + _marker(base + i) + " " + filler[at:]
+        return filler
+
+    f1 = plant(f1, 900, per_stretch)
+    f2 = plant(f2, 950, per_stretch)
+    return _marker(0) + f1 + _marker(1) + f2 + _marker(2) + f3 + _marker(3) + f4
+
+
+async def test_the_inventory_share_is_not_first_come_first_served():
+    """R1167's mechanism read in the records: the ceiling was served in
+    stretch-arrival order, the first stretches filled the inventory and the
+    tail's findings reached it only as a count. Each stretch the pass reads
+    now takes a SHARE of the slots still open — with 4 slots and 2 stretches,
+    2 each — and what a stretch loses to its share is counted ON it."""
+    doc = _shared_document(4)
+    result = _anchored(doc, [0, 1, 2, 3])
+
+    def offered(base: int) -> List[Dict[str, Any]]:
+        return [
+            {
+                "kind": "claim",
+                "reading": f"premier {base + i}",
+                "quote": _marker(base + i),
+            }
+            for i in range(4)
+        ]
+
+    llm = _ScriptedLLM([_answer(offered(900)), _answer(offered(950))])
+    # 4 first-pass moves; the inventory leaves room for exactly 4 more.
+    await _second_reading_pass(result, doc, llm, 8)
+
+    record = result.second_pass
+    assert record["calls"] == 2
+    read = [s for s in record["stretches"] if s["read"]]
+    assert len(read) == 2
+    # Two slots each: NO stretch took the four the old order would have let
+    # the first one take, and each stretch's loss is counted on it.
+    assert sorted(s.get("inventory_lost", 0) for s in read) == [2, 2]
+    assert record["inventory_capped"] == 4
+    assert record["moves_kept"] == 4
+    for stretch in read:
+        kept_here = [
+            m
+            for m in result.moves
+            if m.reading_pass == fr.SECOND_PASS_MARKER
+            and stretch["offset"]
+            <= (m.offset or -1)
+            < stretch["offset"] + stretch["length"]
+        ]
+        assert len(kept_here) == 2, "one stretch monopolised the inventory"
+
+
+def test_the_selection_keeps_the_first_pass_priority_when_the_pass_adds_moves():
+    """R1167's bar item 3, the free witness the coordinator asked for: on a
+    synthetic document, the selection keeps the first pass's priorities when
+    the pass adds moves. The pass's moves join the inventory and the
+    population (their anchored units exist), but the selector's reserved
+    seats belong to the whole-document reading's centres — a full inventory
+    of priority spans measured as no priority at all."""
+    from argumentation_analysis.agents.core.reading import (
+        defining_move_spans,
+        first_pass_move_spans,
+    )
+    from argumentation_analysis.orchestration.invoke_callables import (
+        _selection_priority_spans,
+    )
+    from argumentation_analysis.orchestration.selection import (
+        SelectableUnit,
+        select_for_budget,
+    )
+
+    def unit(i: int) -> SelectableUnit:
+        text = f"unite synthetique numero {i} du document temoin"
+        return SelectableUnit(
+            unit_id=f"unit_{i}",
+            text=text,
+            producer="extraction",
+            offset=i * 100,
+            source_quote=text,
+        )
+
+    population = [unit(i) for i in range(10)]
+    spans_of = {i: (i * 100, i * 100 + len(unit(i).text)) for i in range(10)}
+    # First-pass centres at units 1 and 8; the pass adds 3, 4 and 6.
+
+    def move(i: int, pas: str) -> Dict[str, Any]:
+        return {
+            "kind": "claim",
+            "reading": f"g{i}",
+            "quote": unit(i).text,
+            "offset": i * 100,
+            **({"pass": pas} if pas else {}),
+        }
+
+    state = SimpleNamespace(
+        raw_text="x" * 1000,
+        defining_moves={
+            "status": "ok",
+            "moves": [
+                move(1, ""),
+                move(8, ""),
+                move(3, "second"),
+                move(4, "second"),
+                move(6, "second"),
+            ],
+        },
+    )
+
+    # The split is real: all five spans exist, the selector hints at two.
+    assert sorted(defining_move_spans(state)) == sorted(
+        [spans_of[1], spans_of[3], spans_of[4], spans_of[6], spans_of[8]]
+    )
+    assert sorted(first_pass_move_spans(state)) == [spans_of[1], spans_of[8]]
+    assert _selection_priority_spans(state) == [spans_of[1], spans_of[8]]
+
+    # A pass-free state keeps the same hint — byte-identical selection.
+    state_first_only = SimpleNamespace(
+        raw_text="x" * 1000,
+        defining_moves={"status": "ok", "moves": [move(1, ""), move(8, "")]},
+    )
+    assert _selection_priority_spans(state_first_only) == _selection_priority_spans(
+        state
+    )
+
+    # Through the seam, at a budget that cannot take everything: the two
+    # first-pass units hold the reserved seats whatever else the band rule
+    # reaches. The pass's units compete through the ordinary rule, they do
+    # not displace the centres.
+    selection = select_for_budget(
+        population,
+        3,
+        text_length=1000,
+        priority_spans=_selection_priority_spans(state),
+    )
+    chosen = {u.unit_id for u in selection.selected}
+    assert {"unit_1", "unit_8"} <= chosen
+    assert selection.priority_taken == 2

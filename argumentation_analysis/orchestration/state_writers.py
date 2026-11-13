@@ -3491,6 +3491,19 @@ def _write_first_reading_to_state(output: Any, state: Any, ctx: dict[str, Any]) 
         **({"error": output["error"]} if output.get("error") else {}),
         "read_scope": output.get("read_scope") or {},
         "basis": FIRST_READING_BASIS,
+        # #3511(b) — the second pass's own record, ONLY when the pass ran.
+        # R1167 finding 1 (blocking): this writer is the ONLY path from the
+        # phase output into ``state.defining_moves``, and a closed key list
+        # here dropped the record — the moves survived (copied as written,
+        # ``pass: "second"`` included) but the note read the state, so the
+        # « Passe seconde » line never printed in production. Carried only
+        # when present: a reading that never ran the pass keeps a
+        # byte-identical payload.
+        **(
+            {"second_pass": dict(output["second_pass"])}
+            if output.get("second_pass")
+            else {}
+        ),
     }
     if isinstance(state, dict):
         state["defining_moves"] = payload

@@ -48,6 +48,7 @@ from argumentation_analysis.agents.core.reading.first_reading import (
     document_statements_for_unit,  # #3416
     examined_unit_budget,  # #3511
     extract_first_reading,
+    first_pass_move_spans,  # #3511(b) revision
     first_reading_note,
     move_kind,
     pillar_budget,
@@ -76,6 +77,7 @@ __all__ = [
     "document_statements_for_unit",
     "examined_unit_budget",
     "extract_first_reading",
+    "first_pass_move_spans",
     "first_reading_note",
     "move_kind",
     "pillar_budget",

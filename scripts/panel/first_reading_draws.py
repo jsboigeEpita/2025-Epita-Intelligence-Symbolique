@@ -187,7 +187,15 @@ async def paid(args: argparse.Namespace) -> int:
 
     c.ensure_gitignored(args.out_dir)
     docs = selected_docs(args)
-    last: Dict[str, Any] = {}
+    # R1167 finding 4 — one reading now makes SEVERAL calls (the
+    # whole-document draw, then one per bare stretch the bound allows). The
+    # recorder used to be cleared on every call, so a reading priced and
+    # reported only its LAST call: 0.044 $ printed while the key's
+    # ``limit_remaining`` fell by 0.418 $. It now SUMS per reading: tokens
+    # and seconds accumulate, ``calls`` says how many calls the reading
+    # spent, and ``finish_reason`` turns ``length`` as soon as ANY call of
+    # the reading was cut — a cut anywhere is a cut of the record.
+    acc: Dict[str, Any] = {}
     real = ic._guarded_chat_completion
 
     async def recorder(client: Any, **kwargs: Any) -> Any:
@@ -195,14 +203,17 @@ async def paid(args: argparse.Namespace) -> int:
         response = await real(client, **kwargs)
         choice = response.choices[0]
         usage = getattr(response, "usage", None)
-        last.clear()
-        last.update(
-            finish_reason=getattr(choice, "finish_reason", None),
-            prompt_tokens=getattr(usage, "prompt_tokens", None),
-            completion_tokens=getattr(usage, "completion_tokens", None),
-            model=kwargs.get("model"),
-            seconds=round(time.time() - started, 1),
+        acc["calls"] = acc.get("calls", 0) + 1
+        acc["prompt_tokens"] = (acc.get("prompt_tokens") or 0) + (
+            getattr(usage, "prompt_tokens", None) or 0
         )
+        acc["completion_tokens"] = (acc.get("completion_tokens") or 0) + (
+            getattr(usage, "completion_tokens", None) or 0
+        )
+        acc["model"] = kwargs.get("model")
+        acc["seconds"] = round((acc.get("seconds") or 0) + (time.time() - started), 1)
+        if acc.get("finish_reason") != "length":
+            acc["finish_reason"] = getattr(choice, "finish_reason", None)
         return response
 
     ic._guarded_chat_completion = recorder
@@ -221,7 +232,7 @@ async def paid(args: argparse.Namespace) -> int:
             for doc in docs:
                 state = c.load_state(args.states_dir, doc)
                 index = c.build_doc_index(doc, state)
-                last.clear()
+                acc.clear()
                 reading = await build_first_reading(
                     SimpleNamespace(raw_text=state["raw_text"]), llm
                 )
@@ -236,7 +247,7 @@ async def paid(args: argparse.Namespace) -> int:
                     args.control_draws,
                     rng,
                 )
-                result.update(last or {"finish_reason": "NO_CALL"})
+                result.update(acc or {"finish_reason": "NO_CALL"})
                 result["status"] = payload.get("status")
                 result["draw"] = draw
                 report[doc].append(result)

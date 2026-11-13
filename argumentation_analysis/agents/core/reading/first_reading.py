@@ -61,8 +61,9 @@ that carry it — which no line of the render does. Those passages are usually
 far from the thesis one, and the per-argument selection (#3395) prefers the
 units overlapping a defining move, so they were rarely read at all. The third
 slot names them (``slot="pillar"``, bounded by :func:`pillar_budget`), each with its
-own verbatim quote and a kind from the closed vocabulary; being moves, their
-spans join ``defining_move_spans`` and the selector examines them first. The
+own verbatim quote and a kind from the closed vocabulary; being first-pass
+moves, their spans join ``first_pass_move_spans`` and the selector examines
+them first. The
 slot points the lenses at the passages that carry the thesis — it does not
 judge them, and it does not raise ``MAX_MOVES`` to catch them by volume.
 
@@ -923,7 +924,7 @@ async def build_first_reading(
         # moves whatever their position in the document. The panel measured
         # them far from the thesis passage (the zero-shot finds them, the
         # per-argument selection does not), and the selection prefers the
-        # units a recorded move overlaps (``defining_move_spans``): kept at
+        # units a first-pass move overlaps (``first_pass_move_spans``): kept at
         # their document order, a pillar would lose its place to a local
         # claim that happens to sit beside the thesis. Bounded by
         # ``pillar_budget(len(excerpt))``, the SAME bound stated to the model;
@@ -1228,27 +1229,42 @@ async def _second_reading_pass(
     * the call asks the first reading's own question over the stretch, with
       the thesis the first pass named as context;
     * every returned entry passes the SAME citation rule (``quote_occurs_in``
-      against the whole document) and locates by the same locator, so its
-      offset is a whole-document offset by construction;
+      against the stretch it was asked about) and locates by the same
+      locator, so its offset is a whole-document offset by construction.
+      R1167 finding 2: the locator reads the STRETCH (``locate_quote`` over
+      ``raw_text[start:end]``, plus ``start``), never the whole document —
+      a phrase the document also carries EARLIER would otherwise locate at
+      its first occurrence, outside the stretch, and the containment rule
+      would drop the very argument the call was sent to find;
     * a quote whose anchor does not land INSIDE its stretch is not kept (it
       echoes the context or another passage — the call was about the
-      stretch), a quote another move already carries is not kept (one move
-      per passage, across passes), and the inventory's declared bound still
-      caps the total — what the bound excludes is counted, never silently
-      dropped;
+      stretch); a passage another move already anchors takes no second move
+      (across passes), keyed on the LOCATED SPAN — the same words in two
+      passages are two passages, not a duplicate;
+    * the inventory's declared bound still caps the total, and is NOT first
+      come, first served in stretch order (R1167): each stretch the pass
+      reads takes a SHARE of the slots still open — the slots left, split
+      over the stretches still to read — so the longest stretch can no
+      longer fill the inventory and leave the tail a count only. What a
+      stretch loses to its share is counted on the stretch
+      (``inventory_lost``) and in the total (``inventory_capped``), never
+      silently dropped;
     * the kept moves carry :data:`SECOND_PASS_MARKER` provenance.
 
     A stretch call that raises costs its stretch (``failed_calls``), never
-    the reading: the first pass's inventory stands. The record is written on
-    ``result.second_pass`` — the gap, the bound, each qualifying stretch with
-    whether the pass read it, and the counts — and the note states the bite
-    of the bound (:func:`first_reading_note`).
+    the reading: the first pass's inventory stands, and ``calls`` counts the
+    stretches actually read — an attempt that raised is not a re-read
+    (R1167 finding 3). The record is written on ``result.second_pass`` — the
+    gap, the bounds, each qualifying stretch with whether the pass read it
+    and what its share cost it, and the counts — and the note states the
+    bite of both bounds (:func:`first_reading_note`).
     """
     bare, gap = bare_stretch_spans(raw_text, [m.to_dict() for m in result.moves])
     bound = second_pass_call_bound(len(raw_text))
     record: Dict[str, Any] = {
         "gap": gap,
         "call_bound": bound,
+        "inventory_bound": max_inventory,
         "stretches": [],
         "calls": 0,
         "moves_kept": 0,
@@ -1260,63 +1276,86 @@ async def _second_reading_pass(
         return
 
     thesis = next((m.reading for m in result.moves if m.slot == "thesis"), "")
-    seen = {m.quote for m in result.moves if m.quote}
-    for start, end in bare:
-        read_flag = len(record["stretches"]) < bound
+    # One move per PASSAGE, across passes — the located span is the passage.
+    seen = {m.span() for m in result.moves if m.span()}
+    reads_left = min(len(bare), bound)  # every stretch the bound still reads
+    for position, (start, end) in enumerate(bare):
+        # The bound reads the FIRST ``bound`` stretches of the longest-first
+        # order — ``position < bound``, never ``position < reads_left``:
+        # ``reads_left`` decrements as stretches are read (it sizes the
+        # inventory SHARE) and would un-read the tail of the bound's own set.
+        read_flag = position < bound
         record["stretches"].append(
             {"offset": start, "length": end - start, "read": read_flag}
         )
         if not read_flag:
             continue  # the bound bites: the stretch is recorded, not read
-        record["calls"] += 1
+        stretch_text = raw_text[start:end]
+        # The stretch's SHARE of the inventory (R1167): the slots still open,
+        # split over the stretches still to read. Slots a stretch does not
+        # use flow to the later ones; the hard cap below still guards the
+        # declared bound when the floor (one slot) overshoots it.
+        slots_left = max_inventory - len(result.moves)
+        share = max(1, slots_left // reads_left) if slots_left > 0 else 0
+        kept_here = 0
+        lost_here = 0
         try:
             content = await llm_callable(
                 build_second_reading_prompt(
-                    raw_text[start:end], thesis, inventory_budget(end - start)
+                    stretch_text, thesis, inventory_budget(end - start)
                 )
             )
-            parsed, malformed = _parse_answer(content or "", 0)
-            record["malformed"] += malformed
-            raw_moves = parsed.get("moves")
         except Exception as e:  # pragma: no cover - provider failures
             record["failed_calls"] += 1
             logger.warning("SecondReading stretch %d-%d failed: %s", start, end, e)
+            reads_left -= 1
             continue
-        if not isinstance(raw_moves, list):
-            continue
-        for raw in raw_moves:
-            if not isinstance(raw, dict):
-                record["malformed"] += 1
-                continue
-            reading = str(raw.get("reading", "") or "").strip()
-            quote = str(raw.get("quote", "") or "").strip()
-            if not reading or not quote:
-                record["dropped_quotes"] += 1
-                continue
-            if len(result.moves) >= max_inventory:
-                record["inventory_capped"] = record.get("inventory_capped", 0) + 1
-                continue
-            if not quote_occurs_in(raw_text, quote):
-                record["dropped_quotes"] += 1
-                continue
-            index = locate_quote(raw_text, quote)
-            if index < 0 or not (start <= index < end) or quote in seen:
-                # Outside the stretch it was asked about (an echo of the
-                # context or another passage), or a passage another move
-                # already anchors: one move per passage, across passes.
-                record["dropped_quotes"] += 1
-                continue
-            seen.add(quote)
-            result.moves.append(
-                DefiningMove(
-                    kind=move_kind(raw.get("kind")),
-                    reading=reading,
-                    quote=quote,
-                    offset=index,
-                    reading_pass=SECOND_PASS_MARKER,
+        record["calls"] += 1
+        parsed, malformed = _parse_answer(content or "", 0)
+        record["malformed"] += malformed
+        raw_moves = parsed.get("moves")
+        if isinstance(raw_moves, list):
+            for raw in raw_moves:
+                if not isinstance(raw, dict):
+                    record["malformed"] += 1
+                    continue
+                reading = str(raw.get("reading", "") or "").strip()
+                quote = str(raw.get("quote", "") or "").strip()
+                if not reading or not quote:
+                    record["dropped_quotes"] += 1
+                    continue
+                if kept_here >= share or len(result.moves) >= max_inventory:
+                    lost_here += 1
+                    record["inventory_capped"] = record.get("inventory_capped", 0) + 1
+                    continue
+                if not quote_occurs_in(stretch_text, quote):
+                    record["dropped_quotes"] += 1
+                    continue
+                local = locate_quote(stretch_text, quote)
+                index = -1 if local < 0 else local + start
+                if index < 0 or not (start <= index < end):
+                    # Unlocatable, or an echo of the context or another
+                    # passage: the call was about the stretch.
+                    record["dropped_quotes"] += 1
+                    continue
+                if (index, index + len(quote)) in seen:
+                    record["dropped_quotes"] += 1
+                    continue
+                seen.add((index, index + len(quote)))
+                result.moves.append(
+                    DefiningMove(
+                        kind=move_kind(raw.get("kind")),
+                        reading=reading,
+                        quote=quote,
+                        offset=index,
+                        reading_pass=SECOND_PASS_MARKER,
+                    )
                 )
-            )
-            record["moves_kept"] += 1
+                kept_here += 1
+                record["moves_kept"] += 1
+        reads_left -= 1
+        if lost_here:
+            record["stretches"][-1]["inventory_lost"] = lost_here
     result.second_pass = record
 
 
@@ -1341,14 +1380,47 @@ def defining_moves(state: Any) -> List[Dict[str, Any]]:
 
 
 def defining_move_spans(state: Any) -> List[Tuple[int, int]]:
-    """The ``(start, end)`` spans of the positioned moves — the selection hint.
+    """The ``(start, end)`` spans of the positioned moves.
 
     Unpositioned moves (a verified quote the exact/windowed locator could not
     place) contribute no span: a selection cannot be told to prefer a range it
     cannot name, and inventing one would put the units somewhere they are not.
+    The selector's priority hint is the FIRST pass's subset of these —
+    :func:`first_pass_move_spans` (R1167: the second pass's moves must not
+    dissolve the first reading's priority).
     """
     spans = []
     for move in defining_moves(state):
+        offset = move.get("offset")
+        quote = str(move.get("quote") or "")
+        if not isinstance(offset, int) or isinstance(offset, bool) or not quote:
+            continue
+        spans.append((offset, offset + len(quote)))
+    return spans
+
+
+def first_pass_move_spans(state: Any) -> List[Tuple[int, int]]:
+    """The spans of the FIRST pass's positioned moves — the selector's hint.
+
+    #3511(b) revision (R1167): the second pass's moves join the inventory and
+    the population (their anchored units exist so a bare stretch CAN be
+    examined), but they do not join the PRIORITY the whole-document reading
+    gives the selection. The records measured why: every move was a priority
+    span, a full inventory spread the reserved seats over ~80 anchors, and
+    the selection fell back to chance — the pass dissolved the very priority
+    it was supposed to reinforce. The spans here are the whole-document
+    reading's own centres; a second-pass move is one when the budget rule
+    reaches it, never a reserved seat.
+
+    A move is second-pass exactly when its record carries
+    :data:`SECOND_PASS_MARKER` under ``pass`` (the writer copies moves as
+    written), so a state whose reading never ran the pass keeps the same
+    spans as ``defining_move_spans`` — byte-identical selection.
+    """
+    spans = []
+    for move in defining_moves(state):
+        if move.get("pass") == SECOND_PASS_MARKER:
+            continue
         offset = move.get("offset")
         quote = str(move.get("quote") or "")
         if not isinstance(offset, int) or isinstance(offset, bool) or not quote:
@@ -1816,12 +1888,14 @@ def first_reading_note(state: Any) -> str:
         # reading; what was lost is stated, not hidden.
         lines.append(f"  {malformed} objet(s) illisible(s) : geste(s) perdu(s).")
     second = record.get("second_pass")
-    if isinstance(second, dict) and second.get("calls"):
+    if isinstance(second, dict) and (second.get("calls") or second.get("failed_calls")):
         # #3511(b) — the pass that read the bare stretches states itself:
-        # how many stretches were re-read after the whole-document reading,
-        # and — the coordinator's ask — that the call bound BIT, with the
-        # count it left unread. A pass that did not run says nothing (the
-        # note stays byte-identical).
+        # how many stretches were actually re-read after the whole-document
+        # reading, and — the coordinator's ask — that a bound BIT, with what
+        # it left unread or unnamed. R1167 finding 3: an attempt that raised
+        # is not a re-read, so the failed calls say their own count instead
+        # of hiding inside « relue(s) ». A pass that did not run at all says
+        # nothing (the note stays byte-identical).
         capped = sum(
             1
             for s in second.get("stretches") or []
@@ -1831,6 +1905,15 @@ def first_reading_note(state: Any) -> str:
             f"  Passe seconde : {second.get('calls')} tranche(s) relue(s) "
             "après la lecture d'ensemble"
         )
+        failed = second.get("failed_calls") or 0
+        if failed:
+            line += f", {failed} appel(s) en échec"
+        lost = second.get("inventory_capped") or 0
+        if lost:
+            line += (
+                f", {lost} geste(s) écarté(s) au plafond d'inventaire "
+                f"({second.get('inventory_bound')})"
+            )
         if capped:
             line += (
                 f", {capped} tranche(s) nue(s) au-delà de la borne d'appels "
