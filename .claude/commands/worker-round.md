@@ -175,6 +175,20 @@ arbitrage et fait travailler deux agents l'un contre l'autre.
 
 ### 3. Ordre de choix
 
+0. **La file ordonnée d'abord.** Une issue ouverte porte le label `queue` ; son corps donne,
+   lane par lane, l'ordre dans lequel prendre le travail :
+   ```bash
+   gh issue view $(gh issue list --label queue --state open --json number --jq '.[0].number')
+   ```
+   Prends le premier item de ta lane qui n'est ni barré (`~~…~~`) ni revendiqué. Lis son issue
+   en entier : `gh issue view <numéro>` pour le corps, `gh issue view <numéro> --comments` pour
+   les commentaires (hors terminal, `--comments` n'affiche pas le corps). Lis son dernier
+   commentaire « State on <date> » avant le corps : ce commentaire peut le rendre caduc.
+   Revendique l'item selon le §2, sur sa propre issue et au dashboard. Si ta lane compte moins
+   de trois items ouverts, dis-le en commentaire sur l'issue `queue`. Les critères 1 à 4
+   ci-dessous ne servent que si la liste de ta lane est vide : tous ses items barrés ou
+   revendiqués.
+
 1. Une issue qui en **débloque** une autre (référencée par une autre issue ou PR ouverte).
 2. Une issue dont la **DoD est déjà écrite** — exécutable sans phase de conception.
 3. Une issue de **ta lane** : `po-2025` plomberie et runs lourds ; `po-2023` travail

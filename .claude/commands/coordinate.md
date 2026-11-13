@@ -40,6 +40,12 @@ Adressage : toujours `machine-id:workspace-id` (ex `myia-po-2025:2025-Epita-Inte
    gh issue list --state open --limit 30 --json number,title,labels
    git log --oneline -5
    ```
+5. **La file ordonnée** : l'issue ouverte au label `queue`, son corps puis ses commentaires
+   (une lane qui s'assèche le dit là ; hors terminal, `--comments` n'affiche pas le corps) :
+   ```bash
+   gh issue view $(gh issue list --label queue --state open --json number --jq '.[0].number')
+   gh issue view $(gh issue list --label queue --state open --json number --jq '.[0].number') --comments
+   ```
 
 ## Phase 2 — Lire AVANT d'agir (règle HARD)
 
@@ -206,6 +212,21 @@ Note le hash de tête (`$NEW_MAIN`) pour le dispatch (Phase 5).
 
 L'occupation d'une lane se lit sur le dashboard workspace (`[CLAIMED]`, `[DONE]`), dans l'inbox et dans les commentaires de l'issue visée — pas dans le champ `author` de GitHub, constant pour toute la flotte. Lane sans tâche en cours → dispatcher immédiatement.
 
+### La file `queue` : la source du dispatch
+
+L'issue ouverte au label `queue` porte la file ordonnée de chaque lane. Seul le coordinateur en
+édite le corps : `gh issue edit <numéro de la file> --body-file <corps relu>`.
+
+- Un dispatch part de la file : le premier item de la lane, ni barré (`~~…~~`) ni revendiqué.
+- Après les merges (Phase 3), barrer les items livrés.
+- Une lane à moins de trois items ouverts se recharge depuis le tracker.
+- Le message de dispatch pointe vers la file et ne nomme que ses premiers items, sans recopier
+  la liste.
+- Une décision qui change le périmètre d'une issue s'écrit en commentaire sur cette issue, titré
+  « State on <date> », avec les sections Delivered, Still not true on `main`, Superseded in the
+  text above, Decision, Next step, Where. Le tracker est alors le plan : une décision restée dans
+  un message ou dans la mémoire d'une session n'atteint pas le round suivant.
+
 ### Workers tasking — règles
 
 - **po-2025** : préfère travail de plomberie, runs lourds (re-runs, capstones, benchmarks)
@@ -224,6 +245,21 @@ roosync_messages(
   body: "**De**: Claude Code @ myia-ai-01:2025-Epita-Intelligence-Symbolique\n\n**Round**: Rxxx\n**Mandate user**: [si applicable]\n\n## Contexte\n[2-3 lignes — qu'est-ce qui vient de merger, où en est l'Epic]\n\n## Ton dispatch — Track YY\n\n**Issue**: https://github.com/jsboigeEpita/2025-Epita-Intelligence-Symbolique/issues/ZZZ\n**Base**: main `$NEW_MAIN`\n**Goal**: [1 phrase]\n\n**Périmètre**:\n1. [fichier/module]\n2. [fichier/module]\n\n**DoD**:\n- [ ] [critère mesurable]\n- [ ] [critère mesurable]\n\n**Privacy HARD**:\n- IDs opaques (corpus_A, Speaker_A) dans PR/commit/issue\n- Aucun raw_text dans state\n\n**Anti-pendule**:\n- [ce qui serait un faux-fix à éviter]\n\nACK STP ou push directement avec mention #ZZZ.\n\n🤖 Coordinator ai-01 — Rxxx"
 )
 ```
+
+### Après chaque cycle payé du panel : les états enregistrés vont aux workers
+
+Les rejeux gratuits tournent sur les sièges workers seulement s'ils ont les états enregistrés du
+cycle. Après chaque cycle payé :
+
+1. Archiver les états du cycle, puis `sha256sum <archive>`.
+2. Un `roosync_messages(action: "send", …)` par worker, l'archive en pièce jointe
+   autodestructrice : `attachments: [{path: "<archive>"}]`, `auto_destruct: true`,
+   `destruct_after: "48h"`.
+3. Le corps du message donne le sha256 et la destination sur le siège,
+   `argumentation_analysis/evaluation/results/` (gitignoré). Il demande au worker de récupérer
+   la pièce jointe (`attachments_list` puis `attachments_get`) avant d'ouvrir le message, dont
+   l'ouverture peut détruire la pièce jointe, puis de recalculer le sha256 avant d'extraire.
+4. Canal privé seulement : jamais une issue, une PR, un commit ni un fichier suivi.
 
 ## Phase 6 — Dashboard append (synthesis-first)
 

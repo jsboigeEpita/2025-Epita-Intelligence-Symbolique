@@ -28,6 +28,12 @@ An issue without the label may need a seat for one step (a replay on recorded
 states, a paid measure). Do the keyless part, and name in the pull request the
 step you left to the coordinator.
 
+The seats take issues in the order of the open issue labelled `queue`
+(`gh issue list --label queue --state open --json number,title`). Among the
+`seat-free` issues, prefer one it lists, neither struck through there nor
+claimed in the issue's comments, and read the issue's latest "State on <date>"
+comment before its body, which that comment may supersede.
+
 ## Running things without keys
 
 **Environment.** CI builds its environment from `conda-lock.yml`, which targets
