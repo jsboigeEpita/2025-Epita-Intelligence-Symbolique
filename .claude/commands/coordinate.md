@@ -226,6 +226,12 @@ L'issue ouverte au label `queue` porte la file ordonnée de chaque lane. Seul le
   `State on <date>`, avec les sections Delivered, Still not true on `main`, Superseded in the
   text above, Decision, Next step, Where. Le tracker est alors le plan : une décision restée dans
   un message ou dans la mémoire d'une session n'atteint pas le round suivant.
+- Avant d'écrire qu'un item « attend le user », lire qui a fait ce geste le mois passé. Un
+  ré-enregistrement de cassettes est un geste du siège coordinateur : un run de
+  `record-llm-cassettes.yml` par PR qui change un prompt, lancé une fois sur sa tête finale,
+  coût lu avant et après (`gh run list --workflow record-llm-cassettes.yml --limit 6` : quatre
+  runs du 04 au 11/11). Ses entrées se reprennent sur le dernier run réussi et sur l'en-tête du
+  workflow. Un worker n'enregistre jamais : il signale « tête finale » au dashboard.
 
 ### Workers tasking — règles
 
@@ -254,12 +260,17 @@ cycle. Après chaque cycle payé :
 1. Archiver les états du cycle, puis `sha256sum <archive>`.
 2. Un `roosync_messages(action: "send", …)` par worker, l'archive en pièce jointe
    autodestructrice : `attachments: [{path: "<archive>"}]`, `auto_destruct: true`,
-   `destruct_after: "48h"`.
-3. Le corps du message donne le sha256 et la destination sur le siège,
-   `argumentation_analysis/evaluation/results/` (gitignoré). Il demande au worker de récupérer
-   la pièce jointe (`attachments_list` puis `attachments_get`) avant d'ouvrir le message, dont
-   l'ouverture peut détruire la pièce jointe, puis de recalculer le sha256 avant d'extraire.
-4. Canal privé seulement : jamais une issue, une PR, un commit ni un fichier suivi.
+   `destruct_after: "2d"`. Ce message ne porte que l'archive : le dispatch part dans un message
+   ordinaire.
+3. Le **sujet** du message porte la consigne : « pièce jointe d'abord : `attachments_list` puis
+   `attachments_get` avant d'ouvrir ». Ouvrir le message peut détruire la pièce jointe (perte
+   mesurée le 21/10), et le corps ne se lit qu'en l'ouvrant : une consigne écrite dans le corps
+   arrive trop tard.
+4. Le corps donne le sha256 et la destination sur le siège,
+   `argumentation_analysis/evaluation/results/` (gitignoré). Le worker recalcule le sha256
+   avant d'extraire. Une pièce jointe perdue se redemande : le coordinateur garde l'archive
+   jusqu'à ce que chaque worker ait confirmé.
+5. Canal privé seulement : jamais une issue, une PR, un commit ni un fichier suivi.
 
 ## Phase 6 — Dashboard append (synthesis-first)
 

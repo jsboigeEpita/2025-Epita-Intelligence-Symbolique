@@ -154,7 +154,8 @@ Une issue est prenable si **toutes** ces conditions tiennent :
   `do NOT engage`, `garée`, `gated`, `décision utilisateur`, `en attente de` ;
 - elle ne dépend pas d'une **décision utilisateur** (secret de dépôt, périmètre du gate,
   contenu de `.github/workflows/`) ;
-- **aucune PR ouverte ne la référence** (`gh pr list --search "#N"`) ;
+- **aucune PR ouverte d'une autre lane ne la référence** (`gh pr list --search "#N"`) ; un
+  brouillon ouvert par ta lane se finit (§3, item 0) ;
 - **personne ne l'a revendiquée** (cf. §2) ;
 - son périmètre ne touche ni `.github/workflows/`, ni `.github/CODEOWNERS`, ni `.claude/rules/`.
 
@@ -180,7 +181,8 @@ arbitrage et fait travailler deux agents l'un contre l'autre.
    ```bash
    gh issue view $(gh issue list --label queue --state open --json number --jq '.[0].number')
    ```
-   Prends le premier item de ta lane qui n'est ni barré (`~~…~~`) ni revendiqué. Lis son issue
+   Prends le premier item de ta lane qui n'est ni barré (`~~…~~`) ni revendiqué par une autre
+   lane. Lis son issue
    en entier : `gh issue view <numéro>` pour le corps, `gh issue view <numéro> --comments` pour
    les commentaires (hors terminal, `--comments` n'affiche pas le corps). Lis son dernier
    commentaire `State on <date>` avant le corps : ce commentaire peut le rendre caduc.
