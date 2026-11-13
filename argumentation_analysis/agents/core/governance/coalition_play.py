@@ -333,11 +333,28 @@ def coalition_note(decision: Dict[str, Any]) -> str:
         players = [str(p) for p in manipulability["players"]]
         pair = " et ".join(players)
         verb = "fait" if len(players) == 1 else "font"
-        lines.append(
-            "Manipulabilité du profil déclaré ({kind}, moteur de #3385) : "
-            "{pair} portant « {report} » en tête {verb} gagner « {winner} » "
-            "au lieu de « {baseline} ».".format(
-                kind=str(manipulability.get("kind", "coalition")),
+        # #3530 — the finding is computed under a NAMED rule. Since the
+        # coordinators' decision of 13/11 (option b, restricted to Borda) the
+        # line says the rule is a hypothesis — « si l'issue se réglait aux
+        # points » — never what the players actually did, and it states when
+        # the points winner differs from the Condorcet winner the pipeline
+        # reports as the outcome. A legacy record without ``rule`` keeps the
+        # neutral heading (its provenance is not this block).
+        rule = str(manipulability.get("rule") or "")
+        if rule == "borda":
+            head = (
+                "Manipulabilité du profil déclaré, si l'issue se réglait aux "
+                "points (Borda) : "
+            )
+        else:
+            head = (
+                "Manipulabilité du profil déclaré ({kind}, moteur de #3385) : ".format(
+                    kind=str(manipulability.get("kind", "coalition")),
+                )
+            )
+        line = (
+            head + "{pair} portant « {report} » en tête {verb} gagner "
+            "« {winner} » au lieu de « {baseline} ».".format(
                 pair=pair,
                 verb=verb,
                 report=manipulability.get("report", ""),
@@ -345,4 +362,15 @@ def coalition_note(decision: Dict[str, Any]) -> str:
                 baseline=manipulability.get("baseline", ""),
             )
         )
+        condorcet = manipulability.get("condorcet_winner")
+        if (
+            rule == "borda"
+            and condorcet
+            and condorcet != manipulability.get("baseline")
+        ):
+            line += (
+                f" Le gagnant de Condorcet, « {condorcet} », diffère du gagnant "
+                f"aux points, « {manipulability.get('baseline')} »."
+            )
+        lines.append(line)
     return "\n".join(lines)
