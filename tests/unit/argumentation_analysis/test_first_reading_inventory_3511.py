@@ -594,7 +594,7 @@ class TestExaminedUnitBudget:
         assert examined_unit_budget(state) == 12
 
     def test_kl_above_named_wins(self):
-        doc = _synth_document(30)  # k(L) = 30
+        doc = _synth_document(30)  # asks 54, ceilinged at 45 (#3523)
         state = _CoverageState(doc)
         state.defining_moves = {
             "moves": [
@@ -608,7 +608,7 @@ class TestExaminedUnitBudget:
             * 5,
             "status": "ok",
         }
-        assert examined_unit_budget(state) == 30
+        assert examined_unit_budget(state) == 45
 
     def test_forty_named_with_kl_twenty_is_forty(self):
         """R1164 DoD: 40 named, k(L) = 20 — the budget follows the named

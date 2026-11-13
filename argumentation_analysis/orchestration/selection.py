@@ -105,9 +105,39 @@ def _text_band(offset: int, text_length: int, band_count: int) -> int:
     return min(int(offset // width), band_count - 1) if width else 0
 
 
+def _nested_target_fractions(q: int) -> List[float]:
+    """#3523 — interior targets in NESTED-INSERTION order: ``1/2``, ``1/4``,
+    ``3/4``, ``1/8``, ``3/8``, ``5/8``, ``7/8``, ``1/16``, ...
+
+    Each level bisects every gap of the previous one, left to right, so
+    the first ``q`` fractions are a PREFIX of the first ``q + 1``: raising
+    the budget ADDS a target instead of re-spacing the grid. That is the
+    #3523 defect this replaces: the former grid ``j/(q+1)`` moved every
+    target whenever ``q`` grew, and a unit taken at ``q`` could lose its
+    target at ``q + 1`` (measured on the recorded c6 states: one document
+    kept 2 of 5 judge passages at budget 45 and 1 of 5 at 60).
+
+    At the dyadic levels (``q = 2**m - 1``: 1, 3, 7, 15, 31) the target
+    SET equals the old even grid ``{j/(q+1)}`` — every budget the panel
+    probes (3 per text band, 15 at budget 45) keeps the old targets. What
+    moves is the ASSIGNMENT order: insertion-first, so the ``q``-run's
+    choices are replayed verbatim and only the new target picks.
+    """
+    fractions: List[float] = []
+    denominator = 2
+    while len(fractions) < q:
+        for numerator in range(1, denominator, 2):
+            fractions.append(numerator / denominator)
+            if len(fractions) >= q:
+                break
+        denominator *= 2
+    return fractions
+
+
 def _spread_indices(m: int, q: int) -> List[int]:
-    """The RANK variant of the interior spread: ``q`` evenly spaced
-    indices over a band's ``m`` offset-sorted units.
+    """The RANK variant of the interior spread: ``q`` target positions over
+    a band's ``m`` offset-sorted units, in the NESTED order
+    (``_nested_target_fractions``) so a raise never drops an index.
 
     Kept as the fallback for a degenerate band extent (co-located units,
     where no target geometry exists) — and as the measured lesson: rank
@@ -121,8 +151,8 @@ def _spread_indices(m: int, q: int) -> List[int]:
     if q >= m:
         return list(range(m))
     seen: Dict[int, None] = {}  # dict-as-ordered-set
-    for k in range(1, q + 1):
-        seen[min(round(k * m / (q + 1)), m - 1)] = None
+    for fraction in _nested_target_fractions(q):
+        seen[min(round(fraction * m), m - 1)] = None
     return list(seen)
 
 
@@ -134,9 +164,17 @@ def _pick_by_targets(
     end: float,
 ) -> List[int]:
     """#2896 (b) retouch (R1053) — ``q`` interior POSITION targets over
-    the band's ``[start, end]`` extent: ``start + j·(end-start)/(q+1)`` for
-    ``j = 1..q``; each target takes the not-yet-taken unit closest to it,
-    ties to the lower offset.
+    the band's ``[start, end]`` extent, in their NESTED-INSERTION order
+    (``_nested_target_fractions``: 1/2, 1/4, 3/4, 1/8, ...); each target
+    takes the not-yet-taken unit closest to it, ties to the lower offset.
+
+    #3523 — the targets are consumed in insertion order, never re-spaced
+    by ``q``. The ``q``-run's sequence is therefore replayed verbatim when
+    one more grant arrives: the earlier targets see the same pools and
+    make the same choices, and only the NEW target picks a unit. So
+    ``selection(k + 1) ⊇ selection(k)`` by construction — a budget raise
+    can never drop a unit the pass already examined. The former ascending
+    order over ``j/(q+1)`` re-placed every target whenever ``q`` moved.
 
     Position, not rank: a target lands where the TEXT needs reading and
     grabs the nearest unit, so a band dense at its head still sends its
@@ -147,8 +185,8 @@ def _pick_by_targets(
     """
     picked: List[int] = []
     taken: Dict[int, bool] = {}
-    for j in range(1, q + 1):
-        target = start + j * (end - start) / (q + 1)
+    for fraction in _nested_target_fractions(q):
+        target = start + fraction * (end - start)
         best = -1
         best_d = -1.0
         for idx in band:
@@ -331,6 +369,16 @@ def _prefer_priority(
 
     Returns ``(picked, priority_taken)``. With no spans this is the identity
     — the byte-identical path every other caller keeps.
+
+    #3523 — this swap preserves the nesting contract. The victim sequence
+    is STATIC: the key (distance to the nearest span, then index) is a
+    property of the unit, so "farthest of the remaining" consumed one at a
+    time is exactly the non-priority units of ``picked`` in descending
+    key order; and the missing priority units are visited in text order.
+    With ``picked(k) ⊆ picked(k + 1)``, a unit the swap left in place at
+    ``k`` can only lose its place to a victim consumed EARLIER in the
+    static order, which a larger ``picked`` never pushes forward — every
+    unit ``k`` kept (picked or swapped in) is kept at ``k + 1``.
     """
     if not priority_spans or not picked:
         return picked, 0
@@ -393,19 +441,39 @@ def stratified_position(
 
     Within a band the picks sit at interior POSITION targets (#2896 b,
     R1053 retouch): the round-robin's grant allocation runs first (counts
-    only), then each band's ``q`` grants go to its targets
-    ``start_b + j·width_b/(q+1)`` — each target takes the nearest
-    not-yet-taken unit (``_pick_by_targets``). The measured reason: rank
-    quantiles follow unit DENSITY — on the paid-run population a tier
-    dense in its first 5 % spent every pick there and the thesis passage
-    (offset fraction 0.107) was never taken, while position targets took
-    it; the largest uncovered stretch measured 0.342/0.288/0.285 (rank)
-    vs 0.224/0.193/0.174 (position) at k=6/8/10. ``k``, the grant
-    allocation and the bands are unchanged; only the inner rule moved.
-    Absent-offset units fill what remains, last, in insertion order.
-    The returned selection is ALWAYS in TEXT order (offset ascending,
-    absent last), whatever the interleaving picked — downstream phases read
-    the document's order, not the extraction clock's.
+    only), then each band's ``q`` grants go to its nested targets
+    ``start_b + f·width_b`` for ``f`` in ``_nested_target_fractions``
+    (1/2, 1/4, 3/4, ...) — each target takes the nearest not-yet-taken
+    unit (``_pick_by_targets``). The measured reason: rank quantiles
+    follow unit DENSITY — on the paid-run population a tier dense in its
+    first 5 % spent every pick there and the thesis passage (offset
+    fraction 0.107) was never taken, while position targets took it; the
+    largest uncovered stretch measured 0.342/0.288/0.285 (rank) vs
+    0.224/0.193/0.174 (position) at k=6/8/10. ``k``, the grant allocation
+    and the bands are unchanged; only the inner rule moved.
+
+    #3523 — NESTED: ``stratified_position(k + Δ)`` keeps every unit
+    ``stratified_position(k)`` picked, so a budget raise adds units and
+    never drops an examined one. In the TEXT-band path (``text_length``
+    given — every state-backed caller) the band count is fixed
+    (``band_count`` or 3), the round-robin grants are monotone in ``n``,
+    the within-band targets are consumed in insertion order
+    (``_nested_target_fractions``), the absent fill takes the first
+    ``n - picked`` in insertion order, and ``_prefer_priority`` consumes
+    its victims in a static farthest-first sequence — each piece only
+    ever ADDS picks. The equal-count fallback (no ``text_length``) is the
+    stated exception: its band count IS ``min(n, len(positioned))`` (the
+    slice-A rule, one band per pick — pinned by
+    ``test_no_text_length_keeps_population_bands_and_no_span``), so its
+    geometry moves with ``n``. Every caller of that path passes a FIXED
+    ``n`` (they never compare ``k`` against ``k + Δ``), and the one
+    ramped caller — the no-state per-argument fallback — has no offsets:
+    its population is all-absent, and the insertion-order fill is itself
+    nested. Absent-offset units fill what remains, last, in insertion
+    order. The returned selection is ALWAYS in TEXT order (offset
+    ascending, absent last), whatever the interleaving picked —
+    downstream phases read the document's order, not the extraction
+    clock's.
     """
     if n <= 0:
         return SelectionResult((), 0, len(units), 0, 0)
@@ -564,6 +632,15 @@ def select_for_budget(
     examined first: the pass gives up the picked unit farthest from every
     span, never a priority unit, and keeps its budget. Absent (the default),
     the selection is byte-identical to the pre-#3395 behaviour.
+
+    #3523 — the selection is NESTED: for every ``k``, every unit
+    ``select_for_budget(population, k, ...)`` returns is also returned at
+    ``k + Δ`` (same strategy, bands and spans; the exception, stated in
+    ``stratified_position``, is the offset-less count-band fallback whose
+    band count follows ``n``). A budget raise — the #3523 ceiling move —
+    therefore adds examined units and never withdraws one. Witnessed in
+    ``test_nested_selection_3523.py`` and held by construction, not by a
+    post-hoc repair.
     """
     if strategy != "stratified_position":
         raise ValueError(

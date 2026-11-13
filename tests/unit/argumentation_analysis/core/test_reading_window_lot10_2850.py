@@ -108,14 +108,17 @@ class TestPerArgumentBudget:
             (13_927, 10),  # k=3 -> 6, floored at 10
             (47_644, 16),  # k=8 -> 16
             (56_430, 20),  # k=10 -> 20
-            (179_139, 30),  # k=30 -> 60, ceilinged at 30
+            (179_139, 45),  # k=30 -> 60, ceilinged at 45 (#3523)
         ],
     )
     def test_k_grows_with_the_text_under_a_declared_ceiling(self, length, expected):
         assert per_argument_unit_budget(length) == expected
 
     def test_the_ceiling_is_declared_and_never_exceeded(self):
-        assert PER_ARGUMENT_CEILING == 30
+        # #3523 — 30 -> 45 on the c6 same-side replay (12/33 at 1.58x; the
+        # added units at chance past 45). The pin stays: the value moves on a
+        # measured panel, never as a repair side effect.
+        assert PER_ARGUMENT_CEILING == 45
         assert per_argument_unit_budget(10_000_000) == PER_ARGUMENT_CEILING
 
 
