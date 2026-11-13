@@ -525,22 +525,45 @@ def _format_strategic_block(read: Dict[str, Any]) -> str:
             who = ", ".join(sorted(completed))
             winner_line += f" — profil complété pour {who}"
         lines.append(winner_line)
+        # #3524 — a witness is only rendered as a MANIPULATION when its movers
+        # would be better off: the engine keeps a pivot only when the mover's
+        # own ballot ranks the new winner above the baseline, and a coalition
+        # only when BOTH members do (Gibbard–Satterthwaite). The line states
+        # that ordering — the source of the preference — and never the
+        # players' stance on the subject.
         for pivot in (game.get("single_player") or [])[:_PIVOT_LINES]:
             lines.append(
-                f"  Pivot d'un joueur : {pivot.get('player')} peut porter "
+                f"  Pivot d'un joueur : {pivot.get('player')} pourrait porter "
                 f"« {pivot.get('reports')} » en tête et faire gagner "
-                f"« {pivot.get('winner')} »"
+                f"« {pivot.get('winner')} », que son bulletin classe devant "
+                f"« {game.get('winner')} »"
             )
         for coalition in (game.get("coalitions") or [])[:_COALITION_LINES]:
             pair = " + ".join(str(p) for p in coalition.get("players") or [])
             lines.append(
-                f"  Coalition : {pair} portent « {coalition.get('report')} » en "
-                f"tête → « {coalition.get('winner')} »"
+                f"  Coalition : {pair} pourraient porter "
+                f"« {coalition.get('report')} » en tête et faire gagner "
+                f"« {coalition.get('winner')} », que leurs bulletins classent "
+                f"devant « {game.get('winner')} »"
             )
+        dropped = int(game.get("dropped_against_interest") or 0)
         if not game.get("single_player") and not game.get("coalitions"):
             lines.append(
-                "  Aucun pivot CALCULÉ : sur ce profil, ni un joueur seul ni une "
-                "paire ne déplace le gagnant."
+                "  Aucun pivot CALCULÉ : profil non manipulable par un joueur "
+                "seul ni par une paire — aucun déplacement du gagnant vers une "
+                "option que tous ses porteurs préfèrent."
+            )
+        if dropped:
+            # #3524 — the removed candidates are counted, never silent: a
+            # reader who sees only the empty list would conclude the profile
+            # was never tested. "Au moins un" is the measured bound: in a
+            # dropped pair one member may gain, never both.
+            lines.append(
+                f"  Déplacements ÉCARTÉS ({dropped}) : des bulletins modifiés "
+                "y feraient gagner une autre option, mais au moins un des "
+                "porteurs de chaque déplacement la classe DERRIÈRE le gagnant "
+                "actuel — ce n'est pas une manipulation, ne la présente pas "
+                "comme telle."
             )
     elif status:
         lines.append(

@@ -674,6 +674,10 @@ def setup_registry(
                     "Stratège : joueurs, options, profil de préférences, et la "
                     "manipulabilité que le moteur de gouvernance CALCULE "
                     "(gagnant de Condorcet, pivot d'un joueur, coalition à deux). "
+                    "#3524 : un pivot ou une coalition n'est retenu que si ses "
+                    "porteurs classent le nouveau gagnant devant l'actuel ; les "
+                    "déplacements écartés sont comptés "
+                    "(`dropped_against_interest`), jamais silencieux. "
                     "Consommé par act1_framing, qui ne produit plus sa propre "
                     "lecture."
                 )
