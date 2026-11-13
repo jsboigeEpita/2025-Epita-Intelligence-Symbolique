@@ -506,6 +506,21 @@ def _identified_arguments(state: Any) -> Dict[str, Any]:
     return args if isinstance(args, dict) else {}
 
 
+def _anchored_unit_ids(state: Any) -> frozenset[str]:
+    """#3518 — the anchored units' ids, through the ONE producer in
+    ``selection`` (lazy: the import would cycle at module load). Deterministic
+    from the state, so re-deriving it per resolution is safe; ``frozenset()``
+    on any state the reading never ran on."""
+    try:
+        from argumentation_analysis.orchestration.selection import anchored_unit_ids
+
+        return anchored_unit_ids(state)
+    except Exception:  # noqa: BLE001 — a state the producer cannot read
+        # carries no anchored unit; the guard then falls back to the
+        # extracted ids alone, the pre-#3518 answer.
+        return frozenset()
+
+
 def _resolve_target_arg_id(state: Any, target_text: str) -> Optional[str]:
     """Resolve target text to an arg_id from identified_arguments.
 
@@ -578,7 +593,16 @@ def resolve_fallacy_target_arg_id(state: Any, fallacy: Dict[str, Any]) -> Option
     target_arg_id = fallacy.get("target_argument_id")
     if not target_arg_id:
         source_arg_id = str(fallacy.get("source_arg_id") or "")
-        if source_arg_id and source_arg_id in _identified_arguments(state):
+        # #3518 — the membership guard admits the anchored units the first
+        # reading supplied (``reading_N``): a finding the descent grounded on
+        # one names a real argument the state carries through its move — a
+        # guard that rejected it would lose the finding in silence (#1019).
+        # The ids re-derive through the ONE producer, deterministic from the
+        # state; the sentinel rule below keeps excluding "whole_text".
+        if source_arg_id and (
+            source_arg_id in _identified_arguments(state)
+            or source_arg_id in _anchored_unit_ids(state)
+        ):
             target_arg_id = source_arg_id
     for key in ("target_argument", "problematic_quote", "explanation"):
         if target_arg_id:
@@ -1219,6 +1243,7 @@ def _write_fallacy_winner_reading_to_state(
         return
 
     from argumentation_analysis.orchestration.selection import (
+        anchored_units_for_named_moves,
         coverage_figure,
         merged_population_units,
         named_move_residue,
@@ -1233,7 +1258,12 @@ def _write_fallacy_winner_reading_to_state(
         return
     merged_ids = old_ids + fresh
 
-    units = merged_population_units(state)
+    # #3518 — the id resolution carries the anchored units: a winner walk on
+    # one (``reading_N`` in examined_ids) must resolve to its geometry like
+    # any extracted unit, or the walk's coverage line would drop it silently.
+    # Same ONE producer, on the merged population.
+    _merged_units = merged_population_units(state)
+    units = list(_merged_units) + anchored_units_for_named_moves(state, _merged_units)
     by_id = {u.unit_id: u for u in units}
     selected = [by_id[i] for i in merged_ids if i in by_id]
     bands_covered, bands_total, span, stretch = coverage_figure(

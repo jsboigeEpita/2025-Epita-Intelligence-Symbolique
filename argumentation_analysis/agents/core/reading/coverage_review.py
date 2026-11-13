@@ -345,6 +345,29 @@ def _unit_rows(state: Any) -> List[Dict[str, Any]]:
             }
         )
     rows.sort(key=lambda row: (row["offset"] is None, row["offset"] or 0))
+    # #3518 — the anchored units join the rows the review maps passages to.
+    # Without them, a passage over an anchored unit maps to NO unit: the
+    # review could re-name what the descent had just examined (its examined
+    # filter keys by unit id), and a fallacy retained there could never key
+    # ``coverage_family_by_unit`` — the finding lost in silence (#1019).
+    # ONE producer re-derived here (deterministic from the state), projected
+    # into this module's row shape; the ids are the move indices the residue
+    # records.
+    from argumentation_analysis.orchestration.selection import (
+        anchored_units_for_named_moves,
+        merged_population_units,
+    )
+
+    for unit in anchored_units_for_named_moves(state, merged_population_units(state)):
+        rows.append(
+            {
+                "unit_id": unit.unit_id,
+                "text": unit.text,
+                "offset": unit.offset,
+                "source_quote": unit.source_quote,
+            }
+        )
+    rows.sort(key=lambda row: (row["offset"] is None, row["offset"] or 0))
     return rows
 
 
