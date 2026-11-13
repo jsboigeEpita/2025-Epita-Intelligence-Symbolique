@@ -1564,6 +1564,26 @@ def load_rows(
     return [load_json(path) for path in paths]
 
 
+def unjudged_documents(rows: Sequence[Dict[str, Any]]) -> Tuple[List[str], List[str]]:
+    """``(failed, truncated)``: the documents of a pass that were not judged.
+
+    A call that did not answer 200 failed; an answer cut at the output cap
+    that could not be parsed is truncated. A pass with either is not a
+    measurement of the panel. The live pass exits on this rule and the cycle
+    runner (``scripts/panel/run_cycle.py``) reads the same one on stored rows,
+    so "this pass is complete" has one definition.
+    """
+    failed = [row["opaque_id"] for row in rows if row.get("status_code") != 200]
+    truncated = [
+        row["opaque_id"]
+        for row in rows
+        if row.get("status_code") == 200
+        and row.get("state") == "UNPARSED"
+        and row.get("stop_reason") in TRUNCATION_STOP_REASONS
+    ]
+    return failed, truncated
+
+
 def rederive_row_state(row: Dict[str, Any]) -> str:
     """The derived state of a stored row — the same rule as a live pass.
 
@@ -2495,14 +2515,7 @@ async def run(
     table = render_table(rows, meta)
     (args.out_dir / "TABLE.md").write_text(table, encoding="utf-8")
     print(f"table written: {args.out_dir / 'TABLE.md'}", flush=True)
-    failed = [row["opaque_id"] for row in rows if row.get("status_code") != 200]
-    truncated = [
-        row["opaque_id"]
-        for row in rows
-        if row.get("status_code") == 200
-        and row.get("state") == "UNPARSED"
-        and row.get("stop_reason") in TRUNCATION_STOP_REASONS
-    ]
+    failed, truncated = unjudged_documents(rows)
     if failed or truncated:
         # The table is kept (it names each failure), but a pass that did not
         # judge the whole panel is not a measurement of the panel: the exit

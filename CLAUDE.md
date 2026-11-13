@@ -283,6 +283,8 @@ User decision 2026-11-03, superseding the 19/10 one-document tunnel. Measured: 2
 
 Native failures and revival epics continue as ordinary improvement work. The coordinator's DONE entries report the panel verdict table and the cycle count for condition 2.
 
+How a cycle is run, read and turned into the next batch → [`docs/guides/PANEL_CYCLE_RUNBOOK.md`](docs/guides/PANEL_CYCLE_RUNBOOK.md). The instruments are tracked in `scripts/panel/`; the rules that decide whether one of their counts means anything are in [`docs/guides/MEASUREMENT_DISCIPLINE.md`](docs/guides/MEASUREMENT_DISCIPLINE.md).
+
 ## Dataset Privacy Discipline
 
 The canonical dataset is `argumentation_analysis/data/extract_sources.json.gz.enc` (encrypted, tracked). Passphrase is in `.env` (`TEXT_CONFIG_PASSPHRASE`). It contains politically sensitive speeches (historical dictators, current heads of state, domestic politics). **Never let plaintext or downstream analysis leave the machine via git.**
@@ -321,6 +323,7 @@ Full proposal text + reviewer checklist + commit-template are in `docs/proposals
 - `docs/reports/` — Audit reports, mission reports, analysis results
 - `docs/architecture/INTEGRATION_STRATEGY.md` — Overall integration strategy and Lego architecture
 - `KNOWN_ISSUES.md` — Tracked problems and active issues
+- `AGENTS.md` — What an agent without a seat (no keys, no corpus, no dashboard) can and cannot do here, and what its pull request carries
 - Issue #21 — Planned Tweety environment update from CoursIA
 
 ## RooSync Cluster Topology
