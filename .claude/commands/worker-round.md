@@ -333,6 +333,35 @@ Après 3 IDLE consécutifs (cf. protocole idle) : **ne pas ré-armer**.
 
 ---
 
+## Fin de round — l'arbre se rend propre
+
+Un round qui s'arrête **avant sa PR** — suspendu sur un diagnostic, à court de temps,
+bloqué — ne laisse jamais ses édits non commités, **fichiers non suivis compris** :
+
+1. Commiter sur **sa propre branche** (`<type>/<slug>-<issue>`), message conventional disant
+   le travail inachevé — ex. `wip(<scope>): <description> — round suspendu (<motif>)`.
+2. Passer les **deux scans du §3d** (commits + corps de PR), pousser avec refspec explicite.
+3. Ouvrir ou mettre à jour une **PR en brouillon**, écrire sur l'issue ce qui reste.
+4. Revenir sur `main` et y vérifier `git status --porcelain` **vide**.
+
+**Pourquoi.** Le gate d'entrée (§0) arrête tout round planifié ultérieur sur un arbre
+sale : un round qui laisse ses édits non commités gèle sa propre lane. #3471 (07–08/11) :
+deux fichiers modifiés laissés sur la branche, quatre rounds planifiés arrêtés à l'entrée,
+jusqu'à l'ouverture d'une session interactive. #3525 (13/11) : un round suspendu sur un
+warning JVM laisse un plugin modifié et un test non suivi sur sa branche, les deux rounds
+suivants s'arrêtent à l'entrée — le travail n'existait nulle part ailleurs (aucune branche
+distante).
+
+**Ce que ça ne change pas.** §0 reste tel quel : cette section ne couvre que les édits
+faits **par ce round-ci**, pas l'arbre trouvé sale à l'arrivée.
+
+Suspendre sur un diagnostic se déclare **dégradé** : post dashboard avec
+`tags: ["DEGRADED"]`, fermé uniquement par un post `tags: ["REPAIRED"]` de la même
+lane — le checker de la flotte ne lit que le tag ou un premier token, et nos posts
+s'ouvrent sur une signature : un token noyé dans le texte lui est invisible.
+
+---
+
 ## RÈGLES
 
 ### Identité
