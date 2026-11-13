@@ -24,8 +24,11 @@ Two controls decide whether a count means anything:
 - **fidelity** — the population that reproduces the recorded selection
   (``_common.resolve_population``). ``unfaithful`` means the replay does not
   reproduce the run: nothing on that line is a measure, and the exit code is 2.
-- **random** — the same passages redrawn anywhere in the text. A variant that
-  examines 20 passages where random ones score 18 has found nothing.
+- **random** — the same passages redrawn elsewhere in the text, each on its
+  side of the record: a passage the recorded run did not examine is redrawn
+  where that run did not examine either (``_common.random_passage_expectation``
+  says why). A variant that examines 20 passages where random ones score 18
+  has found nothing.
 
 The passages are the judge's kept M1 items on the central thesis
 (``--passages-from``: pass or consensus directories), or the rows of a tracer
@@ -41,7 +44,7 @@ import random
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -106,8 +109,13 @@ def replay_variant(
     k: Optional[int],
     draws: int,
     rng: random.Random,
+    recorded: Optional[Callable[[c.Span], bool]] = None,
 ) -> Dict[str, Any]:
-    """Today's selection on ``state`` at budget ``k``, scored on the passages."""
+    """Today's selection on ``state`` at budget ``k``, scored on the passages.
+
+    ``recorded`` is the recorded run's own predicate: the random control
+    redraws each passage on its side of it.
+    """
     ns = SimpleNamespace(**state)
     population = c.population_of(ns)
     selection = c.select(ns, population, k)
@@ -121,6 +129,7 @@ def replay_variant(
             lambda span: bool(c.units_overlapping(selected, span, starts)),
             draws,
             rng,
+            recorded,
         ),
         "selected": len(selected),
         "population": len(population),
@@ -141,19 +150,23 @@ def replay_document(
     index = c.build_doc_index(doc, state)
     passages = [span for span in map(index.locate, quotes) if span is not None]
     recorded_units = [u for u in index.units if u.unit_id in index.examined]
+
+    def in_record(span: c.Span) -> bool:
+        return bool(c.units_overlapping(recorded_units, span, index.starts))
+
     variants: Dict[str, Dict[str, Any]] = {
         "recorded": {
             "examined": examined_count(recorded_units, index.starts, passages),
             "selected": len(index.examined),
         },
-        "today": replay_variant(state, passages, None, draws, rng),
+        "today": replay_variant(state, passages, None, draws, rng, in_record),
     }
     for k in budgets:
-        variants[f"k={k}"] = replay_variant(state, passages, k, draws, rng)
+        variants[f"k={k}"] = replay_variant(state, passages, k, draws, rng, in_record)
     moves_by_dir = moves_by_dir or {}
     for name, moves in moves_by_dir.items():
         variants[name] = replay_variant(
-            with_moves(state, moves), passages, None, draws, rng
+            with_moves(state, moves), passages, None, draws, rng, in_record
         )
     if len(moves_by_dir) >= 2:
         variants["union"] = replay_variant(
@@ -162,6 +175,7 @@ def replay_document(
             None,
             draws,
             rng,
+            in_record,
         )
     return {
         "doc": doc,

@@ -511,6 +511,70 @@ class TestRandomControls:
         assert c.random_anchor_expectation([(0, 10)], [], 1000, 10, rng) == 0
         assert c.random_passage_expectation([], 1000, lambda _: True, 10, rng) == 0
 
+    def test_a_matched_redraw_stays_on_its_side_of_the_record(self):
+        def recorded(span):
+            return span[0] < 300
+
+        seen: List[tuple] = []
+        c.random_passage_expectation(
+            [(0, 50), (400, 430)],
+            1000,
+            lambda s: seen.append(s) or False,
+            60,
+            random.Random(6),
+            recorded,
+        )
+        assert len(seen) == 120
+        assert all(start < 300 for start, end in seen if end - start == 50)
+        assert all(start >= 300 for start, end in seen if end - start == 30)
+
+    def test_passages_the_record_missed_are_not_read_against_ones_it_examined(self):
+        """The record examines the first half, the variant three quarters, and
+        the judge's passages all lie in the half the record missed. Drawn
+        anywhere, the control is the variant's whole coverage and a real gain
+        reads as chance; drawn on the missed side, it is that side's coverage.
+        """
+
+        def recorded(span):
+            return span[0] < 500
+
+        def variant(span):
+            return span[0] < 750
+
+        missed = [(600, 630), (700, 740), (900, 950)]
+        examined = sum(map(variant, missed))
+        anywhere = c.random_passage_expectation(
+            missed, 1000, variant, 600, random.Random(c.DEFAULT_SEED)
+        )
+        same_side = c.random_passage_expectation(
+            missed, 1000, variant, 600, random.Random(c.DEFAULT_SEED), recorded
+        )
+        assert examined == 2
+        assert 2.2 < anywhere < 2.5
+        assert 1.45 < same_side < 1.8
+        assert same_side < examined < anywhere
+
+    def test_a_passage_with_no_position_on_its_side_keeps_its_own(self):
+        """It then weighs the same in the count and in the control."""
+
+        def recorded(span):
+            return span == (10, 20)  # no redraw in a 20-character text is this span
+
+        rng = random.Random(7)
+        own = [(10, 20)]
+        assert (
+            c.random_passage_expectation(
+                own, 20, lambda s: s == (10, 20), 5, rng, recorded
+            )
+            == 1
+        )
+        assert (
+            c.random_passage_expectation(
+                own, 20, lambda s: s != (10, 20), 5, rng, recorded
+            )
+            == 0
+        )
+
 
 # ---------------------------------------------------------------------------
 # The selection replay
@@ -531,6 +595,19 @@ class TestReplay:
         record = state["analysis_coverage"]["fallacy_per_argument"]
         assert line["variants"]["today"]["selected"] == record["k"]
         assert line["variants"]["today"]["population"] == record["N"]
+
+    def test_an_unchanged_selection_scores_exactly_its_own_control(self):
+        """Each passage is redrawn on its side of the record, so a selection
+        that IS the record hits the redrawn passage exactly when it hit the
+        real one. Drawn anywhere, the control would sit strictly between."""
+        state = make_state()
+        examined, left_out = examined_and_not(state)
+        line = replay_selection.replay_document(
+            "doc_a", state, [sentence(examined), sentence(left_out)], draws=40
+        )
+        today = line["variants"]["today"]
+        assert today["examined"] == 1
+        assert today["random"] == 1.0
 
     def test_a_budget_as_large_as_the_population_examines_every_unit(self):
         state = make_state()

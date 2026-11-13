@@ -395,28 +395,50 @@ def build_doc_index(doc: str, state: Dict[str, Any]) -> DocIndex:
 # ---------------------------------------------------------------------------
 
 
+MATCH_TRIES = 400
+
+
 def random_passage_expectation(
     passages: Sequence[Span],
     text_length: int,
     hit: Callable[[Span], bool],
     draws: int,
     rng: random.Random,
+    recorded: Optional[Callable[[Span], bool]] = None,
 ) -> float:
-    """How many passages a predicate would hit if they lay anywhere.
+    """How many passages a predicate would hit if they lay elsewhere.
 
     Each passage is redrawn at a uniform position with its own length;
     the mean number of hits over ``draws`` is the figure "X of Y passages
     examined" is compared with. Without it the count measures density: a
     selection that covers most of a text examines most passages by chance.
+
+    ``recorded`` is the recorded run's own predicate. With it a passage is
+    redrawn on ITS side of the record: one the recorded run did not examine
+    is redrawn where that run did not examine either. The passages a cycle's
+    own judge raises are chosen because the run missed them; drawn anywhere,
+    some land where the run did examine, and a real gain reads as chance.
+    Measured on cycle 6 at budget 45, on the 33 passages with an unexamined
+    unit: 12 examined, against 12.3 drawn anywhere and 7.7 drawn on the same
+    side. A passage with no position on its side within ``MATCH_TRIES``
+    redraws keeps its own position for that draw, so it weighs the same in
+    the count and in the control.
     """
     if not passages or draws <= 0:
         return 0.0
+    sides = [bool(recorded(span)) if recorded else None for span in passages]
     hits = 0
     for _ in range(draws):
-        for start, end in passages:
+        for (start, end), side in zip(passages, sides):
             length = end - start
-            at = rng.randrange(0, max(1, text_length - length))
-            hits += bool(hit((at, at + length)))
+            span = (start, end)
+            for _try in range(MATCH_TRIES if recorded else 1):
+                at = rng.randrange(0, max(1, text_length - length))
+                redrawn = (at, at + length)
+                if recorded is None or bool(recorded(redrawn)) == side:
+                    span = redrawn
+                    break
+            hits += bool(hit(span))
     return hits / draws
 
 
