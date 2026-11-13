@@ -338,7 +338,7 @@ Après 3 IDLE consécutifs (cf. protocole idle) : **ne pas ré-armer**.
 Un round qui s'arrête **avant sa PR** — suspendu sur un diagnostic, à court de temps,
 bloqué — ne laisse jamais ses édits non commités, **fichiers non suivis compris** :
 
-1. Commiter sur **sa propre branche** (`<type>/<scope>/…`), message conventional disant
+1. Commiter sur **sa propre branche** (`<type>/<slug>-<issue>`), message conventional disant
    le travail inachevé — ex. `wip(<scope>): <description> — round suspendu (<motif>)`.
 2. Passer les **deux scans du §3d** (commits + corps de PR), pousser avec refspec explicite.
 3. Ouvrir ou mettre à jour une **PR en brouillon**, écrire sur l'issue ce qui reste.
