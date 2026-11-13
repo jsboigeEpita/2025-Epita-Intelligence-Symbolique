@@ -184,6 +184,12 @@ arbitrage et fait travailler deux agents l'un contre l'autre.
    en entier : `gh issue view <numéro>` pour le corps, `gh issue view <numéro> --comments` pour
    les commentaires (hors terminal, `--comments` n'affiche pas le corps). Lis son dernier
    commentaire `State on <date>` avant le corps : ce commentaire peut le rendre caduc.
+   Le filtre du §1 (une issue qu'une PR ouverte référence) écarte le travail d'une autre lane,
+   pas le tien : un item dont la PR ouverte est un brouillon ouvert par ta lane est à toi de
+   finir. Vérifie-le sur le reflog de la branche de la PR
+   (`git reflog show refs/heads/<branche de la PR>` rend des entrées sur ton siège) ou sur ton
+   `[CLAIMED]` au dashboard, jamais sur le champ auteur de GitHub : toute la flotte pousse sous
+   une seule identité.
    Revendique l'item selon le §2, sur sa propre issue et au dashboard. Si ta lane compte moins
    de trois items ouverts, dis-le en commentaire sur l'issue `queue`. Les critères 1 à 4
    ci-dessous ne servent que si la liste de ta lane est vide : tous ses items barrés ou
