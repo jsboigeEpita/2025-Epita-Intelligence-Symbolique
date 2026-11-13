@@ -154,7 +154,8 @@ Une issue est prenable si **toutes** ces conditions tiennent :
   `do NOT engage`, `garée`, `gated`, `décision utilisateur`, `en attente de` ;
 - elle ne dépend pas d'une **décision utilisateur** (secret de dépôt, périmètre du gate,
   contenu de `.github/workflows/`) ;
-- **aucune PR ouverte ne la référence** (`gh pr list --search "#N"`) ;
+- **aucune PR ouverte d'une autre lane ne la référence** (`gh pr list --search "#N"`) ; un
+  brouillon ouvert par ta lane se finit (§3, item 0) ;
 - **personne ne l'a revendiquée** (cf. §2) ;
 - son périmètre ne touche ni `.github/workflows/`, ni `.github/CODEOWNERS`, ni `.claude/rules/`.
 
@@ -174,6 +175,27 @@ arbitrage et fait travailler deux agents l'un contre l'autre.
    suivante. Règle déterministe : ni négociation, ni attente, ni message.
 
 ### 3. Ordre de choix
+
+0. **La file ordonnée d'abord.** Une issue ouverte porte le label `queue` ; son corps donne,
+   lane par lane, l'ordre dans lequel prendre le travail :
+   ```bash
+   gh issue view $(gh issue list --label queue --state open --json number --jq '.[0].number')
+   ```
+   Prends le premier item de ta lane qui n'est ni barré (`~~…~~`) ni revendiqué par une autre
+   lane. Lis son issue
+   en entier : `gh issue view <numéro>` pour le corps, `gh issue view <numéro> --comments` pour
+   les commentaires (hors terminal, `--comments` n'affiche pas le corps). Lis son dernier
+   commentaire `State on <date>` avant le corps : ce commentaire peut le rendre caduc.
+   Le filtre du §1 (une issue qu'une PR ouverte référence) écarte le travail d'une autre lane,
+   pas le tien : un item dont la PR ouverte est un brouillon ouvert par ta lane est à toi de
+   finir. Vérifie-le sur le reflog de la branche de la PR
+   (`git reflog show refs/heads/<branche de la PR>` rend des entrées sur ton siège) ou sur ton
+   `[CLAIMED]` au dashboard, jamais sur le champ auteur de GitHub : toute la flotte pousse sous
+   une seule identité.
+   Revendique l'item selon le §2, sur sa propre issue et au dashboard. Si ta lane compte moins
+   de trois items ouverts, dis-le en commentaire sur l'issue `queue`. Les critères 1 à 4
+   ci-dessous ne servent que si la liste de ta lane est vide : tous ses items barrés ou
+   revendiqués.
 
 1. Une issue qui en **débloque** une autre (référencée par une autre issue ou PR ouverte).
 2. Une issue dont la **DoD est déjà écrite** — exécutable sans phase de conception.
