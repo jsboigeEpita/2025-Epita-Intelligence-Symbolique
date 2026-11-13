@@ -222,10 +222,12 @@ Pour chaque tâche sélectionnée :
 ### 3c. Validation
 ```bash
 conda run -n <env du siège> --no-capture-output python -m mypy <fichier> --strict
-conda run -n <env du siège> --no-capture-output pytest <tests touchés + voisins> -m "not slow and not requires_api" -q
+conda run -n <env du siège> --no-capture-output python scripts/ci/neighbour_tests.py --run -n 4
 ```
 
-Voisins à lancer, union locale, lecture d'un zéro ou d'un vert : `docs/guides/MEASUREMENT_DISCIPLINE.md`.
+La seconde commande lance les tests touchés, ceux qui nomment un fichier touché et les gardes qui
+parcourent tout l'arbre, avec le filtre du gate. Sans `--run`, elle affiche l'ensemble et pourquoi.
+Union locale, lecture d'un zéro ou d'un vert : `docs/guides/MEASUREMENT_DISCIPLINE.md`.
 
 ### 3d. Commit + Push
 

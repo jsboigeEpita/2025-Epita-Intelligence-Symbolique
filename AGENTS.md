@@ -49,6 +49,20 @@ set (`conftest.py`), so a sandbox that exports `GITHUB_TOKEN` would run them.
 The gate names its directories one by one; `pytest tests/` whole is not a gate
 (the workflow's comments record a full run killed at the six-hour job limit).
 
+A green run on the file you touched is not the gate. Before you push, run the
+neighbours of your change (the listing needs git and the standard library
+only):
+
+```bash
+python scripts/ci/neighbour_tests.py            # what would run, and why
+python scripts/ci/neighbour_tests.py --run -n 4 # run it, with the gate's filter
+```
+
+It adds to the tests you touched the tests that name a touched file and the
+guards that walk the whole tree, which redden on a file they never name. Three
+pull requests went red in CI on such a guard after a green targeted run
+(`docs/guides/MEASUREMENT_DISCIPLINE.md`, §3.2).
+
 **Java.** The logic tests need the Tweety classpath and a JDK.
 `scripts/ci/provision_tweety.py` assembles them and `scripts/ci/verify_tweety.py`
 checks them — the two steps CI runs. Without a usable classpath the suite
@@ -123,8 +137,8 @@ the "TEST EXECUTION SUMMARY" block of the job log tells you.
   synthetic inputs — no LLM, no network, no corpus.
 - **A mutation control**: undo or break the fix and show the witness goes red
   again. A grep that finds the new line is not a control.
-- **The neighbours**: run the tests that import what you changed, not only the
-  new file, and give the passed and skipped counts.
+- **The neighbours**: the passed and skipped counts of
+  `python scripts/ci/neighbour_tests.py --run`, not only of the new file.
 - **Deletions** follow the Cleanup Gate (`CLAUDE.md`): a `## Files removed and
   why` section with each file's role and a one-sentence reason, the origin
   check `git log --all -- <path>`, and a table above five files.
