@@ -215,7 +215,13 @@ class TestTheEngineComputesTheOutcome:
         assert game["status"] == "ok"
         assert game["winner"] == "A"
 
-    def test_a_single_player_pivot_is_reported(self):
+    def test_a_single_player_pivot_against_its_own_ballot_is_dropped(self):
+        """#3524 — born red on the pre-#3524 engine, which reported ("P1","B").
+
+        P1 ranks A first: reporting B first makes B win, but at P1's own
+        expense. That is not a manipulation (Gibbard-Satterthwaite), so the
+        witness is removed and counted.
+        """
         profile = {
             "P1": ["A", "B", "C"],
             "P2": ["A", "B", "C"],
@@ -224,17 +230,16 @@ class TestTheEngineComputesTheOutcome:
         game = compute_manipulability(profile, ["A", "B", "C"])
 
         assert game["winner"] == "A"
-        pivots = {(p["player"], p["winner"]) for p in game["single_player"]}
-        assert ("P1", "B") in pivots
+        assert game["single_player"] == []
+        assert game["dropped_against_interest"] == 5
 
-    def test_a_pair_can_move_what_no_individual_can(self):
-        """The reason the coalition pass exists.
+    def test_a_pair_that_can_move_but_prefers_the_baseline_is_dropped(self):
+        """#3524 — born red: the old engine returned three coalitions here.
 
-        Three players rank A first, one ranks B first: A wins every pairwise
-        contest. No single player who prefers A can change that alone (one
-        switch leaves A and B tied, i.e. no winner), but two of them together
-        make B win 3-1. A suite that only measured the single pivot would
-        report this configuration as unmanipulable.
+        Three players rank A first, one ranks B first: two of the A-first
+        players together make B win 3-1. The move is real, and it costs both
+        movers — they all rank A above B — so no witness is kept and the
+        count carries the measurement.
         """
         profile = {
             "P1": ["A", "B", "C"],
@@ -246,8 +251,8 @@ class TestTheEngineComputesTheOutcome:
 
         assert game["winner"] == "A"
         assert game["single_player"] == []
-        assert [c["winner"] for c in game["coalitions"]] == ["B", "B", "B"]
-        assert ["P1", "P2"] in [c["players"] for c in game["coalitions"]]
+        assert game["coalitions"] == []
+        assert game["dropped_against_interest"] == 3
 
     def test_an_insufficient_profile_computes_nothing(self):
         game = compute_manipulability({"P1": ["A"]}, ["A", "B"])
@@ -474,7 +479,10 @@ class TestActeIConsumesTheRead:
 
         assert "SAVOIR DU MODÈLE" in prompt
         assert "Gagnant CALCULÉ (Condorcet) : A" in prompt
-        assert "Pivot d'un joueur : P1 peut porter « B » en tête" in prompt
+        # #3524 — the witness is stated as an ORDERING of the mover's ballot,
+        # never as the player's stance on the subject.
+        assert "Pivot d'un joueur : P1 pourrait porter « B » en tête" in prompt
+        assert "que son bulletin classe devant « A »" in prompt
 
     def test_the_prompt_carries_the_historian_with_its_confidence(self):
         from argumentation_analysis.reporting.restitution.act1_framing_plugin import (

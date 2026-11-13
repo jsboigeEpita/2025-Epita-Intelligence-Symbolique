@@ -35,7 +35,7 @@ Tout ce qu'une persona écrit porte l'étiquette `basis="model_knowledge"`, et e
 | producteur | consommateur | ce qu'il en fait |
 |---|---|---|
 | `historian` → `historical_context` | phase `nl_to_logic` | `context_note` ajoutée au prompt SYSTEM après le contrat logique ; note vide ⇒ **aucun ajout** (prompt octet-identique) |
-| `strategist` → `strategic_read` | phase `act1_framing` | l'acte **reprend** la lecture calculée (« tu la REPRENDS et la rends lisible ; tu n'en produis pas une autre ») ; lignes étiquetées `Gagnant CALCULÉ (Condorcet)` / `Pivot d'un joueur` / `Coalition` |
+| `strategist` → `strategic_read` | phase `act1_framing` | l'acte **reprend** la lecture calculée (« tu la REPRENDS et la rends lisible ; tu n'en produis pas une autre ») ; lignes étiquetées `Gagnant CALCULÉ (Condorcet)` / `Pivot d'un joueur` / `Coalition`. #3524 : un pivot ou une coalition n'est rendu que si ses porteurs classent le nouveau gagnant devant l'actuel (Gibbard–Satterthwaite) ; les déplacements écartés sont comptés et rendus (`Déplacements ÉCARTÉS (n)`) |
 
 ## Privacy
 

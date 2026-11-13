@@ -258,6 +258,21 @@ def _reports_first(ballot: List[str], target: str) -> List[str]:
     return [target] + [name for name in ballot if name != target]
 
 
+def _strictly_prefers(ballot: List[str], new_winner: str, baseline: str) -> bool:
+    """``ballot`` ranks ``new_winner`` strictly above ``baseline``.
+
+    #3524 — the interest check reads the same scored ballot the enumeration
+    uses (matched entries followed by the completed ones, so both options are
+    present). A completed option ranks after every declared one, so a
+    preference the player never stated can only make the check stricter,
+    never looser.
+    """
+    try:
+        return ballot.index(new_winner) < ballot.index(baseline)
+    except ValueError:  # absent from the scored ballot: no declared preference
+        return False
+
+
 def compute_manipulability(
     preferences: Dict[str, List[str]], options: List[str]
 ) -> Dict[str, Any]:
@@ -275,6 +290,28 @@ def compute_manipulability(
 
     Bribery is deliberately absent: it needs a budget the profile cannot supply,
     and inventing one would be the fabrication this issue forbids.
+
+    #3524 — a witness must be a manipulation its movers have a reason to make.
+    The standard definition (Gibbard–Satterthwaite) is a misreport that leaves
+    the misreporting player strictly better off: a pivot whose mover ends up
+    with a winner they rank BELOW the baseline is not a manipulation, and the
+    earlier version recorded those as witnesses (measured: every coalition of
+    the c5 and c6 panels had at least one member harmed that way). A single
+    pivot is now kept only when the mover's own scored ballot ranks the new
+    winner above the baseline; a coalition only when BOTH members do. What the
+    interest check removes is counted in ``dropped_against_interest`` — never
+    silent.
+
+    The check is load-bearing and, on a profile that HAS a Condorcet winner,
+    the kept lists are empty for a structural reason: to install a winner
+    ``T`` the movers must make ``T`` beat the baseline pairwise, and a ballot
+    contributes more to ``T``-over-baseline than it did honestly only by
+    flipping against the baseline — i.e. only from a player who ranked the
+    baseline first. Every mover a change can come from is therefore a harmed
+    one, so the counter, not the empty list, carries the measurement: "N moves
+    exist, each costs its own movers". The paragraph above the lists must not
+    be read as "no manipulation exists at any coalition size" — it is the
+    bound of this enumeration (at most two movers, promoting a target first).
 
     Pure and deterministic — same profile, same dict. Bounded by
     ``MAX_PLAYERS``; the output states when the bound bit.
@@ -323,6 +360,7 @@ def compute_manipulability(
         "winner": None,
         "single_player": [],
         "coalitions": [],
+        "dropped_against_interest": 0,
         "status": "ok",
         "engine": "governance.social_choice.condorcet_winner",
     }
@@ -343,6 +381,8 @@ def compute_manipulability(
         result["status"] = "no_condorcet_winner"
         return result
 
+    dropped = 0
+
     for index, player in enumerate(players):
         for target in options:
             if target == baseline:
@@ -350,13 +390,19 @@ def compute_manipulability(
             trial = list(ballots)
             trial[index] = _reports_first(ballots[index], target)
             winner = condorcet_winner(trial, options)
-            if winner is not None and winner != baseline:
+            if winner is None or winner == baseline:
+                continue
+            if _strictly_prefers(ballots[index], winner, baseline):
                 result["single_player"].append(
                     {"player": player, "reports": target, "winner": winner}
                 )
+            else:
+                dropped += 1
 
     for first in range(len(players)):
         for second in range(first + 1, len(players)):
+            kept = None
+            moved = False
             for target in options:
                 if target == baseline:
                     continue
@@ -364,17 +410,29 @@ def compute_manipulability(
                 trial[first] = _reports_first(ballots[first], target)
                 trial[second] = _reports_first(ballots[second], target)
                 winner = condorcet_winner(trial, options)
-                if winner is not None and winner != baseline:
+                if winner is None or winner == baseline:
+                    continue
+                moved = True
+                if _strictly_prefers(
+                    ballots[first], winner, baseline
+                ) and _strictly_prefers(ballots[second], winner, baseline):
                     # One witness per pair: the claim is "this pair can move the
-                    # outcome", not "here are all the ways it can".
-                    result["coalitions"].append(
-                        {
-                            "players": [players[first], players[second]],
-                            "report": target,
-                            "winner": winner,
-                        }
-                    )
+                    # outcome toward a winner BOTH of them prefer", not "here
+                    # are all the ways it can".
+                    kept = {
+                        "players": [players[first], players[second]],
+                        "report": target,
+                        "winner": winner,
+                    }
                     break
+            if kept is not None:
+                result["coalitions"].append(kept)
+            elif moved:
+                # The pair can move the outcome, but no target it can install
+                # is preferred by both members: counted, never silent.
+                dropped += 1
+
+    result["dropped_against_interest"] = dropped
     return result
 
 
@@ -474,12 +532,14 @@ async def build_strategic_read(
         result.status = "ok"
         logger.info(
             "Strategist: %d player(s), %d option(s), winner=%s, "
-            "%d single pivot(s), %d coalition(s)",
+            "%d single pivot(s), %d coalition(s), %d move(s) dropped by the "
+            "interest check",
             len(result.players),
             len(result.options),
             result.game.get("winner"),
             len(result.game.get("single_player") or []),
             len(result.game.get("coalitions") or []),
+            result.game.get("dropped_against_interest", 0),
         )
     except json.JSONDecodeError as e:
         result.status = "parse_error"
