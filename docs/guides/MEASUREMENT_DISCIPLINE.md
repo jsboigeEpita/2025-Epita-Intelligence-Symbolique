@@ -166,13 +166,21 @@ A test proves something only if a degenerate substitute makes it fail.
 
 - **Measured.** #2776: two CI reds after green targeted runs (the neighbour set was 34 files, 435
   tests, 5 minutes). #2937 against the README-citation guard (#2669). #3193 against the
-  unbounded-prompt census (#2908): 1 failure in 19,198.
-- **Instrument.** `git diff --name-only origin/main...HEAD`, then `git grep -l` the touched module
-  and directory names across `tests/`, and run that whole set in one pytest call. A new test file
-  ⇒ the guards that scan `tests/`. A `.md` touched under `argumentation_analysis/`, or a symbol
-  retired ⇒ the README-reading guards. A new prompt line carrying document text ⇒
-  `test_unbounded_prompt_census_2908.py`. Most population guards sit at the root of
-  `tests/unit/argumentation_analysis/`; a review brief names the ones that apply.
+  unbounded-prompt census (#2908): 1 failure in 19,198. #3526 against the same census, after this
+  page said which guard to run: 1 failed, 21,379 passed. A recipe to follow by hand did not bite,
+  so it became an instrument.
+- **Instrument.** `python scripts/ci/neighbour_tests.py` reads the change against `origin/main`
+  (committed, staged, unstaged, untracked) and prints three groups, kept to the paths the gate
+  runs: the tests touched, the tests that name a touched file, and the **population guards**: the
+  tests that walk the tree (`ls-files`, `rglob`, `os.walk`, `glob`, `iterdir`, `ast.parse`) and
+  can therefore redden on a file they never name. `--run -n 4` runs the set with the gate's marker
+  filter: 130 guards, about 1,250 tests, under 6 minutes on 4 workers. Replayed on the changes behind
+  the #2937, #3193 and #3526 reds, the set holds the guard that reddened each time.
+- **Its limit.** The set is necessary, not sufficient. A test that reaches a touched module only
+  through an import chain, without naming it, is not in it: the gate stays the full verdict. A
+  module name that more than 150 test files carry (`utils`, `config`) is narrowed to its
+  qualified form, and the report says so. The guards known to have reddened a PR are pinned in
+  `tests/unit/scripts/test_neighbour_tests_3374.py`: a pattern change that loses one fails there.
 
 ### 3.3 The local union run
 
