@@ -221,9 +221,11 @@ Pour chaque tâche sélectionnée :
 
 ### 3c. Validation
 ```bash
-conda run -n projet-is-roo-new --no-capture-output python -m mypy <fichier> --strict
-conda run -n projet-is-roo-new --no-capture-output pytest tests/ -x --timeout=120 -q
+conda run -n <env du siège> --no-capture-output python -m mypy <fichier> --strict
+conda run -n <env du siège> --no-capture-output pytest <tests touchés + voisins> -m "not slow and not requires_api" -q
 ```
+
+Voisins à lancer, union locale, lecture d'un zéro ou d'un vert : `docs/guides/MEASUREMENT_DISCIPLINE.md`.
 
 ### 3d. Commit + Push
 
@@ -237,7 +239,7 @@ git checkout -b <type>/<scope>/<description>
 git add <fichiers>
 git commit -m "type(scope): description
 
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
+Co-Authored-By: Claude Code <noreply@anthropic.com>"
 git push -u origin <branch>
 gh pr create --title "type(scope): description" --body "..."
 ```
@@ -324,9 +326,9 @@ Après 3 IDLE consécutifs (cf. protocole idle) : **ne pas ré-armer**.
   n'est **pas** re-exigée après les édits propres du round.
 
 ### Technique
-- **Conda** : Toujours `conda run -n projet-is-roo-new --no-capture-output`
+- **Conda** : Toujours `conda run -n <env du siège> --no-capture-output` — l'env de chaque siège : `docs/guides/DEV_ENV_SEATS.md`
 - **gh auth** : Switcher vers `jsboigeEpita` avant les opérations d'écriture GitHub
-- **mypy strict** : Seul gate CI réel (black/flake8 = bruit continue-on-error)
+- **mypy strict** : seule étape bloquante du job `lint-and-format` (black/flake8 = bruit continue-on-error)
 
 ### Communication
 - **Dashboard** = canal PRINCIPAL. Messages RooSync = fallback urgence
