@@ -868,7 +868,7 @@ def anchored_units_for_named_moves(
     return anchored
 
 
-def anchored_unit_ids(state: Any) -> frozenset:
+def anchored_unit_ids(state: Any) -> frozenset[str]:
     """The anchored units' ids, derived on the merged population — the ONE
     membership rule for writers that resolve a unit id (#3518: the fallacy
     target guard). Re-deriving is safe: the producer is deterministic from

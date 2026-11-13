@@ -506,7 +506,7 @@ def _identified_arguments(state: Any) -> Dict[str, Any]:
     return args if isinstance(args, dict) else {}
 
 
-def _anchored_unit_ids(state: Any) -> frozenset:
+def _anchored_unit_ids(state: Any) -> frozenset[str]:
     """#3518 — the anchored units' ids, through the ONE producer in
     ``selection`` (lazy: the import would cycle at module load). Deterministic
     from the state, so re-deriving it per resolution is safe; ``frozenset()``
