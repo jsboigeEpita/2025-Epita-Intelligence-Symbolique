@@ -139,7 +139,10 @@ from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mod
 from argumentation_analysis.agents.core.governance.coalition_play import (
     coalition_note,  # #3386
 )
-from argumentation_analysis.agents.core.reading import first_reading_note  # #3395
+from argumentation_analysis.agents.core.reading import (
+    ANCHOR_UNRELATED,  # #3556
+    first_reading_note,  # #3395
+)
 
 logger = logging.getLogger(__name__)
 
@@ -1706,10 +1709,12 @@ def _player_for_point(
     states, and on the panel the dependent side is the one that fires (2 of
     44 points on the node, 7 of 44 on a dependent). Players are read in the
     strategist's own order (salience, the #3386 convention) and the first
-    overlap wins; a player without a located quote claims no ground, and a
-    point without provenance names no player. The sentence then names that
-    player, or no player at all when none is recorded — never an invented
-    attribution.
+    overlap wins; a player without a located quote claims no ground, a player
+    whose passage the producer marked ``anchor="unrelated"`` claims none
+    either (#3556 — the quote and offset stay as the record of what was
+    offered, but the passage is another party's), and a point without
+    provenance names no player. The sentence then names that player, or no
+    player at all when none is recorded — never an invented attribution.
     """
     provenance = getattr(state, "argument_provenance", None)
     if not isinstance(provenance, dict):
@@ -1741,6 +1746,10 @@ def _player_for_point(
         if not isinstance(offset, int) or isinstance(offset, bool):
             continue
         if not quote or not name:
+            continue
+        # #3556 — an unrelated passage is another party's words, kept only as
+        # the record of what was offered. It cannot carry this player's case.
+        if player.get("anchor") == ANCHOR_UNRELATED:
             continue
         end = offset + len(quote)
         if any(s[0] < end and offset < s[1] for s in spans):

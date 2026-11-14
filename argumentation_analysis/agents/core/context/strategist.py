@@ -148,9 +148,10 @@ def _name_in_text(name: str, raw_text: str) -> Optional[int]:
 _SENTENCE_ENDS = ".!?\n"
 
 #: Function words that ride party names but match nothing distinctive. A
-#: distinctive word is what is LEFT once these and the sub-4-letter tokens
-#: are gone: ``l'association`` → ``association``, ``Judge Douglas`` →
-#: ``judge``, ``douglas``. The generous direction of the concern check (#3556).
+#: distinctive word is what is LEFT once these, the sub-4-letter tokens and
+#: the elided determiner are gone: ``l'association`` → ``association``,
+#: ``Mayor Ferrand`` → ``mayor``, ``ferrand``. The generous direction of the
+#: concern check (#3556).
 _NAME_STOP_WORDS = frozenset(
     (
         "the",
@@ -180,7 +181,18 @@ def _distinctive_words(value: str) -> List[str]:
     """The tokens of ``value`` that can carry a player's identity."""
     words: List[str] = []
     for token in re.split(r"[^\w']+", str(value or "")):
-        cleaned = token.strip("'").casefold()
+        cleaned = token.strip("'")
+        # French elision glues a determiner to what follows it: ``l'`` in
+        # ``l'association``, ``d'`` in ``d'une``, ``qu'`` in ``qu'il``. Kept
+        # whole, the token hides the name from the concern check — a passage
+        # saying « cette association » was refused to the player itself
+        # (#3556 blocker, replayed on 228bd276e against d664ed7cf). Cutting
+        # a head of at most two letters makes ``l'association`` yield
+        # ``association``, as the rule above promises.
+        head, sep, tail = cleaned.partition("'")
+        if sep and len(head) <= 2:
+            cleaned = tail
+        cleaned = cleaned.casefold()
         if len(cleaned) >= 4 and cleaned not in _NAME_STOP_WORDS:
             words.append(cleaned)
     return words
@@ -211,9 +223,10 @@ def _passage_concerns(
     built, so the player is given every word of their own name:
 
     * the sentence carries this player's whole name or role, or any
-      DISTINCTIVE word of them (≥ 4 letters, not a function word — the
-      recorded panels anchor ``Judge Douglas``'s stance on sentences that
-      say ``Douglas``, and a full-string rule would refuse them) → concerns;
+      DISTINCTIVE word of them (≥ 4 letters, not a function word, elision
+      cut — the recorded panels anchor ``Mayor Ferrand``'s stance on
+      sentences that say ``Ferrand``, and a full-string rule would refuse
+      them) → concerns;
     * a player whose name or role the DOCUMENT never carries keeps every
       located anchor: that is #3430's population — the speaker and the
       parties the excerpt names nowhere — and the reply's vocabulary cannot

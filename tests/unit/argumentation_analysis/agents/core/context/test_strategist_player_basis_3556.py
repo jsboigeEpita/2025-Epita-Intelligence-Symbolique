@@ -77,6 +77,16 @@ DOC_MIS = (
 )
 QUOTE_MIS = "demandait encore hier que le texte soit retiré"
 
+#: The player is named under an elided determiner at its first mention, then
+#: called by ANOTHER determiner in the passage it is offered — while a peer's
+#: whole name sits in that same sentence. Synthetic (#3556 elision blocker).
+DOC_ELIDED = (
+    "L'association a rendu son rapport public ce matin. "
+    "Le syndicat a suivi cette association dans sa demande de retrait. "
+    "Personne n'a cédé."
+)
+QUOTE_ELIDED = "a suivi cette association dans sa demande de retrait"
+
 
 def _state(raw_text: str):
     return SimpleNamespace(
@@ -255,8 +265,8 @@ class TestThePassageMustConcernThePlayer:
     async def test_a_short_form_of_the_player_keeps_the_anchor(self):
         """A peer named in the passage does not refuse what the passage also
         carries of THIS player, even under a short form of the name — the
-        recorded panels anchor ``Judge Douglas`` on sentences that say
-        ``Douglas``. Control: green on main too.
+        recorded panels anchor ``Mayor Ferrand`` on sentences that say
+        ``Ferrand``. Control: green on main too.
         """
         players = [
             {
@@ -272,6 +282,49 @@ class TestThePassageMustConcernThePlayer:
         player = state["players"][0]
         assert player["basis"] == TEXT_BASIS
         assert player["quote"] == "La commission et le conseil se sont saisis du texte"
+        assert "anchor" not in player
+
+    def test_the_distinctive_words_read_through_a_french_elision(self):
+        """The elided determiner is not part of the name (#3556 blocker).
+
+        ``l'association`` yields ``association`` — the promise the comment
+        above ``_NAME_STOP_WORDS`` makes — and ``d'une`` yields nothing at
+        all, which also closes the ``d'une`` minor of the review.
+        """
+        from argumentation_analysis.agents.core.context.strategist import (
+            _distinctive_words,
+        )
+
+        assert "association" in _distinctive_words("l'association")
+        assert "état" in _distinctive_words("l'État")
+        # ``d'une`` is the elided article plus a function word: nothing is left.
+        assert _distinctive_words("d'une") == []
+        # A long head is not an elision; the token stays whole.
+        assert _distinctive_words("lorsqu'association") == ["lorsqu'association"]
+
+    async def test_a_french_elision_does_not_refuse_the_players_own_passage(self):
+        """Born red on ``228bd276e``: ``l'association`` stayed one opaque token.
+
+        The passage calls the player by another determiner (« cette
+        association ») and carries a peer's whole name in the same sentence,
+        so a concern check that cannot read through the elision falls to the
+        peer loop and refuses the player its OWN passage as ``unrelated``.
+        The base ``d664ed7cf`` anchored it correctly: this restores that.
+        """
+        players = [
+            {
+                "name": "l'association",
+                "role": "groupe de pression",
+                "stance": "against",
+                "quote": QUOTE_ELIDED,
+            },
+            {"name": "le syndicat", "role": "salariés", "stance": "against"},
+        ]
+        _, state = await _read(_payload(players), DOC_ELIDED)
+
+        player = state["players"][0]
+        assert player["basis"] == TEXT_BASIS
+        assert player["quote"] == QUOTE_ELIDED
         assert "anchor" not in player
 
     def test_an_unrelated_anchor_cannot_smuggle_a_text_basis(self):
