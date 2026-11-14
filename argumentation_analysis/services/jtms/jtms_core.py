@@ -252,6 +252,31 @@ class JTMS:
         if tracing_entry is not None:
             self._trace_cascaded_drops(belief, old_labels)
 
+    def copy(self) -> "JTMS":
+        """A deep copy for counterfactual passes (#3547).
+
+        Rebuilt from the belief names, the justification name-triples and the
+        recorded facts, then relabelled from scratch by the same well-founded
+        computation — so mutations on the copy never reach the session's own
+        labels, retraction chain or trace. Tracing stays OFF on the copy
+        (fresh instance): a counterfactual is not a retraction, and the
+        session's ``_retraction_trace`` is the record of what the pipeline
+        actually did (#3226), not of what a question on a copy would do.
+        """
+        new = JTMS(strict=self.strict)
+        for name in self.beliefs:
+            new.add_belief(name)
+        for belief in self.beliefs.values():
+            for justification in belief.justifications:
+                new.add_justification(
+                    [p.name for p in justification.in_list],
+                    [p.name for p in justification.out_list],
+                    belief.name,
+                )
+        new._facts = dict(self._facts)
+        new._recompute_well_founded()
+        return new
+
     def add_justification(
         self,
         in_list: List[str],
