@@ -426,9 +426,14 @@ class TestSpectacularWorkflowGolden:
         # #3492: coverage_review depends on first_reading + deep_synthesis and
         # act2_narrative now reads it, so it sits between L10 and the acts
         # instead of beside them. 12 → 13.
+        # #3547: jtms declares bipolar — the invoker reads the support pairs
+        # the bipolar state writer records, and a same-level producer reads
+        # as empty (0 counterfactual entries on the whole c10 panel). jtms
+        # leaves bipolar's level, debate/belief_revision follow one down
+        # each. 13 → 14.
         wf = build_spectacular_workflow()
         levels = wf.get_execution_order()
-        assert len(levels) == 13
+        assert len(levels) == 14
 
     def test_extract_is_sole_entry_point(self):
         wf = build_spectacular_workflow()
@@ -481,17 +486,21 @@ class TestSpectacularWorkflowGolden:
         # #3326: deep_synthesis left L7 — it now reads fallacy_winner_reading
         # (L8, after governance), so it levels at L9 and governance stays
         # alone at L7.
+        # #3547: jtms waits for bipolar too (the support pairs its
+        # counterfactual pass reads) — it joins dialogue_reasoning's level,
+        # and debate (which reads jtms) moves down with belief_revision.
         assert {
             "hierarchical_fallacy",
             "nl_to_logic",
         }.issubset(set(levels[2]))
         assert {"fol", "modal", "pl", "quality"}.issubset(set(levels[3]))
         assert "counter" in levels[4]
-        assert "jtms" in levels[5]
-        assert {"debate", "dialogue_reasoning"}.issubset(set(levels[6]))
-        assert "governance" in levels[7]
-        assert "fallacy_winner_reading" in levels[8]
-        assert "deep_synthesis" in levels[9]
+        assert "jtms" in levels[6]
+        assert "dialogue_reasoning" in levels[6]
+        assert "debate" in levels[7]
+        assert "governance" in levels[8]
+        assert "fallacy_winner_reading" in levels[9]
+        assert "deep_synthesis" in levels[10]
 
     def test_counter_depends_on_quality(self):
         wf = build_spectacular_workflow()
