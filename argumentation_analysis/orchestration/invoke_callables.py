@@ -3550,6 +3550,20 @@ async def _invoke_governance(
     return result
 
 
+def _live_under(belief: Any, validity: Dict[str, Optional[bool]]) -> bool:
+    """Whether a belief has one live justification under a validity snapshot.
+
+    Shared by the counterfactual pass for its two liveness reads (#3547
+    revision, #3570): BEFORE the withdrawal (the original network's own
+    labels) and DURING the cascade (the copy's current labels).
+    """
+    return any(
+        all(validity.get(p.name) is True for p in j.in_list)
+        and all(validity.get(o.name) is not True for o in j.out_list)
+        for j in belief.justifications
+    )
+
+
 def _jtms_counterfactual_withdrawals(
     session: Any, belief_name_by_id: Dict[str, str]
 ) -> Tuple[List[Dict[str, Any]], int]:
@@ -3565,16 +3579,29 @@ def _jtms_counterfactual_withdrawals(
     Under Step 3 every unit belief is a FACT, and facts are exempt from the
     unsupported set — so a plain label diff would measure nothing. The
     counterfactual therefore also RELEASES, on the copy only, each belief that
-    held True and whose every justification died in the withdrawal
+    held True STANDING ON THE STRUCTURE (a live justification before the
+    withdrawal) and whose every justification died IN the withdrawal
     (``set_belief_validity(name, None)`` pops the fact and lets the label
     answer to justification structure alone): the acceptance of B rested on
     the structure, and the question is precisely what that acceptance rests
-    ON. The release cascades (B falls → the C it alone supported loses its
-    rule) until the copy stabilises. A belief with a second live
-    justification keeps it (mutation control); a belief with no
-    justification ever — an independent premise — never had one to lose and
-    holds (#3226's honest unknowns are never touched: only True beliefs are
-    eligible).
+    ON. #3570: liveness is photographed BEFORE the withdrawal and only what
+    CHANGED is released — the fallacy path leaves beliefs whose only
+    justification is already dead yet still True (they are facts), and a pass
+    that asked merely "dead after the withdrawal" would credit the next
+    premise it withdraws with the fallacy's own kill (arg_3, whose arg_2 died
+    to the fallacy, re-attributed to arg_1's withdrawal). The release
+    cascades (B falls → the C it alone supported loses its rule) until the
+    copy stabilises. A belief with a second live justification keeps it
+    (mutation control); a belief with no justification ever — an independent
+    premise — never had one to lose and holds (#3226's honest unknowns are
+    never touched: only True beliefs are eligible).
+
+    Population (#3570). Premise candidates and recorded falls are drawn only
+    from beliefs carrying a unit id (``belief_name_by_id``): ``FALLACY:*``,
+    ``defeat:*`` and ``_CONTRADICTION_`` are the retraction machinery's own
+    bookkeeping — a withdrawal entry naming one would render the machinery,
+    not the discourse. A bookkeeping belief may still be released on the copy
+    (the cascade must run through it), but it never reaches the records.
 
     Returns the withdrawals with at least one fall (premise name + unit id +
     text, falls in cascade order), and the number of premises tested.
@@ -3590,6 +3617,13 @@ def _jtms_counterfactual_withdrawals(
     # records carry unit ids for the render's label/persona lookups.
     unit_id_by_name = {name: uid for uid, name in belief_name_by_id.items()}
     original = {name: b.valid for name, b in jtms.beliefs.items()}
+    # #3570 — the BEFORE photograph: what stood on the structure before any
+    # withdrawal. A belief already standing on a dead justification (the
+    # fallacy regime leaves one behind every kill) has nothing the withdrawal
+    # can take: "died IN the withdrawal", never "dead after it".
+    live_before = {
+        name: _live_under(belief, original) for name, belief in jtms.beliefs.items()
+    }
 
     premised: Set[str] = set()  # belief names that premise a support edge
     for belief in jtms.beliefs.values():
@@ -3597,34 +3631,40 @@ def _jtms_counterfactual_withdrawals(
             for premise in justification.in_list:
                 premised.add(premise.name)
 
+    # #3570 — candidates carry a unit id: bookkeeping beliefs are never a
+    # premise the reader could see withdrawn.
     candidates = [
-        name for name, valid in original.items() if valid is True and name in premised
+        name
+        for name, valid in original.items()
+        if valid is True and name in premised and name in unit_id_by_name
     ]
     withdrawals: List[Dict[str, Any]] = []
     for premise in candidates:
         net = jtms.copy()
         net.set_belief_validity(premise, False)
         falls: List[Dict[str, Any]] = []
+        # Everything released on the copy — recorded falls AND the
+        # bookkeeping beliefs the cascade must pass through (#3570).
+        released: Set[str] = {premise}
         changed = True
         while changed:
             changed = False
             for name, belief in net.beliefs.items():
-                if name == premise or any(f["name"] == name for f in falls):
+                if name in released:
                     continue
                 if original.get(name) is not True or not belief.justifications:
                     continue
-                live = any(
-                    all(p.valid is True for p in j.in_list)
-                    and all(o.valid is not True for o in j.out_list)
-                    for j in belief.justifications
-                )
-                if live:
+                if not live_before.get(name):
+                    continue  # died before the withdrawal, not in it (#3570)
+                if _live_under(belief, {n: b.valid for n, b in net.beliefs.items()}):
                     continue
                 net.set_belief_validity(name, None)
+                released.add(name)
                 uid = unit_id_by_name.get(name)
-                falls.append(
-                    {"name": name, "unit_id": uid, "text": _text_of(name, uid)}
-                )
+                if uid is not None:  # bookkeeping beliefs never render (#3570)
+                    falls.append(
+                        {"name": name, "unit_id": uid, "text": _text_of(name, uid)}
+                    )
                 changed = True
         if falls:
             uid = unit_id_by_name.get(premise)

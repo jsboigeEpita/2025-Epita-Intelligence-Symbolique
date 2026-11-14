@@ -196,6 +196,55 @@ class TestPositiveControlAndSideEffects:
             assert _belief_name("arg_2") not in _fall_names(entry)
 
 
+class TestTheFallacyRegime:
+    """#3570 — the regime the panel meets most (7/7 retraction chains ride a
+    fallacy): a withdrawal must not re-attribute the fallacy's own kills, and
+    the bookkeeping beliefs of the retraction machinery never reach the state
+    or the render.
+    """
+
+    async def test_a_fallacys_kill_is_not_reattributed(self) -> None:
+        """arg_2 was killed by the fallacy; arg_3's only justification was
+        ALREADY dead before any withdrawal. Withdrawing arg_1 must not claim
+        arg_3's fall — nothing still stands on arg_1 that its withdrawal
+        would drop, so the honest answer is no entry at all."""
+        result = await _invoke_jtms("texte synthetique", _context(fallacy_on="arg_2"))
+        for entry in result.get("counterfactual_withdrawals", []):
+            assert _belief_name("arg_3") not in _fall_names(entry), entry
+        assert result["counterfactual_withdrawals"] == []
+
+    async def test_no_entry_or_fall_without_a_unit_id(self) -> None:
+        """FALLACY:*, defeat:* and _CONTRADICTION_ are the retraction
+        machinery's bookkeeping: never a premise, never a fall."""
+        result = await _invoke_jtms("texte synthetique", _context(fallacy_on="arg_2"))
+        entries = result.get("counterfactual_withdrawals", [])
+        for entry in entries:
+            assert entry["premise_unit_id"] is not None, entry
+            for fall in entry["falls"]:
+                assert fall["unit_id"] is not None, entry
+        assert result["counterfactual_premises_tested"] == 1  # arg_1 only
+
+    async def test_bookkeeping_never_reaches_the_render(self) -> None:
+        """Through the real act3 projector: the machinery's names never ride
+        the belief_maintenance sentence."""
+        result = await _invoke_jtms("texte synthetique", _context(fallacy_on="arg_2"))
+        state = types.SimpleNamespace(
+            jtms_counterfactual_withdrawals=result["counterfactual_withdrawals"],
+            strategic_read={"players": []},
+            argument_provenance={},
+        )
+        evidence = build_act3_evidence(state)
+        statements = [
+            f.statement
+            for f in evidence.structured_findings
+            if f.capability == "belief_maintenance"
+        ]
+        for statement in statements:
+            assert "FALLACY:" not in statement, statement
+            assert "defeat:" not in statement, statement
+            assert "_CONTRADICTION_" not in statement, statement
+
+
 class TestCopyPrimitive:
     """The no-side-effect root: mutations on the copy never reach the original."""
 
