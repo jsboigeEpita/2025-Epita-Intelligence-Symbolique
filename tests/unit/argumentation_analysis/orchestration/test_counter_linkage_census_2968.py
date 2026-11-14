@@ -77,6 +77,16 @@ _CENSUS: Dict[Tuple[str, str, str], str] = {
         "_resolve_target_argument_id (the id resolver), not from free text; "
         "pinned by the ranking tests"
     ),
+    (
+        "state_writers.py",
+        "_write_counter_argument_to_state",
+        "D3",
+    ): (
+        "closed-vocabulary check, not a linkage — the `in` compares the "
+        "counter's attacked_component against the literal trio "
+        "(premise/inference/conclusion); no argument identifier travels "
+        "through it, so no target can be substring-bound (#1649)"
+    ),
 }
 
 
