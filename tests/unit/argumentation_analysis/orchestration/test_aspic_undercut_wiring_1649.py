@@ -6,10 +6,18 @@ source is the COUNTER lane's ``attacked_component`` field, not the ASPIC
 translator. The translator is structurally blind to adversarial material —
 its inventory only ever sees the text's own arguments — and the repaired
 doc_A run proposed 0 undercuts (raw=3 kept=3, 0 contradictions/undercuts).
-The counter census (38 counters) carries ``validation`` +
-``target_arg_id`` in the frame's ``arg_N`` unit-id domain already; the
-``attacked_component`` field does not exist yet — the wiring landed first,
-and the absent case says it is absent.
+
+#1649 State on 14/11 (R1167): the producer now stamps every counter
+(350/350 carry ``attacked_component`` on the c10 states: 247 inference,
+56 premise, 47 conclusion), yet ``aspic_undercut_emitted`` stayed 0 on all
+9 documents with counters. Two consumer defects: it read the STATE-ENTRY
+keys (``target_arg_id``/``counter_content``/``id``) off the producer's
+list, where the producer stamps ``target_unit_id``/``counter_argument``
+(#2968) — so the target was always ``''`` and the atom was minted from an
+empty text — and it looked at only the first 4 of the 13-65 counters a
+document carries. This witness therefore feeds the counter list through
+the producer's OWN stamp (``_stamp_counter_targets``), never a hand-built
+state-entry dict.
 
 Emission contract (the R1223-measured WK shape): for a counter with
 ``attacked_component == "inference"``, a valid attack, a target resolved
@@ -26,9 +34,11 @@ pinned at the handler layer (deterministic there); the wiring tier runs
 under a recording fake handler (no JVM) and asserts exactly what
 ``_invoke_aspic`` handed the handler plus the payload.
 
-Born red on ``main`` (source edits stashed, this file alone): the WK rule
-is absent from the handed rules, the ``aspic_undercut_*`` keys are absent,
-and the handler-tier run renders zero attack.
+Born red on ``main`` (source edits stashed, this file alone): on a
+producer-shaped list the consumer reads no target and mints the atom from
+no text, so the WK rule is absent from the handed rules and
+``aspic_undercut_emitted`` stays 0; a counter past the 4th is never
+considered.
 
 Privacy HARD: synthetic French sentences only — no corpus text.
 """
@@ -75,25 +85,44 @@ class _RecordingState(SimpleNamespace):
         self.coverage_rows.append((row, kwargs))
 
 
+_OFFERED_KEYS = ["arg_1", "arg_2"]
+_OFFERED_TEXT = {"arg_1": _UNIT_1[:120], "arg_2": _UNIT_2[:120]}
+
+
 def _counter(
     component: Any = "inference",
-    valid: Any = True,
-    target: Any = "arg_2",
+    valid: bool = True,
+    target: str = "[arg_2]",
     content: str = _COUNTER_CONTENT,
-    cid: str = "ca_1",
+    cid: str | None = None,
 ) -> Dict[str, Any]:
-    """The producer contract shape this wiring reads (census-measured keys)."""
-    return {
-        "id": cid,
-        "counter_content": content,
+    """The producer contract shape, built by the producer's OWN stamp.
+
+    The raw dict is what the LLM reply schema returns; ``#2968``'s
+    ``_stamp_counter_targets`` then writes ``target_unit_id`` /
+    ``target_text`` / the canonical ``attacked_component`` — exactly as
+    production does. ``validation`` is the real builder's output (score
+    0.6 / strength 0.6 = valid; below the 0.5 score threshold = invalid).
+    """
+    raw: Dict[str, Any] = {
+        "counter_argument": content,
+        "strategy_used": "socratic_questioning",
+        "target_argument": target,
+        "strength": "moderate",
         "attacked_component": component,
-        "validation": {
-            "is_valid_attack": valid,
-            "original_survives": not valid,
-            "counter_succeeds": bool(valid),
-        },
-        "target_arg_id": target,
+        "reasoning": "synthetique",
+        "validation": ic._build_counter_argument_validation(0.6 if valid else 0.3, 0.6),
     }
+    if cid is not None:
+        # A caller-supplied id (the state-entry fallback shape) — the
+        # producer list itself carries none.
+        raw["id"] = cid
+    return ic._stamp_counter_targets(
+        [raw],
+        keys=list(_OFFERED_KEYS),
+        text_by_key=dict(_OFFERED_TEXT),
+        batch_ids=list(_OFFERED_KEYS),
+    )[0]
 
 
 def _context(state: Any, counters: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -149,7 +178,9 @@ def _recording_fake_handler(
 def _expected_wk_rule(
     counter: Dict[str, Any], target_rule: str = "def_arg_2"
 ) -> Dict[str, Any]:
-    atom = ic._pl_atom(str(counter["counter_content"]), prefix="wk_ca")
+    # The atom is named from the counter's TEXT — the producer's
+    # ``counter_argument`` on its list.
+    atom = ic._pl_atom(str(counter["counter_argument"]), prefix="wk_ca")
     return {
         "name": f"wk_{atom}",
         "head": target_rule,
@@ -199,7 +230,7 @@ class TestWiringThroughInvokeAspic:
         assert out["aspic_undercut_total"] == 1
         assert out["aspic_undercut_decisions"] == [
             {
-                "counter_id": "ca_1",
+                "counter_id": "#0",
                 "counter_atom": expected_wk["body"][0],
                 "target_unit": "arg_2",
                 "target_rule": "def_arg_2",
@@ -234,7 +265,8 @@ class TestWiringThroughInvokeAspic:
         assert wk_rules == [], seen[0]["defeasible"]
         assert len(out["aspic_undercut_reasons"]) == 1
         assert component in out["aspic_undercut_reasons"][0]
-        assert "ca_1" in out["aspic_undercut_reasons"][0]
+        # The producer list carries no per-counter id: the position names it.
+        assert "#0" in out["aspic_undercut_reasons"][0]
 
     async def test_invalid_attack_emits_nothing_with_reason(
         self, monkeypatch: pytest.MonkeyPatch
@@ -279,9 +311,10 @@ class TestWiringThroughInvokeAspic:
     async def test_absent_field_says_it_is_absent(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """The producer field does not exist today (census: 0/38 counters).
-        The wiring landed first — the absent case must SAY the absence, not
-        stay silent (GO: 'the absent case says it is absent')."""
+        """A legacy caller that passes no ``attacked_component`` must SAY the
+        absence, not stay silent (GO: 'the absent case says it is absent').
+        The producer asks for the field since #3571 — this pins the older
+        shape."""
         state = _RecordingState(
             identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
         )
@@ -351,12 +384,13 @@ class TestWiringThroughInvokeAspic:
             {"head": "c", "body": ["arg_1"], "name": "def_rule_1"}
         ]
 
-    async def test_consideration_is_capped_and_disclosed(
+    async def test_every_counter_is_considered_and_disclosed(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Family style (#2850): at most 4 counters considered, considered vs
-        total disclosed on the payload — a 5th valid counter is named by the
-        counts, never silently dropped."""
+        """#1649: the 4-counter cap is gone — born with the wiring (#3100),
+        when no producer stamped a component, it excluded up to 61 of the
+        13-65 counters a document carries. The gate is the filter now; the
+        considered/total counts still disclose the population."""
         state = _RecordingState(
             identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
         )
@@ -365,21 +399,88 @@ class TestWiringThroughInvokeAspic:
         _recording_fake_handler(monkeypatch, seen)
 
         counters = [
-            _counter(cid=f"ca_{i}", content=f"{_COUNTER_CONTENT} variante {i}")
-            for i in range(5)
+            _counter(content=f"{_COUNTER_CONTENT} variante {i}") for i in range(5)
         ]
         out = await ic._invoke_aspic(_UNIT_1, _context(state, counters))
 
         assert out["aspic_undercut_total"] == 5
-        assert out["aspic_undercut_considered"] == 4
-        assert out["aspic_undercut_emitted"] == 4
-        assert len(out["aspic_undercut_decisions"]) == 4
+        assert out["aspic_undercut_considered"] == 5
+        assert out["aspic_undercut_emitted"] == 5
+        assert len(out["aspic_undercut_decisions"]) == 5
         wk_rules = [
             r for r in seen[0]["defeasible"] if str(r.get("name", "")).startswith("wk_")
         ]
-        assert len(wk_rules) == 4
+        assert len(wk_rules) == 5
         # Distinct counter contents mint distinct attacker atoms (no merge).
-        assert len({r["body"][0] for r in wk_rules}) == 4
+        assert len({r["body"][0] for r in wk_rules}) == 5
+
+    async def test_a_counter_past_the_old_cap_still_emits(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Born red on main: the sole inference counter sat at position 5 —
+        past ``[:4]`` — so nothing was ever considered."""
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        _empty_translator(monkeypatch)
+        seen: List[Dict[str, Any]] = []
+        _recording_fake_handler(monkeypatch, seen)
+
+        counters = [_counter(component="conclusion") for _ in range(4)]
+        inference = _counter(content=f"{_COUNTER_CONTENT} decisive")
+        counters.append(inference)
+        out = await ic._invoke_aspic(_UNIT_1, _context(state, counters))
+
+        assert out["aspic_undercut_total"] == 5
+        assert out["aspic_undercut_considered"] == 1
+        assert out["aspic_undercut_emitted"] == 1
+        expected_wk = _expected_wk_rule(inference, "def_arg_2")
+        assert expected_wk in seen[0]["defeasible"]
+
+    async def test_state_entry_keys_still_work_as_a_fallback(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A caller still passing the state-entry shape (``target_arg_id`` /
+        ``counter_content`` / ``id``) keeps working — the producer's keys
+        are primary, not exclusive."""
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        _empty_translator(monkeypatch)
+        seen: List[Dict[str, Any]] = []
+        _recording_fake_handler(monkeypatch, seen)
+
+        legacy = {
+            "id": "ca_legacy",
+            "counter_content": _COUNTER_CONTENT,
+            "attacked_component": "inference",
+            "validation": ic._build_counter_argument_validation(0.6, 0.6),
+            "target_arg_id": "arg_2",
+        }
+        out = await ic._invoke_aspic(_UNIT_1, _context(state, [legacy]))
+
+        assert out["aspic_undercut_emitted"] == 1
+        assert out["aspic_undercut_decisions"][0]["counter_id"] == "ca_legacy"
+
+    async def test_a_counter_without_text_is_named(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """No counter text, no mintable attacker atom — named, never minted
+        from an empty string (on main the atom was ALWAYS minted empty)."""
+        state = _RecordingState(
+            identified_arguments={"arg_1": _UNIT_1, "arg_2": _UNIT_2}
+        )
+        _empty_translator(monkeypatch)
+        seen: List[Dict[str, Any]] = []
+        _recording_fake_handler(monkeypatch, seen)
+
+        out = await ic._invoke_aspic(_UNIT_1, _context(state, [_counter(content="")]))
+
+        assert out["aspic_undercut_emitted"] == 0
+        assert any("no counter text" in r for r in out["aspic_undercut_reasons"])
+        assert not any(
+            str(r.get("name", "")).startswith("wk_") for r in seen[0]["defeasible"]
+        )
 
     async def test_no_counters_leaves_the_axis_untouched(
         self, monkeypatch: pytest.MonkeyPatch
