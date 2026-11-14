@@ -116,6 +116,10 @@ from .reading_record import (
 )
 from .global_projection import GlobalFinding, project_global_findings
 from .llm_weaving import LlmCallable, WeaveOutcome, weave
+from .movement_render_contract import (  # #3560
+    MOVEMENT_COUNT_RULE,
+    apply_render_contract,
+)
 from .quote_fidelity import sanitize_act_quotes
 from .specialist_roles import (
     ROLE_LABELS,
@@ -2847,6 +2851,12 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         "l'argument, son caractère (vertus) si l'axe est disponible, ses procédés "
         "relevés (procédé + examen approfondi + contre-argument), et sa tenue "
         "formelle citée comme preuve.\n"
+        # #3560 — le contrat de rendu : ce que le récit ne traite pas se
+        # compte, dans la forme dénombrée que la lecture première utilise
+        # déjà. La relance ne s'ouvre pas ici : le compte manquant est
+        # énoncé par le producteur après le tissage (le compte EST le
+        # contrat), et le contrôle ne fait que mesurer.
+        f"{MOVEMENT_COUNT_RULE}"
         # #3082 — la règle de nommage que l'Acte III porte déjà, mot pour mot :
         # un seul contrat, une seule constante. L'Acte II récitait « le
         # locuteur » sans jamais lire la donnée qui dit qui il est.
@@ -3255,6 +3265,17 @@ async def build_act2_narrative(
         if (_dung_moved or _dung_dropped)
         else ""
     )
+    # #3560 — the render contract, on the FINAL prose: every movement and
+    # every review item the prompt carried is treated in the prose or
+    # counted in a stated drop count. The check measures what is missing;
+    # when the writer's own count is missing or wrong, the producer appends
+    # the honest count line (the counted form the first-reading note uses)
+    # and the motif is filed below. No retry opens here: the count line
+    # repairs the contract deterministically — a counted drop is a measured
+    # choice, only the silent one is the defect.
+    narrative, _render_contract_motif = apply_render_contract(
+        narrative, evidence, state
+    )
     _bound_removal = _dressed.bound_removal
     if _bound_removal.removed or _bound_removal.withdrawn:
         logger.info(
@@ -3348,6 +3369,14 @@ async def build_act2_narrative(
     # fabrication-note keys, archived in the appendix.
     if _quote_motif:
         degraded["act2_quote_fidelity"] = _quote_motif
+    # #3560 — a movement or review item the prompt carried left the prose
+    # without the writer's count: act, counts and what the pipeline did,
+    # never a quote (#3249). The count line itself rides the act (the count
+    # IS the contract); the motif is the audit trace, archived with the
+    # #2046 fabrication notes so it never reaches the reader as a repair
+    # note.
+    if _render_contract_motif:
+        degraded["act2_render_contract"] = _render_contract_motif
     vm = evidence.virtuous_mode
     # Positive outcome — reported by ``is_virtuous``, never filed under
     # ``degraded`` (see the note in ``act1_framing_plugin``): #1608 turned

@@ -156,10 +156,15 @@ class TestTheActsSelfCheckCarriesTheMotive:
 
     def test_the_prose_is_reported_never_rewritten(self) -> None:
         """No silent repair: the narrative is returned exactly as the
-        writer produced it — the gate reports, it does not edit."""
+        writer produced it — the gate reports, it does not edit. #3560
+        appends the render-contract count line AFTER the prose (the tiny
+        stub leaves its movement neither treated nor counted); the writer's
+        own sentences stay byte-identical before it."""
         out = asyncio.get_event_loop().run_until_complete(
             build_act2_narrative(
                 _min_state(), llm_callable=_stub_llm(_BODY_WITH_ID)  # type: ignore[arg-type]
             )
         )
-        assert out.narrative == _BODY_WITH_ID
+        assert out.narrative.startswith(_BODY_WITH_ID)
+        suffix = out.narrative[len(_BODY_WITH_ID) :]
+        assert suffix == "\n" or suffix.startswith("\n(Compte du récit"), suffix

@@ -185,7 +185,10 @@ class TestActTwoLetterRetry:
         llm = _two_drafts(_LETTER_DRAFT, _CLEAN, calls)
         result = _run(build_act2_narrative(_scored_state(), llm_callable=llm))
 
-        assert result.narrative == _CLEAN
+        # #3560 — the tiny stub shares no anchor with its single movement
+        # (this fixture tests the letter retry, not the render contract), so
+        # the producer's count line rides the act AFTER the writer's prose.
+        assert result.narrative.startswith(_CLEAN)
         assert "β" not in result.narrative, (
             "the rewrite is the retained act — the reader never gets a "
             "handle they cannot resolve"
@@ -205,7 +208,9 @@ class TestActTwoLetterRetry:
         llm = _two_drafts(_LETTER_DRAFT, _LETTER_DRAFT, calls)
         result = _run(build_act2_narrative(_scored_state(), llm_callable=llm))
 
-        assert result.narrative == _LETTER_DRAFT
+        # #3560 — same suffix note as above: the writer's prose is the
+        # retained draft, the count line is appended after it.
+        assert result.narrative.startswith(_LETTER_DRAFT)
         motif = result.degraded["act2_designation_letter_retry"]
         assert "le premier brouillon" in motif
 
@@ -217,7 +222,9 @@ class TestActTwoLetterRetry:
         result = _run(build_act2_narrative(_scored_state(), llm_callable=llm))
 
         assert len(calls) == 1, "no retry unless the check fires"
-        assert result.narrative == _CLEAN
+        # #3560 — the count line is the producer's append, not the retry's:
+        # one call, and the writer's prose untouched before it.
+        assert result.narrative.startswith(_CLEAN)
         assert "act2_designation_letter_retry" not in result.degraded
 
     def test_a_retry_that_produces_nothing_keeps_the_first_draft(self):
@@ -234,7 +241,9 @@ class TestActTwoLetterRetry:
         result = _run(build_act2_narrative(_scored_state(), llm_callable=llm_callable))
 
         assert len(calls) == 2
-        assert result.narrative == _LETTER_DRAFT
+        # #3560 — same suffix note: the first draft is kept, the producer's
+        # count line follows it.
+        assert result.narrative.startswith(_LETTER_DRAFT)
         motif = result.degraded["act2_designation_letter_retry"]
         assert "n'a rien produit" in motif
         assert "RuntimeError" in motif, "the observed reason is recorded"

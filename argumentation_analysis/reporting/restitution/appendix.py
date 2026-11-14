@@ -777,6 +777,10 @@ _FABRICATION_NOTE_KEYS = frozenset(
         # #3367 — same family: the letter retry repairs the prose, the reader
         # receives the retained draft and needs no note about it.
         "act2_designation_letter_retry",
+        # #3560 — the render-contract count line is appended by the producer;
+        # the count reaches the reader IN the act (the count is the contract),
+        # and the motif that says the pipeline added it is archived here.
+        "act2_render_contract",
     }
 )
 

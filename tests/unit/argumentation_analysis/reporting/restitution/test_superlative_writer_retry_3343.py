@@ -122,9 +122,9 @@ class TestActTwoRetry:
         _run(build_act2_narrative(_scored_state(), llm_callable=llm))
 
         assert len(calls) == 2, "exactly ONE retry, never a loop"
-        assert _WHOLE_SCOPE in calls[1], (
-            "the retry prompt must carry the sentence the check flagged"
-        )
+        assert (
+            _WHOLE_SCOPE in calls[1]
+        ), "the retry prompt must carry the sentence the check flagged"
         assert "2 unités évaluées sur 2" in calls[1], (
             "the retry prompt must carry the measured base the sentence has "
             "to stand on"
@@ -155,7 +155,11 @@ class TestActTwoRetry:
         llm = _two_drafts(first, first, calls)
         result = _run(build_act2_narrative(_scored_state(), llm_callable=llm))
 
-        assert result.narrative == first
+        # #3560 — the tiny stub shares no anchor with its single movement
+        # (this fixture tests the superlative retry, not the render
+        # contract), so the producer's count line rides the act after the
+        # writer's prose; the first draft is still the retained one.
+        assert result.narrative.startswith(first)
         assert "act2_whole_scope_superlative" in result.degraded
         motif = result.degraded["act2_superlative_retry"]
         assert "le premier brouillon" in motif

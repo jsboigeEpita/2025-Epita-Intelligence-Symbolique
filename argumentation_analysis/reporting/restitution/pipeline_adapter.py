@@ -138,6 +138,10 @@ _FABRICATION_NOTE_KEYS = frozenset(
         # #3367 — same family: the letter retry is a prose repair, never a
         # fact about the run (twin of the appendix set, #2046).
         "act2_designation_letter_retry",
+        # #3560 — twin of the appendix set: the render-contract count line is
+        # the reader's (it rides the act), the motif that says the pipeline
+        # added it is archived, never rendered.
+        "act2_render_contract",
     }
 )
 
