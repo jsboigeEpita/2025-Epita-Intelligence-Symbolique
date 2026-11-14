@@ -86,7 +86,11 @@ def _belief_name(uid: str) -> str:
     return f"{uid}:{text[:66]}"
 
 
-def _context(supports: list | None = None, fallacy_on: str | None = None) -> dict:
+def _context(
+    supports: list | None = None,
+    fallacy_on: str | None = None,
+    units: list | None = None,
+) -> dict:
     fallacies = []
     if fallacy_on:
         fallacies.append(
@@ -99,7 +103,9 @@ def _context(supports: list | None = None, fallacy_on: str | None = None) -> dic
         )
     return {
         "phase_extract_output": {
-            "arguments": [{"unit_id": uid, "text": text} for uid, text in UNITS],
+            "arguments": [
+                {"unit_id": uid, "text": text} for uid, text in (units or UNITS)
+            ],
             "claims": [],
         },
         "phase_hierarchical_fallacy_output": {"fallacies": fallacies},
@@ -243,6 +249,76 @@ class TestTheFallacyRegime:
             assert "FALLACY:" not in statement, statement
             assert "defeat:" not in statement, statement
             assert "_CONTRADICTION_" not in statement, statement
+
+
+class TestTheRestHoldsClause:
+    """#3570 minor — « le reste tient » is a claim, made only when a rest
+    exists: on a 2-belief A→B network the falls take everything else, and
+    the sentence must not claim an empty rest.
+    """
+
+    TWO_UNITS = [("arg_1", A_TEXT), ("arg_2", B_TEXT)]
+
+    async def test_the_clause_is_not_claimed_when_nothing_else_stands(self) -> None:
+        result = await _invoke_jtms(
+            "texte synthetique",
+            _context(supports=[["arg_1", "arg_2"]], units=list(self.TWO_UNITS)),
+        )
+        entry = _premise_entry(result, "arg_1")
+        assert entry is not None, result.get("counterfactual_withdrawals")
+        assert _fall_names(entry) == {_belief_name("arg_2")}
+        # The producer records that no unit belief survives the withdrawal…
+        assert entry["rest_stands"] is False, entry
+        # …and the render claims no rest: the sentence ends at the fall.
+        state = types.SimpleNamespace(
+            jtms_counterfactual_withdrawals=result["counterfactual_withdrawals"],
+            strategic_read={"players": []},
+            argument_provenance={},
+        )
+        evidence = build_act3_evidence(state)
+        statements = [
+            f.statement
+            for f in evidence.structured_findings
+            if f.capability == "belief_maintenance"
+        ]
+        assert statements, "the finding itself must render"
+        assert "le reste tient" not in statements[0], statements[0]
+        assert B_TEXT[:60] in statements[0], statements[0]
+
+    async def test_the_clause_stands_when_a_rest_exists(self) -> None:
+        """The 4-unit fixture: D stands alone, so arg_1's entry keeps the
+        clause (the pre-existing render test guards the sentence; this one
+        guards the producer's flag)."""
+        result = await _invoke_jtms("texte synthetique", _context())
+        entry = _premise_entry(result, "arg_1")
+        assert entry is not None
+        assert entry["rest_stands"] is True, entry
+
+
+class TestThePassCap:
+    """#3570 minor — the pass is bounded: a growth of the upstream belief
+    budget inherits the measured curve (200 beliefs = 28.67 s), so the
+    candidates tested are capped and the cap is SAID, never silent.
+    """
+
+    async def test_the_cap_stops_the_pass_and_says_it(self, monkeypatch) -> None:
+        from argumentation_analysis.orchestration import invoke_callables
+
+        monkeypatch.setattr(invoke_callables, "_COUNTERFACTUAL_PREMISE_CAP", 1)
+        result = await _invoke_jtms("texte synthetique", _context())
+        assert result["counterfactual_premises_tested"] == 1
+        assert result["counterfactual_premises_capped"] is True
+        # arg_1's entry was found before the cap; arg_2 was never asked.
+        assert _premise_entry(result, "arg_1") is not None
+        assert _premise_entry(result, "arg_2") is None
+
+    async def test_below_the_cap_nothing_is_said(self) -> None:
+        """The fixture's 2 candidates sit far below the real cap: the flag
+        is absent and the count is the true population (no false alarm —
+        the #1622 idiom)."""
+        result = await _invoke_jtms("texte synthetique", _context())
+        assert result["counterfactual_premises_tested"] == 2
+        assert "counterfactual_premises_capped" not in result
 
 
 class TestCopyPrimitive:

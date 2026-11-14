@@ -1955,7 +1955,13 @@ def _jtms_counterfactual_finding(state: Any) -> Optional[StructuredArgFinding]:
             if len(fall_texts) == 1
             else "perdent leur seule justification"
         )
-        sentence = f"si « {premise} » est retiré, {listed} {verb} ; le reste tient"
+        sentence = f"si « {premise} » est retiré, {listed} {verb}"
+        # #3570 minor — « le reste tient » is a claim, made only when a rest
+        # exists: on a 2-belief A→B network the falls take everything else.
+        # The flag defaults True, so states recorded before it render as they
+        # always did.
+        if entry.get("rest_stands", True):
+            sentence += " ; le reste tient"
         premise_id = entry.get("premise_unit_id")
         fall_ids = [
             str(f.get("unit_id"))
