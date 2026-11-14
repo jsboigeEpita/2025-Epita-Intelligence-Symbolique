@@ -42,11 +42,12 @@ the motif records « mesure non éprouvée — aucun compte énoncé », counts
 only. The predicate reads a bound item through a treated ATTACK movement's
 beat — a non-attack movement is excluded, its beat names no single unit
 (29/31/38/29 of 61/63/77/66 items were read treated only through that
-binding, on passages the act never carried) — plus the item's own claim
-(the reviewer's French conclusion) and its retained labels. The replay
-measured even the attack-movement binding as necessary-not-sufficient
-(23/20/24/24; a beat can treat a sibling unit), so the channel stays
-unmeasured until a per-item witness exists.
+binding; an eye check on one document found such items absent from the
+act) — plus the item's own claim (the reviewer's French conclusion) and
+its retained labels. The attack-movement binding is necessary, not
+sufficient (23/20/24/24 items read through it; on the same document a
+beat treated the sibling unit of an item read treated), so the channel
+stays unmeasured until a per-item witness exists.
 
 ## The treatment measure
 
@@ -119,11 +120,12 @@ MOVEMENT_COUNT_RULE = (
 #: quote on a French act never fires: 8/41 en against 1/8 fr at c7, 8/48 en
 #: against 1/4 fr at c10). Second, the unit-binding: through NON-ATTACK
 #: movements (« soutiens », « non examinés », each carrying more units than
-#: any attack movement) it read 29/31/38/29 of 61/63/77/66 items treated on
-#: passages the act never carried — excluded from the binding since; through
-#: attack movements alone it still reads 23/20/24/24, and an item can sit in
-#: a small movement's sibling unit, so the binding is NECESSARY, not
-#: sufficient. The replay on the recorded cycles is the coordinator's; this
+#: any attack movement) it read 29/31/38/29 of 61/63/77/66 items treated,
+#: and an eye check on one document found such items absent from the act —
+#: excluded from the binding since; through attack movements alone it still
+#: reads 23/20/24/24, and on the same document an item read treated sat in
+#: the sibling unit of the one the beat treats, so the binding is
+#: NECESSARY, not sufficient. The replay on the recorded cycles is the coordinator's; this
 #: flag stays False until a per-item witness exists. Until then the pipeline
 #: states NO count for the channel — a count the measure cannot back is a
 #: false statement to the reader, worse than silence — and the motif records
@@ -325,10 +327,11 @@ def _item_treated(
     canonical themes of :func:`_theme_fallback_anchors`) is excluded
     entirely: its beat states a fact about a whole population and names no
     single unit (the replay read 29/31/38/29 of 61/63/77/66 items treated
-    only through that binding, on passages the act never carried). Even an
-    attack movement's binding over-reads (23/20/24/24 through attack
-    movements alone): a small movement's beat can treat the sibling unit
-    while the item's own passage is absent. The replay on the recorded
+    only through that binding; an eye check on one document found such
+    items absent from the act). Even an attack movement's binding can
+    over-read (23/20/24/24 items read through attack movements alone): on
+    the same document, a small movement's beat treated the sibling unit
+    while the item's own passage was absent. The replay on the recorded
     cycles is the coordinator's; the channel stays unmeasured
     (:data:`COVERAGE_ITEM_MEASURE_PROVEN`) until a per-item witness exists.
     """
@@ -423,8 +426,8 @@ def read_render_contract(
     #: — the canonical themes of :func:`_theme_fallback_anchors`) is excluded:
     #: its beat states a fact about a whole population and names no single
     #: unit, so its binding witnesses nothing about one item (the replay read
-    #: 29/31/38/29 of 61/63/77/66 items treated only through it, on passages
-    #: the act never carried).
+    #: 29/31/38/29 of 61/63/77/66 items treated only through it; an eye check
+    #: on one document found such items absent from the act).
     treated_unit_ids: Set[str] = set()
     for movement in movements:
         theme = str(getattr(movement, "theme", "") or "")
