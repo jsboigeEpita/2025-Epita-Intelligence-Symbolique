@@ -1,0 +1,48 @@
+{
+  "key": "91bdeabd002b2491557a70da6ab7e3946be9d6c764df6d54660e758326a1af4e",
+  "value": {
+    "id": "chatcmpl-Ek7dEURAhqmhylT8aPvr2aSkQaYG1",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Deux catégories d’argumentation (« argument d’autorité » et « appel à la peur ») ne sont pas définies, ce qui crée un obstacle localisé. Toutefois, le contexte permet d’en reconstruire le sens global ; aucun problème notable d’anaphore ou d’emboîtement phrastique n’est relevé. Verdict : obstacle résolvable par le contexte.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661132,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 121,
+      "prompt_tokens": 272,
+      "total_tokens": 393,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 25,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

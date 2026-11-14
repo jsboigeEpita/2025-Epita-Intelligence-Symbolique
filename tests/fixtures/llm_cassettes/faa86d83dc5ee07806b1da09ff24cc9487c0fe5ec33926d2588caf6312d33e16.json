@@ -1,0 +1,48 @@
+{
+  "key": "faa86d83dc5ee07806b1da09ff24cc9487c0fe5ec33926d2588caf6312d33e16",
+  "value": {
+    "id": "chatcmpl-Ek7e8AvyXViSbwvIFr2RQGv1LDub8",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points portent sur des défauts argumentatifs distincts : le premier identifie un appel à l’émotion, tandis que le second relève un homme de paille. Aucune redondance substantielle n’est présente.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661188,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 110,
+      "prompt_tokens": 297,
+      "total_tokens": 407,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 44,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

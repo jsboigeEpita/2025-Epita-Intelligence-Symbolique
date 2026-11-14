@@ -1,0 +1,48 @@
+{
+  "key": "fa95e5386c870803b54f917eff412edba3f1b6cd201c8a1497fee9f589bfb8de",
+  "value": {
+    "id": "chatcmpl-Ek7dMASHXm9NkelB9X2z3jcpTJkZU",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\":true,\"engagement_verdict\":\"engagement_réel\",\"reasoning\":\"La réfutation s’attaque directement au lien invoqué entre l’adoption de la réforme dans les autres pays européens et sa nécessité, en soulignant que les différences structurelles peuvent invalider cette généralisation.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661140,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 133,
+      "prompt_tokens": 326,
+      "total_tokens": 459,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 59,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

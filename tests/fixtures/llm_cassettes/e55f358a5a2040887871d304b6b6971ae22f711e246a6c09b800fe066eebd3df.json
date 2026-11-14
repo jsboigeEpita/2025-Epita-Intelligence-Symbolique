@@ -1,0 +1,48 @@
+{
+  "key": "e55f358a5a2040887871d304b6b6971ae22f711e246a6c09b800fe066eebd3df",
+  "value": {
+    "id": "chatcmpl-Ek7omYeSA6ep2UJAyfCVoTbplEqDn",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Les produits pharmaceutiques cachent les effets secondaires des vaccins et les vaccins sont dangereux.\",\"main_thesis\":\"L'affirmation selon laquelle les vaccins sont dangereux ou que les produits pharmaceutiques cachent leurs effets secondaires est une théorie du complot sans fondement; les vaccins sont soutenus par des décennies de recherche clinique et les taux de vaccination élevés protègent la collectivité.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661848,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 174,
+      "prompt_tokens": 284,
+      "total_tokens": 458,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 70,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

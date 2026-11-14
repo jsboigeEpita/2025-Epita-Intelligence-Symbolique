@@ -1,0 +1,48 @@
+{
+  "key": "27846e00776e2439561d699860ea05ae5e85872668207fb30a83499fec8af4bc",
+  "value": {
+    "id": "chatcmpl-Ek7ik3bSAv3EAwBLhrAHf1Qt1UMKZ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La chaîne relie une répartition égale des 2000 euros entre le tournoi et le matériel à l'idée d'un compromis équitable. L'inférence est présente et cohérente, mais l'équité ne découle pas nécessairement de la seule égalité financière : la structure est donc partielle. Verdict : progression_logique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661474,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 136,
+      "prompt_tokens": 296,
+      "total_tokens": 432,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 47,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

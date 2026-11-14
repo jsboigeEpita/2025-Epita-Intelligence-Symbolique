@@ -1,0 +1,48 @@
+{
+  "key": "1605c1fe59e8eee4e7862f02ec6353ded26df1313c899ef6d0971351966789df",
+  "value": {
+    "id": "chatcmpl-Ek7rCVDCgm5JX4YrAy4TdTvlBvSBn",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La position adverse est clairement identifiée — crise climatique minimisée, impact humain jugé faible et transition énergétique considérée comme inutile ou désavantageuse — et elle fait l’objet d’un engagement réel.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661998,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 96,
+      "prompt_tokens": 278,
+      "total_tokens": 374,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 35,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

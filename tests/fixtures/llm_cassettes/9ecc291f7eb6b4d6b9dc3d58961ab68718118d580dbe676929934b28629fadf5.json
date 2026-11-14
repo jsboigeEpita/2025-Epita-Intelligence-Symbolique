@@ -1,0 +1,48 @@
+{
+  "key": "9ecc291f7eb6b4d6b9dc3d58961ab68718118d580dbe676929934b28629fadf5",
+  "value": {
+    "id": "chatcmpl-Ek7ok9DJMsBuqvmev1DyiesGWor6E",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"La vaccination a éradiqué la variole et a considérablement réduit la polio. Les études scientifiques et les décennies de recherche clinique soutiennent l’efficacité et la sécurité des vaccins.\",\"conclusion\":\"Les vaccins sont indispensables pour la santé publique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661846,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 115,
+      "prompt_tokens": 279,
+      "total_tokens": 394,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 45,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "key": "331e5c650a9d9cf884ff93096a802df3ad98da1ea24718f8270a76dbb19837e8",
+  "value": {
+    "id": "chatcmpl-Ek7dRGk2sjrfet0P95XF0k6W6yEIO",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\":false,\"structure_verdict\":\"saut_logique\",\"reasoning\":\"Le fait que tous les pays européens aient réalisé la réforme ne suffit pas à établir qu’elle est nécessaire, car leurs contextes et systèmes peuvent différer.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661145,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 109,
+      "prompt_tokens": 360,
+      "total_tokens": 469,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 49,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

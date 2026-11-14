@@ -1,0 +1,48 @@
+{
+  "key": "07b89112763315a0412d88e367130875df1b3a614b78a6fd22b28ad2cc707e66",
+  "value": {
+    "id": "chatcmpl-Ek7rIKiMvfMvsUmjIaIUlqq1mrj0u",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Le changement climatique actuel se caractérise par une vitesse sans précédent, contrairement à ce que prennent en compte les sceptiques. 2. La température globale a augmenté de 1,1 °C depuis l’ère préindustrielle. 3. Les modèles prédictifs s’accordent sur l’impact des activités humaines.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794662004,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 189,
+      "prompt_tokens": 241,
+      "total_tokens": 430,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 107,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

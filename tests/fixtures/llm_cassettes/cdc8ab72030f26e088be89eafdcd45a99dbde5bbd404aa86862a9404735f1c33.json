@@ -1,0 +1,48 @@
+{
+  "key": "cdc8ab72030f26e088be89eafdcd45a99dbde5bbd404aa86862a9404735f1c33",
+  "value": {
+    "id": "chatcmpl-Ek7ln4q2HHZsiq6fQMvtf9FeT5Esq",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points présentent des options distinctes : C répartit le budget entre tournoi et matériel pédagogique, tandis que B consacre tout le budget au matériel pédagogique. Le seul chevauchement concerne l’investissement pédagogique, sans reprise substantielle de l’argument.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661663,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 160,
+      "prompt_tokens": 298,
+      "total_tokens": 458,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 89,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

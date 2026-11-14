@@ -1,0 +1,48 @@
+{
+  "key": "2b947b0d78536ff2c3a616db540094ca989a70bd699adf69ba3da25f904c52a8",
+  "value": {
+    "id": "chatcmpl-Ek7lUCuqWVuAJ0YDdfgq7rkEklVPG",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\":false,\"engagement_verdict\":\"pas_de_refutation\",\"reasoning\":\"Le texte présente simplement l’option C comme une alternative équilibrée, sans réfuter explicitement l’argument de l’option B concernant l’usure des échiquiers.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661644,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 231,
+      "prompt_tokens": 390,
+      "total_tokens": 621,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 164,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

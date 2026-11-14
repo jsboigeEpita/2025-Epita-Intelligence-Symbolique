@@ -1,0 +1,48 @@
+{
+  "key": "bf6823cf65de78096c6db4c8c15c963af30ac4d057a74c8722d5a9cdfcd218fa",
+  "value": {
+    "id": "chatcmpl-Ek7qHGglO94KLH1IT39iiZ45iO3wM",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points sont distincts et apportent chacun une idée nouvelle : le premier porte sur le coût comparé des procédures et de l’emprisonnement à vie, tandis que le second porte sur l’irréversibilité de la peine de mort et le risque fatal d’erreur judiciaire. Aucune redondance sémantique notable.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661941,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 121,
+      "prompt_tokens": 285,
+      "total_tokens": 406,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 31,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

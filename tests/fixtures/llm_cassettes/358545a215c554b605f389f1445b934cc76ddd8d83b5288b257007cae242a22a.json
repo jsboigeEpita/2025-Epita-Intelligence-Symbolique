@@ -1,0 +1,48 @@
+{
+  "key": "358545a215c554b605f389f1445b934cc76ddd8d83b5288b257007cae242a22a",
+  "value": {
+    "id": "chatcmpl-Ek7dYm8CD9dCrEU6hlDs20gSqsYhm",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\":true,\"structure_verdict\":\"progression_logique\",\"reasoning\":\"Le caractère optimiste des hypothèses de croissance fournit une raison pertinente de juger la projection incertaine ou peu fiable, même s’il ne la réfute pas définitivement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661152,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 161,
+      "prompt_tokens": 482,
+      "total_tokens": 643,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 97,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -107,7 +107,10 @@ PENDING_TRIAGE: dict[tuple[str, str], str] = {
     # retired. The offline CI-safe tier stays honest-absent BY NATURE
     # (lexical detections carry no target): re-measured 25 candidates over 4
     # docs, 0 attacks, 0 eliminations. Real-run eliminations now hinge on (a)
-    # declared Walton-Krabbe relations, producer #1649 (open), and (b) the
+    # the counter lane's attacked_component producer (#1649 — the
+    # Walton-Krabbe relations channel this line used to name was retired by
+    # #2937; the R1223 GO moved the producer to the counter field, whose
+    # consumer wiring landed with the ASPIC undercut), and (b) the
     # per-argument LLM tier actually feeding the stage — the wiring decision
     # loop lives in #2920.
     ("dung_arbitration_service", "dung_arbitration"): "#1649",

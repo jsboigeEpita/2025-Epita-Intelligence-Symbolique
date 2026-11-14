@@ -1,0 +1,40 @@
+{
+  "key": "d233e83588a05c144076e4e1a4085db18f1dcd51f7870a831a2663800255b6fb",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_GneLTefFxjXGTWyzQRo3UaAp",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1360\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"La phrase rapporte simplement que le président affirme le succès incontestable de la politique économique. Elle n'attaque pas la personne de l'adversaire et ne contient aucun ad hominem.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Ek7fbGS3LQgrmLyI7HIGxTmGJPuaS",
+        "created": 1794661279,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2481,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1043,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 84,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

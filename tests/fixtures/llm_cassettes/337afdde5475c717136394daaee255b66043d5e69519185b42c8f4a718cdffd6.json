@@ -1,0 +1,48 @@
+{
+  "key": "337afdde5475c717136394daaee255b66043d5e69519185b42c8f4a718cdffd6",
+  "value": {
+    "id": "chatcmpl-Ek7d83D4qplVbTeq9QMo8ZR22zDM2",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"L’expression « argument d’autorité » est un terme technique de l’analyse argumentative qui n’est pas défini. Les anaphores (« l’ », « C’est ») sont résolvables et les phrases ne sont pas excessivement emboîtées.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661126,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 223,
+      "prompt_tokens": 268,
+      "total_tokens": 491,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 148,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

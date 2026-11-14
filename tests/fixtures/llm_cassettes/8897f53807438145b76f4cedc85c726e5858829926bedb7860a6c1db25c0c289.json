@@ -1,0 +1,48 @@
+{
+  "key": "8897f53807438145b76f4cedc85c726e5858829926bedb7860a6c1db25c0c289",
+  "value": {
+    "id": "chatcmpl-Ek7jWzobd6hstvgXboDTMFsExJYmL",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"Créer un espace numérique avec des ordinateurs en libre accès (option B).\",\"digressions\":\"L’option A (« élargir le fonds de livres jeunesse ») et l’option C (« répartir la somme, moitié fonds livre, moitié espace numérique ») sont des propositions alternatives qui ne servent pas directement la thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661522,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 230,
+      "prompt_tokens": 241,
+      "total_tokens": 471,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 142,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

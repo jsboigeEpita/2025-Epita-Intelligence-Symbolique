@@ -6,26 +6,26 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_EusxAf9zceMcOsVO5HfnUwks",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\":\"888\"}"
+          "id": "call_4gw5lY4uF4Ocju4jHB6PgXs8",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"888\",\"matches\":false,\"justification\":\"La phrase rapporte seulement une affirmation du président selon laquelle la politique économique serait un succès incontestable. Elle ne fournit pas assez d’éléments pour établir une présentation trompeuse des faits, un mensonge, une attribution fallacieuse, une attention sélective ou un déplacement des critères.\",\"move_author\":\"reported\",\"move_author_label\":\"le président\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EjCgIvIoAOtn0ge7icmPG45qmpi97",
-        "created": 1794442214,
+        "id": "chatcmpl-Ek7faURKFoMA4ryi6wk55SlAHVkhM",
+        "created": 1794661278,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2309,
           "prompt_tokens_details": {
             "audio_tokens": 0,
-            "cache_write_tokens": 2306,
-            "cached_tokens": 0,
+            "cache_write_tokens": 871,
+            "cached_tokens": 1435,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 22,
+          "completion_tokens": 101,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

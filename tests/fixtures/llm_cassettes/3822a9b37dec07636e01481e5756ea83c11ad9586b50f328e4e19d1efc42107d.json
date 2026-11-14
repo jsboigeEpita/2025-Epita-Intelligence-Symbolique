@@ -1,0 +1,48 @@
+{
+  "key": "3822a9b37dec07636e01481e5756ea83c11ad9586b50f328e4e19d1efc42107d",
+  "value": {
+    "id": "chatcmpl-Ek7p7D621CFSm1lhGIEmOYgvDSWWf",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Le point 2 apporte une idée distincte sur l’ignorance des décennies de recherche clinique. Le point 3 reprend en substance le point 1 en réaffirmant que les produits pharmaceutiques cachent les effets, même si sa formulation est incomplète.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661869,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 129,
+      "prompt_tokens": 296,
+      "total_tokens": 425,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 54,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

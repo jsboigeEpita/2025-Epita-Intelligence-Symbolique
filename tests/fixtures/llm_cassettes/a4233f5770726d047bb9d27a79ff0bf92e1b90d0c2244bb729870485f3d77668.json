@@ -1,0 +1,48 @@
+{
+  "key": "a4233f5770726d047bb9d27a79ff0bf92e1b90d0c2244bb729870485f3d77668",
+  "value": {
+    "id": "chatcmpl-Ek7lP3nDUIWU6mkieZcr6CWYeiOVf",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_digression\":true,\"relevance_verdict\":\"digression_localisée\",\"located_digression\":\"La présentation de l’option A (organiser un tournoi inter-villes avec buffet et prix) et de l’option C (format hybride avec 1000 euros pour un tournoi et 1000 euros pour le matériel) s’écarte de la thèse en proposant des usages alternatifs des 2000 euros.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661639,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 176,
+      "prompt_tokens": 475,
+      "total_tokens": 651,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 78,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

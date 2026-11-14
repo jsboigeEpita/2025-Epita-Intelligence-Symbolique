@@ -1,0 +1,48 @@
+{
+  "key": "465160f899466873e02759e7beb7ca42ed3436f26d03c008c892a784797b9a9c",
+  "value": {
+    "id": "chatcmpl-Ek7iqeyTKkDufAINz3E0eIZFEN17L",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Les deux points décrivent des options budgétaires distinctes, mais ils se recoupent partiellement sur l’achat de matériel et d’échiquiers. Le point 1 ajoute toutefois la répartition équitable avec un tournoi réduit, tandis que le point 2 défend un investissement entièrement consacré au matériel.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661480,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 217,
+      "prompt_tokens": 298,
+      "total_tokens": 515,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 133,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

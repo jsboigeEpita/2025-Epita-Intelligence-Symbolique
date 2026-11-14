@@ -1,0 +1,48 @@
+{
+  "key": "8efdcc7954dae00c447a0ce5c6b82f10c1415223b6bee8e1bcf70b1cdf294bdb",
+  "value": {
+    "id": "chatcmpl-Ek7oqIKUrVCueXcCCqut1zA3WLloA",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Deux points distincts : le premier affirme l’importance générale des vaccins pour la santé publique ; le second fournit des résultats historiques et scientifiques précis illustrant leur efficacité. Aucune redondance substantielle.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661852,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 128,
+      "prompt_tokens": 275,
+      "total_tokens": 403,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 67,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "Hypothèse : une personne est entrée par la porte restée ouverte et a emporté l’objet manquant, sans forcer la serrure.",
+      "content": "**Hypothèse :** Une personne a profité de la porte restée ouverte pour entrer et prendre l’objet manquant, sans laisser de traces d’effraction.",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EjCnmea1Sm0v390YN1k3z1httBuQW",
-        "created": 1794442678,
+        "id": "chatcmpl-Ek7n2YZgHUEZN4AONgBwOf8hiZmuV",
+        "created": 1794661740,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 32,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 93,
+          "completion_tokens": 85,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 54,
+            "reasoning_tokens": 42,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

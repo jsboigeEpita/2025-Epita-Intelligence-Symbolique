@@ -1,0 +1,48 @@
+{
+  "key": "e8f38f553305bc286f2068e91136b4f5ffa475ef41c716fe2a7c9b56968ab8ef",
+  "value": {
+    "id": "chatcmpl-Ek7dMelTlOLDIKceWgO75m856dwaI",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse soutient que l’affirmation gouvernementale sur l’effondrement du système des retraites dans cinq ans est fallacieuse. Une digression localisée concerne la critique syndicale d’un autre argument, le sophisme naturaliste selon lequel travailler plus longtemps serait « dans l’ordre des choses ».\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661140,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 159,
+      "prompt_tokens": 315,
+      "total_tokens": 474,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 75,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

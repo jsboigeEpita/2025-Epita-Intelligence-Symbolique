@@ -1,0 +1,48 @@
+{
+  "key": "a6a2e3aea4902a4c40d745bd5dc56a25279e3a532173e7a41a8586106ce449ad",
+  "value": {
+    "id": "chatcmpl-Ek7iMvOCN6FcMExsKl1bjIpeLDcLq",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Les deux points portent sur l’autorité des experts, mais ils avancent des idées distinctes : le premier invoque l’unanimité comme preuve de vérité, tandis que le second écarte les avis des non-experts. La redondance est partielle, car le second renforce indirectement le premier sans le répéter entièrement.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661450,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 158,
+      "prompt_tokens": 272,
+      "total_tokens": 430,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 68,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

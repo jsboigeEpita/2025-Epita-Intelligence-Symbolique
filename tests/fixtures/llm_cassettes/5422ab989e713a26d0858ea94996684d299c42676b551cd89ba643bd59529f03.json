@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "Hypothèse : **Le sénateur souhaite augmenter le financement des écoles publiques, mais il ne veut pas nécessairement le faire sans contrôle ni obligation de rendre des comptes.** Son adversaire déforme donc probablement sa position en présentant un **homme de paille** (« jeter l’argent par les fenêtres »).",
+      "content": "**Hypothèse :** Le sénateur souhaite probablement augmenter le financement des écoles publiques, mais cela ne signifie pas qu’il veut le faire sans contrôle ni obligation de rendre des comptes. L’énoncé déforme donc sa position — c’est un **homme de paille**.",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EjCnQ5hct6kfWoEnrbPLay19nynBs",
-        "created": 1794442656,
+        "id": "chatcmpl-Ek7mefxSQsh3j7ZDMPcmw2u7wIB2c",
+        "created": 1794661716,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 52,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 169,
+          "completion_tokens": 170,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 97,
+            "reasoning_tokens": 103,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

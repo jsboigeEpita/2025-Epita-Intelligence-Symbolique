@@ -1,0 +1,48 @@
+{
+  "key": "a649494c662d320f0658706cafb3b9cc868e8b2780ffb964a8af554cb9330f1f",
+  "value": {
+    "id": "chatcmpl-Ek7jKoSCT6dIxLQS2rn9fHB4bdnhV",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.58,\"fairness_assessment\":\"La méthode favorise une comparaison transparente des trois options et réduit le risque qu’un seul objectif — visibilité ou amélioration interne — domine la décision. Un vote préférentiel serait plus équitable qu’un simple vote majoritaire, car il permettrait d’exprimer le soutien au compromis.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"agent_1\",\"position\":\"Soutient l’option A, consacrant tout le budget à un tournoi inter-villes pour accroître la visibilité du club.\",\"influence\":0.33},{\"agent\":\"agent_2\",\"position\":\"Soutient l’option B, investissant tout le budget dans le matériel pédagogique et les nouveaux échiquiers; cette position a remporté le débat.\",\"influence\":0.4},{\"agent\":\"agent_3\",\"position\":\"Soutient l’option C, répartissant le budget entre un tournoi réduit et du matériel, afin de concilier visibilité et qualité de pratique.\",\"influence\":0.27}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"Les trois options répondent à des objectifs légitimes mais présentent des coûts d’opportunité clairs. Un vote préférentiel ou à classement permettrait de mesurer les préférences collectives, tandis qu’une négociation finale devrait examiner des variantes de l’option C fondées sur des coûts réels et des objectifs mesurables. La décision devrait prévoir une réévaluation après l’événement ou l’achat de matériel.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661510,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 449,
+      "prompt_tokens": 580,
+      "total_tokens": 1029,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 118,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

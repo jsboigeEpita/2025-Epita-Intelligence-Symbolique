@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\"fallacy_name\":\"Bromure\",\"taxonomy_pk\":\"32\",\"explanation\":\"Le texte se limite à des affirmations banales et convenues, sans véritable raisonnement ni conclusion à établir.\",\"confidence\":0.72}",
+      "content": "{\"fallacy_name\":null,\"taxonomy_pk\":null,\"explanation\":\"Le texte énonce simplement deux affirmations descriptives sans raisonnement fallacieux identifiable.\",\"confidence\":1.0}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EjCfb22ROm0t0sx8Tj4ectaE0Iqyj",
-        "created": 1794442171,
+        "id": "chatcmpl-Ek7esowfkBoO4Dfj8sxIrR7AxByER",
+        "created": 1794661234,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 23156,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 378,
+          "completion_tokens": 149,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 323,
+            "reasoning_tokens": 101,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

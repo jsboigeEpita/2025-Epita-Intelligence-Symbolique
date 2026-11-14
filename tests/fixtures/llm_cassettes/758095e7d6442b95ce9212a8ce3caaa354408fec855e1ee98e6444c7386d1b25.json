@@ -1,0 +1,48 @@
+{
+  "key": "758095e7d6442b95ce9212a8ce3caaa354408fec855e1ee98e6444c7386d1b25",
+  "value": {
+    "id": "chatcmpl-Ek7djzWkNeBSIaGy6XEyVCoDE2TTq",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"L'opposition soutient que le gouvernement déforme sa position en présentant à tort sa proposition comme une suppression des retraites, alors qu'elle veut seulement les réformer autrement.\",\"digressions\":\"Le recours à l'argument « pensez à vos enfants » constitue un appel à l'émotion sans rapport direct avec l'examen technique du financement des retraites.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661163,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 297,
+      "prompt_tokens": 334,
+      "total_tokens": 631,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 205,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

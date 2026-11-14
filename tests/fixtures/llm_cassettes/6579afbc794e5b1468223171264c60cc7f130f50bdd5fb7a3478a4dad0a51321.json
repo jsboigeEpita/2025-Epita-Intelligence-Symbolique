@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_pY6WJi7CHszPXN9eIc2mcB9Y",
+          "id": "call_3HT1CJDDfhmavHxaPu7sKJ1S",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"301\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"Le texte affirme que la proposition est vraie uniquement parce que des experts sont unanimes, puis exclut l’avis des non-experts sur la seule base de leur statut. Cela correspond à un appel à la conviction/autorité présentée comme suffisante, sans autre justification.\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"301\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L'argument affirme que la conclusion est vraie uniquement parce que des experts sont unanimes, et exclut l'avis des non-experts sans autre justification. Cela relève de l'appel à la conviction, sans sous-cas d'effet de halo.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EjChU6qI9mkAIFO4mo7VYpw55Chcd",
-        "created": 1794442288,
+        "id": "chatcmpl-Ek7hFbpZgJPPrIh4kn5dmk17N6y0N",
+        "created": 1794661381,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1999,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 95,
+          "completion_tokens": 88,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

@@ -1,0 +1,48 @@
+{
+  "key": "34a7e54d29496abadb44f1f18d59cfac5b9ea8a9179323830f067f9830784e9c",
+  "value": {
+    "id": "chatcmpl-Ek7rHV1mBNucAZJCm0TudnJVcArHJ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne relie une hausse de 1,1 degré et une vitesse non précisée à la conclusion que le changement climatique est exceptionnellement rapide et principalement dû aux activités humaines. Le verdict indique un saut logique net : les prémisses ne suffisent pas à établir ces deux affirmations.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794662003,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 110,
+      "prompt_tokens": 289,
+      "total_tokens": 399,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 32,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

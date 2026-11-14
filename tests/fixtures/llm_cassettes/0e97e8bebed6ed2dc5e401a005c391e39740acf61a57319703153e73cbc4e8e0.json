@@ -1,0 +1,48 @@
+{
+  "key": "0e97e8bebed6ed2dc5e401a005c391e39740acf61a57319703153e73cbc4e8e0",
+  "value": {
+    "id": "chatcmpl-Ek7rOeVmgMv5BqPkg2GrW5SDfIsnI",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. La minimisation de la crise climatique repose souvent sur l’utilisation de données sélectives pour soutenir cette position.\\n2. Les modèles prédictifs sont unanimes quant à l’impact des activités humaines sur la crise climatique.\\n3. La transition énergétique est nécessaire et économiquement avantageuse à long terme.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794662010,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 113,
+      "prompt_tokens": 230,
+      "total_tokens": 343,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 35,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

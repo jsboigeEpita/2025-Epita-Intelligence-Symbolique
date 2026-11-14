@@ -1,0 +1,48 @@
+{
+  "key": "8e60a7f3780af5009d3da366c80cf8c88cdc0814e27e3d94ac7df8703ba32649",
+  "value": {
+    "id": "chatcmpl-Ek7dFrprvfNSS1YEvR9DehCTX5EJG",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"L'affirmation du gouvernement selon laquelle le système des retraites s'effondrera dans cinq ans sans action immédiate est un argument fallacieux, fondé notamment sur l'autorité et la peur, et qui néglige les différences structurelles entre les systèmes.\",\"digressions\":\"La remarque des syndicats sur le sophisme naturaliste consistant à prétendre que travailler plus longtemps est « dans l'ordre des choses » constitue une digression : elle critique un autre argument du gouvernement plutôt que l'affirmation de l'effondrement imminent.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661133,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 381,
+      "prompt_tokens": 292,
+      "total_tokens": 673,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 248,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

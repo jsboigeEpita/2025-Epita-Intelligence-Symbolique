@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "### Requête : `alice_succeeds`\n\n1. **Ce que la requête cherchait à vérifier**  \n   Elle cherchait à déterminer si Alice réussit.\n\n2. **Résultat**  \n   La requête a été prouvée : **True**.\n\n3. **Signification dans le texte source**  \n   Le texte indique que si Alice étudie, alors elle réussit, et qu’Alice étudie effectivement. On peut donc déduire qu’Alice réussit. Cette conclusion est également présente explicitement dans l’ensemble des croyances sous la forme `alice_succeeds`.\n\n### Requête : `alice_studies`\n\n1. **Ce que la requête cherchait à vérifier**  \n   Elle cherchait à déterminer si Alice étudie.\n\n2. **Résultat**  \n   La requête a été prouvée : **True**.\n\n3. **Signification dans le texte source**  \n   Le fait qu’Alice étudie est directement affirmé dans le texte source et dans l’ensemble des croyances sous la forme `alice_studies`.\n\n### Conclusion générale\n\nLes deux requêtes ont obtenu le résultat **True**. Cela signifie que les deux propositions sont considérées comme vraies dans le système :\n\n- Alice étudie.\n- Alice réussit.\n\nLa réussite d’Alice découle logiquement de la règle « si Alice étudie, alors elle réussit » et du fait établi qu’Alice étudie. Il s’agit d’un raisonnement par **modus ponens**.",
+      "content": "### 1. Requête : `alice_succeeds`\n\n- **Ce que la requête cherchait à vérifier :**  \n  Elle cherchait à déterminer si Alice réussit.\n\n- **Résultat :**  \n  `True` — la requête a été prouvée.\n\n- **Signification dans le texte source :**  \n  Le texte affirme que si Alice étudie, alors elle réussit, et qu’Alice étudie effectivement. Par le raisonnement logique appelé **modus ponens**, on peut donc conclure qu’Alice réussit. Cette conclusion est également présente explicitement dans l’ensemble des croyances.\n\n### 2. Requête : `alice_studies`\n\n- **Ce que la requête cherchait à vérifier :**  \n  Elle cherchait à déterminer si Alice étudie.\n\n- **Résultat :**  \n  `True` — la requête a été prouvée.\n\n- **Signification dans le texte source :**  \n  Le fait qu’Alice étudie est donné directement comme une information de départ. Il ne s’agit donc pas d’une conclusion déduite, mais d’un fait explicitement présent dans les croyances.\n\n### Conclusion générale\n\nLes deux requêtes ont obtenu le résultat `True`. Cela signifie que le système de logique propositionnelle confirme à la fois qu’Alice étudie et qu’Alice réussit. La réussite d’Alice découle logiquement de la règle « si Alice étudie, alors elle réussit » et du fait qu’Alice étudie.",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EjCowAbcZd0bRwjh04orn64tuxkqe",
-        "created": 1794442750,
+        "id": "chatcmpl-Ek7oMd1S3q3sI442U8uTjLaHTcKLC",
+        "created": 1794661822,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 247,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 365,
+          "completion_tokens": 356,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 39,
+            "reasoning_tokens": 28,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

@@ -6,30 +6,45 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_mnX4ohEIZIaWYNqFvXktVUly",
+          "id": "call_GX4CJxcSiw1vWWOZphm3fqK4",
           "name": "Exploration-explore_branch",
           "arguments": "{\"node_pk\": \"699\"}"
         },
         {
-          "id": "call_MqpeUy4bFCg1aUdquaWX49bd",
+          "id": "call_XhDatSskwzEaaFC0wOmBOJKK",
           "name": "Exploration-explore_branch",
           "arguments": "{\"node_pk\": \"701\"}"
         },
         {
-          "id": "call_mIGsg8Wfxl4YmpYJOcYuR6Fv",
+          "id": "call_7OFOyMKx3s5aqBAZzZSx9McH",
           "name": "Exploration-explore_branch",
           "arguments": "{\"node_pk\": \"702\"}"
         },
         {
-          "id": "call_rHUYYn1VewawkMIq65goqJ7A",
+          "id": "call_Ye58raMWbJAoQEppPFbfxHKl",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"703\"}"
+        },
+        {
+          "id": "call_0HS2oZJVPK74rbrZnIXwLjSM",
           "name": "Exploration-explore_branch",
           "arguments": "{\"node_pk\": \"704\"}"
+        },
+        {
+          "id": "call_8M0Cm3NvicdNYrlrsZIlfCiC",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"705\"}"
+        },
+        {
+          "id": "call_MhSFp1TZc9d0vP9Or059SlNP",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"706\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EjChjPTSHzZkMmUxBRdOmAgMLYKiF",
-        "created": 1794442303,
+        "id": "chatcmpl-Ek7hUxic5wuAkS5foaVcXLF7ebaPr",
+        "created": 1794661396,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2258,
@@ -40,7 +55,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 95,
+          "completion_tokens": 152,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

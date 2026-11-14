@@ -1,0 +1,48 @@
+{
+  "key": "c19cd9aae6702807ce02c075dbffe0b531f1804b1f7fc56f11456e5c98211f90",
+  "value": {
+    "id": "chatcmpl-Ek7lMfwyLVqQb6BsddwZJrxE3Zr6q",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"Il faut investir les 2000 euros dans du matériel pédagogique neuf, car les échiquiers actuels sont usés.\",\"digressions\":\"La présentation de l’option A (organiser un tournoi inter-villes avec buffet et prix) et de l’option C (format hybride avec 1000 euros pour un tournoi et 1000 euros pour le matériel) s’écarte de la défense de l’option B.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661636,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 275,
+      "prompt_tokens": 335,
+      "total_tokens": 610,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 168,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

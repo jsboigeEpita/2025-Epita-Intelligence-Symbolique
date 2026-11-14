@@ -1,0 +1,48 @@
+{
+  "key": "c2e6edeea3efd83cf44a2f20f443fd2277771ca3ab16cef81251d14c44928fef",
+  "value": {
+    "id": "chatcmpl-Ek7rF9Kky93CczKLl7wqHGZfM6mia",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les prémisses — notamment l’énoncé selon lequel les modèles prédictifs établissent unanimement l’impact des activités humaines sur le climat — soutiennent directement la conclusion identique. Le verdict « progression_logique » est donc justifié.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794662001,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 120,
+      "prompt_tokens": 285,
+      "total_tokens": 405,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 51,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

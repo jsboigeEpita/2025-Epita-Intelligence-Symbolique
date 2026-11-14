@@ -1,0 +1,48 @@
+{
+  "key": "568f6d0ef5068d3e023e088c4da10927b22fb8e7f7066c55b6a7151ea53cb4c6",
+  "value": {
+    "id": "chatcmpl-Ek7dEV4FeSyzlwElSBFhshxV9s1Q9",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Obstacles localisés : jargon technique non défini (« sophisme naturaliste », « homme de paille ») et sigle économique non développé (« PIB »). Verdict : ces obstacles sont résolvables par le contexte, donc le sens global reste accessible.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661132,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 106,
+      "prompt_tokens": 267,
+      "total_tokens": 373,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 34,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

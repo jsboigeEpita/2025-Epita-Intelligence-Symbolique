@@ -1,0 +1,48 @@
+{
+  "key": "bfd2d143691d3d626bd0d32c93da3e59c9aeb9c6b93c4a5e1133e972157a2ddb",
+  "value": {
+    "id": "chatcmpl-Ek7lhrDvVzeZfiSTY6TFQcFD3lGKP",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne relie l’usure des échiquiers et le besoin d’investir dans du matériel pédagogique au souhait de combiner visibilité et pédagogie, puis conclut que l’option C est à retenir. Toutefois, le choix spécifique de l’option C ne découle pas suffisamment des prémisses : saut logique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661657,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 116,
+      "prompt_tokens": 294,
+      "total_tokens": 410,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 31,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

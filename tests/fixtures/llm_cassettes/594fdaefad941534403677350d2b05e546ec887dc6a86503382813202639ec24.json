@@ -1,0 +1,48 @@
+{
+  "key": "594fdaefad941534403677350d2b05e546ec887dc6a86503382813202639ec24",
+  "value": {
+    "id": "chatcmpl-Ek7jbOWQvenO2nf7b8jhwIh9f8E1B",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.2,\"exhibit\":\"La thèse porte sur l’élargissement du fonds de livres jeunesse, tandis que la digression localisée propose de créer un espace numérique avec des ordinateurs en libre accès, ce qui ne contribue pas directement à cette thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661527,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 130,
+      "prompt_tokens": 269,
+      "total_tokens": 399,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 63,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "key": "3401585319e31d55fdfd09d46508e06bf12a63fc124f211a6decbb9bf4d29445",
+  "value": {
+    "id": "chatcmpl-Ek7e4FZ6dibVDRNYfbmC53I197izC",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. L’invocation de l’intérêt des enfants (« pensez à vos enfants ») constitue un appel à l’émotion qui détourne le débat des questions techniques de financement.\\n2. L’opposition dénonce un homme de paille : personne ne propose de supprimer les retraites, mais seulement de les réformer différemment.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661184,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 129,
+      "prompt_tokens": 254,
+      "total_tokens": 383,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 45,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

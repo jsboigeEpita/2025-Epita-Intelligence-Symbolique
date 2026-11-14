@@ -1,14 +1,14 @@
 {
   "key": "cb2c8982c7b2861f32b1c0bebd65f6cec5aafcccdbf50726814c7dc8ac19ae72",
   "value": {
-    "id": "chatcmpl-EjCrdmRRQR7oBgZJgfLc0T3VfJUMY",
+    "id": "chatcmpl-Ek7quV2cZsEiCuQCvQIUnjSQwuGrr",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_clarity_obstacle\":false,\"obstacles\":\"\"}",
+          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Jargon technique non défini : « modèles prédictifs » et « ère préindustrielle » sont utilisés sans explication accessible. Aucun anaphore non résolvable ni phrase excessivement emboîtée.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794442917,
+    "created": 1794661980,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 195,
+      "completion_tokens": 228,
       "prompt_tokens": 275,
-      "total_tokens": 470,
+      "total_tokens": 503,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 172,
+        "reasoning_tokens": 162,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

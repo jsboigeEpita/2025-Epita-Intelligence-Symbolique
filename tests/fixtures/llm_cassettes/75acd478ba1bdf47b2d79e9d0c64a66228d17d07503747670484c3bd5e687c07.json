@@ -1,0 +1,48 @@
+{
+  "key": "75acd478ba1bdf47b2d79e9d0c64a66228d17d07503747670484c3bd5e687c07",
+  "value": {
+    "id": "chatcmpl-Ek7pmM0y2rl0fdl3E73A7vosDqThQ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_digression\":true,\"relevance_verdict\":\"digression_localisée\",\"located_digression\":\"De plus, certains criminels sont irrecuperables et representent un danger permanent pour la societe. Le cout des appels et procedures est souvent superieur a l'emprisonnement a vie.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661910,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 157,
+      "prompt_tokens": 340,
+      "total_tokens": 497,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 83,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_nGmLJEOw5Glhklx4xgfXeqbu",
+          "id": "call_IickUfx9iU1JaNYC8h95nMAP",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"175\",\"matches\":false,\"justification\":\"La phrase rapporte une affirmation du président, mais ne fournit pas assez de contexte pour établir une manipulation, une technique rhétorique ou un appel émotionnel fallacieux.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+          "arguments": "{\"node_pk\":\"175\",\"confidence\":\"low\",\"matches\":false,\"justification\":\"L'énoncé rapporte simplement que le président affirme le succès de la politique économique, sans fournir assez d'éléments pour établir une manipulation ou une technique persuasive fallacieuse.\",\"move_author\":\"reported\",\"move_author_label\":\"le président\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EjCgIavdAxEjTNZw3sdfI8IMUvhY2",
-        "created": 1794442214,
+        "id": "chatcmpl-Ek7faSK8ho4yzDjmgwddsTmIdAsCy",
+        "created": 1794661278,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2319,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 76,
+          "completion_tokens": 82,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

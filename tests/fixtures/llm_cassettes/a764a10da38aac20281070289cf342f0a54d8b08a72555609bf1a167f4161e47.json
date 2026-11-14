@@ -1,0 +1,40 @@
+{
+  "key": "a764a10da38aac20281070289cf342f0a54d8b08a72555609bf1a167f4161e47",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_kB8LY44IGlchyT4DKjMnliKj",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"326\",\"matches\":false,\"justification\":\"Le texte discrédite l'avis des non-experts par un appel à l'autorité et une exclusion de la parole, mais il ne tente pas de provoquer la honte ou l'embarras de l'adversaire. Il n'y a donc pas d'appel à la honte.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Ek7h0fAvZG04FDVF14jTk6ZkbwADW",
+        "created": 1794661366,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1370,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1367,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 95,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

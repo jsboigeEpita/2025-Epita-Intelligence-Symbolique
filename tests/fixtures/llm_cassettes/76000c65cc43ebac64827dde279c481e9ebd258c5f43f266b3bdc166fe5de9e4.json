@@ -1,0 +1,48 @@
+{
+  "key": "76000c65cc43ebac64827dde279c481e9ebd258c5f43f266b3bdc166fe5de9e4",
+  "value": {
+    "id": "chatcmpl-Ek7dQOaYUsLPUvY75GdlH8D49JzYA",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\":true,\"engagement_verdict\":\"engagement_réel\",\"reasoning\":\"La réfutation vise directement le fondement et la présentation de la prédiction gouvernementale, en contestant sa justification par l’autorité, l’absence de prise en compte des différences structurelles et l’appel à la peur.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661144,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 451,
+      "prompt_tokens": 370,
+      "total_tokens": 821,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 375,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
