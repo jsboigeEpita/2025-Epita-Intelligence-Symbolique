@@ -49,8 +49,13 @@ from argumentation_analysis.reporting.restitution import (
     pipeline_adapter,
 )
 from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
+    build_act2_evidence,
     build_act2_narrative,
     build_act2_retry_prompt,
+)
+from argumentation_analysis.reporting.restitution.movement_render_contract import (
+    read_render_contract,
+    render_count_line,
 )
 from argumentation_analysis.reporting.restitution.readability_gate import (
     greek_label_sentences,
@@ -104,6 +109,30 @@ def _two_drafts(first: str, second: str, calls=None):
         return first if len(seen) == 1 else second
 
     return llm_callable
+
+
+#: #3560 — the producer's count line: one parenthesised sentence on ONE
+#: line, nothing after it but an optional newline.
+_COUNT_LINE_RE = re.compile(r"\(Compte du récit : [^\n]*\)\n?")
+
+
+def _expected_act(draft: str) -> str:
+    """The act #3560 makes of this fixture's draft — byte-exact.
+
+    The writer's prose verbatim, then the producer's count line (these
+    fixtures leave their movement uncounted). Exact equality, not a prefix
+    test: two drafts concatenated would satisfy ``startswith`` and must fail
+    here. The line's shape is checked independently, so recomputing it
+    cannot bless a suffix that carries anything else.
+    """
+    state = _scored_state()
+    line = render_count_line(
+        read_render_contract(draft, build_act2_evidence(state), state)
+    )
+    if not line:
+        return draft
+    assert _COUNT_LINE_RE.fullmatch(line), f"count line shape changed: {line!r}"
+    return draft + "\n" + line
 
 
 #: A draft that prints one standalone letter handle — no superlative anywhere,
@@ -188,7 +217,8 @@ class TestActTwoLetterRetry:
         # #3560 — the tiny stub shares no anchor with its single movement
         # (this fixture tests the letter retry, not the render contract), so
         # the producer's count line rides the act AFTER the writer's prose.
-        assert result.narrative.startswith(_CLEAN)
+        # Byte-exact: the draft plus that line, nothing else.
+        assert result.narrative == _expected_act(_CLEAN)
         assert "β" not in result.narrative, (
             "the rewrite is the retained act — the reader never gets a "
             "handle they cannot resolve"
@@ -208,9 +238,9 @@ class TestActTwoLetterRetry:
         llm = _two_drafts(_LETTER_DRAFT, _LETTER_DRAFT, calls)
         result = _run(build_act2_narrative(_scored_state(), llm_callable=llm))
 
-        # #3560 — same suffix note as above: the writer's prose is the
-        # retained draft, the count line is appended after it.
-        assert result.narrative.startswith(_LETTER_DRAFT)
+        # #3560 — same byte-exact form as above: the retained draft, then
+        # the producer's count line, nothing else.
+        assert result.narrative == _expected_act(_LETTER_DRAFT)
         motif = result.degraded["act2_designation_letter_retry"]
         assert "le premier brouillon" in motif
 
@@ -224,7 +254,7 @@ class TestActTwoLetterRetry:
         assert len(calls) == 1, "no retry unless the check fires"
         # #3560 — the count line is the producer's append, not the retry's:
         # one call, and the writer's prose untouched before it.
-        assert result.narrative.startswith(_CLEAN)
+        assert result.narrative == _expected_act(_CLEAN)
         assert "act2_designation_letter_retry" not in result.degraded
 
     def test_a_retry_that_produces_nothing_keeps_the_first_draft(self):
@@ -241,9 +271,9 @@ class TestActTwoLetterRetry:
         result = _run(build_act2_narrative(_scored_state(), llm_callable=llm_callable))
 
         assert len(calls) == 2
-        # #3560 — same suffix note: the first draft is kept, the producer's
-        # count line follows it.
-        assert result.narrative.startswith(_LETTER_DRAFT)
+        # #3560 — same byte-exact form: the first draft is kept, the
+        # producer's count line follows it, nothing else.
+        assert result.narrative == _expected_act(_LETTER_DRAFT)
         motif = result.degraded["act2_designation_letter_retry"]
         assert "n'a rien produit" in motif
         assert "RuntimeError" in motif, "the observed reason is recorded"

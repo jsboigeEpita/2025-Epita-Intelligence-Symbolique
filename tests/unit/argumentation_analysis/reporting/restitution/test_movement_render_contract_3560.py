@@ -5,7 +5,8 @@ item reaches the Act II prompt, and between that prompt and the reader
 stands the writer's discretion alone: no post-weave check verifies that
 what the prompt carried was treated, and no count says how many were not.
 
-This witness pins the contract, per the issue:
+This witness pins the contract, per the issue and the coordinator's
+replay finding (14/11):
 
 * a stubbed writer that treats ONE movement of three, and none of the
   review items, leaves a STATED DROP COUNT on the act — the counted form
@@ -15,6 +16,13 @@ This witness pins the contract, per the issue:
   TRUE count;
 * an EXACT count by the writer needs no pipeline line — the act is
   byte-identical (the drop is counted, which is the contract);
+* the REVIEW ITEM channel states NO count while its measure is unproven:
+  its 4-word run is language-bound (a quote in English on a French act
+  never fires), so a count would be a false statement to the reader; the
+  motif records the unmeasured channel. The predicate reads a bound item
+  through its movement's beat, and the witness proves it TREATED when its
+  unit's movement is treated — and untreated on another movement's beat,
+  so the reading is not "any overlap";
 * a prose that carries everything is returned byte-identical (positive
   control: the contract never fires speculatively);
 * the prompt holds all three movement blocks and the item (the issue's
@@ -108,6 +116,36 @@ _COVERAGE_REVIEW = {
     "reason": "",
     "basis": "coverage_review",
 }
+
+#: Coordinator finding (14/11): a review item whose quote is ENGLISH on a
+#: FRENCH act — the 4-word run is language-bound and can never witness the
+#: treatment. Its unit is ``arg_2``, so the movement's beat carries it
+#: whenever the prose treats that movement.
+EN_QUOTE = "The timber of this argument is the analogy it keeps carrying."
+_BOUND_EN_ITEM = {
+    "unit_id": "arg_2",
+    "quote": EN_QUOTE,
+    "offset": 0,
+    "class": "persuasion",
+    "lens": LENS_BY_CLASS["persuasion"],
+    "reason": "le passage porte l'essentiel du cadrage",
+    "conclusion": "cet argument conclut que la comparaison suffit",
+    "rank": 1,
+    "routed": {
+        "lens": LENS_BY_CLASS["persuasion"],
+        "status": "lens_not_wired",
+        "reason": "synthetic",
+    },
+}
+
+#: Treats the SECOND movement (arg_2's) and nothing else; the bound item's
+#: English quote shares no 4-word run with it, and its French conclusion is
+#: not quoted either — only the movement binding can make it TREATED.
+_BEAT_TWO = (
+    "### Le mouvement de la peur\n\n"
+    "Un appel à la peur disqualifie le rival par sa personne plutôt que par "
+    "ses idées ; le procédé ferme la discussion."
+)
 
 
 def _state() -> SimpleNamespace:
@@ -243,35 +281,80 @@ def test_the_check_reddens_when_the_count_is_wrong():
 
 def test_an_exact_count_by_the_writer_needs_no_pipeline_line():
     """A counted drop is a measured choice, not a defect: the writer's exact
-    line satisfies the contract and the act is byte-identical."""
+    movement count satisfies the contract and the act is byte-identical. The
+    review-item channel is unmeasured (ask 2), so its note rides
+    ``degraded`` — counts only, no movement defect, no pipeline count line."""
     result = _run(build_act2_narrative(_state(), llm_callable=_llm(_TREAT_ONE_COUNTED)))
 
     assert result.narrative == _TREAT_ONE_COUNTED
     assert "Compte du récit" not in result.narrative
-    assert "act2_render_contract" not in result.degraded
+    motif = result.degraded["act2_render_contract"]
+    assert "mouvement absent" not in motif
+    assert "mesure non éprouvée" in motif
 
 
 # --- ask 2: the same contract for the review's items ---------------------------
 
 
-def test_the_review_item_is_counted_when_no_beat_carries_it():
-    """The item rides the block; a prose that does not reprise it states the
-    count — the review-item kind the cycle-10 severe defect was made of."""
+def test_the_item_channel_states_no_count_until_its_measure_is_proven():
+    """Coordinator finding (14/11), ask 2: a count the measure cannot witness
+    is a false statement to the reader. The item channel is unmeasured, so the
+    pipeline states NO item count (the movements' count still renders) and the
+    motif records the unmeasured channel, counts only. The untreated item is
+    still MEASURED as untreated — the tracer reads it, the reader is not told
+    a number the measure cannot back."""
+    from argumentation_analysis.reporting.restitution.movement_render_contract import (
+        read_render_contract,
+    )
+
     result = _run(build_act2_narrative(_state(), llm_callable=_llm(_TREAT_ONE)))
 
-    assert (
-        "1 constat de couverture remis au rédacteur, 0 repris ici" in result.narrative
-    )
+    assert "Compte du récit" in result.narrative, "the movements' count renders"
+    assert "constat de couverture remis au rédacteur" not in result.narrative
     motif = result.degraded["act2_render_contract"]
-    assert "1 constat de couverture non repris sur 1" in motif
+    assert "1 constat de couverture remis au rédacteur" in motif
+    assert "mesure non éprouvée" in motif, "the channel is recorded, not counted"
+    reading = read_render_contract(_TREAT_ONE, build_act2_evidence(_state()), _state())
+    assert reading.items_total == 1
+    assert reading.items_treated == 0
+    assert reading.items_measured is False
+
+
+def test_a_bound_item_reads_treated_through_its_movements_beat():
+    """Coordinator finding (14/11), ask 1: the quote is English, the act
+    French — the 4-word run is language-bound and cannot witness the
+    treatment. The item's unit (``arg_2``) is carried by a movement the prose
+    treats, so that beat is the item's home (#3505): the item is TREATED.
+    Red on the head before the predicate read the binding."""
+    from argumentation_analysis.reporting.restitution.movement_render_contract import (
+        read_render_contract,
+    )
+
+    state = _state()
+    state.coverage_review = dict(_COVERAGE_REVIEW, items=[dict(_BOUND_EN_ITEM)])
+    evidence = build_act2_evidence(state)
+
+    reading = read_render_contract(_BEAT_TWO, evidence, state)
+    assert reading.items_total == 1
+    assert reading.items_treated == 1
+    assert reading.items_untreated == 0
+
+    # Not "any overlap": the SAME item on another movement's beat stays
+    # untreated — the witness is the binding, not prose in general.
+    control = read_render_contract(_TREAT_ONE, evidence, state)
+    assert control.items_treated == 0
 
 
 def test_a_beat_that_carries_the_items_quote_counts_as_treated():
-    """The tracer's own measure: a 4-word run shared with the passage."""
+    """The tracer's own measure: a 4-word run shared with the passage. The
+    item channel is still unmeasured for COUNTING (ask 2), so the motif
+    records that — but no movement drop and no count line are stated."""
     result = _run(build_act2_narrative(_state(), llm_callable=_llm(_TREAT_ALL)))
 
     assert "Compte du récit" not in result.narrative
-    assert "act2_render_contract" not in result.degraded
+    motif = result.degraded["act2_render_contract"]
+    assert "mouvement absent" not in motif
+    assert "mesure non éprouvée" in motif
 
 
 # --- the positive control: the contract never fires speculatively --------------
@@ -282,7 +365,9 @@ def test_a_prose_that_carries_everything_is_returned_byte_identical():
 
     assert result.status == "woven"
     assert result.narrative == _TREAT_ALL
-    assert "act2_render_contract" not in result.degraded
+    motif = result.degraded["act2_render_contract"]
+    assert "mouvement absent" not in motif
+    assert "mesure non éprouvée" in motif, "the channel is recorded, not counted"
 
 
 # --- the verdict object, on the measure itself --------------------------------

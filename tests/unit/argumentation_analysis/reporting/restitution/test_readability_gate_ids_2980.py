@@ -22,15 +22,21 @@ Privacy: invented filler, opaque ids. Deterministic: no JVM, no LLM.
 from __future__ import annotations
 
 import asyncio
+import re
 from types import SimpleNamespace
 
 from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
+    build_act2_evidence,
     build_act2_narrative,
 )
 from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
     build_act3_conclusion,
 )
 from argumentation_analysis.reporting.restitution.acts import RestitutionActs
+from argumentation_analysis.reporting.restitution.movement_render_contract import (
+    read_render_contract,
+    render_count_line,
+)
 from argumentation_analysis.reporting.restitution.readability_gate import (
     ReadabilityGate,
 )
@@ -74,6 +80,30 @@ def _min_state() -> SimpleNamespace:
         governance_decisions=[],
         debate_transcripts=[],
     )
+
+
+#: #3560 — the producer's count line: one parenthesised sentence on ONE
+#: line, nothing after it but an optional newline.
+_COUNT_LINE_RE = re.compile(r"\(Compte du récit : [^\n]*\)\n?")
+
+
+def _expected_act(draft: str) -> str:
+    """The act #3560 makes of this fixture's draft — byte-exact.
+
+    The writer's prose verbatim, then the producer's count line (this
+    fixture leaves its movement uncounted). Exact equality, not a prefix
+    test: two drafts concatenated would satisfy ``startswith`` and must fail
+    here. The line's shape is checked independently, so recomputing it
+    cannot bless a suffix that carries anything else.
+    """
+    state = _min_state()
+    line = render_count_line(
+        read_render_contract(draft, build_act2_evidence(state), state)
+    )
+    if not line:
+        return draft
+    assert _COUNT_LINE_RE.fullmatch(line), f"count line shape changed: {line!r}"
+    return draft + "\n" + line
 
 
 class TestTheBodyCheckFlagsIdClasses:
@@ -165,6 +195,7 @@ class TestTheActsSelfCheckCarriesTheMotive:
                 _min_state(), llm_callable=_stub_llm(_BODY_WITH_ID)  # type: ignore[arg-type]
             )
         )
-        assert out.narrative.startswith(_BODY_WITH_ID)
-        suffix = out.narrative[len(_BODY_WITH_ID) :]
-        assert suffix == "\n" or suffix.startswith("\n(Compte du récit"), suffix
+        # #3560 — the render-contract count line is the ONLY thing after the
+        # writer's body, and byte-exact: the model's prose verbatim, then the
+        # producer's line for this fixture's state, nothing else.
+        assert out.narrative == _expected_act(_BODY_WITH_ID)

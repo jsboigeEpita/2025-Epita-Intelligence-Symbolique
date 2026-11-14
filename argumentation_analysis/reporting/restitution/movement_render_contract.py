@@ -19,13 +19,31 @@ treated in the prose OR counted in a stated drop count — the counted form
 the first-reading note already uses (« 3 gestes nommés, 1 montré ici —
 échantillonné, pas exhaustif »). The writer is taught the form
 (:data:`MOVEMENT_COUNT_RULE`, one consigne of the Act II prompt); the
-pipeline guarantees it: when the measured untreated set is non-empty and
-the writer's own count is missing or wrong, the producer appends the honest
-count line to the act (:func:`render_count_line`, same counted form) and the
-motif lands in the act's ``degraded`` map under ``act2_render_contract``,
-archived with the #2046 fabrication notes — the count line tells the reader,
-the motif tells the auditor. A writer whose own count is exact keeps its
-prose byte-identical: the pipeline line never fires on a counted drop.
+pipeline guarantees it on each channel it can WITNESS: when the measured
+untreated set is non-empty and the writer's own count is missing or wrong,
+the producer appends the honest count line to the act
+(:func:`render_count_line`, same counted form) and the motif lands in the
+act's ``degraded`` map under ``act2_render_contract``, archived with the
+#2046 fabrication notes — the count line tells the reader, the motif tells
+the auditor. A writer whose own count is exact keeps its prose
+byte-identical: the pipeline line never fires on a counted drop.
+
+## A count the measure cannot witness
+
+The coordinator's replay on the recorded c7–c10 states (14/11) measured the
+review-item predicate as language-bound: with the quote in English and the
+act in French, a 4-word run never fires, and the recorded rates split by
+quote language (c7 8/41 en against 1/8 fr; c10 8/48 en against 1/4 fr). A
+count line built on that predicate would state a number the measure cannot
+back — worse than silence. So the review-item channel is MEASURED but not
+yet PROVEN (:data:`COVERAGE_ITEM_MEASURE_PROVEN`): the reading exposes
+``items_treated`` for the tracer, and no count is stated for the channel;
+the motif records « mesure non éprouvée — aucun compte énoncé », counts
+only. The predicate itself now reads a bound item through its movement's
+beat — the item's unit carried by a treated movement — plus the item's own
+claim (the reviewer's French conclusion) and its retained labels, which are
+language-free witnesses. The channel flips to proven when the coordinator's
+replay confirms it on the recorded states.
 
 ## The treatment measure
 
@@ -40,7 +58,11 @@ the check reddens exactly where the tracer counts an uncounted drop:
   shares a 4-word run with one of its units' texts, or with the quote of a
   coverage line bound to one of its units;
 * a REVIEW ITEM is treated when the prose shares a 4-word run with its
-  quote, or names one of its retained fallacy names.
+  quote (same-language only), or its ``unit_id`` belongs to a movement the
+  prose treats (the #3505 binding — the movement's beat carries the
+  passage, whatever the quote's language), or the prose shares a 4-word
+  run with the item's own claim (the reviewer's French ``conclusion``), or
+  it names one of the item's retained fallacy names.
 
 Anchors are taxonomy constants, never corpus text. The appended line and
 the motif carry COUNTS only (#3249 — ``restitution_acts_degraded`` is a
@@ -86,6 +108,17 @@ MOVEMENT_COUNT_RULE = (
     "couverture non repris sur M ». Un absent sans son compte est une "
     "perte silencieuse, jamais un choix mesuré.\n"
 )
+
+#: #3560, coordinator finding 14/11 — is the REVIEW-ITEM channel's treatment
+#: measure PROVEN on the recorded panel states? Not yet: the quote's 4-word
+#: run is language-bound (an English quote on a French act never fires; the
+#: replay measured 8/41 en against 1/8 fr at c7, 8/48 en against 1/4 fr at
+#: c10). Until the coordinator's replay confirms the binding/claim predicate
+#: on c7–c10, the pipeline states NO count for this channel — a count the
+#: measure cannot witness is a false statement to the reader, worse than
+#: silence. The motif still records the channel as unmeasured. Flip to True
+#: with the replay's figures.
+COVERAGE_ITEM_MEASURE_PROVEN = False
 
 #: The writer's stated movement count — « 2 mouvements non traités sur 3 ».
 #: First match wins: the consigne teaches ONE line, and a second differing
@@ -250,10 +283,40 @@ def _item_retained_names(item: Dict[str, Any]) -> List[str]:
     return names
 
 
-def _item_treated(item: Dict[str, Any], prose_norm: str, prose_runs: Set[str]) -> bool:
-    """The tracer's measure, at review-item granularity."""
+def _item_own_claim(item: Dict[str, Any]) -> str:
+    """The item's own claim, as the reviewer recorded it.
+
+    French by construction (the review answers in French), so a 4-word run
+    with the act is a language-free witness of the treatment. The quote is
+    NOT read here — it is the language-bound channel — and neither is
+    ``reason`` (it argues why the reader would lose something, not what the
+    passage says).
+    """
+    return str(item.get("conclusion") or "")
+
+
+def _item_treated(
+    item: Dict[str, Any],
+    prose_norm: str,
+    prose_runs: Set[str],
+    treated_unit_ids: Set[str],
+) -> bool:
+    """The tracer's measure, at review-item granularity.
+
+    Four witnesses, strongest first: the quote's 4-word run (same-language
+    only), the item's UNIT carried by a movement the prose treats (the
+    #3505 binding — the movement's beat renders the passage, whatever the
+    quote's language), a 4-word run with the item's own claim, and one of
+    the item's retained fallacy names.
+    """
     quote = str(item.get("quote") or "")
     if quote and any(run in prose_runs for run in _runs(quote)):
+        return True
+    unit_id = str(item.get("unit_id") or "")
+    if unit_id and unit_id in treated_unit_ids:
+        return True
+    claim = _item_own_claim(item)
+    if claim and any(run in prose_runs for run in _runs(claim)):
         return True
     return _names_prose_anchor(prose_norm, _item_retained_names(item))
 
@@ -273,6 +336,12 @@ class RenderContractReading:
     untreated_movement_themes: Tuple[str, ...] = ()
     items_total: int = 0
     items_treated: int = 0
+    #: #3560, coordinator finding 14/11 — the review-item channel is MEASURED
+    #: but not PROVEN (:data:`COVERAGE_ITEM_MEASURE_PROVEN`): no count is
+    #: stated for it and it never reddens the check until its measure is
+    #: confirmed on the recorded panel states. The count stays exposed here
+    #: for the tracer; the reader is not told a number nothing can back.
+    items_measured: bool = True
     stated_movement_drops: Optional[int] = None
     stated_item_drops: Optional[int] = None
 
@@ -292,8 +361,10 @@ class RenderContractReading:
 
     @property
     def items_count_missing_or_wrong(self) -> bool:
-        return self.items_untreated > 0 and (
-            self.stated_item_drops != self.items_untreated
+        return (
+            self.items_measured
+            and self.items_untreated > 0
+            and self.stated_item_drops != self.items_untreated
         )
 
 
@@ -323,14 +394,23 @@ def read_render_contract(
     movements = list(getattr(evidence, "movements", []) or [])
     untreated_themes: List[str] = []
     treated = 0
+    #: The units a treated movement's beat carries — the witness a translated
+    #: item keeps when its quote shares no run with the act (#3505 binding).
+    treated_unit_ids: Set[str] = set()
     for movement in movements:
         if _movement_treated(movement, prose_norm, prose_runs):
             treated += 1
+            for argument in getattr(movement, "arguments", []) or []:
+                arg_id = str(getattr(argument, "arg_id", "") or "")
+                if arg_id:
+                    treated_unit_ids.add(arg_id)
         else:
             untreated_themes.append(str(getattr(movement, "theme", "") or ""))
     items = _review_items(state)
     items_treated = sum(
-        1 for item in items if _item_treated(item, prose_norm, prose_runs)
+        1
+        for item in items
+        if _item_treated(item, prose_norm, prose_runs, treated_unit_ids)
     )
     return RenderContractReading(
         movements_total=len(movements),
@@ -338,6 +418,7 @@ def read_render_contract(
         untreated_movement_themes=tuple(untreated_themes),
         items_total=len(items),
         items_treated=items_treated,
+        items_measured=COVERAGE_ITEM_MEASURE_PROVEN,
         stated_movement_drops=_first_int(_STATED_MOVEMENT_DROPS_RE, narrative),
         stated_item_drops=_first_int(_STATED_ITEM_DROPS_RE, narrative),
     )
@@ -384,10 +465,12 @@ def check_render_contract(reading: RenderContractReading) -> GateVerdict:
 def render_count_line(reading: RenderContractReading) -> str:
     """The producer's stated count — the first-reading note's counted form.
 
-    Empty when every channel is clean (all treated, or counted by the
+    Empty when every PROVEN channel is clean (all treated, or counted by the
     writer's own exact line). Only the channels the writer left uncounted
-    are stated: the line adds what is missing, never a second opinion on
-    what the prose already counts.
+    AND whose measure is proven are stated: the line adds what is missing,
+    never a second opinion on what the prose already counts. An unmeasured
+    channel is never counted here — a number the measure cannot witness is
+    a false statement to the reader; the motif records it instead.
     """
     clauses: List[str] = []
     if reading.movements_count_missing_or_wrong:
@@ -410,12 +493,10 @@ def render_contract_motif(reading: RenderContractReading) -> str:
 
     Act, counts and what the pipeline did — never a quote of the prose
     (#3249): ``restitution_acts_degraded`` is a closed producer vocabulary
-    and the anchors themselves stay out of it.
+    and the anchors themselves stay out of it. A channel whose measure is
+    not proven is recorded as measured-not-counted, so the auditor sees the
+    withheld count without the reader being told a number nothing backs.
     """
-    if not (
-        reading.movements_count_missing_or_wrong or reading.items_count_missing_or_wrong
-    ):
-        return ""
     parts: List[str] = []
     if reading.movements_count_missing_or_wrong:
         stated = (
@@ -440,7 +521,14 @@ def render_contract_motif(reading: RenderContractReading) -> str:
             f"{accord(reading.items_untreated, 'constat de couverture non repris', 'constats de couverture non repris')} "
             f"sur {reading.items_total}{stated}"
         )
-    return "Acte II : " + " ; ".join(parts) + " — compte énoncé par le pipeline (#3560)"
+    if not reading.items_measured and reading.items_total:
+        parts.append(
+            f"{accord(reading.items_total, 'constat de couverture remis au rédacteur', 'constats de couverture remis au rédacteur')}, "
+            "mesure non éprouvée sur ce canal — aucun compte énoncé"
+        )
+    if not parts:
+        return ""
+    return "Acte II : " + " ; ".join(parts) + " (#3560)"
 
 
 def apply_render_contract(narrative: str, evidence: Any, state: Any) -> Tuple[str, str]:
