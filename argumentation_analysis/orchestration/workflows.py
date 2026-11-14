@@ -1176,7 +1176,11 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             # #2969: the invoker also reads pl/fol outputs for its
             # formal-consistency axis (#285) — that read only worked by the
             # accident of levels (fol/pl happened to run earlier). Declared.
-            depends_on=["counter", "fol", "pl"],
+            # #3547: the invoker also reads the bipolar supports recorded on
+            # the state (bipolar_results) to seed its justification edges —
+            # both phases shared a level, so the pairs never reached jtms on
+            # a first run. Declared here, same as fol/pl above.
+            depends_on=["counter", "fol", "pl", "bipolar"],
             optional=True,
         )
         .add_phase(

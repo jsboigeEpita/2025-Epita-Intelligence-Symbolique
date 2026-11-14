@@ -3949,9 +3949,10 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
         )
     _bipolar_results = getattr(_jtms_state, "bipolar_results", None) or []
     if isinstance(_bipolar_results, list):
-        # Recorded supports from a previous bipolar pass (the phase runs
-        # AFTER jtms in the pipeline, so these exist on re-runs and on
-        # pre-supplied states) — same [source, target] pair convention.
+        # Recorded supports from the bipolar pass (#3547: bipolar runs
+        # BEFORE jtms — declared in the workflow — so these exist on first
+        # runs too, as well as on re-runs and pre-supplied states) — same
+        # [source, target] pair convention.
         for _bipolar_entry in _bipolar_results:
             if isinstance(_bipolar_entry, dict):
                 _support_pairs.extend(
