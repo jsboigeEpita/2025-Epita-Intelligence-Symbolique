@@ -2808,13 +2808,18 @@ def _derive_player_profile(
         name = str(player.get("name") or "").strip() if isinstance(player, dict) else ""
         if not name or name in seen:
             continue
+        # #3386 review fix 5 (14/11) — the name is claimed at FIRST SIGHT,
+        # in the strategist's salience order, BEFORE the ballot check: the
+        # docstring's contract (« duplicates keep the first ») holds by
+        # construction — a first occurrence with a partial or absent ballot
+        # costs its own player, never hands the seat to a later duplicate.
+        seen.add(name)
         ranking = preferences.get(name)
         if not isinstance(ranking, list):
             continue
         ballot = [str(o) for o in ranking]
         if sorted(ballot) != sorted(options) or len(set(ballot)) != len(options):
             continue
-        seen.add(name)
         agents.append(
             Agent(name=name, personality="stubborn", preferences=list(ballot))
         )

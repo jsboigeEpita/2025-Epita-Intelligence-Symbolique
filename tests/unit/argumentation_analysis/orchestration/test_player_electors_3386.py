@@ -109,6 +109,33 @@ class TestTheDocumentPlayersBecomeElectors:
         assert derivable, reason
         assert [a.name for a in agents] == ["joueur_un", "joueur_deux"]
 
+    def test_a_duplicate_name_is_claimed_at_first_sight_by_salience(self) -> None:
+        """Review fix 5 — the docstring's contract (« duplicates keep the
+        first ») is enforced at the NAME, in the strategist's salience
+        order, before any ballot check: a first occurrence with a partial
+        ballot costs its own player, never hands the seat to a later
+        duplicate. The two placements are indistinguishable while the
+        ballot is looked up BY NAME (a duplicate reads the same ranking);
+        this pins the invariant for the day the ballot source becomes
+        per-player."""
+        read = {
+            "players": [
+                {"name": "joueur_un", "stance": "for"},
+                {"name": "joueur_un", "stance": "for"},  # duplicate
+                {"name": "joueur_deux", "stance": "against"},
+                {"name": "joueur_trois", "stance": "uncommitted"},
+            ],
+            "options": ["opt_a", "opt_b"],
+            "preferences": {
+                "joueur_un": ["opt_a"],  # partial — costs its own player
+                "joueur_deux": ["opt_b", "opt_a"],
+                "joueur_trois": ["opt_a", "opt_b"],
+            },
+        }
+        _options, _ballots, agents, derivable, reason = _derive_player_profile(read)
+        assert derivable, reason
+        assert [a.name for a in agents] == ["joueur_deux", "joueur_trois"]
+
     def test_under_two_full_rankings_is_honest_not_degraded_silently(self) -> None:
         """The honest-degraded contract mirrors the virtue derivation: the
         reason names what was missing, and ``derivable`` is False."""
@@ -228,6 +255,50 @@ class TestTheVerdictCarriesThePlayersPlay:
         finally:
             ic._derive_player_profile = original
         assert "players_play" not in output["governance_verdict"]
+
+    @pytest.mark.asyncio
+    async def test_a_degraded_virtue_vote_keeps_the_players_play(self) -> None:
+        """Review fix 1 (14/11) — the champ-sans-lecteur repair, through the
+        REAL handler then the REAL writer: on a degraded virtue profile
+        (fewer than 2 evaluated arguments) the players still hold full
+        rankings, the producer still records the play on the verdict — but
+        no ``vote_result`` exists to carry it (it is built outside degraded
+        only), and the deliberation's conflicts keep the writer running.
+        The writer must read the annex off the verdict itself, or the
+        measure lives nowhere."""
+        from argumentation_analysis.orchestration.state_writers import (
+            _write_governance_to_state,
+        )
+
+        state = UnifiedAnalysisState(
+            initial_text="filler text for the witness, no corpus content."
+        )
+        state.strategic_read = _PLAYERS_READ
+        context: Dict[str, Any] = {
+            "phase_extract_output": {"arguments": ["s1", "s2"]},
+            "phase_quality_output": {"per_argument_scores": {}},  # degraded
+            "_state_object": state,
+        }
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
+            return_value=(None, ""),
+        ):
+            output = await _invoke_governance("synthetic neutral text", context)
+        # The producer's degraded shape, as measured: verdict degraded, play
+        # recorded, no vote_result — and conflicts present, so the writer
+        # records a decision on the conflict-resolution branch.
+        assert output["governance_verdict"]["degraded"] is True
+        assert "players_play" in output["governance_verdict"]
+        assert "vote_result" not in output
+        assert output["conflicts"]
+        _write_governance_to_state(output, state, {})
+        assert len(state.governance_decisions) == 1
+        decision = state.governance_decisions[0]
+        assert decision["players_play"]["electors"] == ["joueur_un", "joueur_deux"]
+        # The decision fields stay honest: no vote decided anything — the
+        # winner comes from the conflict-resolution branch, never from a
+        # vote aggregate that does not exist.
+        assert decision["winner_provenance"] == "conflict_resolution"
 
 
 def test_the_writer_payload_keeps_the_players_play() -> None:

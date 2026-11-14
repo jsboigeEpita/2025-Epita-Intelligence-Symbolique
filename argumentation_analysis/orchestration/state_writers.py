@@ -1004,6 +1004,22 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
             winner = str(resolutions[0].get("resolution_type", "N/A"))
             winner_provenance = "conflict_resolution"
 
+    if not (isinstance(vote_result, dict) and vote_result.get("winner")):
+        # #3386 follow-up (14/11) — the players' play is recorded on the
+        # verdict EVEN when the virtue vote is degraded: the electors are
+        # the document's players, and their rankings do not depend on the
+        # quality profile's derivability (invoke_callables sets the key
+        # after the degraded branch, unconditionally). The annex was read
+        # only through ``vote_result["results"]`` — built outside degraded
+        # only — so a degraded virtue profile with two full-ranking players
+        # dropped a play that existed. The DECISION fields above stay
+        # honest-absent: no vote decided anything here.
+        degraded_verdict = output.get("governance_verdict")
+        if isinstance(degraded_verdict, dict):
+            raw_players_play = degraded_verdict.get("players_play")
+            if isinstance(raw_players_play, dict) and raw_players_play:
+                players_play = dict(raw_players_play)
+
     # Track E #1281 introduced ``extraction_method``; GE-4 #1462 emptied its
     # original meaning. It now records only whether an LLM assessment ran on the
     # METHOD recommendation ("llm" | "heuristic") — it is not the verdict's
