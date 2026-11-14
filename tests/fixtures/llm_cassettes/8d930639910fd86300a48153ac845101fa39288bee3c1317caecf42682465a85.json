@@ -1,0 +1,48 @@
+{
+  "key": "8d930639910fd86300a48153ac845101fa39288bee3c1317caecf42682465a85",
+  "value": {
+    "id": "chatcmpl-EkFlD5VtFBe3MNlWQWbnfRGwBQtN0",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La structure est globalement accessible, mais trois termes techniques non définis (« argument d’autorité », « appel à la peur » et « sophisme naturaliste ») constituent des obstacles résolvables par le contexte. Aucun anaphore non résolvable ni phrase excessivement emboîtée n’est présent.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794692379,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 112,
+      "prompt_tokens": 268,
+      "total_tokens": 380,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 30,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

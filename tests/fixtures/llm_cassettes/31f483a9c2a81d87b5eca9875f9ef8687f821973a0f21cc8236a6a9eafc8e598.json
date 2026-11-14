@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "**Hypothèse :** La Terre effectue une révolution autour du Soleil sur une orbite presque elliptique, en environ **365,25 jours**.",
+      "content": "Hypothèse : **La Terre effectue une révolution autour du Soleil, selon une orbite presque elliptique, en environ 365 jours.**",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Ek7mlYyALMvRc0nysmECiN2PiT6ka",
-        "created": 1794661723,
+        "id": "chatcmpl-EkFtQ7W6jTn9WuumIPlMi4Kd8JNNl",
+        "created": 1794692888,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 41,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 131,
+          "completion_tokens": 103,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 90,
+            "reasoning_tokens": 64,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

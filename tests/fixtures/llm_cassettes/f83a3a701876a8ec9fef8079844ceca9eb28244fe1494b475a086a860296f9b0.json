@@ -1,0 +1,48 @@
+{
+  "key": "f83a3a701876a8ec9fef8079844ceca9eb28244fe1494b475a086a860296f9b0",
+  "value": {
+    "id": "chatcmpl-EkFvZVPcEmP4j5VtWOKVA13JFB5wO",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les trois points développés sont distincts : le premier affirme la dangerosité des vaccins, le deuxième souligne leur efficacité historique, et le troisième critique la méconnaissance de la recherche scientifique par leurs détracteurs. Aucune redondance substantielle n’est démontrée ; le quatrième point est incomplet (« L’ »).\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794693021,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 173,
+      "prompt_tokens": 296,
+      "total_tokens": 469,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 83,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

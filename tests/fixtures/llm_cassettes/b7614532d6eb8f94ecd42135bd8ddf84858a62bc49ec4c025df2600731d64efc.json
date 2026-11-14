@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_2zcedp6OYZW32nsWwqtOVc1V",
+          "id": "call_nlUvUw3Wz2Ztnlxvd5IYkncZ",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"313\",\"matches\":false,\"justification\":\"Le texte ne flatte pas l’auditoire et ne cherche pas à le rallier par des éloges ; il invoque plutôt l’unanimité des experts et exclut les non-experts.\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"313\",\"matches\":false,\"justification\":\"Le texte ne fait pas l’éloge de l’auditoire et ne cherche pas à le rallier en flattant sa valeur. Il invoque plutôt l’unanimité des experts et exclut les non-experts, ce qui relève d’autres branches argumentatives.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Ek7hDhPgnhBbr6ixm2maPHbHjC680",
-        "created": 1794661379,
+        "id": "chatcmpl-EkFo0xNAWj8pw8HMISqEBlftIpkLz",
+        "created": 1794692552,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2102,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 78,
+          "completion_tokens": 91,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

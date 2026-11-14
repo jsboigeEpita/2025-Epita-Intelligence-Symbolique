@@ -1,14 +1,14 @@
 {
   "key": "8b5e499df4a12ce9c4a6a6317350431df0adb58c9033663b543c37b07429b676",
   "value": {
-    "id": "chatcmpl-Ek7fp1j110qcf1G3tHVkT3zSrlHM5",
+    "id": "chatcmpl-EkFngjImVEdD2ua89CU8k0Ro1Rhgo",
     "choices": [
       {
-        "finish_reason": "length",
+        "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "",
+          "content": "{\"arguments\":[{\"text\":\"L’unanimité des experts suffit à établir qu’une proposition est vraie.\",\"source_quote\":\"Les experts sont unanimes, c'est donc vrai.\",\"move_author\":\"speaker\"},{\"text\":\"Lorsqu’une personne n’est pas experte, son avis ne doit pas être pris en compte.\",\"source_quote\":\"Si vous n'etes pas expert, votre avis ne compte pas.\",\"move_author\":\"speaker\"}],\"claims\":[{\"text\":\"Les experts sont unanimes.\",\"source_quote\":\"Les experts sont unanimes\"},{\"text\":\"Une proposition est vraie parce que les experts sont unanimes.\",\"source_quote\":\"c'est donc vrai\"}],\"summary\":\"Le texte s’appuie sur l’autorité et l’unanimité des experts, puis exclut les avis des non-experts de la discussion.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794661293,
+    "created": 1794692532,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 8192,
+      "completion_tokens": 384,
       "prompt_tokens": 607,
-      "total_tokens": 8799,
+      "total_tokens": 991,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 8192,
+        "reasoning_tokens": 211,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

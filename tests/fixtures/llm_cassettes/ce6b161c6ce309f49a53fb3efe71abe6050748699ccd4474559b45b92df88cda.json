@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_bzCxGLB2kd6G9uiFD7CeYq56",
+          "id": "call_qISHZ4w9N2iUhpzrdtgW4MdK",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"2\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"La phrase rapporte une affirmation du président, mais ne fournit ni anecdote, ni échantillon, ni inférence générale identifiable permettant de conclure à une généralisation hâtive.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\",\"document_statement\":\"Le texte ne fournit aucune preuve ni élément permettant d’évaluer le succès de la politique économique.\"}"
+          "arguments": "{\"node_pk\":\"2\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L’affirmation présente la politique économique comme un succès « incontestable » sans fournir de données, d’exemples ou de preuves solides ; elle repose donc sur une généralisation non étayée.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Ek7faNea8M77th0B21nbpJIjyNTme",
-        "created": 1794661278,
+        "id": "chatcmpl-EkFnOb41x33QDV33peFFp1VS70v0B",
+        "created": 1794692514,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2500,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 106,
+          "completion_tokens": 87,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

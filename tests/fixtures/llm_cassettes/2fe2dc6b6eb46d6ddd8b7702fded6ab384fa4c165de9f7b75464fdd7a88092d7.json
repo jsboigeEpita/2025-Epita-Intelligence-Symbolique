@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"start_marker\": \"Nous avons créé plus d'emplois en deux ans que n'importe quelle administration en quatre.\",\n  \"end_marker\": \"Nous avons créé plus d'emplois en deux ans que n'importe quelle administration en quatre.\",\n  \"template_start\": null,\n  \"explanation\": \"L'extrait se limite à la phrase qui porte directement sur la création d'emplois, correspondant précisément à la dénomination « Déclaration sur la création d'emplois ».\"\n}",
+      "content": "{\n  \"start_marker\": \"Nous avons créé plus d'emplois en deux ans\",\n  \"end_marker\": \"que n'importe quelle administration en quatre.\",\n  \"template_start\": \"\",\n  \"explanation\": \"L'extrait sélectionné correspond directement à la dénomination « Déclaration sur la création d'emplois », car il affirme explicitement le nombre d'emplois créés et compare cette création à celle des administrations précédentes. Les deux marqueurs sont des chaînes exactement présentes dans le texte source.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Ek7n4F2upKWpowwLGV085YMLOOTaV",
-        "created": 1794661742,
+        "id": "chatcmpl-EkFthvGUXp0rGoQkzoJUmMZY6a4PN",
+        "created": 1794692905,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 234,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 193,
+          "completion_tokens": 198,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 81,
+            "reasoning_tokens": 82,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

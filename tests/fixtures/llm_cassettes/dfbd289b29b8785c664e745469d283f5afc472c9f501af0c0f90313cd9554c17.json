@@ -1,0 +1,48 @@
+{
+  "key": "dfbd289b29b8785c664e745469d283f5afc472c9f501af0c0f90313cd9554c17",
+  "value": {
+    "id": "chatcmpl-EkFwceLQSbLbm4XLxb0uCxUtXmzWQ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les trois points abordent des justifications distinctes : réduction du risque d’erreur judiciaire grâce à l’ADN, effet dissuasif pour les crimes graves, et caractère irrécupérable de certains criminels. Aucune redondance sémantique manifeste n’est identifiable, même si le troisième point est tronqué.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794693086,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 168,
+      "prompt_tokens": 308,
+      "total_tokens": 476,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 78,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

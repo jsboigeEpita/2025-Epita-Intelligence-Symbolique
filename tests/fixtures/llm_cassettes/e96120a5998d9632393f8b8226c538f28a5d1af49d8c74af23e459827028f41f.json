@@ -1,0 +1,48 @@
+{
+  "key": "e96120a5998d9632393f8b8226c538f28a5d1af49d8c74af23e459827028f41f",
+  "value": {
+    "id": "chatcmpl-EkFvd3P6WERFYzO3k6AD1Iw2TuaX0",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Deux idées distinctes apparaissent : la dissimulation présumée des effets secondaires (point 1) et l’ignorance de la recherche clinique par les opposants (point 2). Le point 3 reprend toutefois directement l’idée du point 1, bien qu’il soit tronqué.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794693025,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 230,
+      "prompt_tokens": 295,
+      "total_tokens": 525,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 150,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
