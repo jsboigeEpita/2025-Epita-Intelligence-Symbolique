@@ -33,6 +33,7 @@ from argumentation_analysis.agents.core.reading.first_reading import (
     ANCHOR_MIN_SHARE,
     ANCHOR_RELOCATED,
     ANCHOR_UNANCHORED,
+    ANCHOR_UNRELATED,
     FIRST_READING_BASIS,
     MAX_MOVES,
     MAX_PILLARS,  # #3432
