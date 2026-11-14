@@ -36,6 +36,7 @@ from __future__ import annotations
 import itertools
 import json
 import logging
+import re
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
@@ -48,6 +49,7 @@ from argumentation_analysis.agents.core.governance.social_choice import (
 )
 from argumentation_analysis.agents.core.reading import (
     ANCHOR_UNANCHORED,
+    ANCHOR_UNRELATED,
     defining_moves,
 )
 
@@ -123,40 +125,215 @@ Document excerpt:
 """
 
 
-def anchor_player(player: Dict[str, Any], raw_text: str) -> Dict[str, Any]:
-    """#3430 — a player's stance, anchored on the document or labelled as ours.
+def _name_in_text(name: str, raw_text: str) -> Optional[int]:
+    """Where ``raw_text`` carries ``name`` as a whole word, if it does.
+
+    Letter boundaries (``(?<!\\w)`` / ``(?!\\w)``), case-insensitive — the
+    #2012 lesson, applied to names: a word boundary would let ``Nom`` hide
+    inside ``nom_only``, and a plain substring match would hit ``PARTI``
+    inside ``PARTICIPATION``. Returns the offset of the first occurrence in
+    ``raw_text``, or ``None`` when the name is absent (or empty).
+    """
+    cleaned = str(name or "").strip()
+    if not cleaned or not raw_text:
+        return None
+    pattern = re.compile(r"(?<!\w)" + re.escape(cleaned) + r"(?!\w)", re.IGNORECASE)
+    match = pattern.search(raw_text)
+    return match.start() if match else None
+
+
+#: The punctuation that closes a sentence for the concern check. Kept to the
+#: unambiguous set — a mis-split sentence only widens or narrows the window
+#: the name is searched in, and both directions are declared misses (#3556).
+_SENTENCE_ENDS = ".!?\n"
+
+#: Function words that ride party names but match nothing distinctive. A
+#: distinctive word is what is LEFT once these, the sub-4-letter tokens and
+#: the elided determiner are gone: ``l'association`` → ``association``,
+#: ``Mayor Ferrand`` → ``mayor``, ``ferrand``. The generous direction of the
+#: concern check (#3556).
+_NAME_STOP_WORDS = frozenset(
+    (
+        "the",
+        "with",
+        "that",
+        "from",
+        "pour",
+        "avec",
+        "dans",
+        "les",
+        "des",
+        "une",
+        "par",
+        "aux",
+        "chez",
+        "sous",
+        "entre",
+        "vers",
+        "dont",
+        "party",
+        "parti",
+    )
+)
+
+
+def _distinctive_words(value: str) -> List[str]:
+    """The tokens of ``value`` that can carry a player's identity."""
+    words: List[str] = []
+    for token in re.split(r"[^\w']+", str(value or "")):
+        cleaned = token.strip("'")
+        # French elision glues a determiner to what follows it: ``l'`` in
+        # ``l'association``, ``d'`` in ``d'une``, ``qu'`` in ``qu'il``. Kept
+        # whole, the token hides the name from the concern check — a passage
+        # saying « cette association » was refused to the player itself
+        # (#3556 blocker, replayed on 228bd276e against d664ed7cf). Cutting
+        # a head of at most two letters makes ``l'association`` yield
+        # ``association``, as the rule above promises.
+        head, sep, tail = cleaned.partition("'")
+        if sep and len(head) <= 2:
+            cleaned = tail
+        cleaned = cleaned.casefold()
+        if len(cleaned) >= 4 and cleaned not in _NAME_STOP_WORDS:
+            words.append(cleaned)
+    return words
+
+
+def _sentence_span(raw_text: str, start: int, end: int) -> Tuple[int, int]:
+    """The span of the sentence that carries ``raw_text[start:end]``."""
+    lo = max(raw_text.rfind(ch, 0, start) for ch in _SENTENCE_ENDS) + 1
+    ends = [raw_text.find(ch, end) for ch in _SENTENCE_ENDS]
+    found = [e for e in ends if e >= 0]
+    hi = min(found) + 1 if found else len(raw_text)
+    return lo, hi
+
+
+def _passage_concerns(
+    player: Dict[str, Any],
+    peers: List[Dict[str, Any]],
+    raw_text: str,
+    quote: str,
+    index: int,
+) -> bool:
+    """#3556 — does the passage at ``index`` concern this player?
+
+    What the reply can establish, with no named-entity pass: the sentence
+    that carries the quote, read against the players' own ``name``/``role``
+    vocabulary as the reply gives it. The rule is asymmetric on purpose —
+    refusing a real anchor costs a verified citation, the feature #3430
+    built, so the player is given every word of their own name:
+
+    * the sentence carries this player's whole name or role, or any
+      DISTINCTIVE word of them (≥ 4 letters, not a function word, elision
+      cut — the recorded panels anchor ``Mayor Ferrand``'s stance on
+      sentences that say ``Ferrand``, and a full-string rule would refuse
+      them) → concerns;
+    * a player whose name or role the DOCUMENT never carries keeps every
+      located anchor: that is #3430's population — the speaker and the
+      parties the excerpt names nowhere — and the reply's vocabulary cannot
+      disprove what the document never names → concerns;
+    * else the sentence carries ANOTHER player's WHOLE name or role → the
+      document does name this player, but not in this passage, and this
+      passage names a different player of the same read (the measured
+      defect: a quote the document does carry, offered for the player it
+      does not name in it) → does not concern;
+    * else → concerns: unproven is not disproven.
+
+    The declared misses run both ways: a passage addressed to another party
+    through pronouns alone (the cycle-7 doc_E shape — the player named
+      seven times in the document, never inside the passage) stays
+    anchored, and speech attribution itself is beyond a vocabulary rule.
+    The pull request measures each side on the recorded states.
+    """
+    if index < 0:
+        return False
+    lo, hi = _sentence_span(raw_text, index, index + len(quote))
+    sentence = raw_text[lo:hi]
+    for key in ("name", "role"):
+        if _name_in_text(str(player.get(key) or ""), sentence) is not None:
+            return True
+    for key in ("name", "role"):
+        for word in _distinctive_words(str(player.get(key) or "")):
+            if _name_in_text(word, sentence) is not None:
+                return True
+    named_in_document = any(
+        _name_in_text(str(player.get(key) or ""), raw_text) is not None
+        for key in ("name", "role")
+    )
+    if not named_in_document:
+        return True
+    for peer in peers or []:
+        for key in ("name", "role"):
+            peer_value = str(peer.get(key) or "").strip()
+            if peer_value and _name_in_text(peer_value, sentence) is not None:
+                return False
+    return True
+
+
+def anchor_player(
+    player: Dict[str, Any],
+    raw_text: str,
+    peers: Optional[List[Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
+    """#3430, #3556 — a player's stance, anchored on the document or labelled as ours.
 
     A position the text states comes with a verbatim ``quote``. The producer
     re-runs the one citation rule (#3389) on that quote against the document it
     already holds, so the basis is COMPUTED from the text, never asserted by
     the model: whatever ``basis`` the reply carried is dropped before the check.
 
-    Three outcomes, the first reading's shape (#3415, #3427):
+    ``peers`` are the OTHER players as the reply gave them — the concern check
+    reads the same reply's vocabulary, so a passage can be recognised as
+    another party's of the SAME read (the measured defect). Without peers the
+    check cannot prove a passage concerns anyone else, and #3430's anchor
+    stands: unproven is not disproven.
 
-    * the quote is in the document → ``basis="text"``, the quote and its
-      offset kept; the render may quote the position as the document's;
+    Five outcomes, the first reading's shape (#3415, #3427):
+
+    * the quote is in the document and the passage concerns the player →
+      ``basis="text"``, the quote and its offset kept; the render may quote
+      the position as the document's;
+    * the quote is in the document but its passage is another player's
+      (#3556 — the sentence that carries the quote names a peer, and not
+      this player) → the quote and offset are KEPT as the record of what
+      was offered, ``anchor="unrelated"``, ``basis`` back to model
+      knowledge; the render never quotes the passage as this player's
+      position;
     * the quote is absent from the document → the position is KEPT (it may
       still be true, and dropping it would be the pendulum), the quote is
       emptied, ``anchor="unanchored"``; the render never puts the model's
       words between « »;
     * no quote at all → ordinary model knowledge: no ``quote`` key, no
       ``anchor`` key, so a player that carried neither stays byte-identical
-      to a pre-#3430 one.
+      to a pre-#3430 one;
+    * no quote, but the document names the player (#3556 — the model's
+      omission must not decide what the text says) → same model-knowledge
+      basis, plus ``named_offset``, the offset where the text carries the
+      name: the player is not "known only from outside the text", though
+      the unquoted stance itself stays a reading.
 
-    The model's own keys are never trusted: ``basis`` and ``anchor`` are
-    removed from the incoming dict and only the producer writes them back.
+    The model's own keys are never trusted: ``basis``, ``anchor`` and
+    ``named_offset`` are removed from the incoming dict and only the
+    producer writes them back.
     """
     item = {key: value for key, value in (player or {}).items() if key != "basis"}
     item.pop("anchor", None)
+    item.pop("named_offset", None)
     quote = str(item.pop("quote", "") or "").strip()
     if not quote:
         item["basis"] = MODEL_KNOWLEDGE_BASIS
+        named = _name_in_text(str(item.get("name") or ""), raw_text or "")
+        if named is not None:
+            item["named_offset"] = named
         return item
     if raw_text and quote_occurs_in(raw_text, quote):
         index = locate_quote(raw_text, quote)
         item["quote"] = quote
         item["offset"] = index if index >= 0 else None
-        item["basis"] = TEXT_BASIS
+        if _passage_concerns(item, peers or [], raw_text, quote, index):
+            item["basis"] = TEXT_BASIS
+        else:
+            item["anchor"] = ANCHOR_UNRELATED
+            item["basis"] = MODEL_KNOWLEDGE_BASIS
         return item
     item["anchor"] = ANCHOR_UNANCHORED
     item["basis"] = MODEL_KNOWLEDGE_BASIS
@@ -194,6 +371,9 @@ class StrategicRead:
                 and bool(str(item.get("quote") or "").strip())
                 and isinstance(item.get("offset"), int)
                 and not isinstance(item.get("offset"), bool)
+                # #3556 — a passage marked unrelated to this player can never
+                # render as this player's text basis, hand-built or not.
+                and item.get("anchor") != ANCHOR_UNRELATED
             )
             item["basis"] = TEXT_BASIS if anchored else MODEL_KNOWLEDGE_BASIS
             labelled.append(item)
@@ -761,10 +941,15 @@ async def build_strategic_read(
             for option in (parsed.get("options") or [])[:MAX_OPTIONS]
             if str(option).strip()
         ]
-        result.players = [
-            anchor_player(dict(player), raw_text)
+        # #3556 — the concern check reads the peers the reply itself named,
+        # so the passage can be recognised as another party's of this read.
+        raw_players = [
+            dict(player)
             for player in (parsed.get("players") or [])[:MAX_PLAYERS]
             if isinstance(player, dict) and player.get("name")
+        ]
+        result.players = [
+            anchor_player(player, raw_text, raw_players) for player in raw_players
         ]
         raw_preferences = parsed.get("preferences") or {}
         result.preferences = {

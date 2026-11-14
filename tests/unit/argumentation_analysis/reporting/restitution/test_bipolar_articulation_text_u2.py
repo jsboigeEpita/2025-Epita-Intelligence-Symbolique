@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import types
 
+from argumentation_analysis.agents.core.reading import ANCHOR_UNRELATED
 from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
     build_act3_evidence,
 )
@@ -160,6 +161,19 @@ class TestArticulationText:
         unlocated = dict(GROUNDED_PLAYER, offset=None)
         statement = _bipolar_statement(_state(players=[unlocated]))
         assert "dont le cas de" not in statement, statement
+
+    def test_an_unrelated_anchor_is_not_the_players_ground(self):
+        """#3556 minor: the marker reaches act III.
+
+        ``anchor="unrelated"`` keeps the quote and its offset as the record
+        of what was offered, so an overlap test alone still names the player
+        whose case rests on the point — through another party's passage. The
+        producer refused that passage; act III honours the refusal.
+        """
+        unrelated = dict(GROUNDED_PLAYER, anchor=ANCHOR_UNRELATED)
+        statement = _bipolar_statement(_state(players=[unrelated]))
+        assert "dont le cas de" not in statement, statement
+        assert ASIDE in statement, statement
 
     def test_an_unlabelled_dependent_falls_back_to_its_id(self):
         labels = dict(LABELS)

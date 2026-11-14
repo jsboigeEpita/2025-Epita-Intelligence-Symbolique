@@ -50,7 +50,10 @@ import yaml
 # constants, never compared against literals, so a rename cannot leave a
 # consumer silently accepting an unlabelled stance.
 from argumentation_analysis.agents.core.context import TEXT_BASIS
-from argumentation_analysis.agents.core.reading import ANCHOR_UNANCHORED
+from argumentation_analysis.agents.core.reading import (
+    ANCHOR_UNANCHORED,
+    ANCHOR_UNRELATED,
+)
 
 from .arena_record import ArenaRecord, build_arena_record, format_arena_line
 from .figure_scales import score_with_scale  # #3394 — scales ride the figures
@@ -571,6 +574,28 @@ def _format_strategic_block(read: Dict[str, Any]) -> str:
             label += (
                 " — citation non ancrée : le texte ne porte pas ce passage "
                 "(ne le cite PAS entre guillemets)"
+            )
+        elif player.get("anchor") == ANCHOR_UNRELATED:
+            # #3556 — the passage IS in the document, but the producer did not
+            # find this player in the sentence that carries it: an anchor that
+            # is not theirs never reaches the render as their position. The
+            # label names the control that ran (name and role, as the reply
+            # gives them, searched in the sentence), never a claim about what
+            # the text means.
+            label += (
+                " — citation sans rapport : le document porte ce passage "
+                "mais il ne concerne pas ce joueur "
+                "(ne le cite PAS comme sa position)"
+            )
+        elif isinstance(player.get("named_offset"), int) and not isinstance(
+            player.get("named_offset"), bool
+        ):
+            # #3556 — the document NAMES this player, so the position is not
+            # "known only from outside the text" — but no citation ran on the
+            # stance itself: it stays an unverified reading (#3461).
+            label += (
+                " — savoir du modèle, sans citation (le texte n'a pas été "
+                "vérifié pour cette position) ; le texte nomme ce joueur"
             )
         else:
             label += (
@@ -1492,7 +1517,8 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         f"[LECTURE STRATÉGIQUE — profil et calcul = état (#3377) ; chaque "
         f"partie dit SA provenance : « le texte dit » = citation vérifiée "
         f"contre le document, « savoir du modèle » = lecture sans citation, "
-        f"que le texte n'a pas vérifiée (#3430, #3461)]\n{gt_block}\n{gt_note}\n{strategic_block}\n\n"
+        f"que le texte n'a pas vérifiée, « sans rapport » = citation "
+        f"retrouvée mais pas pour ce joueur (#3430, #3461, #3556)]\n{gt_block}\n{gt_note}\n{strategic_block}\n\n"
         "CONSIGNE DE RÉDACTION :\n"
         "- Rédige 4 paragraphes thématiques (un par battement), en prose lisible,\n"
         "  pas une liste de champs.\n"
@@ -1511,8 +1537,12 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         "  « le texte présente X comme … » et la citation se reprend telle\n"
         "  quelle ; une position étiquetée « savoir du modèle » s'écrit au\n"
         "  registre de l'historien (« on sait par ailleurs que … »), jamais\n"
-        "  comme le propos du texte ; une position dont la citation n'a pas\n"
-        "  été retrouvée se dit sans guillemets.\n"
+        "  comme le propos du texte — SAUF si l'étiquette dit que le texte\n"
+        "  NOMME ce joueur : un acteur que le document nomme s'écrit comme\n"
+        "  une lecture DU texte, jamais comme un savoir venu d'ailleurs (#3556) ;\n"
+        "  une position dont la citation n'a pas été retrouvée, ou étiquetée\n"
+        "  « sans rapport », se dit sans guillemets — une citation sans\n"
+        "  rapport n'est JAMAIS la position de ce joueur.\n"
         "  Aucune position n'est attribuée au texte sans sa citation.\n"
         # #3461 — la négation non contrôlée : le panel 3b n'a retenu qu'un
         # seul item sévère, et c'est celui-ci. Une provenance dit D'OÙ vient

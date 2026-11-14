@@ -235,6 +235,10 @@ _SLOT_DROP_LABELS_FR = {
 #: in the state, the note and the tests.
 ANCHOR_RELOCATED = "relocated"
 ANCHOR_UNANCHORED = "unanchored"
+#: #3556 — a quote the document DOES carry, but whose passage does not
+#: concern the player it was offered for: the anchor exists and is not the
+#: player's. Same one-spelling rule.
+ANCHOR_UNRELATED = "unrelated"
 
 
 def _slot_label(slot: str) -> str:
