@@ -609,6 +609,21 @@ def _format_strategic_block(read: Dict[str, Any]) -> str:
                     f"« {coalition.get('winner')} », que leurs bulletins "
                     f"classent devant « {borda['winner']} »"
                 )
+            if borda.get("cut") == "pair_search":
+                # #3563 review (fix 1) — the pair search can stop on its trial
+                # budget while the single-player pass completed (six options:
+                # 720 × 720 pairs against a 50 000 budget). Stated here, in the
+                # winner branch, so the measured winner and pivots above are
+                # not dropped; silent, the missing pair line would read as "no
+                # pair exists".
+                lines.append(
+                    "  Recherche de paires aux points (Borda) BORNÉE : "
+                    f"{borda.get('pairs_examined')} paires comparées sur un "
+                    f"budget de {borda.get('pairs_budget')} essais — les pivots "
+                    "à un joueur ci-dessus sont mesurés, les paires ne sont "
+                    "pas épuisées ; ne conclus pas à l'absence de manipulation "
+                    "à deux joueurs."
+                )
     elif status:
         lines.append(
             f"  Calcul : non concluant ({status}) — ne présente AUCUN gagnant."

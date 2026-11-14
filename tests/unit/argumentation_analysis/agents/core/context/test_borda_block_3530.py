@@ -32,7 +32,7 @@ import pytest
 
 from argumentation_analysis.agents.core.context import strategist
 from argumentation_analysis.agents.core.context.strategist import (
-    BORDA_PERMUTATION_CAP,
+    BORDA_TRIAL_CAP,
     _borda_scores,
     borda_winner,
     compute_manipulability,
@@ -178,12 +178,39 @@ class TestTheBoundsAreStated:
         assert borda["winner"] == "A"
         assert borda["status"] == "capped"
         assert borda["exhaustive"] is False
+        assert borda["cut"] == "entry"
         assert borda["permutations_per_player"] == 5040
-        assert borda["permutations_per_player"] > BORDA_PERMUTATION_CAP
         assert borda["ballots_examined"] == 0
         assert borda["ballots_required"] == 5040 * 3
         # A cut enumeration says nothing about what it did not score.
         assert borda["single_player"] == []
+
+    def test_a_six_option_profile_states_its_cut_pair_search(self) -> None:
+        """#3563 review (fix 1) — on six options the ENTRY cap does not bite
+        (720 permutations × 3 players = 2 160 ballots, under the 50 000
+        budget), but the pair search does: 720 × 720 pair trials exceed what
+        is left of it. The cut is stated on the block (``cut ==
+        "pair_search"``) and in the act I render, where it stands beside the
+        MEASURED winner and pivots — never read as "no pair exists"."""
+        options = list("ABCDEF")
+        profile = {f"P{index}": list(options) for index in range(3)}
+        game = compute_manipulability(profile, options)
+        borda = game["borda"]
+
+        assert borda["winner"] == "A"
+        assert borda["status"] == "ok"
+        assert borda["exhaustive"] is False
+        assert borda["cut"] == "pair_search"
+        # The single-player pass ran in full; the cut is exactly the budget's
+        # end, not an arbitrary slice.
+        assert borda["ballots_examined"] == 720 * 3
+        assert borda["pairs_budget"] == BORDA_TRIAL_CAP - 720 * 3
+        assert borda["pairs_examined"] == borda["pairs_budget"]
+
+        block = _format_strategic_block({"players": [], "options": [], "game": game})
+        assert "gagnant CALCULÉ : « A »" in block
+        assert "Recherche de paires aux points (Borda) BORNÉE" in block
+        assert "ne conclus pas à l'absence de manipulation à deux joueurs" in block
 
     def test_the_engine_is_deterministic(self) -> None:
         assert compute_manipulability(
@@ -207,7 +234,6 @@ class TestTheCondorcetBlockIsUntouched:
         # pairwise contest, while the points tie A and B at 4.
         assert game["borda"]["winner"] is None
         assert game["borda"]["status"] == "no_borda_winner"
-        assert game["borda"]["moved_not_kept"] == 0
 
 
 class TestTheRenderNamesTheRule:
@@ -286,7 +312,10 @@ class TestTheRenderNamesTheRule:
         )
 
         assert "si l'issue se réglait aux points (Borda)" in note
-        assert "portant « arg_3 > arg_1 > arg_2 » en tête" in note
+        # #3563 review (fix 2): the report is a COMPLETE ranking — « classant »,
+        # never « en tête » (which claims only its top).
+        assert "classant « arg_3 > arg_1 > arg_2 »" in note
+        assert "en tête" not in note
         assert (
             "Le gagnant de Condorcet, « arg_1 », diffère du gagnant aux points, "
             "« arg_2 »." in note

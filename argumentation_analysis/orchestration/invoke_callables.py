@@ -3203,7 +3203,12 @@ async def _invoke_governance(
             g_finding["baseline"] = g_borda.get("winner")
             g_finding["condorcet_winner"] = g_manip.get("winner")
             g_finding["engine"] = g_borda.get("engine")
-            g_finding["status"] = g_manip.get("status")
+            # #3563 review (fix 3) — the finding's status is the BLOCK's own,
+            # never the enclosing Condorcet status: a ``rule: "borda"``
+            # finding on a profile with no Condorcet winner used to carry
+            # ``no_condorcet_winner``, which describes a population the
+            # finding was not computed on.
+            g_finding["status"] = g_borda.get("status")
             governance_verdict["manipulability"] = g_finding
         # #2850 R1107 — the vote names the population it was decided over,
         # apart from the conflict's own record. The winner is a member of
