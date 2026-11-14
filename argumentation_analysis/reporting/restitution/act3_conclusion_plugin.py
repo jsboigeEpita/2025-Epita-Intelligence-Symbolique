@@ -282,6 +282,11 @@ _ABSENT_DIMENSION_LABELS: Dict[str, str] = {
     "weighted_argumentation": "la force pondérée des attaques",
     "bipolar_argumentation": "les relations de soutien entre arguments",
     "belief_revision": "la révision des croyances (le point de rupture minimal)",
+    # #3547 — the JTMS axis. As a key of this map, an executor-level death
+    # of the ``belief_maintenance`` phase now reaches the absence ledger
+    # (#3087's contract: the keys ARE the membership table) — before this
+    # entry a timed-out jtms phase left no ledger entry whatever.
+    "belief_maintenance": "la maintenance des croyances (ce qui tomberait sans une prémisse)",
     # #2952 — the three axes wired into Acte III by the sidecar/native
     # projectors.
     # #3087 — this map's KEYS are the absence-ledger membership table: the
@@ -1911,6 +1916,72 @@ def _bipolar_finding(state: Any) -> Optional[StructuredArgFinding]:
     )
 
 
+def _jtms_counterfactual_finding(state: Any) -> Optional[StructuredArgFinding]:
+    """Project the counterfactual the JTMS pass measured on a copy (#3547).
+
+    Today the pipeline retracts a belief only when a fallacy targets it — the
+    retraction chain names what DID fall. This axis names the other direction,
+    which no other axis computes: which premises CARRY weight they never
+    display, in the sense that withdrawing one would drop other beliefs' only
+    justification. The records carry text (never a bare id — the #3156
+    lesson) and unit ids for the persona lookup; a withdrawal record is
+    rendered as the issue's canonical sentence: premise named, falls named,
+    the rest holding. The persona names the strategist's player whose case
+    rests on the ground, when the players locate it (#3544's convention).
+
+    Returns ``None`` when no withdrawal drops anything (an honest absence —
+    no premise carries that weight), never a fabricated sentence.
+    """
+    entries = getattr(state, "jtms_counterfactual_withdrawals", None) or []
+    if not isinstance(entries, list):
+        return None
+    parts: List[str] = []
+    for entry in entries:
+        if not isinstance(entry, dict) or len(parts) >= _ARTICULATION_CAP:
+            continue
+        premise = _truncate(str(entry.get("text") or "").strip(), _SUPPORT_NODE_CAP)
+        if not premise:
+            continue
+        fall_texts = [
+            _truncate(str(f.get("text") or "").strip(), _SUPPORT_NODE_CAP)
+            for f in entry.get("falls") or []
+            if isinstance(f, dict) and str(f.get("text") or "").strip()
+        ]
+        if not fall_texts:
+            continue
+        listed = " et ".join(f"« {t} »" for t in fall_texts)
+        verb = (
+            "perd sa seule justification"
+            if len(fall_texts) == 1
+            else "perdent leur seule justification"
+        )
+        sentence = f"si « {premise} » est retiré, {listed} {verb}"
+        # #3570 minor — « le reste tient » is a claim, made only when a rest
+        # exists: on a 2-belief A→B network the falls take everything else.
+        # The flag defaults True, so states recorded before it render as they
+        # always did.
+        if entry.get("rest_stands", True):
+            sentence += " ; le reste tient"
+        premise_id = entry.get("premise_unit_id")
+        fall_ids = [
+            str(f.get("unit_id"))
+            for f in entry.get("falls") or []
+            if isinstance(f, dict) and f.get("unit_id")
+        ]
+        if isinstance(premise_id, str) and premise_id:
+            player = _player_for_point(state, premise_id, fall_ids)
+            if player:
+                sentence += f" (le cas de {player} repose sur cet appui)"
+        parts.append(sentence)
+    if not parts:
+        return None
+    return StructuredArgFinding(
+        capability="belief_maintenance",
+        label=_axis_label("belief_maintenance"),
+        statement=" ; ".join(parts),
+    )
+
+
 def _aspic_finding(state: Any) -> Optional[StructuredArgFinding]:
     """Project what ASPIC+ alone establishes, in priority order (#1649).
 
@@ -2875,6 +2946,10 @@ def _collect_structured_arg_findings(state: Any) -> List[StructuredArgFinding]:
     for projector in (
         _aspic_finding,
         _bipolar_finding,
+        # #3547 — the JTMS counterfactual: premises whose withdrawal would
+        # drop other beliefs' only justification. Same contract — ``None``
+        # when no premise carries that weight.
+        _jtms_counterfactual_finding,
         _belief_revision_finding,
         # #1667 axes 3/5 — the three axes whose container is the
         # ``formalism_specific`` sidecar (no first-level ``*_results`` exists).

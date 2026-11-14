@@ -3612,6 +3612,170 @@ async def _invoke_governance(
     return result
 
 
+def _live_under(belief: Any, validity: Dict[str, Optional[bool]]) -> bool:
+    """Whether a belief has one live justification under a validity snapshot.
+
+    Shared by the counterfactual pass for its two liveness reads (#3547
+    revision, #3570): BEFORE the withdrawal (the original network's own
+    labels) and DURING the cascade (the copy's current labels).
+    """
+    return any(
+        all(validity.get(p.name) is True for p in j.in_list)
+        and all(validity.get(o.name) is not True for o in j.out_list)
+        for j in belief.justifications
+    )
+
+
+#: #3570 minor — the counterfactual pass's bound. The upstream belief budget
+#: is ~36 today (the jtms selection), so the cap never fires on the panel; a
+#: growth of that budget would otherwise inherit the measured curve (200
+#: beliefs = 28.67 s on synthetic chains). Candidates are tested in network
+#: order; when the cap fires the payload SAYS it
+#: (``counterfactual_premises_capped``), so the k-of-N trace line keeps its
+#: meaning: N denominates the premises asked, never the whole population.
+_COUNTERFACTUAL_PREMISE_CAP = 25
+
+
+def _jtms_counterfactual_withdrawals(
+    session: Any, belief_name_by_id: Dict[str, str]
+) -> Tuple[List[Dict[str, Any]], int, bool]:
+    """What would lose its only justification if a premise were withdrawn (#3547).
+
+    Today the pipeline retracts a belief only when a fallacy targets it; no act
+    says what would fall if a PREMISE went. This pass answers that question on
+    a COPY of the network — the session's own labels, chain and trace never
+    change.
+
+    Solver. For each belief that held True and premises at least one support
+    edge: ``set_belief_validity(premise, False)`` on the copy, then compare.
+    Under Step 3 every unit belief is a FACT, and facts are exempt from the
+    unsupported set — so a plain label diff would measure nothing. The
+    counterfactual therefore also RELEASES, on the copy only, each belief that
+    held True STANDING ON THE STRUCTURE (a live justification before the
+    withdrawal) and whose every justification died IN the withdrawal
+    (``set_belief_validity(name, None)`` pops the fact and lets the label
+    answer to justification structure alone): the acceptance of B rested on
+    the structure, and the question is precisely what that acceptance rests
+    ON. #3570: liveness is photographed BEFORE the withdrawal and only what
+    CHANGED is released — the fallacy path leaves beliefs whose only
+    justification is already dead yet still True (they are facts), and a pass
+    that asked merely "dead after the withdrawal" would credit the next
+    premise it withdraws with the fallacy's own kill (arg_3, whose arg_2 died
+    to the fallacy, re-attributed to arg_1's withdrawal). The release
+    cascades (B falls → the C it alone supported loses its rule) until the
+    copy stabilises. A belief with a second live justification keeps it
+    (mutation control); a belief with no justification ever — an independent
+    premise — never had one to lose and holds (#3226's honest unknowns are
+    never touched: only True beliefs are eligible).
+
+    Population (#3570). Premise candidates and recorded falls are drawn only
+    from beliefs carrying a unit id (``belief_name_by_id``): ``FALLACY:*``,
+    ``defeat:*`` and ``_CONTRADICTION_`` are the retraction machinery's own
+    bookkeeping — a withdrawal entry naming one would render the machinery,
+    not the discourse. A bookkeeping belief may still be released on the copy
+    (the cascade must run through it), but it never reaches the records.
+
+    Minors (#3570). Each entry carries ``rest_stands`` — whether any OTHER
+    unit belief still holds after the withdrawal — so the render's
+    « le reste tient » is a claim made only when a rest exists (a 2-belief
+    A→B network has none). And the pass is capped
+    (``_COUNTERFACTUAL_PREMISE_CAP``): the pass cost grows with the belief
+    population (measured on synthetic chains: 200 beliefs take 28.67 s), and
+    any growth of the upstream budget would inherit that curve. When the cap
+    fires, ``counterfactual_premises_capped`` says so — the count then
+    denominates the premises ASKED, never the whole population.
+
+    Returns the withdrawals with at least one fall (premise name + unit id +
+    text, falls in cascade order, ``rest_stands``), the number of premises
+    tested, and whether the cap stopped the pass.
+    """
+    jtms = session.jtms
+
+    def _text_of(name: str, unit_id: Optional[str]) -> str:
+        if unit_id and name.startswith(f"{unit_id}:"):
+            return name[len(unit_id) + 1 :]
+        return name
+
+    # Step 1's uid → belief-name convention, reversed to name → uid so the
+    # records carry unit ids for the render's label/persona lookups.
+    unit_id_by_name = {name: uid for uid, name in belief_name_by_id.items()}
+    original = {name: b.valid for name, b in jtms.beliefs.items()}
+    # #3570 — the BEFORE photograph: what stood on the structure before any
+    # withdrawal. A belief already standing on a dead justification (the
+    # fallacy regime leaves one behind every kill) has nothing the withdrawal
+    # can take: "died IN the withdrawal", never "dead after it".
+    live_before = {
+        name: _live_under(belief, original) for name, belief in jtms.beliefs.items()
+    }
+
+    premised: Set[str] = set()  # belief names that premise a support edge
+    for belief in jtms.beliefs.values():
+        for justification in belief.justifications:
+            for premise in justification.in_list:
+                premised.add(premise.name)
+
+    # #3570 — candidates carry a unit id: bookkeeping beliefs are never a
+    # premise the reader could see withdrawn.
+    candidates = [
+        name
+        for name, valid in original.items()
+        if valid is True and name in premised and name in unit_id_by_name
+    ]
+    withdrawals: List[Dict[str, Any]] = []
+    tested = 0
+    for premise in candidates:
+        if tested >= _COUNTERFACTUAL_PREMISE_CAP:
+            break
+        tested += 1
+        net = jtms.copy()
+        net.set_belief_validity(premise, False)
+        falls: List[Dict[str, Any]] = []
+        # Everything released on the copy — recorded falls AND the
+        # bookkeeping beliefs the cascade must pass through (#3570).
+        released: Set[str] = {premise}
+        changed = True
+        while changed:
+            changed = False
+            for name, belief in net.beliefs.items():
+                if name in released:
+                    continue
+                if original.get(name) is not True or not belief.justifications:
+                    continue
+                if not live_before.get(name):
+                    continue  # died before the withdrawal, not in it (#3570)
+                if _live_under(belief, {n: b.valid for n, b in net.beliefs.items()}):
+                    continue
+                net.set_belief_validity(name, None)
+                released.add(name)
+                uid = unit_id_by_name.get(name)
+                if uid is not None:  # bookkeeping beliefs never render (#3570)
+                    falls.append(
+                        {"name": name, "unit_id": uid, "text": _text_of(name, uid)}
+                    )
+                changed = True
+        if falls:
+            uid = unit_id_by_name.get(premise)
+            # #3570 minor — « le reste tient » claims a rest: does any OTHER
+            # unit belief still hold once this withdrawal's falls are taken?
+            rest_stands = any(
+                name != premise
+                and name not in released
+                and name in unit_id_by_name
+                and original.get(name) is True
+                for name in original
+            )
+            withdrawals.append(
+                {
+                    "premise": premise,
+                    "premise_unit_id": uid,
+                    "text": _text_of(premise, uid),
+                    "falls": falls,
+                    "rest_stands": rest_stands,
+                }
+            )
+    return withdrawals, tested, tested < len(candidates)
+
+
 async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
     """Invoke JTMS belief maintenance with ExtendedBelief and agent metadata (#214).
 
@@ -4053,6 +4217,16 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
                 ),
             }
 
+    # ── Step 5c: Counterfactual withdrawals on a COPY (#3547) ─────────
+    # The network is final (fallacies, rebuttals and facts all applied);
+    # asking on a copy what a premise's withdrawal would drop leaves the
+    # session's labels, chain and trace exactly as they are.
+    (
+        _counterfactual_withdrawals,
+        _counterfactual_premises_tested,
+        _counterfactual_premises_capped,
+    ) = _jtms_counterfactual_withdrawals(session, _belief_name_by_id)
+
     # ── Build output with ExtendedBelief metadata ────────────────────
     beliefs_output = {}
     for name, ext_belief in session.extended_beliefs.items():
@@ -4133,7 +4307,17 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
         "session_version": session.version,
         "consistency_checks": session.consistency_checks,
         "retraction_chain": _retraction_chain,
+        # #3547 — the counterfactual: premises whose withdrawal (on a copy)
+        # would drop other beliefs' only justification. Empty list = no
+        # premise carries that weight (honest absence); ``premises_tested``
+        # says how many were asked so the empty case reads as asked-and-none.
+        "counterfactual_withdrawals": _counterfactual_withdrawals,
+        "counterfactual_premises_tested": _counterfactual_premises_tested,
     }
+    if _counterfactual_premises_capped:
+        # #3570 — the pass's cap fired: said here so ``premises_tested``
+        # keeps meaning "asked", never silently truncated (#1622 idiom).
+        _jtms_result["counterfactual_premises_capped"] = True
     if _jtms_sentences_total is not None:
         # The sentence fallback fired: its cap is disclosed too (honest
         # absence otherwise — the branch did not run).
@@ -4169,6 +4353,17 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             _disclosures.append(
                 f"{len(_claims_without_support)} de "
                 f"{_jtms_result['claims_in_network']} claims sans support enregistré"
+            )
+        if _counterfactual_withdrawals:
+            # #3547 — the counterfactual's k-of-N rides the trace too, so the
+            # surfaces reading analysis_trace can say it (#2850's convention).
+            # #3570 — when the cap stopped the pass, N denominates the
+            # premises ASKED; the cap is said, never silent (#1622 idiom).
+            _disclosures.append(
+                f"{len(_counterfactual_withdrawals)} de "
+                f"{_counterfactual_premises_tested} prémisses portent un retrait "
+                f"contrefactuel"
+                + (" (plafond atteint)" if _counterfactual_premises_capped else "")
             )
         if "arguments_from_sentences" in _jtms_result:
             _disclosures.append(

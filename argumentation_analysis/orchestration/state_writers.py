@@ -767,6 +767,11 @@ def _write_jtms_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     retraction_chain = output.get("retraction_chain", [])
     if isinstance(retraction_chain, list):
         state.jtms_retraction_chain = retraction_chain
+    # #3547 — counterfactual withdrawals (measured on a copy; the beliefs
+    # above are the session's own, untouched by the pass).
+    withdrawals = output.get("counterfactual_withdrawals", [])
+    if isinstance(withdrawals, list):
+        state.jtms_counterfactual_withdrawals = withdrawals
 
 
 def _write_atms_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:

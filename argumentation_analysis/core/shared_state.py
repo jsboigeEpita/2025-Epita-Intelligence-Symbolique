@@ -991,6 +991,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self.jtms_beliefs: Dict[str, Dict[str, Any]] = {}
         # JTMS retraction cascade chains (#350)
         self.jtms_retraction_chain: List[Dict[str, Any]] = []
+        # #3547 — counterfactual withdrawals: what would lose its only
+        # justification if a premise were withdrawn. Measured on a COPY of the
+        # network by the jtms phase; the session's own labels never moved.
+        self.jtms_counterfactual_withdrawals: List[Dict[str, Any]] = []
         # Dung abstract argumentation frameworks (abs_arg_dung)
         self.dung_frameworks: Dict[str, Dict[str, Any]] = {}
         # Governance decisions and votes (2.1.6)

@@ -247,6 +247,11 @@ PROSE_BASELINE = frozenset(
         # this guard is that a new state read is never silent).
         "historical_context",
         "strategic_read",
+        # #3547 — the JTMS counterfactual: premises whose withdrawal would
+        # drop other beliefs' only justification, read by the act3 projector
+        # (and through it the persona lookup above). Counts and texts only;
+        # the pass itself ran on a copy, the beliefs are untouched.
+        "jtms_counterfactual_withdrawals",
     }
 )
 
@@ -330,6 +335,11 @@ PROSE_ONLY = frozenset(
         # wording is model knowledge the export boundary scrubs (pass 8).
         "historical_context",
         "strategic_read",
+        # #3547 — the JTMS counterfactual: a rendering carrier (the
+        # withdrawal sentence act3 projects), not an analytical dimension —
+        # the appendix has no "disponible / mobilisée" row for it, same
+        # family as the ledger record above.
+        "jtms_counterfactual_withdrawals",
     }
 )
 
