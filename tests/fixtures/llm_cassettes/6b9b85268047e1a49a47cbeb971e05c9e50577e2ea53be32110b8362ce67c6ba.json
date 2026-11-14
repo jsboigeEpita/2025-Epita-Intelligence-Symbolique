@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"exists X: (Idee(X) && Incolore(X) && Vert(X) && DortFurieusement(X))\"\n  ],\n  \"predicates\": {\n    \"Idee\": \"est une idée\",\n    \"Incolore\": \"est incolore\",\n    \"Vert\": \"est verte\",\n    \"DortFurieusement\": \"dort furieusement\"\n  },\n  \"variables\": {\n    \"X\": \"chose\"\n  },\n  \"reasoning\": \"L'expression « des idées » est traduite par une existence : il existe au moins une chose qui est une idée. Cette idée est à la fois incolore et verte, et elle dort furieusement. La phrase est sémantiquement étrange, mais elle reste formalisable en logique du premier ordre.\"\n}",
+      "content": "{\n  \"formulas\": [\n    \"exists X: (Idee(X) && Incolore(X) && Verte(X) && DortFurieusement(X))\"\n  ],\n  \"predicates\": {\n    \"Idee\": \"est une idée\",\n    \"Incolore\": \"est incolore\",\n    \"Verte\": \"est verte\",\n    \"DortFurieusement\": \"dort furieusement\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"Le groupe nominal indéfini « d'incolores idées vertes » est traduit par l'existence d'au moins une entité qui est une idée, qui est à la fois incolore et verte, et qui dort furieusement.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Ek7kRAMJBdbf3heIY6SrQeKDrPnEC",
-        "created": 1794661579,
+        "id": "chatcmpl-EkFrKXlIi270Tu8AtfFe0kgZ5eMAu",
+        "created": 1794692758,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 286,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 494,
+          "completion_tokens": 683,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 308,
+            "reasoning_tokens": 512,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

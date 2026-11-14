@@ -1,0 +1,48 @@
+{
+  "key": "f1b8fd84f9f28036cf4dd0a6e11ba26fddf3cb91013220eb5a7009e10685a361",
+  "value": {
+    "id": "chatcmpl-EkFlZ74LBK808aag2Agay923LNHKZ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Sans action immédiate, le système de retraites s’effondrerait dans cinq ans.\\n2. Cet argument repose sur un argument d’autorité.\\n3. Il ne tient pas compte des différences structurelles entre les systèmes de retraite.\\n4. La prédiction d’un effondrement dans cinq ans constitue un appel classique à la peur.\\n5. Selon les syndicats, le gouvernement commet un sophisme naturaliste en affirmant que travailler plus longtemps est « dans l’ordre des choses ».\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794692401,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 313,
+      "prompt_tokens": 262,
+      "total_tokens": 575,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 192,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

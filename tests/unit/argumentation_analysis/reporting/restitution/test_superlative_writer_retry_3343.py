@@ -37,6 +37,7 @@ Synthetic vocabularies only — no corpus text, opaque ids only.
 """
 
 import asyncio
+import re
 from types import SimpleNamespace
 
 from argumentation_analysis.reporting.restitution import (
@@ -44,11 +45,16 @@ from argumentation_analysis.reporting.restitution import (
     pipeline_adapter,
 )
 from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
+    build_act2_evidence,
     build_act2_narrative,
     build_act2_retry_prompt,
 )
 from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
     build_act3_conclusion,
+)
+from argumentation_analysis.reporting.restitution.movement_render_contract import (
+    read_render_contract,
+    render_count_line,
 )
 
 #: The R1125a shape — a whole-scope superlative with no ranking in the state.
@@ -108,6 +114,30 @@ def _two_drafts(first: str, second: str, calls=None):
     return llm_callable
 
 
+#: #3560 — the producer's count line: one parenthesised sentence on ONE
+#: line, nothing after it but an optional newline.
+_COUNT_LINE_RE = re.compile(r"\(Compte du récit : [^\n]*\)\n?")
+
+
+def _expected_act(draft: str) -> str:
+    """The act #3560 makes of this fixture's draft — byte-exact.
+
+    The writer's prose verbatim, then the producer's count line (these
+    fixtures leave their movement uncounted). Exact equality, not a prefix
+    test: two drafts concatenated would satisfy ``startswith`` and must fail
+    here. The line's shape is checked independently, so recomputing it
+    cannot bless a suffix that carries anything else.
+    """
+    state = _scored_state()
+    line = render_count_line(
+        read_render_contract(draft, build_act2_evidence(state), state)
+    )
+    if not line:
+        return draft
+    assert _COUNT_LINE_RE.fullmatch(line), f"count line shape changed: {line!r}"
+    return draft + "\n" + line
+
+
 class TestActTwoRetry:
     """The bounded retry, end to end through the real builder."""
 
@@ -122,9 +152,9 @@ class TestActTwoRetry:
         _run(build_act2_narrative(_scored_state(), llm_callable=llm))
 
         assert len(calls) == 2, "exactly ONE retry, never a loop"
-        assert _WHOLE_SCOPE in calls[1], (
-            "the retry prompt must carry the sentence the check flagged"
-        )
+        assert (
+            _WHOLE_SCOPE in calls[1]
+        ), "the retry prompt must carry the sentence the check flagged"
         assert "2 unités évaluées sur 2" in calls[1], (
             "the retry prompt must carry the measured base the sentence has "
             "to stand on"
@@ -155,7 +185,11 @@ class TestActTwoRetry:
         llm = _two_drafts(first, first, calls)
         result = _run(build_act2_narrative(_scored_state(), llm_callable=llm))
 
-        assert result.narrative == first
+        # #3560 — the tiny stub shares no anchor with its single movement
+        # (this fixture tests the superlative retry, not the render
+        # contract), so the producer's count line rides the act after the
+        # writer's prose; byte-exact — the draft plus that line, nothing else.
+        assert result.narrative == _expected_act(first)
         assert "act2_whole_scope_superlative" in result.degraded
         motif = result.degraded["act2_superlative_retry"]
         assert "le premier brouillon" in motif

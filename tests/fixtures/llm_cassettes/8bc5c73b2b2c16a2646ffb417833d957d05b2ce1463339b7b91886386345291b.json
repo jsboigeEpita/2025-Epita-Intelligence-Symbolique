@@ -1,0 +1,48 @@
+{
+  "key": "8bc5c73b2b2c16a2646ffb417833d957d05b2ce1463339b7b91886386345291b",
+  "value": {
+    "id": "chatcmpl-EkFxOX7uZlOhaGILrtsJk75a3foVl",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Le climat a toujours changé, donc le changement climatique actuel n’est pas exceptionnel ou ne justifie pas de relativiser la situation actuelle.\",\"main_thesis\":\"Le fait que le climat ait toujours changé ne suffit pas à relativiser la crise actuelle, car la vitesse du réchauffement présent est sans précédent et les activités humaines en sont responsables.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794693134,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 151,
+      "prompt_tokens": 295,
+      "total_tokens": 446,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 61,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

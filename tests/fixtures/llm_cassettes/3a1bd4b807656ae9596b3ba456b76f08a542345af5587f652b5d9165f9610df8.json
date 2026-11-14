@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_op28tVYyErqI3WTqvoyo5tUo",
+          "id": "call_YckiRIHWnY2XqiGeHBKffv9h",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"1281\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"La phrase est une simple affirmation d’un succès économique, sans esquive explicite d’un débat ni refus de répondre à des objections. Elle n’instancie pas Refus du débat.\",\"move_author\":\"speaker\",\"document_statement\":\"Le président affirme que la politique économique est un succès incontestable.\"}"
+          "arguments": "{\"node_pk\":\"1281\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"La phrase énonce une affirmation politique, mais n’esquive pas explicitement un débat ni ne refuse de fournir des arguments. Le contenu ne manifeste donc pas le « refus du débat ».\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Ek7fd0dCKwIAjutwfXCW2dXOwJyPg",
-        "created": 1794661281,
+        "id": "chatcmpl-EkFnRFFLJXSHWFAicUB8jO7k3nZmo",
+        "created": 1794692517,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2603,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 95,
+          "completion_tokens": 79,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

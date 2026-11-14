@@ -6,30 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_baYAazCPixPysnUmy6mXOfNJ",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"1353\"}"
-        },
-        {
-          "id": "call_Qm0uhESvVDzvruJKlXI4aFwM",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"1354\"}"
-        },
-        {
-          "id": "call_jsY35VwRswcMPzLzEehQD2Zk",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"1355\"}"
-        },
-        {
-          "id": "call_uIaMzFQ67Myf8am66qoG7qTm",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"1357\"}"
+          "id": "call_KwOfW4LGvLM1fq16BdTiZenY",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"1352\",\"matches\":false,\"justification\":\"Le texte commet plutôt un appel à l'autorité et un argument ad hominem contre les non-experts, mais il ne discrédite pas un adversaire au moyen d'informations préjudiciables au sens spécifique de l'empoisonnement du puits. Aucun sous-type proposé ne correspond mieux.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Ek7hgYTR9Ny9uERVB3a0Kv9m5NVn9",
-        "created": 1794661408,
+        "id": "chatcmpl-EkFomcAlQj0kb5FuyPTkzFvbmWyot",
+        "created": 1794692600,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2251,
@@ -40,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 99,
+          "completion_tokens": 98,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

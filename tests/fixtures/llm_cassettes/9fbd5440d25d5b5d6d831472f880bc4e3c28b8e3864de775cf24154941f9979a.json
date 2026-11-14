@@ -1,14 +1,14 @@
 {
   "key": "9fbd5440d25d5b5d6d831472f880bc4e3c28b8e3864de775cf24154941f9979a",
   "value": {
-    "id": "chatcmpl-Ek7i7TwnNHII9t3VMzf5XsG22CHqm",
+    "id": "chatcmpl-EkFp7FU1w1AGX3RmIubjLf6q99jH0",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_digression\":false,\"relevance_verdict\":\"toutes_pertinentes\",\"located_digression\":\"\"}",
+          "content": "{\"has_digression\":true,\"relevance_verdict\":\"digression_localisée\",\"located_digression\":\"Si vous n'etes pas expert, votre avis ne compte pas.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794661435,
+    "created": 1794692621,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 129,
+      "completion_tokens": 135,
       "prompt_tokens": 271,
-      "total_tokens": 400,
+      "total_tokens": 406,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 93,
+        "reasoning_tokens": 88,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

@@ -3949,9 +3949,10 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
         )
     _bipolar_results = getattr(_jtms_state, "bipolar_results", None) or []
     if isinstance(_bipolar_results, list):
-        # Recorded supports from a previous bipolar pass (the phase runs
-        # AFTER jtms in the pipeline, so these exist on re-runs and on
-        # pre-supplied states) — same [source, target] pair convention.
+        # Recorded supports from the bipolar pass (#3547: bipolar runs
+        # BEFORE jtms — declared in the workflow — so these exist on first
+        # runs too, as well as on re-runs and pre-supplied states) — same
+        # [source, target] pair convention.
         for _bipolar_entry in _bipolar_results:
             if isinstance(_bipolar_entry, dict):
                 _support_pairs.extend(
@@ -6837,7 +6838,7 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
     # become undercuts (the premise/conclusion emission contracts are not
     # measured; undermine-via-atom is bounded out by #3050). Every
     # non-emission path records its reason on the payload; the absent field
-    # says it is absent (the wiring landed before the prompt asks for it).
+    # says it is absent (on states produced before the producer asked for it).
     # The WK contract is the R1223-measured shape: a defeasible rule named
     # after the attacking unit (the counter's minted atom), head_negated on
     # the TARGET RULE'S NAME, body citing the counter atom — which the
@@ -6865,10 +6866,19 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
     # ``SelectableUnit`` annotation is wider); ``str`` keeps the membership
     # check honest for both.
     _aspic_unit_ids = {str(a) for a in arguments}
-    for c in _aspic_counters[:4]:
+    # #1649: the 4-counter cap shipped with the wiring (#3100), when no
+    # producer stamped a component — a speculative sample. Documents carry
+    # 13 to 65 counters, so it excluded up to 61 of them. The gate below
+    # (component, validity, resolved target, existing rule) is the real
+    # filter; every counter is considered, and the considered/total counts
+    # still disclose the population.
+    for _ci, c in enumerate(_aspic_counters):
         if not isinstance(c, dict):
             continue
-        _cid = str(c.get("id", "?"))
+        # The producer list carries no per-counter id (the id is minted by
+        # the state writer); the caller-supplied one is honoured, else the
+        # position names the counter in the refusal list.
+        _cid = str(c.get("id") or "") or f"#{_ci}"
         _component = c.get("attacked_component")
         if _component != "inference":
             if _component is None and _aspic_any_component:
@@ -6886,10 +6896,16 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
         if not (isinstance(_validation, dict) and _validation.get("is_valid_attack")):
             _aspic_undercut_reasons.append(f"{_cid}: is_valid_attack not truthy")
             continue
-        _target = str(c.get("target_arg_id") or "")
+        # #1649: read the producer's keys (#2968 stamp); the state-entry
+        # keys stay as a fallback for callers that still pass them.
+        _target = str(c.get("target_unit_id") or c.get("target_arg_id") or "")
         if _target not in _aspic_unit_ids:
+            # The producer records WHY the echo resolved nothing (#2968) —
+            # the refusal carries it rather than dropping the evidence.
+            _target_reason = str(c.get("target_unresolved_reason") or "")
             _aspic_undercut_reasons.append(
                 f"{_cid}: target {_target!r} unresolved among the frame units"
+                + (f" ({_target_reason})" if _target_reason else "")
             )
             continue
         _target_rule = next(
@@ -6908,7 +6924,16 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
                 f"{_cid}: target {_target} has no defeasible rule to undercut"
             )
             continue
-        _counter_atom = _pl_atom(str(c.get("counter_content", "")), prefix="wk_ca")
+        # #1649: the atom is named from the counter's TEXT (the producer's
+        # ``counter_argument``); a counter with no text has no mintable
+        # attacker — named, never minted from an empty string.
+        _counter_text = str(c.get("counter_argument") or c.get("counter_content") or "")
+        if not _counter_text:
+            _aspic_undercut_reasons.append(
+                f"{_cid}: no counter text to mint the attacker atom"
+            )
+            continue
+        _counter_atom = _pl_atom(_counter_text, prefix="wk_ca")
         defeasible.append(
             {
                 "name": f"wk_{_counter_atom}",

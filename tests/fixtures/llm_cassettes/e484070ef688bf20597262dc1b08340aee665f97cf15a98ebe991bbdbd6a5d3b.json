@@ -1,14 +1,14 @@
 {
   "key": "e484070ef688bf20597262dc1b08340aee665f97cf15a98ebe991bbdbd6a5d3b",
   "value": {
-    "id": "chatcmpl-Ek7iEPzWe5jrwR3WLwxPkmQebAToz",
+    "id": "chatcmpl-EkFpLUelZ6u8B1qipvm42n08YC9C3",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"chain_holds\":false,\"structure_verdict\":\"saut_logique\",\"reasoning\":\"L’unanimité des experts ne suffit pas à établir logiquement que l’énoncé est vrai, et l’argument 2 n’ajoute pas de justification pertinente.\"}",
+          "content": "{\"chain_holds\":false,\"structure_verdict\":\"saut_logique\",\"reasoning\":\"L’unanimité des experts ne suffit pas à établir logiquement que la conclusion est vraie, et l’argument sur les non-experts est sans lien démonstratif direct.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794661442,
+    "created": 1794692635,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 115,
+      "completion_tokens": 123,
       "prompt_tokens": 294,
-      "total_tokens": 409,
+      "total_tokens": 417,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 51,
+        "reasoning_tokens": 58,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "## 🕯️ Nouvelle enquête Cluedo : *Le secret du Manoir Tudor*\n\nUne pluie glaciale s’abat sur le manoir. À **23 h 17**, toutes les lumières s’éteignent brusquement.\n\nQuelques secondes plus tard, un cri retentit depuis la bibliothèque.\n\nLorsque les chandelles sont rallumées, **Lord Édouard Tudor**, propriétaire du manoir, est retrouvé mort près de son bureau. La porte était verrouillée de l’intérieur… mais une fenêtre donne sur les jardins détrempés.\n\nLe meurtrier se trouve forcément parmi les invités.\n\n### Les suspects\n\n- **Lady Béatrice Tudor**, l’épouse de la victime, froide et impeccable.\n- **Arthur Blackwood**, l’associé de Lord Tudor, ruiné depuis peu.\n- **Clara Finch**, la gouvernante, au service de la famille depuis trente ans.\n- **Dr Henry Graves**, médecin personnel de la victime.\n- **Miss Eleanor Vale**, nièce de Lord Tudor, héritière potentielle.\n- **Victor Ash**, antiquaire mystérieux invité pour une affaire secrète.\n\n### Premiers indices\n\n- Une **tasse de thé brisée** repose près du corps.\n- Une **trace de boue** apparaît sous la fenêtre.\n- Le bureau contient une lettre à moitié brûlée, dont on peut lire :  \n  > « …si vous révélez la vérité, tout le monde saura que… »\n- L’horloge de la bibliothèque s’est arrêtée à **23 h 05**.\n- Personne ne semble pouvoir confirmer exactement où il se trouvait au moment du meurtre.\n\nL’inspecteur vous tend un carnet.\n\n**Par où commencez-vous ?**\n\n1. Examiner le corps et le bureau  \n2. Inspecter la fenêtre et les jardins  \n3. Interroger Lady Béatrice  \n4. Interroger Arthur Blackwood  \n5. Interroger Clara Finch  \n6. Interroger le Dr Graves  \n7. Interroger Eleanor Vale  \n8. Interroger Victor Ash",
+      "content": "## Enquête au manoir Tudor — Dossier n°1\n\nLa pluie fouette les vitres du vieux manoir. À 22 h 17, un cri retentit dans l’aile ouest.\n\nLorsque vous arrivez dans la bibliothèque, **Lord Édouard Tudor**, propriétaire du domaine, gît près de son bureau. Il a été frappé à la tête. La fenêtre est ouverte, mais aucune trace de pas n’est visible dans le jardin détrempé.\n\n### Premières constatations\n- L’arme du crime semble être un **chandelier en bronze**.\n- Une tasse de thé encore tiède repose sur le bureau.\n- Le coffre-fort est ouvert, mais rien ne semble manquer.\n- Une feuille à moitié brûlée porte seulement ces mots :  \n  **« À minuit, tout sera révélé. »**\n- L’horloge de la bibliothèque est arrêtée à **22 h 05**.\n\n### Les personnes présentes\n1. **Lady Victoria Tudor**, épouse de la victime — calme, mais très pâle.\n2. **Arthur Tudor**, son fils — affirme avoir été dans la salle de billard.\n3. **Clara Bell**, secrétaire de Lord Tudor — dit avoir travaillé dans son bureau jusqu’à 21 h 45.\n4. **Dr Samuel Blackwood**, médecin de famille — prétend être arrivé après le meurtre.\n5. **Margaret Crowe**, gouvernante — connaît tous les passages du manoir.\n6. **Colonel James Harrington**, voisin et ancien militaire — assure avoir entendu un bruit de verre brisé.\n\nVous êtes chargé(e) de l’enquête.\n\n**Que souhaitez-vous faire ?**  \nA. Examiner le corps et la scène du crime  \nB. Interroger Lady Victoria  \nC. Interroger Arthur  \nD. Interroger Clara Bell  \nE. Interroger le Dr Blackwood  \nF. Interroger Margaret Crowe  \nG. Interroger le colonel Harrington",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Ek7mrnw5BLSOfom72ueEZEwt9E7s0",
-        "created": 1794661729,
+        "id": "chatcmpl-EkFtWePSfitWdgL3pauYqOm8gGF6b",
+        "created": 1794692894,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 29,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 502,
+          "completion_tokens": 455,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 78,
+            "reasoning_tokens": 43,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

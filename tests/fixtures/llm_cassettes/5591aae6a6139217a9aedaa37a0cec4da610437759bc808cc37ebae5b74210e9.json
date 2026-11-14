@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_aOHBh3kLEJkhjk3WpyRUSfpn",
+          "id": "call_DPvwjDy81tetoau1u5dhYpYK",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"2\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L'énoncé affirme sans fournir de données, d'exemples ni de preuve que la politique économique est un « succès incontestable »; il s'agit d'une généralisation ou conclusion globale insuffisamment étayée.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\",\"document_statement\":\"Le président affirme que la politique économique est un succès incontestable.\"}"
+          "arguments": "{\"node_pk\":\"2\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L’énoncé présente comme un succès incontestable une évaluation globale de la politique économique, sans fournir de preuve, de données ni d’exemples permettant de l’étayer. Il s’agit d’une généralisation hâtive plutôt que d’un sous-type plus spécifique identifiable.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\",\"document_statement\":\"\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Ek7fbRajmKz1OnSiW1ZzbWYgCuq7P",
-        "created": 1794661279,
+        "id": "chatcmpl-EkFnPPagbTGljKGRHVfjcLHxPd0mv",
+        "created": 1794692515,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2526,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 109,
+          "completion_tokens": 108,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

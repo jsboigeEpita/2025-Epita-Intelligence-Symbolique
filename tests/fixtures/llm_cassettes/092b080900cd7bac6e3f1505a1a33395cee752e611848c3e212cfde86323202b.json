@@ -1,0 +1,48 @@
+{
+  "key": "092b080900cd7bac6e3f1505a1a33395cee752e611848c3e212cfde86323202b",
+  "value": {
+    "id": "chatcmpl-EkFxfetKlIPjUjdaxYPAS4kjiM5rg",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les trois points apportent des idées distinctes : consensus sur l’impact humain, argument sceptique sur la variabilité historique, puis critique de cet argument en distinguant la vitesse du changement actuel. Aucune redondance substantielle n’est présente.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794693151,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 144,
+      "prompt_tokens": 298,
+      "total_tokens": 442,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 74,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

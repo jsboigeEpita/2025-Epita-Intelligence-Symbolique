@@ -1,14 +1,14 @@
 {
   "key": "58873cb17872fa51a9eb5e853a3644951accdf8ee3f1b15623633031da6ac21a",
   "value": {
-    "id": "chatcmpl-Ek7obMfYSUQq7irSIdfbUkP1JU1HN",
+    "id": "chatcmpl-EkFvAsan3vUiBPRG0mTt9eZemfO0M",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_thesis\":true,\"thesis\":\"Les vaccins ne sont pas dangereux, et les affirmations du contraire sont infondées.\",\"digressions\":\"\"}",
+          "content": "{\"has_thesis\":true,\"thesis\":\"Les vaccins ne sont pas dangereux ; les affirmations contraires ignorent les preuves scientifiques.\",\"digressions\":\"\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794661837,
+    "created": 1794692996,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 397,
+      "completion_tokens": 489,
       "prompt_tokens": 250,
-      "total_tokens": 647,
+      "total_tokens": 739,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 353,
+        "reasoning_tokens": 445,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

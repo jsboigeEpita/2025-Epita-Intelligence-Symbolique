@@ -1,0 +1,48 @@
+{
+  "key": "23a4637f38c2aeed013d54287386147e3fe5f12a416154eb1e105504a7949820",
+  "value": {
+    "id": "chatcmpl-EkFlFjCCM9lEvG5DU6D5PpDVBgqcz",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"L'opposition soutient que le débat déforme sa position en lui attribuant à tort la volonté de supprimer les retraites, alors qu'elle propose seulement une réforme différente.\",\"digressions\":\"La présentation des chiffres du déficit à 2,3 % du PIB en 2030 et la critique des hypothèses de croissance de 1,8 % par an s'écartent de la thèse sur la déformation de la position de l'opposition. L'évocation de l'argument « pensez à vos enfants » constitue également une digression émotionnelle par rapport à cette thèse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794692381,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 277,
+      "prompt_tokens": 328,
+      "total_tokens": 605,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 137,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

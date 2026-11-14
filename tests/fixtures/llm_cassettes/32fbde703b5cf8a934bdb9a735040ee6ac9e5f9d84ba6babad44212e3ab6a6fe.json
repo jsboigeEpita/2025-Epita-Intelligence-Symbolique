@@ -1,0 +1,40 @@
+{
+  "key": "32fbde703b5cf8a934bdb9a735040ee6ac9e5f9d84ba6babad44212e3ab6a6fe",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_xxd88o2EzavIyucuypUXeAPU",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"804\",\"matches\":false,\"justification\":\"La phrase affirme simplement un succès économique sans inventer ni redéfinir le sens d’un terme; l’acception arbitraire n’est pas établie.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\",\"confidence\":\"high\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkFnSdVqVWxMqa69szC9hM06rNOGv",
+        "created": 1794692518,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2363,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 925,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 80,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}
