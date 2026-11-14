@@ -1,14 +1,14 @@
 {
   "key": "8b5e499df4a12ce9c4a6a6317350431df0adb58c9033663b543c37b07429b676",
   "value": {
-    "id": "chatcmpl-EjCgfFKNWLoLdSSJXiDZsIx8ofBKA",
+    "id": "chatcmpl-Ek7fp1j110qcf1G3tHVkT3zSrlHM5",
     "choices": [
       {
-        "finish_reason": "stop",
+        "finish_reason": "length",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[{\"text\":\"L'unanimité des experts est présentée comme une raison suffisante pour considérer une affirmation comme vraie.\",\"source_quote\":\"Les experts sont unanimes, c'est donc vrai.\",\"move_author\":\"speaker\"},{\"text\":\"Seules les personnes expertes auraient un avis pertinent ou recevable; l'avis des non-experts ne compterait pas.\",\"source_quote\":\"Si vous n'etes pas expert, votre avis ne compte pas.\",\"move_author\":\"speaker\"}],\"claims\":[{\"text\":\"Les experts sont unanimes sur la question concernée.\",\"source_quote\":\"Les experts sont unanimes\"}],\"summary\":\"Le texte défend l'autorité des experts comme fondement de la vérité et exclut les avis des non-experts de la délibération pertinente.\"}",
+          "content": "",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794442237,
+    "created": 1794661293,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 344,
+      "completion_tokens": 8192,
       "prompt_tokens": 607,
-      "total_tokens": 951,
+      "total_tokens": 8799,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 176,
+        "reasoning_tokens": 8192,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

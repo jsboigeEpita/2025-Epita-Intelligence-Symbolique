@@ -1,0 +1,48 @@
+{
+  "key": "d5dd2ba6ee2a5abf1e5e96baf5efedf4bc45c7f8c765184cc5e5dc51a7e73732",
+  "value": {
+    "id": "chatcmpl-Ek7lk0zrQdPcKnfwvh372b0pCYT6d",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. L’option C propose de répartir équitablement les 2000 euros entre un tournoi réduit et du matériel pédagogique afin de combiner visibilité et pédagogie.\\n2. L’option B propose d’investir les 2000 euros dans du matériel pédagogique, notamment des échiquiers neufs, des horloges et des supports de cours.\\n3. Les échiquiers actuels sont usés, ce qui justifie l’investissement dans du nouveau matériel pédagogique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661660,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 225,
+      "prompt_tokens": 272,
+      "total_tokens": 497,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 112,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

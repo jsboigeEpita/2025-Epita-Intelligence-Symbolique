@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "## 🕯️ Enquête au Manoir Tudor\n\nLa pluie fouette les vitres du vieux manoir. À **22 h 17**, un cri retentit dans l’aile est.\n\nLorsque vous arrivez dans le **bureau Tudor**, vous découvrez **Sir Alistair Blackwood**, propriétaire des lieux, étendu près de son bureau. Il a été frappé à la tête avec un objet contondant. La porte était verrouillée de l’intérieur, mais une fenêtre est entrouverte.\n\n### Les suspects présents au manoir\n\n- **Lady Eleanor Blackwood**, l’épouse de la victime  \n- **Victor Blackwood**, son fils héritier  \n- **Clara Hastings**, la secrétaire personnelle  \n- **Dr Julian Moore**, médecin de famille  \n- **Edward Finch**, majordome  \n- **Martha Bell**, gouvernante  \n\n### Premiers éléments observés\n\n- Une **trace de boue** près de la fenêtre  \n- Un **verre de whisky brisé** sur le tapis  \n- Une page arrachée du **journal intime** de Sir Alistair  \n- L’horloge du bureau arrêtée à **22 h 03**  \n- Une odeur persistante de **fumée de cheminée**, bien que le feu soit presque éteint  \n\nLe commissaire local vous laisse diriger l’enquête.\n\n**Que souhaitez-vous faire ?**  \n1. Examiner le corps  \n2. Fouiller le bureau  \n3. Inspecter la fenêtre et la cheminée  \n4. Interroger un suspect  \n5. Réunir tout le monde pour établir les alibis",
+      "content": "## 🕯️ Nouvelle enquête Cluedo : *Le secret du Manoir Tudor*\n\nUne pluie glaciale s’abat sur le manoir. À **23 h 17**, toutes les lumières s’éteignent brusquement.\n\nQuelques secondes plus tard, un cri retentit depuis la bibliothèque.\n\nLorsque les chandelles sont rallumées, **Lord Édouard Tudor**, propriétaire du manoir, est retrouvé mort près de son bureau. La porte était verrouillée de l’intérieur… mais une fenêtre donne sur les jardins détrempés.\n\nLe meurtrier se trouve forcément parmi les invités.\n\n### Les suspects\n\n- **Lady Béatrice Tudor**, l’épouse de la victime, froide et impeccable.\n- **Arthur Blackwood**, l’associé de Lord Tudor, ruiné depuis peu.\n- **Clara Finch**, la gouvernante, au service de la famille depuis trente ans.\n- **Dr Henry Graves**, médecin personnel de la victime.\n- **Miss Eleanor Vale**, nièce de Lord Tudor, héritière potentielle.\n- **Victor Ash**, antiquaire mystérieux invité pour une affaire secrète.\n\n### Premiers indices\n\n- Une **tasse de thé brisée** repose près du corps.\n- Une **trace de boue** apparaît sous la fenêtre.\n- Le bureau contient une lettre à moitié brûlée, dont on peut lire :  \n  > « …si vous révélez la vérité, tout le monde saura que… »\n- L’horloge de la bibliothèque s’est arrêtée à **23 h 05**.\n- Personne ne semble pouvoir confirmer exactement où il se trouvait au moment du meurtre.\n\nL’inspecteur vous tend un carnet.\n\n**Par où commencez-vous ?**\n\n1. Examiner le corps et le bureau  \n2. Inspecter la fenêtre et les jardins  \n3. Interroger Lady Béatrice  \n4. Interroger Arthur Blackwood  \n5. Interroger Clara Finch  \n6. Interroger le Dr Graves  \n7. Interroger Eleanor Vale  \n8. Interroger Victor Ash",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EjCnd7pgmdVGPBGEf1uIrzEeUCyrO",
-        "created": 1794442669,
+        "id": "chatcmpl-Ek7mrnw5BLSOfom72ueEZEwt9E7s0",
+        "created": 1794661729,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 29,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 383,
+          "completion_tokens": 502,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 44,
+            "reasoning_tokens": 78,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

@@ -1,0 +1,48 @@
+{
+  "key": "9aff961d2a67438debba516ac4a4b1d2ad74e7bf5c7c532d96b7411da7fa2a34",
+  "value": {
+    "id": "chatcmpl-Ek7jZ2tUy3oT83lB2davuxumwjhEN",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_digression\":true,\"relevance_verdict\":\"digression_localisée\",\"located_digression\":\"Option B : creer un espace numerique avec des ordinateurs en libre acces.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661525,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 86,
+      "prompt_tokens": 312,
+      "total_tokens": 398,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 37,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

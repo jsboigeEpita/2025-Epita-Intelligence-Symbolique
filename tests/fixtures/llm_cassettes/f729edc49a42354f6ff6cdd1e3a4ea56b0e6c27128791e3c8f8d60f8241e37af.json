@@ -1,0 +1,48 @@
+{
+  "key": "f729edc49a42354f6ff6cdd1e3a4ea56b0e6c27128791e3c8f8d60f8241e37af",
+  "value": {
+    "id": "chatcmpl-Ek7psdeO4iFmenKx0dA5p8GfxoQ1D",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"engages_real_claim\":true,\"engagement_verdict\":\"engagement_réel\",\"reasoning\":\"La réfutation répond directement à la justification en soulignant que, même face à des criminels jugés irrécupérables et dangereux, l’irréversibilité des erreurs et le coût supérieur des procédures affaiblissent le recours à la peine de mort.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661916,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 185,
+      "prompt_tokens": 343,
+      "total_tokens": 528,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 99,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

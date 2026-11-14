@@ -1,0 +1,48 @@
+{
+  "key": "25db2dd135a3e1e602e816f2b4515b0f28a5672948201c58f065c380adf42338",
+  "value": {
+    "id": "chatcmpl-Ek7du1JjSIjAe0ehEc8uWTKpr3ayl",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"La réforme proposée viserait à supprimer les retraites, ou quelqu'un aurait proposé leur suppression.\",\"main_thesis\":\"L'invocation de l'intérêt des enfants constitue un appel à l'émotion qui détourne le débat des questions techniques de financement, tandis que l'opposition construit un homme de paille en présentant la réforme comme une suppression des retraites.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661174,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 303,
+      "prompt_tokens": 302,
+      "total_tokens": 605,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 209,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

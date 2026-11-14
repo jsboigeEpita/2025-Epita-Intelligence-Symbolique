@@ -1,0 +1,48 @@
+{
+  "key": "5610a0e844dd7afd4db11a1af6040375f88fb89f3e8bb9a5769a1e56aacae476",
+  "value": {
+    "id": "chatcmpl-Ek7dLu7IaweUhNnHJuHb1bcwX4ZI4",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"La projection du ministre des Finances selon laquelle le déficit atteindra 2,3 % du PIB d’ici 2030, ainsi que l’idée que travailler plus longtemps serait « dans l’ordre des choses ».\",\"main_thesis\":\"La projection du déficit est contestable, car elle repose sur des hypothèses de croissance optimistes de 1,8 % par an.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661139,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 315,
+      "prompt_tokens": 341,
+      "total_tokens": 656,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 218,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

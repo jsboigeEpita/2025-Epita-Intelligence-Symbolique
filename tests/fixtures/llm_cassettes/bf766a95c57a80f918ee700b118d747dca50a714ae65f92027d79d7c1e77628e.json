@@ -1,0 +1,48 @@
+{
+  "key": "bf766a95c57a80f918ee700b118d747dca50a714ae65f92027d79d7c1e77628e",
+  "value": {
+    "id": "chatcmpl-Ek7d8JnL3XcHtVG67rWmK6pQHlsKz",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Jargon technique non défini : « sophisme naturaliste » et « appel à la peur » sont utilisés sans explication accessible ; « PIB » est également un terme économique non explicité. Aucun pronom à l’antécédent ambigu ni phrase excessivement emboîtée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661126,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 237,
+      "prompt_tokens": 349,
+      "total_tokens": 586,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 157,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

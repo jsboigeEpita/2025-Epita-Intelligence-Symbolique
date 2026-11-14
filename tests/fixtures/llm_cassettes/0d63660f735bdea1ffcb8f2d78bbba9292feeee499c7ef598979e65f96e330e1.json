@@ -1,0 +1,40 @@
+{
+  "key": "0d63660f735bdea1ffcb8f2d78bbba9292feeee499c7ef598979e65f96e330e1",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_Bl7w4VywKTPckYnH3JiECrwF",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"324\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"Le texte ne tourne pas en dérision une proposition ; il invoque l'unanimité des experts et exclut l'avis des non-experts. Cela relève plutôt de l'appel à l'autorité et de l'argument ad hominem circonstanciel, pas de l'appel au ridicule.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Ek7h4BvKpZs9ac8cRlabuEtLrpYVo",
+        "created": 1794661370,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2019,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 581,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 98,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

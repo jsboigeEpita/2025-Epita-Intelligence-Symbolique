@@ -1,0 +1,48 @@
+{
+  "key": "a38007c38cb075dae4fb9d1a090ad59060d0114ad14b1e697cc6368635acfafd",
+  "value": {
+    "id": "chatcmpl-Ek7inII1RPqJH0K7JFGpdR6k2cpRt",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. L’option C propose un compromis équitable en répartissant les 2000 euros à parts égales entre un tournoi réduit et l’achat de matériel.\\n2. L’option B consiste à investir les 2000 euros dans du matériel pédagogique et des échiquiers neufs.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661477,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 165,
+      "prompt_tokens": 227,
+      "total_tokens": 392,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 91,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

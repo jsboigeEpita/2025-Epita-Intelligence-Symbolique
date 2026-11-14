@@ -6,20 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_Afj8heWE8eq8h4OG8IhvwnSG",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"700\"}"
-        },
-        {
-          "id": "call_9b5VHs8RtYyyESQIOV0yAcNB",
-          "name": "Exploration-explore_branch",
-          "arguments": "{\"node_pk\": \"699\"}"
+          "id": "call_qmI3IZ9ERao9TWZr4mQZqbFP",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"699\",\"confidence\":\"high\",\"matches\":false,\"justification\":\"Les arguments invoquent un consensus d’experts et excluent l’avis des non-experts : cela relève plutôt de l’appel à l’autorité et de l’argument ad hominem, pas d’un raisonnement circulaire.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EjChl60lbW9fpnQqJZmctdPdMwxYc",
-        "created": 1794442305,
+        "id": "chatcmpl-Ek7hWaToFxITtTCx81iY36qQCXvnX",
+        "created": 1794661398,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2026,
@@ -30,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 57,
+          "completion_tokens": 86,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

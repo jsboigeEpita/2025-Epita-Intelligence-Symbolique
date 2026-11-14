@@ -1,0 +1,40 @@
+{
+  "key": "ce6b161c6ce309f49a53fb3efe71abe6050748699ccd4474559b45b92df88cda",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_bzCxGLB2kd6G9uiFD7CeYq56",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"2\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"La phrase rapporte une affirmation du président, mais ne fournit ni anecdote, ni échantillon, ni inférence générale identifiable permettant de conclure à une généralisation hâtive.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\",\"document_statement\":\"Le texte ne fournit aucune preuve ni élément permettant d’évaluer le succès de la politique économique.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Ek7faNea8M77th0B21nbpJIjyNTme",
+        "created": 1794661278,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2500,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1062,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 106,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

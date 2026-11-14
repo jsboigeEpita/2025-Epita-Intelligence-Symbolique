@@ -1,14 +1,14 @@
 {
   "key": "9cec110ef98048296eab7f8ef5ff3cd82ff83a25f8d95fc520e5715031f54623",
   "value": {
-    "id": "chatcmpl-EjCifK8PsRD6JXZZFMEykksS6cQkl",
+    "id": "chatcmpl-Ek7i9CJMvtwnb0mCCDl5nrldzxuuR",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":1.0,\"exhibit\":\"La thèse est unique et aucune digression n’est identifiée ; l’ensemble de l’argument reste donc centré sur l’idée que l’unanimité des experts suffit à établir la vérité d’une proposition.\"}",
+          "content": "{\"score\":1.0,\"exhibit\":\"La thèse est clairement identifiée et aucune digression n'est présente ; l'ensemble reste entièrement centré sur l'idée que l'unanimité des experts suffit à établir la vérité d'une proposition.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794442361,
+    "created": 1794661437,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 91,
+      "completion_tokens": 81,
       "prompt_tokens": 260,
-      "total_tokens": 351,
+      "total_tokens": 341,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 28,
+        "reasoning_tokens": 21,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

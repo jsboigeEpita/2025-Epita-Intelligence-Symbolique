@@ -1,0 +1,48 @@
+{
+  "key": "5350216a554568e9a88305bcf7ac8d003c8fa58005f3164db7f7d9883dbb8857",
+  "value": {
+    "id": "chatcmpl-Ek7pl1RSwEKCAyjVQqZTgvyilhaVg",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.2,\"exhibit\":\"Anaphore non résolvable : « Elle » n’a pas d’antécédent clair, ce qui rend indéterminé ce qui est censé dissuader les crimes. Verdict : opaque réel ; le sens global reste partiellement reconstructible.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661909,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 136,
+      "prompt_tokens": 273,
+      "total_tokens": 409,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 65,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

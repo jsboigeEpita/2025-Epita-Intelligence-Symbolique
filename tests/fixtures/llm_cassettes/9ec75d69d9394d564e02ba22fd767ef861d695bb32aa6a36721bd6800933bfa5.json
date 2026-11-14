@@ -6,8 +6,8 @@
       "content": "{\"query_ideas\":[{\"formula\":\"[](logic_coherent)\"},{\"formula\":\"<>(find_proof)\"}]}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EjCom6u98KkT95tLZ0CgdvcIf5qKq",
-        "created": 1794442740,
+        "id": "chatcmpl-Ek7oEms7u9poHYKuoLxnpZeRzu9xu",
+        "created": 1794661814,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 207,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 63,
+          "completion_tokens": 48,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 31,
+            "reasoning_tokens": 16,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

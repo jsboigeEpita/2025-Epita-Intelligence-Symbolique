@@ -1,0 +1,48 @@
+{
+  "key": "7290670bcf755f27af305f554c102bccb878a0dffa2ed6dd14861ad462b6fef9",
+  "value": {
+    "id": "chatcmpl-Ek7jgLu38hdM4RlZ0h63mHG9WP52E",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Position adverse identifiée : Option B, créer un espace numérique avec des ordinateurs en libre accès. Verdict d'engagement : pas_de_refutation ; aucune réfutation constructive démontrée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661532,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 52,
+      "prompt_tokens": 258,
+      "total_tokens": 310,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

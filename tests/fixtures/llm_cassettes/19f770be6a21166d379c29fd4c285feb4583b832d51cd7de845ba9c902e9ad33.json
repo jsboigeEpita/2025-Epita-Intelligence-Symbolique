@@ -1,0 +1,40 @@
+{
+  "key": "19f770be6a21166d379c29fd4c285feb4583b832d51cd7de845ba9c902e9ad33",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_QtbE3bwU5VyDXpP5Uqau93AJ",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"360\",\"matches\":false,\"justification\":\"Le texte ne brouille pas son point de vue en alternant habilement le pour et le contre. Il avance au contraire deux affirmations convergentes : un appel à l'autorité (« les experts sont unanimes, c'est donc vrai ») puis une disqualification des non-experts (« votre avis ne compte pas »). Cela peut relever d'autres sophismes, mais pas de l'équivoque antithétique.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Ek7hMYWpweBnr1ns7ygV4EanEpDgs",
+        "created": 1794661388,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1400,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1397,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 126,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

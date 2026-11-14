@@ -1,0 +1,48 @@
+{
+  "key": "282e210bf8c61db74712ab6ca35a077f8e8c550e8beaeb25accd6737dacfeac1",
+  "value": {
+    "id": "chatcmpl-Ek7oyjxlsie2Qp5H7jHkwrM6dy7qj",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Deux points globalement distincts : le premier s’appuie sur la durée et l’ampleur de la recherche clinique pour rejeter l’affirmation de dangerosité, tandis que le second invoque des résultats historiques concrets de la vaccination. Ils soutiennent toutefois la même conclusion générale en faveur de la sécurité ou de l’efficacité vaccinale, ce qui crée une redondance partielle.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661860,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 171,
+      "prompt_tokens": 292,
+      "total_tokens": 463,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 70,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

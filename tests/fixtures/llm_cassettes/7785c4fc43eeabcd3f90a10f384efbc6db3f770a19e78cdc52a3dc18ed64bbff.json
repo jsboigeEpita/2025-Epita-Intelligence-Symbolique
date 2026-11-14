@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_kJrDq5dBP2EHeGNQkdc3F78A",
+          "id": "call_48exLzgbxJlrDm0NxvXVXMvI",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"183\",\"matches\":false,\"justification\":\"Le texte commet plutôt un appel à l'autorité et une disqualification de l'opinion des non-experts. Il ne suppose pas explicitement la conclusion déjà vraie; l'unanimité alléguée des experts est présentée comme une justification, même si elle peut être insuffisante ou non étayée. La pétition de principe n'est donc pas le meilleur diagnostic.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"183\",\"matches\":false,\"justification\":\"Le texte ne présuppose pas la conclusion qu’il cherche à prouver. Il invoque plutôt l’unanimité des experts comme justification et exclut l’avis des non-experts; cela relève d’un appel à l’autorité ou d’un argument ad hominem circonstanciel, mais pas de la pétition de principe.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EjChfU1wVr8uqQdUTy0dNlhq7qVf6",
-        "created": 1794442299,
+        "id": "chatcmpl-Ek7hQaGzfAJtmPIG9SWFuypiKdwjn",
+        "created": 1794661392,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1381,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 117,
+          "completion_tokens": 107,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

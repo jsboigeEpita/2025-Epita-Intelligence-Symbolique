@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"start_marker\": \"Nous avons créé plus d'emplois en deux ans que n'importe quelle administration en quatre.\",\n  \"end_marker\": \"C'est un progrès économique réel.\",\n  \"explanation\": \"L'extrait commence par l'affirmation explicite de la création d'emplois et se termine par la qualification positive de ce résultat économique. Il correspond directement à la dénomination « Déclaration sur la création d'emplois ».\"\n}",
+      "content": "{\n  \"start_marker\": \"Nous avons créé plus d'emplois en deux ans que n'importe quelle administration en quatre.\",\n  \"end_marker\": \"Nous avons créé plus d'emplois en deux ans que n'importe quelle administration en quatre.\",\n  \"template_start\": null,\n  \"explanation\": \"L'extrait se limite à la phrase qui porte directement sur la création d'emplois, correspondant précisément à la dénomination « Déclaration sur la création d'emplois ».\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EjCnnl8YYkED4t4Ox5SBWHrmtT6T8",
-        "created": 1794442679,
+        "id": "chatcmpl-Ek7n4F2upKWpowwLGV085YMLOOTaV",
+        "created": 1794661742,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 234,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 207,
+          "completion_tokens": 193,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 102,
+            "reasoning_tokens": 81,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

@@ -1,0 +1,48 @@
+{
+  "key": "cf41521bd540bdd4dcc588fe2f1d869b28f570554ab7675381b2808fa83533f7",
+  "value": {
+    "id": "chatcmpl-Ek7dXol7TvinEE4oqh0XFR69cHN5t",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La chaîne établit que la projection du déficit repose sur des hypothèses de croissance optimistes, d'où l'inférence qu'elle est contestable. Verdict : progression_logique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661151,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 163,
+      "prompt_tokens": 273,
+      "total_tokens": 436,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 107,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

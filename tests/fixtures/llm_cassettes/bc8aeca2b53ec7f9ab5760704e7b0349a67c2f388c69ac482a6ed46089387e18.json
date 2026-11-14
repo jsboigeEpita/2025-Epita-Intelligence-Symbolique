@@ -1,0 +1,48 @@
+{
+  "key": "bc8aeca2b53ec7f9ab5760704e7b0349a67c2f388c69ac482a6ed46089387e18",
+  "value": {
+    "id": "chatcmpl-Ek7dFw1FjGv7vSoB3Y2gHhUvKVK5N",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"La projection du déficit est contestable parce qu’elle repose sur une hypothèse de croissance trop optimiste de 1,8 % par an.\",\"digressions\":\"Les remarques sur le sophisme naturaliste invoqué par les syndicats et sur l’accusation d’homme de paille formulée par l’opposition sont hors sujet par rapport à la contestation de la projection du déficit.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661133,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 172,
+      "prompt_tokens": 320,
+      "total_tokens": 492,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 72,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

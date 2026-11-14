@@ -1,0 +1,48 @@
+{
+  "key": "8722b05478abd0d1d7dc889d36e432fd954969d0499710159b72a22dca2cdd81",
+  "value": {
+    "id": "chatcmpl-Ek7ijQ98nWSwJiQ4oYdvwVDDp2dOK",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points présentent des options distinctes : l’option A concerne un tournoi inter-villes visant la visibilité du club, tandis que l’option B concerne l’investissement dans du matériel pédagogique. Aucune redondance n’est démontrée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661473,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 118,
+      "prompt_tokens": 300,
+      "total_tokens": 418,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 48,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

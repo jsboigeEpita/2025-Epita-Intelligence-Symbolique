@@ -1,14 +1,14 @@
 {
   "key": "c4494c6f21be0c6b7a1d7b5169ef08a54f5c3ac3b5cd5568c756923fdcf88c4b",
   "value": {
-    "id": "chatcmpl-EjCj6Y7uQHXBrdiHgz52I1OZlW1oU",
+    "id": "chatcmpl-Ek7iPgbWXE4S9FrnyJMJjFpeavi7W",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[{\"text\":\"L'option A consiste à consacrer les 2000 euros à un tournoi inter-villes comprenant un buffet et des prix, afin d'accroître la visibilité du club.\",\"source_quote\":\"Option A : organiser un tournoi inter-villes avec buffet et prix pour 2000 euros, augmentant la visibilite du club.\"},{\"text\":\"L'option B consiste à investir les 2000 euros dans du matériel pédagogique et de nouveaux échiquiers.\",\"source_quote\":\"Option B : investir les 2000 euros en materiel pedagogique et echiquiers neufs.\"},{\"text\":\"L'option C propose un compromis hybride répartissant les 2000 euros à parts égales entre un tournoi réduit et du matériel.\",\"source_quote\":\"Option C : un format hybride, 1000 euros tournoi reduit et 1000 euros materiel.\"}],\"claims\":[{\"text\":\"Le club d'échecs dispose chaque année d'un budget participatif de 2000 euros.\",\"source_quote\":\"Le club d'echecs dispose d'un budget participatif annuel de 2000 euros.\"},{\"text\":\"Le tournoi inter-villes de l'option A est présenté comme susceptible d'augmenter la visibilité du club.\",\"source_quote\":\"augmentant la visibilite du club.\"},{\"text\":\"L'option A prévoit un coût total de 2000 euros pour le tournoi, le buffet et les prix.\",\"source_quote\":\"organiser un tournoi inter-villes avec buffet et prix pour 2000 euros\"},{\"text\":\"L'option C répartit le budget en deux enveloppes de 1000 euros.\",\"source_quote\":\"1000 euros tournoi reduit et 1000 euros materiel\"}],\"summary\":\"Le texte présente trois utilisations concurrentes d'un budget annuel de 2000 euros : un tournoi destiné à accroître la visibilité, un investissement complet dans le matériel, ou un compromis combinant les deux.\"}",
+          "content": "{\"arguments\":[{\"text\":\"L'option A consiste à consacrer l'intégralité du budget à un tournoi inter-villes avec buffet et prix, afin d'accroître la visibilité du club.\",\"source_quote\":\"Option A : organiser un tournoi inter-villes avec buffet et prix pour 2000 euros, augmentant la visibilite du club.\",\"move_author\":\"speaker\"},{\"text\":\"L'option B consiste à investir l'intégralité du budget dans du matériel pédagogique et de nouveaux échiquiers.\",\"source_quote\":\"Option B : investir les 2000 euros en materiel pedagogique et echiquiers neufs.\",\"move_author\":\"speaker\"},{\"text\":\"L'option C défend un compromis répartissant équitablement le budget entre un tournoi réduit et l'achat de matériel.\",\"source_quote\":\"Option C : un format hybride, 1000 euros tournoi reduit et 1000 euros materiel.\",\"move_author\":\"speaker\"}],\"claims\":[{\"text\":\"Le club d'échecs dispose chaque année d'un budget participatif de 2 000 euros.\",\"source_quote\":\"Le club d'echecs dispose d'un budget participatif annuel de 2000 euros.\"},{\"text\":\"L'organisation du tournoi inter-villes de l'option A, avec buffet et prix, coûterait 2 000 euros.\",\"source_quote\":\"organiser un tournoi inter-villes avec buffet et prix pour 2000 euros\"},{\"text\":\"Le tournoi inter-villes augmenterait la visibilité du club.\",\"source_quote\":\"augmentant la visibilite du club\"},{\"text\":\"L'option B prévoit un investissement de 2 000 euros en matériel pédagogique et en échiquiers neufs.\",\"source_quote\":\"investir les 2000 euros en materiel pedagogique et echiquiers neufs\"},{\"text\":\"Dans l'option C, le tournoi réduit coûterait 1 000 euros.\",\"source_quote\":\"1000 euros tournoi reduit\"},{\"text\":\"Dans l'option C, 1 000 euros seraient consacrés au matériel.\",\"source_quote\":\"1000 euros materiel\"}],\"summary\":\"Le texte présente trois usages concurrents d'un budget annuel de 2 000 euros : un tournoi visant la visibilité, un investissement pédagogique et matériel, ou un partage égal entre ces deux objectifs.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794442388,
+    "created": 1794661453,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 532,
+      "completion_tokens": 549,
       "prompt_tokens": 673,
-      "total_tokens": 1205,
+      "total_tokens": 1222,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 126,
+        "reasoning_tokens": 76,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

@@ -1,0 +1,48 @@
+{
+  "key": "9d9d03a4e18cadfbec17e1fce92586b1e68bbb57cb71852102d5fa8e8461e2db",
+  "value": {
+    "id": "chatcmpl-Ek7q5TE6wOzzBI6sTk9QJ8hnkg7f5",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les trois points abordent des dimensions distinctes : le risque d’erreur judiciaire irréversible, le danger permanent posé par certains criminels et le coût comparé des appels et procédures. Aucune redondance sémantique notable n’est identifiable.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661929,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 130,
+      "prompt_tokens": 297,
+      "total_tokens": 427,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 59,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

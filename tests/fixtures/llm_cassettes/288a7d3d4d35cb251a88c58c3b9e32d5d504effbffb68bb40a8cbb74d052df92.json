@@ -1,0 +1,48 @@
+{
+  "key": "288a7d3d4d35cb251a88c58c3b9e32d5d504effbffb68bb40a8cbb74d052df92",
+  "value": {
+    "id": "chatcmpl-Ek7dPQswrweoL47MMGB76jqSzpXLa",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Le gouvernement soutient que l'allongement de la durée du travail est conforme à l'ordre naturel des choses et que, sans action immédiate, le système s'effondrera dans cinq ans.\",\"main_thesis\":\"Les justifications du gouvernement en faveur de l'allongement de la durée du travail sont fallacieuses et fragiles, car elles reposent sur un sophisme naturaliste, un appel à la peur et des projections économiques fondées sur des hypothèses de croissance optimistes.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661143,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 240,
+      "prompt_tokens": 351,
+      "total_tokens": 591,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 117,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

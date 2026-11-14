@@ -1,0 +1,48 @@
+{
+  "key": "fa8b13a8c48804bca17dfd78804fb04c86c1a2e86e29de75cdb58f5027a252b6",
+  "value": {
+    "id": "chatcmpl-Ek7mHeSicRGEVlvNOXnihtVlhgvIW",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.58,\"fairness_assessment\":\"Social choice fairly compares visibility, recruitment, equipment quality, and budget sufficiency; the hybrid option offers balance but may underdeliver on both objectives.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"agent_1\",\"position\":\"Supports Option A: spend the full budget on an inter-city tournament to increase visibility and recruit members.\",\"influence\":0.3},{\"agent\":\"agent_2\",\"position\":\"Supports Option B: purchase new educational equipment because existing boards, clocks, and teaching materials are worn.\",\"influence\":0.4},{\"agent\":\"agent_3\",\"position\":\"Supports Option C: split the budget between a smaller tournament and educational equipment to balance outreach and pedagogy.\",\"influence\":0.3}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"A ranked social-choice vote should evaluate all three options against agreed criteria, while a compromise process can address the strongest concerns: verify equipment urgency and obtain realistic tournament and replacement-cost estimates before selecting a targeted allocation.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661693,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 339,
+      "prompt_tokens": 646,
+      "total_tokens": 985,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 107,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

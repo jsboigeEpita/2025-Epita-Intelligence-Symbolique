@@ -1,14 +1,14 @@
 {
   "key": "a79cbbde5e71bf16e026ead8bdbe7e957a0f5766435f140ef5579599925ef86e",
   "value": {
-    "id": "chatcmpl-EjCg4EAJ0INJJ6VlWV3hvAT4gt3VV",
+    "id": "chatcmpl-Ek7fMdHiFSekMXhZlkOvkUN7D3uwJ",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[{\"text\":\"Le président soutient que la politique économique constitue un succès incontestable.\",\"source_quote\":\"Le president affirme que la politique economique est un succes incontestable.\",\"move_author\":\"reported\"}],\"claims\":[],\"summary\":\"Le texte rapporte la position du président, qui présente la politique économique comme un succès incontestable.\"}",
+          "content": "{\"arguments\":[{\"text\":\"Le président soutient que la politique économique est un succès incontestable.\",\"source_quote\":\"Le president affirme que la politique economique est un succes incontestable.\",\"move_author\":\"reported\"}],\"claims\":[{\"text\":\"Le président affirme que la politique économique est un succès incontestable.\",\"source_quote\":\"Le president affirme que la politique economique est un succes incontestable.\"}],\"summary\":\"Le texte rapporte la position du président selon laquelle la politique économique constitue un succès incontestable.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794442200,
+    "created": 1794661264,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 191,
+      "completion_tokens": 192,
       "prompt_tokens": 588,
-      "total_tokens": 779,
+      "total_tokens": 780,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 111,
+        "reasoning_tokens": 79,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

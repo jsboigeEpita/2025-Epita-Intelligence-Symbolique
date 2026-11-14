@@ -1,0 +1,48 @@
+{
+  "key": "be8c5e92742891201d0c9ad265eb2d12e56d04283abb8fd1625f6ef239b123fd",
+  "value": {
+    "id": "chatcmpl-Ek7q5xKHHDkg3eYnme1dPHgbTuMPX",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne relie les progrès de l’ADN, qui réduisent le risque d’erreur judiciaire, à la fonction dissuasive de la peine de mort, puis conclut qu’elle est justifiée ou devrait être maintenue malgré ce risque. Le verdict est un saut logique : ces prémisses ne suffisent pas à établir la conclusion.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661929,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 127,
+      "prompt_tokens": 300,
+      "total_tokens": 427,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 36,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

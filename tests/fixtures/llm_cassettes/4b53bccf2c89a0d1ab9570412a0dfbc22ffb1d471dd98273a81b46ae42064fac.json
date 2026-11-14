@@ -1,0 +1,48 @@
+{
+  "key": "4b53bccf2c89a0d1ab9570412a0dfbc22ffb1d471dd98273a81b46ae42064fac",
+  "value": {
+    "id": "chatcmpl-Ek7oso2I4MeOv4SzMJeo7tlyQH7u2",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\":false,\"structure_verdict\":\"saut_logique\",\"reasoning\":\"L’efficacité des vaccins contre certaines maladies et l’accusation d’ignorance envers leurs détracteurs ne suffisent pas à établir qu’ils ne sont pas dangereux.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661854,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 158,
+      "prompt_tokens": 380,
+      "total_tokens": 538,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 94,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

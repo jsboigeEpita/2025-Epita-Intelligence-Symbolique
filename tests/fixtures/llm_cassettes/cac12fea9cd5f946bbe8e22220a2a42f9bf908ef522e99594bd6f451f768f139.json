@@ -1,0 +1,48 @@
+{
+  "key": "cac12fea9cd5f946bbe8e22220a2a42f9bf908ef522e99594bd6f451f768f139",
+  "value": {
+    "id": "chatcmpl-Ek7ooPGfXZOiigl0mmqfSjRKSiwOq",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\":false,\"structure_verdict\":\"saut_logique\",\"reasoning\":\"Les décennies de recherche et l’efficacité contre certaines maladies ne suffisent pas à établir que l’affirmation selon laquelle les vaccins sont dangereux doit être rejetée, car elles ne démontrent pas l’absence de risques ou d’effets secondaires.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661850,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 136,
+      "prompt_tokens": 412,
+      "total_tokens": 548,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 58,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

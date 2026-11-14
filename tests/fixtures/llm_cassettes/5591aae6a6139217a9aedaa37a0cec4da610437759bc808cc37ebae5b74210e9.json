@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_ppgKw8Cx48bOqHgr2y0cAgRY",
+          "id": "call_aOHBh3kLEJkhjk3WpyRUSfpn",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"2\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"L’énoncé présente comme un succès incontestable une affirmation générale sur la politique économique, sans fournir de données, d’exemples ni de preuve solide. Aucun sous-type plus précis n’est établi par le texte.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\",\"document_statement\":\"« Le président affirme que la politique économique est un succès incontestable. »\"}"
+          "arguments": "{\"node_pk\":\"2\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L'énoncé affirme sans fournir de données, d'exemples ni de preuve que la politique économique est un « succès incontestable »; il s'agit d'une généralisation ou conclusion globale insuffisamment étayée.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\",\"document_statement\":\"Le président affirme que la politique économique est un succès incontestable.\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EjCgJbP48ImXlTOP0LBLCLNJuHs3V",
-        "created": 1794442215,
+        "id": "chatcmpl-Ek7fbRajmKz1OnSiW1ZzbWYgCuq7P",
+        "created": 1794661279,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2526,

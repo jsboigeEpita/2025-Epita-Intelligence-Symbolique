@@ -1,0 +1,48 @@
+{
+  "key": "aaf28f82996170bd9b99053c016f2f231d74eddd5cdcfddd1e4ce3ccd1bd08a0",
+  "value": {
+    "id": "chatcmpl-Ek7pmUespEAzR7XSHygdrcy9cbyHA",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.2,\"exhibit\":\"Anaphore non résolvable (« Elle » sans antécédent explicite et référent ambigu) et jargon technique non défini (« ADN ») ; verdict : opacité réelle, avec un sens seulement partiellement reconstructible.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661910,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 242,
+      "prompt_tokens": 268,
+      "total_tokens": 510,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 176,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

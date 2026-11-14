@@ -6,15 +6,25 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_7XnQI0utRuFEBsb1DgMl0EuW",
-          "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"323\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"L'argument 2 disqualifie l'avis des non-experts en le présentant comme indigne de compter, plutôt que d'examiner ses raisons. Il s'agit d'un appel au mépris, sans sous-type plus spécifique de ridicule, honte ou dégoût.\",\"move_author\":\"speaker\"}"
+          "id": "call_rH92qGWCtTBZU9u1kXmw9Jnf",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"324\"}"
+        },
+        {
+          "id": "call_5o6VqQKoyMUUFQu8icDOw1Qv",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"326\"}"
+        },
+        {
+          "id": "call_9Yr1GSHFvXFBlrlU4f4Ua1EE",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"327\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EjChB78KVV1PP2XLIbHMDYTpvlgeO",
-        "created": 1794442269,
+        "id": "chatcmpl-Ek7gzIF1ioyBPJ10J9VA6Ok70uBYe",
+        "created": 1794661365,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2180,
@@ -25,7 +35,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 95,
+          "completion_tokens": 76,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

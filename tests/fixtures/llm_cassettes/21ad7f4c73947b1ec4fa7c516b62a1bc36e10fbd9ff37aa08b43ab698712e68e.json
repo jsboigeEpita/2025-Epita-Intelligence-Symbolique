@@ -1,0 +1,48 @@
+{
+  "key": "21ad7f4c73947b1ec4fa7c516b62a1bc36e10fbd9ff37aa08b43ab698712e68e",
+  "value": {
+    "id": "chatcmpl-Ek7r0vy5CxOzvZgYZJxqUrTciNcv2",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Obstacles localisés : jargon technique non défini (« modèles prédictifs » et « ère préindustrielle »), sans anaphore non résolvable ni phrase excessivement emboîtée. Verdict : obstacles résolvables par le contexte.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661986,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 98,
+      "prompt_tokens": 269,
+      "total_tokens": 367,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 27,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

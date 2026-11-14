@@ -1,0 +1,48 @@
+{
+  "key": "98143b34126cf608265976a7e4946888e3422f4850df50b518b455cd63267f75",
+  "value": {
+    "id": "chatcmpl-Ek7p00bJzSant3G7VqYP1UVvCox67",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne reconstruite relie la prémisse selon laquelle les personnes affirmant que les vaccins sont dangereux ignorent la recherche clinique à la conclusion que l’argument d’une dissimulation des effets secondaires est une théorie du complot sans fond. Le verdict est un saut logique, car la prémisse ne suffit pas à établir cette conclusion.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661862,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 115,
+      "prompt_tokens": 287,
+      "total_tokens": 402,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 27,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

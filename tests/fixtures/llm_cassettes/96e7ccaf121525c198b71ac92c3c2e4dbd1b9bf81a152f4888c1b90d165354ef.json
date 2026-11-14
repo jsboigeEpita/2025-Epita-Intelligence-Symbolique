@@ -1,0 +1,48 @@
+{
+  "key": "96e7ccaf121525c198b71ac92c3c2e4dbd1b9bf81a152f4888c1b90d165354ef",
+  "value": {
+    "id": "chatcmpl-Ek7iVP2FMFtVyLCGdqSPZFQ3BNfvq",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"L’option C défend un compromis répartissant équitablement les 2000 euros entre un tournoi réduit et l’achat de matériel.\",\"digressions\":\"La proposition présentant l’option B — investir les 2000 euros en matériel pédagogique et en échiquiers neufs — est une digression, car elle ne sert pas directement la défense de l’option C.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661459,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 160,
+      "prompt_tokens": 254,
+      "total_tokens": 414,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 64,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

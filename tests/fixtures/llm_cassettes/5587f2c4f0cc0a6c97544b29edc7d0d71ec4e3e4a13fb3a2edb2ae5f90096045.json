@@ -1,0 +1,48 @@
+{
+  "key": "5587f2c4f0cc0a6c97544b29edc7d0d71ec4e3e4a13fb3a2edb2ae5f90096045",
+  "value": {
+    "id": "chatcmpl-Ek7daAlOkLBcCLMg4M8a0IwwMPeSe",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La chaîne relie le fait que la projection repose sur des hypothèses de croissance optimistes à la conclusion qu’elle est incertaine ou peu fiable. L’inférence est présente, mais le lien entre hypothèses optimistes et manque de fiabilité n’est pas entièrement démontré.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794661154,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 125,
+      "prompt_tokens": 304,
+      "total_tokens": 429,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 48,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

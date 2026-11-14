@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"start_marker\": \"La déclaration cruciale\",\n  \"end_marker\": \"est enfouie ici.\",\n  \"explanation\": \"L’extrait pertinent est la phrase unique qui mentionne explicitement l’économie verte : « La déclaration cruciale sur l'économie verte est enfouie ici. » Les deux marqueurs correspondent respectivement au début et à la fin exacte de cette phrase, en excluant le texte factice environnant.\"\n}",
+      "content": "{\n  \"start_marker\": \"La déclaration cruciale sur l'économie verte est enfouie ici.\",\n  \"end_marker\": \"ici.\",\n  \"explanation\": \"Le texte ne contient pas de véritable titre ni de section explicitement consacrée à l'économie verte. Le seul passage thématiquement pertinent est la phrase contenant la déclaration sur ce sujet. Les bornes proposées délimitent donc cette phrase, de son début jusqu'à son point final.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EjCnqiLgC2y9yTl8ODXiGh8SaxDIq",
-        "created": 1794442682,
+        "id": "chatcmpl-Ek7n6tSPEWcapuydIVmKSbiyBUZZ5",
+        "created": 1794661744,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 6801,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 613,
+          "completion_tokens": 500,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 512,
+            "reasoning_tokens": 398,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

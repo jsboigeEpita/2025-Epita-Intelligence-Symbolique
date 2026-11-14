@@ -1,0 +1,40 @@
+{
+  "key": "c1df05a55bb7aaa0ac8a0d6fe5b481c49f9b6ba4d93b2f4dc7005769fed2ebfc",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_r3rttrQeqmv0wNob9YgXBSUz",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"602\",\"matches\":false,\"justification\":\"Le texte ne manifeste pas un biais de confirmation : il invoque l’unanimité supposée des experts et exclut l’avis des non-experts. Il n’est pas question de sélectionner uniquement des éléments confirmant une thèse parmi des éléments concurrents.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-Ek7hZpl3BKDze74EwFNyDMlXMbI4Z",
+        "created": 1794661401,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2165,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 727,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 88,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

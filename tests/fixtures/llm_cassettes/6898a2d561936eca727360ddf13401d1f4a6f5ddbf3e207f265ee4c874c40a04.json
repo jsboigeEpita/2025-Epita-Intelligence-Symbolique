@@ -6,8 +6,8 @@
       "content": "[]",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EjCfZJ6hNK9X1HwSurNUycd3PVHZF",
-        "created": 1794442169,
+        "id": "chatcmpl-Ek7ep1zA1JMmjGKIVpbi38utqfFwb",
+        "created": 1794661231,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 263,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 90,
+          "completion_tokens": 230,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 80,
+            "reasoning_tokens": 220,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }
