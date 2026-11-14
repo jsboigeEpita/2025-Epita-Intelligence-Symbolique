@@ -383,6 +383,7 @@ def _borda_block(
         block["status"] = "capped"
         block["exhaustive"] = False
         block["ballots_required"] = needed
+        block["cut"] = "entry"
         return block
 
     block["status"] = "ok"
@@ -482,7 +483,18 @@ def _borda_block(
             elif moved:
                 block["pairs_moved_not_kept"] += 1
             if cut:
+                # #3563 review (fix 1) — the pair search can stop on its trial
+                # budget without the ENTRY cap biting (six options: 720 × 720
+                # pair trials against a 50 000 budget). The single-player pass
+                # is complete; only the pairs are cut. Named apart from the
+                # entry cap — ``status`` stays ``ok`` because the block DID
+                # measure its winner and its single-player space, and the act I
+                # render states this cut in its winner branch (the entry cap's
+                # ``status == "capped"`` branch would drop those measured
+                # lines).
                 block["exhaustive"] = False
+                block["cut"] = "pair_search"
+                block["pairs_budget"] = budget
                 break
         if not block["exhaustive"]:
             break

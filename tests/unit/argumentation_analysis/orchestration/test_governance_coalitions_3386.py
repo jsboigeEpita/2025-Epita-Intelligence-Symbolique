@@ -161,6 +161,41 @@ _CONCORDANT_QUALITY: Dict[str, Any] = {
 }
 
 
+# #3563 review (fix 3) — a Condorcet CYCLE whose points block has a winner and
+# a pair witness: the enclosing engine's status is ``no_condorcet_winner``,
+# the Borda block's is ``ok``. The finding must carry the block's own status.
+# Ballots, by virtue order: a, b, c, d — the cand3 profile measured in the
+# review (no Condorcet winner, Borda winner arg_2, one pair).
+_CYCLE_QUALITY: Dict[str, Any] = {
+    "per_argument_scores": {
+        "arg_1": {
+            "scores_par_vertu": {
+                "vertu_a": 3.0,
+                "vertu_b": 1.0,
+                "vertu_c": 2.0,
+                "vertu_d": 2.0,
+            }
+        },
+        "arg_2": {
+            "scores_par_vertu": {
+                "vertu_a": 2.0,
+                "vertu_b": 3.0,
+                "vertu_c": 1.0,
+                "vertu_d": 3.0,
+            }
+        },
+        "arg_3": {
+            "scores_par_vertu": {
+                "vertu_a": 1.0,
+                "vertu_b": 2.0,
+                "vertu_c": 3.0,
+                "vertu_d": 1.0,
+            }
+        },
+    }
+}
+
+
 async def _handler_output(quality: Dict[str, Any]) -> Dict[str, Any]:
     """Run the REAL producer (no LLM) on a synthetic quality profile."""
     context: Dict[str, Any] = {
@@ -321,6 +356,30 @@ class TestTheVerdictCarriesCoalitionAndManipulability:
         # The outcome rule did not move: the points and Condorcet winners agree
         # on this profile, and the render must not imply a disagreement.
         assert finding["condorcet_winner"] == "arg_2"
+
+    @pytest.mark.asyncio
+    async def test_the_finding_carries_its_blocks_status_not_the_condorcet_one(
+        self,
+    ) -> None:
+        """#3563 review (fix 3) — on a Condorcet cycle whose points block has
+        a winner and a pair witness, ``status`` must name the BLOCK's status.
+        Read from the enclosing engine it would say ``no_condorcet_winner`` —
+        a population the finding was never computed on."""
+        output = await _handler_output(_CYCLE_QUALITY)
+        options, ballots, agents, derivable, reason = _derive_governance_profile(
+            _CYCLE_QUALITY
+        )
+        assert derivable, reason
+        game = compute_manipulability(
+            {a.name: list(a.preferences) for a in agents}, list(options)
+        )
+        # The premise, measured on the same ballots the handler derives.
+        assert game["status"] == "no_condorcet_winner"
+        assert game["borda"]["status"] == "ok"
+        assert game["borda"]["coalitions"], "the fixture must carry a witness"
+        finding = output["governance_verdict"]["manipulability"]
+        assert finding["rule"] == "borda"
+        assert finding["status"] == "ok"
 
     @pytest.mark.asyncio
     async def test_the_record_carries_the_coalition_and_no_phantom_finding(

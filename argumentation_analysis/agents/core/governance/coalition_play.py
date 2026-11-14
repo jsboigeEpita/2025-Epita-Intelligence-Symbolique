@@ -352,15 +352,25 @@ def coalition_note(decision: Dict[str, Any]) -> str:
                     kind=str(manipulability.get("kind", "coalition")),
                 )
             )
-        line = (
-            head + "{pair} portant « {report} » en tête {verb} gagner "
-            "« {winner} » au lieu de « {baseline} ».".format(
-                pair=pair,
-                verb=verb,
-                report=manipulability.get("report", ""),
-                winner=manipulability.get("winner", ""),
-                baseline=manipulability.get("baseline", ""),
+        # #3563 review (fix 2) — the Borda ``report`` is a COMPLETE ranking:
+        # « classant » states what it is, where « en tête » claims only its
+        # top. The legacy branches keep their promote-first wording.
+        if rule == "borda":
+            wording = (
+                "{pair} classant « {report} » {verb} gagner "
+                "« {winner} » au lieu de « {baseline} »."
             )
+        else:
+            wording = (
+                "{pair} portant « {report} » en tête {verb} gagner "
+                "« {winner} » au lieu de « {baseline} »."
+            )
+        line = head + wording.format(
+            pair=pair,
+            verb=verb,
+            report=manipulability.get("report", ""),
+            winner=manipulability.get("winner", ""),
+            baseline=manipulability.get("baseline", ""),
         )
         condorcet = manipulability.get("condorcet_winner")
         if (

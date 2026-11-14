@@ -927,6 +927,10 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
     # vote whose negotiation changed nothing carries neither).
     coalition: dict[str, Any] | None = None
     manipulability: dict[str, Any] | None = None
+    # #3386 (re-scope of 13/11) — the PLAYERS' play (electors from the
+    # strategist's read, voting the framings): annex by measurement —
+    # recorded never rendered. Same honest absence.
+    players_play: dict[str, Any] | None = None
     if isinstance(vote_result, dict) and vote_result.get("winner"):
         winner = str(vote_result["winner"])
         winner_provenance = "vote_aggregate"
@@ -986,6 +990,11 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
             raw_manip = verdict.get("manipulability")
             if isinstance(raw_manip, dict) and raw_manip:
                 manipulability = dict(raw_manip)
+            # #3386 (re-scope of 13/11) — the players' play, same read-only
+            # rule: the writer states what the vote measured.
+            raw_players_play = verdict.get("players_play")
+            if isinstance(raw_players_play, dict) and raw_players_play:
+                players_play = dict(raw_players_play)
     elif llm_gov.get("recommended_resolution"):
         winner = str(llm_gov["recommended_resolution"])
         winner_provenance = "llm_resolution"
@@ -1031,6 +1040,8 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
         # from the verdict above (honest absence when the play produced none).
         coalition=coalition,
         manipulability=manipulability,
+        # #3386 (re-scope of 13/11) — the players' play, annex.
+        players_play=players_play,
     )
 
 
