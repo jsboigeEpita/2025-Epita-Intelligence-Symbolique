@@ -20,9 +20,10 @@ replay finding (14/11):
   its 4-word run is language-bound (a quote in English on a French act
   never fires), so a count would be a false statement to the reader; the
   motif records the unmeasured channel. The predicate reads a bound item
-  through its movement's beat, and the witness proves it TREATED when its
-  unit's movement is treated — and untreated on another movement's beat,
-  so the reading is not "any overlap";
+  through a treated ATTACK movement's beat — TREATED when its unit's
+  movement is treated, untreated on another movement's beat, and NOT
+  treated through a non-attack movement's beat (« soutiens » names no
+  single unit) — so the reading is not "any overlap";
 * a prose that carries everything is returned byte-identical (positive
   control: the contract never fires speculatively);
 * the prompt holds all three movement blocks and the item (the issue's
@@ -146,6 +147,44 @@ _BEAT_TWO = (
     "Un appel à la peur disqualifie le rival par sa personne plutôt que par "
     "ses idées ; le procédé ferme la discussion."
 )
+
+#: A fourth unit with no fallacy: with the per-argument sample recorded it
+#: lands in the canonical NON-ATTACK movement « soutiens », whose beat states
+#: a fact about a whole population and names no single unit.
+_SUPPORT_UNIT = "Une réserve prudente accompagne la mesure sans la refuser."
+_SUPPORT_ITEM = {
+    "unit_id": "arg_4",
+    "quote": EN_QUOTE,
+    "offset": 0,
+    "class": "statistical",
+    "lens": LENS_BY_CLASS["statistical"],
+    "reason": "le passage porte une réserve que le lecteur doit entendre",
+    "conclusion": "cet argument conclut que la réserve tempère la mesure",
+    "rank": 1,
+    "routed": {
+        "lens": LENS_BY_CLASS["statistical"],
+        "status": "lens_not_wired",
+        "reason": "synthetic",
+    },
+}
+
+#: Treats the « soutiens » movement (its theme and its unit's description),
+#: and nothing the item itself carries: the item's only witness would be the
+#: binding — which must not count for a non-attack movement.
+_SUPPORTS_BEAT = (
+    "### Les soutiens qui tiennent\n\n"
+    "Le texte rassemble des soutiens qui tiennent : la réserve prudente "
+    "accompagne la mesure, et rien dans le fil ne la retire."
+)
+
+
+def _support_state() -> SimpleNamespace:
+    state = _state()
+    units = dict(UNITS, arg_4=_SUPPORT_UNIT)
+    state.identified_arguments = units
+    state.analysis_coverage = {"fallacy_per_argument": {"unit_ids": list(units)}}
+    state.coverage_review = dict(_COVERAGE_REVIEW, items=[dict(_SUPPORT_ITEM)])
+    return state
 
 
 def _state() -> SimpleNamespace:
@@ -343,6 +382,24 @@ def test_a_bound_item_reads_treated_through_its_movements_beat():
     # untreated — the witness is the binding, not prose in general.
     control = read_render_contract(_TREAT_ONE, evidence, state)
     assert control.items_treated == 0
+
+
+def test_an_item_in_a_non_attack_movement_is_not_treated_by_binding():
+    """Coordinator ask (14/11, third round): a non-attack movement's beat
+    states a fact about a whole population (« soutiens », « non examinés » —
+    each carrying more units than any attack movement) and names no single
+    unit; its binding cannot witness an item. Red on ``30c3ce2b5``, where
+    the binding ignored the theme."""
+    from argumentation_analysis.reporting.restitution.movement_render_contract import (
+        read_render_contract,
+    )
+
+    state = _support_state()
+    reading = read_render_contract(_SUPPORTS_BEAT, build_act2_evidence(state), state)
+
+    assert reading.movements_treated == 1, "the non-attack movement is treated"
+    assert reading.items_total == 1
+    assert reading.items_treated == 0, "the non-attack binding is not a witness"
 
 
 def test_a_beat_that_carries_the_items_quote_counts_as_treated():

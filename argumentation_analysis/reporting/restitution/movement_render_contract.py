@@ -39,11 +39,14 @@ back — worse than silence. So the review-item channel is MEASURED but not
 yet PROVEN (:data:`COVERAGE_ITEM_MEASURE_PROVEN`): the reading exposes
 ``items_treated`` for the tracer, and no count is stated for the channel;
 the motif records « mesure non éprouvée — aucun compte énoncé », counts
-only. The predicate itself now reads a bound item through its movement's
-beat — the item's unit carried by a treated movement — plus the item's own
-claim (the reviewer's French conclusion) and its retained labels, which are
-language-free witnesses. The channel flips to proven when the coordinator's
-replay confirms it on the recorded states.
+only. The predicate reads a bound item through a treated ATTACK movement's
+beat — a non-attack movement is excluded, its beat names no single unit
+(29/31/38/29 of 61/63/77/66 items were read treated only through that
+binding, on passages the act never carried) — plus the item's own claim
+(the reviewer's French conclusion) and its retained labels. The replay
+measured even the attack-movement binding as necessary-not-sufficient
+(23/20/24/24; a beat can treat a sibling unit), so the channel stays
+unmeasured until a per-item witness exists.
 
 ## The treatment measure
 
@@ -58,11 +61,12 @@ the check reddens exactly where the tracer counts an uncounted drop:
   shares a 4-word run with one of its units' texts, or with the quote of a
   coverage line bound to one of its units;
 * a REVIEW ITEM is treated when the prose shares a 4-word run with its
-  quote (same-language only), or its ``unit_id`` belongs to a movement the
-  prose treats (the #3505 binding — the movement's beat carries the
-  passage, whatever the quote's language), or the prose shares a 4-word
-  run with the item's own claim (the reviewer's French ``conclusion``), or
-  it names one of the item's retained fallacy names.
+  quote (same-language only), or its ``unit_id`` belongs to an ATTACK
+  movement the prose treats (the #3505 binding — the movement's beat
+  carries the passage, whatever the quote's language; a NON-attack
+  movement's beat names no single unit, so it is excluded), or the prose
+  shares a 4-word run with the item's own claim (the reviewer's French
+  ``conclusion``), or it names one of the item's retained fallacy names.
 
 Anchors are taxonomy constants, never corpus text. The appended line and
 the motif carry COUNTS only (#3249 — ``restitution_acts_degraded`` is a
@@ -110,14 +114,20 @@ MOVEMENT_COUNT_RULE = (
 )
 
 #: #3560, coordinator finding 14/11 — is the REVIEW-ITEM channel's treatment
-#: measure PROVEN on the recorded panel states? Not yet: the quote's 4-word
-#: run is language-bound (an English quote on a French act never fires; the
-#: replay measured 8/41 en against 1/8 fr at c7, 8/48 en against 1/4 fr at
-#: c10). Until the coordinator's replay confirms the binding/claim predicate
-#: on c7–c10, the pipeline states NO count for this channel — a count the
-#: measure cannot witness is a false statement to the reader, worse than
-#: silence. The motif still records the channel as unmeasured. Flip to True
-#: with the replay's figures.
+#: measure PROVEN on the recorded panel states? No, and the replay measured
+#: why, twice. First, the quote's 4-word run is language-bound (an English
+#: quote on a French act never fires: 8/41 en against 1/8 fr at c7, 8/48 en
+#: against 1/4 fr at c10). Second, the unit-binding: through NON-ATTACK
+#: movements (« soutiens », « non examinés », each carrying more units than
+#: any attack movement) it read 29/31/38/29 of 61/63/77/66 items treated on
+#: passages the act never carried — excluded from the binding since; through
+#: attack movements alone it still reads 23/20/24/24, and an item can sit in
+#: a small movement's sibling unit, so the binding is NECESSARY, not
+#: sufficient. The replay on the recorded cycles is the coordinator's; this
+#: flag stays False until a per-item witness exists. Until then the pipeline
+#: states NO count for the channel — a count the measure cannot back is a
+#: false statement to the reader, worse than silence — and the motif records
+#: the channel as unmeasured.
 COVERAGE_ITEM_MEASURE_PROVEN = False
 
 #: The writer's stated movement count — « 2 mouvements non traités sur 3 ».
@@ -301,13 +311,26 @@ def _item_treated(
     prose_runs: Set[str],
     treated_unit_ids: Set[str],
 ) -> bool:
-    """The tracer's measure, at review-item granularity.
+    """The tracer's measure at review-item granularity — and what it does
+    NOT witness.
 
     Four witnesses, strongest first: the quote's 4-word run (same-language
-    only), the item's UNIT carried by a movement the prose treats (the
-    #3505 binding — the movement's beat renders the passage, whatever the
-    quote's language), a 4-word run with the item's own claim, and one of
-    the item's retained fallacy names.
+    only), the item's UNIT carried by a treated ATTACK movement (the #3505
+    binding — the movement's beat renders the passage, whatever the quote's
+    language), a 4-word run with the item's own claim, and one of the item's
+    retained fallacy names.
+
+    The binding is NECESSARY, not sufficient, and only an attack movement's
+    counts. A NON-ATTACK movement (« soutiens », « non examinés » — the
+    canonical themes of :func:`_theme_fallback_anchors`) is excluded
+    entirely: its beat states a fact about a whole population and names no
+    single unit (the replay read 29/31/38/29 of 61/63/77/66 items treated
+    only through that binding, on passages the act never carried). Even an
+    attack movement's binding over-reads (23/20/24/24 through attack
+    movements alone): a small movement's beat can treat the sibling unit
+    while the item's own passage is absent. The replay on the recorded
+    cycles is the coordinator's; the channel stays unmeasured
+    (:data:`COVERAGE_ITEM_MEASURE_PROVEN`) until a per-item witness exists.
     """
     quote = str(item.get("quote") or "")
     if quote and any(run in prose_runs for run in _runs(quote)):
@@ -394,18 +417,26 @@ def read_render_contract(
     movements = list(getattr(evidence, "movements", []) or [])
     untreated_themes: List[str] = []
     treated = 0
-    #: The units a treated movement's beat carries — the witness a translated
-    #: item keeps when its quote shares no run with the act (#3505 binding).
+    #: The units a treated ATTACK movement's beat carries — the witness a
+    #: translated item keeps when its quote shares no run with the act
+    #: (#3505 binding). A NON-ATTACK movement (« soutiens », « non examinés »
+    #: — the canonical themes of :func:`_theme_fallback_anchors`) is excluded:
+    #: its beat states a fact about a whole population and names no single
+    #: unit, so its binding witnesses nothing about one item (the replay read
+    #: 29/31/38/29 of 61/63/77/66 items treated only through it, on passages
+    #: the act never carried).
     treated_unit_ids: Set[str] = set()
     for movement in movements:
+        theme = str(getattr(movement, "theme", "") or "")
         if _movement_treated(movement, prose_norm, prose_runs):
             treated += 1
-            for argument in getattr(movement, "arguments", []) or []:
-                arg_id = str(getattr(argument, "arg_id", "") or "")
-                if arg_id:
-                    treated_unit_ids.add(arg_id)
+            if not _theme_fallback_anchors(theme):
+                for argument in getattr(movement, "arguments", []) or []:
+                    arg_id = str(getattr(argument, "arg_id", "") or "")
+                    if arg_id:
+                        treated_unit_ids.add(arg_id)
         else:
-            untreated_themes.append(str(getattr(movement, "theme", "") or ""))
+            untreated_themes.append(theme)
     items = _review_items(state)
     items_treated = sum(
         1
