@@ -1618,6 +1618,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         target_arg_id: Optional[str] = None,
         validation: Optional[Dict[str, Any]] = None,
         target_unresolved_reason: Optional[str] = None,
+        attacked_component: Optional[str] = None,
     ) -> str:
         """Add a counter-argument result.
 
@@ -1631,6 +1632,11 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         ``target_arg_id`` (the echoed target matched no offered id) — an
         unlinked counter is a measured fact, not a silent one. Stored only
         when non-empty, same honest-absence rule.
+
+        #1649: ``attacked_component`` carries WHICH part of the target the
+        counter attacks (premise / inference / conclusion) — the ASPIC
+        consumer reads it to emit one undercut rule for an ``inference``
+        counter. Stored only when non-empty, same honest-absence rule.
 
         #3275 — ``counter_content`` est un fragment du texte : un nom de champ
         de l'état y est refusé par la porte partagée de #3268. ``original_arg``
@@ -1653,6 +1659,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             entry["validation"] = validation
         if target_unresolved_reason:
             entry["target_unresolved_reason"] = target_unresolved_reason
+        if attacked_component:
+            entry["attacked_component"] = attacked_component
         self.counter_arguments.append(entry)
         state_logger.info(f"Counter-argument added: {ca_id} (strategy: {strategy})")
         return ca_id

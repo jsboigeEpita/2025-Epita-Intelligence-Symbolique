@@ -1258,6 +1258,7 @@ async def _generate_counters_for_targets(
     batch_size: int = 12,
     k_per_target: int = 1,
     target_ids: Optional[List[Optional[str]]] = None,
+    context_note: str = "",
 ) -> List[Dict[str, Any]]:
     """Generate ``k_per_target`` counter-arguments per target via the LLM.
 
@@ -1277,6 +1278,16 @@ async def _generate_counters_for_targets(
     key, or None with a ``target_unresolved_reason``) and ``target_text`` (the
     offered text of the key it answers). Callers that pass no ``target_ids``
     get no stamped id — the free-text echo never resolves an id.
+
+    #1649 — the prompt now asks for ``attacked_component`` (premise /
+    inference / conclusion): WHICH part of the target the counter attacks.
+    Only the canonical trio survives stamping; the ASPIC consumer reads the
+    field to emit one undercut rule for an ``inference`` counter.
+
+    #3377 — ``context_note`` is the historian's labelled situation block,
+    appended to the system prompt AFTER the base contract, same convention as
+    nl_to_logic (one producer of the wording; empty note = the previous
+    prompt byte for byte).
     """
     counters: List[Dict[str, Any]] = []
     det_params = _get_determinism_params()
@@ -1308,16 +1319,27 @@ async def _generate_counters_for_targets(
     # here it carries the echoed KEY of the offered item. Same name, two
     # meanings — a consumer must know which payload it is reading. Do not
     # unify the two branches.
+    # #1649 — the reply says WHICH part of the target it attacks; the ASPIC
+    # consumer turns an "inference" counter into one undercut rule.
     system_prompt = (
         "You are an expert in argumentation and counter-argument generation. "
         + prompt_count_clause
         + " Each listed item starts with its [key] — answer with that key "
-        "verbatim in target_argument. Respond with ONLY a JSON array:\n"
+        "verbatim in target_argument. For each counter, attacked_component "
+        "names WHICH part of the target it attacks: premise (one of its "
+        "stated premises), inference (the step from premises to conclusion), "
+        "or conclusion (the claim itself). Respond with ONLY a JSON array:\n"
         '[{"counter_argument": "text", "strategy_used": "name", '
         '"target_argument": "[key of the item you counter]", '
         f'"strength": "{strength_scale}", '
+        '"attacked_component": "premise|inference|conclusion", '
         '"reasoning": "why this works"}, ...]\n' + DECISIVE_CRITERION
     )
+    # #3377 — the historian's situation rides on the SYSTEM prompt, after the
+    # counter contract: same convention as nl_to_logic (one producer of the
+    # wording; empty note = the previous prompt byte for byte).
+    if context_note:
+        system_prompt = f"{system_prompt}\n\n{context_note}"
     ids: List[Optional[str]] = (
         list(target_ids) if target_ids is not None else [None] * len(targets)
     )
@@ -1423,6 +1445,15 @@ def _stamp_counter_targets(
             ca["target_unresolved_reason"] = (
                 f"echoed target {echo[:60]!r} matches no offered key"
             )
+        # #1649 — the component survives only in its canonical vocabulary
+        # (normalized lower): a reply that says something else carries no
+        # component, not a guessed one — the ASPIC consumer reads exactly
+        # the trio.
+        component = str(ca.get("attacked_component", "")).strip().lower()
+        if component in ("premise", "inference", "conclusion"):
+            ca["attacked_component"] = component
+        else:
+            ca.pop("attacked_component", None)
         stamped.append(ca)
     return stamped
 
@@ -1487,8 +1518,21 @@ async def _generate_counter_arguments_from_state(state: Any) -> Dict[str, Any]:
         except (TypeError, ValueError):
             pass
 
+    # #3377 — the historian's situation note reaches this generator too
+    # (same ONE producer as nl_to_logic; empty note = byte-identical prompt).
+    from argumentation_analysis.agents.core.context.historian import (
+        context_note as _historian_note,
+    )
+
+    _sweep_note = _historian_note(state)
+
     counters = await _generate_counters_for_targets(
-        client, model_id, targets, k_per_target=k_per_target, target_ids=target_ids
+        client,
+        model_id,
+        targets,
+        k_per_target=k_per_target,
+        target_ids=target_ids,
+        context_note=_sweep_note,
     )
 
     def _ca_target(ca: Dict[str, Any]) -> Tuple[str, Optional[str]]:
@@ -1558,6 +1602,7 @@ async def _generate_counter_arguments_from_state(state: Any) -> Dict[str, Any]:
                     uncovered,
                     k_per_target=k_per_target,
                     target_ids=uncovered_ids,
+                    context_note=_sweep_note,
                 )
                 for ca in retry_counters:
                     if not isinstance(ca, dict):
@@ -1907,8 +1952,25 @@ async def _invoke_counter_argument(
                 _ca_fallback_k = len(targets[0])
                 _ca_fallback_n = len(input_text)
 
+            # #3377 — the historian's situation note reaches the production
+            # counter phase: same ONE producer as nl_to_logic (the wording
+            # lives with the persona); empty note = byte-identical prompt.
+            from argumentation_analysis.agents.core.context.historian import (
+                context_note as _historian_note,
+            )
+
+            _ca_persona_state = context.get("_state_object")
+            _ca_context_note = (
+                _historian_note(_ca_persona_state)
+                if _ca_persona_state is not None
+                else ""
+            )
             llm_counters = await _generate_counters_for_targets(
-                client, model_id, targets, target_ids=target_ids
+                client,
+                model_id,
+                targets,
+                target_ids=target_ids,
+                context_note=_ca_context_note,
             )
     except LLMCacheMiss:
         raise

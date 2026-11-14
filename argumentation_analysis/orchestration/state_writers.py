@@ -662,6 +662,14 @@ def _write_counter_argument_to_state(
             validation = llm_ca.get("validation")
             if not isinstance(validation, dict):
                 validation = None
+            # #1649 — the component rides the state entry when the producer
+            # stamped one (canonical trio; anything else stays absent).
+            component = llm_ca.get("attacked_component")
+            if not (
+                isinstance(component, str)
+                and component.strip().lower() in ("premise", "inference", "conclusion")
+            ):
+                component = None
             state.add_counter_argument(
                 target,
                 counter_text,
@@ -670,6 +678,7 @@ def _write_counter_argument_to_state(
                 target_arg_id=arg_id,
                 validation=validation,
                 target_unresolved_reason=unresolved,
+                attacked_component=component,
             )
         return
 
@@ -694,6 +703,13 @@ def _write_counter_argument_to_state(
         validation = llm_ca.get("validation")
         if not isinstance(validation, dict):
             validation = None
+        # #1649 — same canonical-trio rule as the list branch.
+        component = llm_ca.get("attacked_component")
+        if not (
+            isinstance(component, str)
+            and component.strip().lower() in ("premise", "inference", "conclusion")
+        ):
+            component = None
         state.add_counter_argument(
             target,
             counter_text,
@@ -702,6 +718,7 @@ def _write_counter_argument_to_state(
             target_arg_id=arg_id,
             validation=validation,
             target_unresolved_reason=unresolved,
+            attacked_component=component,
         )
         return
 
