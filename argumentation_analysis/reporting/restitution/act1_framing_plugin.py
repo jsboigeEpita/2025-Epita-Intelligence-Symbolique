@@ -414,9 +414,37 @@ def _format_historical_block(context: Dict[str, Any]) -> str:
     writer must not print the refuted year as the document's date. The
     situation stays — it is model knowledge — reframed as uncertain, not
     silenced.
+    #3555 — same shape for the venue: when the document states where it is
+    being given and the situation names other places, the document's own
+    statement is printed FIRST with its passage and position, and the
+    situation is marked as naming a refuted place. The situation still
+    renders: its dating and stakes stay useful (the issue's own limit), only
+    the place is not to be presented as the speech's.
     """
     context = context or {}
     lines: List[str] = []
+    place_refuted = False
+    place = context.get("place")
+    if isinstance(place, dict) and place.get("status") == "refuted":
+        place_refuted = True
+        stated = place.get("document") or {}
+        model_places = [
+            str(name) for name in (place.get("model_places") or []) if str(name).strip()
+        ]
+        passages = stated.get("statements")
+        passages_note = (
+            f" ({passages} passages)"
+            if isinstance(passages, int) and passages > 1
+            else ""
+        )
+        lines.append(
+            f"  Lieu CONFRONTÉ (contrôle déterministe) : le document situe "
+            f"lui-même la prise de parole à {stated.get('name', '')}"
+            f"{passages_note} — « {stated.get('quote', '')} » "
+            f"(position {stated.get('offset')}). La situation ci-dessous nomme "
+            f"{', '.join(model_places) or 'un autre lieu'} : ne présente pas ce "
+            "lieu comme celui du discours — le document fait foi sur le lieu."
+        )
     dating = context.get("dating")
     if isinstance(dating, dict) and dating.get("status") == "uncertain":
         refuted = dating.get("refuted_by") or {}
@@ -430,7 +458,12 @@ def _format_historical_block(context: Dict[str, Any]) -> str:
         )
     situation = _truncate(context.get("situation", ""), _STRATEGIC_READ_CAP)
     if situation:
-        lines.append(f"  Situation : {situation}")
+        prefix = (
+            "  Situation (lieu refuté — voir ci-dessus) : "
+            if place_refuted
+            else "  Situation : "
+        )
+        lines.append(f"{prefix}{situation}")
     for item in context.get("items") or []:
         if not isinstance(item, dict):
             continue
