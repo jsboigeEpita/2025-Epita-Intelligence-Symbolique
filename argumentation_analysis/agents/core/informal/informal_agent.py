@@ -30,7 +30,10 @@ from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
 
 # Import des définitions et des prompts
-from .informal_definitions import InformalAnalysisPlugin, INFORMAL_AGENT_INSTRUCTIONS
+from .informal_definitions import (
+    InformalAnalysisPlugin,
+    build_informal_agent_instructions,
+)
 from .prompts import (
     prompt_identify_args_v8,
     prompt_analyze_fallacies_v1,
@@ -163,7 +166,7 @@ class InformalAnalysisAgent(BaseAgent):
         kernel: sk.Kernel,
         agent_name: str = "InformalAnalysisAgent",
         taxonomy_file_path: Optional[str] = None,
-        instructions: str = INFORMAL_AGENT_INSTRUCTIONS,
+        instructions: Optional[str] = None,
     ):
         """
         Initialise l'agent d'analyse informelle.
@@ -173,7 +176,18 @@ class InformalAnalysisAgent(BaseAgent):
             agent_name (str, optional): Le nom de l'agent.
             taxonomy_file_path (Optional[str], optional): Chemin vers le fichier
                 JSON de la taxonomie pour le plugin natif.
+            instructions (Optional[str], optional): Le prompt système. None
+                prend la variante sans outils de V15 : les invocations de cet
+                agent n'offrent jamais de fonctions au modèle (analyze_text
+                rend la main aux templates sémantiques ; une invocation chat
+                ne règle pas function_choice_behavior), et un prompt qui
+                nomme des fonctions non offertes peut faire refuser le
+                modèle (#3573). Un assemblage qui offre réellement
+                StateManager + InformalAnalyzer passe
+                ``build_informal_agent_instructions(tools_available=True)``.
         """
+        if instructions is None:
+            instructions = build_informal_agent_instructions(tools_available=False)
         super().__init__(
             kernel=kernel, agent_name=agent_name, system_prompt=instructions
         )
