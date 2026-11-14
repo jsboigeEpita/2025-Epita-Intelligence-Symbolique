@@ -1,0 +1,48 @@
+{
+  "key": "cb02540703af93951a1119c13bc6db279be2c9d4887fc6e410aef0c5f46dbdea",
+  "value": {
+    "id": "chatcmpl-EkGzVSPjGcCd8x3Mclk9WQMhmB3K4",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\":true,\"structure_verdict\":\"progression_logique\",\"reasoning\":\"Les différences structurelles affaiblissent l’argument d’autorité et l’appel à la peur ne démontre pas la nécessité de la réforme, ce qui justifie que celle-ci n’est pas établie par ces arguments.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794697109,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 198,
+      "prompt_tokens": 430,
+      "total_tokens": 628,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 122,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

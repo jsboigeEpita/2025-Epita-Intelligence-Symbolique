@@ -1,0 +1,40 @@
+{
+  "key": "9c87052cdf9538cc0e59bd67681020619c5c8f6961a7e7d94ce04210be99c6b3",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_7wc5qPYUoK0FiXZt3t7jezAw",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"342\",\"matches\":false,\"justification\":\"Le texte invoque l'unanimité des experts et exclut l'avis des non-experts, mais il ne contient ni cri, ni menace, ni intimidation visant à gagner le débat par la véhémence. Il relève plutôt d'un appel à l'autorité et d'une disqualification de la personne, qui ne correspondent pas à ce nœud.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkH1tqdnwqifTaMjmC35FF9fFu12T",
+        "created": 1794697257,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1368,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1365,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 112,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

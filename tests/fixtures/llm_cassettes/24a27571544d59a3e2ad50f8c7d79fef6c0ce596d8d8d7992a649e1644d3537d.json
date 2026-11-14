@@ -1,0 +1,48 @@
+{
+  "key": "24a27571544d59a3e2ad50f8c7d79fef6c0ce596d8d8d7992a649e1644d3537d",
+  "value": {
+    "id": "chatcmpl-EkGzXhKJ92GUlrcrn5KvNsJ2HFoYQ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Prémisse : l'opposition ne propose pas de supprimer les retraites, mais seulement de les réformer différemment. Conclusion : le débat déforme la position de l'opposition. Verdict : saut logique, car la prémisse ne suffit pas à établir que le débat déforme effectivement cette position.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794697111,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 77,
+      "prompt_tokens": 277,
+      "total_tokens": 354,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

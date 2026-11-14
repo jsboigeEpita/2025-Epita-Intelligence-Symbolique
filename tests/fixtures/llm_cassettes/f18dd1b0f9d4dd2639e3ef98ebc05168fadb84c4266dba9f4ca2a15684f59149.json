@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"start_marker\": \"La déclaration cruciale sur l'économie verte\",\n  \"end_marker\": \"est enfouie ici.\",\n  \"explanation\": \"Le texte source ne contient qu'une seule mention explicite de l'économie verte. Les marqueurs proposés délimitent précisément la phrase « La déclaration cruciale sur l'économie verte est enfouie ici. », qui constitue l'extrait le plus pertinent pour la dénomination demandée.\"\n}",
+      "content": "{\n  \"start_marker\": \"La déclaration cruciale sur l'économie verte est enfouie ici.\",\n  \"end_marker\": \"La déclaration cruciale sur l'économie verte est enfouie ici.\",\n  \"explanation\": \"Le texte ne contient pas de titre explicite « Le point sur l'économie verte ». Le seul passage thématiquement pertinent est la phrase unique qui mentionne directement l'économie verte. Les deux bornes correspondent donc exactement à cette phrase, qui constitue l'extrait le plus précis et le plus minimal.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkFtj8rc4jR58PXGrr2WfwO7wmlEL",
-        "created": 1794692907,
+        "id": "chatcmpl-EkH7O70okQJDtvU94mmCMxMZxhKgd",
+        "created": 1794697598,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 6801,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 452,
+          "completion_tokens": 535,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 350,
+            "reasoning_tokens": 418,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

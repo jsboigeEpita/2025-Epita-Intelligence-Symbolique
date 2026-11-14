@@ -1,0 +1,48 @@
+{
+  "key": "914c24a7d6e2c7af4009a6d0be48dfb6b761d4f60bd323c63424cba05d7ba8d3",
+  "value": {
+    "id": "chatcmpl-EkH90IIkyVCNoARRPEBHwsXffsVNU",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Jargon technique non défini (« immunité collective »), sans pronom à antécédent ambigu ni phrase excessivement emboîtée ; obstacle résolvable par le contexte, donc sens globalement accessible.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794697698,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 94,
+      "prompt_tokens": 260,
+      "total_tokens": 354,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 31,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

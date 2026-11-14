@@ -1,14 +1,14 @@
 {
   "key": "1bf27510b69e25163516cc9f9812a66126366f1b8bc46fbfe6a675b27e3c9e45",
   "value": {
-    "id": "chatcmpl-EkFncyScGDpjns5gjVVozSSM4u41A",
+    "id": "chatcmpl-EkH1DMrYOtE9b0YhymlvaCZhc0eCw",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_thesis\":true,\"thesis\":\"Le président affirme que la politique économique est un succès incontestable.\",\"digressions\":\"\"}",
+          "content": "{\"has_thesis\":true,\"thesis\":\"La politique économique est un succès incontestable.\",\"digressions\":\"\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794692528,
+    "created": 1794697215,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 67,
+      "completion_tokens": 28,
       "prompt_tokens": 174,
-      "total_tokens": 241,
+      "total_tokens": 202,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 29,
+        "reasoning_tokens": 0,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

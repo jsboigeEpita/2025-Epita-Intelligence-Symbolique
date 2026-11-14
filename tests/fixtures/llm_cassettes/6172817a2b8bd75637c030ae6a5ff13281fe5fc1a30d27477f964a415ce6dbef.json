@@ -1,0 +1,40 @@
+{
+  "key": "6172817a2b8bd75637c030ae6a5ff13281fe5fc1a30d27477f964a415ce6dbef",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_bReWCVM1fU9g47oKAVH1pxxt",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"344\",\"matches\":false,\"justification\":\"Le texte invoque l'autorité des experts et exclut les non-experts, mais il ne fonde pas son raisonnement sur un handicap. Le capacitisme ne correspond donc pas à la fallacie identifiée.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkH1r47idhLpbIBa5wC0jaSaeTCKz",
+        "created": 1794697255,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1340,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1337,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 83,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

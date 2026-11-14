@@ -6,26 +6,56 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_aSdgjGcExvnzO7dQjscxu7im",
-          "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"698\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"La phrase rapporte simplement une affirmation du président (« la politique économique est un succès incontestable ») sans fournir d’argument ni supposer explicitement la conclusion comme prémisse. Elle n’établit donc pas une pétition de principe.\",\"move_author\":\"reported\",\"move_author_label\":\"le président\",\"document_statement\":\"« Le président affirme que la politique économique est un succès incontestable. »\"}"
+          "id": "call_eximWmslyZ6AOQk1ZdJS63yx",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"699\"}"
+        },
+        {
+          "id": "call_WnVGhcazeYyAdUicI7g8KeWo",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"701\"}"
+        },
+        {
+          "id": "call_EPNMjbtXXDTcEstVulszwjPy",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"702\"}"
+        },
+        {
+          "id": "call_PX8RCm2RQkwazgF4QXTSx0tj",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"703\"}"
+        },
+        {
+          "id": "call_S9zJHkejerHlt9Wx6Tj6sOLW",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"704\"}"
+        },
+        {
+          "id": "call_4wo51JWVSQJJwuNGfByUNRmj",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"705\"}"
+        },
+        {
+          "id": "call_E3NwKGzLllvwYuYbmqD8cC3L",
+          "name": "Exploration-explore_branch",
+          "arguments": "{\"node_pk\": \"706\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkFnO7CnVtTrOBDYUUpMWY8jheiDZ",
-        "created": 1794692514,
+        "id": "chatcmpl-EkH13QO8n0mcuH2InQk2mpRsrwSF4",
+        "created": 1794697205,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2196,
           "prompt_tokens_details": {
             "audio_tokens": 0,
-            "cache_write_tokens": 758,
-            "cached_tokens": 1435,
+            "cache_write_tokens": 2193,
+            "cached_tokens": 0,
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 113,
+          "completion_tokens": 152,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

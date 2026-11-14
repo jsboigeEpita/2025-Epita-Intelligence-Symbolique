@@ -1,0 +1,48 @@
+{
+  "key": "ae7257aad3491c479758097dd4039463ef80465e712245d97030e3e406de9219",
+  "value": {
+    "id": "chatcmpl-EkH9LCK2YO2fvUiuht7na79EemS9d",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points 1 et 2 portent sur des idées différentes : le premier rapporte une position adverse sur la dangerosité des vaccins, tandis que le second invoque leur efficacité historique. Le point 3 étant tronqué (« ignorent des d… »), aucune redondance précise ne peut être établie à son sujet.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794697719,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 209,
+      "prompt_tokens": 296,
+      "total_tokens": 505,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 121,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

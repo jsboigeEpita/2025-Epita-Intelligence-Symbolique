@@ -1,0 +1,40 @@
+{
+  "key": "03ea2d513183cba94bfe3118c2d36b96188cc2955d6f5949b5b42d9c4d871cb4",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_oj1dnT56DsPKvb0gEM9OJR6a",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"942\",\"matches\":false,\"justification\":\"La phrase attribue simplement une affirmation au président, sans source fausse, mal identifiée, incompétente ou inventée. Aucun élément ne permet d'établir une fausse attribution.\",\"move_author\":\"reported\",\"move_author_label\":\"le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkH15oJQ744jrYO6Q1WR4DXWxj7hO",
+        "created": 1794697207,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2355,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 917,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 82,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

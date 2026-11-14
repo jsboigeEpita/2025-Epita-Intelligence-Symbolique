@@ -1,0 +1,48 @@
+{
+  "key": "be2fed7facd9bc3580ecec4fd2343e9c4e2334ab809adedcd64641f1ca954b65",
+  "value": {
+    "id": "chatcmpl-EkGzSapHTQk4CZ8Gnbpbj5AJSHYFK",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Le Premier ministre affirme que la réforme des retraites est nécessaire parce que tous les pays européens l'ont déjà faite. Or, les systèmes de retraite présentent des différences structurelles, et la menace d'un effondrement dans cinq ans constitue un appel à la peur.\",\"conclusion\":\"La nécessité de la réforme n'est pas établie par ces arguments, qui reposent sur un argument d'autorité et un appel à la peur.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794697106,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 287,
+      "prompt_tokens": 293,
+      "total_tokens": 580,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 181,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

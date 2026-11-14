@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La phrase « Test mémoire numéro 0 » sert d’identifiant au test et ne constitue pas une proposition logique. La phrase « Tous les tests sont importants » se traduit par : pour tout objet X, si X est un test, alors X est important.\"\n}",
+      "content": "{\n  \"formulas\": [\n    \"Test(test0)\",\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"Le texte affirme que l'entité test0 est un test et que tous les tests sont importants. Cela se traduit par Test(test0) et par une implication universelle reliant Test(X) à Important(X).\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkFrQFSfBFxzwMKZSZ0kFtXDfVKxr",
-        "created": 1794692764,
+        "id": "chatcmpl-EkH51qB4RtI0hFPymI28vOQj3WdTt",
+        "created": 1794697451,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 285,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 332,
+          "completion_tokens": 204,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 202,
+            "reasoning_tokens": 77,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

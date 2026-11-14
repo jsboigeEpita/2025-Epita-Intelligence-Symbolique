@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_KwOfW4LGvLM1fq16BdTiZenY",
+          "id": "call_ZPqE0z0hDHgz9SGqITTNhE5j",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"1352\",\"matches\":false,\"justification\":\"Le texte commet plutôt un appel à l'autorité et un argument ad hominem contre les non-experts, mais il ne discrédite pas un adversaire au moyen d'informations préjudiciables au sens spécifique de l'empoisonnement du puits. Aucun sous-type proposé ne correspond mieux.\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"1352\",\"matches\":false,\"justification\":\"Le texte présente plutôt un appel à l'autorité et une disqualification de l'avis des non-experts, mais il ne discrédite pas une partie au moyen d'informations préjudiciables au sens spécifique de l'empoisonnement du puits. Aucun des sous-types proposés ne correspond mieux.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkFomcAlQj0kb5FuyPTkzFvbmWyot",
-        "created": 1794692600,
+        "id": "chatcmpl-EkH2XbRwBZw0h2LMOhmeruagYocR1",
+        "created": 1794697297,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2251,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 98,
+          "completion_tokens": 97,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

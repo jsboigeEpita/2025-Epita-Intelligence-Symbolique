@@ -1,0 +1,48 @@
+{
+  "key": "5f1328270ebedfb3432cfb93e95969e40921092c553aef027b6e469f3648d7e9",
+  "value": {
+    "id": "chatcmpl-EkH9BvvXkhMArkrwgEH1Hf9x8u9aa",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Prémisses : les études montrent que la vaccination a éradiqué la variole et fortement réduit la poliomyélite. Conclusion : les vaccins sont indispensables pour la santé publique. Verdict : saut logique, car la conclusion ne découle pas suffisamment des prémisses.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794697709,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 144,
+      "prompt_tokens": 282,
+      "total_tokens": 426,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 70,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
