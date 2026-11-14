@@ -55,7 +55,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 from fractions import Fraction
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 from .figure_scales import score_with_scale  # #3394
 from .arena_record import (  # #3073: shared arena record with act1
@@ -1693,7 +1693,64 @@ def _cycle_phrase(nodes: List[str]) -> str:
     return f"{joined} forment un cycle de soutien sans ancrage externe (autorité circulaire)"
 
 
-def _articulation_phrase(node: str, dependents: List[str]) -> str:
+def _player_for_point(
+    state: Any, node_id: str, dependent_ids: Sequence[str]
+) -> Optional[str]:
+    """The strategist's player whose case rests on this articulation point (#3544).
+
+    The players carry a located quote (``offset`` + text); the units carry
+    their located source quotes through ``argument_provenance``. A player's
+    case DEPENDS on the point when the player's quoted ground overlaps the
+    node itself (they quote the aside) or one of its dependents (they quote
+    the claim only the aside supports) — both are the figure the sentence
+    states, and on the panel the dependent side is the one that fires (2 of
+    44 points on the node, 7 of 44 on a dependent). Players are read in the
+    strategist's own order (salience, the #3386 convention) and the first
+    overlap wins; a player without a located quote claims no ground, and a
+    point without provenance names no player. The sentence then names that
+    player, or no player at all when none is recorded — never an invented
+    attribution.
+    """
+    provenance = getattr(state, "argument_provenance", None)
+    if not isinstance(provenance, dict):
+        return None
+
+    def _span(unit_id: str) -> Optional[Tuple[int, int]]:
+        entry = provenance.get(unit_id)
+        if not isinstance(entry, dict):
+            return None
+        offset = entry.get("offset")
+        quote = str(entry.get("source_quote") or "")
+        if not isinstance(offset, int) or isinstance(offset, bool) or not quote:
+            return None
+        return (offset, offset + len(quote))
+
+    spans = [
+        s for s in (_span(uid) for uid in [node_id, *dependent_ids]) if s is not None
+    ]
+    if not spans:
+        return None
+    read = getattr(state, "strategic_read", None)
+    players = read.get("players") if isinstance(read, dict) else None
+    for player in players or []:
+        if not isinstance(player, dict):
+            continue
+        offset = player.get("offset")
+        quote = str(player.get("quote") or "")
+        name = str(player.get("name") or "").strip()
+        if not isinstance(offset, int) or isinstance(offset, bool):
+            continue
+        if not quote or not name:
+            continue
+        end = offset + len(quote)
+        if any(s[0] < end and offset < s[1] for s in spans):
+            return name
+    return None
+
+
+def _articulation_phrase(
+    node: str, dependents: List[str], player: Optional[str] = None
+) -> str:
     """French prose naming a sole-supporter articulation point (#1645 PR2).
 
     The figure: an argument that is the ONLY backer of one or more others, so
@@ -1701,18 +1758,28 @@ def _articulation_phrase(node: str, dependents: List[str]) -> str:
     incidental that structurally carries the weight" (issue B-insight-3).
     Naming the figure (``point d'articulation``) is the projection no other
     axis produces; the dependent count conveys how much rests on it.
+
+    #3544 — the node and its dependents arrive as TEXT (resolved through the
+    entry's ``argument_labels`` by the caller), and ``player`` names whose
+    case depends on the point when the strategist's players carry the
+    ground; ``None`` names no player.
     """
     node_t = _truncate(node, _SUPPORT_NODE_CAP)
     deps_t = [_truncate(d, _SUPPORT_NODE_CAP) for d in dependents if d]
+    figure = (
+        f"point d'articulation dont le cas de {player} dépend"
+        if player
+        else "point d'articulation"
+    )
     if len(deps_t) == 1:
         return (
             f"« {node_t} » est le seul appui de « {deps_t[0]} » : le retirer "
-            f"lui ferait perdre tout soutien (point d'articulation)"
+            f"lui ferait perdre tout soutien ({figure})"
         )
     listed = ", ".join(f"« {d} »" for d in deps_t)
     return (
         f"« {node_t} » est le seul appui de {len(deps_t)} arguments ({listed}) : "
-        f"le retirer ferait s'effondrer leur soutien (point d'articulation)"
+        f"le retirer ferait s'effondrer leur soutien ({figure})"
     )
 
 
@@ -1741,16 +1808,23 @@ def _bipolar_finding(state: Any) -> Optional[StructuredArgFinding]:
     # Priority insight (#1645 section A): support cycles = circular authority.
     # NAME it — this is the projection no other axis can produce. A cycle is a
     # structural fact the text does not contain, so naming it is not a recopy
-    # (anti-pendule C: "si le texte le dit, on mesure une recopie").
+    # (anti-pendulum C: "si le texte le dit, on mesure une recopie").
+    # #3544 — the cycle's nodes render as TEXT through the entry's labels,
+    # exactly like the articulation phrase below (ids give the writer nothing
+    # to describe — the #3156 lesson).
     cycle_parts: List[str] = []
     for entry in entries:
         if not isinstance(entry, dict):
             continue
+        entry_labels = entry.get("argument_labels")
+        labels = entry_labels if isinstance(entry_labels, dict) else {}
         for group in entry.get("support_cycles") or []:
             if not isinstance(group, list):
                 continue
             nodes = [
-                _truncate(str(n).strip(), _SUPPORT_NODE_CAP)
+                _truncate(
+                    _resolve_unit_label(labels, str(n).strip()), _SUPPORT_NODE_CAP
+                )
                 for n in group
                 if str(n).strip()
             ]
@@ -1770,20 +1844,33 @@ def _bipolar_finding(state: Any) -> Optional[StructuredArgFinding]:
     # Second insight (#1645 PR2, B-insight-3): articulation points = sole
     # supporter. NAME the figure ("point d'articulation") — the gap between
     # structural weight and displayed importance. Same anti-recopy rationale.
+    # #3544 — the node and its dependents render as TEXT through the entry's
+    # ``argument_labels`` (falling back to the id when no label exists), and
+    # the phrase names the player whose case carries the point when the
+    # strategist's players locate the ground.
     articulation_parts: List[str] = []
     for entry in entries:
         if not isinstance(entry, dict):
             continue
+        entry_labels = entry.get("argument_labels")
+        labels = entry_labels if isinstance(entry_labels, dict) else {}
         for ap in entry.get("articulation_points") or []:
             if not isinstance(ap, dict):
                 continue
-            node = str(ap.get("node", "")).strip()
-            if not node:
+            node_id = str(ap.get("node", "")).strip()
+            if not node_id:
                 continue
             deps_raw = ap.get("dependents") or []
-            deps = [str(d).strip() for d in deps_raw if str(d).strip()]
+            dep_ids = [str(d).strip() for d in deps_raw if str(d).strip()]
+            deps = [_resolve_unit_label(labels, d) for d in dep_ids]
             if deps:
-                articulation_parts.append(_articulation_phrase(node, deps))
+                articulation_parts.append(
+                    _articulation_phrase(
+                        _resolve_unit_label(labels, node_id),
+                        deps,
+                        _player_for_point(state, node_id, dep_ids),
+                    )
+                )
                 if len(articulation_parts) >= _ARTICULATION_CAP:
                     break
         if len(articulation_parts) >= _ARTICULATION_CAP:
