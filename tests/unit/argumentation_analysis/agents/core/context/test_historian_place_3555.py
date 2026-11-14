@@ -170,10 +170,11 @@ class TestTheDocumentVenueReader:
 
         # Measured on the cycle-7 corpus: documents given at X addressed the
         # "people of" places they were not in. The reader must not take them.
+        # The sentence below is invented (no real place names, rule 7).
         assert (
             _document_venue_statements(
-                "I speak to the people of Vermont, and to the people of "
-                "Kentucky, about the union and its future."
+                "I speak to the people of Valmont, and to the people of "
+                "Norbury, about the union and its future."
             )
             == []
         )

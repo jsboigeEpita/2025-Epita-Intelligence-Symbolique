@@ -68,17 +68,17 @@ PLACE_MAX_CANDIDATES = 5
 _PLACE_QUOTE_CONTEXT = 48
 
 #: A capitalised word — the shape a place name takes in prose. The first
-#: character class covers the accented capitals (``États``) that ``[A-Z]``
+#: character class covers the accented capitals (``Évremont``) that ``[A-Z]``
 #: alone misses, and ``\w`` continues through accents and hyphens.
 _CAP_WORD = r"[A-ZÀ-ÖØ-Þ][\w'’-]*"
 
-#: A run of up to five capitalised words (``New York City``, ``États-Unis``):
-#: a place name is a run, and a venue statement names one.
+#: A run of up to five capitalised words (``Valbourg Belle Rive``,
+#: ``Ville-Neuve``): a place name is a run, and a venue statement names one.
 _CAP_RUN = rf"{_CAP_WORD}(?:\s+{_CAP_WORD}){{0,4}}"
 
 #: Words a venue capture ends on that name the KIND of place, not the place
-#: (``here in New York City`` names New York): stripped from the right, never
-#: from the left — ``City`` inside ``Mexico City`` is part of the name and the
+#: (``here in Valbourg City`` names Valbourg): stripped from the right, never
+#: from the left — ``City`` inside ``Valburg City`` is part of the name and the
 #: capture already runs through it.
 _GENERIC_PLACE_WORDS = frozenset(
     {"city", "town", "village", "place", "cité", "ville", "capital"}
@@ -101,7 +101,7 @@ _DOCUMENT_VENUE_CUES = (
 )
 
 #: #3555 — the prepositions that place a speech in the historian's French
-#: situation (``prononcé à Alton``, ``depuis Londres``, ``au Kremlin``). The
+#: situation (``prononcé à Valcourt``, ``depuis Waldborg``, ``au Palais-Neuf``). The
 #: region prepositions (``dans``, ``en``) are NOT here: measured on the c10
 #: state, a situation naming the STATE that contains the document's venue
 #: states something compatible, and reading it as a venue would refute a
@@ -453,7 +453,7 @@ def _confront_dating(result: HistoricalContext, stated: List[StatedDate]) -> Non
 
 def _strip_generic_tail(run: str) -> str:
     """Drop the words that name the KIND of place from a captured run's right
-    end — ``here in New York City`` names New York, not City."""
+    end — ``here in Valbourg City`` names Valbourg, not City."""
     words = run.split()
     while words and words[-1].lower() in _GENERIC_PLACE_WORDS:
         words.pop()
@@ -535,12 +535,12 @@ def _situation_place_candidates(situation: str) -> List[str]:
 def _names_share(left: str, right: str) -> bool:
     """Do two place names name the same place, as far as a reader can tell?
 
-    Equality, containment (``New`` / ``New York``) or a common prefix of four
-    characters — the last one is the measured cross-language class: a French
-    situation writes ``Londres`` where an English document writes ``London``,
-    ``Moscou`` / ``Moscow``, ``Vienne`` / ``Vienna``. Four characters is
-    conservative on purpose: it can only SUPPRESS a refutation, never create
-    one (``Alton`` / ``Albany`` share two and stay distinct).
+    Equality, containment (``Port`` / ``Port Neuf``) or a common prefix of four
+    characters — the last one is the measured cross-language class: the same
+    city written in two languages, as an invented ``Valbourg`` / ``Valburg``
+    pair shows. Four characters is conservative on purpose: it can only
+    SUPPRESS a refutation, never create one (``Brienne`` / ``Brissac`` share
+    three and stay distinct).
     """
     left_l, right_l = left.lower(), right.lower()
     if left_l == right_l or left_l in right_l or right_l in left_l:
