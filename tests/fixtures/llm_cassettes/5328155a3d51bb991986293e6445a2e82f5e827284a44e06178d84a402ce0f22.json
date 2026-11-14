@@ -1,0 +1,48 @@
+{
+  "key": "5328155a3d51bb991986293e6445a2e82f5e827284a44e06178d84a402ce0f22",
+  "value": {
+    "id": "chatcmpl-EkFlWTlIR9PeVnsMlcgemf8WHYfrz",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Prémisses : le Premier ministre justifie la réforme par le fait que tous les pays européens l’ont déjà adoptée, mais les systèmes de retraite présentent des différences. Conclusion : la comparaison avec les autres pays européens ne suffit pas à justifier la réforme. Verdict : progression_logique, car les différences entre systèmes affaiblissent l’inférence fondée sur la seule comparaison.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794692398,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 216,
+      "prompt_tokens": 288,
+      "total_tokens": 504,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 119,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

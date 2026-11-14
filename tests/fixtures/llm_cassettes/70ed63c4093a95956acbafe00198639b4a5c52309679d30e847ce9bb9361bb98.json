@@ -1,0 +1,48 @@
+{
+  "key": "70ed63c4093a95956acbafe00198639b4a5c52309679d30e847ce9bb9361bb98",
+  "value": {
+    "id": "chatcmpl-EkFlFux4rkeAhHlVUrILuwsAF2Jsh",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"La projection du déficit et ses hypothèses de croissance doivent être examinées avant d'accepter la conclusion financière avancée par le ministre.\",\"digressions\":\"Les remarques sur le sophisme naturaliste invoqué par les syndicats et sur l'homme de paille dénoncé par l'opposition sont des digressions, car elles portent sur la justification idéologique du travail plus longtemps et sur la réforme des retraites, non sur l'examen de la projection du déficit et de ses hypothèses de croissance.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794692381,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 198,
+      "prompt_tokens": 325,
+      "total_tokens": 523,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 75,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "key": "8e2fa5921b04fc14eef5b3d5f7b83076b396446430923ac99066be6b306a926a",
+  "value": {
+    "id": "chatcmpl-EkFppf9sEAHcOIyzQs75sDaCUpWeJ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les deux points présentent des options d’utilisation différentes des 2000 euros : l’achat de matériel pédagogique et d’échiquiers pour l’option B, contre l’organisation d’un tournoi inter-villes avec buffet et prix pour accroître la visibilité du club dans l’option A. Aucune redondance substantielle.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794692665,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 80,
+      "prompt_tokens": 301,
+      "total_tokens": 381,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

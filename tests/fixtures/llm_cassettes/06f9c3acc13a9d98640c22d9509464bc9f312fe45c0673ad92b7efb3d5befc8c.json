@@ -1,14 +1,14 @@
 {
   "key": "06f9c3acc13a9d98640c22d9509464bc9f312fe45c0673ad92b7efb3d5befc8c",
   "value": {
-    "id": "chatcmpl-Ek7oSyXXV3zybj0mmVko3rhdiiSbu",
+    "id": "chatcmpl-EkFv0a8f2YQE7Tx16pwbOPOuNNchd",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[{\"text\":\"Les vaccins sont indispensables à la santé publique.\",\"source_quote\":\"Les vaccins sont indispensables pour la sante publique.\",\"move_author\":\"speaker\"},{\"text\":\"La vaccination a éradiqué la variole et a considérablement réduit la polio, ce qui soutient son importance pour la santé publique.\",\"source_quote\":\"Les etudes scientifiques montrent que la vaccination a eradique la variole et reduit considerablement la polio.\",\"move_author\":\"speaker\"},{\"text\":\"L'affirmation selon laquelle les vaccins sont dangereux doit être rejetée parce qu'elle méconnaît plusieurs décennies de recherche clinique.\",\"source_quote\":\"Ceux qui affirment que les vaccins sont dangereux ignorent les decades de recherche clinique.\",\"move_author\":\"speaker\"},{\"text\":\"Les vaccins sont dangereux.\",\"source_quote\":\"Ceux qui affirment que les vaccins sont dangereux\",\"move_author\":\"speaker\"},{\"text\":\"Les produits pharmaceutiques cachent les effets secondaires des vaccins.\",\"source_quote\":\"l'argument selon lequel les produits pharmaceutiques cachent les effets secondaires\",\"move_author\":\"speaker\"},{\"text\":\"L'immunité collective créée par des taux de vaccination élevés protège également les personnes qui ne peuvent pas être vaccinées.\",\"source_quote\":\"Les taux de vaccination eleves protegent aussi ceux qui ne peuvent pas etre vaccines grace a l'immunite collective.\",\"move_author\":\"speaker\"}],\"claims\":[{\"text\":\"Des études scientifiques montrent que la vaccination a éradiqué la variole.\",\"source_quote\":\"Les etudes scientifiques montrent que la vaccination a eradique la variole\"},{\"text\":\"La vaccination a considérablement réduit la polio.\",\"source_quote\":\"la vaccination a eradique la variole et reduit considerablement la polio\"},{\"text\":\"La recherche clinique sur les vaccins s'étend sur plusieurs décennies.\",\"source_quote\":\"ignorent les decades de recherche clinique\"},{\"text\":\"L'affirmation selon laquelle les produits pharmaceutiques cachent les effets secondaires est une théorie du complot sans fondement.\",\"source_quote\":\"L'argument selon lequel les produits pharmaceutiques cachent les effets secondaires est une theorie du complot sans fondement.\"},{\"text\":\"Des taux de vaccination élevés protègent les personnes qui ne peuvent pas être vaccinées grâce à l'immunité collective.\",\"source_quote\":\"Les taux de vaccination eleves protegent aussi ceux qui ne peuvent pas etre vaccines grace a l'immunite collective.\"}],\"summary\":\"Le texte défend l'indispensabilité des vaccins en invoquant leurs effets historiques sur la variole et la polio, la recherche clinique et l'immunité collective. Il rejette les positions selon lesquelles les vaccins sont dangereux ou les entreprises pharmaceutiques dissimulent leurs effets secondaires.\"}",
+          "content": "{\"arguments\":[{\"text\":\"Les vaccins sont indispensables à la santé publique.\",\"source_quote\":\"Les vaccins sont indispensables pour la sante publique.\",\"move_author\":\"speaker\"},{\"text\":\"La vaccination a démontré son efficacité historique en éradiquant la variole et en réduisant considérablement la polio.\",\"source_quote\":\"Les etudes scientifiques montrent que la vaccination a eradique la variole et reduit considerablement la polio.\",\"move_author\":\"speaker\"},{\"text\":\"L'affirmation selon laquelle les vaccins sont dangereux est contredite par des décennies de recherche clinique.\",\"source_quote\":\"Ceux qui affirment que les vaccins sont dangereux ignorent les decades de recherche clinique.\",\"move_author\":\"speaker\"},{\"text\":\"Les vaccins sont dangereux.\",\"source_quote\":\"Ceux qui affirment que les vaccins sont dangereux\",\"move_author\":\"speaker\"},{\"text\":\"Les entreprises pharmaceutiques cachent les effets secondaires des vaccins.\",\"source_quote\":\"L'argument selon lequel les produits pharmaceutiques cachent les effets secondaires\",\"move_author\":\"speaker\"},{\"text\":\"Les taux de vaccination élevés protègent les personnes qui ne peuvent pas être vaccinées grâce à l'immunité collective.\",\"source_quote\":\"Les taux de vaccination eleves protegent aussi ceux qui ne peuvent pas etre vaccines grace a l'immunite collective.\",\"move_author\":\"speaker\"}],\"claims\":[{\"text\":\"Des études scientifiques montrent que la vaccination a éradiqué la variole.\",\"source_quote\":\"Les etudes scientifiques montrent que la vaccination a eradique la variole\"},{\"text\":\"Des études scientifiques montrent que la vaccination a considérablement réduit la polio.\",\"source_quote\":\"Les etudes scientifiques montrent que la vaccination a eradique la variole et reduit considerablement la polio.\"},{\"text\":\"La recherche clinique sur les vaccins s'étend sur plusieurs décennies.\",\"source_quote\":\"les decades de recherche clinique\"},{\"text\":\"L'affirmation selon laquelle les produits pharmaceutiques cachent les effets secondaires est présentée comme une théorie du complot sans fondement.\",\"source_quote\":\"une theorie du complot sans fondement.\"},{\"text\":\"L'immunité collective permet aux taux de vaccination élevés de protéger les personnes qui ne peuvent pas être vaccinées.\",\"source_quote\":\"Les taux de vaccination eleves protegent aussi ceux qui ne peuvent pas etre vaccines grace a l'immunite collective.\"}],\"summary\":\"Le texte défend l'indispensabilité des vaccins en s'appuyant sur leur efficacité historique, la recherche clinique et l'immunité collective. Il répond à deux positions adverses : les vaccins seraient dangereux et les entreprises pharmaceutiques cacheraient leurs effets secondaires. Il mobilise l'appel aux études scientifiques, aux données historiques et à l'autorité de la recherche clinique.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794661828,
+    "created": 1794692986,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 821,
+      "completion_tokens": 896,
       "prompt_tokens": 676,
-      "total_tokens": 1497,
+      "total_tokens": 1572,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 252,
+        "reasoning_tokens": 324,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

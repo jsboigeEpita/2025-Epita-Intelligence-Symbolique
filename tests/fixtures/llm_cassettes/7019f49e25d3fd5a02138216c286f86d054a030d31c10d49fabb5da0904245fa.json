@@ -1,0 +1,48 @@
+{
+  "key": "7019f49e25d3fd5a02138216c286f86d054a030d31c10d49fabb5da0904245fa",
+  "value": {
+    "id": "chatcmpl-EkFlQgrDQNSYfP1Vm3oEU4dO5XOFP",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Le Premier ministre justifie la réforme par le fait que tous les pays européens l'ont déjà faite. Or les systèmes de retraite présentent des différences structurelles, que cette comparaison ne prend pas en compte.\",\"conclusion\":\"La comparaison avec les autres pays européens ne suffit pas à justifier la réforme.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794692392,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 242,
+      "prompt_tokens": 305,
+      "total_tokens": 547,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 164,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

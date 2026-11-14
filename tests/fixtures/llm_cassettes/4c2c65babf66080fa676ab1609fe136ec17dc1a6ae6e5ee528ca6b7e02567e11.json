@@ -1,14 +1,14 @@
 {
   "key": "4c2c65babf66080fa676ab1609fe136ec17dc1a6ae6e5ee528ca6b7e02567e11",
   "value": {
-    "id": "chatcmpl-Ek7pf30x3T3elykAR8MzBBsBNXtE8",
+    "id": "chatcmpl-EkFw9ZamX2w7rbpQt850SGYaYZ4yJ",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_clarity_obstacle\":false,\"obstacles\":\"\"}",
+          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Jargon technique non défini : « ADN » est utilisé sans explication. Aucun anaphore non résolvable ni phrase excessivement emboîtée.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794661903,
+    "created": 1794693057,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 202,
+      "completion_tokens": 212,
       "prompt_tokens": 294,
-      "total_tokens": 496,
+      "total_tokens": 506,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 179,
+        "reasoning_tokens": 159,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

@@ -1,14 +1,14 @@
 {
   "key": "70cbd175b8e9961bb5493793b16f77c212a4026b7d3743c4a3013f9ed1731e53",
   "value": {
-    "id": "chatcmpl-Ek7rIT958Ct98wTTPT2V5Sx8GWM5W",
+    "id": "chatcmpl-EkFxbd4bfg18H5rZG798dRFs3GeJo",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"distinct_points\":\"1. Les modèles prédictifs sont unanimes sur le fait que les activités humaines ont un impact sur le climat.\\n2. Les sceptiques affirment que le climat a toujours changé.\\n3. Le changement climatique actuel se caractérise par une vitesse sans précédent, que les sceptiques omettent.\\n4. Ceux qui minimisent la crise climatique utilisent souvent des données sélectives pour soutenir leur position.\"}",
+          "content": "{\"distinct_points\":\"1. Les modèles prédictifs sont unanimes à établir que les activités humaines ont un impact sur le climat.\\n2. Les sceptiques affirment que le climat a toujours changé.\\n3. Les sceptiques omettent que la vitesse du changement climatique actuel est sans précédent.\\n4. Ceux qui minimisent la crise climatique utilisent souvent des données sélectives pour soutenir leur position.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794662004,
+    "created": 1794693147,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 241,
+      "completion_tokens": 191,
       "prompt_tokens": 236,
-      "total_tokens": 477,
+      "total_tokens": 427,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 141,
+        "reasoning_tokens": 96,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

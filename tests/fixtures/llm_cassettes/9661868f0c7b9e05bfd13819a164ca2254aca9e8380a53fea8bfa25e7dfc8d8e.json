@@ -1,0 +1,48 @@
+{
+  "key": "9661868f0c7b9e05bfd13819a164ca2254aca9e8380a53fea8bfa25e7dfc8d8e",
+  "value": {
+    "id": "chatcmpl-EkFvUT90EI6SEv8omc9mzjW6FmYNL",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Les points 1 et 2 sont liés : l’efficacité historique des vaccins soutient leur caractère indispensable pour la santé publique, ce qui crée une reprise partielle mais avec une progression vers une conclusion générale. Le point 3 est tronqué (« ignorent les dé... ») et ne permet pas d’évaluer précisément une éventuelle redondance.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794693016,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 187,
+      "prompt_tokens": 299,
+      "total_tokens": 486,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 95,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

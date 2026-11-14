@@ -1,0 +1,48 @@
+{
+  "key": "fbb55808ed392bb4c9dfd408391b5fc6c5a48b3ee49bff7790a944216a338460",
+  "value": {
+    "id": "chatcmpl-EkFwaQNH4mE6bavGil6Yd24X3jWAW",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Prémisses : le système judiciaire peut se tromper malgré les avancées de l’ADN, et la peine de mort est irréversible. Conclusion : toute erreur judiciaire dans l’application de la peine de mort serait fatale. Verdict : progression_logique ; l’irréversibilité de la peine permet d’inférer qu’une erreur ne pourrait pas être réparée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794693084,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 191,
+      "prompt_tokens": 288,
+      "total_tokens": 479,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 95,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

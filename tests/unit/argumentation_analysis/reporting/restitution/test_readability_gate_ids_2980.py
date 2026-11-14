@@ -22,15 +22,21 @@ Privacy: invented filler, opaque ids. Deterministic: no JVM, no LLM.
 from __future__ import annotations
 
 import asyncio
+import re
 from types import SimpleNamespace
 
 from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
+    build_act2_evidence,
     build_act2_narrative,
 )
 from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
     build_act3_conclusion,
 )
 from argumentation_analysis.reporting.restitution.acts import RestitutionActs
+from argumentation_analysis.reporting.restitution.movement_render_contract import (
+    read_render_contract,
+    render_count_line,
+)
 from argumentation_analysis.reporting.restitution.readability_gate import (
     ReadabilityGate,
 )
@@ -74,6 +80,30 @@ def _min_state() -> SimpleNamespace:
         governance_decisions=[],
         debate_transcripts=[],
     )
+
+
+#: #3560 — the producer's count line: one parenthesised sentence on ONE
+#: line, nothing after it but an optional newline.
+_COUNT_LINE_RE = re.compile(r"\(Compte du récit : [^\n]*\)\n?")
+
+
+def _expected_act(draft: str) -> str:
+    """The act #3560 makes of this fixture's draft — byte-exact.
+
+    The writer's prose verbatim, then the producer's count line (this
+    fixture leaves its movement uncounted). Exact equality, not a prefix
+    test: two drafts concatenated would satisfy ``startswith`` and must fail
+    here. The line's shape is checked independently, so recomputing it
+    cannot bless a suffix that carries anything else.
+    """
+    state = _min_state()
+    line = render_count_line(
+        read_render_contract(draft, build_act2_evidence(state), state)
+    )
+    if not line:
+        return draft
+    assert _COUNT_LINE_RE.fullmatch(line), f"count line shape changed: {line!r}"
+    return draft + "\n" + line
 
 
 class TestTheBodyCheckFlagsIdClasses:
@@ -156,10 +186,16 @@ class TestTheActsSelfCheckCarriesTheMotive:
 
     def test_the_prose_is_reported_never_rewritten(self) -> None:
         """No silent repair: the narrative is returned exactly as the
-        writer produced it — the gate reports, it does not edit."""
+        writer produced it — the gate reports, it does not edit. #3560
+        appends the render-contract count line AFTER the prose (the tiny
+        stub leaves its movement neither treated nor counted); the writer's
+        own sentences stay byte-identical before it."""
         out = asyncio.get_event_loop().run_until_complete(
             build_act2_narrative(
                 _min_state(), llm_callable=_stub_llm(_BODY_WITH_ID)  # type: ignore[arg-type]
             )
         )
-        assert out.narrative == _BODY_WITH_ID
+        # #3560 — the render-contract count line is the ONLY thing after the
+        # writer's body, and byte-exact: the model's prose verbatim, then the
+        # producer's line for this fixture's state, nothing else.
+        assert out.narrative == _expected_act(_BODY_WITH_ID)

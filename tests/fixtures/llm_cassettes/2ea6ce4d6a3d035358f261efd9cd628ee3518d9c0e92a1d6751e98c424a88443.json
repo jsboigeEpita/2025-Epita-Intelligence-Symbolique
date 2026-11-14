@@ -1,14 +1,14 @@
 {
   "key": "2ea6ce4d6a3d035358f261efd9cd628ee3518d9c0e92a1d6751e98c424a88443",
   "value": {
-    "id": "chatcmpl-Ek7ojAsqpUJ9jqvQqCJM07iiMQVvj",
+    "id": "chatcmpl-EkFvHwCWPAngdn0fzeB4Zb61VNPvW",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Les vaccins sont dangereux et les entreprises pharmaceutiques cachent leurs effets secondaires.\",\"main_thesis\":\"Les vaccins ne sont pas dangereux et leur efficacité est démontrée par les recherches scientifiques et les résultats de la vaccination.\"}",
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Les vaccins sont dangereux.\",\"main_thesis\":\"Les vaccins ont des effets bénéfiques démontrés, et l'affirmation selon laquelle ils sont dangereux ou que leurs effets secondaires seraient dissimulés est infondée.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794661845,
+    "created": 1794693003,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 188,
+      "completion_tokens": 202,
       "prompt_tokens": 271,
-      "total_tokens": 459,
+      "total_tokens": 473,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 120,
+        "reasoning_tokens": 132,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

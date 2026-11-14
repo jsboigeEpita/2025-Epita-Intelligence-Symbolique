@@ -1,0 +1,48 @@
+{
+  "key": "b13bb2aadd4ef1ad77d98140b0b5af158a1ff38332cfc2e552da5fb3fd2a5618",
+  "value": {
+    "id": "chatcmpl-EkFvKqS4Pg1htL6hkRDIXRRZMQmNT",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La thèse affirme que l’idée d’une dissimulation des effets secondaires est une théorie du complot sans fondement, tandis que la proposition citée reprend cette idée et contredit donc la thèse au lieu de la soutenir.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794693006,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 136,
+      "prompt_tokens": 305,
+      "total_tokens": 441,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 70,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

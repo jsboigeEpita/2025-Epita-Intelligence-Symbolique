@@ -1,0 +1,48 @@
+{
+  "key": "a5729fdcb5183cacf37447ef50d4ba916c4a397f8f90cc722ff4c7805c6b5c04",
+  "value": {
+    "id": "chatcmpl-EkFphatBuhQqJmBhL5t5kDf3ghs4Z",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La thèse défend l’investissement de la totalité du budget dans du matériel pédagogique et de nouveaux échiquiers ; aucune digression n’est identifiée, donc l’ensemble reste pleinement centré sur cette proposition.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794692657,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 90,
+      "prompt_tokens": 269,
+      "total_tokens": 359,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 28,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,14 +1,14 @@
 {
   "key": "947fcc924827efe947ca382700e63225ed079c8b78e7e8122c4bc5c0eb8de660",
   "value": {
-    "id": "chatcmpl-Ek7oxYA1CpXtT6lIzBqe0Zm0gaPgA",
+    "id": "chatcmpl-EkFvV5HbLt0oqcZcpz84UcNgKD6bQ",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"distinct_points\":\"1. Les vaccins sont dangereux.\\n2. Les études scientifiques montrent que la vaccination a éradiqué la variole et considérablement réduit la polio.\\n3. Les personnes qui affirment que les vaccins sont dangereux ignorent des décennies de recherche clinique.\\n4. L’affirmation selon laquelle les entreprises pharmaceutiques cachent les effets secondaires est une théorie du complot sans fondement.\"}",
+          "content": "{\"distinct_points\":\"1. Les vaccins sont dangereux.\\n2. Les études scientifiques montrent que la vaccination a éradiqué la variole et considérablement réduit la polio.\\n3. Ceux qui affirment que les vaccins sont dangereux ignorent des décennies de recherche clinique.\\n4. L’affirmation selon laquelle les entreprises pharmaceutiques cachent les effets secondaires est une théorie du complot sans fondement.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794661859,
+    "created": 1794693017,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,9 +26,9 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 167,
+      "completion_tokens": 166,
       "prompt_tokens": 223,
-      "total_tokens": 390,
+      "total_tokens": 389,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,

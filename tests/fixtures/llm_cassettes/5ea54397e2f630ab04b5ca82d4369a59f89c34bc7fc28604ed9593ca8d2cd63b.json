@@ -1,0 +1,48 @@
+{
+  "key": "5ea54397e2f630ab04b5ca82d4369a59f89c34bc7fc28604ed9593ca8d2cd63b",
+  "value": {
+    "id": "chatcmpl-EkFlEoK5D9bFlD1J5EEQ7co3T5Dp3",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Obstacles localisés : le terme technique « PIB » et les expressions argumentatives « homme de paille » et « appel à l’émotion » ne sont pas définis. Verdict : ces obstacles sont résolvables par le contexte, de sorte que le sens global reste accessible.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794692380,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 113,
+      "prompt_tokens": 271,
+      "total_tokens": 384,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 36,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_9Zzr49UI4fkOrn7B2a5IuCAG",
+          "id": "call_dXRTDPTjerH5ZKJoxpPKTIX8",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"696\",\"matches\":false,\"justification\":\"La phrase rapporte simplement une affirmation politique (« est un succès incontestable ») sans prémisses ni structure argumentative suffisante pour établir une erreur de raisonnement spécifique.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+          "arguments": "{\"node_pk\":\"696\",\"matches\":false,\"justification\":\"La phrase rapporte simplement une affirmation du président; elle ne fournit pas assez de prémisses ni de structure argumentative pour établir une erreur de raisonnement spécifique.\",\"move_author\":\"reported\",\"move_author_label\":\"le président\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-Ek7fapNrRmwS0pfsNE45GsyN3EqJJ",
-        "created": 1794661278,
+        "id": "chatcmpl-EkFnOEnnc3ueNkR6bjXBetO4KNyCd",
+        "created": 1794692514,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2327,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 74,
+          "completion_tokens": 72,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

@@ -1,0 +1,48 @@
+{
+  "key": "89cc44cbce7d860e902b02dc79fbae89b8cd6fc24d23f23f2ac1da1eb6820774",
+  "value": {
+    "id": "chatcmpl-EkFsWlwDtCUUbDJ3DtG31wKQPqMEn",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Les deux points comparent des options d’utilisation des 2000 euros et mentionnent le matériel pédagogique, mais ils défendent des allocations distinctes : l’option C combine tournoi et pédagogie, tandis que l’option B privilégie entièrement le matériel. La redondance est donc limitée et sert à comparer les choix.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794692832,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 173,
+      "prompt_tokens": 300,
+      "total_tokens": 473,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 87,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

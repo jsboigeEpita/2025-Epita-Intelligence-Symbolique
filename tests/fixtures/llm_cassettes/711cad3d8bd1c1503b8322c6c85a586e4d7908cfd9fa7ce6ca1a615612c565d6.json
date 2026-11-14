@@ -1,0 +1,48 @@
+{
+  "key": "711cad3d8bd1c1503b8322c6c85a586e4d7908cfd9fa7ce6ca1a615612c565d6",
+  "value": {
+    "id": "chatcmpl-EkFlB649M8NuvWqwZFvYZoFgNvGfR",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"obstacle_genuinely_opaque\":false,\"clarity_verdict\":\"résolvable_contexte\",\"reasoning\":\"Les exemples environnants permettent d’inférer qu’un argument d’autorité s’appuie sur l’affirmation du Premier ministre ou de la majorité des pays, et qu’un appel à la peur annonce un effondrement pour provoquer l’inquiétude.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794692377,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 143,
+      "prompt_tokens": 371,
+      "total_tokens": 514,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 56,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

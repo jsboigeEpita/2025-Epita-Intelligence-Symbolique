@@ -1,0 +1,40 @@
+{
+  "key": "67b147c264462fd0ec466f16aa66352554cb2008424302656e7de2c00449a0e5",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_azkwmpNk4smQZBlHcy9RNtUX",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"453\",\"matches\":false,\"justification\":\"Le texte ne répète pas le même message à plusieurs reprises pour obtenir l'adhésion. Il présente deux arguments distincts, portant plutôt sur un appel à l'autorité et une disqualification de l'avis des non-experts.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkFoBJaGWbMov43NUN7HUrr2YhHo9",
+        "created": 1794692563,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1381,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1378,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 86,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}
