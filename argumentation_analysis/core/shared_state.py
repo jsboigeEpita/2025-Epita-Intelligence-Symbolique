@@ -1775,6 +1775,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         vote_population: Optional[Dict[str, Any]] = None,
         coalition: Optional[Dict[str, Any]] = None,
         manipulability: Optional[Dict[str, Any]] = None,
+        players_play: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Add a governance voting decision.
 
@@ -1828,6 +1829,14 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         a pivot the #3385 engine found on the declared profile. Both stored
         only when the play produced them; a vote whose negotiation changed
         nothing carries neither.
+
+        #3386 (re-scope of 13/11) — ``players_play`` is the PLAYERS' play:
+        the electors are the document's own players (``strategic_read``),
+        each voting its recorded ranking of the strategist's framings. ANNEX
+        by measurement: on the recorded cycle-6 states a coalition of player
+        electors changed the outcome on 0 of 9 documents, so the record
+        exists for the audit to count but the RENDER never reads it — no
+        sentence claims a flip the count disproves.
 
         Optional fields are stored only when set (honest absence).
         """
@@ -1886,6 +1895,12 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             # profile (a pair that can flip the Condorcet winner, else a
             # single player). Honest absence when the profile is not pivotal.
             entry["manipulability"] = dict(manipulability)
+        if players_play:
+            # #3386 (re-scope of 13/11) — the PLAYERS' play: electors from
+            # the document's own players over the strategist's framings.
+            # Recorded never rendered (annex by measurement): honest absence
+            # when no player held a full ranking.
+            entry["players_play"] = dict(players_play)
         self.governance_decisions.append(entry)
         state_logger.info(f"Governance decision added: {gd_id} ({method}: {winner})")
         return gd_id

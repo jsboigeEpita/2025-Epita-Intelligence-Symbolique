@@ -2765,6 +2765,83 @@ def _derive_governance_profile(
     )
 
 
+def _derive_player_profile(
+    strategic_read: Any,
+) -> Tuple[List[str], List[List[str]], List[Any], bool, str]:
+    """#3386 (re-scope of 13/11) — electors built from the DOCUMENT'S players.
+
+    The virtue electors above rank the arguments the quality phase scored.
+    The players the strategist read (``strategic_read.players``, stances
+    anchored per #3430) rank the framings in competition
+    (``strategic_read.options``) — a different profile over a different
+    option space, and the strategy engine the user named on 03/11 (« il ne
+    vote qu'entre réponses »): the electors are the document's own players,
+    each voting the ranking the strategist recorded for it, never a
+    preference the pipeline invented.
+
+    A player is an elector exactly when its recorded preference is a FULL
+    ranking over the options (each option exactly once) — the same rule the
+    strategist engine's ballot completion applies; a partial ranking cannot
+    be scored and costs its own player, never the play. Players iterate in
+    the strategist's own order (salience), duplicates keep the first.
+
+    Returns ``(options, ballots, agents, derivable, reason)`` with the same
+    honest-degraded contract as :func:`_derive_governance_profile`.
+    """
+    from argumentation_analysis.agents.core.governance.governance_agent import Agent
+
+    read = strategic_read if isinstance(strategic_read, dict) else {}
+    raw_options = read.get("options")
+    options = (
+        [str(o) for o in raw_options]
+        if isinstance(raw_options, list) and raw_options
+        else []
+    )
+    if len(options) < 2:
+        return [], [], [], False, "fewer than 2 strategist options — no play possible"
+    raw_preferences = read.get("preferences")
+    preferences = raw_preferences if isinstance(raw_preferences, dict) else {}
+    agents: List[Any] = []
+    ballots: List[List[str]] = []
+    seen: Set[str] = set()
+    for player in read.get("players") or []:
+        name = str(player.get("name") or "").strip() if isinstance(player, dict) else ""
+        if not name or name in seen:
+            continue
+        ranking = preferences.get(name)
+        if not isinstance(ranking, list):
+            continue
+        ballot = [str(o) for o in ranking]
+        if sorted(ballot) != sorted(options) or len(set(ballot)) != len(options):
+            continue
+        seen.add(name)
+        agents.append(
+            Agent(name=name, personality="stubborn", preferences=list(ballot))
+        )
+        ballots.append(ballot)
+    if len(agents) < 2:
+        return (
+            [],
+            [],
+            [],
+            False,
+            (
+                f"{len(agents)} player(s) with a full ranking over the "
+                f"{len(options)} options — a play needs at least 2 electors"
+            ),
+        )
+    return (
+        options,
+        ballots,
+        agents,
+        True,
+        (
+            f"{len(agents)} player electors over {len(options)} framings "
+            "(strategist read)"
+        ),
+    )
+
+
 def _aggregate_governance_votes(
     agents: List[Any], options: List[str], ballots: List[List[str]]
 ) -> Dict[str, Any]:
@@ -3141,6 +3218,29 @@ async def _invoke_governance(
             "derivation": "formal-vote-aggregation (virtue electors)",
         }
         logger.debug("governance formal aggregation degraded: %s", g_reason)
+
+    # #3386 (re-scope of 13/11) — the PLAYERS' play, beside the verdict
+    # whatever the quality profile's own derivability: the electors are the
+    # document's players (``strategic_read.players``, stances per #3430)
+    # voting their recorded ranking over the strategist's framings. The
+    # coordinator's rule was measure-first: the count on the recorded cycle-6
+    # states (9 runnable documents) gave ``outcome_changed`` on 0 — no
+    # uniform flip anywhere — so the record is an ANNEX (the measured fact on
+    # the state, never a rendered sentence; ``coalition_note`` reads only the
+    # virtue play's ``coalition`` key, unchanged). A future cycle where a
+    # players' coalition uniformly flips a framing re-opens the render with
+    # this same record.
+    p_options, p_ballots, p_agents, p_derivable, p_reason = _derive_player_profile(
+        getattr(_gov_state, "strategic_read", None)
+    )
+    if p_derivable:
+        governance_verdict["players_play"] = {
+            **play_sensitivity(
+                p_agents, p_options, p_ballots, _aggregate_governance_votes
+            ),
+            "electors": [a.name for a in p_agents],
+            "derivation_reason": p_reason,
+        }
 
     # Enrich with LLM-based governance and deliberation assessment
     llm_governance = None
