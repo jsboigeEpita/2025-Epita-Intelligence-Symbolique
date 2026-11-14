@@ -272,10 +272,17 @@ specialist sees it. Your job, in this order:
    vocabulary.
 3. Then EVERY argument the text carries, exhaustively: wherever it sits in
    the document — opening, middle or end, beside the thesis or far from it —
-   name it. Each argument comes with ONE verbatim anchor in the text's own
-   language, of 8 to 40 words, copied from the document: the anchor is where
-   the argument lives, and an argument whose anchor you cannot quote verbatim
-   is omitted rather than guessed.
+   name it. Read the document as one CHAIN: each argument is a link the
+   thesis hangs from — an aside the claims quietly rest on, a concession
+   that buys goodwill, a closing peroration that does the urging — and a
+   link omitted is a chain cut. Before you answer, walk the document again
+   FROM THE END toward the beginning: the closing stretch regularly carries
+   pivots a forward-only reader never returns to, and any long stretch none
+   of your quotes touches deserves one more look — if it argues something,
+   it belongs in your list. Each argument comes with ONE verbatim anchor in
+   the text's own language, of 8 to 40 words, copied from the document: the
+   anchor is where the argument lives, and an argument whose anchor you
+   cannot quote verbatim is omitted rather than guessed.
 
 Hard rules:
 - One call, one pass. Say what the text DOES, not what it should have done.
@@ -285,6 +292,9 @@ Hard rules:
 - Every entry carries a VERBATIM quote copied from the document, character for
   character: no translation, no paraphrase, no ellipsis, no two passages
   joined. A quote the document does not carry is discarded by the pipeline.
+- The anchor is the sentence the argument LIVES IN, never a neighbouring
+  sentence that frames or mentions the place: a move named for a stretch of
+  the document is quoted from that stretch itself.
 - Do not date, place or situate the document in history. Another reader does
   that.
 - At most {max_moves} entries in total, thesis, mechanism and pillars
@@ -687,6 +697,14 @@ def build_first_reading_prompt(excerpt: str) -> str:
     bind (the #3480 lesson, at the inventory's scale). It is never the render
     cap — ``MAX_MOVES`` says what the NOTE shows, not what the reading may
     name.
+
+    #3511/#3565 (R1167 dispatch, prompt-only) — step 3 reads the document as
+    one CHAIN, re-walks it FROM THE END, and revisits any long stretch no
+    quote touches (the positional lever: 8 of 35 judge passages never named,
+    7 in one document's mid-band); the anchor rule demands the sentence the
+    argument LIVES IN, not a neighbouring one (the placement defect: recorded
+    quotes land 80–1039 characters BESIDE the passages they are named for).
+    General terms only — no band, share or constant tuned on the passages.
     """
     bound = pillar_budget(len(excerpt))
     return FIRST_READING_PROMPT.format(
