@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
@@ -55,6 +56,69 @@ _PROMPT_MAX_STAKES = 6
 #: unbounded sentence would crowd the conclusion it is there to sharpen.
 #: Same order of magnitude as the interpretive question's cap (#1914).
 BLIND_SPOT_CAP = 400
+
+#: #3555 — how many place names the situation may contribute to the conflict
+#: field. A situation is one sentence; more than a handful of names is a list
+#: the render does not need, and the bound keeps the state small.
+PLACE_MAX_CANDIDATES = 5
+
+#: Characters of context quoted around a venue statement (#3555). Same order
+#: as the dated references' quote (#3479): enough to name the passage, short
+#: of becoming an excerpt of the text.
+_PLACE_QUOTE_CONTEXT = 48
+
+#: A capitalised word — the shape a place name takes in prose. The first
+#: character class covers the accented capitals (``Évremont``) that ``[A-Z]``
+#: alone misses, and ``\w`` continues through accents and hyphens.
+_CAP_WORD = r"[A-ZÀ-ÖØ-Þ][\w'’-]*"
+
+#: A run of up to five capitalised words (``Valbourg Belle Rive``,
+#: ``Ville-Neuve``): a place name is a run, and a venue statement names one.
+_CAP_RUN = rf"{_CAP_WORD}(?:\s+{_CAP_WORD}){{0,4}}"
+
+#: Words a venue capture ends on that name the KIND of place, not the place
+#: (``here in Valbourg City`` names Valbourg): stripped from the right, never
+#: from the left — ``City`` inside ``Valburg City`` is part of the name and the
+#: capture already runs through it.
+_GENERIC_PLACE_WORDS = frozenset(
+    {"city", "town", "village", "place", "cité", "ville", "capital"}
+)
+
+#: #3555 — the forms in which a document states WHERE it is being given.
+#: Deictic only: ``this ... city of X`` and ``here in X`` point at the place
+#: of the speech act itself. Measured on the cycle-7 corpus (R1167): the
+#: address form ``people of X`` is NOT here — it named states and a
+#: continent in documents given elsewhere, so admitting it would declare
+#: venues the speaker is not in. That missed form is named in the pull
+#: request rather than guessed at.
+_DOCUMENT_VENUE_CUES = (
+    re.compile(rf"\bthis (?:\w+ ){{0,3}}(?:city|town|village) of (?P<name>{_CAP_RUN})"),
+    re.compile(rf"\bhere in (?P<name>{_CAP_RUN})"),
+    re.compile(
+        rf"\bcette (?:\w+ ){{0,3}}(?:ville|cité) (?:de |d')(?P<name>{_CAP_RUN})"
+    ),
+    re.compile(rf"\bici,? (?:à|en|dans) (?P<name>{_CAP_RUN})"),
+)
+
+#: #3555 — the prepositions that place a speech in the historian's French
+#: situation (``prononcé à Valcourt``, ``depuis Waldborg``, ``au Palais-Neuf``). The
+#: region prepositions (``dans``, ``en``) are NOT here: measured on the c10
+#: state, a situation naming the STATE that contains the document's venue
+#: states something compatible, and reading it as a venue would refute a
+#: situation that is right.
+_SITUATION_VENUE_PREPOSITIONS = ("à", "au", "aux", "depuis", "devant")
+
+_SITUATION_VENUE_RE = re.compile(
+    rf"\b(?:{'|'.join(_SITUATION_VENUE_PREPOSITIONS)})\b"
+    rf"(?:\s+(?:la|le|les))?(?:\s+l')?\s*(?P<name>{_CAP_RUN})"
+)
+
+#: ``dans la ville de X`` names the kind of place explicitly and IS a venue;
+#: a bare ``dans X`` does not (see above).
+_SITUATION_PLACE_KIND_RE = re.compile(
+    rf"\b(?:dans|en)\s+(?:la\s+|le\s+|l')?(?:ville|cité|village)\s+"
+    rf"(?:de\s+|d')?(?P<name>{_CAP_RUN})"
+)
 
 HISTORIAN_PROMPT = """You are a historian. Situate the document below before anyone
 analyses its reasoning: what period, what place, which actors, and what was at
@@ -131,6 +195,12 @@ class HistoricalContext:
     dating_degraded: bool = False
     dating_model_year: Optional[int] = None
     dating_refuted_by: Optional[Dict[str, Any]] = None
+    # #3555 — set by the deterministic confrontation when the document states
+    # where it is being given and the situation names other places. Same
+    # convention as the dating: the key exists only when the check fired.
+    place_degraded: bool = False
+    place_document: Optional[Dict[str, Any]] = None
+    place_model_places: List[str] = field(default_factory=list)
 
     def to_state(self) -> Dict[str, Any]:
         payload = {
@@ -147,6 +217,14 @@ class HistoricalContext:
                 "status": "uncertain",
                 "model_year": self.dating_model_year,
                 "refuted_by": dict(self.dating_refuted_by or {}),
+            }
+        if self.place_degraded:
+            # #3555 — the document states its own venue and the situation
+            # names other places, named by the document's passage and offset.
+            payload["place"] = {
+                "status": "refuted",
+                "document": dict(self.place_document or {}),
+                "model_places": list(self.place_model_places),
             }
         return payload
 
@@ -311,6 +389,10 @@ async def build_historical_context(
         ]
         result.status = "ok"
         _confront_dating(result, stated)
+        # #3555 — the document's own venue, read from the whole text: the
+        # reading window can leave the statement out, so the excerpt is not
+        # the reference here either.
+        _confront_place(result, raw_text)
         logger.info(
             "Historian: %d item(s), situation=%s",
             len(result.items),
@@ -366,6 +448,156 @@ def _confront_dating(result: HistoricalContext, stated: List[StatedDate]) -> Non
         model_year,
         bound.year,
         bound.offset,
+    )
+
+
+def _strip_generic_tail(run: str) -> str:
+    """Drop the words that name the KIND of place from a captured run's right
+    end — ``here in Valbourg City`` names Valbourg, not City."""
+    words = run.split()
+    while words and words[-1].lower() in _GENERIC_PLACE_WORDS:
+        words.pop()
+    return " ".join(words)
+
+
+def _document_venue_statements(text: str) -> List[Dict[str, Any]]:
+    """#3555 — where the DOCUMENT says it is being given, in text order.
+
+    Deterministic and deictic: only the forms that point at the place of the
+    speech act (``this … city of X``, ``here in X``, and their French twins)
+    count. No gazetteer and no list of places — the cue is a construction, so
+    a place the corpus has never seen is caught the same way. The ``offset``
+    is the place NAME's position, not the cue's: that is the position a
+    render can point a reader at, and the one #3555's measurement names.
+
+    The reading is deliberately narrow, and the pull request states what it
+    does not catch: an address such as ``people of X`` (measured naming
+    audiences the speaker is not among), a dateline or header line in any
+    other form, and a venue stated only in a language none of the cues cover.
+    """
+    if not text:
+        return []
+    statements: List[Dict[str, Any]] = []
+    seen_offsets = set()
+    for cue in _DOCUMENT_VENUE_CUES:
+        for match in cue.finditer(text):
+            name = _strip_generic_tail(match.group("name"))
+            if not name:
+                continue
+            start = match.start("name")
+            if start in seen_offsets:
+                continue
+            seen_offsets.add(start)
+            window_start = max(0, start - _PLACE_QUOTE_CONTEXT)
+            window_end = min(
+                len(text), start + len(match.group("name")) + _PLACE_QUOTE_CONTEXT
+            )
+            statements.append(
+                {
+                    "name": name,
+                    "offset": start,
+                    "quote": " ".join(text[window_start:window_end].split()),
+                }
+            )
+    statements.sort(key=lambda entry: entry["offset"])
+    return statements
+
+
+def _situation_place_candidates(situation: str) -> List[str]:
+    """#3555 — the places the historian's situation places the SPEECH at.
+
+    Read through the venitive prepositions and the explicit ``dans la ville
+    de`` form (see the two patterns above). This is a candidate list, not a
+    verdict: the confrontation below decides, and the state records what the
+    situation named.
+    """
+    if not situation:
+        return []
+    found: List[str] = []
+    matches = sorted(
+        [
+            m
+            for cue in (_SITUATION_VENUE_RE, _SITUATION_PLACE_KIND_RE)
+            for m in cue.finditer(situation)
+        ],
+        key=lambda m: m.start("name"),
+    )
+    for match in matches:
+        name = _strip_generic_tail(match.group("name"))
+        if not name or name in found:
+            continue
+        found.append(name)
+        if len(found) >= PLACE_MAX_CANDIDATES:
+            break
+    return found
+
+
+def _names_share(left: str, right: str) -> bool:
+    """Do two place names name the same place, as far as a reader can tell?
+
+    Equality, containment (``Port`` / ``Port Neuf``) or a common prefix of four
+    characters — the last one is the measured cross-language class: the same
+    city written in two languages, as an invented ``Valbourg`` / ``Valburg``
+    pair shows. Four characters is conservative on purpose: it can only
+    SUPPRESS a refutation, never create one (``Brienne`` / ``Brissac`` share
+    three and stay distinct).
+    """
+    left_l, right_l = left.lower(), right.lower()
+    if left_l == right_l or left_l in right_l or right_l in left_l:
+        return True
+    shorter = min(len(left_l), len(right_l))
+    if shorter < 4:
+        return False
+    return left_l[:4] == right_l[:4]
+
+
+def _confront_place(result: HistoricalContext, raw_text: str) -> None:
+    """#3555 — record a venue the document itself contradicts.
+
+    The dating's sibling (#3479), one level harder: a year is a token, a place
+    is a name. The check therefore leans on the document being POSITIVE — it
+    must state its own venue deictically — and on the situation placing the
+    speech somewhere else. A document that says nothing about where it was
+    given changes nothing; a situation that names no place changes nothing;
+    and a situation that shares a name with the document's venue changes
+    nothing (a city and its region are not a conflict). A false refutation is
+    worse than a missed one, the rule #3479 states for dates.
+
+    The whole ``raw_text`` is read, never the excerpt: the venue statement is
+    exactly what the reading window can leave out (measured on the cycle-7
+    document, both statements outside the historian's 4 361 characters).
+    """
+    statements = _document_venue_statements(raw_text)
+    if not statements:
+        return
+    candidates = _situation_place_candidates(result.situation)
+    if not candidates:
+        return
+    venue_tokens = [str(entry["name"]) for entry in statements]
+    for entry in statements:
+        venue_tokens.extend(str(entry["name"]).split())
+    if any(
+        _names_share(token, venue)
+        for candidate in candidates
+        for token in candidate.split()
+        for venue in venue_tokens
+    ):
+        return
+    first = statements[0]
+    result.place_degraded = True
+    result.place_model_places = candidates
+    result.place_document = {
+        "name": first["name"],
+        "quote": first["quote"],
+        "offset": first["offset"],
+        "statements": len(statements),
+    }
+    logger.info(
+        "Historian place degraded: document states its venue at %s (offset %d), "
+        "situation names %s — place refuted",
+        first["name"],
+        first["offset"],
+        ", ".join(candidates),
     )
 
 

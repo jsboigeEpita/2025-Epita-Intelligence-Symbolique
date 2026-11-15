@@ -3475,6 +3475,11 @@ def _write_historical_context_to_state(
     # state, so it is never written empty).
     if output.get("dating"):
         payload["dating"] = output["dating"]
+    # #3555 — same convention for the venue: written only when the
+    # deterministic confrontation fired, so an absent key is the consistent
+    # state and nothing downstream has to read an empty dict as a finding.
+    if output.get("place"):
+        payload["place"] = output["place"]
     if isinstance(state, dict):
         state["historical_context"] = payload
     elif hasattr(state, "historical_context"):
