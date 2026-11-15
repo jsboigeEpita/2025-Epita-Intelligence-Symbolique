@@ -14,7 +14,9 @@ What is witnessed:
 - the fidelity control tells the four kinds apart, and the recorded
   population SIZE decides between two populations that select the same units;
 - a state with no extracted argument has no population, anchors included;
-- the random controls are deterministic and bounded;
+- the random controls are deterministic and bounded, and the replay prints a
+  side control and an anywhere control, marking a selection that is exactly
+  the record instead of quoting its side control as chance (#3592);
 - the replay's totals never borrow a denominator from a document a variant
   does not have;
 - a bar on the first reading needs three draws;
@@ -599,7 +601,8 @@ class TestReplay:
     def test_an_unchanged_selection_scores_exactly_its_own_control(self):
         """Each passage is redrawn on its side of the record, so a selection
         that IS the record hits the redrawn passage exactly when it hit the
-        real one. Drawn anywhere, the control would sit strictly between."""
+        real one. Drawn anywhere it would sit strictly between; the variant
+        says so instead of letting the side number pass for chance (#3592)."""
         state = make_state()
         examined, left_out = examined_and_not(state)
         line = replay_selection.replay_document(
@@ -607,7 +610,58 @@ class TestReplay:
         )
         today = line["variants"]["today"]
         assert today["examined"] == 1
-        assert today["random"] == 1.0
+        assert today["random_side"] == 1.0
+        assert today["unchanged_selection"] is True
+        assert today["random_anywhere"] != today["examined"]
+
+    def test_the_recorded_line_carries_the_anywhere_control_alone(self):
+        """The side control redraws on the record's side, and the recorded
+        line IS the record: it would give back the count by construction, so
+        the line prints the passage drawn anywhere instead (#3592)."""
+        state = make_state()
+        examined, left_out = examined_and_not(state)
+        line = replay_selection.replay_document(
+            "doc_a", state, [sentence(examined), sentence(left_out)], draws=40
+        )
+        recorded = line["variants"]["recorded"]
+        assert "random_side" not in recorded
+        assert 0 < recorded["random_anywhere"] < 2
+
+    def test_a_different_selection_keeps_a_side_control_that_differs_from_its_count(
+        self,
+    ):
+        """The control of a CHANGE still varies with the selection: a forced
+        budget that selects other units is not marked unchanged, and its side
+        control does not collapse onto its count (#3592)."""
+        state = make_state()
+        examined, left_out = examined_and_not(state)
+        line = replay_selection.replay_document(
+            "doc_a",
+            state,
+            [sentence(examined), sentence(left_out)],
+            budgets=[11],
+            draws=40,
+        )
+        variant = line["variants"]["k=11"]
+        assert variant["unchanged_selection"] is False
+        assert variant["random_side"] != variant["examined"]
+
+    def test_the_run_prints_both_control_names_and_marks_an_unchanged_selection(
+        self, tmp_path, capsys
+    ):
+        state = make_state()
+        examined, left_out = examined_and_not(state)
+        row = {"kept": [m1(sentence(examined)), m1(sentence(left_out))]}
+        states_dir, consensus = write_cycle(tmp_path, {"doc_a": state}, {"doc_a": row})
+        argv = ["--states-dir", str(states_dir), "--passages-from", str(consensus)]
+        assert replay_selection.main(argv + ["--draws", "20"]) == 0
+        out = capsys.readouterr().out
+        assert "random-side = count, unchanged selection" in out
+        recorded_total = next(
+            line for line in out.splitlines() if line.startswith("TOTAL recorded:")
+        )
+        assert "random-anywhere" in recorded_total
+        assert "random-side" not in recorded_total
 
     def test_a_budget_as_large_as_the_population_examines_every_unit(self):
         state = make_state()
@@ -669,13 +723,30 @@ class TestReplay:
             {
                 "located": 7,
                 "variants": {
-                    "today": {"examined": 3, "random": 2.0, "selected": 10},
-                    "d1": {"examined": 5, "random": 2.5, "selected": 12},
+                    "today": {
+                        "examined": 3,
+                        "random_side": 2.0,
+                        "random_anywhere": 2.2,
+                        "selected": 10,
+                    },
+                    "d1": {
+                        "examined": 5,
+                        "random_side": 2.5,
+                        "random_anywhere": 2.8,
+                        "selected": 12,
+                    },
                 },
             },
             {
                 "located": 4,
-                "variants": {"today": {"examined": 1, "random": 1.0, "selected": 10}},
+                "variants": {
+                    "today": {
+                        "examined": 1,
+                        "random_side": 1.0,
+                        "random_anywhere": 1.4,
+                        "selected": 10,
+                    }
+                },
             },
         ]
         totals = replay_selection.totals(lines)

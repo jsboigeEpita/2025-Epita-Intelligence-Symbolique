@@ -24,11 +24,16 @@ Two controls decide whether a count means anything:
 - **fidelity** — the population that reproduces the recorded selection
   (``_common.resolve_population``). ``unfaithful`` means the replay does not
   reproduce the run: nothing on that line is a measure, and the exit code is 2.
-- **random** — the same passages redrawn elsewhere in the text, each on its
-  side of the record: a passage the recorded run did not examine is redrawn
-  where that run did not examine either (``_common.random_passage_expectation``
-  says why). A variant that examines 20 passages where random ones score 18
-  has found nothing.
+- **random** — every variant prints TWO controls under their own names.
+  ``random-side`` redraws each passage on its side of the record (a passage
+  the recorded run did not examine is redrawn where that run did not examine
+  either; ``_common.random_passage_expectation`` says why): the control of a
+  CHANGE, and on a selection that IS the record it gives back the count by
+  construction. ``random-anywhere`` draws it anywhere in the text: the chance
+  control of the recorded selection itself. The ``recorded`` line carries
+  ``random-anywhere`` alone; a variant whose selected unit ids are exactly
+  the record's prints ``random-side = count, unchanged selection`` instead of
+  a number, so it cannot be quoted as chance (#3592).
 
 The passages are the judge's kept M1 items on the central thesis
 (``--passages-from``: pass or consensus directories), or the rows of a tracer
@@ -110,27 +115,39 @@ def replay_variant(
     draws: int,
     rng: random.Random,
     recorded: Optional[Callable[[c.Span], bool]] = None,
+    recorded_ids: Optional[Sequence[str]] = None,
 ) -> Dict[str, Any]:
     """Today's selection on ``state`` at budget ``k``, scored on the passages.
 
-    ``recorded`` is the recorded run's own predicate: the random control
-    redraws each passage on its side of it.
+    Two controls, because they answer different questions. ``random_side``
+    redraws each passage on its side of the recorded run (``recorded``'s
+    predicate): the control of a CHANGE, and on a selection that IS the
+    record it gives back the count by construction. ``random_anywhere``
+    draws the passage anywhere in the text: the chance control of the
+    recorded selection itself. ``unchanged_selection`` says the selected unit
+    ids are exactly ``recorded_ids`` — the cell then refuses to print the
+    side number as chance (``_cell``).
     """
     ns = SimpleNamespace(**state)
     population = c.population_of(ns)
     selection = c.select(ns, population, k)
     selected = list(selection.selected)
     _units, starts = c.positioned_units(population)
+    text_length = len(state.get("raw_text") or "")
+
+    def hit(span: c.Span) -> bool:
+        return bool(c.units_overlapping(selected, span, starts))
+
     return {
         "examined": examined_count(selected, starts, passages),
-        "random": c.random_passage_expectation(
-            passages,
-            len(state.get("raw_text") or ""),
-            lambda span: bool(c.units_overlapping(selected, span, starts)),
-            draws,
-            rng,
-            recorded,
+        "random_side": c.random_passage_expectation(
+            passages, text_length, hit, draws, rng, recorded
         ),
+        "random_anywhere": c.random_passage_expectation(
+            passages, text_length, hit, draws, rng
+        ),
+        "unchanged_selection": recorded_ids is not None
+        and sorted(u.unit_id for u in selected) == sorted(recorded_ids),
         "selected": len(selected),
         "population": len(population),
     }
@@ -150,6 +167,8 @@ def replay_document(
     index = c.build_doc_index(doc, state)
     passages = [span for span in map(index.locate, quotes) if span is not None]
     recorded_units = [u for u in index.units if u.unit_id in index.examined]
+    record = c.recorded_selection(state)
+    recorded_ids = record[0] if record is not None else None
 
     def in_record(span: c.Span) -> bool:
         return bool(c.units_overlapping(recorded_units, span, index.starts))
@@ -157,16 +176,35 @@ def replay_document(
     variants: Dict[str, Dict[str, Any]] = {
         "recorded": {
             "examined": examined_count(recorded_units, index.starts, passages),
+            "random_anywhere": c.random_passage_expectation(
+                passages,
+                len(index.raw),
+                lambda span: bool(
+                    c.units_overlapping(recorded_units, span, index.starts)
+                ),
+                draws,
+                rng,
+            ),
             "selected": len(index.examined),
         },
-        "today": replay_variant(state, passages, None, draws, rng, in_record),
+        "today": replay_variant(
+            state, passages, None, draws, rng, in_record, recorded_ids
+        ),
     }
     for k in budgets:
-        variants[f"k={k}"] = replay_variant(state, passages, k, draws, rng, in_record)
+        variants[f"k={k}"] = replay_variant(
+            state, passages, k, draws, rng, in_record, recorded_ids
+        )
     moves_by_dir = moves_by_dir or {}
     for name, moves in moves_by_dir.items():
         variants[name] = replay_variant(
-            with_moves(state, moves), passages, None, draws, rng, in_record
+            with_moves(state, moves),
+            passages,
+            None,
+            draws,
+            rng,
+            in_record,
+            recorded_ids,
         )
     if len(moves_by_dir) >= 2:
         variants["union"] = replay_variant(
@@ -176,6 +214,7 @@ def replay_document(
             draws,
             rng,
             in_record,
+            recorded_ids,
         )
     return {
         "doc": doc,
@@ -210,20 +249,41 @@ def totals(lines: Sequence[Dict[str, Any]]) -> Dict[str, Dict[str, float]]:
         for name, variant in line["variants"].items():
             total = out.setdefault(
                 name,
-                {"examined": 0, "random": 0.0, "selected": 0, "located": 0, "docs": 0},
+                {
+                    "examined": 0,
+                    "random_side": 0.0,
+                    "random_anywhere": 0.0,
+                    "unchanged": 0,
+                    "selected": 0,
+                    "located": 0,
+                    "docs": 0,
+                },
             )
             total["examined"] += variant["examined"]
-            total["random"] += variant.get("random", 0.0)
+            total["random_side"] += variant.get("random_side", 0.0)
+            total["random_anywhere"] += variant.get("random_anywhere", 0.0)
+            total["unchanged"] += 1 if variant.get("unchanged_selection") else 0
             total["selected"] += variant["selected"]
             total["located"] += line["located"]
             total["docs"] += 1
     return out
 
 
+def _side_cell(unchanged: bool, value: float) -> str:
+    if unchanged:
+        return "random-side = count, unchanged selection"
+    return f"random-side {value:.1f}"
+
+
 def _cell(name: str, variant: Dict[str, Any], located: int) -> str:
     text = f"{name} {variant['examined']}/{located}"
-    if "random" in variant:
-        text += f" (random {variant['random']:.1f})"
+    if name == "recorded":
+        text += f" (random-anywhere {variant['random_anywhere']:.1f})"
+    else:
+        side = _side_cell(
+            variant.get("unchanged_selection", False), variant["random_side"]
+        )
+        text += f" ({side}, random-anywhere {variant['random_anywhere']:.1f})"
     return f"{text} units={variant['selected']}"
 
 
@@ -285,13 +345,24 @@ def main(argv: Optional[List[str]] = None) -> int:
             f"passages={line['located']}/{line['quotes']} | {cells}"
         )
     for name, total in totals(lines).items():
-        ratio = (
-            f" x{total['examined'] / total['random']:.2f}" if total["random"] else ""
-        )
-        tail = f" (random {total['random']:.1f}{ratio})" if name != "recorded" else ""
+        doc_count = int(total["docs"])
+        anywhere = total["random_anywhere"]
+        ratio = f" x{total['examined'] / anywhere:.2f}" if anywhere else ""
+        parts: List[str] = []
+        if name != "recorded":
+            if total["unchanged"] and total["unchanged"] == doc_count:
+                parts.append("random-side = count, unchanged selection")
+            else:
+                side = f"random-side {total['random_side']:.1f}"
+                if total["unchanged"]:
+                    side += (
+                        f" (unchanged on {int(total['unchanged'])}/{doc_count} docs)"
+                    )
+                parts.append(side)
+        parts.append(f"random-anywhere {anywhere:.1f}{ratio}")
         print(
-            f"TOTAL {name}: {int(total['examined'])}/{int(total['located'])}{tail} "
-            f"units={int(total['selected'])} docs={int(total['docs'])}"
+            f"TOTAL {name}: {int(total['examined'])}/{int(total['located'])} "
+            f"({', '.join(parts)}) units={int(total['selected'])} docs={doc_count}"
         )
     unfaithful = [
         line["doc"] for line in lines if line["fidelity"] == c.POPULATION_UNFAITHFUL
