@@ -319,7 +319,7 @@ class TestTheOneShotAbstention:
         plugin.llm_service.get_chat_message_content = AsyncMock(
             return_value=self._reply()
         )
-        await plugin._run_one_shot(SCENE_LINE, None)
+        await plugin._run_one_shot(SCENE_LINE, None, allow_no_proposition=True)
         history = plugin.llm_service.get_chat_message_content.call_args.kwargs.get(
             "chat_history"
         )
@@ -328,6 +328,29 @@ class TestTheOneShotAbstention:
         assert (
             "no proposition at all" in served
         ), "the served prompt never offers the abstention"
+
+    @pytest.mark.asyncio
+    async def test_the_document_prompt_stays_byte_identical(self):
+        """The abstention is offered ONLY to the per-argument call: without
+        the flag the served prompt equals the pre-#3584 one, so no recorded
+        replay key moves (#3416/#3428 rule). Measured cause: an
+        unconditional clause moved a document one-shot cassette and the
+        replay band reddened on a subprocess call the anti-vacuity gate
+        cannot see."""
+        plugin = _plugin()
+        plugin.llm_service.get_chat_message_content = AsyncMock(
+            return_value=self._reply(
+                fallacy_name="Argument circulaire", taxonomy_pk="411"
+            )
+        )
+        await plugin._run_one_shot(SCENE_LINE, None)
+        history = plugin.llm_service.get_chat_message_content.call_args.kwargs.get(
+            "chat_history"
+        )
+        served = " ".join(str(m.content) for m in history.messages)
+        assert (
+            "no proposition at all" not in served
+        ), "the document one-shot must not carry the abstention clause"
 
     @pytest.mark.asyncio
     async def test_a_real_fallacy_still_files(self):

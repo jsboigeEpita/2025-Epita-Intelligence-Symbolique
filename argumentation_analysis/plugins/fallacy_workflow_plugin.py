@@ -2231,6 +2231,7 @@ class FallacyWorkflowPlugin:
         use_one_shot: bool = False,
         document_statements: Optional[Any] = None,
         document_frame: Optional[Any] = None,
+        allow_no_proposition: bool = False,
     ) -> Annotated[str, "JSON result with identified fallacies"]:
         """Execute hierarchical fallacy detection with one-shot fallback.
 
@@ -2266,6 +2267,13 @@ class FallacyWorkflowPlugin:
         keeps every prompt byte-identical to the pre-#3428 path — a unit
         whose provenance carries no offset gets no window, not an invented
         one.
+
+        #3584 — ``allow_no_proposition`` offers the one-shot's abstention
+        (answer "none" when the passage holds no proposition at all). It is
+        the PER-ARGUMENT caller that sets it: the measured defect is a unit
+        filed at 0.98-0.99 whose own justification said the passage holds
+        nothing. Unset keeps the document prompt byte-identical to the
+        pre-#3584 one, so no recorded replay key moves (#3416/#3428 rule).
         """
         file_handler = self._attach_trace_handler(trace_log_path)
 
@@ -2283,7 +2291,10 @@ class FallacyWorkflowPlugin:
             if use_one_shot:
                 return self._mark_regime(
                     await self._run_one_shot(
-                        argument_text, _statements, document_frame=_frame
+                        argument_text,
+                        _statements,
+                        document_frame=_frame,
+                        allow_no_proposition=allow_no_proposition,
                     ),
                     "one_shot",
                 )
@@ -2296,7 +2307,10 @@ class FallacyWorkflowPlugin:
                 )
                 _fallback = self._mark_fallback(
                     await self._run_one_shot(
-                        argument_text, _statements, document_frame=_frame
+                        argument_text,
+                        _statements,
+                        document_frame=_frame,
+                        allow_no_proposition=allow_no_proposition,
                     )
                 )
                 return self._mark_regime(_fallback, "one_shot")
@@ -2647,6 +2661,7 @@ class FallacyWorkflowPlugin:
         argument_text: str,
         document_statements: Optional[Any] = None,
         document_frame: Optional[Any] = None,
+        allow_no_proposition: bool = False,
     ) -> str:
         """Fallback one-shot analysis — sends compact taxonomy to LLM.
 
@@ -2734,6 +2749,7 @@ class FallacyWorkflowPlugin:
                     kernel=kernel,
                     settings=settings,
                     statements=_statements,
+                    allow_no_proposition=allow_no_proposition,
                 )
                 for chunk_text in planned
             ]
@@ -2808,6 +2824,7 @@ class FallacyWorkflowPlugin:
         kernel: Any,
         settings: Any,
         statements: List[str],
+        allow_no_proposition: bool = False,
     ) -> Dict[str, Any]:
         """One one-shot call over one chunk — #2850 lot 10's per-chunk unit.
 
@@ -2816,7 +2833,33 @@ class FallacyWorkflowPlugin:
         what the run answers. Every non-detection keeps the envelope it
         returned before (#3391 register, #3416 refutation), so a chunk's
         verdict about the text is never lost in the merge.
+
+        #3584 — ``allow_no_proposition`` offers the abstention half of the
+        contract ONLY where the measured defect lives: the per-argument
+        one-shot, whose unit may hold no proposition (a heading that passed
+        the writer's form gate, a bare context note). A whole document is
+        read for its fallacies, not judged as a proposition, so the
+        document one-shot keeps its pre-#3584 prompt BYTE FOR BYTE and no
+        recorded replay key moves — the same rule as #3416/#3428.
         """
+        # #3584 — the abstention the per-argument contract lacked. Measured:
+        # the one-shot had to name a fallacy whatever the unit held, so a
+        # bracketed scene line drew a 0.98-0.99 detection whose own
+        # justification said the passage holds no proposition. This is NOT a
+        # looser judge: an appeal that IS disproportionate still files; only
+        # a passage with NO proposition at all may answer "none", and such
+        # an answer records no detection.
+        abstention = (
+            "If the passage holds no proposition at all - no claim, no "
+            "reasoning, nothing anyone asserts (a stage direction, a scene "
+            "line, a speaker tag, an audience reaction standing alone, a "
+            "timestamp, a bare context note) - answer "
+            '{"fallacy_name": "none", "taxonomy_pk": "", '
+            '"explanation": "why the passage holds no proposition", '
+            '"confidence": 0.0}. Such an answer records NO fallacy.\n'
+            if allow_no_proposition
+            else ""
+        )
         prompt = (
             f"Analyze the following text:\n--- TEXT ---\n{windowed_text}\n--- END TEXT ---\n"
             f"{statement_block}{frame_block}\n"
@@ -2850,20 +2893,7 @@ class FallacyWorkflowPlugin:
             "When the text revises or restricts its own preceding wording, "
             "that revision is not a false implication of the wording it "
             "corrects: do not flag it.\n"
-            # #3584 — the abstention the contract lacked. Measured: the
-            # one-shot had to name a fallacy whatever the passage held, so a
-            # bracketed scene line drew a 0.98-0.99 detection whose own
-            # justification said the passage holds no proposition. This is
-            # NOT a looser judge: an appeal that IS disproportionate still
-            # files; only a passage with NO proposition at all may answer
-            # "none", and such an answer records no detection.
-            "If the passage holds no proposition at all - no claim, no "
-            "reasoning, nothing anyone asserts (a stage direction, a scene "
-            "line, a speaker tag, an audience reaction standing alone, a "
-            "timestamp, a bare context note) - answer "
-            '{"fallacy_name": "none", "taxonomy_pk": "", '
-            '"explanation": "why the passage holds no proposition", '
-            '"confidence": 0.0}. Such an answer records NO fallacy.\n'
+            f"{abstention}"
             f"{caveat}{frame_instruction}"
             "Respond with ONLY a JSON object: "
             '{"fallacy_name": "...", "taxonomy_pk": "...", "explanation": "...", '
