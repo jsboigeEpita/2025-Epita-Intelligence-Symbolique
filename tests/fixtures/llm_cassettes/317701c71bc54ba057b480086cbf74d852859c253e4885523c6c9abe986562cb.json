@@ -1,0 +1,48 @@
+{
+  "key": "317701c71bc54ba057b480086cbf74d852859c253e4885523c6c9abe986562cb",
+  "value": {
+    "id": "chatcmpl-EkNqqljLTn7dEYdggRzasQPFm9kdF",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"La chaîne avance que personne n’a proposé de supprimer les retraites, que les réformes envisagées diffèrent et qu’une projection de déficit de 2,3 % du PIB en 2030 est invoquée, puis conclut que la présentation du gouvernement est trompeuse. Le verdict est un saut logique : ces prémisses ne suffisent pas à établir que le gouvernement caricature l’opposition ni que ses projections rendent sa présentation trompeuse.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794723480,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 159,
+      "prompt_tokens": 310,
+      "total_tokens": 469,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 46,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

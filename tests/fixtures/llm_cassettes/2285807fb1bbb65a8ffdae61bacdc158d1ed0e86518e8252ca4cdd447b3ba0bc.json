@@ -1,0 +1,48 @@
+{
+  "key": "2285807fb1bbb65a8ffdae61bacdc158d1ed0e86518e8252ca4cdd447b3ba0bc",
+  "value": {
+    "id": "chatcmpl-EkO22x9ZbEnh1RwZ2VWW2idF0XwtG",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. La peine de mort est irréversible, de sorte qu’une erreur judiciaire est fatale.\\n2. Le coût des appels et des procédures est souvent supérieur à celui de l’emprisonnement à vie.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794724174,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 104,
+      "prompt_tokens": 222,
+      "total_tokens": 326,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 46,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

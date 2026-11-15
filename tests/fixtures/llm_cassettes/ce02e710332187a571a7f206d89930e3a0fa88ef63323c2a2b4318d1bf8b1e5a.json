@@ -1,0 +1,48 @@
+{
+  "key": "ce02e710332187a571a7f206d89930e3a0fa88ef63323c2a2b4318d1bf8b1e5a",
+  "value": {
+    "id": "chatcmpl-EkO1cCSG7etaLx4nsjiGWZQmsJrxW",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"La peine de mort est justifiée, notamment parce que certains criminels sont irrécupérables et représentent un danger permanent pour la société, et parce que son coût peut être inférieur à celui de l'emprisonnement à vie malgré le risque d'erreur irréversible.\",\"digressions\":\"\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794724148,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 243,
+      "prompt_tokens": 268,
+      "total_tokens": 511,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 162,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

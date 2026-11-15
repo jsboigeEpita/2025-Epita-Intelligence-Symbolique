@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "## 🕯️ Nouvelle enquête : *Le meurtre du Manoir Tudor*\n\nUn orage éclate au-dessus du manoir. À **23 h 17**, les lumières s’éteignent brusquement. Quelques secondes plus tard, un cri retentit dans l’aile est.\n\nLorsque les bougies sont rallumées, **Sir Alistair Tudor**, propriétaire des lieux, est retrouvé mort dans la **bibliothèque**, affaissé derrière son bureau. Une fine plaie est visible au niveau du cœur. La porte était verrouillée de l’intérieur… mais une fenêtre donne sur les jardins détrempés.\n\n### Les personnes présentes\n\n- **Lady Eleanor Tudor**, l’épouse de la victime  \n- **Victor Tudor**, son neveu endetté  \n- **Dr Clara Whitmore**, médecin de famille  \n- **Edmund Graves**, le majordome  \n- **Margaret Bell**, gouvernante du manoir  \n- **Professeur Lionel Ashcroft**, vieil ami de Sir Alistair  \n\n### Premiers éléments sur la scène\n\n- Un **verre de brandy brisé** près du bureau  \n- Une **page arrachée** dans le grand livre familial  \n- Une horloge arrêtée à **23 h 12**  \n- Des traces de boue près de la fenêtre  \n- Une odeur étrange d’**amande amère** dans la pièce  \n- L’arme du crime ne se trouve pas sur les lieux  \n\nTous les invités sont réunis dans le grand salon, sous surveillance.\n\n**Votre enquête commence.**  \nVous pouvez examiner la bibliothèque, interroger un suspect ou inspecter les jardins.",
+      "content": "## 🕵️ Nouvelle enquête : **Le meurtre du Manoir Tudor**\n\nUne pluie glaciale s’abat sur le manoir. À **22 h 17**, toutes les lumières s’éteignent brusquement. Lorsque le courant revient, le maître des lieux, **Sir Edmund Tudor**, est retrouvé mort dans la bibliothèque.\n\nLa porte était verrouillée de l’intérieur. Une fenêtre est entrouverte, mais la boue du jardin ne porte aucune empreinte.\n\n### La victime\n**Sir Edmund Tudor**, 62 ans, propriétaire du manoir.  \nCause apparente : un violent coup porté à la tête avec un objet lourd.\n\n### Les suspects présents\n- **Lady Victoria Tudor**, son épouse, très calme malgré le drame.\n- **Arthur Tudor**, son fils, couvert de dettes.\n- **Clara Bell**, la gouvernante, au service de la famille depuis vingt ans.\n- **Dr Henry Blackwood**, médecin et vieil ami de Sir Edmund.\n- **Eleanor Graves**, journaliste invitée au manoir.\n- **James Finch**, le majordome, qui affirme avoir découvert le corps.\n\n### Les premiers éléments\n- Une horloge de cheminée est arrêtée à **22 h 05**.\n- Un verre de whisky brisé gît près du bureau.\n- Une page a été arrachée du journal intime de la victime.\n- Le lourd **chandelier en bronze** a disparu de la bibliothèque.\n- Une odeur de fumée flotte dans le couloir ouest.\n\nL’orage bloque les routes. Le meurtrier est nécessairement encore au manoir.\n\n**Votre enquête commence.**  \nQue souhaitez-vous examiner en premier : **la bibliothèque**, **les suspects**, **le couloir ouest** ou **la chronologie des événements** ?",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkH77IkVU1WJFLPGaBtGNN5S9jla1",
-        "created": 1794697581,
+        "id": "chatcmpl-EkNytz65FHvjXQ55Yhm8iWY5Z3Rku",
+        "created": 1794723979,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 29,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 425,
+          "completion_tokens": 437,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 76,
+            "reasoning_tokens": 61,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

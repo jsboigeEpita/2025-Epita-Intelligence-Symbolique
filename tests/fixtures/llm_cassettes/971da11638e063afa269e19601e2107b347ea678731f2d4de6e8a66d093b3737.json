@@ -1,0 +1,48 @@
+{
+  "key": "971da11638e063afa269e19601e2107b347ea678731f2d4de6e8a66d093b3737",
+  "value": {
+    "id": "chatcmpl-EkNqhKFyvX8J7x4am7LxfAlX2KSz1",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_chain\":true,\"premises\":\"Personne n’a proposé de supprimer les retraites, mais seulement de les réformer différemment ; la projection d’un déficit de 2,3 % du PIB en 2030 repose sur une hypothèse de croissance optimiste de 1,8 % par an ; l’appel à l’émotion (« pensez à vos enfants ») détourne l’attention des questions techniques de financement.\",\"conclusion\":\"La présentation du gouvernement est trompeuse : elle caricature la position de l’opposition et s’appuie sur des projections fragiles ainsi que sur un appel à l’émotion plutôt que sur un débat technique solide.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794723471,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 499,
+      "prompt_tokens": 338,
+      "total_tokens": 837,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 353,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

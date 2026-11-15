@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"exists X: (Idee(X) && Incolore(X) && Verte(X) && DortFurieusement(X))\"\n  ],\n  \"predicates\": {\n    \"Idee\": \"est une idée\",\n    \"Incolore\": \"est incolore\",\n    \"Verte\": \"est verte\",\n    \"DortFurieusement\": \"dort furieusement\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"L'expression indéfinie « d'incolores idées vertes » introduit l'existence d'au moins une entité X qui est une idée, qui est incolore et verte. Le prédicat « DortFurieusement(X) » représente le fait que cette idée dort furieusement. La formule ne traite pas l'incohérence sémantique apparente entre « incolore » et « verte » : elle la formalise simplement comme une conjonction de propriétés.\"\n}",
+      "content": "{\n  \"formulas\": [\n    \"exists X: (Idee(X) && Incolore(X) && Vert(X) && DortFurieusement(X))\"\n  ],\n  \"predicates\": {\n    \"Idee\": \"est une idée\",\n    \"Incolore\": \"est incolore\",\n    \"Vert\": \"est vert\",\n    \"DortFurieusement\": \"dort furieusement\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La phrase affirme l'existence d'au moins une idée qui est à la fois incolore et verte, et qui dort furieusement. L'étrangeté sémantique de l'énoncé n'est pas une contradiction logique en FOL, sauf si l'on ajoute des axiomes stipulant qu'une idée ne peut pas être incolore et verte simultanément.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkH4vAO8Vc9ozRH6JPkHSumeSTB2y",
-        "created": 1794697445,
+        "id": "chatcmpl-EkNwcGBNqtDouHWKm8z8VzSKMUX3l",
+        "created": 1794723838,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 286,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 551,
+          "completion_tokens": 608,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 327,
+            "reasoning_tokens": 409,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

@@ -1,0 +1,48 @@
+{
+  "key": "6bc970b254a3ca4f3fab9d72d788611704384a167a4cbdfd272be2927018ce79",
+  "value": {
+    "id": "chatcmpl-EkNqQRMt3WrZSaro68Bl8ZtTLJf4d",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_digression\":true,\"relevance_verdict\":\"digression_localisée\",\"located_digression\":\"La présentation des chiffres du déficit atteignant 2,3 % du PIB en 2030 et la critique des hypothèses de croissance optimistes de 1,8 % par an ; le recours à l’argument « pensez à vos enfants », présenté comme un appel à l’émotion.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794723454,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 367,
+      "prompt_tokens": 460,
+      "total_tokens": 827,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 275,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

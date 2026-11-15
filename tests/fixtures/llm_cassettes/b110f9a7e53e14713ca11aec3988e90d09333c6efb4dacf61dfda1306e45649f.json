@@ -1,14 +1,14 @@
 {
   "key": "b110f9a7e53e14713ca11aec3988e90d09333c6efb4dacf61dfda1306e45649f",
   "value": {
-    "id": "chatcmpl-EkGz8FKAmm43jvnoJTgaH6sukt6ln",
+    "id": "chatcmpl-EkNqFAiwouZFWMXCAfB2CNBXP5Yud",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Jargon technique non défini : « argument d’autorité » n’est pas expliqué.\"}",
+          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Jargon technique non défini : « argument d’autorité » est un terme spécialisé utilisé sans explication. Aucun problème d’anaphore non résolvable ni de phrase trop emboîtée.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794697086,
+    "created": 1794723443,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 215,
+      "completion_tokens": 304,
       "prompt_tokens": 270,
-      "total_tokens": 485,
+      "total_tokens": 574,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 175,
+        "reasoning_tokens": 243,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

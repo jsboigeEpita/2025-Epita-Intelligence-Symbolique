@@ -1,14 +1,14 @@
 {
   "key": "2eb9871d1eac16f8bb4e46ba6c2994ccbede8ca4d12f862b801c6a6f0d5a374b",
   "value": {
-    "id": "chatcmpl-EkGzIsggM1bwhvb775p01C2HVAIMx",
+    "id": "chatcmpl-EkNqQqr2bXM5jnzhhXo2WrqrPH1Mh",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"La réforme des retraites n'est pas nécessaire simplement parce que tous les pays européens l'ont adoptée, car les différences structurelles entre les systèmes doivent être prises en compte.\",\"main_thesis\":\"La réforme des retraites est nécessaire parce que tous les pays européens l'ont déjà adoptée.\"}",
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"La réforme des retraites est nécessaire parce que tous les pays européens l'ont déjà adoptée.\",\"main_thesis\":\"L'argument du Premier ministre ne tient pas, car il s'appuie sur un argument d'autorité et ne prend pas en compte les différences structurelles entre les systèmes de retraite.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794697096,
+    "created": 1794723454,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 74,
+      "completion_tokens": 223,
       "prompt_tokens": 272,
-      "total_tokens": 346,
+      "total_tokens": 495,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 0,
+        "reasoning_tokens": 141,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

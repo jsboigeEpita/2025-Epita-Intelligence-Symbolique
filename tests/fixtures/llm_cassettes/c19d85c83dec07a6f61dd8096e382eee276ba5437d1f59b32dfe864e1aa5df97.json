@@ -1,0 +1,48 @@
+{
+  "key": "c19d85c83dec07a6f61dd8096e382eee276ba5437d1f59b32dfe864e1aa5df97",
+  "value": {
+    "id": "chatcmpl-EkNqUlxD2FUce0TVX7ISIRSraxxut",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse porte sur la réforme des retraites plutôt que leur suppression. L’argument s’en écarte ponctuellement avec la présentation du déficit prévu, la critique des hypothèses de croissance optimistes et la remarque sur l’appel à l’émotion, mais ces digressions restent liées au débat sur les retraites.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794723458,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 241,
+      "prompt_tokens": 315,
+      "total_tokens": 556,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 155,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

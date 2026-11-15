@@ -1,14 +1,14 @@
 {
   "key": "f75fd729a8b27645981fab007843e52dfda2157ce5569f20d29e34fa70369c4d",
   "value": {
-    "id": "chatcmpl-EkH60gnvCWM1WI5NwzXlMgnngzCIk",
+    "id": "chatcmpl-EkNxoP40t2wZoI4CIfKhDxVLdLgHd",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"distinct_points\":\"1. Organiser un tournoi inter-villes avec buffet et prix pour 2000 euros afin d’accroître la visibilité du club et de recruter de nouveaux membres.\\n2. Investir les 2000 euros dans du matériel pédagogique, notamment des échiquiers neufs, des horloges et des supports de cours, parce que les échiquiers actuels sont usés.\"}",
+          "content": "{\"distinct_points\":\"1. Organiser un tournoi inter-villes avec buffet et prix pour 2 000 euros afin d’accroître la visibilité du club.\\n2. Cette organisation permettrait de recruter de nouveaux membres.\\n3. Investir les 2 000 euros dans du matériel pédagogique, des échiquiers neufs, des horloges et des supports de cours, car les échiquiers actuels sont usés.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794697512,
+    "created": 1794723912,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 151,
+      "completion_tokens": 247,
       "prompt_tokens": 282,
-      "total_tokens": 433,
+      "total_tokens": 529,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 57,
+        "reasoning_tokens": 146,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "Hypothèse : **La Terre effectue une révolution autour du Soleil**, ce qui explique notamment la succession des saisons et les variations apparentes de la position du Soleil dans le ciel au cours de l’année.",
+      "content": "**Hypothèse :** La Terre tourne autour du Soleil sur une orbite, ce qui explique les variations apparentes de sa position dans le ciel et les changements de saisons.",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkH72qGbg7dx3mbdwlrd2rHbrWbmd",
-        "created": 1794697576,
+        "id": "chatcmpl-EkNymJ7B2ODcieRNdI4bn7dNj125l",
+        "created": 1794723972,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 41,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 113,
+          "completion_tokens": 83,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 62,
+            "reasoning_tokens": 38,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

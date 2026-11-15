@@ -1,0 +1,48 @@
+{
+  "key": "8d7a9d1bc1bd27b04283eb7624b37cf12d12953b995820b21d82231a0ae7c0da",
+  "value": {
+    "id": "chatcmpl-EkO1n6UCXexhxEvfwYgUDC6rDQYQW",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La thèse affirme que la peine de mort est justifiée et devrait être maintenue, en invoquant deux arguments directement pertinents : les progrès de l’ADN réduisent le risque d’erreur judiciaire et la peine de mort dissuade les crimes. Aucune digression n’est identifiée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794724159,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 118,
+      "prompt_tokens": 282,
+      "total_tokens": 400,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 36,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

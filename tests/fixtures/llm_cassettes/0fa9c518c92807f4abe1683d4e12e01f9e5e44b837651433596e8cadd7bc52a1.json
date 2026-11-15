@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_SHfV8PCdTE8jZQuaDODnzbgq",
+          "id": "call_Yr8nfg1o3QnfWkPz7vQbpaoI",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"73\",\"matches\":true,\"confidence\":\"high\",\"justification\":\"Les deux arguments traitent l’autorité et l’expertise comme suffisantes en elles-mêmes : l’un affirme que l’unanimité des experts rend nécessairement la proposition vraie, l’autre exclut tout avis non expert sans examiner ses raisons. Cela correspond à une obéissance aveugle à une autorité supposée suprême.\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"73\",\"confidence\":\"high\",\"matches\":true,\"justification\":\"Les deux arguments traitent l’autorité ou l’expertise comme une validation suffisante : le premier infère la vérité du seul consensus des experts, et le second exclut l’avis des non-experts sans examiner leurs raisons. Cela relève d’un recours à une autorité jugée suprême, sans justification indépendante.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkH2L4W6niT0EMr3ut22fm9x0JWd0",
-        "created": 1794697285,
+        "id": "chatcmpl-EkNtMacf2ZzDAv8YdbgTcYXNHbUiG",
+        "created": 1794723636,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2042,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 107,
+          "completion_tokens": 104,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

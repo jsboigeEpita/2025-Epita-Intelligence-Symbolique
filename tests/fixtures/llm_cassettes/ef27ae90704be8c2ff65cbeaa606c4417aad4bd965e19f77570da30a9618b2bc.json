@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_JFJ9Rp3NGuIKFoIxOCpiIOXc",
+          "id": "call_vaV6IbYOjK21UTKu0HegVjWC",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"1378\",\"matches\":true,\"justification\":\"Les deux arguments évaluent la validité d'une proposition selon le statut d'expert ou de non-expert de la personne qui s'exprime, plutôt que d'examiner les raisons et les preuves. L'unanimité supposée des experts et l'exclusion de l'avis des non-experts constituent bien un appel à l'identité.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"1378\",\"matches\":true,\"justification\":\"Le texte évalue la validité d'une proposition selon l'identité ou le statut des personnes : l'unanimité des experts est utilisée comme preuve suffisante (« c'est donc vrai »), puis l'avis des non-experts est disqualifié en raison de leur appartenance à cette catégorie, sans examiner les arguments eux-mêmes.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkH2WMtI6dQ3h8LfqLvzNnH4ENBtC",
-        "created": 1794697296,
+        "id": "chatcmpl-EkNu3hOALMOUyr9DfLabXPy4fFZLa",
+        "created": 1794723679,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1389,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 111,
+          "completion_tokens": 107,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

@@ -1,0 +1,48 @@
+{
+  "key": "f83a3a701876a8ec9fef8079844ceca9eb28244fe1494b475a086a860296f9b0",
+  "value": {
+    "id": "chatcmpl-EkO12UQpbhlq32FEkxz7JVLCKRK6J",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Les points 1, 2 et 3 apportent des fonctions distinctes : affirmation initiale, éléments empiriques contraires et critique des opposants. Les points 2 et 3 se recoupent toutefois autour de la solidité de la recherche scientifique. Le point 4 est incomplet et ne permet pas d’identifier une idée supplémentaire.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794724112,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 213,
+      "prompt_tokens": 296,
+      "total_tokens": 509,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 120,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

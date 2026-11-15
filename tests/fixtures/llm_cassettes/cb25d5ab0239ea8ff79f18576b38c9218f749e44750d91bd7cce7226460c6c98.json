@@ -1,0 +1,48 @@
+{
+  "key": "cb25d5ab0239ea8ff79f18576b38c9218f749e44750d91bd7cce7226460c6c98",
+  "value": {
+    "id": "chatcmpl-EkNvjnBg93WEq6oEO16W4EQdOxpqF",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.62,\"fairness_assessment\":\"Une décision par classement multicritère ou vote préférentiel permet de comparer visibilité, apprentissage, impact durable et faisabilité sans donner automatiquement priorité à un seul objectif. Un compromis ajustable est plus équitable qu'une division strictement égale du budget.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"agent_1\",\"position\":\"Favorable à l'option A, un tournoi inter-villes avec buffet et prix pour accroître la visibilité du club.\",\"influence\":0.33},{\"agent\":\"agent_2\",\"position\":\"Favorable à l'option B, un investissement complet dans le matériel pédagogique et les échiquiers.\",\"influence\":0.33},{\"agent\":\"agent_3\",\"position\":\"Favorable à l'option C, un format hybride combinant tournoi réduit et achat de matériel.\",\"influence\":0.34}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"Les trois positions poursuivent des objectifs légitimes et aucun argument ne domine clairement, comme l'indiquent le débat nul et les critiques réciproques. Il est recommandé d'utiliser un vote préférentiel ou multicritère, précédé d'une estimation concrète de l'impact de chaque option, puis de retenir une formule hybride modulable plutôt qu'un partage arbitrairement égal. La décision devrait inclure un plan de communication et des indicateurs d'évaluation afin de vérifier la visibilité réellement générée par le tournoi.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794723783,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 398,
+      "prompt_tokens": 562,
+      "total_tokens": 960,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 73,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,14 +1,14 @@
 {
   "key": "218fa7d4638ac43334e5cc32442d88ca0f6ffecc7b040cc4a3e095e427365add",
   "value": {
-    "id": "chatcmpl-EkH9zZa8KPkaulxW3PrH7gdfVBK1b",
+    "id": "chatcmpl-EkO1at5otMxL2hkyZ01QGmRgjBSTK",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Anaphore non résolvable : « Elle » n’a pas d’antécédent explicite et son référent est ambigu. Aucun jargon technique non défini ni phrase excessivement emboîtée.\"}",
+          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Anaphore non résolvable : « Elle » n’a pas d’antécédent explicite dans le texte ; on peut supposer qu’il s’agit de la peine de mort, mais celle-ci n’est pas mentionnée directement. Aucun jargon technique non défini ni phrase excessivement emboîtée.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794697759,
+    "created": 1794724146,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 215,
+      "completion_tokens": 173,
       "prompt_tokens": 287,
-      "total_tokens": 502,
+      "total_tokens": 460,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 152,
+        "reasoning_tokens": 89,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

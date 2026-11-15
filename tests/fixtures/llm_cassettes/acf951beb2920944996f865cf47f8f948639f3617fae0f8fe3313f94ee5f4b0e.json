@@ -1,0 +1,48 @@
+{
+  "key": "acf951beb2920944996f865cf47f8f948639f3617fae0f8fe3313f94ee5f4b0e",
+  "value": {
+    "id": "chatcmpl-EkNqoerYwhpaVeNHF6KIGPfU1IO90",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Les syndicats contestent l’idée que travailler plus longtemps soit naturellement justifié par un prétendu « ordre des choses », y voyant un sophisme naturaliste du gouvernement.\\n2. L’affirmation selon laquelle le système s’effondrera dans cinq ans si aucune mesure n’est prise maintenant constitue un appel classique à la peur.\\n3. Le ministre des Finances prévoit que le déficit atteindra 2,3 % du PIB d’ici 2030.\\n4. Cette projection du déficit repose sur des hypothèses de croissance optimistes, à savoir 1,8 % par an.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794723478,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 238,
+      "prompt_tokens": 300,
+      "total_tokens": 538,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 100,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

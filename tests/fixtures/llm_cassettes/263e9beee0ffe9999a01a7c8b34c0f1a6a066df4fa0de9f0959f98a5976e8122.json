@@ -1,0 +1,48 @@
+{
+  "key": "263e9beee0ffe9999a01a7c8b34c0f1a6a066df4fa0de9f0959f98a5976e8122",
+  "value": {
+    "id": "chatcmpl-EkNxUfrk7aFlPLRnK022yMKiUEgDx",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La thèse défend l’option B, qui consiste à investir les 2000 euros dans du matériel pédagogique en raison de l’usure des échiquiers. Les digressions sont localisées dans la présentation de l’option A, tournoi inter-villes avec buffet et prix, et de l’option C, répartition du budget entre un tournoi réduit.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794723892,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 220,
+      "prompt_tokens": 326,
+      "total_tokens": 546,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 125,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
