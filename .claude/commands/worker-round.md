@@ -96,7 +96,9 @@ roosync_dashboard(action: "read", type: "workspace")
 roosync_messages(action: "inbox", format: "markdown", status: "unread")
 ```
 
-Lire le contenu COMPLET. Identifier :
+Lire le contenu COMPLET, sauf un message porteur de pièce jointe : son sujet dit « NE PAS
+OUVRIR ». Le marquer lu détruit la pièce jointe. Le dispatch qui l'accompagne donne son uuid :
+`attachments_get(uuid, targetPath)` d'abord, sha256 ensuite, ouverture en dernier. Identifier :
 - Messages **[DISPATCH]** du coordinateur → action immédiate
 - Messages **[DONE]** des autres workers → vérifier et ACK
 - Messages **[ASK]** sans [REPLY] → répondre AVANT de travailler
