@@ -1000,6 +1000,25 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             optional=True,
             timeout_seconds=180,
         )
+        # L2e — #2928: the Dung-arbitration stage, wired as a STATEMENT, never
+        # a filter (coordinator decision 13/11: 8 of 9 cycle-6 documents carry
+        # contested detections). The stage joins spectacular WITHOUT the neural
+        # tier — its only source is the hierarchical pass's per-argument
+        # detections, and the verdict it files never touches the report's
+        # detections: the state writer records a ``dung_arbitration`` framework
+        # and Act II renders which detections a rival family contests on the
+        # same unit, and which contests the stage leaves undecided. The
+        # ``parameters`` overlay (#2928) is what turns the selector ON for
+        # THIS phase's invoke only — the callable's default stays OFF, so no
+        # other workflow's invocation of the capability changes behavior.
+        .add_phase(
+            "dung_arbitration",
+            capability="dung_arbitration",
+            depends_on=["hierarchical_fallacy"],
+            optional=True,
+            parameters={"dung_arbitration": True},
+            timeout_seconds=60,
+        )
         # L3 — Dung extensions (from fallacy + PL results)
         .add_phase(
             "dung_extensions",

@@ -96,24 +96,16 @@ PENDING_TRIAGE: dict[tuple[str, str], str] = {
     # declared inside `for name, caps, ... in <rows>:` loops, which the census
     # could not read before #1604: silence the tree already carried, made
     # visible here rather than created.
-    # dung_arbitration owner -> #1649 (arbitration c.5976719576, reaffirmed by
-    # #2920's offline re-measure). #2920 repaired the stage's input ROUTE
-    # (R1063 shape): the bridge anchors on target_argument (same-target
-    # different-family rivalry fires, born-red witness on the REAL bridge),
-    # the stage reads the hierarchical phase's per_argument_fallacies field
-    # (targeted detections only — the merged fallacies list stays
-    # byte-identical to main, its per-(argument, pk) counting question is
-    # parked in its own issue), and the dead rule-taxonomy source key is
-    # retired. The offline CI-safe tier stays honest-absent BY NATURE
-    # (lexical detections carry no target): re-measured 25 candidates over 4
-    # docs, 0 attacks, 0 eliminations. Real-run eliminations now hinge on (a)
-    # the counter lane's attacked_component producer (#1649 — the
-    # Walton-Krabbe relations channel this line used to name was retired by
-    # #2937; the R1223 GO moved the producer to the counter field, whose
-    # consumer wiring landed with the ASPIC undercut), and (b) the
-    # per-argument LLM tier actually feeding the stage — the wiring decision
-    # loop lives in #2920.
-    ("dung_arbitration_service", "dung_arbitration"): "#1649",
+    # ("dung_arbitration_service", "dung_arbitration") — retired #2928: the
+    # spectacular workflow now requests the capability, so the pair has a
+    # consumer and leaves triage. The stage is wired as a STATEMENT, never a
+    # filter (coordinator decision 13/11): every detection stays in the
+    # report, and Act II renders which detections a rival family contests on
+    # the same unit, and which contests the stage leaves undecided. History
+    # of the entry: owner #1649, input route repaired by #2920 (bridge
+    # anchors on target_argument; the stage reads the hierarchical phase's
+    # per_argument_fallacies field, targeted detections only; the dead
+    # rule-taxonomy source key retired).
     # ("tweety_logic_plugin", "tweety_logic") — retired #1604 (coordinator
     # arbitration): the plugin registration carries no invoke callable, so the
     # MCP invoke_capability route never reached it — only the list readers

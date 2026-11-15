@@ -14232,8 +14232,9 @@ async def _invoke_dung_arbitration(
 
     sources: Dict[str, List[Any]] = {}
     hierarchical = context.get("phase_hierarchical_fallacy_output") or {}
+    per_arg: List[Any] = []
     if isinstance(hierarchical, dict):
-        per_arg = hierarchical.get("per_argument_fallacies") or []
+        per_arg = list(hierarchical.get("per_argument_fallacies") or [])
         if per_arg:
             # #2920 (R1063 review): the stage reads ONLY the per-argument
             # detections — the ones carrying ``target_argument``, i.e. the
@@ -14261,6 +14262,25 @@ async def _invoke_dung_arbitration(
     eliminated = {str(k): str(v) for k, v in verdict.eliminated_ids.items()}
     attack_pairs = [[str(a), str(b)] for a, b in sorted(verdict.attacks)]
 
+    # #2928 — the verdict speaks in opaque candidate ids; the statement the
+    # acts render names FAMILIES and UNITS. Provenance joins each candidate
+    # id back to its source detection (family + target argument) over the
+    # same enumeration the bridge minted the ids in — the join is made only
+    # while the single-source invariant holds (candidates == the per_argument
+    # batch), so a second source added later yields an empty provenance, never
+    # a mis-join. Family labels are taxonomy vocabulary and targets are
+    # opaque unit ids — never corpus text.
+    provenance: List[Dict[str, Any]] = []
+    if per_arg and len(candidates) == len(per_arg):
+        provenance = [
+            {
+                "id": cand.candidate_id,
+                "family": str(cand.family),
+                "target_argument": str(per_arg[i].get("target_argument") or "").strip(),
+            }
+            for i, cand in enumerate(candidates)
+        ]
+
     return {
         "verdict": {
             "enabled": verdict.enabled,
@@ -14273,6 +14293,7 @@ async def _invoke_dung_arbitration(
         },
         "dung_arbitration": enabled,
         "candidate_count": len(candidates),
+        "candidates_provenance": provenance,
         "degraded": False,
     }
 

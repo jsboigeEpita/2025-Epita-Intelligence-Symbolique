@@ -33,7 +33,7 @@ All IDs opaque (arg_N) — privacy HARD.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, NamedTuple, Optional, Set, Tuple
+from typing import Any, Dict, FrozenSet, List, NamedTuple, Optional, Set, Tuple
 
 
 class NativeDungDecoding(NamedTuple):
@@ -416,3 +416,169 @@ def dung_reading(
         if isinstance(fw, dict) and not fw.get("extensions"):
             return fw, {}
     return None, {}
+
+
+# #2928 — cap on units the arbitration statement names (prompt budget
+# discipline, same family as _SEQUENCE_RENDER_CAP): a panel state can carry
+# more contested units than a prompt wants; the overflow is NAMED, never
+# silently dropped.
+_ARBITRATION_UNIT_CAP = 8
+
+
+def arbitration_note(state: Any) -> str:
+    """#2928 — the Dung-arbitration statement, rendered by its one reader.
+
+    Reads the ``dung_arbitration`` framework the state writer files
+    (``_write_dung_arbitration_to_state``) and renders the coordinator's
+    #2928 sentence: which detections a RIVAL FAMILY contests on the same
+    unit, and which of these contests the stage leaves undecided. The
+    statement is an éclairage, never a filter — every detection stays in the
+    report, and the note says so at its head.
+
+    Honest absence, all three shapes, renders one line (or none):
+
+    - no ``dung_arbitration`` framework at all (the stage never ran — every
+      pre-#2928 state): ``""`` — the act prompt is byte-identical to the
+      stage-free one, the issue's control;
+    - the framework with ``enabled=False`` (the stage ran OFF): ``""``, same
+      control;
+    - the framework with no attacks (``honest_absent``): one line saying no
+      family contests a detection on the same unit — the stage ran and found
+      nothing to arbitrate, which is a finding, not a silence.
+
+    Families are the detector's taxonomy labels and units are opaque unit
+    ids — never corpus text. A candidate id the provenance does not carry is
+    named by its opaque id (honest, never fabricated).
+    """
+    frameworks = getattr(state, "dung_frameworks", {}) or {}
+    if not isinstance(frameworks, dict):
+        return ""
+    fw: Optional[Dict[str, Any]] = None
+    for entry in frameworks.values():
+        if isinstance(entry, dict) and entry.get("name") == "dung_arbitration":
+            fw = entry
+            break
+    if fw is None:
+        return ""
+    ext = fw.get("extensions")
+    ext = ext if isinstance(ext, dict) else {}
+    if not ext.get("enabled"):
+        return ""
+
+    prov: Dict[str, Dict[str, Any]] = {
+        str(p.get("id")): p
+        for p in ext.get("candidates_provenance") or []
+        if isinstance(p, dict) and p.get("id")
+    }
+    surviving = {str(c) for c in ext.get("surviving_ids") or []}
+    eliminated_raw = ext.get("eliminated_ids") or {}
+    eliminated = (
+        {str(k): str(v) for k, v in eliminated_raw.items()}
+        if isinstance(eliminated_raw, dict)
+        else {}
+    )
+    attacks = [
+        (str(pair[0]), str(pair[1]))
+        for pair in fw.get("attacks") or []
+        if isinstance(pair, (list, tuple)) and len(pair) >= 2
+    ]
+
+    def _family(cid: str) -> str:
+        p = prov.get(cid)
+        family = str(p.get("family") or "").strip() if p else ""
+        return family or cid
+
+    def _unit(cid: str) -> str:
+        p = prov.get(cid)
+        return str(p.get("target_argument") or "").strip() if p else ""
+
+    # One contest = one unordered candidate pair (the rivalry policy may emit
+    # both directions; a symmetric pair is ONE contest). Grouped by the unit
+    # the pair shares — the same span anchor is the same target argument.
+    seen_pairs: Set[FrozenSet[str]] = set()
+    contests: Dict[str, Dict[str, List[str]]] = {}
+    for a, b in attacks:
+        pair = frozenset((a, b))
+        if len(pair) != 2 or pair in seen_pairs:
+            continue
+        seen_pairs.add(pair)
+        unit = _unit(a) or _unit(b)
+        slot = contests.setdefault(unit, {"families": [], "aside": [], "kept": []})
+        for cid in (a, b):
+            fam = _family(cid)
+            if fam not in slot["families"]:
+                slot["families"].append(fam)
+            if cid in eliminated:
+                if fam not in slot["aside"]:
+                    slot["aside"].append(fam)
+            elif cid in surviving and fam not in slot["kept"]:
+                slot["kept"].append(fam)
+
+    if not contests:
+        return (
+            "ARBITRAGE DUNG ENTRE FAMILLES RIVALES — l'étage a tourné : aucune "
+            "famille rivale ne conteste une détection sur la même unité, et "
+            "toutes les détections restent dans le rapport."
+        )
+
+    def _fr_list(items: List[str]) -> str:
+        # French enumeration: « A, B et C » — the plain " et " join reads as
+        # a pair even with three or more families on one unit.
+        if len(items) <= 1:
+            return "".join(items)
+        return ", ".join(items[:-1]) + " et " + items[-1]
+
+    def _unit_sort_key(unit: str) -> Tuple[str, int]:
+        # Natural order (arg_2 before arg_11): the note follows the text's
+        # own unit order, not the lexicographic one.
+        head, _, tail = unit.rpartition("_")
+        try:
+            return (head or unit, int(tail))
+        except ValueError:
+            return (unit, 0)
+
+    ordered_units = sorted(contests, key=_unit_sort_key)
+    lines: List[str] = []
+    for unit in ordered_units[:_ARBITRATION_UNIT_CAP]:
+        slot = contests[unit]
+        where = f"unité {unit}" if unit else "une même unité"
+        fams = _fr_list(slot["families"])
+        if slot["aside"]:
+            aside = _fr_list(slot["aside"])
+            if slot["kept"]:
+                benefit = f"au bénéfice de {_fr_list(slot['kept'])}"
+            else:
+                # Mutual destruction: the grounded extension left NO family
+                # standing on this unit. Say it — a phantom "rival" would be
+                # fabricated (anti-#1019).
+                benefit = "sans qu'aucune famille ne soit maintenue sur l'unité"
+            lines.append(
+                f"  • {where} : {fams} se contestent sur la même unité ; "
+                f"l'arbitrage (extension fondée) écarte {aside} {benefit} — "
+                f"la détection écartée RESTE dans le rapport, marquée "
+                f"contestée."
+            )
+        else:
+            n_fams = len(slot["families"])
+            fam_noun = "les deux familles" if n_fams == 2 else "toutes les familles"
+            lines.append(
+                f"  • {where} : {fams} se contestent sur la même unité ; "
+                f"l'arbitrage laisse ce concours INDÉCIDÉ — les détections "
+                f"de {fam_noun} restent dans le rapport."
+            )
+    overflow = len(ordered_units) - _ARBITRATION_UNIT_CAP
+    overflow_line = (
+        f"  • … et {overflow} autre(s) unité(s) contestée(s), non détaillée(s) ici."
+        if overflow > 0
+        else ""
+    )
+    body = "\n".join(
+        [ln for ln in lines + ([overflow_line] if overflow_line else []) if ln]
+    )
+    return (
+        "ARBITRAGE DUNG ENTRE FAMILLES RIVALES (éclairage, JAMAIS un filtre — "
+        "chaque détection reste dans le rapport) :\n" + body + "\n"
+        "Consigne : tisse chaque concours dans le battement de l'unité qu'il "
+        "nomme, comme une contestation entre lectures rivales — jamais comme "
+        "un retrait ou une hiérarchie de détections."
+    )
