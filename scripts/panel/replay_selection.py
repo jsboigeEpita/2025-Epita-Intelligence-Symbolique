@@ -14,6 +14,13 @@ column per variant:
   today      today's population, budget and priority spans on the same state
              (what the checked-out code would select: the free measure of a
              selector, budget or population change before any paid run)
+  rests-on   --rests-on: the #3511 selector variant behind its flag — beside
+             each move's priority seat, the unit its claim RESTS ON earns one
+             too (``selection.rests_on_unit_ids``, model-free), same budget,
+             same victim order. The cell prints what the variant ADDS and
+             what it DROPS against ``today``: passages gained (``+g``),
+             passages lost (``-l``) and the units given up (``victims``) —
+             a variant that only says its count says half the trade.
   k=<K>      the same at a forced budget (--budget)
   <dir>      the first reading's moves replaced by ``moves_<doc>.json`` of a
              directory (--moves-dir, e.g. the draws of first_reading_draws.py)
@@ -116,6 +123,7 @@ def replay_variant(
     rng: random.Random,
     recorded: Optional[Callable[[c.Span], bool]] = None,
     recorded_ids: Optional[Sequence[str]] = None,
+    rests_on: bool = False,
 ) -> Dict[str, Any]:
     """Today's selection on ``state`` at budget ``k``, scored on the passages.
 
@@ -127,10 +135,15 @@ def replay_variant(
     recorded selection itself. ``unchanged_selection`` says the selected unit
     ids are exactly ``recorded_ids`` — the cell then refuses to print the
     side number as chance (``_cell``).
+
+    ``rests_on=True`` replays the #3511 variant instead of today's selector
+    (same population, same budget). ``hits`` carries the per-passage verdict
+    so the caller can state what the variant adds and what it drops against
+    ``today`` — the trade, not just the count.
     """
     ns = SimpleNamespace(**state)
     population = c.population_of(ns)
-    selection = c.select(ns, population, k)
+    selection = c.select(ns, population, k, rests_on=rests_on)
     selected = list(selection.selected)
     _units, starts = c.positioned_units(population)
     text_length = len(state.get("raw_text") or "")
@@ -138,8 +151,11 @@ def replay_variant(
     def hit(span: c.Span) -> bool:
         return bool(c.units_overlapping(selected, span, starts))
 
+    hits = [hit(span) for span in passages]
     return {
-        "examined": examined_count(selected, starts, passages),
+        "examined": sum(hits),
+        "hits": hits,
+        "selected_ids": sorted(u.unit_id for u in selected),
         "random_side": c.random_passage_expectation(
             passages, text_length, hit, draws, rng, recorded
         ),
@@ -161,6 +177,7 @@ def replay_document(
     moves_by_dir: Optional[Dict[str, List[Dict[str, Any]]]] = None,
     draws: int = 300,
     rng: Optional[random.Random] = None,
+    rests_on: bool = False,
 ) -> Dict[str, Any]:
     """One document's line: fidelity, located passages, and every variant."""
     rng = rng or random.Random(c.DEFAULT_SEED)
@@ -191,6 +208,24 @@ def replay_document(
             state, passages, None, draws, rng, in_record, recorded_ids
         ),
     }
+    if rests_on:
+        # The #3511 variant, stated as the trade against ``today``: passages
+        # gained, passages lost, and the units the swap gave up. A variant
+        # that only prints its count hides the cost the queue item demands.
+        variant = replay_variant(
+            state, passages, None, draws, rng, in_record, recorded_ids, rests_on=True
+        )
+        today = variants["today"]
+        variant["gained"] = sum(
+            1 for t, r in zip(today["hits"], variant["hits"]) if r and not t
+        )
+        variant["lost"] = sum(
+            1 for t, r in zip(today["hits"], variant["hits"]) if t and not r
+        )
+        variant["victims"] = len(
+            set(today["selected_ids"]) - set(variant["selected_ids"])
+        )
+        variants["rests-on"] = variant
     for k in budgets:
         variants[f"k={k}"] = replay_variant(
             state, passages, k, draws, rng, in_record, recorded_ids
@@ -257,6 +292,9 @@ def totals(lines: Sequence[Dict[str, Any]]) -> Dict[str, Dict[str, float]]:
                     "selected": 0,
                     "located": 0,
                     "docs": 0,
+                    "gained": 0,
+                    "lost": 0,
+                    "victims": 0,
                 },
             )
             total["examined"] += variant["examined"]
@@ -266,6 +304,9 @@ def totals(lines: Sequence[Dict[str, Any]]) -> Dict[str, Dict[str, float]]:
             total["selected"] += variant["selected"]
             total["located"] += line["located"]
             total["docs"] += 1
+            total["gained"] += variant.get("gained", 0)
+            total["lost"] += variant.get("lost", 0)
+            total["victims"] += variant.get("victims", 0)
     return out
 
 
@@ -277,6 +318,11 @@ def _side_cell(unchanged: bool, value: float) -> str:
 
 def _cell(name: str, variant: Dict[str, Any], located: int) -> str:
     text = f"{name} {variant['examined']}/{located}"
+    if name == "rests-on":
+        text += (
+            f" (+{variant['gained']}/-{variant['lost']} passages,"
+            f" victims={variant['victims']})"
+        )
     if name == "recorded":
         text += f" (random-anywhere {variant['random_anywhere']:.1f})"
     else:
@@ -307,6 +353,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--stage", default=DEFAULT_TRACE_STAGE)
     parser.add_argument("--budget", type=int, nargs="*", default=[])
     parser.add_argument("--moves-dir", type=Path, nargs="*", default=[])
+    parser.add_argument(
+        "--rests-on",
+        action="store_true",
+        default=False,
+        help="add the #3511 variant: beside each move's priority seat, the "
+        "unit its claim rests on earns one too (model-free rule, same "
+        "budget) — printed with what it adds and drops against today",
+    )
     parser.add_argument("--draws", type=int, default=300)
     parser.add_argument("--seed", type=int, default=c.DEFAULT_SEED)
     args = parser.parse_args(argv)
@@ -333,7 +387,14 @@ def main(argv: Optional[List[str]] = None) -> int:
             if (directory / f"moves_{doc}.json").exists()
         }
         line = replay_document(
-            doc, state, quotes, args.budget, moves_by_dir, args.draws, rng
+            doc,
+            state,
+            quotes,
+            args.budget,
+            moves_by_dir,
+            args.draws,
+            rng,
+            rests_on=args.rests_on,
         )
         lines.append(line)
         cells = " | ".join(
@@ -349,6 +410,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         anywhere = total["random_anywhere"]
         ratio = f" x{total['examined'] / anywhere:.2f}" if anywhere else ""
         parts: List[str] = []
+        if name == "rests-on":
+            parts.append(
+                f"+{int(total['gained'])}/-{int(total['lost'])} passages vs today,"
+                f" victims={int(total['victims'])}"
+            )
         if name != "recorded":
             if total["unchanged"] and total["unchanged"] == doc_count:
                 parts.append("random-side = count, unchanged selection")

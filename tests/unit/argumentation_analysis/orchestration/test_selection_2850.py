@@ -6,7 +6,8 @@ order, named-absence units never seeding a band, text-order return, and a
 budget that never grows. All deterministic, no LLM.
 """
 
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
+from types import SimpleNamespace
 
 import pytest
 
@@ -15,6 +16,7 @@ from argumentation_analysis.orchestration.selection import (
     SelectableUnit,
     _positioned_spans,
     merged_population_units,
+    rests_on_unit_ids,
     select_for_budget,
 )
 
@@ -291,3 +293,230 @@ class TestTheSpanIsThePassageNotTheParaphrase3502:
         ]
         sel = select_for_budget(units, 5, text_length=60000)
         assert sel.span == (0 / 60000, 15 / 60000)
+
+
+class TestRestsOnUnitIds3511:
+    """#3511 — the model-free rule naming the unit a claim RESTS ON.
+
+    The measured fact: a move sits on an evidence passage 1 time in 23
+    (against 8 in 28 for claims) — the evidence lies BESIDE the move. The
+    rule (the coordinator's candidate (b), picked from the 23 judged
+    occurrences: it names a unit intersecting the judged passage's unit 7
+    times in 9, against 5 in 9 for "just the unit before") names, per
+    positioned move, the nearest positioned unit that starts before it in
+    the SAME blank-line paragraph, CARRIES a quotation mark or a figure,
+    and does not already overlap a move. All deterministic, no LLM.
+    """
+
+    @staticmethod
+    def _state(raw: str, moves: List[Dict[str, Any]]) -> SimpleNamespace:
+        return SimpleNamespace(raw_text=raw, defining_moves={"moves": moves})
+
+    def test_the_nearest_carrying_unit_before_the_move_in_its_paragraph_wins(self):
+        raw = (
+            "first paragraph stands alone.\n\n"
+            "evidence 3 opens then the claim ends.\n\n"
+            "a last paragraph."
+        )
+        claim_at = raw.index("the claim")
+        moves = [{"offset": claim_at, "quote": "the claim"}]
+        # Quoted extents: the rule reads positions, and a point unit at the
+        # move's start would be the move's own unit (nearest-before, #3395).
+        population = [
+            SelectableUnit(
+                unit_id="other_par",
+                text="x",
+                offset=0,
+                source_quote="first paragraph",
+            ),
+            SelectableUnit(
+                unit_id="rests_on",
+                text="x",
+                offset=raw.index("evidence"),
+                source_quote="evidence 3",
+            ),
+        ]
+        named = rests_on_unit_ids(self._state(raw, moves), population)
+        assert named == frozenset({"rests_on"})
+
+    def test_a_non_carrying_unit_is_skipped_for_an_earlier_carrier(self):
+        """The carrier test is what candidate (b) adds over "just the unit
+        before": a plain sentence between the evidence and the move is not
+        the unit the claim draws from."""
+        raw = "said 7 things. plain words follow. the claim ends."
+        claim_at = raw.index("the claim")
+        moves = [{"offset": claim_at, "quote": "the claim"}]
+        population = [
+            SelectableUnit(
+                unit_id="carrier",
+                text="x",
+                offset=raw.index("said"),
+                source_quote="said 7 things",
+            ),
+            SelectableUnit(
+                unit_id="plain",
+                text="x",
+                offset=raw.index("plain"),
+                source_quote="plain words follow",
+            ),
+        ]
+        named = rests_on_unit_ids(self._state(raw, moves), population)
+        assert named == frozenset({"carrier"})
+
+    def test_a_unit_whose_extent_reaches_the_move_stays_priority_not_rests_on(self):
+        raw = "one.\n\nearly 2 evidence so the claim follows.\n\nlast."
+        claim_at = raw.index("the claim")
+        moves = [{"offset": claim_at, "quote": "the claim"}]
+        ev = raw.index("evidence")
+        reaches = SelectableUnit(
+            unit_id="reaches",
+            text="x",
+            offset=ev,
+            source_quote=raw[ev : claim_at + 3],
+        )
+        before = SelectableUnit(
+            unit_id="before",
+            text="x",
+            offset=raw.index("early"),
+            source_quote="early 2",
+        )
+        named = rests_on_unit_ids(self._state(raw, moves), [reaches, before])
+        # ``reaches`` overlaps the move: #3395 already gives it a seat, the
+        # rule must skip to the next preceding carrier instead of
+        # double-naming.
+        assert named == frozenset({"before"})
+
+    def test_a_move_first_in_its_paragraph_names_nothing(self):
+        raw = "first 1.\n\nclaim opens its own paragraph.\n\nlast 3."
+        claim_at = raw.index("claim")
+        moves = [{"offset": claim_at, "quote": "claim"}]
+        population = [
+            SelectableUnit(unit_id="p1", text="x", offset=0, source_quote="first 1"),
+            SelectableUnit(
+                unit_id="p3", text="x", offset=raw.index("last"), source_quote="last 3"
+            ),
+        ]
+        assert rests_on_unit_ids(self._state(raw, moves), population) == frozenset()
+
+    def test_a_text_without_blank_lines_is_one_paragraph(self):
+        """Measured on the panel: one long document carries no newline at all,
+        so the paragraph rule must degenerate to nearest-preceding-carrier,
+        defined and deterministic, never a crash."""
+        raw = "alpha beta gamma. delta epsilon 4. the claim ends the text."
+        claim_at = raw.index("the claim")
+        moves = [{"offset": claim_at, "quote": "the claim"}]
+        population = [
+            SelectableUnit(unit_id="a", text="x", offset=0, source_quote="alpha beta"),
+            SelectableUnit(
+                unit_id="b",
+                text="x",
+                offset=raw.index("delta"),
+                source_quote="delta epsilon 4",
+            ),
+        ]
+        assert rests_on_unit_ids(self._state(raw, moves), population) == frozenset(
+            {"b"}
+        )
+
+    def test_two_moves_sharing_their_rests_on_unit_name_it_once(self):
+        raw = "intro.\n\nevidence 5 opens one claim then a second claim ends.\n\nlast."
+        first_at = raw.index("one claim")
+        second_at = raw.index("second claim")
+        moves = [
+            {"offset": first_at, "quote": "one claim"},
+            {"offset": second_at, "quote": "second claim"},
+        ]
+        population = [
+            SelectableUnit(
+                unit_id="shared",
+                text="x",
+                offset=raw.index("evidence"),
+                source_quote="evidence 5 opens",
+            )
+        ]
+        assert rests_on_unit_ids(self._state(raw, moves), population) == frozenset(
+            {"shared"}
+        )
+
+    def test_no_moves_names_nothing(self):
+        raw = "a claim with no reading behind it."
+        population = [SelectableUnit(unit_id="u", text="x", offset=0)]
+        assert rests_on_unit_ids(self._state(raw, []), population) == frozenset()
+
+
+class TestIdPrioritySeats3511:
+    """#3511 — ``priority_unit_ids``: a seat beside the move's, same budget.
+
+    The flag is OFF in production (no call site passes ids); these pin the
+    behaviour the replay measures through, and the nesting contract #3523
+    proved for spans under the same union.
+    """
+
+    def test_the_id_union_swaps_exactly_one_seat_and_keeps_the_budget(self):
+        units = _spread(20)
+        spans = [(30000, 30100)]
+        base = select_for_budget(units, 6, text_length=60000, priority_spans=spans)
+        on_span = [u for u in units if 29500 <= (u.offset or 0) <= 30500]
+        outsider = next(
+            u
+            for u in units
+            if u not in base.selected and u not in on_span and (u.offset or 0) < 2000
+        )
+        variant = select_for_budget(
+            units,
+            6,
+            text_length=60000,
+            priority_spans=spans,
+            priority_unit_ids={outsider.unit_id},
+        )
+        base_ids = [u.unit_id for u in base.selected]
+        variant_ids = [u.unit_id for u in variant.selected]
+        assert outsider.unit_id in variant_ids
+        assert len(variant_ids) == len(base_ids) == 6
+        assert set(variant_ids) - set(base_ids) == {outsider.unit_id}
+        assert variant.priority_taken == base.priority_taken + 1
+
+    def test_the_union_never_takes_a_seat_from_a_priority_unit(self):
+        units = _spread(20)
+        spans = [(30000, 30100)]
+        ids = {u.unit_id for u in units if (u.offset or 0) >= 50000}
+        variant = select_for_budget(
+            units, 6, text_length=60000, priority_spans=spans, priority_unit_ids=ids
+        )
+        variant_ids = set(u.unit_id for u in variant.selected)
+        # Every span-overlapping unit that the base selection had stays.
+        base = select_for_budget(units, 6, text_length=60000, priority_spans=spans)
+        for u in base.selected:
+            if 29500 <= (u.offset or 0) <= 30500:
+                assert u.unit_id in variant_ids
+
+    def test_the_id_union_keeps_the_nesting_contract(self):
+        units = _spread(24)
+        spans = [(20000, 20100), (40000, 40100)]
+        ids = {f"arg_{i}" for i in range(1, 25, 3)}
+        previous: set = set()
+        for k in range(1, 15):
+            sel = select_for_budget(
+                units,
+                k,
+                text_length=60000,
+                priority_spans=spans,
+                priority_unit_ids=ids,
+            )
+            current = {u.unit_id for u in sel.selected}
+            assert previous <= current, f"budget {k} dropped a unit of {k - 1}"
+            previous = current
+
+    def test_ids_without_spans_is_defined_and_deterministic(self):
+        """Degenerate but defined: no span to measure distance from, the
+        index tie decides — never the ValueError of an empty ``min``."""
+        units = _spread(10)
+        first = select_for_budget(
+            units, 4, text_length=60000, priority_unit_ids={"arg_3"}
+        )
+        second = select_for_budget(
+            units, 4, text_length=60000, priority_unit_ids={"arg_3"}
+        )
+        first_ids = [u.unit_id for u in first.selected]
+        assert first_ids == [u.unit_id for u in second.selected]
+        assert "arg_3" in first_ids

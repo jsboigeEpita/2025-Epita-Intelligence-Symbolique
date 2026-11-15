@@ -706,6 +706,60 @@ class TestReplay:
         assert line["variants"]["d2"]["examined"] == 1
         assert line["variants"]["union"]["examined"] == 2
 
+    def test_the_rests_on_variant_buys_the_unit_the_move_rests_on(self):
+        """#3511 — the evidence seat. The move sits on sentence 11; the unit
+        of sentence 10, what its claim rests on, is what the budget rations
+        out of today's selection. The variant buys it back at the same budget
+        and SAYS the trade: one passage gained, one unit given up."""
+        state = make_state(moves_at=(11,))
+        line = replay_selection.replay_document(
+            "doc_a", state, [sentence(10)], draws=20, rests_on=True
+        )
+        today = line["variants"]["today"]
+        variant = line["variants"]["rests-on"]
+        assert today["examined"] == 0
+        assert variant["examined"] == 1
+        assert variant["gained"] == 1
+        assert variant["lost"] == 0
+        assert variant["victims"] == 1
+        assert variant["selected"] == today["selected"], "the budget is the same"
+
+    def test_an_already_selected_rests_on_unit_changes_nothing(self):
+        """Idempotence: on the default fixture the rule names arg_14, which
+        the budget already buys — the variant must be exactly today's
+        selection, with no victim and no passage moved."""
+        state = make_state()
+        line = replay_selection.replay_document(
+            "doc_a", state, [sentence(13)], draws=20, rests_on=True
+        )
+        today = line["variants"]["today"]
+        variant = line["variants"]["rests-on"]
+        assert variant["examined"] == today["examined"] == 1
+        assert variant["gained"] == 0
+        assert variant["lost"] == 0
+        assert variant["victims"] == 0
+        assert variant["unchanged_selection"] is True
+
+    def test_the_run_prints_the_rests_on_trade(self, tmp_path, capsys):
+        state = make_state(moves_at=(11,))
+        row = {"kept": [m1(sentence(10))]}
+        states_dir, consensus = write_cycle(tmp_path, {"doc_a": state}, {"doc_a": row})
+        argv = [
+            "--states-dir",
+            str(states_dir),
+            "--passages-from",
+            str(consensus),
+            "--rests-on",
+        ]
+        assert replay_selection.main(argv + ["--draws", "20"]) == 0
+        out = capsys.readouterr().out
+        doc_line = next(line for line in out.splitlines() if line.startswith("doc_a"))
+        assert "(+1/-0 passages, victims=1)" in doc_line
+        total = next(
+            line for line in out.splitlines() if line.startswith("TOTAL rests-on:")
+        )
+        assert "+1/-0 passages vs today, victims=1" in total
+
     def test_union_counts_a_passage_once_and_keeps_what_it_cannot_compare(self):
         first = [{"offset": 0, "quote": "x" * 40}, {"quote": "unpositioned"}]
         second = [

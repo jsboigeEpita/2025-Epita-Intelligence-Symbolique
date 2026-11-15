@@ -242,19 +242,31 @@ def budget_of(ns: Any) -> int:
     return per_argument_unit_budget(sel.state_text_length(ns) or 0)
 
 
-def select(ns: Any, population: Sequence[Any], k: Optional[int] = None) -> Any:
+def select(
+    ns: Any,
+    population: Sequence[Any],
+    k: Optional[int] = None,
+    rests_on: bool = False,
+) -> Any:
     """The production selector on ``population`` at budget ``k`` (default:
-    production's own budget), with production's priority spans."""
+    production's own budget), with production's priority spans.
+
+    ``rests_on=True`` (#3511) turns on the selector variant behind its flag:
+    the units a named claim rests on (``sel.rests_on_unit_ids``, model-free)
+    join the priority set. Production call sites do not pass them, so the
+    default here mirrors production exactly."""
     from argumentation_analysis.orchestration import selection as sel
     from argumentation_analysis.orchestration.invoke_callables import (
         _selection_priority_spans,
     )
 
+    priority_unit_ids = sel.rests_on_unit_ids(ns, population) if rests_on else None
     return sel.select_for_budget(
         population,
         budget_of(ns) if k is None else k,
         text_length=sel.state_text_length(ns),
         priority_spans=_selection_priority_spans(ns),
+        priority_unit_ids=priority_unit_ids,
     )
 
 
