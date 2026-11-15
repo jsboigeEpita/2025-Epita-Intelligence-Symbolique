@@ -34,7 +34,6 @@ still cannot launder a deduction into a quotation.
 from __future__ import annotations
 
 import itertools
-import json
 import logging
 import re
 from dataclasses import dataclass, field
@@ -43,6 +42,12 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 from argumentation_analysis.agents.core.context import (
     MODEL_KNOWLEDGE_BASIS,
     TEXT_BASIS,
+)
+
+# #3576 — one father for the call → strip fence → parse → retry logic the two
+# context personas share; the historian imports the same helper.
+from argumentation_analysis.agents.core.context._json_reply import (
+    request_json_reply,
 )
 from argumentation_analysis.agents.core.governance.social_choice import (
     condorcet_winner,
@@ -489,6 +494,14 @@ class StrategicRead:
     game: Dict[str, Any] = field(default_factory=dict)
     status: str = "no_llm"
     error: str = ""
+    #: #3576 — how many model calls the reply took (1, or 2 when the second
+    #: chance was used). Written to the state only when a second chance was
+    #: actually used, so the pre-#3576 success shape is unchanged.
+    attempts: int = 0
+    #: #3576 — the bounded record of a reply ``json.loads`` refused: decoder
+    #: message, position (char/line/column), reply length and the window of
+    #: the reply around the position. Empty unless ``status == "parse_error"``.
+    parse_failure: Dict[str, Any] = field(default_factory=dict)
 
     def _labelled_players(self) -> List[Dict[str, Any]]:
         """The players, each with the basis the PRODUCER decided (#3430).
@@ -517,7 +530,7 @@ class StrategicRead:
         return labelled
 
     def to_state(self) -> Dict[str, Any]:
-        return {
+        payload = {
             "players": self._labelled_players(),
             "options": list(self.options),
             "preferences": {k: list(v) for k, v in self.preferences.items()},
@@ -529,6 +542,17 @@ class StrategicRead:
             "status": self.status,
             "basis": MODEL_KNOWLEDGE_BASIS,
         }
+        # #3576 — the second chance and the parse cause ride the read they
+        # belong to. Each key exists only when it carries something (the same
+        # convention as the historian's ``dating``/``place``), so a first-try
+        # success writes the pre-#3576 shape byte for byte.
+        if self.attempts > 1:
+            payload["attempts"] = self.attempts
+        if self.error:
+            payload["error"] = self.error
+        if self.parse_failure:
+            payload["parse_failure"] = dict(self.parse_failure)
+        return payload
 
 
 def _match_key(name: str) -> str:
@@ -1063,16 +1087,33 @@ async def build_strategic_read(
 
     prompt = build_strategist_prompt(state, excerpt)
     try:
-        content = await llm_callable(prompt)
-        content = (content or "").strip()
-        if content.startswith("```"):
-            content = content.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-        if not content:
-            result.status = "llm_error"
-            result.error = "empty completion"
-            return result
+        reply = await request_json_reply(llm_callable, prompt)
+    except Exception as e:  # pragma: no cover - provider failures
+        result.status = "llm_error"
+        result.error = f"{type(e).__name__}: {e}"
+        logger.warning("Strategist LLM error: %s", e)
+        return result
 
-        parsed = json.loads(content)
+    result.attempts = reply.attempts
+    result.error = reply.error
+    if reply.status == "parse_error":
+        # #3576 — the cause now rides the read into the state: the decoder
+        # message, its position, the reply's length and a bounded window of
+        # the reply around that position. A malformed MIDDLE is then readable
+        # from the recorded state, not only from the log.
+        result.status = "parse_error"
+        result.parse_failure = dict(reply.parse_failure)
+        # The log line keeps its exact pre-#3576 text (the bare decoder string).
+        logger.warning("Strategist parse error: %s", reply.detail)
+        return result
+    if reply.status != "ok":
+        # An empty completion: ONE call, never retried. Only a MALFORMED reply
+        # gets the second chance; the two statuses stay discriminated (#3576).
+        result.status = "llm_error"
+        return result
+
+    parsed = reply.payload
+    try:
         result.options = [
             str(option).strip()
             for option in (parsed.get("options") or [])[:MAX_OPTIONS]
@@ -1114,11 +1155,7 @@ async def build_strategic_read(
             len(result.game.get("coalitions") or []),
             result.game.get("dropped_against_interest", 0),
         )
-    except json.JSONDecodeError as e:
-        result.status = "parse_error"
-        result.error = f"{type(e).__name__}: {e}"
-        logger.warning("Strategist parse error: %s", e)
-    except Exception as e:  # pragma: no cover - provider failures
+    except Exception as e:  # pragma: no cover - unexpected payload shapes
         result.status = "llm_error"
         result.error = f"{type(e).__name__}: {e}"
         logger.warning("Strategist LLM error: %s", e)
