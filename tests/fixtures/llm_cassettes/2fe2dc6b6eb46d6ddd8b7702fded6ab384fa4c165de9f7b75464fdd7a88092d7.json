@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"start_marker\": \"Nous avons créé plus d'emplois en deux ans que n'importe quelle administration en quatre.\",\n  \"end_marker\": \"C'est un progrès économique réel.\",\n  \"explanation\": \"L'extrait commence par la déclaration explicite concernant la création d'emplois et se termine par la phrase qui en souligne la portée économique.\"\n}",
+      "content": "{\n  \"start_marker\": \"Nous avons créé plus d'emplois en deux ans que n'importe quelle administration en quatre.\",\n  \"end_marker\": \"Nous avons créé plus d'emplois en deux ans que n'importe quelle administration en quatre.\",\n  \"explanation\": \"Cet extrait constitue directement la déclaration sur la création d'emplois, en affirmant le nombre d'emplois créés et la comparaison avec les administrations précédentes.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkH7Ma7t0c9iK7o3t1Vrri9KV1Rd8",
-        "created": 1794697596,
+        "id": "chatcmpl-EkNz9HnasqO1M0yx48bWj9l7yxMQJ",
+        "created": 1794723995,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 234,
@@ -18,7 +18,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 147,
+          "completion_tokens": 164,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

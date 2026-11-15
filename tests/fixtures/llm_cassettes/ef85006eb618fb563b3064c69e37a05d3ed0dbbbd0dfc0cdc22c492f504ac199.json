@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\"propositions\":[\"all_men_mortal\",\"socrates_wise\"],\"modal_formulas\":[\"[](all_men_mortal)\",\"<>(socrates_wise)\"]}",
+      "content": "{\"propositions\":[\"all_men_are_mortal\",\"socrates_is_wise\"],\"modal_formulas\":[\"[](all_men_are_mortal)\",\"<>(socrates_is_wise)\"]}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkH8WOul1dHRxjfd8GJixnIx065cO",
-        "created": 1794697668,
+        "id": "chatcmpl-EkO0CMlmoLFhcedvjjUsRMAuHbngX",
+        "created": 1794724060,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 307,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 96,
+          "completion_tokens": 103,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 49,
+            "reasoning_tokens": 52,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

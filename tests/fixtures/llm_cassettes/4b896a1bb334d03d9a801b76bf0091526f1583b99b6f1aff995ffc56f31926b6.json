@@ -1,0 +1,48 @@
+{
+  "key": "4b896a1bb334d03d9a801b76bf0091526f1583b99b6f1aff995ffc56f31926b6",
+  "value": {
+    "id": "chatcmpl-EkNqU1sFoSA8M4YgCPq0A9rjCfV2S",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Le gouvernement soutient que la réforme est urgente et que, si aucune action n'est entreprise maintenant, le système s'effondrera dans cinq ans.\",\"main_thesis\":\"L'argument du gouvernement en faveur de l'urgence de la réforme est fallacieux et insuffisamment fondé, car il repose notamment sur un argument d'autorité et un appel à la peur sans tenir compte des différences structurelles entre les systèmes.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794723458,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 185,
+      "prompt_tokens": 318,
+      "total_tokens": 503,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 77,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

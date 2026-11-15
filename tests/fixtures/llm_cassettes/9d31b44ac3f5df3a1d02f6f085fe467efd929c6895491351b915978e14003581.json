@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"TestMemoire(test_4)\",\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"TestMemoire\": \"est le test mémoire numéro 4\",\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La première phrase identifie le test mémoire numéro 4, représenté par la constante test_4. La seconde phrase affirme que tout objet qui est un test est important.\"\n}",
+      "content": "{\n  \"formulas\": [\n    \"Test(test_memoire_numero_4)\",\n    \"forall X: (Test(X) => Important(X))\"\n  ],\n  \"predicates\": {\n    \"Test\": \"est un test\",\n    \"Important\": \"est important\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"La première phrase affirme l'existence du test de mémoire numéro 4, représenté par la constante test_memoire_numero_4. La seconde phrase signifie que tout objet qui est un test est important.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkH5B6sSogdp0jgywUP2t67Xh0GTj",
-        "created": 1794697461,
+        "id": "chatcmpl-EkNwtJyswSby7rkavIiLclA1KTq1Z",
+        "created": 1794723855,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 285,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 334,
+          "completion_tokens": 267,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 197,
+            "reasoning_tokens": 134,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

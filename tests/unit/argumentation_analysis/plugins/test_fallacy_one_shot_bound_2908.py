@@ -116,9 +116,9 @@ def test_text_over_the_bound_is_read_whole_in_calls_of_one_capacity():
         f"({WHOLE_TEXT_CALL_CAPACITY} chars), got {[len(s) for s in sections]}"
     )
     assert "".join(sections) == text, "the chunks must tile the whole document"
-    assert len(result.get("fallacies") or []) == 2, (
-        "each chunk's detection is pooled — a chunk is not a throwaway"
-    )
+    assert (
+        len(result.get("fallacies") or []) == 2
+    ), "each chunk's detection is pooled — a chunk is not a throwaway"
 
 
 def test_texts_at_or_under_the_bound_produce_a_byte_identical_prompt():
@@ -166,6 +166,9 @@ def test_texts_at_or_under_the_bound_produce_a_byte_identical_prompt():
             "When the text revises or restricts its own preceding wording, "
             "that revision is not a false implication of the wording it "
             "corrects: do not flag it.\n"
+            # #3584 — the abstention clause is conditional: the document
+            # one-shot (this pin's subject, no flag) keeps its pre-#3584
+            # prompt byte for byte; only the per-argument call offers it.
             "Respond with ONLY a JSON object: "
             '{"fallacy_name": "...", "taxonomy_pk": "...", "explanation": "...", '
             '"confidence": 0.0-1.0, "move_author": "speaker|reported", '

@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_gb5feKsDltld7iR7fizyu25I",
+          "id": "call_1UdQMXiqWkaU1eG8jyXyaqjd",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"329\",\"matches\":false,\"justification\":\"Le texte invoque l’unanimité des experts et exclut les avis des non-experts, mais ne repose pas sur la colère ni sur une indignation suscitée contre une thèse adverse. Cette branche ne correspond donc pas.\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"329\",\"matches\":false,\"justification\":\"Le texte ne contient ni colère ni indignation mobilisée pour soutenir l'argument ; il relève plutôt d'un appel à l'autorité et d'un argument d'autorité exclusive, hors de cette branche.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkH1dRB2QGETOG1IR55GjjzVh9AqU",
-        "created": 1794697241,
+        "id": "chatcmpl-EkNtS7ZfNATecZ3XL30ekVI5iWfFU",
+        "created": 1794723642,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2041,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 83,
+          "completion_tokens": 76,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

@@ -1,14 +1,14 @@
 {
   "key": "d8dba663a655176ddb8de3f8015a7cf37e7cf5b663c698b19d72d87e4a9799c4",
   "value": {
-    "id": "chatcmpl-EkH5ZfG4Z7Rj8aE7B4oKq6Gwf9l54",
+    "id": "chatcmpl-EkNxIIguT5zANnZjoSmvTFPOqBccQ",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[{\"text\":\"L'option A défend l'organisation d'un tournoi inter-villes avec buffet et prix afin d'accroître la visibilité du club et de recruter de nouveaux membres.\",\"source_quote\":\"Option A : organiser un tournoi inter-villes avec buffet et prix pour 2000 euros, ce qui augmentera la visibilite du club et recrutera de nouveaux membres.\",\"move_author\":\"speaker\"},{\"text\":\"L'option B défend l'investissement intégral du budget dans du matériel pédagogique, notamment parce que les échiquiers actuels sont usés.\",\"source_quote\":\"Option B : investir les 2000 euros en materiel pedagogique, echiquiers neufs, horloges et supports de cours, car les echiquiers actuels sont uses.\",\"move_author\":\"speaker\"},{\"text\":\"L'option C défend un compromis entre visibilité et pédagogie en partageant également le budget entre un tournoi réduit et du matériel pédagogique.\",\"source_quote\":\"Option C : un format hybride, 1000 euros pour un tournoi reduit et 1000 euros pour le materiel pedagogique, equilibre entre visibilite et pedagogie.\",\"move_author\":\"speaker\"}],\"claims\":[{\"text\":\"Le club d'échecs dispose d'un budget participatif de 2000 euros.\",\"source_quote\":\"Le club d'echecs dispose d'un budget participatif de 2000 euros.\"},{\"text\":\"L'option A prévoit un coût total de 2000 euros pour le tournoi inter-villes, le buffet et les prix.\",\"source_quote\":\"organiser un tournoi inter-villes avec buffet et prix pour 2000 euros\"},{\"text\":\"Selon l'option A, le tournoi augmentera la visibilité du club.\",\"source_quote\":\"ce qui augmentera la visibilite du club\"},{\"text\":\"Selon l'option A, le tournoi recrutera de nouveaux membres.\",\"source_quote\":\"et recrutera de nouveaux membres.\"},{\"text\":\"L'option B prévoit l'achat d'échiquiers neufs, d'horloges et de supports de cours avec les 2000 euros.\",\"source_quote\":\"investir les 2000 euros en materiel pedagogique, echiquiers neufs, horloges et supports de cours\"},{\"text\":\"Les échiquiers actuellement utilisés par le club sont usés.\",\"source_quote\":\"car les echiquiers actuels sont uses.\"},{\"text\":\"L'option C répartit le budget en deux parts égales de 1000 euros.\",\"source_quote\":\"1000 euros pour un tournoi reduit et 1000 euros pour le materiel pedagogique\"}],\"summary\":\"Le texte présente trois options concurrentes pour utiliser un budget de 2000 euros : privilégier la visibilité par un tournoi, améliorer le matériel pédagogique, ou combiner les deux objectifs à parts égales.\"}",
+          "content": "{\"arguments\":[{\"text\":\"L'option A défend l'organisation d'un tournoi inter-villes avec buffet et prix afin d'accroître la visibilité du club et de recruter de nouveaux membres.\",\"source_quote\":\"Option A : organiser un tournoi inter-villes avec buffet et prix pour 2000 euros, ce qui augmentera la visibilite du club et recrutera de nouveaux membres.\"},{\"text\":\"L'option B défend l'investissement intégral du budget dans du matériel pédagogique, notamment parce que les échiquiers actuels sont usés.\",\"source_quote\":\"Option B : investir les 2000 euros en materiel pedagogique, echiquiers neufs, horloges et supports de cours, car les echiquiers actuels sont uses.\"},{\"text\":\"L'option C défend un compromis entre visibilité et pédagogie en répartissant également le budget entre un tournoi réduit et du matériel pédagogique.\",\"source_quote\":\"Option C : un format hybride, 1000 euros pour un tournoi reduit et 1000 euros pour le materiel pedagogique, equilibre entre visibilite et pedagogie.\"}],\"claims\":[{\"text\":\"Le club d'échecs dispose d'un budget participatif de 2000 euros.\",\"source_quote\":\"Le club d'echecs dispose d'un budget participatif de 2000 euros.\"},{\"text\":\"L'option A coûterait 2000 euros.\",\"source_quote\":\"organiser un tournoi inter-villes avec buffet et prix pour 2000 euros\"},{\"text\":\"Selon l'option A, le tournoi augmenterait la visibilité du club.\",\"source_quote\":\"ce qui augmentera la visibilite du club\"},{\"text\":\"Selon l'option A, le tournoi recruterait de nouveaux membres.\",\"source_quote\":\"et recrutera de nouveaux membres.\"},{\"text\":\"L'option B prévoit l'achat d'échiquiers neufs, d'horloges et de supports de cours.\",\"source_quote\":\"echiquiers neufs, horloges et supports de cours\"},{\"text\":\"Les échiquiers actuellement disponibles sont usés.\",\"source_quote\":\"car les echiquiers actuels sont uses.\"},{\"text\":\"L'option C prévoit d'allouer 1000 euros à un tournoi réduit et 1000 euros au matériel pédagogique.\",\"source_quote\":\"1000 euros pour un tournoi reduit et 1000 euros pour le materiel pedagogique\"}],\"summary\":\"Le texte présente trois options concurrentes pour l'utilisation d'un budget de 2000 euros : un tournoi favorisant la visibilité, un investissement pédagogique répondant à l'usure du matériel, ou un partage égal entre ces deux objectifs.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794697485,
+    "created": 1794723880,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 757,
+      "completion_tokens": 746,
       "prompt_tokens": 714,
-      "total_tokens": 1471,
+      "total_tokens": 1460,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 170,
+        "reasoning_tokens": 194,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

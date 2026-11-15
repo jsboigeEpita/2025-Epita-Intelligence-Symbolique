@@ -1,0 +1,40 @@
+{
+  "key": "441fae71bf1334f175a15b8b26dada465d77405f4a789259553210f1d8164c57",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_NF9IGi2P9lClXBOQdrdhRewz",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"85\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"Les arguments invoquent un consensus d’experts et excluent l’avis des non-experts, mais ne précisent pas que ces experts sont non qualifiés dans le domaine concerné. L’autorité non pertinente n’est donc pas établie.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkNtGWaIFNNDafjbLwu2GbapAJBGu",
+        "created": 1794723630,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2171,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 733,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 90,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

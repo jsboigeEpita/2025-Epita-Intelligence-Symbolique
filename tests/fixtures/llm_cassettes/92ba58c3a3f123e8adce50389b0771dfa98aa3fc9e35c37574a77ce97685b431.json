@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_fE9XvPQxfYuDySpHbzNNrAq0",
+          "id": "call_6AGbK7vkZhQKDxlV30Y6HzBn",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"798\",\"matches\":false,\"justification\":\"La phrase affirme un succès économique incontestable, mais ne définit pas les termes, ne joue pas sur leur sens et ne présente pas d'ambiguïté ou de comparaison fallacieuse. Aucun sophisme d'abus de langage n'est établi.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+          "arguments": "{\"node_pk\":\"800\",\"matches\":true,\"confidence\":\"medium\",\"justification\":\"L'expression « succès incontestable » est vague et absolue, sans critères ni éléments permettant d'évaluer la réussite de la politique économique; elle laisse le locuteur évasif sur ce qui constituerait un succès.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkH13fRdez8R1l1OjfgoXvs4p8mf8",
-        "created": 1794697205,
+        "id": "chatcmpl-EkNseS2tauDHcZXimcyzwH4RJy5yZ",
+        "created": 1794723592,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2297,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 92,
+          "completion_tokens": 85,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

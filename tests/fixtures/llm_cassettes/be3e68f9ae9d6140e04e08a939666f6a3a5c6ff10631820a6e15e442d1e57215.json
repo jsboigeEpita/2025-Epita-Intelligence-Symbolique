@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_UdkvXjMEQE9zbTZ6vgfNmzYY",
+          "id": "call_33iQAJ5eR9bucnwGKUf5HvAP",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"175\",\"matches\":false,\"justification\":\"La simple affirmation qu’une politique économique est un succès incontestable ne suffit pas à établir une manipulation de l’auditoire ni une technique persuasive identifiable; aucun mécanisme d’influence fallacieux n’est explicité.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+          "arguments": "{\"node_pk\":\"175\",\"matches\":false,\"justification\":\"L’énoncé rapporte simplement une affirmation du président; il ne fournit pas assez de contexte pour établir une manipulation de l’auditoire ou une technique rhétorique fallacieuse.\",\"move_author\":\"reported\",\"move_author_label\":\"le président\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkH131QM0Nv2rnhu5hGiZfdepMcva",
-        "created": 1794697205,
+        "id": "chatcmpl-EkNsdN6W4lZ1lrTk6MA0jQCB2wCoE",
+        "created": 1794723591,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2319,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 87,
+          "completion_tokens": 80,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

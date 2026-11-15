@@ -1,14 +1,14 @@
 {
   "key": "13c46692936470a46d0f874f91d9fbea1095799baa4d314e4da28e25c1216fb7",
   "value": {
-    "id": "chatcmpl-EkHANzM9JNlPwLQHN1RiMbzNfsbyz",
+    "id": "chatcmpl-EkO1yurcjZvyp4sncRBthmsc7XpNn",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"distinct_points\":\"1. Les erreurs du système judiciaire peuvent conduire à condamner injustement des personnes à mort.\\n2. La peine de mort sert de dissuasion contre les crimes les plus graves, comme le meurtre de masse.\\n3. Les avancées dans l’analyse ADN réduisent considérablement le risque d’erreurs judiciaires.\\n4. Certains criminels sont irrécupérables et représentent un danger permanent pour la société.\"}",
+          "content": "{\"distinct_points\":\"1. Les opposants soutiennent que les erreurs du système judiciaire peuvent conduire à condamner injustement des personnes à mort.\\n2. La peine de mort sert de dissuasion contre les crimes les plus graves, comme le meurtre de masse.\\n3. Les avancées dans les analyses ADN réduisent considérablement le risque d’erreurs judiciaires.\\n4. Certains criminels sont considérés comme irrécupérables et représentent un danger permanent pour la société.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794697783,
+    "created": 1794724170,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 166,
+      "completion_tokens": 192,
       "prompt_tokens": 241,
-      "total_tokens": 407,
+      "total_tokens": 433,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 64,
+        "reasoning_tokens": 81,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

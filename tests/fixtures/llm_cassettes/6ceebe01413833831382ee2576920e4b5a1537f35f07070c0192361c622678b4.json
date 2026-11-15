@@ -1,14 +1,14 @@
 {
   "key": "6ceebe01413833831382ee2576920e4b5a1537f35f07070c0192361c622678b4",
   "value": {
-    "id": "chatcmpl-EkH5viec7iQIhYZCayNDHvcd6zSYw",
+    "id": "chatcmpl-EkNxfRFm1RaIS3Fj4jLVN9scHaBUR",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"distinct_points\":\"1. L’option A consiste à organiser un tournoi inter-villes avec buffet et prix pour 2 000 euros.\\n2. Ce tournoi augmenterait la visibilité du club et permettrait de recruter de nouveaux membres.\\n3. L’option B consiste à investir intégralement les 2 000 euros dans du matériel pédagogique, notamment des échiquiers neufs, des horloges et des supports de cours.\\n4. Cet investissement est justifié par l’usure des échiquiers actuels.\\n5. L’option C propose un format hybride, avec 1 000 euros consacrés à un tournoi réduit et 1 000 euros au matériel pédagogique.\\n6. Ce format hybride cherche à équilibrer la visibilité du club et la pédagogie.\"}",
+          "content": "{\"distinct_points\":\"1. L’option B consiste à investir l’intégralité des 2000 euros dans du matériel pédagogique.\\n2. Cet investissement est justifié par l’usure des échiquiers actuels.\\n3. L’option A consiste à organiser un tournoi inter-villes avec buffet et prix pour 2000 euros.\\n4. Ce tournoi augmenterait la visibilité du club et permettrait de recruter de nouveaux membres.\\n5. L’option C propose un format hybride répartissant 1000 euros entre un tournoi réduit et 1000 euros dans le matériel pédagogique.\\n6. Cette répartition cherche à équilibrer la visibilité du club et les objectifs pédagogiques.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794697507,
+    "created": 1794723903,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 252,
+      "completion_tokens": 242,
       "prompt_tokens": 309,
-      "total_tokens": 561,
+      "total_tokens": 551,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 78,
+        "reasoning_tokens": 90,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

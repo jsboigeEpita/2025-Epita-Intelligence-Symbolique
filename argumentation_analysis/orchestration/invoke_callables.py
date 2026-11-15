@@ -9562,6 +9562,11 @@ async def _walk_single_fallacy_unit(
                 argument_text=arg_text,
                 document_statements=document_statements,
                 document_frame=document_frame,
+                # #3584 — this is the per-argument pass: a unit may hold no
+                # proposition at all, so its one-shot fallback is allowed to
+                # answer "none" (the document pass keeps its byte-identical
+                # pre-#3584 prompt).
+                allow_no_proposition=True,
             ),
             timeout=120.0,
         )
@@ -9582,6 +9587,9 @@ async def _walk_single_fallacy_unit(
                         use_one_shot=True,
                         document_statements=document_statements,
                         document_frame=document_frame,
+                        # #3584 — per-argument timeout fallback: same
+                        # abstention offer as the guided call above.
+                        allow_no_proposition=True,
                     ),
                     timeout=45.0,
                 )

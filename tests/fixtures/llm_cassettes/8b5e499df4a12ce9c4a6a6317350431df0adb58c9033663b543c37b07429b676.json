@@ -1,14 +1,14 @@
 {
   "key": "8b5e499df4a12ce9c4a6a6317350431df0adb58c9033663b543c37b07429b676",
   "value": {
-    "id": "chatcmpl-EkH1HZmDnuAhzi3EO8qepQ5Tfqqpg",
+    "id": "chatcmpl-EkNsrLO9jAElRjxRB2CaayxNKZfES",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[{\"text\":\"L’unanimité des experts suffit à établir qu’une proposition est vraie.\",\"source_quote\":\"Les experts sont unanimes, c'est donc vrai.\",\"move_author\":\"speaker\"},{\"text\":\"Les personnes qui ne sont pas expertes ne devraient pas voir leur avis pris en compte.\",\"source_quote\":\"Si vous n'etes pas expert, votre avis ne compte pas.\",\"move_author\":\"speaker\"}],\"claims\":[{\"text\":\"Les experts sont unanimes au sujet de la proposition considérée.\",\"source_quote\":\"Les experts sont unanimes\"},{\"text\":\"Selon l’argument avancé, le statut d’expert détermine la prise en compte d’un avis.\",\"source_quote\":\"Si vous n'etes pas expert, votre avis ne compte pas.\"}],\"summary\":\"Le texte défend deux positions fondées sur l’autorité des experts et sur l’exclusion des avis des non-experts; il emploie une généralisation catégorique et une condition d’exclusion.\"}",
+          "content": "{\"arguments\":[{\"text\":\"L'unanimité des experts suffit à établir qu'une proposition est vraie.\",\"source_quote\":\"Les experts sont unanimes, c'est donc vrai.\",\"move_author\":\"speaker\"},{\"text\":\"Une personne qui n'est pas experte ne peut pas faire valoir son avis dans le débat.\",\"source_quote\":\"Si vous n'etes pas expert, votre avis ne compte pas.\",\"move_author\":\"speaker\"}],\"claims\":[{\"text\":\"Les experts sont unanimes.\",\"source_quote\":\"Les experts sont unanimes\"}],\"summary\":\"Le texte défend l'autorité du consensus expert comme preuve de vérité et exclut les avis des non-experts.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794697219,
+    "created": 1794723605,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 396,
+      "completion_tokens": 495,
       "prompt_tokens": 607,
-      "total_tokens": 1003,
+      "total_tokens": 1102,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 185,
+        "reasoning_tokens": 350,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

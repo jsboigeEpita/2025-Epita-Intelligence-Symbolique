@@ -1,0 +1,48 @@
+{
+  "key": "dade041705755165557423ac0a8f3305b613eefa20fb27200f6e1694ac15582d",
+  "value": {
+    "id": "chatcmpl-EkO22u7dTZum8c4dfpTdLWQJ1ARoA",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"Les points visibles sont distincts : le point 1 traite du risque d’erreurs judiciaires et de condamnations injustes, tandis que le point 2 traite de l’effet dissuasif de la peine de mort. Le point 3 est tronqué (« Les avancées dan ») et ne permet pas d’identifier une éventuelle redondance.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794724174,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 168,
+      "prompt_tokens": 299,
+      "total_tokens": 467,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 74,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

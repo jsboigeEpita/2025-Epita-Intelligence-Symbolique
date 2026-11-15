@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "### Requête : `alice_succeeds`\n\n1. **Ce que la requête cherchait à vérifier :**  \n   Elle cherchait à déterminer si Alice réussit.\n\n2. **Résultat :** `True`  \n   La requête a été prouvée.\n\n3. **Signification dans le texte source :**  \n   Le texte indique qu’Alice étudie et que, si Alice étudie, alors elle réussit. On peut donc conclure qu’Alice réussit. Cette conclusion est également présente directement dans l’ensemble des croyances.\n\n### Requête : `alice_studies`\n\n1. **Ce que la requête cherchait à vérifier :**  \n   Elle cherchait à déterminer si Alice étudie.\n\n2. **Résultat :** `True`  \n   La requête a été prouvée.\n\n3. **Signification dans le texte source :**  \n   Cela confirme le fait donné explicitement dans le texte : Alice étudie.\n\n### Conclusion générale\n\nLes deux requêtes ont obtenu le résultat `True`. L’ensemble de croyances confirme donc qu’Alice étudie et qu’elle réussit. La réussite d’Alice découle logiquement de la règle « Si Alice étudie, alors elle réussit » et du fait établi qu’Alice étudie.",
+      "content": "### 1. Requête : `alice_succeeds`\n\n- **Ce que la requête cherchait à vérifier :**  \n  Elle cherchait à déterminer si Alice réussit.\n\n- **Résultat :** `True`  \n  La requête a donc été prouvée.\n\n- **Signification dans le texte source :**  \n  Le texte affirme que si Alice étudie, alors elle réussit (`alice_studies => alice_succeeds`). Il affirme également qu’Alice étudie (`alice_studies`). On peut donc déduire, par **modus ponens**, qu’Alice réussit.  \n  De plus, `alice_succeeds` figure directement dans l’ensemble des croyances.\n\n### 2. Requête : `alice_studies`\n\n- **Ce que la requête cherchait à vérifier :**  \n  Elle cherchait à déterminer si Alice étudie.\n\n- **Résultat :** `True`  \n  La requête a donc été prouvée.\n\n- **Signification dans le texte source :**  \n  Cette proposition est directement affirmée dans le texte : « Alice étudie ». Elle est également présente dans l’ensemble des croyances sous la forme `alice_studies`.\n\n### Conclusion générale\n\nLes deux requêtes ont obtenu le résultat `True`. Cela signifie que, selon l’ensemble des croyances, il est établi qu’Alice étudie et qu’Alice réussit. La réussite d’Alice est justifiée par la règle selon laquelle toute personne qui étudie réussit, combinée au fait qu’Alice étudie effectivement.",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkH8m1folDFecfCJ9kI8ESwyHVy2l",
-        "created": 1794697684,
+        "id": "chatcmpl-EkO0Ry3dkqsPMkVDR2knXzTr2dEtW",
+        "created": 1794724075,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 247,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 275,
+          "completion_tokens": 360,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 0,
+            "reasoning_tokens": 22,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

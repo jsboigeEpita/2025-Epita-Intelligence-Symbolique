@@ -1,14 +1,14 @@
 {
   "key": "8e82e105b99ab122810eda7cbfc3079c1c35f6ddab86c96bb5a75bf5d8d722a0",
   "value": {
-    "id": "chatcmpl-EkH5nJotL6b6pIOXz0V7ljCsBtvDM",
+    "id": "chatcmpl-EkNxYuIxdz73GH2XtlTrJMUrI1jDu",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Investir les 2000 euros en matériel pédagogique, en échiquiers neufs, en horloges et en supports de cours, car les échiquiers actuels sont usés.\",\"main_thesis\":\"Organiser un tournoi inter-villes avec buffet et prix pour 2000 euros afin d’accroître la visibilité du club et de recruter de nouveaux membres.\"}",
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Option B propose d’investir les 2000 euros dans du matériel pédagogique, des échiquiers neufs, des horloges et des supports de cours, parce que les échiquiers actuels sont usés.\",\"main_thesis\":\"L’option A propose d’organiser un tournoi inter-villes avec buffet et prix pour 2000 euros afin d’accroître la visibilité du club et de recruter de nouveaux membres.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794697499,
+    "created": 1794723896,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 165,
+      "completion_tokens": 435,
       "prompt_tokens": 330,
-      "total_tokens": 495,
+      "total_tokens": 765,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 67,
+        "reasoning_tokens": 325,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

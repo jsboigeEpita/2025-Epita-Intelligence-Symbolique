@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_5pW5AWnOxx6QSU3cl3EKC8Mn",
+          "id": "call_QG89ZSbhBDADo0DhQPyTIoH3",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"332\",\"matches\":false,\"justification\":\"Le texte invoque l'unanimité des experts et exclut l'avis des non-experts; il ne cherche pas à énerver l'adversaire ni à le déstabiliser émotionnellement. La branche « Fâcher l’adversaire » ne correspond pas.\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"332\",\"matches\":false,\"justification\":\"Le texte ne cherche pas à énerver ou à déstabiliser émotionnellement l'adversaire ; il invoque plutôt l'autorité des experts et exclut les non-experts.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkH1eMz3LdQEsSMG4xMbKSFlpvoGG",
-        "created": 1794697242,
+        "id": "chatcmpl-EkNtUU0UTGm2MHlKajwMfDE5M7JTk",
+        "created": 1794723644,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2108,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 93,
+          "completion_tokens": 75,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

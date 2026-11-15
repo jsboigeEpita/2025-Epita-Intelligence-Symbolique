@@ -1,0 +1,48 @@
+{
+  "key": "6c76b0de543fedd3fc2f977bcda123e6ecabdd06700f54049b5560c83307b13f",
+  "value": {
+    "id": "chatcmpl-EkNqLvTr389vh7ycFuVFcxeO1B3Lo",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Obstacles localisés : les termes « PIB », « homme de paille » et « appel à l’émotion » ne sont pas définis, et le référent de « le déficit » n’est pas explicitement précisé. Verdict : ces obstacles sont résolvables par le contexte, ce qui permet d’accéder globalement au sens.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794723449,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 127,
+      "prompt_tokens": 279,
+      "total_tokens": 406,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 37,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
