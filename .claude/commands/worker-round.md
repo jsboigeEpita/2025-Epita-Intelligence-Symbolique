@@ -96,9 +96,10 @@ roosync_dashboard(action: "read", type: "workspace")
 roosync_messages(action: "inbox", format: "markdown", status: "unread")
 ```
 
-Lire le contenu COMPLET, sauf un message porteur de pièce jointe : son sujet dit « NE PAS
-OUVRIR ». Le marquer lu détruit la pièce jointe. Le dispatch qui l'accompagne donne son uuid :
-`attachments_get(uuid, targetPath)` d'abord, sha256 ensuite, ouverture en dernier. Identifier :
+Lire le contenu COMPLET. Un message porteur de pièce jointe autodestructrice ne se marque pas
+lu (`mark_read`, `bulk_mark_read`, `mark_as_read: true`) avant `attachments_get` : le marquage
+lu détruit la pièce jointe. Le dispatch qui l'accompagne donne son uuid :
+`attachments_get(uuid, targetPath)` d'abord, sha256 ensuite, marquage lu en dernier. Identifier :
 - Messages **[DISPATCH]** du coordinateur → action immédiate
 - Messages **[DONE]** des autres workers → vérifier et ACK
 - Messages **[ASK]** sans [REPLY] → répondre AVANT de travailler
