@@ -560,6 +560,22 @@ def _borda_lines(game: Dict[str, Any]) -> List[str]:
     return lines
 
 
+def _naming_quote(player: Dict[str, Any]) -> str:
+    """#3556 (c13) — what the text says where it names the player.
+
+    The producer recorded the sentence that carries the name AND the
+    reply's own role/interests vocabulary, as a slice of the text at the
+    recorded span. Quoted verbatim and truncated, it is the text's words
+    AT THE NAMING PLACE — the stance basis is unchanged (#3461) and this
+    is never the player's position (#3389: ``quote_occurs_in`` is not
+    loosened, no stance citation was verified).
+    """
+    sentence = _truncate(player.get("naming_sentence", ""), _MODEL_READ_CAP)
+    if not sentence:
+        return ""
+    return f" — en le nommant, le texte dit : « {sentence} »"
+
+
 def _format_strategic_block(read: Dict[str, Any]) -> str:
     """Render the strategist's read AND what the engine computed from it (#3377).
 
@@ -619,6 +635,10 @@ def _format_strategic_block(read: Dict[str, Any]) -> str:
                 player.get("named_offset"), bool
             ):
                 label += " ; le texte nomme ce joueur"
+                # #3556 (c13) — the naming sentence itself, when it carries
+                # the reply's role/interests vocabulary: what the text says
+                # where it names the player, never the stance.
+                label += _naming_quote(player)
         elif player.get("anchor") == ANCHOR_UNRELATED:
             # #3556 — the passage IS in the document, but the producer did not
             # find this player in the sentence that carries it: an anchor that
@@ -641,6 +661,10 @@ def _format_strategic_block(read: Dict[str, Any]) -> str:
                 " — savoir du modèle, sans citation (le texte n'a pas été "
                 "vérifié pour cette position) ; le texte nomme ce joueur"
             )
+            # #3556 (c13) — the naming sentence, when it carries the reply's
+            # role/interests vocabulary: quoted as the text's own words at
+            # the naming place, never as the stance.
+            label += _naming_quote(player)
         else:
             label += (
                 " — savoir du modèle, sans citation (le texte n'a pas été "
@@ -1584,6 +1608,9 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         "  comme le propos du texte — SAUF si l'étiquette dit que le texte\n"
         "  NOMME ce joueur : un acteur que le document nomme s'écrit comme\n"
         "  une lecture DU texte, jamais comme un savoir venu d'ailleurs (#3556) ;\n"
+        "  quand l'étiquette cite la phrase qui nomme (« en le nommant, le\n"
+        "  texte dit »), cette phrase est la parole du texte À L'ENDROIT où\n"
+        "  il nomme le joueur — jamais la position du joueur elle-même ;\n"
         "  une position dont la citation n'a pas été retrouvée, ou étiquetée\n"
         "  « sans rapport », se dit sans guillemets — une citation sans\n"
         "  rapport n'est JAMAIS la position de ce joueur.\n"

@@ -157,3 +157,53 @@ class TestTheCompanionsKeepTheirLabels:
         assert "la citation proposée n'a pas été retrouvée" in block
         assert "le texte ne porte pas ce passage" not in block
         assert "ne le cite PAS entre guillemets" in block
+
+
+class TestTheNamingSentenceQuote:
+    """#3556 (c13) — when the producer recorded the sentence that names the
+    player, the label quotes it as what the text says AT THE NAMING PLACE:
+    the stance basis is unchanged (#3461 — the naming quote is never a
+    stance citation, #3389 — ``quote_occurs_in`` is not loosened)."""
+
+    def test_the_naming_quote_is_the_text_at_the_naming_place(self):
+        read = {
+            "players": [
+                {
+                    "name": "P1",
+                    "role": "ministère",
+                    "stance": "for",
+                    "basis": MODEL_KNOWLEDGE_BASIS,
+                    "named_offset": 12,
+                    "naming_span": [11, 61],
+                    "naming_sentence": (
+                        "La mission régionale a signé la charte de la coopération."
+                    ),
+                }
+            ]
+        }
+        block = _format_strategic_block(read)
+
+        assert (
+            "en le nommant, le texte dit : « La mission régionale a signé "
+            "la charte de la coopération. »" in block
+        )
+        # The stance stays an unverified reading — the naming quote did not
+        # turn it into a citation.
+        assert "le texte n'a pas été vérifié pour cette position" in block
+
+    def test_without_a_recorded_sentence_the_label_keeps_its_shape(self):
+        read = {
+            "players": [
+                {
+                    "name": "P1",
+                    "role": "ministère",
+                    "stance": "for",
+                    "basis": MODEL_KNOWLEDGE_BASIS,
+                    "named_offset": 12,
+                }
+            ]
+        }
+        block = _format_strategic_block(read)
+
+        assert "en le nommant" not in block
+        assert "le texte nomme ce joueur" in block
