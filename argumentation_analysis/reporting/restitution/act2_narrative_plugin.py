@@ -144,6 +144,9 @@ from argumentation_analysis.agents.core.governance.coalition_play import (
 )
 from argumentation_analysis.agents.core.reading import first_reading_note  # #3395
 from argumentation_analysis.agents.core.reading import cross_passage_note  # #3432
+from argumentation_analysis.reporting.restitution.native_dung import (  # #2928
+    arbitration_note,
+)
 from argumentation_analysis.agents.core.reading import (  # #3492
     coverage_family_by_unit,  # #3505 part 3
     coverage_item_line,  # #3505
@@ -671,6 +674,14 @@ class Act2Evidence:
     # positions, or the named absence (#1941). Empty when the state carries
     # no record: the prompt omits the section.
     cross_passage: str = ""
+    # #2928 — the Dung-arbitration statement, rendered by its ONE producer
+    # (``native_dung.arbitration_note``): which detections a rival family
+    # contests on the same unit, and which contests the stage leaves
+    # undecided — a STATEMENT, never a filter (every detection stays in the
+    # report, and the note says so at its head). Empty when the state carries
+    # no enabled ``dung_arbitration`` framework: the prompt omits the section
+    # and stays byte-identical to the stage-free one (the issue's control).
+    dung_arbitration: str = ""
     # #3492 — the coverage review's block, rendered by its ONE producer
     # (``coverage_review_note``): the supports or qualifiers of the thesis no
     # lens examined, each with its quote, its position and what its lens
@@ -1550,6 +1561,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         # never re-words the moves in its own vocabulary.
         first_reading=first_reading_note(state),
         cross_passage=cross_passage_note(state),
+        dung_arbitration=arbitration_note(state),
         # #3492 — same single-producer rule: the act never re-words the review.
         # #3505 — the findings bound to a movement are excluded from the
         # block: one home per finding (the movement's beat), the block keeps
@@ -2402,6 +2414,15 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
             + "\n\n"
         )
 
+    # --- #2928: the Dung-arbitration statement (éclairage, jamais un filtre) ---
+    # Right after the fallacy-statement family of blocks: it speaks ABOUT the
+    # detections above, it adds none and removes none. Empty on a state whose
+    # stage never ran (or ran OFF): the prompt is byte-identical to the
+    # stage-free one — the issue's control.
+    arbitration_block = (
+        f"{evidence.dung_arbitration}\n\n" if evidence.dung_arbitration else ""
+    )
+
     # --- formal anchors (verified-in-state) ---
     # #1914 (constat 1) : an anchor without its tested content reads as a
     # badge — the reader cannot tell WHAT was tested. Each line now carries
@@ -2829,6 +2850,7 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         f"{coverage_note}"
         f"{unattributed_block}"
         f"{reported_block}"
+        f"{arbitration_block}"
         f"TENUE FORMELLE (ancres vérifiées, à tisser comme PREUVE d'un battement) :\n"
         f"{formal_block}\n\n"
         f"{annex_ref_rule}"

@@ -2354,6 +2354,25 @@ def _write_dung_arbitration_to_state(
         for pair in attacks
         if isinstance(pair, (list, tuple)) and len(pair) >= 2
     ]
+    # #2928 — candidate provenance (id → family + target unit), so the
+    # statement a render builds can name families and units instead of the
+    # opaque ids the solver speaks. Stored only as produced; an absent or
+    # malformed list stays empty (the note then falls back to its
+    # opaque-ids form, never fabricates).
+    provenance_raw = output.get("candidates_provenance")
+    provenance = (
+        [
+            {
+                "id": str(p.get("id") or ""),
+                "family": str(p.get("family") or ""),
+                "target_argument": str(p.get("target_argument") or ""),
+            }
+            for p in provenance_raw
+            if isinstance(p, dict) and p.get("id")
+        ]
+        if isinstance(provenance_raw, list)
+        else []
+    )
     state.add_dung_framework(
         name="dung_arbitration",
         arguments=arguments,
@@ -2365,6 +2384,7 @@ def _write_dung_arbitration_to_state(
             "enabled": bool(verdict.get("enabled", False)),
             "input_count": int(verdict.get("input_count", 0)),
             "surviving_count": int(verdict.get("surviving_count", 0)),
+            "candidates_provenance": provenance,
         },
     )
     if verdict.get("enabled"):

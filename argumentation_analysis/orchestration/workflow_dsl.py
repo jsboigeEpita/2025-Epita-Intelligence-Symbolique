@@ -95,6 +95,12 @@ class WorkflowPhase:
     capability: str
     optional: bool = False
     depends_on: List[str] = field(default_factory=list)
+    # #2928 — per-phase context overlay, READ by the executor: merged as a
+    # copy over the shared ctx for THIS phase's provider.invoke only (see
+    # _invoke_with_retry / _execute_loop). The shared ctx stays untouched, so
+    # a stage selector a phase turns on (e.g. the Dung-arbitration stage's
+    # ``dung_arbitration: True``) never leaks to later phases. Before #2928
+    # this field was assigned and never read — the dead-channel shape #1019.
     parameters: Dict[str, Any] = field(default_factory=dict)
     timeout_seconds: Optional[float] = None
     condition: Optional[Callable[[Dict[str, Any]], bool]] = None
@@ -798,6 +804,12 @@ class WorkflowExecutor:
         retry_cfg = phase.retry_config
         max_attempts = retry_cfg.max_attempts if retry_cfg is not None else 1
         last_exc: Optional[BaseException] = None
+        # #2928 — per-phase context overlay (WorkflowPhase.parameters): merged
+        # as a COPY for this phase's invokes only. The shared ctx is never
+        # mutated, so a selector one phase turns on stays scoped to it.
+        invoke_ctx: Dict[str, Any] = (
+            {**ctx, **phase.parameters} if phase.parameters else ctx
+        )
 
         for attempt in range(1, max_attempts + 1):
             # #3435 — publier le budget AUTOUR de l'invocation : le transport
@@ -817,11 +829,11 @@ class WorkflowExecutor:
                     )
                     observer_token = phase_transport_observer.set(observer)
                     output = await asyncio.wait_for(
-                        provider.invoke(phase_input, ctx),
+                        provider.invoke(phase_input, invoke_ctx),
                         timeout=phase.timeout_seconds,
                     )
                 else:
-                    output = await provider.invoke(phase_input, ctx)
+                    output = await provider.invoke(phase_input, invoke_ctx)
                 return output, attempt
             except BaseException as exc:  # noqa: BLE001 — see below
                 last_exc = exc
@@ -1295,6 +1307,12 @@ class WorkflowExecutor:
 
         prev_output = None
         final_output = None
+        # #2928 — per-phase context overlay, same rule as _invoke_with_retry:
+        # the provider's invokes read the merged COPY; the iteration writes
+        # below stay on the SHARED ctx (later phases read them).
+        invoke_ctx: Dict[str, Any] = (
+            {**ctx, **phase.parameters} if phase.parameters else ctx
+        )
 
         for iteration in range(loop_config.max_iterations):
             # #3435 — même publication que _invoke_with_retry : le budget est
@@ -1309,11 +1327,11 @@ class WorkflowExecutor:
                     )
                     observer_token = phase_transport_observer.set({"attempts": 0})
                     output = await asyncio.wait_for(
-                        provider.invoke(phase_input, ctx),
+                        provider.invoke(phase_input, invoke_ctx),
                         timeout=phase.timeout_seconds,
                     )
                 else:
-                    output = await provider.invoke(phase_input, ctx)
+                    output = await provider.invoke(phase_input, invoke_ctx)
             finally:
                 if budget_token is not None:
                     phase_attempt_budget.reset(budget_token)
