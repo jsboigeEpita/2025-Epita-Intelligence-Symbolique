@@ -53,7 +53,10 @@ class TestSpectacularWorkflowDAG:
         # passages, decided by the wired propositional reasoner. 44 → 45.
         # #3492 adds coverage_review: after the deep phases, one whole-document
         # pass names the thesis supports no lens examined. 45 → 46.
-        assert len(wf.phases) == 46
+        # #2928 adds dung_arbitration: the Dung-arbitration stage wired as a
+        # STATEMENT on contested detections (every detection stays; Act II
+        # renders which units rival families contest). 46 → 47.
+        assert len(wf.phases) == 47
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -79,6 +82,9 @@ class TestSpectacularWorkflowDAG:
             "fol_solver",
             "modal_solver",
             "dung_extensions",
+            # #2928: the arbitration stage — a statement on contested
+            # detections, never a filter.
+            "dung_arbitration",
             "ranking",
             "bipolar",
             "probabilistic",

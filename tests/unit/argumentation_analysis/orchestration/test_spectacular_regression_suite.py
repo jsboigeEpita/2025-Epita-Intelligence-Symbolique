@@ -321,6 +321,9 @@ class TestSpectacularWorkflowGolden:
         "fol_solver",
         "modal_solver",
         "dung_extensions",
+        # #2928: the arbitration stage — a statement on contested
+        # detections, never a filter.
+        "dung_arbitration",
         "ranking",
         "bipolar",
         "probabilistic",
@@ -385,8 +388,11 @@ class TestSpectacularWorkflowGolden:
         # #3432 (ask 6b) adds cross_passage_consistency. 44 → 45.
         # #3492 adds coverage_review: after the deep phases, one whole-document
         # pass names the thesis supports no lens examined. 45 → 46.
+        # #2928 adds dung_arbitration: the Dung-arbitration stage wired as a
+        # STATEMENT on contested detections (every detection stays; Act II
+        # renders which units rival families contest). 46 → 47.
         wf = build_spectacular_workflow()
-        assert len(wf.phases) == 46
+        assert len(wf.phases) == 47
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -862,7 +868,9 @@ class TestWorkflowCatalogGolden:
         # #3387 rework: +1 semantic_indexing (index queried by the reading).
         # 43 → 44. #3432 (ask 6b): +1 cross_passage_consistency. 44 → 45.
         # #3492: +1 coverage_review (the whole-document pass). 45 → 46.
-        assert len(catalog["spectacular"].phases) == 46
+        # #2928: +1 dung_arbitration (the statement on contested detections).
+        # 46 → 47.
+        assert len(catalog["spectacular"].phases) == 47
 
     def test_catalog_includes_sherlock_modern(self):
         catalog = get_workflow_catalog()
