@@ -29,7 +29,8 @@ never a corpus name, place or date):
   discriminated (each with its cause now written to the state);
 - a retry call that RAISES keeps the first attempt's decode record, with the
   provider failure riding inside it as ``retry_error``: both causes matter
-  in that one case, and neither erases the other.
+  in that one case, and neither erases the other. A retry that comes back
+  EMPTY keeps it too — same class, one father in the helper.
 
 The file collects on ``main``: the new symbols are imported inside the tests
 that need them, so the feature arms redden while the controls stay green —
@@ -357,3 +358,51 @@ class TestARaisingSecondChanceKeepsTheFirstRecord:
         assert failure["message"] == "Expecting ':' delimiter"
         assert failure["position"] == _BAD_POS
         assert failure["retry_error"] == "TimeoutError: provider timeout"
+
+
+# ============================================================================
+# An EMPTY second chance — same class: the first record is the one to keep
+# ============================================================================
+
+
+class TestAnEmptySecondChanceKeepsTheFirstRecord:
+    """Follow-up on #3597: attempt 1 failed to decode, attempt 2 came back
+    EMPTY. The empty completion must not erase the decode record either —
+    same class as the raising retry, same father in the helper. The empty
+    reply rides inside ``parse_failure`` as ``retry_error``.
+    """
+
+    async def test_the_strategist_keeps_the_first_attempts_record(self):
+        llm, calls = _replies(_MALFORMED_REPLY, "")
+
+        result = await build_strategic_read(_state(), llm)
+        payload = result.to_state()
+
+        assert result.status == "parse_error"
+        assert len(calls) == 2
+        assert payload["attempts"] == 2
+        assert payload["players"] == []
+        # The primary cause stays the DECODE failure, not the empty retry.
+        assert payload["error"].startswith("JSONDecodeError: Expecting ':'")
+        failure = payload["parse_failure"]
+        assert set(failure) == _FAILURE_KEYS | {"retry_error"}
+        assert failure["message"] == "Expecting ':' delimiter"
+        assert failure["position"] == _BAD_POS
+        assert failure["retry_error"] == "empty completion"
+
+    async def test_the_historian_keeps_the_first_attempts_record(self):
+        llm, calls = _replies(_MALFORMED_REPLY, "")
+
+        result = await build_historical_context(_state(), llm)
+        payload = result.to_state()
+
+        assert result.status == "parse_error"
+        assert len(calls) == 2
+        assert payload["attempts"] == 2
+        assert payload["items"] == []
+        assert payload["error"].startswith("JSONDecodeError: Expecting ':'")
+        failure = payload["parse_failure"]
+        assert set(failure) == _FAILURE_KEYS | {"retry_error"}
+        assert failure["message"] == "Expecting ':' delimiter"
+        assert failure["position"] == _BAD_POS
+        assert failure["retry_error"] == "empty completion"

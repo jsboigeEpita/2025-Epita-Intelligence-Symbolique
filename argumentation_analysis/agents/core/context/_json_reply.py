@@ -22,9 +22,10 @@ Choices, stated because they change what a read can claim:
   rejects, hiding the very malformation this record exists to show.
 - only a MALFORMED reply is retried. An empty completion or a provider
   exception stays ``llm_error`` after its one call: those are not a decode
-  symptom, and a second paid call would not repair them. A provider exception
-  on the RETRY itself keeps the first attempt's decode record, the provider
-  failure riding inside it as ``retry_error`` (#3597 review).
+  symptom, and a second paid call would not repair them. A retry that cannot
+  answer — the call raises, or comes back empty — keeps the first attempt's
+  decode record, the retry's own failure riding inside it as ``retry_error``
+  (#3597 review).
 - the failure record is BOUNDED: ``JSON_REPLY_WINDOW_RADIUS`` characters
   around the decoder's position, plus the reply's length — enough to read a
   malformed middle, never the whole reply.
@@ -115,16 +116,36 @@ async def request_json_reply(
     A decode failure is retried on the SAME prompt while attempts remain; any
     other outcome ends the loop. A provider exception on the FIRST attempt
     propagates to the caller, which owns the ``llm_error`` branch (unchanged
-    behaviour). A provider exception on a RETRY does not erase what the first
-    attempt left: the reply that failed to decode is still the primary cause,
-    so the loop stops and returns ``parse_error`` with the first attempt's
-    record, the provider failure riding inside it as ``retry_error`` — no new
-    state key, and neither cause is lost (#3597 review).
+    behaviour); so does an empty completion on the first attempt. A retry that
+    cannot answer — the call RAISES, or comes back EMPTY — does not erase what
+    the first attempt left: the reply that failed to decode is still the
+    primary cause, so the loop stops and returns ``parse_error`` with the
+    first attempt's record, the retry's own failure riding inside it as
+    ``retry_error`` — no new state key, and neither cause is lost (#3597
+    review).
     """
     last_error = ""
     last_detail = ""
     failure: Dict[str, Any] = {}
     made = 0
+
+    def _unanswered_retry(reason: str) -> JsonReply:
+        """The retry could not answer (#3597 review): it raised, or was empty.
+
+        One father for both shapes so they cannot drift: the reply that failed
+        to decode is still the primary cause, and the retry's own failure
+        JOINS its record as ``retry_error`` instead of replacing it.
+        """
+        record = dict(failure)
+        record["retry_error"] = reason
+        return JsonReply(
+            status="parse_error",
+            error=last_error,
+            detail=last_detail,
+            attempts=made,
+            parse_failure=record,
+        )
+
     while made < max(1, attempts):
         made += 1
         try:
@@ -135,22 +156,15 @@ async def request_json_reply(
                 # whole story, and the caller's ``llm_error`` branch owns it
                 # exactly as before #3576.
                 raise
-            # The second chance could not even be asked. The decode record is
-            # the one this fix exists to keep; the provider failure joins it
-            # instead of replacing it.
-            record = dict(failure)
-            record["retry_error"] = f"{type(exc).__name__}: {exc}"
-            return JsonReply(
-                status="parse_error",
-                error=last_error,
-                detail=last_detail,
-                attempts=made,
-                parse_failure=record,
-            )
+            return _unanswered_retry(f"{type(exc).__name__}: {exc}")
         if not content:
-            return JsonReply(
-                status="llm_error", error="empty completion", attempts=made
-            )
+            if not failure:
+                # First attempt: an empty completion is an ``llm_error``
+                # exactly as before #3576 — it is not a decode symptom.
+                return JsonReply(
+                    status="llm_error", error="empty completion", attempts=made
+                )
+            return _unanswered_retry("empty completion")
         try:
             parsed = json.loads(content)
         except json.JSONDecodeError as exc:
