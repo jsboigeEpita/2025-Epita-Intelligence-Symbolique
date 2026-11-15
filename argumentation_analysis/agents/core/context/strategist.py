@@ -207,6 +207,97 @@ def _sentence_span(raw_text: str, start: int, end: int) -> Tuple[int, int]:
     return lo, hi
 
 
+#: #3556 (c14) — the conjunctions a compound player name splits on.
+_NAME_CONJUNCTIONS = (" et ", " and ")
+
+#: #3556 (c13) — a distinctive word of the reply's role/interests rides a
+#: naming sentence either as the same word, or as its close morphological
+#: family: the recorded c13 shape carries « industrie » in the text where
+#: the reply says « industrielle ». Eight shared letters is the narrowest
+#: closure that bridges that shape — below, « gouvernance » would ride
+#: « gouvernement », which is not a family the reply can claim.
+_NAMING_FAMILY_PREFIX = 8
+
+
+def _words_share_family(word: str, other: str) -> bool:
+    """#3556 (c13) — same word, or its ≥ 8-letter morphological family
+    (``industrie`` / ``industrielle``, accent-stable) — never a shorter
+    shared head (``gouvernance`` is not ``gouvernement``)."""
+    shared = 0
+    for left, right in zip(word, other):
+        if left != right:
+            break
+        shared += 1
+    return shared >= _NAMING_FAMILY_PREFIX
+
+
+def _name_offset_in_text(name: str, raw_text: str) -> Optional[int]:
+    """#3556 (c14) — where the text names ``name``, compounds included.
+
+    « Officiers et soldats français » names the player when EVERY conjunct
+    of its conjunction occurs contiguously: the shared trailing qualifier
+    distributes over both in the reply's own grammar, so the text's
+    « les officiers et les soldats français » carries the whole compound
+    though the full string never sits contiguous. NOT a word-bag: one
+    missing or reworded conjunct (the reply's « de l'armement » against
+    the text's « des industries d'armement ») leaves the player unnamed,
+    exactly as the plain check would. Returns the FIRST conjunct's offset.
+    """
+    cleaned = str(name or "").strip()
+    if not cleaned or not raw_text:
+        return None
+    lowered = cleaned.casefold()
+    for separator in _NAME_CONJUNCTIONS:
+        parts = [part.strip() for part in lowered.split(separator)]
+        parts = [part for part in parts if part]
+        if len(parts) < 2:
+            continue
+        offsets: List[int] = []
+        for part in parts:
+            found = _name_in_text(part, raw_text)
+            if found is None:
+                return _name_in_text(cleaned, raw_text)
+            offsets.append(found)
+        return offsets[0]
+    return _name_in_text(cleaned, raw_text)
+
+
+def _naming_sentence(
+    player: Dict[str, Any], raw_text: str
+) -> Optional[Tuple[int, int, str]]:
+    """#3556 (c13) — the sentence that NAMES the player, when it also
+    carries the reply's own role/interests vocabulary.
+
+    The c13 severs are players the text names while Act I files their role
+    under the model's knowledge: the naming sentence itself often states
+    that role (« the … administration », « l'immense industrie »), and the
+    producer recorded only WHERE the name sat, never WHAT that sentence
+    says. The check is the concern check's distinctive-word rule, read
+    against EVERY sentence that carries the name (the recorded doc_E shape
+    keeps its role vocabulary at the second occurrence), family forms
+    included — the recorded doc_I shape says « industrie » where the reply
+    says « industrielle ». Returns ``(lo, hi, sentence)`` computed from the
+    text, never relayed from the reply, or ``None``.
+    """
+    name = str(player.get("name") or "").strip()
+    if not name or not raw_text:
+        return None
+    vocabulary = _distinctive_words(
+        " ".join(str(player.get(key) or "") for key in ("role", "interests"))
+    )
+    if not vocabulary:
+        return None
+    pattern = re.compile(r"(?<!\w)" + re.escape(name) + r"(?!\w)", re.IGNORECASE)
+    for match in pattern.finditer(raw_text):
+        lo, hi = _sentence_span(raw_text, match.start(), match.end())
+        sentence_words = _distinctive_words(raw_text[lo:hi])
+        for word in vocabulary:
+            for sentence_word in sentence_words:
+                if word == sentence_word or _words_share_family(word, sentence_word):
+                    return lo, hi, raw_text[lo:hi].strip()
+    return None
+
+
 def _passage_concerns(
     player: Dict[str, Any],
     peers: List[Dict[str, Any]],
@@ -314,19 +405,35 @@ def anchor_player(
       name: the player is not "known only from outside the text", though
       the unquoted stance itself stays a reading.
 
-    The model's own keys are never trusted: ``basis``, ``anchor`` and
-    ``named_offset`` are removed from the incoming dict and only the
-    producer writes them back.
+    The model's own keys are never trusted: ``basis``, ``anchor``,
+    ``named_offset``, ``naming_span`` and ``naming_sentence`` are removed
+    from the incoming dict and only the producer writes them back. The
+    name check reads compound names conjunct by conjunct (#3556, c14), and
+    wherever it sets ``named_offset`` it also looks for the naming
+    sentence that carries the reply's own role/interests vocabulary
+    (#3556, c13) — recorded as the span and string of what the text says
+    where it names the player, never as the stance.
     """
     item = {key: value for key, value in (player or {}).items() if key != "basis"}
     item.pop("anchor", None)
     item.pop("named_offset", None)
+    item.pop("naming_span", None)
+    item.pop("naming_sentence", None)
     quote = str(item.pop("quote", "") or "").strip()
     if not quote:
         item["basis"] = MODEL_KNOWLEDGE_BASIS
-        named = _name_in_text(str(item.get("name") or ""), raw_text or "")
+        # #3556 (c14) — compounds name the player conjunct by conjunct;
+        # #3556 (c13) — a naming sentence that carries the reply's own
+        # role/interests vocabulary is recorded as what the text says
+        # where it names the player.
+        named = _name_offset_in_text(str(item.get("name") or ""), raw_text or "")
         if named is not None:
             item["named_offset"] = named
+            naming = _naming_sentence(item, raw_text or "")
+            if naming is not None:
+                lo, hi, sentence = naming
+                item["naming_span"] = [lo, hi]
+                item["naming_sentence"] = sentence
         return item
     if raw_text and quote_occurs_in(raw_text, quote):
         index = locate_quote(raw_text, quote)
@@ -345,9 +452,17 @@ def anchor_player(
     # carries, is not "known only from outside the text". The control that
     # ran says the citation was not found verbatim — never that the text
     # lacks the passage or the player.
-    named = _name_in_text(str(item.get("name") or ""), raw_text or "")
+    named = _name_offset_in_text(str(item.get("name") or ""), raw_text or "")
     if named is not None:
         item["named_offset"] = named
+        # #3556 (c13) — the same naming-sentence record as the no-quote
+        # branch: a failed citation says nothing about what the sentence
+        # that names the player states.
+        naming = _naming_sentence(item, raw_text or "")
+        if naming is not None:
+            lo, hi, sentence = naming
+            item["naming_span"] = [lo, hi]
+            item["naming_sentence"] = sentence
     return item
 
 

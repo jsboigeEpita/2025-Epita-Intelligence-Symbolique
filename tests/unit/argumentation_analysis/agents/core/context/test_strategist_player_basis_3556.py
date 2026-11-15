@@ -562,3 +562,266 @@ class TestActOneTellsTheTwoApart:
         # The register rule still routes a named player to a reading OF the
         # text — the unanchored label now carries the naming line.
         assert "un acteur que le document nomme s'écrit comme" in prompt
+
+
+#: #3556 (c13) — the naming sentence itself carries the reply's
+#: role/interests vocabulary: the SECOND occurrence's sentence says what
+#: the reply files under the role (the recorded doc_E shape), the first
+#: occurrence's says nothing of it. The check must read every naming
+#: sentence, not only the recorded offset's.
+DOC_NAMING_SENTENCE = (
+    "Le bureau a publié son avis ce matin. "
+    "La mission régionale a répondu la semaine suivante. "
+    "Puis la mission régionale a signé la charte de la coopération."
+)
+NAMING_SENTENCE_HIT = "Puis la mission régionale a signé la charte de la coopération."
+
+#: #3556 (c13) — the recorded doc_I shape: the naming sentence carries the
+#: role's morphological FAMILY (« industrie » where the reply says
+#: « industrielle » — an accent-stable family), never the word itself: an
+#: exact-word rule measured zero hits on both c13 targets.
+DOC_NAMING_FAMILY = (
+    "L'office a rendu son avis. "
+    "Le syndicat peut, comme la chambre, mobiliser toute l'institution "
+    "de la province."
+)
+
+#: #3556 (c13) control — the naming sentence carries none of the role's
+#: vocabulary, family included: the exact pre-c13 shape, unchanged.
+DOC_NAMING_QUIET = (
+    "Le secrétariat a diffusé la note. " "La province a répondu par courrier."
+)
+
+#: #3556 (c14) — the compound the text carries by its conjunction: every
+#: conjunct contiguous, the full string never contiguous.
+DOC_COMPOUND = (
+    "Le comité a statué sans débat. "
+    "J'invite les délégués et les agents consulaires qui siègent "
+    "à rejoindre l'accord."
+)
+
+#: #3556 (c14) control — the text carries the first conjunct and a
+#: REWORDED second (« experts des comptes » against « experts
+#: comptables »): the player stays unnamed, byte-identically.
+DOC_COMPOUND_MISS = (
+    "Le comité a statué sans débat. "
+    "Les archivistes et les experts des comptes publics ont validé "
+    "le relevé."
+)
+
+
+class TestTheNamingSentenceCarriesTheRole:
+    """#3556 (c13) — the producer already records WHERE the text names the
+    player (c12). When the naming sentence also carries the reply's own
+    role/interests vocabulary, it records the sentence itself — computed
+    from the text, never relayed from the reply. Born red on ``e4eb7e74d``:
+    no ``naming_span``/``naming_sentence`` key exists there."""
+
+    async def test_the_span_is_the_sentence_that_carries_the_vocabulary(self):
+        """The vocabulary sits in the SECOND occurrence's sentence — the
+        check reads every naming sentence, and records the span of the one
+        that hits."""
+        players = [
+            {
+                "name": "la mission régionale",
+                "role": "coordinateur de la coopération",
+                "stance": "for",
+                "interests": "défendre la charte commune",
+            }
+        ]
+        _, state = await _read(_payload(players), DOC_NAMING_SENTENCE)
+        player = state["players"][0]
+
+        assert "named_offset" in player
+        span = player["naming_span"]  # born red: KeyError on main
+        lo, hi = span
+        assert DOC_NAMING_SENTENCE[lo:hi].strip() == NAMING_SENTENCE_HIT
+        assert player["naming_sentence"] == NAMING_SENTENCE_HIT
+
+    async def test_the_family_shape_hits_where_the_exact_word_cannot(self):
+        """The measured doc_I shape: the text's « institution » against the
+        reply's « institutionnel » (as « industrie » stood against
+        « industrielle ») — same word family, never the same word. An
+        exact-word check stays silent; the family rule fires."""
+        players = [
+            {
+                "name": "la province",
+                "role": "gardien du cadre institutionnel",
+                "stance": "against",
+            }
+        ]
+        _, state = await _read(_payload(players), DOC_NAMING_FAMILY)
+        player = state["players"][0]
+
+        assert "naming_span" in player, (
+            "« institution » must ride « institutionnel » — the measured "
+            "doc_I shape, where the exact-word rule scores zero"
+        )
+        assert "institution" in player["naming_sentence"]
+
+    async def test_a_naming_sentence_without_the_vocabulary_changes_nothing(self):
+        """The c13 control: no role word in the naming sentence (family
+        included) → no span recorded, the exact pre-c13 shape."""
+        players = [
+            {
+                "name": "la province",
+                "role": "gardien de la concurrence",
+                "stance": "against",
+            }
+        ]
+        _, state = await _read(_payload(players), DOC_NAMING_QUIET)
+        player = state["players"][0]
+
+        assert "named_offset" in player
+        assert "naming_span" not in player
+        assert "naming_sentence" not in player
+
+    async def test_the_unanchored_branch_gets_the_same_sentence(self):
+        """The naming check runs wherever ``named_offset`` is set — the
+        unanchored branch too, not only the no-quote one."""
+        players = [
+            {
+                "name": "la mission régionale",
+                "role": "coordinateur de la coopération",
+                "stance": "for",
+                "quote": "a signé la charte de la coopération élargie",
+            }
+        ]
+        _, state = await _read(_payload(players), DOC_NAMING_SENTENCE)
+        player = state["players"][0]
+
+        assert player["anchor"] == ANCHOR_UNANCHORED
+        assert player["naming_sentence"] == NAMING_SENTENCE_HIT
+
+    async def test_a_text_basis_player_gets_no_naming_sentence(self):
+        """The check is for players the text NAMES but does not quote: an
+        anchored player keeps the c7 shape — the stance quote is the only
+        quote."""
+        players = [
+            {
+                "name": "la commission",
+                "role": "rapporteuse",
+                "stance": "against",
+                "quote": "en demande le retrait avant la fin du mois",
+            }
+        ]
+        _, state = await _read(_payload(players), DOC_NAMED)
+        player = state["players"][0]
+
+        assert player["basis"] == TEXT_BASIS
+        assert "naming_span" not in player
+
+
+class TestActOneQuotesTheNamingSentence:
+    """#3556 (c13) — on such a hit the label quotes the naming sentence
+    verbatim and truncated, as what the text says WHERE it names the
+    player. The stance basis is unchanged: the naming quote is never the
+    position (#3461, #3389). Born red on ``e4eb7e74d``."""
+
+    async def test_the_label_quotes_what_the_text_says_where_it_names(self):
+        players = [
+            {
+                "name": "la mission régionale",
+                "role": "coordinateur de la coopération",
+                "stance": "for",
+            }
+        ]
+        _, state = await _read(_payload(players), DOC_NAMING_SENTENCE)
+        block = _format_strategic_block(state)
+
+        assert "en le nommant, le texte dit" in block
+        assert f"« {NAMING_SENTENCE_HIT} »" in block
+        # The stance basis is unchanged — a naming quote is not a stance quote.
+        assert "le texte n'a pas été vérifié pour cette position" in block
+
+    async def test_without_the_sentence_the_label_keeps_its_exact_shape(self):
+        players = [
+            {
+                "name": "la province",
+                "role": "gardien de la concurrence",
+                "stance": "against",
+            }
+        ]
+        _, state = await _read(_payload(players), DOC_NAMING_QUIET)
+        block = _format_strategic_block(state)
+
+        assert "en le nommant" not in block
+        assert "le texte nomme ce joueur" in block
+
+    async def test_the_register_rule_keeps_the_naming_quote_off_the_stance(self):
+        """The drafting rule says what the naming quote may and may not
+        stand for: the text's own words at the naming place — never the
+        player's position."""
+        players = [
+            {
+                "name": "la mission régionale",
+                "role": "coordinateur de la coopération",
+                "stance": "for",
+            }
+        ]
+        _, state = await _read(_payload(players), DOC_NAMING_SENTENCE)
+        prompt = build_act1_prompt(_evidence(state))
+
+        assert "en le nommant, le texte dit" in prompt
+        assert "jamais la position du joueur elle-même" in prompt
+        # The c12 rules are kept as they were.
+        assert "un acteur que le document nomme s'écrit comme" in prompt
+
+
+class TestACompoundNameNamesThePlayer:
+    """#3556 (c14) — a compound name on its conjunction names the player
+    when EVERY conjunct occurs contiguously; the shared trailing qualifier
+    distributes over both in the reply's own grammar. NOT a word-bag: a
+    single missing or reworded conjunct leaves the player unnamed,
+    byte-identically. Born red on ``e4eb7e74d``: the whole-string check
+    alone refuses the recorded c14 player the text does carry."""
+
+    async def test_every_conjunct_contiguous_names_the_player(self):
+        players = [
+            {
+                "name": "Délégués et agents consulaires",
+                "role": "corps diplomatique",
+                "stance": "ambivalent",
+            }
+        ]
+        _, state = await _read(_payload(players), DOC_COMPOUND)
+        player = state["players"][0]
+
+        # named_offset is the FIRST conjunct's offset.
+        assert player["named_offset"] == DOC_COMPOUND.find("délégués")
+
+    async def test_one_reworded_conjunct_leaves_the_player_unnamed(self):
+        players = [
+            {
+                "name": "Archivistes et experts comptables",
+                "role": "corps de contrôle",
+                "stance": "uncommitted",
+            }
+        ]
+        _, state = await _read(_payload(players), DOC_COMPOUND_MISS)
+        player = state["players"][0]
+
+        assert "named_offset" not in player
+        block = _format_strategic_block(state)
+        assert "le texte nomme ce joueur" not in block
+        # The unnamed path is byte-identical to the pre-c14 shape.
+        assert "savoir du modèle, sans citation" in block
+
+    async def test_a_contiguous_compound_keeps_its_whole_name_offset(self):
+        """A compound the text carries whole keeps the plain check's offset
+        — the first conjunct's IS the whole name's start."""
+        doc = (
+            "Le comité a statué. "
+            "La fédération et confédération du bâtiment a suivi l'accord."
+        )
+        players = [
+            {
+                "name": "Fédération et confédération du bâtiment",
+                "role": "chambre syndicale",
+                "stance": "for",
+            }
+        ]
+        _, state = await _read(_payload(players), doc)
+        player = state["players"][0]
+
+        assert player["named_offset"] == doc.find("fédération")
