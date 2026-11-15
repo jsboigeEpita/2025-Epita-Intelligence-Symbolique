@@ -260,16 +260,22 @@ cycle. Après chaque cycle payé :
 1. Archiver les états du cycle, puis `sha256sum <archive>`.
 2. Un `roosync_messages(action: "send", …)` par worker, l'archive en pièce jointe
    autodestructrice : `attachments: [{path: "<archive>"}]`, `auto_destruct: true`,
-   `destruct_after: "2d"`. Ce message ne porte que l'archive : le dispatch part dans un message
-   ordinaire.
-3. Le **sujet** du message porte la consigne : « pièce jointe d'abord : `attachments_list` puis
-   `attachments_get` avant d'ouvrir ». Ouvrir le message peut détruire la pièce jointe (perte
-   mesurée le 21/10), et le corps ne se lit qu'en l'ouvrant : une consigne écrite dans le corps
-   arrive trop tard.
-4. Le corps donne le sha256 et la destination sur le siège,
-   `argumentation_analysis/evaluation/results/` (gitignoré). Le worker recalcule le sha256
-   avant d'extraire. Une pièce jointe perdue se redemande : le coordinateur garde l'archive
-   jusqu'à ce que chaque worker ait confirmé.
+   `destruct_after: "2d"`. Ce message ne porte que l'archive. L'accusé d'envoi donne l'uuid
+   de la pièce jointe.
+3. La pièce jointe meurt au **premier marquage « lu » du message porteur par le destinataire** :
+   `mark_read`, `bulk_mark_read`, ou `message` avec `mark_as_read: true`. Lire l'inbox ou ouvrir
+   le message sans `mark_as_read` ne la touche pas. `destruct_after` n'en est que le plafond,
+   pas une durée de vie garantie. Mesuré le 15/11 : deux copies c11 envoyées au même instant.
+   Celle du worker qui avait traité son message était introuvable trois heures plus tard, même
+   depuis l'expéditeur ; celle du worker arrêté existait encore. Le code est
+   `MessageManager.ts` `checkAutoDestructCondition`, appelé par `markAsRead` (roo-extensions).
+   Le sujet du porteur dit « ne pas marquer lu avant `attachments_get` par uuid ».
+4. Un message **ordinaire** (le dispatch, ou une réponse sur son fil) donne, pour chaque
+   archive, l'uuid, le sha256 et la destination sur le siège :
+   `argumentation_analysis/evaluation/results/` (gitignoré). Le worker récupère par
+   `attachments_get(uuid, targetPath)` avant tout marquage « lu » du porteur, puis recalcule
+   le sha256 avant d'extraire. Une pièce jointe perdue se redemande : le coordinateur garde l'archive jusqu'à
+   ce que chaque worker ait confirmé son sha256.
 5. Canal privé seulement : jamais une issue, une PR, un commit ni un fichier suivi.
 
 ## Phase 6 — Dashboard append (synthesis-first)
