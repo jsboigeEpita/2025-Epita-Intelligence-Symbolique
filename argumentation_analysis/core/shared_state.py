@@ -276,6 +276,67 @@ def extend_question_quote(
     return quote + lead + answer
 
 
+# #3584 — classes de forme d'une unité NON propositionnelle. Le recensement
+# gratuit sur les états c6–c10 (50 docs-cycles) mesure la classe : 2 unités
+# par run (une ligne de scène, une note de transcription) sont des unités
+# « argument » dont la passe par argument dépose ensuite une détection à
+# 0,98–0,99 dont la justification dit elle-même que le passage ne contient
+# « ni proposition argumentative ni raisonnement ». La détection voyage
+# ensuite dans les contre-arguments, le JTMS et l'Acte II. La réparation est
+# PAR LA FORME, COMME UNE CLASSE (#3584) : jamais une liste de mots pris du
+# corpus (règle 7 privacy), jamais un seuil de longueur (une phrase courte
+# peut être un argument). Ce qui RESTE une unité : tout texte portant des
+# lettres hors crochets/étiquette — y compris une unité qui OUVRE sur un
+# crochet mais porte la phrase du locuteur derrière (9 unités de ce type sur
+# un même doc du panel, mesurées).
+_NON_PROP_BRACKET_SPAN = re.compile(r"\[[^\[\]]*\]")
+# Étiquette de locuteur : préfixe sans minuscule ni chiffre (convention
+# théâtre/transcription), ≤ 40 caractères, terminé par « : ».
+_NON_PROP_SPEAKER_TAG = re.compile(r"^[^a-zà-ÿ0-9\n]{1,40}:\s*")
+_NON_PROP_TIMESTAMP = re.compile(
+    r"^\d{1,2}[:hH]\d{2}([:.]\d{2})?" r"\s*(?:[-–]\s*\d{1,2}[:hH]\d{2}([:.]\d{2})?)?$"
+)
+_NON_PROP_LETTERS = re.compile(r"[A-Za-zÀ-ÿœŒ]")
+
+
+def non_propositional_form(unit_text: str) -> str:
+    """#3584 — la classe de forme d'une unité, ``""`` si elle est propositionnelle.
+
+    Rend ``""`` (l'unité reste une unité d'argument) ou le nom de la classe :
+    ``bracket_only`` (didascalie / ligne de scène / note de transcription
+    entièrement entre crochets), ``speaker_tag_only`` (étiquette de locuteur
+    seule), ``timestamp_only`` (horodatage seul), ``no_letter_residue`` (une
+    fois retirés crochets et étiquette, il ne reste aucune lettre). Le test
+    ne lit QUE la forme — pas de mot du corpus, pas de longueur.
+
+    Détail mesuré : l'extracteur peut transformer le crochet fermant en point
+    (« [Un lieu, une scène. ») — la restauration est un fait de forme, pas une
+    conjecture sur le contenu.
+    """
+    raw = (unit_text or "").strip()
+    if not raw:
+        return "empty"
+    if raw.startswith("[") and raw.endswith("."):
+        raw = raw[:-1] + "]"
+    if raw.startswith("[") and raw.endswith("]"):
+        if not _NON_PROP_BRACKET_SPAN.sub("", raw).strip():
+            return "bracket_only"
+    # Résidu : le texte moins les spans entre crochets, moins l'étiquette de
+    # locuteur de tête. Des lettres dans le résidu = une proposition possible.
+    residue = _NON_PROP_SPEAKER_TAG.sub(
+        "", _NON_PROP_BRACKET_SPAN.sub(" ", raw).strip()
+    ).strip()
+    if not _NON_PROP_LETTERS.search(residue):
+        if _NON_PROP_SPEAKER_TAG.match(raw):
+            return "speaker_tag_only"
+        if _NON_PROP_TIMESTAMP.match(residue):
+            return "timestamp_only"
+        if not residue:
+            return "bracket_only"
+        return "no_letter_residue"
+    return ""
+
+
 @dataclass
 class ArgumentProfile:
     """Aggregated view of all analysis data for a single argument."""

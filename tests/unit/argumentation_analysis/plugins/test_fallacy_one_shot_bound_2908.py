@@ -166,6 +166,18 @@ def test_texts_at_or_under_the_bound_produce_a_byte_identical_prompt():
             "When the text revises or restricts its own preceding wording, "
             "that revision is not a false implication of the wording it "
             "corrects: do not flag it.\n"
+            # #3584 — the template also offers the abstention half of the
+            # contract: a passage that holds no proposition at all may answer
+            # "none" instead of being forced to name a fallacy. Same re-pin as
+            # #3180/#3391 above: the property is the single constant template,
+            # not a frozen vintage of it.
+            "If the passage holds no proposition at all - no claim, no "
+            "reasoning, nothing anyone asserts (a stage direction, a scene "
+            "line, a speaker tag, an audience reaction standing alone, a "
+            "timestamp, a bare context note) - answer "
+            '{"fallacy_name": "none", "taxonomy_pk": "", '
+            '"explanation": "why the passage holds no proposition", '
+            '"confidence": 0.0}. Such an answer records NO fallacy.\n'
             "Respond with ONLY a JSON object: "
             '{"fallacy_name": "...", "taxonomy_pk": "...", "explanation": "...", '
             '"confidence": 0.0-1.0, "move_author": "speaker|reported", '

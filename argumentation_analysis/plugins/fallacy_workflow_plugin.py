@@ -2770,9 +2770,14 @@ class FallacyWorkflowPlugin:
             ).model_dump_json(indent=2)
 
         # No detection in any chunk. A verdict ABOUT the text (the document
-        # refutes a guarded attribution, or the appeal is proportionate)
-        # outranks silence: it is carried as the answer, as before.
-        for kind in ("refuted_by_document", "legitimate_in_register"):
+        # refutes a guarded attribution, the appeal is proportionate, or the
+        # passage holds no proposition at all) outranks silence: it is carried
+        # as the answer, as before (#3584 joins the two #3391/#3416 verdicts).
+        for kind in (
+            "refuted_by_document",
+            "legitimate_in_register",
+            "no_proposition",
+        ):
             for out in outcomes:
                 if out.get("kind") == kind and isinstance(out.get("json"), str):
                     return out["json"]
@@ -2845,6 +2850,20 @@ class FallacyWorkflowPlugin:
             "When the text revises or restricts its own preceding wording, "
             "that revision is not a false implication of the wording it "
             "corrects: do not flag it.\n"
+            # #3584 — the abstention the contract lacked. Measured: the
+            # one-shot had to name a fallacy whatever the passage held, so a
+            # bracketed scene line drew a 0.98-0.99 detection whose own
+            # justification said the passage holds no proposition. This is
+            # NOT a looser judge: an appeal that IS disproportionate still
+            # files; only a passage with NO proposition at all may answer
+            # "none", and such an answer records no detection.
+            "If the passage holds no proposition at all - no claim, no "
+            "reasoning, nothing anyone asserts (a stage direction, a scene "
+            "line, a speaker tag, an audience reaction standing alone, a "
+            "timestamp, a bare context note) - answer "
+            '{"fallacy_name": "none", "taxonomy_pk": "", '
+            '"explanation": "why the passage holds no proposition", '
+            '"confidence": 0.0}. Such an answer records NO fallacy.\n'
             f"{caveat}{frame_instruction}"
             "Respond with ONLY a JSON object: "
             '{"fallacy_name": "...", "taxonomy_pk": "...", "explanation": "...", '
@@ -2882,6 +2901,38 @@ class FallacyWorkflowPlugin:
                     parsed = json.loads(text_to_parse[start:end])
                     fallacy_name = parsed.get("fallacy_name", "")
                     if fallacy_name:
+                        # #3584 — the abstention half of the contract: a
+                        # reply that names "none" says the passage holds no
+                        # proposition. It is a VERDICT, not a parse failure:
+                        # keep the envelope (same shape as the #3391 register
+                        # and #3416 refutation verdicts) so the run records
+                        # WHY nothing was filed.
+                        if str(fallacy_name).strip().lower() in (
+                            "none",
+                            "aucun",
+                            "aucune",
+                            "no fallacy",
+                        ):
+                            self.logger.info(
+                                "One-shot: no proposition in the passage — "
+                                f"{parsed.get('explanation', '')}"
+                            )
+                            return {
+                                "kind": "no_proposition",
+                                "fallacy": None,
+                                "json": json.dumps(
+                                    {
+                                        "fallacies": [],
+                                        "exploration_method": (
+                                            "one_shot_no_proposition"
+                                        ),
+                                        "no_proposition_reason": parsed.get(
+                                            "explanation", ""
+                                        ),
+                                    },
+                                    ensure_ascii=False,
+                                ),
+                            }
                         # #3029 — the reply's confidence is a FIELD, not a
                         # given: absent or non-numeric (a word, a bool) means
                         # "not measured", stored as None. The old

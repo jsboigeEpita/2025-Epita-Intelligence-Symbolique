@@ -1878,6 +1878,7 @@ def _write_fact_extraction_to_state(
     from argumentation_analysis.core.shared_state import (
         ends_as_question,
         extend_question_quote,
+        non_propositional_form,
     )
 
     if not output or not isinstance(output, dict):
@@ -1909,12 +1910,29 @@ def _write_fact_extraction_to_state(
     # renders the full trace, so #2315's debt does not return.
     arguments = output.get("arguments", [])
     if isinstance(arguments, list):
+        # #3584 — a unit whose FORM is non-propositional (a scene line, a
+        # speaker tag, an audience reaction standing alone, a timestamp) is
+        # not minted as an argument unit at all: the measured defect is a
+        # bracketed scene line that stayed a unit on every cycle, then drew
+        # a 0.99 detection whose own justification said the passage holds
+        # "ni proposition argumentative ni raisonnement" — and the verdict
+        # travelled into counters, JTMS and Act II. The class test reads the
+        # FORM only (never corpus words, never a length threshold); the
+        # refusal is counted by class and recorded below, so nothing is
+        # silently dropped.
+        refused: dict[str, int] = {}
         raw_text = getattr(state, "raw_text", "") or ""
         for arg in arguments:
             if isinstance(arg, dict):
                 text = arg.get("text", "").strip()
                 quote = str(arg.get("source_quote", "") or "").strip()
                 if text:
+                    # #3584 — the form gate, on the extractor's own text
+                    # (before the quote annotation is appended).
+                    form = non_propositional_form(text)
+                    if form:
+                        refused[form] = refused.get(form, 0) + 1
+                        continue
                     arg_text = text
                     if quote:
                         # #3491 — a unit whose verbatim source IS a question
@@ -1953,10 +1971,24 @@ def _write_fact_extraction_to_state(
                     )
                     _record_assert_move(state, arg_id, quote, raw_text)
             elif isinstance(arg, str) and arg.strip():
+                # #3584 — same form gate on the bare-string shape.
+                _bare = arg.strip()
+                _form = non_propositional_form(_bare)
+                if _form:
+                    refused[_form] = refused.get(_form, 0) + 1
+                    continue
                 # No quote carried: the description itself is the find key —
                 # usually a named absence, never a guess.
-                arg_id = state.add_argument(arg.strip(), producer="llm_extract")
+                arg_id = state.add_argument(_bare, producer="llm_extract")
                 _record_assert_move(state, arg_id, "", raw_text)
+        if refused:
+            # #3584 — the refusal is data, not silence: counts by class, no
+            # corpus text. Same channel as [extraction_status] above.
+            _parts = " ".join(f"{cls}={n}" for cls, n in sorted(refused.items()))
+            state.add_task(
+                f"[extraction_refused] {sum(refused.values())} unit(s) not "
+                f"minted — non-propositional form (#3584): {_parts}"
+            )
     # NOTE: Fallacy detection removed from fact_extraction (issue #179).
     # Fallacies are the sole responsibility of hierarchical_fallacy_detection,
     # which uses deep taxonomy navigation for precise identification.
@@ -3086,6 +3118,13 @@ def _write_text_to_kb_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
 
     add_arg = getattr(state, "add_argument", None)
     if callable(add_arg):
+        # #3584 — same form gate as the llm_extract writer: a chunk that is
+        # entirely a scene line / speaker tag / timestamp holds no proposition
+        # and is not minted, whoever the producer is. Chunks that carry real
+        # text (the whole point of the split) are untouched.
+        from argumentation_analysis.core.shared_state import non_propositional_form
+
+        refused_kb: dict[str, int] = {}
         for arg_data in arguments:
             if isinstance(arg_data, dict):
                 text = arg_data.get("text", "")
@@ -3100,6 +3139,11 @@ def _write_text_to_kb_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
                 text = str(arg_data)
                 stated = None
             if text:
+                # #3584 — the form gate, before the mint.
+                _form = non_propositional_form(text)
+                if _form:
+                    refused_kb[_form] = refused_kb.get(_form, 0) + 1
+                    continue
                 # #2850 slice A — the second producer, named: kb_heuristic
                 # units are whole-text paragraph splits, so their own text is
                 # the find key. Both producers now land in identified_arguments
@@ -3112,6 +3156,12 @@ def _write_text_to_kb_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
                 # it was sampled. The unit's own text is the find key here,
                 # exactly the anchor rule the provenance side-table uses.
                 _record_assert_move(state, arg_id, text, state.raw_text or "")
+        if refused_kb:
+            _parts = " ".join(f"{cls}={n}" for cls, n in sorted(refused_kb.items()))
+            state.add_task(
+                f"[extraction_refused] {sum(refused_kb.values())} unit(s) not "
+                f"minted — non-propositional form (#3584, kb_heuristic): {_parts}"
+            )
         # #2973 — ce writer est le deuxième producteur de population : le
         # recensement des non-ancrées couvre désormais TOUTE la table de
         # provenance (les deux producteurs), pas la sienne seule.
