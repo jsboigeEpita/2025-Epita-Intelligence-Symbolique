@@ -3550,6 +3550,15 @@ def _write_historical_context_to_state(
     # state and nothing downstream has to read an empty dict as a finding.
     if output.get("place"):
         payload["place"] = output["place"]
+    # #3576 — same convention for the second chance and the parse cause: each
+    # key is written only when it carries something, so a first-try success
+    # persists the pre-#3576 shape byte for byte.
+    if output.get("attempts"):
+        payload["attempts"] = output["attempts"]
+    if output.get("error"):
+        payload["error"] = output["error"]
+    if output.get("parse_failure"):
+        payload["parse_failure"] = output["parse_failure"]
     if isinstance(state, dict):
         state["historical_context"] = payload
     elif hasattr(state, "historical_context"):
@@ -3583,6 +3592,15 @@ def _write_strategic_read_to_state(
         "status": _persisted_status(output),
         "basis": MODEL_KNOWLEDGE_BASIS,
     }
+    # #3576 — the second chance and the parse cause ride the read they belong
+    # to, written only when they carry something (same convention as the
+    # historian's ``dating``/``place``: an absent key is the pre-#3576 state).
+    if output.get("attempts"):
+        payload["attempts"] = output["attempts"]
+    if output.get("error"):
+        payload["error"] = output["error"]
+    if output.get("parse_failure"):
+        payload["parse_failure"] = output["parse_failure"]
     if isinstance(state, dict):
         state["strategic_read"] = payload
     elif hasattr(state, "strategic_read"):

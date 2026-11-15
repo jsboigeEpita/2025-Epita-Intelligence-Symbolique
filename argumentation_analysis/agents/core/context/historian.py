@@ -19,7 +19,6 @@ is the failure mode this module exists to prevent.
 
 from __future__ import annotations
 
-import json
 import logging
 import re
 from dataclasses import dataclass, field
@@ -28,6 +27,12 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional
 from argumentation_analysis.agents.core.context import (
     MODEL_KNOWLEDGE_BASIS,
     stamp_basis,
+)
+
+# #3576 — one father for the call → strip fence → parse → retry logic the two
+# context personas share; the strategist imports the same helper.
+from argumentation_analysis.agents.core.context._json_reply import (
+    request_json_reply,
 )
 from argumentation_analysis.agents.core.context.stated_dates import (
     PROMPT_MAX_DATES,
@@ -188,6 +193,14 @@ class HistoricalContext:
     items: List[HistoricalItem] = field(default_factory=list)
     status: str = "no_llm"
     error: str = ""
+    #: #3576 — how many model calls the reply took (1, or 2 when the second
+    #: chance was used). Written to the state only when a second chance was
+    #: actually used, so the pre-#3576 success shape is unchanged.
+    attempts: int = 0
+    #: #3576 — the bounded record of a reply ``json.loads`` refused (same
+    #: father as the strategist's): decoder message, position, reply length
+    #: and the window around the position. Empty unless ``parse_error``.
+    parse_failure: Dict[str, Any] = field(default_factory=dict)
     # #3479 — set by the deterministic confrontation when the document's own
     # stated dates refute the situation's dating. ``to_state`` exposes the
     # degradation ONLY when it fired: a consistent dating changes nothing
@@ -210,6 +223,16 @@ class HistoricalContext:
             "status": self.status,
             "basis": MODEL_KNOWLEDGE_BASIS,
         }
+        # #3576 — the second chance and the parse cause ride the read they
+        # belong to. Each key exists only when it carries something (the same
+        # convention as ``dating``/``place`` below), so a first-try success
+        # writes the pre-#3576 shape byte for byte.
+        if self.attempts > 1:
+            payload["attempts"] = self.attempts
+        if self.error:
+            payload["error"] = self.error
+        if self.parse_failure:
+            payload["parse_failure"] = dict(self.parse_failure)
         if self.dating_degraded:
             # #3479 — uncertain dating, named by the document's own dated
             # reference. The key exists only when the confrontation fired.
@@ -342,16 +365,31 @@ async def build_historical_context(
 
     prompt = build_historian_prompt(state, excerpt, stated_dates=stated)
     try:
-        content = await llm_callable(prompt)
-        content = (content or "").strip()
-        if content.startswith("```"):
-            content = content.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-        if not content:
-            result.status = "llm_error"
-            result.error = "empty completion"
-            return result
+        reply = await request_json_reply(llm_callable, prompt)
+    except Exception as e:  # pragma: no cover - provider failures
+        result.status = "llm_error"
+        result.error = f"{type(e).__name__}: {e}"
+        logger.warning("Historian LLM error: %s", e)
+        return result
 
-        parsed = json.loads(content)
+    result.attempts = reply.attempts
+    result.error = reply.error
+    if reply.status == "parse_error":
+        # #3576 — the same cause record as the strategist's (one helper): the
+        # state, not only the log, can now answer WHY a reply failed to parse.
+        result.status = "parse_error"
+        result.parse_failure = dict(reply.parse_failure)
+        # The log line keeps its exact pre-#3576 text (the bare decoder string).
+        logger.warning("Historian parse error: %s", reply.detail)
+        return result
+    if reply.status != "ok":
+        # An empty completion: ONE call, never retried. Only a MALFORMED reply
+        # gets the second chance; the two statuses stay discriminated (#3576).
+        result.status = "llm_error"
+        return result
+
+    parsed = reply.payload
+    try:
         result.situation = str(parsed.get("situation", "") or "").strip()
         # #3432 ask 2 — the thesis's historical blind spot, model knowledge.
         # Capped and stripped: an unbounded sentence would crowd the Act III
@@ -398,11 +436,7 @@ async def build_historical_context(
             len(result.items),
             bool(result.situation),
         )
-    except json.JSONDecodeError as e:
-        result.status = "parse_error"
-        result.error = f"{type(e).__name__}: {e}"
-        logger.warning("Historian parse error: %s", e)
-    except Exception as e:  # pragma: no cover - provider failures
+    except Exception as e:  # pragma: no cover - unexpected payload shapes
         result.status = "llm_error"
         result.error = f"{type(e).__name__}: {e}"
         logger.warning("Historian LLM error: %s", e)
