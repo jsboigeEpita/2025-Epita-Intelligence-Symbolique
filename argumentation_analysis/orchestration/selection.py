@@ -51,8 +51,12 @@ _RE_BLANK_LINE = re.compile(r"\n[ \t]*\n")
 
 #: #3511 — what makes a unit "carry" evidence: a quotation mark or a figure.
 #: The coordinator's candidate (b), measured better than (a) on the judged
-#: occurrences (see ``rests_on_unit_ids``).
-_RE_QUOTE_OR_FIGURE = re.compile(r"[«»“”\"‘’']|\d")
+#: occurrences (see ``rests_on_unit_ids``). Apostrophes are deliberately NOT
+#: carriers: measured on c13–c15 they let 74–76 % of positioned units through
+#: (59–61 % without), while the judged justification is identical with or
+#: without them (7/9 rows, 2/14 false positives) — French elision (`l'assemblée`,
+#: `d'une`) is everywhere and is not evidence.
+_RE_QUOTE_OR_FIGURE = re.compile(r"[«»“”\"‘]|\d")
 
 
 @dataclass(frozen=True)
@@ -1018,7 +1022,8 @@ def _paragraph_spans(raw: str) -> List[Tuple[int, int]]:
 
 def _carries_quote_or_figure(unit: SelectableUnit) -> bool:
     """#3511 — a unit "carries evidence" when its text shows a quotation mark
-    or a figure (the coordinator's candidate (b))."""
+    or a figure (the coordinator's candidate (b)). The test is a floor, not a
+    discriminator: it passes 59–61 % of the positioned units on c13–c15."""
     return bool(_RE_QUOTE_OR_FIGURE.search((unit.source_quote or "") + "|" + unit.text))
 
 
@@ -1052,6 +1057,13 @@ def rests_on_unit_ids(
     exactly on the passage) is 0/9 and 1/9 — too strict a bar, since units
     overlap each other and the passage's text is often examined by a unit
     starting just inside it. The carrier filter buys the two extra rows.
+    Apostrophes are not carriers: with them the filter passes 74–76 % of the
+    positioned units on c13–c15 (59–61 % without), while the judged outcome
+    is the same 7/9 and 2/14 with or without — French elision is not evidence.
+
+    A move whose start falls outside every paragraph span falls back to the
+    LAST paragraph (``paragraphs[-1]``), so the rule stays defined at the
+    text's edge.
 
     Deterministic from the state, like every helper here: the selector's
     ``priority_unit_ids`` consumers re-derive the same set. The population

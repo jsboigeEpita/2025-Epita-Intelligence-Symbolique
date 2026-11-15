@@ -363,6 +363,33 @@ class TestRestsOnUnitIds3511:
         named = rests_on_unit_ids(self._state(raw, moves), population)
         assert named == frozenset({"carrier"})
 
+    def test_an_apostrophe_alone_is_not_a_carrier(self):
+        """French elision (`l'assemblée`, `d'une`) is everywhere and is not
+        evidence: measured on c13–c15, counting `'` and `’` as carriers lets
+        74–76 % of the positioned units through (59–61 % without), while the
+        judged outcome is the same 7/9 rows and 2/14 false positives with or
+        without them. Born red on the first head of this PR, where the
+        apostrophe still counted."""
+        raw = "said 7 things. l'assemblée suit. the claim ends."
+        claim_at = raw.index("the claim")
+        moves = [{"offset": claim_at, "quote": "the claim"}]
+        population = [
+            SelectableUnit(
+                unit_id="carrier",
+                text="x",
+                offset=raw.index("said"),
+                source_quote="said 7 things",
+            ),
+            SelectableUnit(
+                unit_id="elision",
+                text="x",
+                offset=raw.index("l'assemblée"),
+                source_quote="l'assemblée suit",
+            ),
+        ]
+        named = rests_on_unit_ids(self._state(raw, moves), population)
+        assert named == frozenset({"carrier"})
+
     def test_a_unit_whose_extent_reaches_the_move_stays_priority_not_rests_on(self):
         raw = "one.\n\nearly 2 evidence so the claim follows.\n\nlast."
         claim_at = raw.index("the claim")
