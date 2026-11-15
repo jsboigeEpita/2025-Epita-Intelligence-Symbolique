@@ -138,7 +138,9 @@ class TestTheCompanionsKeepTheirLabels:
 
     def test_the_unanchored_label_keeps_its_exact_negation(self):
         """The ONE negation a control establishes: ``quote_occurs_in``
-        failed on a supplied quote. Its wording is unchanged."""
+        failed on the offered quote. Since #3556 (c12) the wording states
+        that measured fact — the citation was not found — never « le texte
+        ne porte pas ce passage », which claims more than the control ran."""
         read = {
             "players": [
                 {
@@ -152,5 +154,6 @@ class TestTheCompanionsKeepTheirLabels:
         block = _format_strategic_block(read)
 
         assert "citation non ancrée" in block
-        assert "le texte ne porte pas ce passage" in block
+        assert "la citation proposée n'a pas été retrouvée" in block
+        assert "le texte ne porte pas ce passage" not in block
         assert "ne le cite PAS entre guillemets" in block

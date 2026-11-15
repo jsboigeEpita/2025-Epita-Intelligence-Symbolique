@@ -87,6 +87,16 @@ DOC_ELIDED = (
 )
 QUOTE_ELIDED = "a suivi cette association dans sa demande de retrait"
 
+#: The text names the commission and states its demand; the offered quote
+#: differs from what the text carries by ONE inserted word — the #3430
+#: verbatim check fails, the name check must not (#3556, c12).
+DOC_NEAR_MISS = (
+    "La commission et le conseil se sont saisis du texte ce matin. "
+    "La commission exige le retrait du texte avant la fin du mois. "
+    "Le conseil attend l'avis de l'assemblée avant de trancher."
+)
+QUOTE_NEAR_MISS = "exige le retrait intégral du texte avant la fin du mois"
+
 
 def _state(raw_text: str):
     return SimpleNamespace(
@@ -360,6 +370,81 @@ class TestThePassageMustConcernThePlayer:
 
 
 # ============================================================================
+# The unanchored branch — a failed quote is not a failed name check
+# ============================================================================
+
+
+class TestTheUnanchoredQuoteStillSeesTheText:
+    """#3556 (c12) — the unanchored branch never looked at the document.
+
+    A player whose offered quote the text does not carry verbatim, but whose
+    name the text DOES carry, rendered exactly like outside knowledge — the
+    same omission the no-quote branch repaired. And the control that ran is
+    ``quote_occurs_in`` on the OFFERED string: it establishes that this
+    citation was not found, never that the text lacks the passage.
+    """
+
+    async def test_an_unanchored_player_the_text_names_records_where(self):
+        """Born red on main: the unanchored branch returned early."""
+        players = [
+            {
+                "name": "la commission",
+                "role": "rapporteuse",
+                "stance": "against",
+                "quote": QUOTE_NEAR_MISS,
+            }
+        ]
+        _, state = await _read(_payload(players), DOC_NEAR_MISS)
+
+        player = state["players"][0]
+        # The offered quote is kept out of the record, as before…
+        assert player["basis"] == MODEL_KNOWLEDGE_BASIS
+        assert player["anchor"] == ANCHOR_UNANCHORED
+        assert "quote" not in player
+        # …but the text CARRIES the player's name, and the record says where.
+        assert isinstance(player["named_offset"], int)
+        assert (
+            DOC_NEAR_MISS[
+                player["named_offset"] : player["named_offset"] + len("la commission")
+            ].lower()
+            == "la commission"
+        )
+
+    async def test_the_model_cannot_smuggle_an_unanchored_named_offset(self):
+        """``named_offset`` is computed from the text, never relayed."""
+        players = [
+            {
+                "name": "la commission",
+                "role": "rapporteuse",
+                "stance": "against",
+                "quote": QUOTE_NEAR_MISS,
+                "named_offset": 9999,
+            }
+        ]
+        _, state = await _read(_payload(players), DOC_NEAR_MISS)
+
+        assert state["players"][0]["named_offset"] == 0
+
+    async def test_an_unanchored_player_the_text_does_not_name_gains_nothing(self):
+        """Control: the unnamed unanchored player keeps its exact shape."""
+        players = [
+            {
+                "name": "la fédération",
+                "role": "observatrice",
+                "stance": "ambivalent",
+                "quote": QUOTE_NEAR_MISS,
+            }
+        ]
+        _, state = await _read(_payload(players), DOC_NEAR_MISS)
+
+        player = state["players"][0]
+        assert player["basis"] == MODEL_KNOWLEDGE_BASIS
+        assert player["anchor"] == ANCHOR_UNANCHORED
+        assert "named_offset" not in player
+        assert "quote" not in player
+
+
+# ============================================================================
 # Act I — the two new labels, and the register they command
 # ============================================================================
 
@@ -425,3 +510,55 @@ class TestActOneTellsTheTwoApart:
         assert "« on sait par ailleurs que … »" in prompt
         assert "Aucune position n'est attribuée au texte sans sa citation." in prompt
         assert "le texte ne l'énonce pas" not in prompt
+
+    async def test_the_block_states_the_control_that_ran_on_an_unanchored_quote(self):
+        """Born red on main: the label wrote « le texte ne porte pas ce
+        passage » — a claim about the TEXT, when the only control that ran
+        (quote_occurs_in on the OFFERED string) established that this
+        citation was not found verbatim (#3556, c12).
+        """
+        players = [
+            {
+                "name": "la commission",
+                "role": "rapporteuse",
+                "stance": "against",
+                "quote": QUOTE_NEAR_MISS,
+            },
+            {
+                "name": "la fédération",
+                "role": "observatrice",
+                "stance": "ambivalent",
+                "quote": QUOTE_NEAR_MISS,
+            },
+        ]
+        _, state = await _read(_payload(players), DOC_NEAR_MISS)
+        block = _format_strategic_block(state)
+
+        # The label names the control: the proposed QUOTE was not found…
+        assert (
+            "citation non ancrée : la citation proposée n'a pas été "
+            "retrouvée" in block
+        )
+        # …never what the text lacks.
+        assert "le texte ne porte pas ce passage" not in block
+        # Exactly the player the text names gets the naming line.
+        assert block.count("le texte nomme ce joueur") == 1
+
+    async def test_the_register_rule_names_the_control_that_ran(self):
+        """The prompt's unanchored exception states the same measured fact."""
+        players = [
+            {
+                "name": "la commission",
+                "role": "rapporteuse",
+                "stance": "against",
+                "quote": QUOTE_NEAR_MISS,
+            }
+        ]
+        _, state = await _read(_payload(players), DOC_NEAR_MISS)
+        prompt = build_act1_prompt(_evidence(state))
+
+        assert "la citation proposée n'a pas été retrouvée telle quelle" in prompt
+        assert "le passage fourni n'a pas été retrouvé dans le document" not in prompt
+        # The register rule still routes a named player to a reading OF the
+        # text — the unanchored label now carries the naming line.
+        assert "un acteur que le document nomme s'écrit comme" in prompt
