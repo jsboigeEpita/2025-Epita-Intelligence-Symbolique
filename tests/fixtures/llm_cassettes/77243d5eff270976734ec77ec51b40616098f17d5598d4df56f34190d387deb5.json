@@ -1,14 +1,14 @@
 {
   "key": "77243d5eff270976734ec77ec51b40616098f17d5598d4df56f34190d387deb5",
   "value": {
-    "id": "chatcmpl-EkFwP8e3oKw90CLgqXaWeThbk5VTA",
+    "id": "chatcmpl-EkHAD2bErw7xTLT8ePN6Bd71iqpFq",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"score\":0.0,\"exhibit\":\"Prémisses : la peine de mort dissuade les crimes les plus graves, notamment les meurtres de masse ; les avancées en ADN réduisent considérablement le risque d'erreur. Conclusion : la peine de mort est une sanction nécessaire dans certains cas extrêmes. Verdict : saut logique net, car les prémisses ne suffisent pas à établir la nécessité de cette sanction.\"}",
+          "content": "{\"score\":0.0,\"exhibit\":\"Prémisses : « La peine de mort dissuade les crimes les plus graves, notamment les meurtres de masse. Les avancées en ADN réduisent considérablement le risque d'erre… » → conclusion : « La peine de mort est une sanction nécessaire dans certains cas extrêmes. » Verdict : saut logique, car les prémisses ne suffisent pas à établir la nécessité de cette sanction.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794693073,
+    "created": 1794697773,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 138,
+      "completion_tokens": 145,
       "prompt_tokens": 292,
-      "total_tokens": 430,
+      "total_tokens": 437,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 40,
+        "reasoning_tokens": 43,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

@@ -1,0 +1,40 @@
+{
+  "key": "a2fee96a6fd90af066f36b6fda7354b047c98ac8573ddc97e786fab2aaa700c9",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_TH9BzhCbprPWRamEafs4FHnZ",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"953\",\"matches\":false,\"justification\":\"La phrase affirme simplement que la politique économique est un succès incontestable, sans présenter de faits sélectionnés ni en occulter explicitement d'autres. L'attention sélective n'est donc pas établie.\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\",\"document_statement\":\"« Le président affirme que la politique économique est un succès incontestable. »\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkH15KFLY8RFd6TVSucz9kXbA2UuZ",
+        "created": 1794697207,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2208,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 770,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 104,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

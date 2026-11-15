@@ -1,0 +1,40 @@
+{
+  "key": "47ffd5fdf8a83ac876571a0cc3342a23765fc48ed0a0ad9e8e2195f680ff9dcb",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_JghT7WzRZjKdSmWebXnrTYex",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"702\",\"matches\":false,\"justification\":\"La phrase rapporte simplement l’affirmation du président selon laquelle la politique économique est un succès incontestable. Elle ne fournit pas un raisonnement permettant d’établir que la conclusion est hors sujet; l’absence de justification ou le caractère catégorique ne suffit pas à identifier une conclusion excessive.\",\"confidence\":\"0.98\",\"move_author\":\"reported\",\"move_author_label\":\"Le président\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkH14UGRYv9u7lVZDHcaysRaFP0tK",
+        "created": 1794697206,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1318,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1315,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 106,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "### Requête : `alice_succeeds`\n\n1. **Ce que la requête cherchait à vérifier :**  \n   Elle cherchait à déterminer si Alice réussit.\n\n2. **Résultat :** `True`  \n   La requête a été prouvée.\n\n3. **Signification dans le texte source :**  \n   Le texte indique que si Alice étudie, alors elle réussit (`alice_studies => alice_succeeds`). Il indique également qu’Alice étudie (`alice_studies`). On peut donc déduire qu’Alice réussit. Cette conclusion est aussi explicitement présente dans l’ensemble des croyances (`alice_succeeds`).\n\n---\n\n### Requête : `alice_studies`\n\n1. **Ce que la requête cherchait à vérifier :**  \n   Elle cherchait à déterminer si Alice étudie.\n\n2. **Résultat :** `True`  \n   La requête a été prouvée.\n\n3. **Signification dans le texte source :**  \n   Le fait qu’Alice étudie est donné directement comme une prémisse du texte. Il figure également dans l’ensemble des croyances sous la forme `alice_studies`.\n\n---\n\n### Conclusion générale\n\nLes deux requêtes ont obtenu le résultat `True`. Cela signifie que les deux propositions sont établies dans le système de croyances :\n\n- Alice étudie ;\n- donc, puisque étudier implique réussir, Alice réussit.\n\nLes résultats confirment ainsi entièrement le raisonnement présenté dans le texte source.",
+      "content": "### Requête : `alice_succeeds`\n\n1. **Ce que la requête cherchait à vérifier :**  \n   Elle cherchait à déterminer si Alice réussit.\n\n2. **Résultat :** `True`  \n   La requête a été prouvée.\n\n3. **Signification dans le texte source :**  \n   Le texte indique qu’Alice étudie et que, si Alice étudie, alors elle réussit. On peut donc conclure qu’Alice réussit. Cette conclusion est également présente directement dans l’ensemble des croyances.\n\n### Requête : `alice_studies`\n\n1. **Ce que la requête cherchait à vérifier :**  \n   Elle cherchait à déterminer si Alice étudie.\n\n2. **Résultat :** `True`  \n   La requête a été prouvée.\n\n3. **Signification dans le texte source :**  \n   Cela confirme le fait donné explicitement dans le texte : Alice étudie.\n\n### Conclusion générale\n\nLes deux requêtes ont obtenu le résultat `True`. L’ensemble de croyances confirme donc qu’Alice étudie et qu’elle réussit. La réussite d’Alice découle logiquement de la règle « Si Alice étudie, alors elle réussit » et du fait établi qu’Alice étudie.",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkFuwodQ9lYeQVMP44I3KAtuSYTYf",
-        "created": 1794692982,
+        "id": "chatcmpl-EkH8m1folDFecfCJ9kI8ESwyHVy2l",
+        "created": 1794697684,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 247,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 340,
+          "completion_tokens": 275,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 18,
+            "reasoning_tokens": 0,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

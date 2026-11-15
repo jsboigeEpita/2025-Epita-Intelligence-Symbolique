@@ -1,0 +1,48 @@
+{
+  "key": "da3631d7fd37f42c84cb0a3fb2b2d10e98665498813722ec66c877e395affd36",
+  "value": {
+    "id": "chatcmpl-EkH5hhMZm5qSIsOoFWKZPqC04xaTJ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"L’option C est le meilleur compromis, car elle partage équitablement les 2000 euros entre un tournoi réduit et du matériel pédagogique, conciliant visibilité et pédagogie.\",\"digressions\":\"La proposition en faveur de l’option B — investir les 2000 euros dans du matériel pédagogique parce que les échiquiers actuels sont usés — s’écarte de la défense principale de l’option C.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794697493,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 175,
+      "prompt_tokens": 296,
+      "total_tokens": 471,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 70,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

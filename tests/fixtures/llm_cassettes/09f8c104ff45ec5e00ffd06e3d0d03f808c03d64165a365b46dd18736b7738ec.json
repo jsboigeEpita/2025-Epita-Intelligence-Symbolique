@@ -1,0 +1,48 @@
+{
+  "key": "09f8c104ff45ec5e00ffd06e3d0d03f808c03d64165a365b46dd18736b7738ec",
+  "value": {
+    "id": "chatcmpl-EkHBSSq63mO4p1dI9R2aEShnRL3rP",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Chaîne reconstruite : les mesures montrent une hausse de 1,1 degré depuis l’ère préindustrielle, tandis que les sceptiques se contentent d’affirmer qu… ; conclusion : le changement climatique actuel se distingue par une vitesse sans précédent, de sorte que l’argument des sceptiques ne t… Verdict : saut logique net, car les prémisses ne suffisent pas à établir la conclusion.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794697850,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 147,
+      "prompt_tokens": 301,
+      "total_tokens": 448,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 43,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

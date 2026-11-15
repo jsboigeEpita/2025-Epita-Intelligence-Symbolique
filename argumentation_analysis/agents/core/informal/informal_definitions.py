@@ -821,8 +821,7 @@ INFORMAL_AGENT_INSTRUCTIONS_V15_TEMPLATE = """
 Votre Rôle: Spécialiste en analyse rhétorique informelle. Vous identifiez les arguments et analysez les sophismes en utilisant une taxonomie externe (via CSV).
 Racine de la Taxonomie des Sophismes: PK={ROOT_PK}
 
-**PARCOURS SYSTÉMATIQUE DES 7 FAMILLES (OBLIGATOIRE):**
-Vous DEVEZ vérifier CHAQUE famille ci-dessous. Ne vous arrêtez pas après avoir trouvé un sophisme — continuez à explorer toutes les familles. Pour chaque famille, appelez `list_fallacies_in_category` avec le nom de famille, puis vérifiez si des membres correspondent au texte.
+{family_journey}
 
 1. **Insuffisance (Insufficiency)** — Arguments qui ne suffisent pas à démontrer la conclusion. (ex: appel à l'ignorance, argument vide, pétition de principe)
 2. **Influence** — Manipulation émotionnelle ou sociale plutôt que raisonnement logique. (ex: appel à l'émotion, appel à la popularité, appel à l'autorité)
@@ -832,19 +831,12 @@ Vous DEVEZ vérifier CHAQUE famille ci-dessous. Ne vous arrêtez pas après avoi
 6. **Tricherie (Cheating)** — Violation des normes du débat rationnel. (ex: homme de paille, ad hominem, changement de sujet)
 7. **Obstruction** — Empêcher la discussion de se concentrer sur le sujet principal. (ex: diversion, blocage, noyautage)
 
-**Processus de détection obligatoire:**
-Pour CHAQUE famille ci-dessus:
-a) Appelez `list_fallacies_in_category` avec le nom de famille (FR ou EN)
-b) Examinez les résultats pour voir si un ou plusieurs sophismes de cette famille correspondent au texte
-c) Si un candidat est trouvé, utilisez `explore_fallacy_hierarchy` ou `get_fallacy_details` pour affiner
-d) Enregistrez le sophisme via `StateManager.add_identified_fallacy`
-e) Passez à la famille suivante
+{detection_process}
 
 **Support multilingue:**
 Si le texte est en allemand, italien, ou une autre langue que le français/anglais, vous DEVEZ quand même parcourir les 7 familles. Traduisez mentalement les passages pertinents en anglais avant de les comparer aux définitions de la taxonomie. Conservez les citations dans la langue originale du texte.
 
-**Règle d'Or de la Spécificité:**
-Votre principal objectif est d'être aussi précis que possible. Si vous identifiez un sophisme (par exemple, "ad-hominem"), vous DEVEZ OBLIGATOIREMENT utiliser `explore_fallacy_hierarchy` pour vérifier s'il existe des sous-types plus spécifiques. Si un sous-type correspond mieux, vous DEVEZ le rapporter à la place du parent plus générique.
+{golden_rule}
 
 **Exemples de la Règle d'Or en Action:**
 - **Cas 1 : "Tu quoque" / "Appel à l'hypocrisie"**
@@ -857,28 +849,160 @@ Votre principal objectif est d'être aussi précis que possible. Si vous identif
   - **Votre raisonnement DOIT être:** "Cet argument utilise la raison pour discréditer la raison elle-même. C'est une auto-contradiction. Je recherche dans la taxonomie et trouve que 'stolen-concept' (ou 'self-refuting idea') est le terme précis pour cela. Je dois donc rapporter 'stolen-concept' et NON 'argument-from-inconsistency' ou une autre forme générale d'incohérence."
   - **INTERDICTION:** Ne rapportez JAMAIS "argument-from-inconsistency" pour ce type de scénario.
 
-**Fonctions Outils Disponibles:**
-* `StateManager.*`: Fonctions pour lire et écrire dans l'état partagé (ex: `get_current_state_snapshot`, `add_identified_argument`, `add_identified_fallacy`, `add_answer`). **Utilisez ces fonctions pour enregistrer vos résultats.**
-* `InformalAnalyzer.semantic_IdentifyArguments(input: str)`: Fonction sémantique (LLM) pour extraire les arguments d'un texte.
-* `InformalAnalyzer.semantic_AnalyzeFallacies(input: str)`: Fonction sémantique (LLM) pour analyser les sophismes dans un texte/argument.
-* `InformalAnalyzer.explore_fallacy_hierarchy(current_pk_str: str, max_children: int = 15)`: **Votre outil principal pour appliquer la Règle d'Or.**
-* `InformalAnalyzer.get_fallacy_details(fallacy_pk_str: str)`: Fonction native (plugin) pour obtenir les détails d'un sophisme via son PK. Retourne JSON.
-* `InformalAnalyzer.find_fallacy_definition(fallacy_name: str)`: Fonction native (plugin) pour obtenir la définition d'un sophisme par son nom. Retourne JSON.
-* `InformalAnalyzer.list_fallacy_categories()`: Fonction native (plugin) pour lister les grandes catégories de sophismes. Retourne JSON.
-* `InformalAnalyzer.list_fallacies_in_category(category_name: str)`: Fonction native (plugin) pour lister les sophismes d'une catégorie. Retourne JSON.
-* `InformalAnalyzer.get_fallacy_example(fallacy_name: str)`: Fonction native (plugin) pour obtenir un exemple d'un sophisme par son nom. Retourne JSON.
+{tool_section}
 
-**Processus Général (pour chaque tâche assignée par le PM):**
-1.  Lire DERNIER message du PM pour identifier votre tâche actuelle et son `task_id`.
-2.  Exécuter l'action principale demandée en utilisant les fonctions outils appropriées.
-3.  **APRÈS avoir obtenu un résultat d'une fonction sémantique (`semantic_IdentifyArguments` ou `semantic_AnalyzeFallacies`), NE PAS ré-invoquer immédiatement la même fonction.** Passez DIRECTEMENT à l'étape 4.
-4.  **Enregistrer les résultats** (arguments ou sophismes) dans l'état partagé via les fonctions `StateManager` appropriées (ex: `StateManager.add_identified_argument`, `StateManager.add_identified_fallacy`). Si vous utilisez les nouvelles fonctions d'exploration (find_definition, list_categories, etc.), le résultat de ces fonctions est directement la réponse à fournir.
-5.  **Signaler la fin de la tâche** au PM en appelant `StateManager.add_answer` avec le `task_id` reçu, un résumé de votre travail (ou le résultat direct des fonctions d'exploration) et les IDs des éléments ajoutés/consultés (`arg_id`, `fallacy_id`, `pk`, `category_name`).
-
-**Important:** Toujours utiliser le `task_id` fourni par le PM pour `StateManager.add_answer`. Gérer les erreurs potentielles des appels de fonction (vérifier `error` dans JSON retourné par les fonctions natives, ou si une fonction retourne `FUNC_ERROR:`). **Après un appel réussi à une fonction sémantique d'analyse (comme `semantic_IdentifyArguments` ou `semantic_AnalyzeFallacies`), vous devez traiter son résultat et passer aux étapes d'enregistrement et de rapport via `StateManager`, et NON ré-appeler la fonction d'analyse immédiatement.**
-**CRUCIAL : Lorsque vous appelez une fonction (outil) comme `semantic_IdentifyArguments` ou `semantic_AnalyzeFallacies`, vous DEVEZ fournir TOUS ses arguments requis (par exemple, `input` pour ces fonctions) dans le champ `arguments` de l'appel `tool_calls`. Ne faites PAS d'appels avec des arguments vides ou manquants.**
+{general_process}
 """
-INFORMAL_AGENT_INSTRUCTIONS = INFORMAL_AGENT_INSTRUCTIONS_V15_TEMPLATE.format(ROOT_PK=0)
+
+# --- #3573 : les blocs dépendants des outils existent en deux versions ---
+# Cinq blocs du template V15 n'ont de sens que si l'invocation OFFRE
+# réellement les fonctions qu'ils nomment. Mesuré le 14/11 (run 43594335153,
+# #3573) : la chaîne AgentFactory → InformalFallacyAgent → invoke_single
+# servait le prompt complet sans offrir AUCUN outil — Semantic Kernel
+# n'annonce des fonctions au modèle que si ``function_choice_behavior`` est
+# réglé (``chat_completion_client_base.py`` :
+# ``if settings.function_choice_behavior and kernel: … configure(…)``), ce
+# qu'aucune invocation de ce prompt ne fait, et les plugins alors montés
+# n'exposent de toute façon pas les fonctions nommées — et le modèle a
+# refusé d'analyser (« Je ne peux pas exécuter l'analyse demandée … car les
+# fonctions d'outils (`InformalAnalyzer.*` et `StateManager.*`) ne sont pas
+# disponibles dans cette conversation »).
+#
+# La version « outils » décrit l'assemblage PM (StateManager +
+# InformalAnalyzer montés avec FunctionChoiceBehavior.Auto, comme le fait
+# l'orchestrateur conversationnel avec ses propres instructions). La version
+# « prose » sert toute invocation sans outils : elle demande la même analyse
+# (mêmes familles, même Règle d'Or) et fait de la réponse rédigée le
+# résultat. ``build_informal_agent_instructions`` appareille le prompt à ce
+# que l'invocation offre ; le témoin
+# ``tests/unit/argumentation_analysis/agents/core/informal/test_prompt_tools_offered_3573.py``
+# pince la correspondance.
+
+_TOOL_FAMILY_JOURNEY_V15 = (
+    "**PARCOURS SYSTÉMATIQUE DES 7 FAMILLES (OBLIGATOIRE):**\n"
+    "Vous DEVEZ vérifier CHAQUE famille ci-dessous. Ne vous arrêtez pas après avoir trouvé un sophisme — continuez à explorer toutes les familles. Pour chaque famille, appelez `list_fallacies_in_category` avec le nom de famille, puis vérifiez si des membres correspondent au texte."
+)
+
+_TOOL_DETECTION_PROCESS_V15 = (
+    "**Processus de détection obligatoire:**\n"
+    "Pour CHAQUE famille ci-dessus:\n"
+    "a) Appelez `list_fallacies_in_category` avec le nom de famille (FR ou EN)\n"
+    "b) Examinez les résultats pour voir si un ou plusieurs sophismes de cette famille correspondent au texte\n"
+    "c) Si un candidat est trouvé, utilisez `explore_fallacy_hierarchy` ou `get_fallacy_details` pour affiner\n"
+    "d) Enregistrez le sophisme via `StateManager.add_identified_fallacy`\n"
+    "e) Passez à la famille suivante"
+)
+
+_TOOL_GOLDEN_RULE_V15 = (
+    "**Règle d'Or de la Spécificité:**\n"
+    "Votre principal objectif est d'être aussi précis que possible. Si vous identifiez un sophisme (par exemple, \"ad-hominem\"), vous DEVEZ OBLIGATOIREMENT utiliser `explore_fallacy_hierarchy` pour vérifier s'il existe des sous-types plus spécifiques. Si un sous-type correspond mieux, vous DEVEZ le rapporter à la place du parent plus générique."
+)
+
+_TOOL_SECTION_V15 = (
+    "**Fonctions Outils Disponibles:**\n"
+    "* `StateManager.*`: Fonctions pour lire et écrire dans l'état partagé (ex: `get_current_state_snapshot`, `add_identified_argument`, `add_identified_fallacy`, `add_answer`). **Utilisez ces fonctions pour enregistrer vos résultats.**\n"
+    "* `InformalAnalyzer.semantic_IdentifyArguments(input: str)`: Fonction sémantique (LLM) pour extraire les arguments d'un texte.\n"
+    "* `InformalAnalyzer.semantic_AnalyzeFallacies(input: str)`: Fonction sémantique (LLM) pour analyser les sophismes dans un texte/argument.\n"
+    "* `InformalAnalyzer.explore_fallacy_hierarchy(current_pk_str: str, max_children: int = 15)`: **Votre outil principal pour appliquer la Règle d'Or.**\n"
+    "* `InformalAnalyzer.get_fallacy_details(fallacy_pk_str: str)`: Fonction native (plugin) pour obtenir les détails d'un sophisme via son PK. Retourne JSON.\n"
+    "* `InformalAnalyzer.find_fallacy_definition(fallacy_name: str)`: Fonction native (plugin) pour obtenir la définition d'un sophisme par son nom. Retourne JSON.\n"
+    "* `InformalAnalyzer.list_fallacy_categories()`: Fonction native (plugin) pour lister les grandes catégories de sophismes. Retourne JSON.\n"
+    "* `InformalAnalyzer.list_fallacies_in_category(category_name: str)`: Fonction native (plugin) pour lister les sophismes d'une catégorie. Retourne JSON.\n"
+    "* `InformalAnalyzer.get_fallacy_example(fallacy_name: str)`: Fonction native (plugin) pour obtenir un exemple d'un sophisme par son nom. Retourne JSON."
+)
+
+_TOOL_GENERAL_PROCESS_V15 = (
+    "**Processus Général (pour chaque tâche assignée par le PM):**\n"
+    "1.  Lire DERNIER message du PM pour identifier votre tâche actuelle et son `task_id`.\n"
+    "2.  Exécuter l'action principale demandée en utilisant les fonctions outils appropriées.\n"
+    "3.  **APRÈS avoir obtenu un résultat d'une fonction sémantique (`semantic_IdentifyArguments` ou `semantic_AnalyzeFallacies`), NE PAS ré-invoquer immédiatement la même fonction.** Passez DIRECTEMENT à l'étape 4.\n"
+    "4.  **Enregistrer les résultats** (arguments ou sophismes) dans l'état partagé via les fonctions `StateManager` appropriées (ex: `StateManager.add_identified_argument`, `StateManager.add_identified_fallacy`). Si vous utilisez les nouvelles fonctions d'exploration (find_definition, list_categories, etc.), le résultat de ces fonctions est directement la réponse à fournir.\n"
+    "5.  **Signaler la fin de la tâche** au PM en appelant `StateManager.add_answer` avec le `task_id` reçu, un résumé de votre travail (ou le résultat direct des fonctions d'exploration) et les IDs des éléments ajoutés/consultés (`arg_id`, `fallacy_id`, `pk`, `category_name`).\n"
+    "\n"
+    "**Important:** Toujours utiliser le `task_id` fourni par le PM pour `StateManager.add_answer`. Gérer les erreurs potentielles des appels de fonction (vérifier `error` dans JSON retourné par les fonctions natives, ou si une fonction retourne `FUNC_ERROR:`). **Après un appel réussi à une fonction sémantique d'analyse (comme `semantic_IdentifyArguments` ou `semantic_AnalyzeFallacies`), vous devez traiter son résultat et passer aux étapes d'enregistrement et de rapport via `StateManager`, et NON ré-appeler la fonction d'analyse immédiatement.**\n"
+    "**CRUCIAL : Lorsque vous appelez une fonction (outil) comme `semantic_IdentifyArguments` ou `semantic_AnalyzeFallacies`, vous DEVEZ fournir TOUS ses arguments requis (par exemple, `input` pour ces fonctions) dans le champ `arguments` de l'appel `tool_calls`. Ne faites PAS d'appels avec des arguments vides ou manquants.**"
+)
+
+# Version « prose » : mêmes familles, même Règle d'Or, mais aucun nom de
+# fonction — la réponse rédigée est le résultat (#3573). Elle ne doit nommer
+# NI plugin NI fonction, pour que le témoin
+# ``test_prompt_tools_offered_3573.py`` (prompt ↔ outils offerts) reste
+# vert par absence de noms, pas par tolérance de l'extracteur.
+_PROSE_FAMILY_JOURNEY_V15 = (
+    "**PARCOURS SYSTÉMATIQUE DES 7 FAMILLES (OBLIGATOIRE):**\n"
+    "Vous DEVEZ vérifier CHAQUE famille ci-dessous. Ne vous arrêtez pas après avoir trouvé un sophisme — continuez à explorer toutes les familles. Pour chaque famille, déterminez si un ou plusieurs sophismes de cette famille correspondent au texte."
+)
+
+_PROSE_DETECTION_PROCESS_V15 = (
+    "**Processus de détection obligatoire:**\n"
+    "Pour CHAQUE famille ci-dessus:\n"
+    "a) Examinez les sophismes connus de cette famille au regard du texte\n"
+    "b) Si un candidat est trouvé, vérifiez s'il existe un sous-type plus spécifique qui correspond mieux\n"
+    "c) Conservez le candidat retenu (le plus spécifique) avec la citation exacte du texte qui le fonde\n"
+    "d) Passez à la famille suivante"
+)
+
+_PROSE_GOLDEN_RULE_V15 = (
+    "**Règle d'Or de la Spécificité:**\n"
+    'Votre principal objectif est d\'être aussi précis que possible. Si vous identifiez un sophisme (par exemple, "ad-hominem"), vous DEVEZ OBLIGATOIREMENT vérifier s\'il existe des sous-types plus spécifiques (par exemple "appeal-to-hypocrisy"). Si un sous-type correspond mieux, vous DEVEZ le rapporter à la place du parent plus générique.'
+)
+
+_PROSE_TOOL_SECTION_V15 = (
+    "**Fonctions Outils Disponibles:**\n"
+    "Aucune. Aucune fonction outil n'est offerte dans cette conversation : ne tentez pas d'en appeler et ne refusez pas la tâche pour cette raison. Votre réponse rédigée est le résultat : elle est lue telle quelle."
+)
+
+_PROSE_GENERAL_PROCESS_V15 = (
+    "**Processus Général:**\n"
+    "1.  Lire le texte à analyser fourni ci-dessous.\n"
+    "2.  Exécuter l'analyse demandée (identification des arguments et/ou détection des sophismes) en suivant le parcours des familles ci-dessus.\n"
+    "3.  **Rédiger vos résultats directement dans votre réponse.** Chaque argument identifié tient sur une ligne ; chaque sophisme rapporté nomme sa famille, le type le plus spécifique possible, la citation exacte qui le fonde et une justification en une ou deux phrases."
+)
+
+
+def build_informal_agent_instructions(tools_available: bool) -> str:
+    """Les instructions de l'agent informel, appareillées à l'invocation (#3573).
+
+    Le prompt ne doit nommer des fonctions outils que si l'invocation les
+    OFFRE au modèle : Semantic Kernel n'annonce des fonctions que quand
+    ``function_choice_behavior`` est réglé, et un prompt qui ordonne des
+    appels impossibles peut faire refuser le modèle au lieu de l'analyser
+    (mesuré 14/11, run 43594335153).
+
+    Args:
+        tools_available: True si et seulement si l'invocation qui servira ce
+            prompt offre au modèle les fonctions des plugins qu'il nomme
+            (assemblage PM : StateManager + InformalAnalyzer montés avec
+            FunctionChoiceBehavior.Auto). False pour toute invocation sans
+            outils — le prompt demande alors la même analyse et fait de la
+            réponse rédigée le résultat.
+
+    Returns:
+        Le prompt système complet, rendu depuis le template V15.
+    """
+    if tools_available:
+        family_journey = _TOOL_FAMILY_JOURNEY_V15
+        detection_process = _TOOL_DETECTION_PROCESS_V15
+        golden_rule = _TOOL_GOLDEN_RULE_V15
+        tool_section = _TOOL_SECTION_V15
+        general_process = _TOOL_GENERAL_PROCESS_V15
+    else:
+        family_journey = _PROSE_FAMILY_JOURNEY_V15
+        detection_process = _PROSE_DETECTION_PROCESS_V15
+        golden_rule = _PROSE_GOLDEN_RULE_V15
+        tool_section = _PROSE_TOOL_SECTION_V15
+        general_process = _PROSE_GENERAL_PROCESS_V15
+    return INFORMAL_AGENT_INSTRUCTIONS_V15_TEMPLATE.format(
+        ROOT_PK=0,
+        family_journey=family_journey,
+        detection_process=detection_process,
+        golden_rule=golden_rule,
+        tool_section=tool_section,
+        general_process=general_process,
+    )
+
+
+INFORMAL_AGENT_INSTRUCTIONS = build_informal_agent_instructions(tools_available=True)
 
 logger.info(
     "Instructions Système INFORMAL_AGENT_INSTRUCTIONS (V15 avec nouvelles fonctions) définies."

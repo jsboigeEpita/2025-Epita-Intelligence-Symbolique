@@ -1,14 +1,14 @@
 {
   "key": "cb2c8982c7b2861f32b1c0bebd65f6cec5aafcccdbf50726814c7dc8ac19ae72",
   "value": {
-    "id": "chatcmpl-EkFxFx29nE0BZ3FbhWBLPFpgpDwFS",
+    "id": "chatcmpl-EkHB99JldfwyHAvRrizYr61bN6kdZ",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Le terme technique « modèles prédictifs » est utilisé sans être défini. L’expression « ère préindustrielle » peut également manquer de précision pour un lecteur ne sachant pas à quelle période elle fait référence.\"}",
+          "content": "{\"has_clarity_obstacle\":true,\"obstacles\":\"Jargon technique non défini : « modèles prédictifs » est utilisé sans expliquer de quels modèles il s’agit ni ce qu’ils prédisent. Aucune anaphore non résolvable ni phrase trop emboîtée.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1794693125,
+    "created": 1794697831,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 244,
+      "completion_tokens": 203,
       "prompt_tokens": 275,
-      "total_tokens": 519,
+      "total_tokens": 478,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 178,
+        "reasoning_tokens": 135,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

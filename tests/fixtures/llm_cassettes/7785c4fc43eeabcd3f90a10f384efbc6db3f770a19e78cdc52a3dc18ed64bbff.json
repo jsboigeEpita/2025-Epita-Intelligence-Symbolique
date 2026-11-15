@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_07lhiiTmilwq21ZRgMIEn1iL",
+          "id": "call_f3Tx9kTaUhSnVbzBdRgaD7Og",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"183\",\"matches\":false,\"justification\":\"Le texte ne commet pas une pétition de principe : il invoque l'unanimité alléguée des experts et exclut les non-experts, ce qui relève plutôt d'un appel à l'autorité et d'une disqualification de l'avis selon le statut, sans présupposer directement la conclusion.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"183\",\"matches\":false,\"justification\":\"Le texte invoque l’unanimité des experts puis exclut les avis des non-experts. Cela relève d’un appel à l’autorité ou d’une disqualification de la source, mais ne suppose pas explicitement déjà vraie la conclusion de manière circulaire.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkFoRXHLZh4YHR4izW2CvM6JMIjXV",
-        "created": 1794692579,
+        "id": "chatcmpl-EkH28E3prMjGkfCsZy08VTl8hSd13",
+        "created": 1794697272,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 1381,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 102,
+          "completion_tokens": 92,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

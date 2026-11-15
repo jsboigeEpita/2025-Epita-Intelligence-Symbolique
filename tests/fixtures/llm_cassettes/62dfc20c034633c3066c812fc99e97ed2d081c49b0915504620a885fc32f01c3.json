@@ -1,0 +1,40 @@
+{
+  "key": "62dfc20c034633c3066c812fc99e97ed2d081c49b0915504620a885fc32f01c3",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_L6YUrtVsWZTjJXRrWrChEGW0",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"761\",\"matches\":false,\"justification\":\"Le sophisme génétique consiste à rejeter une idée en raison de son origine. Ici, l'argument invoque l'autorité supposée unanime des experts et exclut l'avis des non-experts; il s'agit plutôt d'un appel à l'autorité et d'un argumentum ad hominem circonstanciel, pas d'un rejet fondé sur l'origine de l'idée.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkH2FV214cR58ypMfcdBuSgffFSOQ",
+        "created": 1794697279,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1382,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1379,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 118,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

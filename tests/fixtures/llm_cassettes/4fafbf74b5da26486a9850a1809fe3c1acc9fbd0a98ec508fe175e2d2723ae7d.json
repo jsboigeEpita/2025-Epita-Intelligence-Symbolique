@@ -1,0 +1,48 @@
+{
+  "key": "4fafbf74b5da26486a9850a1809fe3c1acc9fbd0a98ec508fe175e2d2723ae7d",
+  "value": {
+    "id": "chatcmpl-EkGzEEOUuQcVLJlzS87WGH81y8qEn",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_thesis\":true,\"thesis\":\"L'argument du gouvernement en faveur d'une action immédiate est fallacieux, car il repose sur un argument d'autorité et un appel à la peur sans tenir compte des différences structurelles entre les systèmes.\",\"digressions\":\"La remarque selon laquelle les syndicats accusent le gouvernement de commettre un sophisme naturaliste en affirmant que travailler plus longtemps est « dans l'ordre des choses » constitue une digression, car elle introduit une critique distincte qui ne porte pas directement sur l'argument de l'effondrement dans cinq ans.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794697092,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 279,
+      "prompt_tokens": 302,
+      "total_tokens": 581,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 146,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

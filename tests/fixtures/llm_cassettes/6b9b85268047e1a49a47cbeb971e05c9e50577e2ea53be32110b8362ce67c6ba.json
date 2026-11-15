@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\n  \"formulas\": [\n    \"exists X: (Idee(X) && Incolore(X) && Verte(X) && DortFurieusement(X))\"\n  ],\n  \"predicates\": {\n    \"Idee\": \"est une idée\",\n    \"Incolore\": \"est incolore\",\n    \"Verte\": \"est verte\",\n    \"DortFurieusement\": \"dort furieusement\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"Le groupe nominal indéfini « d'incolores idées vertes » est traduit par l'existence d'au moins une entité qui est une idée, qui est à la fois incolore et verte, et qui dort furieusement.\"\n}",
+      "content": "{\n  \"formulas\": [\n    \"exists X: (Idee(X) && Incolore(X) && Verte(X) && DortFurieusement(X))\"\n  ],\n  \"predicates\": {\n    \"Idee\": \"est une idée\",\n    \"Incolore\": \"est incolore\",\n    \"Verte\": \"est verte\",\n    \"DortFurieusement\": \"dort furieusement\"\n  },\n  \"variables\": {\n    \"X\": \"thing\"\n  },\n  \"reasoning\": \"L'expression indéfinie « d'incolores idées vertes » introduit l'existence d'au moins une entité X qui est une idée, qui est incolore et verte. Le prédicat « DortFurieusement(X) » représente le fait que cette idée dort furieusement. La formule ne traite pas l'incohérence sémantique apparente entre « incolore » et « verte » : elle la formalise simplement comme une conjonction de propriétés.\"\n}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkFrKXlIi270Tu8AtfFe0kgZ5eMAu",
-        "created": 1794692758,
+        "id": "chatcmpl-EkH4vAO8Vc9ozRH6JPkHSumeSTB2y",
+        "created": 1794697445,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 286,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 683,
+          "completion_tokens": 551,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 512,
+            "reasoning_tokens": 327,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

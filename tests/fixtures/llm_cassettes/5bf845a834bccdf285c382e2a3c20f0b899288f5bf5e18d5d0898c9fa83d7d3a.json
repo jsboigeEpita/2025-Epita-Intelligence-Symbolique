@@ -1,0 +1,40 @@
+{
+  "key": "5bf845a834bccdf285c382e2a3c20f0b899288f5bf5e18d5d0898c9fa83d7d3a",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_YJWScrzlTSE7Xf0BAXXpRzYr",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"343\",\"matches\":false,\"justification\":\"Le texte invoque l'autorité des experts et exclut l'avis des non-experts, mais ne contient aucune menace ni sanction coercitive. L'argument du bâton ne correspond donc pas à ce raisonnement.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkH1qEjwmZTpRfN8VngXDL1XYiD9n",
+        "created": 1794697254,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1334,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1331,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 83,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -20,7 +20,7 @@ from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer impor
     ComplexFallacyAnalyzer as IdentificationPlugin,
 )
 from argumentation_analysis.agents.core.informal.informal_definitions import (
-    INFORMAL_AGENT_INSTRUCTIONS,
+    build_informal_agent_instructions,
 )
 
 # #2121 — the configs this agent understands, named once. The plugin gates below
@@ -49,7 +49,13 @@ class InformalFallacyAgent(BaseAgent):
         """
         Initialise une instance de InformalFallacyAgent.
         """
-        prompt = INFORMAL_AGENT_INSTRUCTIONS
+        # #3573 : invoke_single (ci-dessous) n'offre AUCUNE fonction outil au
+        # modèle — pas de ``function_choice_behavior`` dans les settings, et
+        # aucun plugin monté par les configs de cet agent n'expose les
+        # fonctions que la section outils de V15 nomme (StateManager,
+        # InformalAnalyzer). Le prompt servi doit dire la vérité : variante
+        # sans outils, la réponse rédigée est le résultat.
+        prompt = build_informal_agent_instructions(tools_available=False)
         super().__init__(
             kernel=kernel,
             agent_name=agent_name,

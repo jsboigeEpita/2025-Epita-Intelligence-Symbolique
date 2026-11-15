@@ -3,11 +3,11 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\"fallacy_name\":\"Lapalissade\",\"taxonomy_pk\":\"31\",\"explanation\":\"Le texte énonce des banalités évidentes sans fournir de raisonnement ni de conclusion à établir.\",\"confidence\":0.9}",
+      "content": "{\"fallacy_name\":\"Lapalissade\",\"taxonomy_pk\":\"31\",\"explanation\":\"Le texte énonce des évidences triviales (« Le soleil brille », « Il fait beau ») sans véritable argumentation.\",\"confidence\":0.93}",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkFmkCp5ErDgNVXeNNKgXJtTZqQmu",
-        "created": 1794692474,
+        "id": "chatcmpl-EkH0NOBUACdXMdy40FLkvoQBAG9fx",
+        "created": 1794697163,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 23156,
@@ -18,11 +18,11 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 346,
+          "completion_tokens": 208,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,
-            "reasoning_tokens": 293,
+            "reasoning_tokens": 149,
             "rejected_prediction_tokens": 0,
             "text_tokens": null
           }

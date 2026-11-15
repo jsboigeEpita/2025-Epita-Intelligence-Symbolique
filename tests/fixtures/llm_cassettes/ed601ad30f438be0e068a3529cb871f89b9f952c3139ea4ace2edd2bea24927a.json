@@ -1,0 +1,40 @@
+{
+  "key": "ed601ad30f438be0e068a3529cb871f89b9f952c3139ea4ace2edd2bea24927a",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_83dquMN2NyxxnnaPKDLgb6fs",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"351\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"Le texte ne cherche pas à obtenir l'accord en promettant un avantage personnel, un service réciproque, une revanche ou une corruption. Il s'agit plutôt d'un appel à l'autorité et d'une exclusion de l'avis des non-experts, donc cette branche ne correspond pas.\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkH1uNk7XgwukhXPKLuAZbU4KGOwo",
+        "created": 1794697258,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 2072,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 634,
+            "cached_tokens": 1435,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 98,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

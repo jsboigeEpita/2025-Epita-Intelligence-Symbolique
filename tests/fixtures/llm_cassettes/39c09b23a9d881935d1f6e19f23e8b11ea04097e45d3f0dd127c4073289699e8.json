@@ -1,0 +1,48 @@
+{
+  "key": "39c09b23a9d881935d1f6e19f23e8b11ea04097e45d3f0dd127c4073289699e8",
+  "value": {
+    "id": "chatcmpl-EkHAJrJgr91orYWJv1h3VIV7FvhjU",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"distinct_points\":\"1. Certains criminels sont irrécupérables et représentent un danger permanent pour la société, ce qui justifie la peine de mort dans certains cas.\\n2. Le système judiciaire peut se tromper.\\n3. Les avancées de l’ADN réduisent considérablement le risque d’erreur judiciaire.\\n4. La peine de mort est irréversible, si bien qu’une erreur judiciaire serait fatale.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794697779,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 219,
+      "prompt_tokens": 262,
+      "total_tokens": 481,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 119,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "key": "44211e6932c396ef0ab1d9fb49e826a9948dfd07b19a3b9be72eee067257d271",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_cha2yzo3KHpVOPJh8e82N7zj",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"599\",\"matches\":false,\"justification\":\"Le texte ne généralise pas à partir d'une poignée d'exemples. Il invoque plutôt l'unanimité alléguée des experts et disqualifie l'avis des non-experts; cela ne correspond pas à l'appel aux petits nombres.\",\"confidence\":\"high\",\"move_author\":\"speaker\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EkH2SYIIdPTsNQExnNVMjkqNa2HG2",
+        "created": 1794697292,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1405,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1402,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 90,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

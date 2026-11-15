@@ -1,0 +1,48 @@
+{
+  "key": "89d37fdb60819e7222e1b9e8f7102bc8b58d1c7cb178c80b207c0f3ff192b69b",
+  "value": {
+    "id": "chatcmpl-EkH96B6k0GHOZMDLtQvW5HaEL2Ucd",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"Les vaccins sont dangereux et les produits pharmaceutiques cachent leurs effets secondaires.\",\"main_thesis\":\"Les vaccins sont soutenus par des décennies de recherche clinique, l’idée qu’ils sont dangereux ou que leurs effets secondaires sont dissimulés est infondée, et des taux de vaccination élevés protègent les personnes qui ne peuvent pas être vaccinées grâce à l’immunité collective.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794697704,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 139,
+      "prompt_tokens": 308,
+      "total_tokens": 447,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 36,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

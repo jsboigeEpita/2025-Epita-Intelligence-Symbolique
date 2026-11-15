@@ -6,15 +6,15 @@
       "content": "",
       "function_calls": [
         {
-          "id": "call_YckiRIHWnY2XqiGeHBKffv9h",
+          "id": "call_qSx7a3hkSDPcusCHekkQfLYO",
           "name": "Exploration-confirm_fallacy",
-          "arguments": "{\"node_pk\":\"1281\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"La phrase énonce une affirmation politique, mais n’esquive pas explicitement un débat ni ne refuse de fournir des arguments. Le contenu ne manifeste donc pas le « refus du débat ».\",\"move_author\":\"speaker\"}"
+          "arguments": "{\"node_pk\":\"1281\",\"matches\":false,\"confidence\":\"high\",\"justification\":\"La phrase affirme simplement le succès de la politique économique ; elle n’esquive pas un débat ni ne refuse explicitement de fournir des arguments en réponse à une objection.\",\"move_author\":\"speaker\"}"
         }
       ],
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EkFnRFFLJXSHWFAicUB8jO7k3nZmo",
-        "created": 1794692517,
+        "id": "chatcmpl-EkH14XdaodwjOpg1IUhh04r1UwaEU",
+        "created": 1794697206,
         "system_fingerprint": null,
         "usage": {
           "prompt_tokens": 2603,
@@ -25,7 +25,7 @@
             "image_tokens": null,
             "text_tokens": null
           },
-          "completion_tokens": 79,
+          "completion_tokens": 74,
           "completion_tokens_details": {
             "accepted_prediction_tokens": 0,
             "audio_tokens": 0,

@@ -1,0 +1,48 @@
+{
+  "key": "9b7d32a3c9e3005bd6f48ef9d8de07dc427a47513b92b97101979819a6986d49",
+  "value": {
+    "id": "chatcmpl-EkGzXgo46qysBkQzO2m7M8uT3bRGP",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La chaîne présente une progression logique partielle : le Premier ministre invoque l’adoption de la réforme par les pays européens, puis cette justification est contestée au regard des différences entre les systèmes de retraite, ce qui conduit à conclure que la nécessité de la réforme n’est pas établie. L’inférence existe, mais elle reste incomplète et imprécise dans la chaîne reconstruite.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1794697111,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 201,
+      "prompt_tokens": 303,
+      "total_tokens": 504,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 100,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
