@@ -125,11 +125,18 @@ _SITUATION_PLACE_KIND_RE = re.compile(
 #: 12 on doc_H, where the situation's « face à <person> » became the only
 #: venue candidate and refuted a situation that was right. Each pattern ends
 #: where the venitive preposition starts; it reads the text BEFORE the match.
+#: The three verbs are read by their STEM (``répond\\w*``, ``s'adress\\w*``,
+#: ``oppos\\w*`` — review of 15/11): every tense is covered by construction
+#: and the elided pronoun before the verb (« qui l'opposait à X », measured at
+#: c13-c14) does not matter, because the cue reads the end of the text before
+#: the match. « siège au X » names a role in an institution, not the place
+#: the speech was given (measured at c8, review of 15/11).
 _PERSON_RELATION_CUES = (
     re.compile(r"\bface\s+$", re.IGNORECASE),
-    re.compile(r"\brépond(?:re|ent)?\s+$", re.IGNORECASE),
-    re.compile(r"\bs[’']?adress(?:e|er|ent)?\s+$", re.IGNORECASE),
-    re.compile(r"\bopposé(?:e|s|es)?\s+$", re.IGNORECASE),
+    re.compile(r"\brépond\w*\s+$", re.IGNORECASE),
+    re.compile(r"\bs[’']?adress\w*\s+$", re.IGNORECASE),
+    re.compile(r"\boppos\w*\s+$", re.IGNORECASE),
+    re.compile(r"\bsiège\s+$", re.IGNORECASE),
 )
 
 HISTORIAN_PROMPT = """You are a historian. Situate the document below before anyone
@@ -552,7 +559,9 @@ def _document_venue_statements(text: str) -> List[Dict[str, Any]]:
 def _governed_by_a_person_relation(situation: str, match: re.Match[str]) -> bool:
     """#3586 — is this venitive match the complement of a relation to a
     PERSON? ``face à Jean Dorlac``, ``répond à X``, ``s'adresse à X``,
-    ``opposé à X``: the capitalised run is the person, not a venue."""
+    ``opposait à X`` (any tense: the verbs are read by their stem), and
+    ``siège au X`` (a role in an institution): the capitalised run is the
+    person or the institution, not a venue."""
     before = situation[: match.start()]
     return any(cue.search(before) for cue in _PERSON_RELATION_CUES)
 
@@ -566,12 +575,16 @@ def _situation_place_candidates(situation: str) -> List[str]:
     situation named.
 
     #3586: a venitive match governed by a relation to a person is not a
-    venue (``_governed_by_a_person_relation``). Four à-forms are covered —
-    « face à », « répond / répondre à », « s'adresse / s'adresser à »,
-    « opposé à ». Left out, and named in the pull request: « devant <person> »
-    (no construction separates it from « devant <assembly> », and enumerating
-    person names is excluded by the privacy rule), and relations carried by
-    another preposition (``aux côtés de``, ``à l'égard de``).
+    venue (``_governed_by_a_person_relation``). Five cues are covered —
+    « face à », and the three verbs read by their stem so every tense and
+    every elided pronoun is covered by construction: « répond / répondrait /
+    répondit à », « s'adresse / s'adressait à », « opposé / l'opposait à »
+    (the c13-c14 shape), plus « siège au <institution> » (a role, not the
+    place the speech was given; c8). Left out, and named in the pull request:
+    « devant <person> » (no construction separates it from « devant
+    <assembly> », and enumerating person names is excluded by the privacy
+    rule), and relations carried by another preposition (``aux côtés de``,
+    ``à l'égard de``).
     """
     if not situation:
         return []

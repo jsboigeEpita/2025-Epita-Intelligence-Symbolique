@@ -416,10 +416,13 @@ class TestAct1ReadsTheField:
 
 
 class TestAPersonIsNotAVenue3586:
-    """« à » also governs persons: « face à X », « répond à X », « s'adresse
-    à X », « opposé à X » (issue #3586, cycle 12). The situation below is
-    invented, shaped like the measured one: a region the document's venue may
-    sit in, then a person."""
+    """« à » also governs persons: « face à X », and the three verbs read by
+    their stem — « répond… à », « s'adress… à », « oppos… à », every tense
+    and every elided pronoun covered by construction (issue #3586, cycle 12;
+    the c13-c14 shape is the conjugated form after « qui l'… », review of
+    15/11) — plus « siège au <institution> » (a role, c8). The situation
+    below is invented, shaped like the measured one: a region the document's
+    venue may sit in, then a person."""
 
     _PERSON_SITUATION = (
         "Il s'agit d'une allocution prononcée dans la province de Valmont, "
@@ -445,6 +448,43 @@ class TestAPersonIsNotAVenue3586:
             "Allocution prononcée à Valcourt, opposée à Jean Dorlac.",
         ):
             assert _situation_place_candidates(sentence) == ["Valcourt"], sentence
+
+    def test_a_conjugated_form_with_an_elided_pronoun_is_covered(self):
+        """The c13-c14 shape (review of 15/11): the imperfect after « qui
+        l'… » — a closed list of forms read the participle only, so the
+        person stayed a candidate there. The stems cover every tense by
+        construction, and the elided pronoun before the verb does not matter
+        because the cue reads the end of the text before the match."""
+        from argumentation_analysis.agents.core.context.historian import (
+            _situation_place_candidates,
+        )
+
+        # The venue elsewhere in the sentence survives.
+        assert _situation_place_candidates(
+            "Allocution prononcée à Valcourt, lors de la rencontre qui "
+            "l'opposait à Jean Dorlac."
+        ) == ["Valcourt"]
+        # The same shape with no other candidate names nothing.
+        assert (
+            _situation_place_candidates(
+                "Allocution prononcée en province, lors de la rencontre qui "
+                "l'opposait à Jean Dorlac."
+            )
+            == []
+        )
+
+    def test_a_seat_in_an_institution_is_a_role_not_a_venue(self):
+        """The c8 shape (review of 15/11, optional ask taken): « siège au
+        <institution> » names where the movement sits, not where the speech
+        was given."""
+        from argumentation_analysis.agents.core.context.historian import (
+            _situation_place_candidates,
+        )
+
+        assert _situation_place_candidates(
+            "Allocution donnée à Valcourt, dont le mouvement siège au "
+            "Parlement Régional."
+        ) == ["Valcourt"]
 
     async def test_the_measured_shape_records_no_refutation(self):
         payload = {
