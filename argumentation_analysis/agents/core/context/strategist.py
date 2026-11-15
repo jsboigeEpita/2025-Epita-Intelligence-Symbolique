@@ -300,7 +300,10 @@ def anchor_player(
       position;
     * the quote is absent from the document → the position is KEPT (it may
       still be true, and dropping it would be the pendulum), the quote is
-      emptied, ``anchor="unanchored"``; the render never puts the model's
+      emptied, ``anchor="unanchored"``, plus ``named_offset`` when the text
+      names the player (#3556, c12 — the same omission as the no-quote
+      branch: the offered quote failing its verbatim check must not decide
+      what the text says about the name); the render never puts the model's
       words between « »;
     * no quote at all → ordinary model knowledge: no ``quote`` key, no
       ``anchor`` key, so a player that carried neither stays byte-identical
@@ -337,6 +340,14 @@ def anchor_player(
         return item
     item["anchor"] = ANCHOR_UNANCHORED
     item["basis"] = MODEL_KNOWLEDGE_BASIS
+    # #3556 (c12) — this branch never looked at the text either: a player
+    # whose offered quote was not found, but whose name the document
+    # carries, is not "known only from outside the text". The control that
+    # ran says the citation was not found verbatim — never that the text
+    # lacks the passage or the player.
+    named = _name_in_text(str(item.get("name") or ""), raw_text or "")
+    if named is not None:
+        item["named_offset"] = named
     return item
 
 

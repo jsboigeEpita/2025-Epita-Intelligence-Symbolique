@@ -599,15 +599,26 @@ def _format_strategic_block(read: Dict[str, Any]) -> str:
         # « le texte ne l'énonce pas » is a claim about the TEXT, and no
         # control ran on an unquoted stance. The only negation a control
         # establishes is the unanchored case below (quote_occurs_in failed
-        # on a supplied quote) — it keeps its exact wording.
+        # on the OFFERED quote — #3556 c12: the label says the citation was
+        # not found, never that the text lacks the passage).
         quote = _truncate(player.get("quote", ""), _MODEL_READ_CAP)
         if player.get("basis") == TEXT_BASIS and quote:
             label += f" — le texte dit : « {quote} »"
         elif player.get("anchor") == ANCHOR_UNANCHORED:
+            # #3556 (c12) — quote_occurs_in failed on the offered string:
+            # the measured fact is "this citation was not found verbatim",
+            # never "the text does not carry this passage" — the passage may
+            # sit there in other words, and the name check below can even
+            # prove the text carries the player.
             label += (
-                " — citation non ancrée : le texte ne porte pas ce passage "
+                " — citation non ancrée : la citation proposée n'a pas été "
+                "retrouvée telle quelle dans le document "
                 "(ne le cite PAS entre guillemets)"
             )
+            if isinstance(player.get("named_offset"), int) and not isinstance(
+                player.get("named_offset"), bool
+            ):
+                label += " ; le texte nomme ce joueur"
         elif player.get("anchor") == ANCHOR_UNRELATED:
             # #3556 — the passage IS in the document, but the producer did not
             # find this player in the sentence that carries it: an anchor that
@@ -1583,9 +1594,10 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         "- N'ÉCRIS JAMAIS « le texte ne dit pas X », « le texte ne l'énonce\n"
         "  pas » ni aucune variante de cette négation, SAUF pour une citation\n"
         "  étiquetée non ancrée : là SEULEMENT un contrôle a réellement tourné\n"
-        "  (le passage fourni n'a pas été retrouvé dans le document). Une\n"
-        "  position « savoir du modèle » se présente comme une lecture non\n"
-        "  vérifiée contre le texte — jamais comme une absence dans le texte.\n"
+        "  (la citation proposée n'a pas été retrouvée telle quelle — jamais\n"
+        "  « le texte ne porte pas ce passage », #3556). Une position « savoir\n"
+        "  du modèle » se présente comme une lecture non vérifiée contre le\n"
+        "  texte — jamais comme une absence dans le texte.\n"
         "- TERMINE l'Acte I en posant LA QUESTION INTERPRÉTATIVE de ce\n"
         "  document : la question centrale que l'analyse (Acte II) instruit et\n"
         "  que la conclusion (Acte III) devra trancher sur CE discours. Dérive-\n"
