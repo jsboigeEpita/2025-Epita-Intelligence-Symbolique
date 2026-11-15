@@ -212,16 +212,17 @@ _NAME_CONJUNCTIONS = (" et ", " and ")
 
 #: #3556 (c13) — a distinctive word of the reply's role/interests rides a
 #: naming sentence either as the same word, or as its close morphological
-#: family: the recorded c13 shape carries « industrie » in the text where
-#: the reply says « industrielle ». Eight shared letters is the narrowest
-#: closure that bridges that shape — below, « gouvernance » would ride
-#: « gouvernement », which is not a family the reply can claim.
+#: family: a recorded shape carries a text noun where the reply gives the
+#: matching adjective (``institution`` / ``institutionnel``). Eight shared
+#: letters is the narrowest closure that bridges that shape — below,
+#: ``gouvernance`` would ride ``gouvernement``, which is not a family the
+#: reply can claim.
 _NAMING_FAMILY_PREFIX = 8
 
 
 def _words_share_family(word: str, other: str) -> bool:
     """#3556 (c13) — same word, or its ≥ 8-letter morphological family
-    (``industrie`` / ``industrielle``, accent-stable) — never a shorter
+    (``institution`` / ``institutionnel``, accent-stable) — never a shorter
     shared head (``gouvernance`` is not ``gouvernement``)."""
     shared = 0
     for left, right in zip(word, other):
@@ -234,32 +235,43 @@ def _words_share_family(word: str, other: str) -> bool:
 def _name_offset_in_text(name: str, raw_text: str) -> Optional[int]:
     """#3556 (c14) — where the text names ``name``, compounds included.
 
-    « Officiers et soldats français » names the player when EVERY conjunct
-    of its conjunction occurs contiguously: the shared trailing qualifier
-    distributes over both in the reply's own grammar, so the text's
-    « les officiers et les soldats français » carries the whole compound
-    though the full string never sits contiguous. NOT a word-bag: one
-    missing or reworded conjunct (the reply's « de l'armement » against
-    the text's « des industries d'armement ») leaves the player unnamed,
-    exactly as the plain check would. Returns the FIRST conjunct's offset.
+    The plain check runs FIRST: a name the text carries whole keeps the
+    plain check's offset, wherever its first conjunct occurs alone. Only
+    when the whole string is absent does a compound rule apply — a name
+    built on a conjunction (`` et `` / `` and ``) names the player when
+    EVERY conjunct occurs contiguously AND inside ONE sentence: the
+    text's own conjunction of the two parties, not a word-bag of parts
+    scattered through the document. A sentence must carry every conjunct
+    after the first, around an occurrence of the first — each occurrence
+    of the first conjunct is tried. One missing or reworded conjunct
+    leaves the player unnamed, exactly as the plain check would. Returns
+    the first conjunct's offset in that sentence.
+
+    Declared: a compound named this way keeps ``named_offset`` only —
+    ``_naming_sentence`` compiles the whole name, so no naming sentence is
+    recorded for a conjunct-by-conjunct match (#3556, c13/c14).
     """
     cleaned = str(name or "").strip()
     if not cleaned or not raw_text:
         return None
+    whole = _name_in_text(cleaned, raw_text)
+    if whole is not None:
+        return whole
     lowered = cleaned.casefold()
     for separator in _NAME_CONJUNCTIONS:
         parts = [part.strip() for part in lowered.split(separator)]
         parts = [part for part in parts if part]
         if len(parts) < 2:
             continue
-        offsets: List[int] = []
-        for part in parts:
-            found = _name_in_text(part, raw_text)
-            if found is None:
-                return _name_in_text(cleaned, raw_text)
-            offsets.append(found)
-        return offsets[0]
-    return _name_in_text(cleaned, raw_text)
+        first = parts[0]
+        pattern = re.compile(r"(?<!\w)" + re.escape(first) + r"(?!\w)", re.IGNORECASE)
+        for match in pattern.finditer(raw_text):
+            lo, hi = _sentence_span(raw_text, match.start(), match.end())
+            sentence = raw_text[lo:hi]
+            if all(_name_in_text(part, sentence) is not None for part in parts[1:]):
+                return match.start()
+        return None
+    return None
 
 
 def _naming_sentence(
@@ -268,15 +280,14 @@ def _naming_sentence(
     """#3556 (c13) — the sentence that NAMES the player, when it also
     carries the reply's own role/interests vocabulary.
 
-    The c13 severs are players the text names while Act I files their role
-    under the model's knowledge: the naming sentence itself often states
-    that role (« the … administration », « l'immense industrie »), and the
-    producer recorded only WHERE the name sat, never WHAT that sentence
-    says. The check is the concern check's distinctive-word rule, read
-    against EVERY sentence that carries the name (the recorded doc_E shape
-    keeps its role vocabulary at the second occurrence), family forms
-    included — the recorded doc_I shape says « industrie » where the reply
-    says « industrielle ». Returns ``(lo, hi, sentence)`` computed from the
+    The recorded c13 severs are players the text names while Act I files
+    their role under the model's knowledge: a naming sentence often states
+    that role itself, and the producer recorded only WHERE the name sat,
+    never WHAT that sentence says. The check is the concern check's
+    distinctive-word rule, read against EVERY sentence that carries the
+    name — a recorded shape keeps its role vocabulary at a later
+    occurrence — family forms included, so a text noun rides the reply's
+    matching adjective. Returns ``(lo, hi, sentence)`` computed from the
     text, never relayed from the reply, or ``None``.
     """
     name = str(player.get("name") or "").strip()

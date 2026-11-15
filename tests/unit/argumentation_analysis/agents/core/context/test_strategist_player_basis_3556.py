@@ -566,9 +566,9 @@ class TestActOneTellsTheTwoApart:
 
 #: #3556 (c13) — the naming sentence itself carries the reply's
 #: role/interests vocabulary: the SECOND occurrence's sentence says what
-#: the reply files under the role (the recorded doc_E shape), the first
-#: occurrence's says nothing of it. The check must read every naming
-#: sentence, not only the recorded offset's.
+#: the reply files under the role, the first occurrence's says nothing of
+#: it. The check must read every naming sentence, not only the recorded
+#: offset's.
 DOC_NAMING_SENTENCE = (
     "Le bureau a publié son avis ce matin. "
     "La mission régionale a répondu la semaine suivante. "
@@ -576,14 +576,12 @@ DOC_NAMING_SENTENCE = (
 )
 NAMING_SENTENCE_HIT = "Puis la mission régionale a signé la charte de la coopération."
 
-#: #3556 (c13) — the recorded doc_I shape: the naming sentence carries the
-#: role's morphological FAMILY (« industrie » where the reply says
-#: « industrielle » — an accent-stable family), never the word itself: an
-#: exact-word rule measured zero hits on both c13 targets.
+#: #3556 (c13) — the naming sentence carries the role's morphological
+#: FAMILY, noun in the text against adjective in the reply, never the word
+#: itself: an exact-word rule scores zero on it.
 DOC_NAMING_FAMILY = (
-    "L'office a rendu son avis. "
-    "Le syndicat peut, comme la chambre, mobiliser toute l'institution "
-    "de la province."
+    "Le préau s'est vidé à midi. "
+    "La fédération a repris l'institution de la province."
 )
 
 #: #3556 (c13) control — the naming sentence carries none of the role's
@@ -593,11 +591,11 @@ DOC_NAMING_QUIET = (
 )
 
 #: #3556 (c14) — the compound the text carries by its conjunction: every
-#: conjunct contiguous, the full string never contiguous.
+#: conjunct INSIDE ONE sentence, the full string never contiguous.
 DOC_COMPOUND = (
-    "Le comité a statué sans débat. "
-    "J'invite les délégués et les agents consulaires qui siègent "
-    "à rejoindre l'accord."
+    "Le préau s'est vidé à midi. "
+    "Les archivistes et les greffiers municipaux ont signé "
+    "le registre d'accueil."
 )
 
 #: #3556 (c14) control — the text carries the first conjunct and a
@@ -607,6 +605,20 @@ DOC_COMPOUND_MISS = (
     "Le comité a statué sans débat. "
     "Les archivistes et les experts des comptes publics ont validé "
     "le relevé."
+)
+
+#: #3556 (c14) control — the two conjuncts sit in DIFFERENT sentences:
+#: the document never conjoins the parties, so the player stays unnamed.
+DOC_COMPOUND_SPLIT = (
+    "Les archivistes se sont réunis lundi. " "Les greffiers municipaux ont signé mardi."
+)
+
+#: #3556 (c14) control — the first conjunct occurs ALONE before the whole
+#: name: the plain whole-name check runs first, so the offset is the whole
+#: name's, not the lone conjunct's earlier one.
+DOC_COMPOUND_WHOLE_FIRST = (
+    "Les archivistes se sont réunis lundi. "
+    "Puis les archivistes et greffiers municipaux ont signé le registre."
 )
 
 
@@ -639,10 +651,9 @@ class TestTheNamingSentenceCarriesTheRole:
         assert player["naming_sentence"] == NAMING_SENTENCE_HIT
 
     async def test_the_family_shape_hits_where_the_exact_word_cannot(self):
-        """The measured doc_I shape: the text's « institution » against the
-        reply's « institutionnel » (as « industrie » stood against
-        « industrielle ») — same word family, never the same word. An
-        exact-word check stays silent; the family rule fires."""
+        """The recorded family shape: the text's « institution » against the
+        reply's « institutionnel » — same word family, never the same word.
+        An exact-word check stays silent; the family rule fires."""
         players = [
             {
                 "name": "la province",
@@ -654,8 +665,8 @@ class TestTheNamingSentenceCarriesTheRole:
         player = state["players"][0]
 
         assert "naming_span" in player, (
-            "« institution » must ride « institutionnel » — the measured "
-            "doc_I shape, where the exact-word rule scores zero"
+            "« institution » must ride « institutionnel » — the recorded "
+            "family shape, where the exact-word rule scores zero"
         )
         assert "institution" in player["naming_sentence"]
 
@@ -770,25 +781,59 @@ class TestActOneQuotesTheNamingSentence:
 
 class TestACompoundNameNamesThePlayer:
     """#3556 (c14) — a compound name on its conjunction names the player
-    when EVERY conjunct occurs contiguously; the shared trailing qualifier
-    distributes over both in the reply's own grammar. NOT a word-bag: a
-    single missing or reworded conjunct leaves the player unnamed,
+    when EVERY conjunct occurs contiguously INSIDE ONE sentence: the
+    text's own conjunction of the parties, never a word-bag of parts
+    scattered through the document. The plain whole-name check runs first.
+    A single missing or reworded conjunct leaves the player unnamed,
     byte-identically. Born red on ``e4eb7e74d``: the whole-string check
     alone refuses the recorded c14 player the text does carry."""
 
     async def test_every_conjunct_contiguous_names_the_player(self):
         players = [
             {
-                "name": "Délégués et agents consulaires",
-                "role": "corps diplomatique",
+                "name": "Archivistes et greffiers municipaux",
+                "role": "corps de greffe",
                 "stance": "ambivalent",
             }
         ]
         _, state = await _read(_payload(players), DOC_COMPOUND)
         player = state["players"][0]
 
-        # named_offset is the FIRST conjunct's offset.
-        assert player["named_offset"] == DOC_COMPOUND.find("délégués")
+        # named_offset is the FIRST conjunct's offset, in that sentence.
+        assert player["named_offset"] == DOC_COMPOUND.find("archivistes")
+
+    async def test_conjuncts_in_two_sentences_leave_the_player_unnamed(self):
+        """The tightener: each conjunct present, but never conjoined by
+        the text — two different sentences name the two parties."""
+        players = [
+            {
+                "name": "Archivistes et greffiers municipaux",
+                "role": "corps de greffe",
+                "stance": "ambivalent",
+            }
+        ]
+        _, state = await _read(_payload(players), DOC_COMPOUND_SPLIT)
+        player = state["players"][0]
+
+        assert "named_offset" not in player
+
+    async def test_the_whole_name_wins_over_a_lone_first_conjunct(self):
+        """The plain check runs FIRST: where the whole name is contiguous,
+        its offset stands even though the first conjunct occurs alone
+        earlier in the text."""
+        players = [
+            {
+                "name": "Archivistes et greffiers municipaux",
+                "role": "corps de greffe",
+                "stance": "ambivalent",
+            }
+        ]
+        _, state = await _read(_payload(players), DOC_COMPOUND_WHOLE_FIRST)
+        player = state["players"][0]
+
+        whole = DOC_COMPOUND_WHOLE_FIRST.find("archivistes et greffiers")
+        assert player["named_offset"] == whole
+        assert player["named_offset"] != DOC_COMPOUND_WHOLE_FIRST.find("archivistes")
 
     async def test_one_reworded_conjunct_leaves_the_player_unnamed(self):
         players = [
@@ -809,7 +854,8 @@ class TestACompoundNameNamesThePlayer:
 
     async def test_a_contiguous_compound_keeps_its_whole_name_offset(self):
         """A compound the text carries whole keeps the plain check's offset
-        — the first conjunct's IS the whole name's start."""
+        — the first conjunct's IS the whole name's start. The lone-conjunct
+        ordering case is its own control above."""
         doc = (
             "Le comité a statué. "
             "La fédération et confédération du bâtiment a suivi l'accord."
