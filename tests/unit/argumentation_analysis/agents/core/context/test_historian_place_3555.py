@@ -408,3 +408,67 @@ class TestAct1ReadsTheField:
                 "basis": MODEL_KNOWLEDGE_BASIS,
             }
         ) == ("  Situation : Allocution prononcée à Valcourt.")
+
+
+# ============================================================================
+# #3586 — a person after « à » is not a venue, and the quote never cuts a word
+# ============================================================================
+
+
+class TestAPersonIsNotAVenue3586:
+    """« à » also governs persons: « face à X », « répond à X », « s'adresse
+    à X », « opposé à X » (issue #3586, cycle 12). The situation below is
+    invented, shaped like the measured one: a region the document's venue may
+    sit in, then a person."""
+
+    _PERSON_SITUATION = (
+        "Il s'agit d'une allocution prononcée dans la province de Valmont, "
+        "face à Jean Dorlac, devant une assemblée réunie pour débattre."
+    )
+
+    def test_the_person_after_face_a_is_not_a_venue_candidate(self):
+        from argumentation_analysis.agents.core.context.historian import (
+            _situation_place_candidates,
+        )
+
+        assert _situation_place_candidates(self._PERSON_SITUATION) == []
+
+    def test_each_relation_form_is_covered_and_the_venue_survives(self):
+        from argumentation_analysis.agents.core.context.historian import (
+            _situation_place_candidates,
+        )
+
+        for sentence in (
+            "Allocution prononcée à Valcourt, face à Jean Dorlac.",
+            "Allocution prononcée à Valcourt, et qui répond à Jean Dorlac.",
+            "Allocution prononcée à Valcourt, qui s'adresse à Jean Dorlac.",
+            "Allocution prononcée à Valcourt, opposée à Jean Dorlac.",
+        ):
+            assert _situation_place_candidates(sentence) == ["Valcourt"], sentence
+
+    async def test_the_measured_shape_records_no_refutation(self):
+        payload = {
+            "situation": self._PERSON_SITUATION,
+            "blind_spot": "",
+            "items": [],
+        }
+        result = await build_historical_context(_state(), _llm(payload))
+
+        assert "place" not in result.to_state()
+
+
+class TestTheVenueQuoteSnapsToWordBoundaries3586:
+    def test_the_quote_never_starts_or_ends_inside_a_word(self):
+        from argumentation_analysis.agents.core.context.historian import (
+            _document_venue_statements,
+        )
+
+        lead, tail = "x" * 55, "y" * 55
+        text = f"{lead} préambule. ici, dans cette ville de {_VENUE_NAME} {tail} suite."
+        statement = _document_venue_statements(text)[0]
+        quote = statement["quote"]
+
+        # The 48-character window falls inside both runs: a quote that cuts
+        # mid-word would start on a fragment, not on the whole run.
+        assert quote.split()[0] == lead
+        assert quote.split()[-1] == tail
