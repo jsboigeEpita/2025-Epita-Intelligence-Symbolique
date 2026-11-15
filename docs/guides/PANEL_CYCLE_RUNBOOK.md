@@ -195,16 +195,20 @@ paid cycle or a wrong conclusion; the incidents are in
    #3518), `no_record`, or `unfaithful`. On an `unfaithful` document nothing
    is a measure, and `replay_selection.py` exits 2.
 2. **The random control.** "X of Y passages examined" is read against the same
-   passages redrawn elsewhere in the text (`random`). A selection that covers
-   most of a text examines most passages by chance. Each passage is redrawn
-   **on its side of the record**: the passages a cycle's own judge raises are
-   the ones that cycle missed, so drawn anywhere some would land where the
-   run did examine, and a real gain would read as chance. Measured on cycle
-   6 at budget 45, on the 33 passages with an unexamined unit: 12 examined,
-   against 12.3 drawn anywhere and 7.7 drawn where the run had not examined.
-   The reading's control (`first_reading_draws.py`) redraws the anchors and
-   is not matched this way. Either way, confirm a change on the passages of
-   the next cycle.
+   passages redrawn elsewhere in the text. Two controls, printed under their
+   own names: `random-side` redraws each passage **on its side of the
+   record** — the passages a cycle's own judge raises are the ones that
+   cycle missed, so drawn anywhere some would land where the run did examine,
+   and a real gain would read as chance; `random-anywhere` draws it anywhere
+   in the text. Measured on cycle 6 at budget 45, on the 33 passages with an
+   unexamined unit: 12 examined, against 12.3 drawn anywhere and 7.7 drawn
+   where the run had not examined. `random-side` is the control of a CHANGE:
+   on the recorded selection, or on `today` with unchanged code, it gives
+   back the count by construction and the line prints `random-side = count,
+   unchanged selection`; the chance control there is the passage drawn
+   anywhere. The reading's control (`first_reading_draws.py`) redraws the
+   anchors and is not matched this way. Either way, confirm a change on the
+   passages of the next cycle.
 3. **Three draws.** A step with a model call upstream is read on three draws
    or more: minimum, mean, spread. One draw that passes a bar shows the bar
    can be passed once.

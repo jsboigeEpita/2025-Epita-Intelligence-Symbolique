@@ -70,6 +70,11 @@ in the same number and with the same lengths.
 
 - **Measured (#3511, #3516).** 4 of 39 observed against 5.6 expected at random: chance level.
   Another probe gave 26 against 14 at random: a real signal, half of which was density.
+- **A selection needs its own control (#3592).** A side-conditioned control — each span redrawn
+  where the recorded run already looked — gives back the count on an unchanged selection: the
+  c10–c14 entries cited "against random" ×1.01–1.05, while the same passages drawn anywhere read
+  ×0.79–1.49 per cycle (53 of 175 against 48.9, ×1.08 over the five). Say which control a ratio
+  is over; `replay_selection.py` prints `random-side` and `random-anywhere`.
 - **Instrument.** Draw random spans (same count, same lengths; 2000 draws were used), report
   observed next to expected, and state the bar as a ratio over that control. Two corollaries: a
   bound the model does not fill does not bind (measure the fill rate before raising a cap); and
