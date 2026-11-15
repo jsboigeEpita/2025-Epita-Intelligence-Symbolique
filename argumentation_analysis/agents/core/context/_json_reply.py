@@ -22,7 +22,9 @@ Choices, stated because they change what a read can claim:
   rejects, hiding the very malformation this record exists to show.
 - only a MALFORMED reply is retried. An empty completion or a provider
   exception stays ``llm_error`` after its one call: those are not a decode
-  symptom, and a second paid call would not repair them.
+  symptom, and a second paid call would not repair them. A provider exception
+  on the RETRY itself keeps the first attempt's decode record, the provider
+  failure riding inside it as ``retry_error`` (#3597 review).
 - the failure record is BOUNDED: ``JSON_REPLY_WINDOW_RADIUS`` characters
   around the decoder's position, plus the reply's length — enough to read a
   malformed middle, never the whole reply.
@@ -111,9 +113,13 @@ async def request_json_reply(
     """Call the model, strip its fence, and decode its JSON — with one retry.
 
     A decode failure is retried on the SAME prompt while attempts remain; any
-    other outcome ends the loop. Provider exceptions propagate to the caller,
-    which owns the ``llm_error`` branch (unchanged behaviour): only a reply
-    that arrived and failed to decode is worth asking again.
+    other outcome ends the loop. A provider exception on the FIRST attempt
+    propagates to the caller, which owns the ``llm_error`` branch (unchanged
+    behaviour). A provider exception on a RETRY does not erase what the first
+    attempt left: the reply that failed to decode is still the primary cause,
+    so the loop stops and returns ``parse_error`` with the first attempt's
+    record, the provider failure riding inside it as ``retry_error`` — no new
+    state key, and neither cause is lost (#3597 review).
     """
     last_error = ""
     last_detail = ""
@@ -121,7 +127,26 @@ async def request_json_reply(
     made = 0
     while made < max(1, attempts):
         made += 1
-        content = strip_json_fence(await llm_callable(prompt))
+        try:
+            content = strip_json_fence(await llm_callable(prompt))
+        except Exception as exc:
+            if not failure:
+                # First attempt, nothing held: the provider failure is the
+                # whole story, and the caller's ``llm_error`` branch owns it
+                # exactly as before #3576.
+                raise
+            # The second chance could not even be asked. The decode record is
+            # the one this fix exists to keep; the provider failure joins it
+            # instead of replacing it.
+            record = dict(failure)
+            record["retry_error"] = f"{type(exc).__name__}: {exc}"
+            return JsonReply(
+                status="parse_error",
+                error=last_error,
+                detail=last_detail,
+                attempts=made,
+                parse_failure=record,
+            )
         if not content:
             return JsonReply(
                 status="llm_error", error="empty completion", attempts=made

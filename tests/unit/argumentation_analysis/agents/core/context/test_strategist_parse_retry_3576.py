@@ -26,7 +26,10 @@ never a corpus name, place or date):
   state — the control that stays green on both sides;
 - an empty completion stays an ``llm_error`` after ONE call: only a
   MALFORMED reply gets the second chance, and the two failure statuses stay
-  discriminated (each with its cause now written to the state).
+  discriminated (each with its cause now written to the state);
+- a retry call that RAISES keeps the first attempt's decode record, with the
+  provider failure riding inside it as ``retry_error``: both causes matter
+  in that one case, and neither erases the other.
 
 The file collects on ``main``: the new symbols are imported inside the tests
 that need them, so the feature arms redden while the controls stay green —
@@ -292,3 +295,65 @@ class TestOnlyAMalformedReplyIsRetried:
         assert len(calls) == 1
         assert "attempts" not in payload
         assert payload["error"] == "empty completion"
+
+
+# ============================================================================
+# A retry call that RAISES — the first attempt's record is the one to keep
+# ============================================================================
+
+
+class TestARaisingSecondChanceKeepsTheFirstRecord:
+    """Review of #3597: attempt 1 failed to decode, attempt 2's CALL raised.
+
+    The provider exception must not erase the decode record: that reply is
+    still the primary cause, and losing its message/position here would lose
+    the one thing #3576 exists to keep — in the one case where both causes
+    matter. The provider failure rides INSIDE ``parse_failure`` as
+    ``retry_error``; no new state key.
+    """
+
+    def _llm(self):
+        calls: list = []
+
+        async def _call(prompt: str) -> str:
+            calls.append(prompt)
+            if len(calls) > 1:
+                raise TimeoutError("provider timeout")
+            return _MALFORMED_REPLY
+
+        return _call, calls
+
+    async def test_the_strategist_keeps_the_first_attempts_record(self):
+        llm, calls = self._llm()
+
+        result = await build_strategic_read(_state(), llm)
+        payload = result.to_state()
+
+        assert result.status == "parse_error"
+        assert len(calls) == 2, "the retry was asked for and raised"
+        assert payload["attempts"] == 2
+        assert payload["players"] == []
+        # The primary cause stays the DECODE failure, not the provider one.
+        assert payload["error"].startswith("JSONDecodeError: Expecting ':'")
+        failure = payload["parse_failure"]
+        assert set(failure) == _FAILURE_KEYS | {"retry_error"}
+        assert failure["message"] == "Expecting ':' delimiter"
+        assert failure["position"] == _BAD_POS
+        assert failure["retry_error"] == "TimeoutError: provider timeout"
+
+    async def test_the_historian_keeps_the_first_attempts_record(self):
+        llm, calls = self._llm()
+
+        result = await build_historical_context(_state(), llm)
+        payload = result.to_state()
+
+        assert result.status == "parse_error"
+        assert len(calls) == 2
+        assert payload["attempts"] == 2
+        assert payload["items"] == []
+        assert payload["error"].startswith("JSONDecodeError: Expecting ':'")
+        failure = payload["parse_failure"]
+        assert set(failure) == _FAILURE_KEYS | {"retry_error"}
+        assert failure["message"] == "Expecting ':' delimiter"
+        assert failure["position"] == _BAD_POS
+        assert failure["retry_error"] == "TimeoutError: provider timeout"
