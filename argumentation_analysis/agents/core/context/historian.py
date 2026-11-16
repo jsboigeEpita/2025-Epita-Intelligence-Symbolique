@@ -22,7 +22,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from argumentation_analysis.agents.core.context import (
     MODEL_KNOWLEDGE_BASIS,
@@ -550,52 +550,37 @@ def _confront_dating_day(
     very speech the document cites as already delivered ("le discours
     prononcé le 14 mars", no year printed) stayed invisible at year
     granularity, where a later date in the same year is possible. This
-    sibling compares the claimed month-day with each past-cited month-day:
+    sibling fires on ONE shape: the claimed day COINCIDES with a day the
+    document cites as already delivered — the situation claims the very
+    cited speech, and the document is a later one.
 
-    - the claimed day COINCIDES with a day the document cites as already
-      delivered — the situation claims the very cited speech, and the
-      document is a later one;
-    - the claimed day PRECEDES a cited day within the situation's claimed
-      year — a day already delivered cannot follow the speech.
+    The claim must be the situation's OWN day (R1170): a situation naming
+    more than one distinct month-day ("Allocution du 20 mars, en réponse au
+    discours prononcé le 14 mars") describes relations among events, not
+    its own date, and passes untouched. The precede clause of the first
+    draft is gone (R1170): a day without a year places nothing within the
+    claimed year — a winter speech cites the previous summer — and it fired
+    on none of the 40 replayed states.
 
-    Both leave the payload's shape to :meth:`HistoricalContext.to_state`,
-    with ``refuted_by`` carrying the month-day reference and its offset
-    (and no ``year`` key: that channel wrote its own refutation, and when it
+    The payload's shape stays :meth:`HistoricalContext.to_state`'s, with
+    ``refuted_by`` carrying the month-day reference and its offset (and no
+    ``year`` key: that channel wrote its own refutation, and when it
     fired this check stays silent — one degradation, named once). Same
     anti-pendulum rule as the years: this does not stop the historian from
     dating, and a situation carrying no month-day passes untouched.
     """
     if not past_days or result.dating_degraded:
         return
-    claims = stated_month_days(result.situation)
-    if not claims:
+    distinct = {
+        (claim.month, claim.day) for claim in stated_month_days(result.situation)
+    }
+    if len(distinct) != 1:
         return
-    refuting: Optional[StatedMonthDay] = None
-    claimed: Tuple[int, int] = (0, 0)
-    coincides = False
-    for claim in claims:
-        same = next(
-            (
-                day
-                for day in past_days
-                if (day.month, day.day) == (claim.month, claim.day)
-            ),
-            None,
-        )
-        if same is not None:
-            refuting, claimed, coincides = same, (claim.month, claim.day), True
-            break
-        later = next(
-            (
-                day
-                for day in past_days
-                if (day.month, day.day) > (claim.month, claim.day)
-            ),
-            None,
-        )
-        if later is not None:
-            refuting, claimed, coincides = later, (claim.month, claim.day), False
-            break
+    claimed = next(iter(distinct))
+    refuting = next(
+        (day for day in past_days if (day.month, day.day) == claimed),
+        None,
+    )
     if refuting is None:
         return
     result.dating_degraded = True
@@ -606,7 +591,6 @@ def _confront_dating_day(
         "day": refuting.day,
         "quote": refuting.quote,
         "offset": refuting.offset,
-        "claimed_day_coincides": coincides,
     }
     logger.info(
         "Historian dating degraded (day channel): situation claims %d/%d, "

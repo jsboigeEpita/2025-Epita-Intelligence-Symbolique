@@ -17,9 +17,10 @@ a corpus date or name):
 - a month-day is a floor only when a past-event cue carries it: the same
   error rule as the years, one shape finer — a doubtful token loses its
   floor, never gains one;
-- a situation claiming the very cited day — or a day before it within the
-  claimed year — is degraded to an uncertain dating named by the quoted
-  reference, and Acte I prints the refutation first;
+- a situation claiming the very cited day is degraded to an uncertain
+  dating named by the quoted reference, and Acte I prints the refutation
+  first; a situation naming several distinct days (it describes relations
+  among events, not its own date) passes untouched (R1170);
 - the cited month-days ride the historian's prompt beside the years;
 - a situation dated later in the same month, a situation without a
   month-day, a document without a cue-carried month-day and the #3479 year
@@ -59,6 +60,11 @@ _TEXT_WITH_BARE_DAY = (
 
 _SAME_DAY_PAYLOAD = {
     "situation": "Allocution prononcée le 14 mars, devant l'assemblée.",
+    "blind_spot": "",
+    "items": [],
+}
+_TWO_DAYS_PAYLOAD = {
+    "situation": ("Allocution du 20 mars, en réponse au discours prononcé le 14 mars."),
     "blind_spot": "",
     "items": [],
 }
@@ -172,6 +178,17 @@ class TestTheMonthDayExtraction:
             (c.month, c.day) for c in stated_month_days("le 31 février et le 30 avril")
         ] == [(4, 30)]
 
+    def test_one_printed_reference_stays_one_entry(self):
+        """R1170's nit: "14 mars 15" is one reference (3, 14), not two —
+        the month-first pattern must not read "mars 15" inside it."""
+        from argumentation_analysis.agents.core.context.stated_dates import (
+            stated_month_days,
+        )
+
+        assert [(c.month, c.day) for c in stated_month_days("le 14 mars 15")] == [
+            (3, 14)
+        ]
+
     def test_the_situation_side_reads_every_claimed_month_day(self):
         from argumentation_analysis.agents.core.context.stated_dates import (
             stated_month_days,
@@ -197,16 +214,25 @@ class TestAClaimedCitedDayIsDegradedAndNamed:
         assert (refute["month"], refute["day"]) == (3, 14)
         assert refute["offset"] == _OFFSET_14
         assert "discours prononcé le 14 mars" in refute["quote"]
-        assert refute["claimed_day_coincides"] is True
-        # The year channel stays intact: no year key on this refutation.
-        assert "year" not in refute
+        # The year channel stays intact: no year key on this refutation, and
+        # nothing but the reference itself (R1170 dropped the precede flag).
+        assert set(refute) == {"month", "day", "quote", "offset"}
 
-    async def test_a_day_preceding_a_cited_day_within_the_year_fires(self):
+    async def test_a_situation_naming_two_distinct_days_is_not_confronted(self):
+        """R1170's measured false positive: the situation correctly names
+        the past speech it answers, plus its own day — that is a relation
+        among events, not a claim that it happens on the cited day."""
+        result = await build_historical_context(_state(), _llm(_TWO_DAYS_PAYLOAD))
+
+        assert "dating" not in result.to_state()
+
+    async def test_a_day_before_the_cited_day_no_longer_fires(self):
+        """R1170 removed the precede clause: a day without a year places
+        nothing within the claimed year (a winter speech cites the previous
+        summer), so a situation dated ten days earlier passes untouched."""
         result = await build_historical_context(_state(), _llm(_EARLIER_DAY_PAYLOAD))
 
-        dating = result.to_state()["dating"]
-        assert dating["refuted_by"]["claimed_day_coincides"] is False
-        assert (dating["refuted_by"]["month"], dating["refuted_by"]["day"]) == (3, 14)
+        assert "dating" not in result.to_state()
 
     async def test_act1_prints_the_refutation_first_and_keeps_the_situation(self):
         from argumentation_analysis.reporting.restitution.act1_framing_plugin import (
@@ -221,6 +247,8 @@ class TestAClaimedCitedDayIsDegradedAndNamed:
         assert "discours prononcé le 14 mars" in prompt
         assert f"position {_OFFSET_14}" in prompt
         assert "ne peut" in prompt
+        # R1170: the precede wording is gone from the Acte I sentence.
+        assert "ni avant lui" not in prompt
         # Anti-pendulum: the situation still renders — model knowledge,
         # reframed as uncertain, never silenced.
         assert "prononcée le 14 mars" in prompt
@@ -244,7 +272,6 @@ class TestAClaimedCitedDayIsDegradedAndNamed:
                         "day": 14,
                         "quote": "discours prononcé le 14 mars à Valmont",
                         "offset": _OFFSET_14,
-                        "claimed_day_coincides": True,
                     },
                 },
             },

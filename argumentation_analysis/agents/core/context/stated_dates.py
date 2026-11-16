@@ -341,7 +341,12 @@ def stated_years(text: str) -> List[int]:
 def _month_day_matches(text: str) -> List[Tuple[int, int, int, int]]:
     """Every month-day shape in the text, in order of appearance, as
     ``(offset, month, day, match_end)`` tuples with the day validated
-    against its month."""
+    against its month.
+
+    The two patterns overlap on a run like "14 mars 15" (day-first sees
+    "14 mars", month-first sees "mars 15"): a reference nested inside one
+    already read is dropped, so one printed reference stays one entry
+    (R1170's nit)."""
     found: List[tuple] = []
     for pattern, day_group, month_group in (
         (_MONTH_DAY_DAY_FIRST, 1, 2),
@@ -353,7 +358,14 @@ def _month_day_matches(text: str) -> List[Tuple[int, int, int, int]]:
             if not 1 <= day <= _DAYS_IN_MONTH[month - 1]:
                 continue
             found.append((match.start(), month, day, match.end()))
-    return sorted(found)
+    kept: List[Tuple[int, int, int, int]] = []
+    last_end = -1
+    for entry in sorted(found):
+        if entry[0] < last_end:
+            continue
+        kept.append(entry)
+        last_end = entry[3]
+    return kept
 
 
 def _month_day_quote(text: str, start: int, end: int) -> str:

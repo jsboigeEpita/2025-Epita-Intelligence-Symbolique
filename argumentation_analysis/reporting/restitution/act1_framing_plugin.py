@@ -488,8 +488,8 @@ def _format_historical_block(context: Dict[str, Any]) -> str:
                 f"  Datation DÉGRADÉE (contrôle déterministe) : le document cite "
                 f"déjà comme passé « {refuted.get('quote', '')} » "
                 f"(position {refuted.get('offset')}) — la prise de parole ne peut "
-                f"tomber ce jour-là, ni avant lui dans l'année que la situation "
-                f"vise. Datation incertaine, ne date pas le texte d'après elle."
+                f"tomber ce jour-là. Datation incertaine, ne date pas le texte "
+                f"d'après elle."
             )
         else:
             lines.append(
