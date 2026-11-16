@@ -722,11 +722,16 @@ class TestTheRestsOnRunTimeSwitch:
     #3595 merged the variant as a REPLAY variant: only
     ``scripts/panel/_common.py`` passes the ids — no production call site
     does, so production never selects with them. The paired draw needs
-    both arms from the SAME code: an env var read at the selection call,
-    a RUN-TIME option, not a code fork. The switch is OFF by default —
-    unset or blank selects exactly as today; an unrecognised value fails
-    loud, because a typo would silently run the control arm as if it were
-    the variant and the paired draw would measure nothing.
+    both arms from the SAME code. Review point (PR #3621): the switch
+    resolves ONCE at pipeline setup — ``_resolve_rests_on``, where #3377
+    resolves its own, BEFORE the DAG — and the resolved arm rides the
+    state as ``rests_on_armed``; this seam reads THAT, never the
+    environment mid-phase (a mid-phase raise would only kill the
+    per-argument pass while the run still spent its cycle: a third, paid
+    arm no draw asked for). The switch is OFF by default — unset or blank
+    selects exactly as today; an unrecognised value fails loud at setup,
+    because a typo would silently run the control arm as if it were the
+    variant and the paired draw would measure nothing.
     """
 
     ENV = "ARGUMENTATION_RESTS_ON"
@@ -746,17 +751,20 @@ class TestTheRestsOnRunTimeSwitch:
         pop = [u for u in merged_population_units(state) if len(u.text.strip()) > 20]
         return pop + anchored_units_for_named_moves(state, pop)
 
-    def _extract(self, state, monkeypatch, value):
-        """Run the production seam with the switch set to ``value`` (None:
-        the variable is not in the environment at all)."""
+    def _extract(self, state, monkeypatch, armed, env="__unset__"):
+        """Run the production seam with the resolved arm ``armed`` written
+        on the state — the only channel the seam may read. ``env`` (when not
+        the sentinel) ALSO sets the environment variable, for the guard that
+        pins the seam to the state and not the environment."""
         from argumentation_analysis.orchestration.invoke_callables import (
             _extract_arguments_for_parallel,
         )
 
-        if value is None:
+        state.rests_on_armed = armed
+        if env == "__unset__":
             monkeypatch.delenv(self.ENV, raising=False)
         else:
-            monkeypatch.setenv(self.ENV, value)
+            monkeypatch.setenv(self.ENV, env)
         extracted = _extract_arguments_for_parallel(
             state.raw_text, {"_state_object": state}
         )
@@ -820,30 +828,46 @@ class TestTheRestsOnRunTimeSwitch:
         )
         return [u.unit_id for u in control.selected]
 
-    def test_unset_switch_selects_exactly_as_today(self, monkeypatch):
-        """The DEFAULT arm: the variable absent, the selection is the one
-        today's code makes — same ids, same order, computed by an
-        independent control that passes no priority ids. The state carries
-        a move, so the variant's ids are NON-empty: an unconditional leak
-        would swap the carrier into this arm too and redden here (the
-        variant would go live without its draw)."""
+    def test_the_control_arm_selects_exactly_as_today(self, monkeypatch):
+        """The DEFAULT arm: the state unarmed (and the variable absent), the
+        selection is the one today's code makes — same ids, same order,
+        computed by an independent control that passes no priority ids. The
+        state carries a move, so the variant's ids are NON-empty: an
+        unconditional leak would swap the carrier into this arm too and
+        redden here (the variant would go live without its draw)."""
         state = self._state()
         state.defining_moves = {"moves": [], "status": "no_llm"}
-        moveless = self._extract(state, monkeypatch, None)
+        moveless = self._extract(state, monkeypatch, False)
         self._carrier_move(state, moveless)  # non-empty rests-on ids from here
-        produced = self._extract(state, monkeypatch, None)
+        produced = self._extract(state, monkeypatch, False)
         assert produced == self._default_ids(state)
         assert state.analysis_coverage["fallacy_per_argument"]["unit_ids"] == produced
 
-    def test_the_switch_on_passes_the_rests_on_ids(self, monkeypatch):
-        """The VARIANT arm, literally: with the switch on, the ids the
-        replay rule derives reach ``select_for_budget`` — red on main,
-        where no production call site passes them."""
+    def test_the_environment_alone_does_not_arm_the_selection(self, monkeypatch):
+        """PR #3621 review: the seam reads the RESOLVED value on the state,
+        never the environment mid-phase. The variable set but the state not
+        armed (a run whose setup did not resolve the switch — or a replay of
+        an unarmed state) selects exactly as today. Red the day the seam
+        re-reads the environment."""
+        state = self._state()
+        default_ids = self._extract(state, monkeypatch, False)
+        carrier = self._carrier_move(state, default_ids)
+
+        produced = self._extract(state, monkeypatch, False, env="1")
+
+        assert produced == self._default_ids(state)
+        assert carrier not in produced
+
+    def test_the_armed_state_passes_the_rests_on_ids(self, monkeypatch):
+        """The VARIANT arm, literally: with the resolved arm on the state,
+        the ids the replay rule derives reach ``select_for_budget`` — red on
+        the first head of this PR, where no production call site passed
+        them."""
         import argumentation_analysis.orchestration.invoke_callables as ic
         from argumentation_analysis.orchestration.selection import rests_on_unit_ids
 
         state = self._state()
-        default_ids = self._extract(state, monkeypatch, None)
+        default_ids = self._extract(state, monkeypatch, False)
         carrier = self._carrier_move(state, default_ids)
 
         captured: dict = {}
@@ -854,26 +878,26 @@ class TestTheRestsOnRunTimeSwitch:
             return real(pop, k, **kwargs)
 
         monkeypatch.setattr(ic, "select_for_budget", _spy)
-        self._extract(state, monkeypatch, "1")
+        self._extract(state, monkeypatch, True)
 
         assert captured["priority_unit_ids"] == rests_on_unit_ids(
             state, self._population(state)
         )
         assert carrier in captured["priority_unit_ids"]
 
-    def test_the_switch_swaps_the_seat_the_replay_measures(self, monkeypatch):
-        """End to end: with the switch on, the production selection IS the
-        replay's variant selection — the dropped carrier in, one other unit
-        out, the budget held. Red on main, where the variable set changes
-        nothing."""
+    def test_the_armed_state_swaps_the_seat_the_replay_measures(self, monkeypatch):
+        """End to end: with the resolved arm on the state, the production
+        selection IS the replay's variant selection — the dropped carrier
+        in, one other unit out, the budget held. Red on the first head of
+        this PR, where the state flag changed nothing."""
         state = self._state()
-        default_ids = self._extract(state, monkeypatch, None)
+        default_ids = self._extract(state, monkeypatch, False)
         carrier = self._carrier_move(state, default_ids)
 
         control = self._extract(
-            _clone_state_with_moves(state, state.defining_moves), monkeypatch, None
+            _clone_state_with_moves(state, state.defining_moves), monkeypatch, False
         )
-        variant = self._extract(state, monkeypatch, "1")
+        variant = self._extract(state, monkeypatch, True)
 
         assert carrier in variant
         assert len(variant) == len(control)
@@ -912,6 +936,89 @@ class TestTheRestsOnRunTimeSwitch:
         monkeypatch.setenv(self.ENV, "maybe")
         with pytest.raises(ValueError):
             rests_on_enabled()
+
+
+class TestTheSwitchResolvesBeforeTheDag:
+    """#3511 (2n), PR #3621 review — the switch resolves ONCE, at pipeline
+    setup, BEFORE the DAG, where #3377 resolves its own.
+
+    The first head of the PR read the variable at the selection call,
+    mid-phase: a typo raised inside the per-argument pass, both production
+    callers absorbed the error, and a paid cycle ran to the end without the
+    per-argument pass — a third arm the draw did not ask for, at full
+    price. And nothing on the recorded state said which arm had run, so two
+    archived cycles of the paired draw would differ only by an environment
+    variable no artifact carries. Both are witnessed here."""
+
+    ENV = "ARGUMENTATION_RESTS_ON"
+
+    @staticmethod
+    def _run(monkeypatch, env_value, context=None):
+        import asyncio
+
+        from argumentation_analysis.core.capability_registry import (
+            CapabilityRegistry,
+        )
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
+        )
+
+        if env_value is None:
+            monkeypatch.delenv("ARGUMENTATION_RESTS_ON", raising=False)
+        else:
+            monkeypatch.setenv("ARGUMENTATION_RESTS_ON", env_value)
+        state = UnifiedAnalysisState("Synthetic text for the rests-on switch witness.")
+        # An empty registry: no provider resolves, so no phase reaches a
+        # model — the run exercises the wiring, not the analysis (the #3377
+        # witness shape).
+        result = asyncio.run(
+            run_unified_analysis(
+                "Synthetic text for the rests-on switch witness.",
+                workflow_name="spectacular",
+                registry=CapabilityRegistry(),
+                state=state,
+                context=context,
+            )
+        )
+        return state, result
+
+    def test_an_unrecognised_value_raises_at_setup(self, monkeypatch):
+        """Born red on the first head: the value was only read mid-phase, so
+        a typo did not stop the run — the setup of a paid cycle must refuse
+        an arm it cannot name, BEFORE any phase (and any spend) begins."""
+        import pytest
+
+        with pytest.raises(ValueError, match="ARGUMENTATION_RESTS_ON"):
+            self._run(monkeypatch, "ture")
+
+    def test_the_state_records_the_variant_arm(self, monkeypatch):
+        """Born red on the first head: nothing on the state said which arm
+        ran. The record is the channel the seam reads — and the artifact a
+        replay or the judges' tracer reads to tell the arms apart."""
+        state, result = self._run(monkeypatch, "1")
+
+        assert state.rests_on_armed is True
+        assert result["rests_on_armed"] is True
+        snapshot = state.get_state_snapshot(summarize=False)
+        assert snapshot["rests_on_armed"] is True
+        assert state.get_state_snapshot(summarize=True)["rests_on_armed"] is True
+
+    def test_the_control_run_records_off(self, monkeypatch):
+        """The control arm is recorded too: a run whose state does not say
+        the variant ran, ran the control — absence is never ambiguity."""
+        state, result = self._run(monkeypatch, None)
+
+        assert state.rests_on_armed is False
+        assert result["rests_on_armed"] is False
+
+    def test_the_context_override_wins_over_the_environment(self, monkeypatch):
+        """The caller's explicit value beats the environment, as
+        ``_resolve_skipped_phases`` lets a test or an embedding caller win
+        (#3377)."""
+        state, _ = self._run(monkeypatch, "0", context={"rests_on": True})
+
+        assert state.rests_on_armed is True
 
 
 def _clone_state_with_moves(source, defining_moves):
