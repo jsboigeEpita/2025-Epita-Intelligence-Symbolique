@@ -6,7 +6,9 @@ Split from unified_pipeline.py (#310).
 """
 
 import logging
-from typing import Dict, Any, Set
+import os
+from dataclasses import replace
+from typing import Dict, Any, List, Sequence, Set
 
 from argumentation_analysis.orchestration.workflow_dsl import (
     WorkflowBuilder,
@@ -42,6 +44,9 @@ __all__ = [
     "get_workflow_catalog",
     "reset_workflow_catalog",
     "filter_formal_extensions",
+    "SKIP_PHASES_ENV_VAR",
+    "read_skipped_phases",
+    "apply_skipped_phases",
 ]
 
 # ---------------------------------------------------------------------------
@@ -141,6 +146,113 @@ def filter_formal_extensions(
     ]
     logger.info(f"formal_extension={filter_spec}: keeping {sorted(requested)}")
     return workflow
+
+
+# ---------------------------------------------------------------------------
+# Phase skip switch — #3377 (the ablation arms)
+# ---------------------------------------------------------------------------
+
+#: Name of the environment variable holding the comma-separated list of phases
+#: to leave OUT of the workflow this run builds. Two consumers need the same
+#: mechanism with a different phase: this issue's persona arm
+#: (``historian,strategist``) and #1649's paired run (``aspic_analysis``).
+#: A switch hard-wired to the personas would need a second switch for that.
+SKIP_PHASES_ENV_VAR = "ARGUMENTATION_SKIP_PHASES"
+
+
+def read_skipped_phases(env_var: str = SKIP_PHASES_ENV_VAR) -> List[str]:
+    """Read the run-time list of phases to leave out of the workflow.
+
+    The switch is a RUN-TIME option, not a code fork: the arms of an ablation
+    differ by the value of this variable, and the code is the same.
+
+    :param env_var: The environment variable to read (default:
+        ``SKIP_PHASES_ENV_VAR``).
+    :return: The phase names, in the order they were written. Empty when the
+        variable is unset or blank — an empty list means "no phase is left
+        out", never "everything is left out".
+    """
+    raw = os.environ.get(env_var, "") or ""
+    names: List[str] = []
+    for chunk in raw.split(","):
+        name = chunk.strip()
+        if name and name not in names:
+            names.append(name)
+    return names
+
+
+def apply_skipped_phases(
+    workflow: WorkflowDefinition,
+    skip_names: Sequence[str],
+) -> WorkflowDefinition:
+    """Return *workflow* without the named phases, and without the edges at them.
+
+    The named phases LEAVE the built workflow, and so does every dependency
+    edge that pointed at them: a phase that depended on a phase that is gone
+    would otherwise carry a dangling edge, and the executor would read a
+    dependency that no phase can satisfy.
+
+    An unknown name is a CALLER ERROR and raises (fail loud, never a silent
+    no-op): the caller believes it is leaving a phase out, and a name that
+    matches no phase of this workflow means the caller is wrong about what it
+    is asking for.
+
+    :param workflow: The workflow to filter (never mutated in place).
+    :param skip_names: The phase names to leave out.
+    :return: A new workflow without those phases, or *workflow* itself when
+        the list is empty (an empty list leaves the workflow untouched).
+    :raises ValueError: If a name is not a phase of *workflow*.
+    """
+    names: List[str] = []
+    for raw in skip_names or []:
+        name = str(raw).strip()
+        if name and name not in names:
+            names.append(name)
+    if not names:
+        # Empty list: the workflow is unchanged — the very same object.
+        return workflow
+
+    known = {phase.name for phase in workflow.phases}
+    unknown = [name for name in names if name not in known]
+    if unknown:
+        raise ValueError(
+            f"Unknown phase name(s) in the skip list: {sorted(unknown)}. "
+            f"Valid phases for workflow '{workflow.name}': {sorted(known)}"
+        )
+
+    skipped = set(names)
+    kept = [phase for phase in workflow.phases if phase.name not in skipped]
+    kept_names = {phase.name for phase in kept}
+
+    new_phases = []
+    for phase in kept:
+        deps: List[str] = []
+        for dep in phase.depends_on:
+            if "*" in dep:
+                # A wildcard dependency resolves by fragment: it stays as long
+                # as it still matches a phase that remained, and leaves when
+                # it only matched the phases that went out.
+                fragment = dep.replace("*", "")
+                if not any(fragment in name for name in kept_names):
+                    continue
+                deps.append(dep)
+            elif dep in skipped:
+                # The edge pointed at a phase that left the DAG.
+                continue
+            else:
+                deps.append(dep)
+        if deps != list(phase.depends_on):
+            phase = replace(phase, depends_on=deps)
+        new_phases.append(phase)
+
+    metadata = dict(workflow.metadata)
+    metadata["phases_left_out"] = list(names)
+    logger.info(
+        "phase skip switch: %s left out of workflow '%s'",
+        names,
+        workflow.name,
+    )
+    return replace(workflow, phases=new_phases, metadata=metadata)
 
 
 # --- Pre-built workflow definitions ---
