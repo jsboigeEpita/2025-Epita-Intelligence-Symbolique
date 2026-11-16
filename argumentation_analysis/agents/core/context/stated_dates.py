@@ -35,13 +35,18 @@ amended after YYYY"), an announced event ("the YYYY <event>"). A year bounds
 the writing date only when a month name, French or English, sits within a
 short window before it. The error stays on the safe side: a doubtful year
 loses its floor and never gains one.
+
+#3589 extends the extraction one shape further: a month-day reference with
+NO year at all ("le discours prononcé le 14 mars"), which the year reader
+cannot see. A month-day is a floor only when a past-event cue carries it —
+the same error rule, one level finer.
 """
 
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import List, Optional, Sequence
+from typing import List, Optional, Sequence, Tuple
 
 #: An explicit year: four digits, 1000-2099, on word boundaries. A year is the
 #: one date shape this extraction can read without a model and without a
@@ -107,6 +112,60 @@ _MONTH_NAMES = (
 #: measured shapes: "January 15, 2019", "du 14 mars 2019").
 _MONTH_WINDOW = 20
 
+#: #3589 — past-event cues that make a month-day reference a FLOOR. A month
+#: and a day alone ("le 14 mars") can announce a future meeting as well as
+#: cite a past speech; the cue names the reference as an event already
+#: delivered. One short NAMED list per corpus language, on the same error
+#: rule as the years: a month-day no cue carries loses its floor, never
+#: gains one.
+_PAST_EVENT_CUES = (
+    re.compile(r"\bprononc\w*\b", re.IGNORECASE),  # fr "ayant été prononcé le 14 mars"
+    re.compile(r"\bdiscours\b", re.IGNORECASE),  # fr "dans le discours du 14 mars"
+    re.compile(r"\bvenu\w*\b", re.IGNORECASE),  # fr "venu à Valmont le 14 mars"
+    re.compile(
+        r"\bdelivered\b", re.IGNORECASE
+    ),  # en "having been delivered … 14 March"
+    re.compile(r"\bspeech\b", re.IGNORECASE),  # en "in a speech at X on March 14"
+    re.compile(r"\bcame\b", re.IGNORECASE),  # en "came to X on the 14th of March"
+)
+
+#: How far before the reference a past-event cue may sit and still carry it.
+#: The measured shapes keep the cue within one short clause of the date.
+_PAST_CUE_WINDOW = 48
+
+#: Ordinal suffixes a day number may carry ("le 1er mai", "the 14th of
+#: March"). The digit stays the day: the suffix is decoration, not another
+#: number.
+_DAY_ORDINAL_SUFFIX = r"(?:er|e|st|nd|rd|th)?"
+
+#: Month-day shapes, day-first ("14 mars", "le 1er mai", "the 14th of
+#: March") and month-first ("March 14", "January 15, 2019" read without its
+#: year). Full month names only — an abbreviation is as doubtful here as it
+#: is for a year (R1149), and a doubtful token loses its floor.
+_MONTH_ALTERNATION = "|".join(re.escape(month) for month in _MONTH_NAMES)
+_MONTH_DAY_DAY_FIRST = re.compile(
+    rf"\b(\d{{1,2}}){_DAY_ORDINAL_SUFFIX}\s+(?:(?:of|de|du)\s+)?({_MONTH_ALTERNATION})\b",
+    re.IGNORECASE,
+)
+_MONTH_DAY_MONTH_FIRST = re.compile(
+    rf"\b({_MONTH_ALTERNATION})\s+(\d{{1,2}}){_DAY_ORDINAL_SUFFIX}\b",
+    re.IGNORECASE,
+)
+
+#: Month name → month number, French and English halves mapped separately
+#: (the concatenation in :data:`_MONTH_NAMES` would number the English
+#: months 13-24; janvier and january are both 1).
+_MONTH_TO_NUMBER = {month: index + 1 for index, month in enumerate(_MONTH_NAMES[:12])}
+_MONTH_TO_NUMBER.update(
+    {month: index + 1 for index, month in enumerate(_MONTH_NAMES[12:])}
+)
+
+#: The latest day each month can carry. February keeps 29: rejecting a real
+#: leap-day citation would be a lost floor, and accepting a 30 February is
+#: impossible — the regex bounds the day at two digits anyway, and 30/31 are
+#: valid days of other months.
+_DAYS_IN_MONTH = (31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+
 #: Characters of context quoted around a stated year: enough for a render to
 #: name the reference, short enough not to become an excerpt of the text.
 _QUOTE_CONTEXT = 48
@@ -134,6 +193,23 @@ class StatedDate:
     offset: int
     projected: bool = False
     calendar: bool = False
+
+
+@dataclass(frozen=True)
+class StatedMonthDay:
+    """One month-day reference (#3589), positioned for the render.
+
+    A month name carrying a day number, without a year — the shape on which
+    a document cites an earlier speech ("le discours prononcé le 14 mars")
+    while stating no year at all. ``offset`` is the position of the
+    reference's first token (the day, in the day-first shapes; the month, in
+    the month-first ones): the position a render can name.
+    """
+
+    month: int
+    day: int
+    quote: str
+    offset: int
 
 
 def _is_year_token(text: str, start: int, end: int) -> bool:
@@ -259,4 +335,97 @@ def stated_years(text: str) -> List[int]:
         int(match.group(0))
         for match in _YEAR_RE.finditer(text or "")
         if _is_year_token(text or "", match.start(), match.end())
+    ]
+
+
+def _month_day_matches(text: str) -> List[Tuple[int, int, int, int]]:
+    """Every month-day shape in the text, in order of appearance, as
+    ``(offset, month, day, match_end)`` tuples with the day validated
+    against its month.
+
+    The two patterns overlap on a run like "14 mars 15" (day-first sees
+    "14 mars", month-first sees "mars 15"): a reference nested inside one
+    already read is dropped, so one printed reference stays one entry
+    (R1170's nit)."""
+    found: List[tuple] = []
+    for pattern, day_group, month_group in (
+        (_MONTH_DAY_DAY_FIRST, 1, 2),
+        (_MONTH_DAY_MONTH_FIRST, 2, 1),
+    ):
+        for match in pattern.finditer(text):
+            month = _MONTH_TO_NUMBER[match.group(month_group).lower()]
+            day = int(match.group(day_group))
+            if not 1 <= day <= _DAYS_IN_MONTH[month - 1]:
+                continue
+            found.append((match.start(), month, day, match.end()))
+    kept: List[Tuple[int, int, int, int]] = []
+    last_end = -1
+    for entry in sorted(found):
+        if entry[0] < last_end:
+            continue
+        kept.append(entry)
+        last_end = entry[3]
+    return kept
+
+
+def _month_day_quote(text: str, start: int, end: int) -> str:
+    window_start = max(0, start - _QUOTE_CONTEXT)
+    window_end = min(len(text), end + _QUOTE_CONTEXT)
+    return " ".join(text[window_start:window_end].split())
+
+
+def extract_past_month_days(text: str) -> List[StatedMonthDay]:
+    """Every month-day the document cites as an ALREADY DELIVERED event.
+
+    #3589 — the year extraction (#3479) reads four-digit tokens only, so a
+    document citing an earlier speech as "le discours prononcé le 14 mars"
+    (no year printed) states no floor at all: the situation could claim that
+    very speech and nothing would see it. This extraction reads the
+    month-day shape itself, and keeps ONLY the references a past-event cue
+    carries (:data:`_PAST_EVENT_CUES` within :data:`_PAST_CUE_WINDOW`
+    characters before the date): a bare month-day can announce a future
+    meeting as well as cite a past speech, and a doubtful token loses its
+    floor, never gains one.
+
+    Not caught (named for the pull request): a day written in words
+    ("le quatorze mars"), an abbreviated month ("14 févr."), a month-day no
+    listed cue carries, and a reference the cue introduces more than
+    :data:`_PAST_CUE_WINDOW` characters before the date.
+    """
+    if not text:
+        return []
+    stated: List[StatedMonthDay] = []
+    for offset, month, day, match_end in _month_day_matches(text):
+        window = text[max(0, offset - _PAST_CUE_WINDOW) : offset].replace("’", "'")
+        if not any(cue.search(window) for cue in _PAST_EVENT_CUES):
+            continue
+        stated.append(
+            StatedMonthDay(
+                month=month,
+                day=day,
+                quote=_month_day_quote(text, offset, match_end),
+                offset=offset,
+            )
+        )
+    return stated
+
+
+def stated_month_days(text: str) -> List[StatedMonthDay]:
+    """Every month-day shape a string names, in order of appearance.
+
+    Used on the historian's own answer: each month-day the situation carries
+    is a CLAIMED day, with or without a year beside it. No cue filter on
+    this side — the situation is the claim under examination, not a
+    reference to weigh.
+    """
+    if not text:
+        return []
+    return [
+        StatedMonthDay(
+            month=month,
+            day=day,
+            quote=_month_day_quote(text, offset, match_end),
+            offset=offset,
+        )
+        for offset, month, day, match_end in _month_day_matches(text)
     ]
