@@ -48,7 +48,8 @@ Everything is written under ``<results>/panel_cycles/<tag>/`` (gitignored):
 ``states/``, ``signatures/``, ``logs/``, ``pipeline.json`` (the pipeline
 run: commit, tree, dirty flag, exit code, harvest), ``status.jsonl`` (one
 event per line, as it happens), ``cycle.json`` (the last invocation: its
-command and commit, exit codes, credit before and after, and the pipeline
+command and commit, exit codes, credit before and after, the cycle's spend and
+the two provider deltas it is made of, and the pipeline
 record) and ``trace.jsonl``. The judge's own directories keep their names,
 ``<results>/judge_panel_3375_<tag>_<judge>_p<i>`` and ``..._cons<k>``.
 
@@ -626,9 +627,26 @@ def run_cycle(
     def finish(stopped: Optional[str], code: int) -> Dict[str, Any]:
         after = credit()
         summary["credit_after"] = after
-        summary["openrouter_spent"] = openrouter_credit.spent_between(
-            summary.get("credit_before"), after
+        before = summary.get("credit_before")
+        # The provider's two counters, each under a name that says which field
+        # it reads. The spend is the FALL of the credit: the ``usage`` counter
+        # moves by a fraction of it, and on one paid run did not move at all
+        # (#3561). When the two disagree by more than the stated margin, the
+        # record says so instead of carrying one of them silently.
+        usage_delta = openrouter_credit.usage_delta_between(before, after)
+        credit_delta = openrouter_credit.limit_remaining_delta_between(before, after)
+        spent = openrouter_credit.credit_fall_between(before, after)
+        summary["openrouter_usage_delta"] = usage_delta
+        summary["openrouter_limit_remaining_delta"] = credit_delta
+        summary["openrouter_spent"] = spent
+        summary["openrouter_spent_field"] = "limit_remaining"
+        summary["openrouter_spent_disagreement"] = openrouter_credit.spend_disagreement(
+            usage_delta, spent
         )
+        summary["openrouter_spent_disagreement_margin"] = {
+            "relative": openrouter_credit.DISAGREEMENT_MARGIN,
+            "floor_usd": openrouter_credit.DISAGREEMENT_FLOOR_USD,
+        }
         summary["head_at_end"] = head()["head"]
         summary["stopped"], summary["exit_code"] = stopped, code
         summary["ended"] = status.stamp()
@@ -637,6 +655,12 @@ def run_cycle(
             stopped=stopped,
             exit_code=code,
             openrouter_spent=summary["openrouter_spent"],
+            openrouter_spent_field=summary["openrouter_spent_field"],
+            openrouter_usage_delta=summary["openrouter_usage_delta"],
+            openrouter_limit_remaining_delta=summary[
+                "openrouter_limit_remaining_delta"
+            ],
+            openrouter_spent_disagreement=summary["openrouter_spent_disagreement"],
         )
         (cfg.cycle_dir / "cycle.json").write_text(
             json.dumps(summary, ensure_ascii=False, indent=1), encoding="utf-8"
