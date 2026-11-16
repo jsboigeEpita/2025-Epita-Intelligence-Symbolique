@@ -140,6 +140,26 @@ ACT_KEYS: Tuple[str, ...] = ("act1_framing", "act2_narrative", "act3_conclusion"
 # the refusal never hides behind a bare literal at the call site.
 DEGRADED_ARM_REFUSAL_THRESHOLD = 2
 
+# #3599 — the persona reads that persist a ``status`` AND whose producer marks
+# the read failed: the state key → the name the row shows. A failed read is
+# ``llm_error`` / ``parse_error``, the two statuses ``_invoke_strategic_read``,
+# ``_invoke_historical_context`` and ``_invoke_first_reading`` stamp with
+# ``degraded``/``degraded_reason``; the coverage review carries the same two
+# failed statuses. ``cross_passage_consistency`` also persists a status and is
+# deliberately NOT read here: its vocabulary (``checked`` / ``inconsistent`` /
+# ``undecided`` / ``unreachable``) has no failed PERSONA read — ``undecided``
+# is a silent reasoner, a different class.
+PERSONA_READ_STATUS_KEYS: Dict[str, str] = {
+    "strategic_read": "strategist",
+    "historical_context": "historian",
+    "defining_moves": "first_reading",
+    "coverage_review": "coverage_review",
+}
+# A read that RAN and failed. ``no_llm`` is an honest empty (a document with no
+# LLM read by design — doc_A), ``empty_input`` / ``no_reading`` / ``no_document``
+# are honest absences too: none is a failure.
+FAILED_PERSONA_STATUSES: Tuple[str, ...] = ("llm_error", "parse_error")
+
 
 class JudgeUnparsed(RuntimeError):
     """The judge's answer carried no readable JSON — counted, never guessed."""
@@ -540,6 +560,15 @@ def arm_health(
     honest shapes above. The state is unwrapped the way
     ``pipeline_text_from_state`` unwraps it. Without a signature the rule
     stays exactly #3458's.
+
+    #3599 — a persona read that RAN and FAILED upstream (``status`` of
+    ``llm_error`` / ``parse_error``, or the invoke's ``degraded`` marker on
+    the same payload) is named on its own signal, ``persona_failed``: the acts
+    still render, but they were written WITHOUT that read's input, and the
+    c15 panel scored those arms healthy because nothing looked. It does NOT
+    enter ``pipeline_degraded``: the refusal threshold is unchanged (a render
+    with a missing input is still the pipeline's render), and the table reads
+    a change on such a document with its failed input.
     """
     st = state.get("state") or state
     empty_acts = [key for key in ACT_KEYS if not str(st.get(key) or "").strip()]
@@ -550,6 +579,11 @@ def arm_health(
         status == "failed"
         and (signature or {}).get("document_classification") != "non_argumentative"
     )
+    persona_failed = [
+        name
+        for key, name in PERSONA_READ_STATUS_KEYS.items()
+        if _persona_read_failed(st.get(key))
+    ]
     return {
         "pipeline_degraded": (bool(empty_acts) and reported) or upstream_failed,
         "empty_acts": empty_acts,
@@ -558,7 +592,25 @@ def arm_health(
         # record and the refusal can tell an upstream death from a broken
         # render.
         "upstream_failed": upstream_failed,
+        # #3599 — the persona reads that failed upstream of the acts; never
+        # folded into ``pipeline_degraded`` (ask 2: not a refusal).
+        "persona_failed": persona_failed,
     }
+
+
+def _persona_read_failed(record: Any) -> bool:
+    """True when a persisted persona read says it RAN and FAILED (#3599).
+
+    Two shapes carry the same signal: the discriminated ``status``
+    (``llm_error`` / ``parse_error``) and the invoke's ``degraded`` marker,
+    which the writers now keep (#3599 ask 3). ``no_llm`` is an honest empty —
+    a document with no LLM read by design — never a failure.
+    """
+    if not isinstance(record, dict):
+        return False
+    if record.get("degraded"):
+        return True
+    return str(record.get("status") or "") in FAILED_PERSONA_STATUSES
 
 
 def document_texts_from_definitions(
@@ -1203,6 +1255,18 @@ def _append_state_rule(lines: List[str], meta: Dict[str, Any]) -> None:
         f"l'étiquette du juge — {DERIVED_STATE_RULE}. L'étiquette du juge est "
         "imprimée à côté quand elle diffère."
     )
+    # #3599 — the reading rule, always printed: a document whose persona read
+    # failed was rendered WITHOUT that read's input, so a change of state on
+    # it is read with its failed input. It is NOT a refusal: the render is the
+    # pipeline's own, and the threshold stays as it is.
+    lines.append(
+        "- **Lecture d'un document dont une persona a échoué** (#3599) : le "
+        "rendu existe, il a été écrit sans l'entrée de la lecture en échec — "
+        "un changement d'état sur ce document se lit donc **avec son entrée "
+        "manquante**, jamais comme un effet du pipeline seul. Ce n'est pas un "
+        "refus de juger : le seuil `DEGRADED_ARM_REFUSAL_THRESHOLD` est "
+        "inchangé."
+    )
     if meta.get("rerendered_from"):
         lines.append(
             f"- **Re-rendu sans appel du juge** depuis les lignes de "
@@ -1303,10 +1367,10 @@ def _append_body(
     lines.append("## Par document")
     lines.append("")
     lines.append(
-        "| doc | verdict | ID juge | S | M | sévère | modéré | items tombés | "
-        "coût pipeline | coût zero-shot |"
+        "| doc | verdict | persona en échec | ID juge | S | M | sévère | "
+        "modéré | items tombés | coût pipeline | coût zero-shot |"
     )
-    lines.append("|---|---|---|---|---|---|---|---|---|---|")
+    lines.append("|---|---|---|---|---|---|---|---|---|---|---|")
     for row in rows:
         counts = _count_codes(row.get("kept") or [])
         severity = _count_severities(row.get("kept") or [])
@@ -1342,8 +1406,19 @@ def _append_body(
             # answers 400, a network fault 0) is UNPARSED — and the reader
             # must see WHY, not wonder (#3375 tranche 3: loud, never silent).
             state_cell += f" **(HTTP {row['status_code']})**"
+        # #3599 — the failed persona reads sit on their OWN cell: the acts
+        # rendered WITHOUT that read's input, and a reader of the verdict
+        # must see which input was missing, never merged into the verdict.
+        persona_cell = (
+            "**en échec : "
+            + ", ".join(f"`{name}`" for name in row["persona_failed"])
+            + "**"
+            if row.get("persona_failed")
+            else "—"
+        )
         lines.append(
-            f"| `{row['opaque_id']}` | {state_cell} | {ident} | "
+            f"| `{row['opaque_id']}` | {state_cell} | {persona_cell} | "
+            f"{ident} | "
             f"{counts['S']} | {counts['M']} | {severity['severe']} | "
             f"{severity['moderate']} | {len(row.get('dropped') or [])} | "
             f"{_money(row['costs'].get('pipeline'))} | "
@@ -1400,6 +1475,26 @@ def _append_body(
             + " ; comptés dans la répartition ci-dessus, mais jamais lus "
             "comme une victoire ou une défaite du pipeline sans ce drapeau "
             "(#3458 : un acte vide ET un signalement de dégradation)"
+        )
+    # #3599 — the summary counts and names the documents whose persona read
+    # failed: the acts rendered, but without that read's input.
+    persona_rows = [row for row in rows if row.get("persona_failed")]
+    if persona_rows:
+        by_persona: Dict[str, List[str]] = {}
+        for row in persona_rows:
+            for name in row["persona_failed"]:
+                by_persona.setdefault(name, []).append(row["opaque_id"])
+        detail = " ; ".join(
+            f"**{name}** : " + ", ".join(f"`{doc_id}`" for doc_id in ids)
+            for name, ids in sorted(by_persona.items())
+        )
+        lines.append(
+            f"- **persona en échec** : **{len(persona_rows)}** document(s) — "
+            + detail
+            + " ; le rendu existe, mais il a été écrit sans l'entrée de la "
+            "lecture en échec : un changement d'état sur ces documents se lit "
+            "avec son entrée manquante (#3599 — pas un refus, le seuil "
+            "DEGRADED_ARM_REFUSAL_THRESHOLD est inchangé)"
         )
     zs_truncated = [row["opaque_id"] for row in rows if row.get("zeroshot_truncated")]
     if zs_truncated:
@@ -1938,6 +2033,9 @@ def consensus_row(
         # #3489 — which half of the rule fired crosses with it, so the
         # consensus names an upstream death as an upstream death.
         "pipeline_upstream_failed": bool(first.get("pipeline_upstream_failed")),
+        # #3599 — the failed persona reads cross with it too: a consensus
+        # over passes that all read the same failed input names it once.
+        "persona_failed": list(first.get("persona_failed") or []),
         # #3460 — the baseline's truncation crosses with it: a cut baseline
         # is never counted as a plain pipeline win, whichever pass produced
         # the rows.
@@ -2462,6 +2560,10 @@ async def run(
         # #3489 — which half of the rule fired: a reader of the record
         # tells an upstream death from a broken render.
         row["pipeline_upstream_failed"] = doc["health"]["upstream_failed"]
+        # #3599 — the failed persona reads ride in the record too, so a
+        # reader of the record (not only of the table) sees which input was
+        # missing from the render.
+        row["persona_failed"] = list(doc["health"]["persona_failed"])
         row["zeroshot_truncated"] = doc["zeroshot_truncated"]
         row["elapsed_seconds"] = elapsed
         row["status_code"] = record.get("status_code")

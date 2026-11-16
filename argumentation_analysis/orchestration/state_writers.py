@@ -3624,6 +3624,15 @@ def _write_historical_context_to_state(
         payload["error"] = output["error"]
     if output.get("parse_failure"):
         payload["parse_failure"] = output["parse_failure"]
+    # #3599 — the failure marker rides the read it belongs to: the invoke
+    # stamps ``degraded``/``degraded_reason`` on a read that ran and failed,
+    # and the payload rebuild here used to drop both, so the state kept
+    # nothing but the status. Same conditional convention as the keys above:
+    # an absent key IS the not-degraded state.
+    if output.get("degraded"):
+        payload["degraded"] = True
+    if output.get("degraded_reason"):
+        payload["degraded_reason"] = output["degraded_reason"]
     if isinstance(state, dict):
         state["historical_context"] = payload
     elif hasattr(state, "historical_context"):
@@ -3666,6 +3675,15 @@ def _write_strategic_read_to_state(
         payload["error"] = output["error"]
     if output.get("parse_failure"):
         payload["parse_failure"] = output["parse_failure"]
+    # #3599 — the failure marker rides the read it belongs to (same
+    # convention, same father as the historian's): the invoke stamps
+    # ``degraded``/``degraded_reason`` on a read that ran and failed, and the
+    # rebuild above dropped both — the state kept the status and nothing
+    # else, so the arm's health had no marker to read.
+    if output.get("degraded"):
+        payload["degraded"] = True
+    if output.get("degraded_reason"):
+        payload["degraded_reason"] = output["degraded_reason"]
     if isinstance(state, dict):
         state["strategic_read"] = payload
     elif hasattr(state, "strategic_read"):
