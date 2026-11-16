@@ -23,9 +23,10 @@ band and only fill leftover budget after positioned units, in stable order.
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from dataclasses import dataclass, replace
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Collection, Dict, List, Optional, Sequence, Tuple
 
 from argumentation_analysis.core.shared_state import unit_extent
 
@@ -38,10 +39,24 @@ __all__ = [
     "coverage_figure",
     "stratified_position",
     "merged_population_units",
+    "rests_on_unit_ids",
     "named_move_residue",
     "named_moves_with_retained_finding",
     "state_text_length",
 ]
+
+#: #3511 — a blank line ends a paragraph (newline, optional spaces/tabs,
+#: newline). The raw separator spans this definition and nothing else.
+_RE_BLANK_LINE = re.compile(r"\n[ \t]*\n")
+
+#: #3511 — what makes a unit "carry" evidence: a quotation mark or a figure.
+#: The coordinator's candidate (b), measured better than (a) on the judged
+#: occurrences (see ``rests_on_unit_ids``). Apostrophes are deliberately NOT
+#: carriers: measured on c13–c15 they let 74–76 % of positioned units through
+#: (59–61 % without), while the judged justification is identical with or
+#: without them (7/9 rows, 2/14 false positives) — French elision (`l'assemblée`,
+#: `d'une`) is everywhere and is not evidence.
+_RE_QUOTE_OR_FIGURE = re.compile(r"[«»“”\"‘]|\d")
 
 
 @dataclass(frozen=True)
@@ -351,6 +366,7 @@ def _prefer_priority(
     picked: List[int],
     n: int,
     priority_spans: Optional[Sequence[Tuple[int, int]]],
+    priority_unit_ids: Optional[Collection[str]] = None,
 ) -> Tuple[List[int], int]:
     """#3395 — make room for the units that overlap a first-reading move.
 
@@ -367,8 +383,16 @@ def _prefer_priority(
     downstream from ``picked``, so it stays the truth about what was actually
     read.
 
-    Returns ``(picked, priority_taken)``. With no spans this is the identity
-    — the byte-identical path every other caller keeps.
+    #3511 — ``priority_unit_ids`` names units that earn a seat the same way
+    WITHOUT overlapping a move: the evidence a named claim rests on sits
+    beside the move, not under it (the coordinator's class measure: a move
+    sits on an evidence passage 1 time in 23, on a claim passage 8 in 28).
+    The ids are a property of the population, decided by a rule outside this
+    function (``rests_on_unit_ids``, model-free); the union with the span
+    rule keeps one victim order and one budget.
+
+    Returns ``(picked, priority_taken)``. With no spans and no ids this is
+    the identity — the byte-identical path every other caller keeps.
 
     #3523 — this swap preserves the nesting contract. The victim sequence
     is STATIC: the key (distance to the nearest span, then index) is a
@@ -378,24 +402,39 @@ def _prefer_priority(
     With ``picked(k) ⊆ picked(k + 1)``, a unit the swap left in place at
     ``k`` can only lose its place to a victim consumed EARLIER in the
     static order, which a larger ``picked`` never pushes forward — every
-    unit ``k`` kept (picked or swapped in) is kept at ``k + 1``.
+    unit ``k`` kept (picked or swapped in) is kept at ``k + 1``. The #3511
+    union changes none of this: the id-named priority set is as k-independent
+    as the span-named one, and the victim key reads spans only.
     """
-    if not priority_spans or not picked:
+    if not picked:
         return picked, 0
-    spans = [(int(a), int(b)) for a, b in priority_spans if int(b) > int(a)]
-    if not spans:
+    spans = [(int(a), int(b)) for a, b in (priority_spans or ()) if int(b) > int(a)]
+    if not spans and not priority_unit_ids:
         return picked, 0
     starts = _population_starts(positioned)
 
     priority_all = {
         i
         for i, (unit, _) in enumerate(positioned)
-        if _unit_overlaps_spans(unit, spans, starts)
+        if (spans and _unit_overlaps_spans(unit, spans, starts))
+        or (priority_unit_ids and unit.unit_id in priority_unit_ids)
     }
     if not priority_all:
         return picked, 0
     taken = [i for i in picked if i in priority_all]
     selected = list(picked)
+
+    def _distance_from_spans(i: int) -> float:
+        """#3511 — a victim's distance to every span; with no span to read
+        (ids-only priority) every victim is equidistant and the index tie
+        decides, so the choice stays deterministic instead of crashing."""
+        if not spans:
+            return 0.0
+        return min(
+            abs((positioned[i][0].offset or 0) - (start + end) / 2)
+            for start, end in spans
+        )
+
     # Missing priority units, in text order (``positioned`` is offset-sorted).
     for candidate in sorted(priority_all):
         if candidate in selected:
@@ -406,13 +445,7 @@ def _prefer_priority(
             break
         farthest = max(
             victims,
-            key=lambda i: (
-                min(
-                    abs((positioned[i][0].offset or 0) - (start + end) / 2)
-                    for start, end in spans
-                ),
-                -i,
-            ),
+            key=lambda i: (_distance_from_spans(i), -i),
         )
         selected[selected.index(farthest)] = candidate
     return selected, len([i for i in selected if i in priority_all])
@@ -424,6 +457,7 @@ def stratified_position(
     band_count: Optional[int] = None,
     text_length: Optional[int] = None,
     priority_spans: Optional[Sequence[Tuple[int, int]]] = None,
+    priority_unit_ids: Optional[Collection[str]] = None,
 ) -> SelectionResult:
     """≥1 unit per position band, then fill; returned in text order, stated.
 
@@ -515,6 +549,10 @@ def stratified_position(
         covered = len({b for b, bl in enumerate(band_lists) if bl}) if bands else 0
         sel_spans = _positioned_spans([u for u, _ in positioned], text_length)
         span = _span_fraction(sel_spans, text_length)
+        whole_spans = [
+            (int(a), int(b)) for a, b in (priority_spans or ()) if int(b) > int(a)
+        ]
+        whole_starts = _population_starts(positioned)
         return SelectionResult(
             all_ordered,
             len(units),
@@ -525,19 +563,16 @@ def stratified_position(
             _largest_uncovered_stretch(sel_spans, text_length),
             # The budget holds the whole population, so every priority unit is
             # in the selection by construction — counted, not claimed, under
-            # the same overlap rule the bounded path applies (R1142).
+            # the same overlap rule the bounded path applies (R1142) and the
+            # same #3511 id union.
             sum(
                 1
                 for unit, _ in positioned
-                if _unit_overlaps_spans(
-                    unit,
-                    [
-                        (int(a), int(b))
-                        for a, b in (priority_spans or ())
-                        if int(b) > int(a)
-                    ],
-                    _population_starts(positioned),
+                if (
+                    whole_spans
+                    and _unit_overlaps_spans(unit, whole_spans, whole_starts)
                 )
+                or (priority_unit_ids and unit.unit_id in priority_unit_ids)
             ),
         )
 
@@ -587,7 +622,9 @@ def stratified_position(
     # report has already named is examined instead of one the stratified pass
     # preferred. Recomputed coverage below then tells the truth about the
     # final picks, not the pre-swap ones.
-    picked, priority_taken = _prefer_priority(positioned, picked, n, priority_spans)
+    picked, priority_taken = _prefer_priority(
+        positioned, picked, n, priority_spans, priority_unit_ids
+    )
 
     selected_positioned = [positioned[i][0] for i in picked if i < len(positioned)]
     selected_absent = [absent[j][0] for j in range(absent_picked)]
@@ -619,6 +656,7 @@ def select_for_budget(
     band_count: Optional[int] = None,
     text_length: Optional[int] = None,
     priority_spans: Optional[Sequence[Tuple[int, int]]] = None,
+    priority_unit_ids: Optional[Collection[str]] = None,
 ) -> SelectionResult:
     """The dispatch point every budget-bounded population goes through.
 
@@ -632,6 +670,12 @@ def select_for_budget(
     examined first: the pass gives up the picked unit farthest from every
     span, never a priority unit, and keeps its budget. Absent (the default),
     the selection is byte-identical to the pre-#3395 behaviour.
+
+    ``priority_unit_ids`` (#3511) adds units that earn that seat WITHOUT
+    overlapping a span — the evidence a named claim rests on, decided by a
+    model-free rule outside this module (``rests_on_unit_ids``). Same victim
+    order, same budget; absent (the default — every production call site
+    today), the selection is byte-identical.
 
     #3523 — the selection is NESTED: for every ``k``, every unit
     ``select_for_budget(population, k, ...)`` returns is also returned at
@@ -653,6 +697,7 @@ def select_for_budget(
         band_count=band_count,
         text_length=text_length,
         priority_spans=priority_spans,
+        priority_unit_ids=priority_unit_ids,
     )
 
 
@@ -952,6 +997,126 @@ def anchored_unit_ids(state: Any) -> frozenset[str]:
     the state."""
     merged = merged_population_units(state)
     return frozenset(u.unit_id for u in anchored_units_for_named_moves(state, merged))
+
+
+def _paragraph_spans(raw: str) -> List[Tuple[int, int]]:
+    """#3511 — the blank-line paragraph spans of a raw text.
+
+    A paragraph runs from its first non-space character to the newline run
+    that ends it (``\\n\\s*\\n`` separators). A text without a blank line is
+    ONE paragraph — measured, not assumed: on the #3375 panel one long
+    document carries no newline at all, so a "same paragraph" rule must
+    degenerate gracefully there rather than crash.
+    """
+    spans: List[Tuple[int, int]] = []
+    start = 0
+    for match in _RE_BLANK_LINE.finditer(raw):
+        end = match.start()
+        if raw[start:end].strip():
+            spans.append((start, end))
+        start = match.end()
+    if raw[start:].strip():
+        spans.append((start, len(raw)))
+    return spans
+
+
+def _carries_quote_or_figure(unit: SelectableUnit) -> bool:
+    """#3511 — a unit "carries evidence" when its text shows a quotation mark
+    or a figure (the coordinator's candidate (b)). The test is a floor, not a
+    discriminator: it passes 59–61 % of the positioned units on c13–c15."""
+    return bool(_RE_QUOTE_OR_FIGURE.search((unit.source_quote or "") + "|" + unit.text))
+
+
+def rests_on_unit_ids(
+    state: Any, population: Sequence[SelectableUnit]
+) -> frozenset[str]:
+    """#3511 — the units a named claim RESTS ON, one rule, no model call.
+
+    The measured fact this answers (the coordinator's class split, c11–c14):
+    a move sits on an EVIDENCE passage 1 time in 23, on a claim passage 8 in
+    28 — the evidence a claim draws from lies BESIDE the move, and on doc_B
+    the reading anchors the claim "on the sentence just after" the evidence.
+    The priority rule of #3395 therefore never reaches it: a unit only earns
+    a seat by overlapping a move's span.
+
+    The rule (candidate (b), "the unit that carries a quotation mark or a
+    figure", the coordinator's State of 15/11, picked from the judged
+    occurrences): for each positioned move, the nearest positioned unit that
+    starts BEFORE the move in the SAME blank-line paragraph
+    (``_paragraph_spans``), carries a quotation mark or a figure in its text,
+    and does not already overlap a move — that one is already priority by
+    #3395 and needs no second seat. One unit per move; a unit chosen by
+    several moves counts once. A move first in its paragraph, or one whose
+    paragraph holds no earlier carrier, contributes nothing.
+
+    Why (b) and not (a), measured on the coordinator's ``occurrences.jsonl``
+    (23 judged occurrences, 9 resting / 14 not): (a) "the unit just before
+    the move" names a unit whose extent intersects the judged passage's unit
+    5 times in 9, (b) 7 in 9, both with the same 2 in 14 false positives
+    among the non-resting rows. Strict containment (the named unit starting
+    exactly on the passage) is 0/9 and 1/9 — too strict a bar, since units
+    overlap each other and the passage's text is often examined by a unit
+    starting just inside it. The carrier filter buys the two extra rows.
+    Apostrophes are not carriers: with them the filter passes 74–76 % of the
+    positioned units on c13–c15 (59–61 % without), while the judged outcome
+    is the same 7/9 and 2/14 with or without — French elision is not evidence.
+
+    A move whose start falls outside every paragraph span falls back to the
+    LAST paragraph (``paragraphs[-1]``), so the rule stays defined at the
+    text's edge.
+
+    Deterministic from the state, like every helper here: the selector's
+    ``priority_unit_ids`` consumers re-derive the same set. The population
+    passed is the selector's own (merged + anchors, #3518): no model call —
+    the carrier test is a regular expression, so "rests on" stays decisive
+    without one.
+    """
+    from argumentation_analysis.agents.core.reading import defining_moves
+
+    moves = defining_moves(state)
+    if not moves:
+        return frozenset()
+    positioned = _positioned(list(population))
+    if not positioned:
+        return frozenset()
+    starts = _population_starts([(u, u.offset or 0) for u in positioned])
+    move_spans = [
+        (int(offset), int(offset) + len(str(quote)))
+        for offset, quote in ((m.get("offset"), m.get("quote") or "") for m in moves)
+        if isinstance(offset, int) and not isinstance(offset, bool) and quote
+    ]
+    if not move_spans:
+        return frozenset()
+    already_priority = {
+        u.unit_id
+        for u in positioned
+        if any(_unit_overlaps_spans(u, [span], starts) for span in move_spans)
+    }
+    raw = getattr(state, "raw_text", None)
+    # No text to read paragraphs from: the whole text is one paragraph (the
+    # degenerate-but-defined case; a state without raw_text still gets a
+    # deterministic rule instead of an empty one).
+    paragraphs = (
+        _paragraph_spans(raw) if isinstance(raw, str) and raw else [(0, 1 << 60)]
+    )
+    chosen: List[str] = []
+    for span in move_spans:
+        paragraph = next(
+            ((a, b) for a, b in paragraphs if a <= span[0] < b), paragraphs[-1]
+        )
+        candidates = [
+            u
+            for u in positioned
+            if u.unit_id not in already_priority
+            and paragraph[0] <= (u.offset or 0) < paragraph[1]
+            and (u.offset or 0) < span[0]
+            and _carries_quote_or_figure(u)
+        ]
+        if not candidates:
+            continue
+        nearest = max(candidates, key=lambda u: u.offset or 0)
+        chosen.append(nearest.unit_id)
+    return frozenset(chosen)
 
 
 def named_move_residue(
