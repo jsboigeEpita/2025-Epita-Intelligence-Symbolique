@@ -20,7 +20,7 @@ Privacy Discipline"). All of it sits under
 |---|---|---|
 | `panel_v1/panel.txt` | the panel: one document id per line | the coordinator, once (#3375); kept on the coordinator seat |
 | `panel_v1/zeroshot/` | the zero-shot arm: one answer per panel document | `scripts/dataset/run_zeroshot_arm.py --panel-file <panel>`, then a frozen copy |
-| `panel_cycles/<tag>/` | one cycle: `states/`, `signatures/`, `logs/`, `status.jsonl`, `pipeline.json`, `cycle.json`, `trace.jsonl` | `scripts/panel/run_cycle.py` |
+| `panel_cycles/<tag>/` | one cycle: `states/`, `signatures/`, `logs/`, `status.jsonl`, `pipeline.json`, `cycle.json`, `cycle_free.json`, `trace.jsonl` | `scripts/panel/run_cycle.py` |
 | `judge_panel_3375_<tag>_<judge>_p<i>/` | one judge pass: a row per document, `META.json`, `TABLE.md` | `scripts/dataset/judge_panel.py` |
 | `judge_panel_3375_<tag>_<judge>_cons<k>/` | the consensus of `k` passes, `STABILITY.md` against the previous cycle | `judge_panel.py --consensus` |
 
@@ -121,12 +121,14 @@ wrote down, not something the cycle can prove.
 
 - `panel_cycles/<tag>/pipeline.json` — the commit the states were produced
   at. This is the commit a cycle's verdict is about.
-- `panel_cycles/<tag>/cycle.json` — the last invocation: its command and its
+- `panel_cycles/<tag>/cycle.json` — the last invocation **that ran a paid
+  step** (the pipeline or a judge pass): its command and its
   own `HEAD`, the exit code of every step, the credit before and after, the
   cycle's spend and the two provider deltas it is made of, and the pipeline
   record again under `pipeline`. After a
   resume the two commits differ, and the one that counts is the pipeline's.
-  An unread credit is reported as unread, not as zero.
+  An unread credit is reported as unread, not as zero. Its `paid_steps` names
+  the steps that spent.
   - The spend is `openrouter_spent`: the fall of the provider's
     `limit_remaining` over the cycle, and `openrouter_spent_field` says which
     field it reads. The change of each provider field is recorded under its
@@ -142,7 +144,18 @@ wrote down, not something the cycle can prove.
     of the two figures is unread.
   - The three raw readings — before the pipeline, after it, and at the end —
     are in `credit_before`, `credit_after_pipeline` and `credit_after`, so the
-    spend of each step is derivable.
+    spend of each step is derivable. Each of them is also an event of the
+    same name in `status.jsonl`, so it survives a later free re-consolidation
+    of the cycle.
+- `panel_cycles/<tag>/cycle_free.json` — the record of the last invocation
+  that ran **no** paid step (`--stage consensus`, a resume whose passes are
+  all stored, a cycle stopped before its first step): the same shape as
+  `cycle.json`, written beside it, never over it (#3611). Once a cycle has
+  been re-consolidated the paid spend therefore still reads from
+  `cycle.json` — the re-consolidation touched only `cycle_free.json` — and
+  the raw readings of every invocation, paid or free, read from the
+  `credit_before` / `credit_after_pipeline` / `credit_after` events in
+  `status.jsonl`.
 - `judge_panel_3375_<tag>_<judge>_cons<k>/TABLE.md` — the verdict table of one
   family. `STABILITY.md` beside it compares the items kept with the previous
   cycle's.
