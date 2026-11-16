@@ -137,6 +137,29 @@ def reader_metadata_view(metadata: Dict[str, Any]) -> Dict[str, str]:
     return view
 
 
+def metadata_fields_with_a_value(metadata: Dict[str, Any]) -> Dict[str, Any]:
+    """The recorded metadata fields that hold a VALUE (#3542).
+
+    A placeholder (``unknown``, ``none``, ``null``, ``n/a``) is the
+    registry's way of writing « not recorded »: it carries no information,
+    so a surface that prints it says nothing while it still takes a clause
+    of the reader's paragraph. This returns the fields that hold a value,
+    in the record's order; the fields that hold none are LEFT OUT — never
+    renamed, never replaced by a guess (the value must come from the
+    document, with its quote, or not at all).
+
+    ``reader_metadata_view`` is unchanged: the acts' own view still names
+    what is missing (Act I's rule, #3311), because there the writer has to
+    say it. This is for the reader surface, which has no such duty.
+    """
+    return {
+        key: value
+        for key, value in (metadata or {}).items()
+        if str(value if value is not None else "").strip().lower()
+        not in _META_PLACEHOLDER_VALUES
+    }
+
+
 # #1914 — cap for the extracted interpretive question (the carrier that
 # rides into the Acte III prompt): a runaway paragraph under the marker
 # must not balloon the conclusion's data block.

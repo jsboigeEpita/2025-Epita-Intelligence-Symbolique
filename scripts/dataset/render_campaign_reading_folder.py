@@ -416,6 +416,8 @@ def render_non_argumentative_reader_paragraph(state: Dict[str, Any], chars: int)
     view the acts use, #3311), and the counts it measured. One clause per
     recorded element, absent fields omitted — an element the extract did
     not record is the gap the issue names, never something to invent.
+    A field that holds a PLACEHOLDER is omitted too (#3542): it records
+    nothing, and the reader paragraph has no duty to print a gap.
     No LLM call (the issue's ask 2). The batch log keeps its own English
     line; this paragraph is the reader's, built beside it.
 
@@ -431,13 +433,23 @@ def render_non_argumentative_reader_paragraph(state: Dict[str, Any], chars: int)
     """
     st = state.get("state") or state
     from argumentation_analysis.reporting.restitution.act1_framing_plugin import (
+        metadata_fields_with_a_value,
         reader_metadata_view,
     )
     from argumentation_analysis.reporting.restitution.quote_fidelity import (
         normalised_quote_in,
     )
 
-    metadata = reader_metadata_view(st.get("source_metadata") or {})
+    # #3542 — a field that holds no value (a registry placeholder) is LEFT
+    # OUT of this paragraph: it carries no information, and on a document
+    # that states its own date « non renseigné » reads as the opposite of
+    # what the document says. Nothing is inferred in its place — the value
+    # must come from the document, with its quote, or not at all. The acts'
+    # own metadata view is untouched: there the writer still has to name
+    # what is missing (#3311).
+    metadata = reader_metadata_view(
+        metadata_fields_with_a_value(st.get("source_metadata") or {})
+    )
     text = st.get("raw_text") or ""
     subject = f"Ce document de {chars} caractères" if chars else "Ce document"
     parts = [
