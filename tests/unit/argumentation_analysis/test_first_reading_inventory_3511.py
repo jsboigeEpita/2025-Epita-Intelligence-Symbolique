@@ -710,3 +710,218 @@ class TestFirstReadingCompletionCap:
         await llm("prompt")
         assert "max_completion_tokens" not in captured
         assert "max_tokens" not in captured
+
+
+# --- 2n: the run-time switch that turns the variant on in production ---------
+
+
+class TestTheRestsOnRunTimeSwitch:
+    """#3511 (2n) — the run-time switch for the rests-on variant, in the
+    shape of #3377's ``ARGUMENTATION_SKIP_PHASES``.
+
+    #3595 merged the variant as a REPLAY variant: only
+    ``scripts/panel/_common.py`` passes the ids — no production call site
+    does, so production never selects with them. The paired draw needs
+    both arms from the SAME code: an env var read at the selection call,
+    a RUN-TIME option, not a code fork. The switch is OFF by default —
+    unset or blank selects exactly as today; an unrecognised value fails
+    loud, because a typo would silently run the control arm as if it were
+    the variant and the paired draw would measure nothing.
+    """
+
+    ENV = "ARGUMENTATION_RESTS_ON"
+
+    def _state(self, parts: int = 30, part_len: int = 1000):
+        doc = _synth_document(parts, part_len=part_len)
+        return _units_at_markers(_CoverageState(doc), range(parts))
+
+    def _population(self, state):
+        """The selector's own population, as the production call builds it:
+        the merged units (length-gated), plus the #3518 anchors."""
+        from argumentation_analysis.orchestration.selection import (
+            anchored_units_for_named_moves,
+            merged_population_units,
+        )
+
+        pop = [u for u in merged_population_units(state) if len(u.text.strip()) > 20]
+        return pop + anchored_units_for_named_moves(state, pop)
+
+    def _extract(self, state, monkeypatch, value):
+        """Run the production seam with the switch set to ``value`` (None:
+        the variable is not in the environment at all)."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _extract_arguments_for_parallel,
+        )
+
+        if value is None:
+            monkeypatch.delenv(self.ENV, raising=False)
+        else:
+            monkeypatch.setenv(self.ENV, value)
+        extracted = _extract_arguments_for_parallel(
+            state.raw_text, {"_state_object": state}
+        )
+        return [arg_id for arg_id, _text in extracted]
+
+    def _carrier_move(self, state, default_ids):
+        """Seat one move so its rests-on carrier is a unit the DEFAULT
+        selection drops. The move sits in the gap AFTER that unit's extent
+        and BEFORE the next unit starts: the carrier is then the nearest
+        positioned carrier before the move, it does not overlap the move,
+        and buying it is a real seat swap, not a no-op."""
+        from argumentation_analysis.orchestration.selection import rests_on_unit_ids
+
+        positioned = sorted(
+            (u for u in self._population(state) if u.offset is not None),
+            key=lambda u: u.offset,
+        )
+        starts = [u.offset for u in positioned]
+        for index, unit in enumerate(positioned[:-1]):
+            if unit.unit_id in default_ids:
+                continue
+            end = unit.offset + len(unit.text)
+            next_start = starts[index + 1]
+            if end >= next_start:
+                continue
+            mid = (end + next_start) // 2
+            state.defining_moves = {
+                "status": "ok",
+                "moves": [
+                    {
+                        "kind": "claim",
+                        "reading": "le geste pose sur son appui",
+                        "quote": state.raw_text[mid : mid + 30],
+                        "offset": mid,
+                    }
+                ],
+            }
+            named = rests_on_unit_ids(state, self._population(state))
+            if unit.unit_id in named:
+                return unit.unit_id
+            state.defining_moves = {"moves": [], "status": "no_llm"}
+        raise AssertionError("no dropped carrier found for the fixture geometry")
+
+    def _default_ids(self, state):
+        """Today's production selection on the same state, computed by the
+        same inputs the seam passes — no priority ids anywhere."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _selection_priority_spans,
+        )
+        from argumentation_analysis.orchestration.selection import (
+            select_for_budget,
+            state_text_length,
+        )
+
+        control = select_for_budget(
+            self._population(state),
+            examined_unit_budget(state)
+            or per_argument_unit_budget(len(state.raw_text)),
+            text_length=state_text_length(state),
+            priority_spans=_selection_priority_spans(state),
+        )
+        return [u.unit_id for u in control.selected]
+
+    def test_unset_switch_selects_exactly_as_today(self, monkeypatch):
+        """The DEFAULT arm: the variable absent, the selection is the one
+        today's code makes — same ids, same order, computed by an
+        independent control that passes no priority ids. The state carries
+        a move, so the variant's ids are NON-empty: an unconditional leak
+        would swap the carrier into this arm too and redden here (the
+        variant would go live without its draw)."""
+        state = self._state()
+        state.defining_moves = {"moves": [], "status": "no_llm"}
+        moveless = self._extract(state, monkeypatch, None)
+        self._carrier_move(state, moveless)  # non-empty rests-on ids from here
+        produced = self._extract(state, monkeypatch, None)
+        assert produced == self._default_ids(state)
+        assert state.analysis_coverage["fallacy_per_argument"]["unit_ids"] == produced
+
+    def test_the_switch_on_passes_the_rests_on_ids(self, monkeypatch):
+        """The VARIANT arm, literally: with the switch on, the ids the
+        replay rule derives reach ``select_for_budget`` — red on main,
+        where no production call site passes them."""
+        import argumentation_analysis.orchestration.invoke_callables as ic
+        from argumentation_analysis.orchestration.selection import rests_on_unit_ids
+
+        state = self._state()
+        default_ids = self._extract(state, monkeypatch, None)
+        carrier = self._carrier_move(state, default_ids)
+
+        captured: dict = {}
+        real = ic.select_for_budget
+
+        def _spy(pop, k, **kwargs):
+            captured["priority_unit_ids"] = kwargs.get("priority_unit_ids")
+            return real(pop, k, **kwargs)
+
+        monkeypatch.setattr(ic, "select_for_budget", _spy)
+        self._extract(state, monkeypatch, "1")
+
+        assert captured["priority_unit_ids"] == rests_on_unit_ids(
+            state, self._population(state)
+        )
+        assert carrier in captured["priority_unit_ids"]
+
+    def test_the_switch_swaps_the_seat_the_replay_measures(self, monkeypatch):
+        """End to end: with the switch on, the production selection IS the
+        replay's variant selection — the dropped carrier in, one other unit
+        out, the budget held. Red on main, where the variable set changes
+        nothing."""
+        state = self._state()
+        default_ids = self._extract(state, monkeypatch, None)
+        carrier = self._carrier_move(state, default_ids)
+
+        control = self._extract(
+            _clone_state_with_moves(state, state.defining_moves), monkeypatch, None
+        )
+        variant = self._extract(state, monkeypatch, "1")
+
+        assert carrier in variant
+        assert len(variant) == len(control)
+        assert set(variant) - set(control) == {carrier}
+
+    def test_the_reader_parses_like_a_switch(self, monkeypatch):
+        """Off: absent, blank, or an explicit no. On: the explicit yes
+        values, case-insensitive. The switch is an operator flag, not a
+        truthiness accident."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            rests_on_enabled,
+        )
+
+        monkeypatch.delenv(self.ENV, raising=False)
+        assert rests_on_enabled() is False
+        for value in ("", "   "):
+            monkeypatch.setenv(self.ENV, value)
+            assert rests_on_enabled() is False
+        for value in ("0", "false", "no", "off"):
+            monkeypatch.setenv(self.ENV, value)
+            assert rests_on_enabled() is False
+        for value in ("1", "true", "yes", "on", "ON", "True"):
+            monkeypatch.setenv(self.ENV, value)
+            assert rests_on_enabled() is True
+
+    def test_an_unrecognised_value_fails_loud(self, monkeypatch):
+        """A typo must never silently select the control arm: the paired
+        draw would measure nothing while believing it measures the
+        variant. Same fail-loud contract as an unknown phase name in
+        #3377's ``apply_skipped_phases``."""
+        import pytest
+        from argumentation_analysis.orchestration.invoke_callables import (
+            rests_on_enabled,
+        )
+
+        monkeypatch.setenv(self.ENV, "maybe")
+        with pytest.raises(ValueError):
+            rests_on_enabled()
+
+
+def _clone_state_with_moves(source, defining_moves):
+    """A second ``_CoverageState`` on the same text and units, carrying the
+    given moves — the control arm of the paired draw runs on its own state
+    so the two coverage records do not overwrite each other."""
+    clone = _CoverageState(source.raw_text)
+    clone.identified_arguments = dict(source.identified_arguments)
+    clone.argument_provenance = {
+        key: dict(value) for key, value in source.argument_provenance.items()
+    }
+    clone.defining_moves = defining_moves
+    return clone

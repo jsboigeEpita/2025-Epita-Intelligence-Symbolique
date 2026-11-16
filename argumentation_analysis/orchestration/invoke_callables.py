@@ -82,6 +82,7 @@ from argumentation_analysis.orchestration.selection import (
     coverage_figure,
     merged_population_units,
     named_move_residue,
+    rests_on_unit_ids,
     select_for_budget,
     state_text_length,
 )
@@ -10042,6 +10043,49 @@ def _selection_priority_spans(state_obj: Any) -> List[Tuple[int, int]]:
     return spans
 
 
+#: #3511 (2n) — name of the environment variable that turns the rests-on
+#: variant (#3595) on in PRODUCTION selection. Same shape as #3377's
+#: ``ARGUMENTATION_SKIP_PHASES``: a RUN-TIME option, not a code fork — the
+#: two arms of the paired draw differ by the value of this variable, and
+#: the code is the same. Unset or blank keeps today's selection
+#: byte-identical (the variant stays a replay variant until its paid draw).
+RESTS_ON_ENV_VAR = "ARGUMENTATION_RESTS_ON"
+
+#: The recognised values, lowercased. An unrecognised NON-EMPTY value is a
+#: CALLER ERROR (see ``rests_on_enabled``): a typo would silently run the
+#: control arm as if it were the variant, and the paired draw would measure
+#: nothing while believing it measures the variant.
+_RESTS_ON_TRUTHY = frozenset({"1", "true", "yes", "on"})
+_RESTS_ON_FALSY = frozenset({"0", "false", "no", "off"})
+
+
+def rests_on_enabled(env_var: str = RESTS_ON_ENV_VAR) -> bool:
+    """Read the run-time switch for the rests-on variant (#3511).
+
+    :param env_var: the environment variable to read (default
+        ``RESTS_ON_ENV_VAR``).
+    :return: ``True`` only for an explicit yes value; absent, blank and the
+        explicit no values return ``False`` — the default arm is today's
+        selection, byte-identical.
+    :raises ValueError: on a non-empty value that is neither a yes nor a no.
+        Fail loud, never a silent no: the switch arms a MEASUREMENT, and a
+        typo'd arm is a draw that measures nothing (the same contract as an
+        unknown phase name in ``apply_skipped_phases``, #3377).
+    """
+    raw = (os.environ.get(env_var, "") or "").strip().lower()
+    if not raw:
+        return False
+    if raw in _RESTS_ON_TRUTHY:
+        return True
+    if raw in _RESTS_ON_FALSY:
+        return False
+    raise ValueError(
+        f"{env_var}={raw!r} is not a recognised switch value "
+        f"(yes: {sorted(_RESTS_ON_TRUTHY)}, no: {sorted(_RESTS_ON_FALSY)}) — "
+        "refusing to run an ambiguous arm of the paired draw"
+    )
+
+
 def _extract_arguments_for_parallel(
     input_text: str, context: Dict[str, Any]
 ) -> List[tuple[str, str]]:
@@ -10123,11 +10167,22 @@ def _extract_arguments_for_parallel(
                 if _fr_budget is not None
                 else per_argument_unit_budget(_doc_length)
             )
+            # #3511 (2n) — the rests-on variant, ON only through the
+            # run-time switch (``RESTS_ON_ENV_VAR``): unset, no ids are
+            # passed and the selection is byte-identical to today's; set,
+            # the units a named claim rests on join the priority set —
+            # the same ids ``scripts/panel/_common.py`` replays, so the
+            # paired draw runs both arms through this one seam.
             selection = select_for_budget(
                 population,
                 _unit_budget,
                 text_length=state_text_length(state_obj),
                 priority_spans=_selection_priority_spans(state_obj),
+                priority_unit_ids=(
+                    rests_on_unit_ids(state_obj, population)
+                    if rests_on_enabled()
+                    else None
+                ),
             )
             if hasattr(state_obj, "record_analysis_coverage"):
                 state_obj.record_analysis_coverage(
