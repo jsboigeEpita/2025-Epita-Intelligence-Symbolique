@@ -282,9 +282,11 @@ class InformalAnalysisAgent(BaseAgent):
         )
         try:
             # #2341: un seul KernelArguments, sous le nom que le template connaît.
-            # `prompt_analyze_fallacies_v3_tool_use` porte le slot `{{$input}}` ; un
-            # kwarg `text_to_analyze` laissait ce slot non résolu et envoyait au LLM
-            # la consigne d'analyse sans l'argument à analyser.
+            # Le template enregistré (`prompt_analyze_fallacies_v4_no_tools`,
+            # #3579 ; auparavant `prompt_analyze_fallacies_v3_tool_use`) porte le
+            # slot `{{$input}}` ; un kwarg `text_to_analyze` laissait ce slot non
+            # résolu et envoyait au LLM la consigne d'analyse sans l'argument à
+            # analyser.
             arguments = KernelArguments(input=text)
             result = await self.kernel.invoke(
                 plugin_name="InformalAnalyzer",

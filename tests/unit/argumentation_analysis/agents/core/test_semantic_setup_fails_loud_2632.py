@@ -204,8 +204,9 @@ class TestSetupInformalKernel:
         from argumentation_analysis.agents.core.informal import informal_definitions
 
         kernel = _kernel()
+        # #3579 : c'est la variante enregistrée pour semantic_AnalyzeFallacies.
         monkeypatch.setattr(
-            informal_definitions, "prompt_analyze_fallacies_v3_tool_use", ""
+            informal_definitions, "prompt_analyze_fallacies_v4_no_tools", ""
         )
         with pytest.raises(
             SemanticSetupError, match=r"InformalAnalyzer\.semantic_AnalyzeFallacies"

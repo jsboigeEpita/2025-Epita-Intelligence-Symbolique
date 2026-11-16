@@ -70,6 +70,9 @@ Ne retournez aucun texte ou explication en dehors de l'objet JSON.
 # --- Prompt pour l'Analyse de Sophismes (V3 - Tool Use) ---
 # Ce prompt instruit le LLM pour qu'il utilise les fonctions natives (outils)
 # afin d'identifier un sophisme de manière autonome et raisonnée.
+# Depuis #3579 il n'est plus enregistré : l'invocation de production
+# n'offre pas les quatre fonctions qu'il nomme (voir la variante V4
+# ci-dessous). Il reste la forme à servir à une invocation qui les offrirait.
 prompt_analyze_fallacies_v3_tool_use = """
 [Contexte]
 Vous êtes un assistant spécialisé dans l'analyse critique. Votre objectif est d'identifier des sophismes dans un argument en utilisant les outils à votre disposition pour explorer une taxonomie.
@@ -117,6 +120,62 @@ Si, après une analyse rigoureuse avec les outils, aucun sophisme ne correspond,
 
 [RAPPEL FINAL]
 Votre seule et unique sortie doit être l'objet JSON contenant la clé "sophismes". N'incluez aucun texte, aucune pensée, aucun appel d'outil, aucune explication avant ou après le bloc JSON.
+
+[Argument à analyser]
+{{$input}}
+"""
+
+# --- Prompt pour l'Analyse de Sophismes (V4 - sans outils) ---
+# #3579 : `semantic_AnalyzeFallacies` est enregistré avec les settings du
+# service (`prompt_settings`, `semantic_setup.py`), qui ne portent aucun
+# `function_choice_behavior`, et `analyze_fallacies` l'invoque avec un simple
+# `KernelArguments(input=...)` — la requête n'offre AUCUNE fonction au modèle.
+# Le template V3 ci-dessus ordonne pourtant quatre appels d'outils :
+# même classe de défaut que #3573, un niveau plus bas. Cette variante demande
+# la même analyse (nom le plus spécifique, justification) sans nommer aucune
+# fonction, et garde le contrat JSON que
+# `InformalAnalysisAgent.analyze_fallacies` parse :
+# `{"sophismes": [{"nom", "justification"}]}` (informal_agent.py:283-300).
+prompt_analyze_fallacies_v4_no_tools = """
+[Contexte]
+Vous êtes un assistant spécialisé dans l'analyse critique. Votre objectif est d'identifier les sophismes d'un argument et de les nommer avec le terme le plus spécifique possible.
+
+[Objectif]
+Analysez l'argument fourni ($input) et identifiez les sophismes qu'il contient.
+
+[Démarche OBLIGATOIRE et SÉQUENTIELLE]
+1.  **Hypothèse** : Lisez l'argument et formulez une hypothèse sur le type de sophisme général.
+2.  **Exploration** : Passez en revue les familles de sophismes — insuffisance, influence, erreur mathématique, erreur de raisonnement, abus de langage, tricherie, obstruction — et retenez les types dont la définition correspond à l'argument.
+3.  **Validation** : Confrontez chaque candidat à sa définition et écartez ceux qui ne s'appliquent pas.
+4.  **Raffinement (CRUCIAL)** : Une fois un sophisme général retenu (ex: `ad-hominem`), **cherchez systématiquement s'il existe une variante plus spécifique** (ex: `appeal-to-hypocrisy`, `ad hominem circumstantial`). Comparez les définitions et **choisissez TOUJOURS le plus spécifique**.
+5.  **Réponse Finale** : Une fois le sophisme le plus spécifique identifié et validé, et SEULEMENT à ce moment-là, structurez votre réponse finale en JSON.
+
+[Exemples de Logique de Raffinement]
+- **Exemple 1 : Appel à l'hypocrisie**
+  - Si l'argument est : "Mon médecin me dit de perdre du poids, mais il est lui-même en surpoids."
+  - Votre hypothèse initiale est 'ad-hominem', mais après vérification, vous identifiez 'appeal-to-hypocrisy' comme plus spécifique.
+  - **Votre réponse finale DOIT être 'appeal-to-hypocrisy'.**
+
+- **Exemple 2 : Concept Volé**
+  - Si l'argument est : "La raison n'est pas fiable, donc on ne peut pas l'utiliser pour trouver la vérité."
+  - Votre raisonnement doit identifier que l'argument utilise la raison pour s'auto-invalider. C'est une contradiction performative.
+  - Après vérification, vous identifiez 'stolen-concept' (ou 'self-refuting idea') comme le terme exact.
+  - **Votre réponse finale DOIT être 'stolen-concept'.**
+
+[RÈGLE D'OR DE LA SPÉCIFICITÉ]
+Avant de produire la réponse JSON, posez-vous cette question finale : "Est-ce que le sophisme que j'ai choisi est le plus spécifique possible ?". Si un sous-type existe et correspond, vous DEVEZ l'utiliser. Par exemple, si l'argument est un cas clair de 'Appeal to Hypocrisy', retourner 'ad-hominem' est une erreur.
+
+[Format de la Réponse Finale]
+La réponse finale doit être un unique objet JSON valide. Ne retournez rien d'autre.
+Cet objet JSON doit contenir une clé "sophismes", qui est une liste d'objets.
+Chaque objet de la liste représente un sophisme identifié et doit contenir :
+- "nom": Le nom exact et normalisé du sophisme, le plus spécifique possible.
+- "justification": Une explication concise expliquant pourquoi l'argument constitue ce sophisme spécifique.
+
+Si, après une analyse rigoureuse, aucun sophisme ne correspond, retournez une liste vide : {"sophismes": []}.
+
+[RAPPEL FINAL]
+Votre seule et unique sortie doit être l'objet JSON contenant la clé "sophismes". N'incluez aucun texte, aucune pensée, aucune explication avant ou après le bloc JSON.
 
 [Argument à analyser]
 {{$input}}

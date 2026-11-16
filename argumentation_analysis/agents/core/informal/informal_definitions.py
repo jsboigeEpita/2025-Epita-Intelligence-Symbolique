@@ -60,10 +60,10 @@ logger = logging.getLogger("InformalDefinitions")
 if TYPE_CHECKING:
     import pandas as pd  # annotations only — the runtime import is call-time (#2867)
 
-# Import des prompts (V3 - Tool Use)
+# Import des prompts (V4 - sans outils pour l'invocation enregistrée, #3579)
 from .prompts import (
     prompt_identify_args_v8,
-    prompt_analyze_fallacies_v3_tool_use,
+    prompt_analyze_fallacies_v4_no_tools,
     prompt_justify_fallacy_attribution_v1,
 )
 from ..semantic_setup import prompt_settings, register_prompt_function
@@ -760,7 +760,7 @@ def setup_informal_kernel(
     kernel: sk.Kernel, llm_service: Any, taxonomy_file_path: Optional[str] = None
 ) -> None:
     plugin_name = "InformalAnalyzer"
-    logger.info(f"Configuration Kernel pour {plugin_name} (V15 - Tool Use)...")
+    logger.info(f"Configuration Kernel pour {plugin_name} (V15)...")
 
     if not llm_service:
         raise ValueError("Le service LLM (llm_service) est requis")
@@ -795,12 +795,13 @@ def setup_informal_kernel(
         plugin_name,
         plugin_name,
         "semantic_AnalyzeFallacies",
-        prompt_analyze_fallacies_v3_tool_use,
-        "Analyse les sophismes dans un argument en guidant le LLM à utiliser les outils disponibles.",
+        prompt_analyze_fallacies_v4_no_tools,
+        "Analyse les sophismes dans un argument (variante sans outils : "
+        "l'invocation n'offre aucune fonction au modèle).",
         default_settings,
     )
     logger.debug(
-        f"Fonction {plugin_name}.semantic_AnalyzeFallacies (Tool Use) ajoutée."
+        f"Fonction {plugin_name}.semantic_AnalyzeFallacies (sans outils) ajoutée."
     )
 
     register_prompt_function(
@@ -814,7 +815,7 @@ def setup_informal_kernel(
     )
     logger.debug(f"Fonction {plugin_name}.semantic_JustifyFallacyAttribution ajoutée.")
 
-    logger.info(f"Kernel {plugin_name} configuré (V15 - Tool Use).")
+    logger.info(f"Kernel {plugin_name} configuré (V15).")
 
 
 INFORMAL_AGENT_INSTRUCTIONS_V15_TEMPLATE = """
