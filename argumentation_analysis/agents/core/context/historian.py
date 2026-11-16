@@ -336,7 +336,7 @@ def _dates_section(
         lines.append(
             "Past month-day references the document itself cites as already "
             "delivered (no year printed): the speech cannot fall on one of "
-            "those days, nor before one within the year you assign it."
+            "those days."
         )
         for entry in floors[:PROMPT_MAX_DATES]:
             lines.append(

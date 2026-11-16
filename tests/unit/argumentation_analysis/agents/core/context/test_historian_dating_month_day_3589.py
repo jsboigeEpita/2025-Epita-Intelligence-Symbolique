@@ -301,6 +301,23 @@ class TestThePromptCarriesTheCitedMonthDays:
         assert "discours prononcé le 14 mars" in prompt
         assert f"(offset {_OFFSET_14})" in prompt
 
+    def test_the_floors_sentence_carries_no_precede_half(self):
+        """The removed half stays removed: a month-day floor excludes the
+        named days only — it never bounds "the year you assign" (review 2
+        on #3607)."""
+        from argumentation_analysis.agents.core.context.stated_dates import (
+            extract_past_month_days,
+        )
+
+        past_days = extract_past_month_days(_TEXT_WITH_PAST_DAY)
+        assert past_days  # the fixture does carry a floor
+
+        prompt = build_historian_prompt(_state(), "X", past_month_days=past_days)
+
+        assert "Past month-day references" in prompt  # the floors are present
+        assert "nor before" not in prompt
+        assert "cannot fall on one of" in prompt
+
     async def test_a_month_day_no_cue_carries_does_not_ride(self):
         sink = []
 
