@@ -196,7 +196,12 @@ class TestTheHeaderSElementsAreRecordedAndRead:
 
     def test_the_control_render_stays_byte_identical(self):
         """DoD: a render whose every recorded value the document carries
-        keeps the exact bytes the paragraph always printed."""
+        keeps the exact bytes the paragraph always printed.
+
+        #3542 ask 1 — the ONE expected string changes: the document's own
+        header elements (the event, the participants, the report's title)
+        now come before the registry's fields. The values, their quoting
+        and their bytes are unchanged."""
         state = dict(_STATE)
         state["source_metadata"] = dict(self._HEADER_META)
         state["raw_text"] = (
@@ -206,10 +211,10 @@ class TestTheHeaderSElementsAreRecordedAndRead:
         )
         out = _fiche(state=state)
         assert (
-            "type de discours : « compte rendu » ; "
             "événement : « audition de la commission synthétique » ; "
             "participants : « deux rapporteures fictives » ; "
-            "titre du rapport : « Rapport sur un sujet inventé »"
+            "titre du rapport : « Rapport sur un sujet inventé » ; "
+            "type de discours : « compte rendu »"
         ) in out
 
     def test_expand_corpus_reads_extract_level_metadata(self, monkeypatch):

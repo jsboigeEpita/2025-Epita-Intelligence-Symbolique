@@ -416,6 +416,11 @@ def render_non_argumentative_reader_paragraph(state: Dict[str, Any], chars: int)
     view the acts use, #3311), and the counts it measured. One clause per
     recorded element, absent fields omitted — an element the extract did
     not record is the gap the issue names, never something to invent.
+    A field that holds a PLACEHOLDER is omitted too (#3542): it records
+    nothing, and the reader paragraph has no duty to print a gap. The
+    document's OWN header elements come first (#3542 ask 1): the reader
+    meets what the document says about itself before the registry's
+    bookkeeping.
     No LLM call (the issue's ask 2). The batch log keeps its own English
     line; this paragraph is the reader's, built beside it.
 
@@ -431,13 +436,36 @@ def render_non_argumentative_reader_paragraph(state: Dict[str, Any], chars: int)
     """
     st = state.get("state") or state
     from argumentation_analysis.reporting.restitution.act1_framing_plugin import (
+        HEADER_METADATA_KEYS,
+        metadata_fields_with_a_value,
         reader_metadata_view,
     )
     from argumentation_analysis.reporting.restitution.quote_fidelity import (
         normalised_quote_in,
     )
 
-    metadata = reader_metadata_view(st.get("source_metadata") or {})
+    # #3542 — a field that holds no value (a registry placeholder) is LEFT
+    # OUT of this paragraph: it carries no information, and on a document
+    # that states its own date « non renseigné » reads as the opposite of
+    # what the document says. Nothing is inferred in its place — the value
+    # must come from the document, with its quote, or not at all. The acts'
+    # own metadata view is untouched: there the writer still has to name
+    # what is missing (#3311).
+    recorded = metadata_fields_with_a_value(st.get("source_metadata") or {})
+
+    # #3542 ask 1 — the document's OWN header elements come first: the
+    # event, the participants, the report's title say what the document is
+    # about, and the registry's fields are the corpus's bookkeeping. The
+    # reader must meet the document before the bookkeeping. Each group
+    # keeps the record's order; only the two groups are swapped.
+    header = {
+        key: value for key, value in recorded.items() if key in HEADER_METADATA_KEYS
+    }
+    registry = {key: value for key, value in recorded.items() if key not in header}
+    metadata = {
+        **reader_metadata_view(header),
+        **reader_metadata_view(registry),
+    }
     text = st.get("raw_text") or ""
     subject = f"Ce document de {chars} caractères" if chars else "Ce document"
     parts = [

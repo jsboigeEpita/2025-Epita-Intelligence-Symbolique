@@ -119,6 +119,15 @@ _META_LABELS: Dict[str, str] = {
 _META_PLACEHOLDER = "non renseigné"
 _META_PLACEHOLDER_VALUES = frozenset({"unknown", "none", "null", "n/a"})
 
+#: The keys the DOCUMENT's own header carries — the event, the
+#: participants, the report's title (#3392 ask 2, #3408 rework). Every
+#: other metadata key is a registry field: the header says what the
+#: document is about, the registry says what the corpus recorded. A
+#: reader surface that lists the registry's fields first makes the
+#: reader meet the corpus's bookkeeping before the document itself
+#: (#3542 ask 1), so these come first there.
+HEADER_METADATA_KEYS = ("event", "participants", "report_title")
+
 
 def reader_metadata_view(metadata: Dict[str, Any]) -> Dict[str, str]:
     """The metadata block as the WRITER sees it (#3311): reader labels,
@@ -135,6 +144,29 @@ def reader_metadata_view(metadata: Dict[str, Any]) -> Dict[str, str]:
         )
         view[_META_LABELS.get(str(key), str(key).replace("_", " "))] = rendered
     return view
+
+
+def metadata_fields_with_a_value(metadata: Dict[str, Any]) -> Dict[str, Any]:
+    """The recorded metadata fields that hold a VALUE (#3542).
+
+    A placeholder (``unknown``, ``none``, ``null``, ``n/a``) is the
+    registry's way of writing « not recorded »: it carries no information,
+    so a surface that prints it says nothing while it still takes a clause
+    of the reader's paragraph. This returns the fields that hold a value,
+    in the record's order; the fields that hold none are LEFT OUT — never
+    renamed, never replaced by a guess (the value must come from the
+    document, with its quote, or not at all).
+
+    ``reader_metadata_view`` is unchanged: the acts' own view still names
+    what is missing (Act I's rule, #3311), because there the writer has to
+    say it. This is for the reader surface, which has no such duty.
+    """
+    return {
+        key: value
+        for key, value in (metadata or {}).items()
+        if str(value if value is not None else "").strip().lower()
+        not in _META_PLACEHOLDER_VALUES
+    }
 
 
 # #1914 — cap for the extracted interpretive question (the carrier that
