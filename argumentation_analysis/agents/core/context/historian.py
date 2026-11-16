@@ -125,6 +125,25 @@ _SITUATION_PLACE_KIND_RE = re.compile(
     rf"(?:de\s+|d')?(?P<name>{_CAP_RUN})"
 )
 
+#: #3586 — « à » also governs a PERSON: « face à Jean Dorlac », « répond à
+#: X », « s'adresse à X », « opposé à X ». A relation cue, measured at cycle
+#: 12 on doc_H, where the situation's « face à <person> » became the only
+#: venue candidate and refuted a situation that was right. Each pattern ends
+#: where the venitive preposition starts; it reads the text BEFORE the match.
+#: The three verbs are read by their STEM (``répond\\w*``, ``s'adress\\w*``,
+#: ``oppos\\w*`` — review of 15/11): every tense is covered by construction
+#: and the elided pronoun before the verb (« qui l'opposait à X », measured at
+#: c13-c14) does not matter, because the cue reads the end of the text before
+#: the match. « siège au X » names a role in an institution, not the place
+#: the speech was given (measured at c8, review of 15/11).
+_PERSON_RELATION_CUES = (
+    re.compile(r"\bface\s+$", re.IGNORECASE),
+    re.compile(r"\brépond\w*\s+$", re.IGNORECASE),
+    re.compile(r"\bs[’']?adress\w*\s+$", re.IGNORECASE),
+    re.compile(r"\boppos\w*\s+$", re.IGNORECASE),
+    re.compile(r"\bsiège\s+$", re.IGNORECASE),
+)
+
 HISTORIAN_PROMPT = """You are a historian. Situate the document below before anyone
 analyses its reasoning: what period, what place, which actors, and what was at
 stake THEN (not what the document argues).
@@ -494,6 +513,37 @@ def _strip_generic_tail(run: str) -> str:
     return " ".join(words)
 
 
+def _is_word_char(char: str) -> bool:
+    """The characters a quote must not cut through: letters, digits, and the
+    joiners French prose uses inside a word (``d'une``, ``Port-Rouge``)."""
+    return char.isalnum() or char in "'’-"
+
+
+def _snap_quote_start(text: str, index: int) -> int:
+    """#3586 — move a quote window's start BACK to the beginning of the word
+    it lands in. The window expands outward: it never drops text to look
+    tidy, and it never begins on a fragment."""
+    while (
+        0 < index < len(text)
+        and _is_word_char(text[index - 1])
+        and _is_word_char(text[index])
+    ):
+        index -= 1
+    return index
+
+
+def _snap_quote_end(text: str, index: int) -> int:
+    """#3586 — move a quote window's end FORWARD to the end of the word it
+    lands in."""
+    while (
+        0 < index < len(text)
+        and _is_word_char(text[index - 1])
+        and _is_word_char(text[index])
+    ):
+        index += 1
+    return index
+
+
 def _document_venue_statements(text: str) -> List[Dict[str, Any]]:
     """#3555 — where the DOCUMENT says it is being given, in text order.
 
@@ -502,7 +552,9 @@ def _document_venue_statements(text: str) -> List[Dict[str, Any]]:
     count. No gazetteer and no list of places — the cue is a construction, so
     a place the corpus has never seen is caught the same way. The ``offset``
     is the place NAME's position, not the cue's: that is the position a
-    render can point a reader at, and the one #3555's measurement names.
+    render can point a reader at, and the one #3555's measurement names. The
+    quote window snaps outward to word boundaries (#3586): it never starts or
+    ends inside a word.
 
     The reading is deliberately narrow, and the pull request states what it
     does not catch: an address such as ``people of X`` (measured naming
@@ -522,9 +574,10 @@ def _document_venue_statements(text: str) -> List[Dict[str, Any]]:
             if start in seen_offsets:
                 continue
             seen_offsets.add(start)
-            window_start = max(0, start - _PLACE_QUOTE_CONTEXT)
-            window_end = min(
-                len(text), start + len(match.group("name")) + _PLACE_QUOTE_CONTEXT
+            window_start = _snap_quote_start(text, max(0, start - _PLACE_QUOTE_CONTEXT))
+            window_end = _snap_quote_end(
+                text,
+                min(len(text), start + len(match.group("name")) + _PLACE_QUOTE_CONTEXT),
             )
             statements.append(
                 {
@@ -537,6 +590,16 @@ def _document_venue_statements(text: str) -> List[Dict[str, Any]]:
     return statements
 
 
+def _governed_by_a_person_relation(situation: str, match: re.Match[str]) -> bool:
+    """#3586 — is this venitive match the complement of a relation to a
+    PERSON? ``face à Jean Dorlac``, ``répond à X``, ``s'adresse à X``,
+    ``opposait à X`` (any tense: the verbs are read by their stem), and
+    ``siège au X`` (a role in an institution): the capitalised run is the
+    person or the institution, not a venue."""
+    before = situation[: match.start()]
+    return any(cue.search(before) for cue in _PERSON_RELATION_CUES)
+
+
 def _situation_place_candidates(situation: str) -> List[str]:
     """#3555 — the places the historian's situation places the SPEECH at.
 
@@ -544,6 +607,18 @@ def _situation_place_candidates(situation: str) -> List[str]:
     de`` form (see the two patterns above). This is a candidate list, not a
     verdict: the confrontation below decides, and the state records what the
     situation named.
+
+    #3586: a venitive match governed by a relation to a person is not a
+    venue (``_governed_by_a_person_relation``). Five cues are covered —
+    « face à », and the three verbs read by their stem so every tense and
+    every elided pronoun is covered by construction: « répond / répondrait /
+    répondit à », « s'adresse / s'adressait à », « opposé / l'opposait à »
+    (the c13-c14 shape), plus « siège au <institution> » (a role, not the
+    place the speech was given; c8). Left out, and named in the pull request:
+    « devant <person> » (no construction separates it from « devant
+    <assembly> », and enumerating person names is excluded by the privacy
+    rule), and relations carried by another preposition (``aux côtés de``,
+    ``à l'égard de``).
     """
     if not situation:
         return []
@@ -551,9 +626,10 @@ def _situation_place_candidates(situation: str) -> List[str]:
     matches = sorted(
         [
             m
-            for cue in (_SITUATION_VENUE_RE, _SITUATION_PLACE_KIND_RE)
-            for m in cue.finditer(situation)
-        ],
+            for m in _SITUATION_VENUE_RE.finditer(situation)
+            if not _governed_by_a_person_relation(situation, m)
+        ]
+        + list(_SITUATION_PLACE_KIND_RE.finditer(situation)),
         key=lambda m: m.start("name"),
     )
     for match in matches:
