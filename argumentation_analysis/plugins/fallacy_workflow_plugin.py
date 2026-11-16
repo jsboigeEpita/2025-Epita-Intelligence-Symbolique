@@ -1975,9 +1975,22 @@ class FallacyWorkflowPlugin:
                 )
                 justification = confirm_result.get("justification", "")
 
-                # Capture reasoning for memory
+                # Capture reasoning for memory.
+                # #3525 — name the node the verdict CONFIRMS. This line used to
+                # print the explored parent's name beside the confirmed child's
+                # depth, and when the model omits its justification it is the
+                # only text the finding carries — the reader was told one node
+                # and given another.
+                if confirmed_node:
+                    confirmed_name = (
+                        confirmed_node.get(f"text_{self.language}")
+                        or confirmed_node.get("nom_vulgarisé")
+                        or confirmed_pk
+                    )
+                else:
+                    confirmed_name = confirmed_pk
                 reasoning_summary = (
-                    f"Confirmed {current_node.get(f'text_{self.language}', current_pk)} "
+                    f"Confirmed {confirmed_name} "
                     f"at depth {confirmed_depth}: {justification}"
                 )
                 reasoning_history.append(reasoning_summary)
