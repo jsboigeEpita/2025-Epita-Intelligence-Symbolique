@@ -85,6 +85,16 @@ async def test_bridge_plans_its_own_acts_without_any_harness_append():
     assert result["unresolved_capabilities"] == {}
 
 
+async def test_bridge_witness_detects_removal_of_restitution_mapping(monkeypatch):
+    from argumentation_analysis.orchestration.hierarchical.hierarchy_bridge import (
+        _OBJECTIVE_CAPABILITY_MAP,
+    )
+
+    monkeypatch.delitem(_OBJECTIVE_CAPABILITY_MAP, "restitution")
+    with pytest.raises(AssertionError):
+        await test_bridge_plans_its_own_acts_without_any_harness_append()
+
+
 async def test_bridge_persists_ordered_acts_through_real_state_writers():
     from argumentation_analysis.core.shared_state import UnifiedAnalysisState
     from argumentation_analysis.reporting.restitution.pipeline_adapter import (
