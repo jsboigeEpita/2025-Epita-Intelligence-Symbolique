@@ -1643,9 +1643,23 @@ def rerender(
 
 
 def _item_anchor(item: Dict[str, Any]) -> str:
-    """The quote that identifies an item: the side its code must quote."""
-    side = "zeroshot" if item.get("code") == "M1" else "pipeline"
-    return normalise(item.get(f"{side}_quote") or "")
+    """The quote that identifies an item: the passage it points at.
+
+    #3598 — an M1's identity is the DOCUMENT passage (``document_quote``),
+    not the zero-shot's wording: six passes that point at the same passage
+    but quote the zero-shot with different cuts are one item, and nesting
+    zero-shot quotes split them into clusters too small to ever reach a
+    majority. Measured on every recorded pass of c10-c15: every kept M1
+    (1002 of 1002) carries a document_quote found in the document's
+    raw_text (normalised), so the quote carries the passage's position; the
+    36 M1 rows without one are all dropped rows, and an M1 with no document
+    quote falls back to the zero-shot quote so identity stays defined.
+    """
+    if item.get("code") == "M1":
+        return normalise(item.get("document_quote") or "") or normalise(
+            item.get("zeroshot_quote") or ""
+        )
+    return normalise(item.get("pipeline_quote") or "")
 
 
 def _same_item(a: Dict[str, Any], b: Dict[str, Any]) -> bool:
@@ -1653,6 +1667,8 @@ def _same_item(a: Dict[str, Any], b: Dict[str, Any]) -> bool:
 
     Containment, not equality: two passes over the same texts often cut the
     same passage a few words wider or narrower, and that is the same item.
+    The anchor is the document passage for an M1 (#3598) and the pipeline
+    side for every other code.
     """
     if a.get("code") != b.get("code"):
         return False
@@ -1853,6 +1869,13 @@ def consensus_row(
     (``_same_item``) are listed with their support, the others as
     ``minority`` — listed, never deciding. A document that fewer than a
     majority of passes could read stays ``UNPARSED``.
+
+    #3598 — an item's identity is the passage it points at (the document
+    passage for an M1), and its centrality is the majority of its OWN
+    cluster's members: a minority cluster whose members flag it central is
+    listed "severe, minority" — it never decides (kept-ness stays the
+    majority of the passes), but it is no longer erased. The state never
+    reads the clusters: it stays the majority of the per-pass answers.
     """
     n = len(rows)
     need = n // 2 + 1
@@ -1882,7 +1905,13 @@ def consensus_row(
         central_votes = sum(
             1 for _, member in cluster if member.get("on_central_thesis")
         )
-        item["on_central_thesis"] = central_votes >= need
+        # #3598 — centrality is the CLUSTER'S OWN majority, not a majority of
+        # the whole consensus: a cluster below ``need`` could never be
+        # central however unanimous its members, so a minority of passes
+        # flagging the same passage central was erased instead of listed.
+        # Kept-ness stays ``support >= need``: a central minority cluster is
+        # listed "severe, minority" and never decides.
+        item["on_central_thesis"] = central_votes * 2 > len(cluster)
         item["severity"] = severity_of(item["code"], item["on_central_thesis"])
         item["support"] = len(cluster)
         (kept if len(cluster) >= need else minority).append(item)

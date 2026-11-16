@@ -1728,3 +1728,101 @@ class TestTheConsensusIsTheMajorityAnswer:
         p1 = self._write_pass(tmp_path, "p1", {"d1": [_S2]})
         with pytest.raises(SystemExit, match="at least two"):
             jp.build_consensus([p1], tmp_path / "out")
+
+
+# ---------------------------------------------------------------------------
+# #3598 — the cluster's identity is the document passage, its centrality is
+# its own majority
+# ---------------------------------------------------------------------------
+
+_CUTS = (
+    "Le document defend la these beta",
+    "en s'appuyant sur un exemple date",
+    "ne discute jamais la semantique preferee",
+    "et ne discute jamais",
+    "la these beta en s'appuyant",
+    "un exemple date, et",
+)
+
+#: A second passage of the same synthetic document: a different item.
+DOC_QUOTE_B = "le texte appuie cette affirmation sur trois chiffres dates"
+
+
+def _m1(reading, document=DOC_QUOTE, central=True):
+    return {
+        "code": "M1",
+        "reading_quote": reading,
+        "document_quote": document,
+        "on_central_thesis": central,
+    }
+
+
+class TestClusterIdentityIsTheDocumentPassage3598:
+    """#3598 — c15: six passes pointed at the same document passage and
+    quoted the zero-shot with six cuts that do not nest. The consensus
+    split them into singletons, and a cluster below ``need`` could never be
+    central, so 0 severe items were listed while the passes said severe 6
+    of 6. Identity moves to the document passage (measured: every kept M1
+    of c10-c15, 1002 of 1002, carries a document_quote found in the
+    document's raw_text); centrality becomes the cluster's own majority.
+    Born red on ``main`` both ways: there the six cuts are six items, and a
+    minority cluster is never central."""
+
+    def _six_rows(self, cuts=_CUTS, document=DOC_QUOTE):
+        return [_row([_m1(c, document)], "ZEROSHOT_WINS") for c in cuts]
+
+    def test_six_cuts_of_one_document_passage_make_one_severe_kept_item(self):
+        # The split the issue measured: no cut contains another once
+        # normalised, so nesting zero-shot quotes cannot join them.
+        for i, a in enumerate(_CUTS):
+            for b in _CUTS[i + 1 :]:
+                na, nb = jp.normalise(a), jp.normalise(b)
+                assert not (na in nb or nb in na), (a, b)
+
+        row = jp.consensus_row(self._six_rows(), [f"p{i}" for i in range(6)])
+
+        (kept,) = row["kept"]
+        assert kept["support"] == 6
+        assert kept["severity"] == "severe"
+        assert kept["on_central_thesis"] is True
+        assert row["minority"] == []
+        # The state still reads the per-pass votes, not the clusters.
+        assert row["state"] == "ZEROSHOT_WINS"
+        assert row["consensus"]["votes"]["severe"] == 6
+
+    def test_a_minority_cluster_keeps_its_severity_and_never_decides(self):
+        """Three passes of six point at one passage, three at another: two
+        clusters of 3, both below ``need``. Both are listed — severe,
+        minority — and neither decides anything: kept stays empty and the
+        state stays the passes' votes."""
+        rows = [_row([_m1(c, DOC_QUOTE)], "ZEROSHOT_WINS") for c in _CUTS[:3]] + [
+            _row([_m1(c, DOC_QUOTE_B)], "ZEROSHOT_WINS") for c in _CUTS[3:]
+        ]
+
+        row = jp.consensus_row(rows, [f"p{i}" for i in range(6)])
+
+        assert row["kept"] == []
+        assert sorted(i["support"] for i in row["minority"]) == [3, 3]
+        assert all(i["severity"] == "severe" for i in row["minority"])
+        assert all(i["on_central_thesis"] is True for i in row["minority"])
+        # Never deciding: the state is the majority of the per-pass answers.
+        assert row["state"] == "ZEROSHOT_WINS"
+
+    def test_two_different_document_passages_are_two_items(self):
+        """The control: identity by passage must not merge two genuinely
+        different omissions — the two passages do not nest, so two
+        clusters."""
+        rows = [_row([_m1(_CUTS[0], DOC_QUOTE)], "ZEROSHOT_WINS") for _ in range(4)] + [
+            _row([_m1(_CUTS[1], DOC_QUOTE_B)], "ZEROSHOT_WINS") for _ in range(2)
+        ]
+
+        row = jp.consensus_row(rows, [f"p{i}" for i in range(6)])
+
+        (kept,) = row["kept"]
+        assert kept["support"] == 4
+        (minority,) = row["minority"]
+        assert minority["support"] == 2
+        # The majority cluster decides its own severity; the minority keeps
+        # what its members said without ever deciding.
+        assert kept["severity"] == "severe"
+        assert minority["severity"] == "severe"
