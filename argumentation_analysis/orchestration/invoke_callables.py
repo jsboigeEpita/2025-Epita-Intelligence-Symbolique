@@ -14737,6 +14737,15 @@ def _build_persona_callable(
     reading passes one so its inventory's end is a DECISION, not the
     provider's default. ``None`` (every other persona) sends no cap, exactly
     as before.
+
+    ``response_format`` (#3600) is NOT spelled here: the ONE per-provider
+    decision of #3096 owns it. All five personas ask for JSON in their
+    prompts (the openai ``json_object`` mode requires the word in the
+    messages), so the mode is what the prompt already asks for; on the
+    anthropic endpoint the decision answers ``None`` — the key is then
+    ABSENT, since ``response_format=None`` is a different request than no
+    key. No per-site flag: the decision is read once, where the route is
+    resolved.
     """
     try:
         llm_client, model_id = _get_openai_client()
@@ -14748,6 +14757,12 @@ def _build_persona_callable(
     sampling = sampling_kwargs(_resolve_llm_route()[1], dict(_get_determinism_params()))
     if max_completion_tokens:
         sampling = {**sampling, "max_completion_tokens": max_completion_tokens}
+
+    # #3600 — the ONE decision (#3096), read from the endpoint the client was
+    # built from. ``None`` means prompt-only JSON: the key is not sent.
+    response_format, _base_url = resolved_json_response_format()
+    if response_format is not None:
+        sampling = {**sampling, "response_format": response_format}
 
     async def _call(prompt: str) -> str:
         response = await _guarded_chat_completion(
