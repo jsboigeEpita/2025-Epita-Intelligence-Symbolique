@@ -133,6 +133,20 @@ _TEXT_STRIP_DICT_OF_DICTS = {
     "structured_arg_status": {"reason"},
 }
 
+# #3590 — dict-of-dicts fields whose entry carries a nested DICT holding a
+# verbatim leaf: field -> {entry_subkey -> {leaf_subkeys}}. The fact-extraction
+# writer (``_mark_declared_indeterminate``, state_writers.py) adds
+# ``argument_provenance[arg_id].indeterminate = {status, declared_quote,
+# declared_offset}`` AFTER ``add_argument`` built the entry, one dict below the
+# flat ``source_quote`` rule of pass 4, which therefore never reached it.
+# ``declared_quote`` is the document's own declaring sentence: the #3217
+# ``source_quote`` verdict applies, drop the leaf and keep the record.
+# ``status`` (closed vocabulary) and ``declared_offset`` (int) survive, so an
+# export still says which units the document declared unsettled.
+_TEXT_STRIP_DICT_OF_DICTS_NESTED: dict[str, dict[str, set[str]]] = {
+    "argument_provenance": {"indeterminate": {"declared_quote"}},
+}
+
 # Dict-of-dicts fields whose *list sub-keys* carry nominative text entries
 # (verified nominative firsthand, #1265): top-level field -> {sub_key}.
 # Each list is reduced by opacifying every string entry via ``opaque_id``
@@ -416,7 +430,16 @@ _OPAQUE_LIST_OF_DICTS_SUBKEYS = {
     "ranking_results": {"arguments"},
     "probabilistic_results": {"arguments"},
     "bipolar_results": {"arguments", "supports"},
-    "aspic_results": {"extensions"},
+    # #1649 — ``aspic_undercut_reasons`` = one refusal string per counter;
+    # the unresolved-target leg embeds the producer's
+    # ``target_unresolved_reason``, i.e. up to 60 chars of the model's echoed
+    # target. Opacified, not dropped: the refusal count survives.
+    "aspic_results": {"extensions", "aspic_undercut_reasons"},
+    # #1649 — ``counter_arguments[*].target_unresolved_reason`` (#2968) reads
+    # "echoed target {echo[:60]!r} matches no offered key": the echo is the
+    # model's copy of a unit's text. Opacified, not dropped: an unlinked
+    # counter stays a measured fact in the export, its wording does not.
+    "counter_arguments": {"target_unresolved_reason"},
     "belief_revision_results": {"original", "revised"},
     "dialogue_results": {"topic"},
     # #3235: ``atms_contexts[*].assumptions`` — the arg atoms (measured:
@@ -553,7 +576,16 @@ _OPAQUE_NESTED_ITEM_SUBKEYS = {
     # closed vocabularies at every producer (measured: handler _qualify_attacks,
     # translator _validate_aspic_*) → preserved, exactly as dung_frameworks.name
     # is. Uses the same opacify_list_values path as dialogue_results.trace.
-    "aspic_results": {"attacks": {"target", "attacker_premises"}},
+    # #1649 (State on 15/11) — ``aspic_undercut_decisions[*].counter_atom`` is
+    # ``_pl_atom`` of the counter's text, the same atom the undercut rule
+    # puts in ``attacks[*].attacker_premises``: same class, same pass, and the
+    # deterministic ``opaque_id`` keeps the join between the two.
+    # ``counter_id`` / ``target_unit`` / ``target_rule`` are ids and rule
+    # names at the producer → preserved.
+    "aspic_results": {
+        "attacks": {"target", "attacker_premises"},
+        "aspic_undercut_decisions": {"counter_atom"},
+    },
     # #3235: ``jtms_beliefs`` is dict-keyed (``{jtms_N: {…}}``), so this
     # pass's list-only gate could never reach it — the same shape-blindness
     # 5b had before #1664. The justification items are dicts carrying the
@@ -824,6 +856,29 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
                 )
                 for key, val in data[field].items()
             }
+
+    # 4, one dict deeper (#3590): the nested verbatim leaves of
+    # ``_TEXT_STRIP_DICT_OF_DICTS_NESTED``. New dicts are built, never mutated
+    # in place, because the ``dict(state)`` fallback above is a shallow copy.
+    for field, nested_spec in _TEXT_STRIP_DICT_OF_DICTS_NESTED.items():
+        container = data.get(field)
+        if not isinstance(container, dict):
+            continue
+        data[field] = {
+            key: (
+                {
+                    sub: (
+                        _strip_text_from_dict(val, nested_spec[sub])
+                        if sub in nested_spec and isinstance(val, dict)
+                        else val
+                    )
+                    for sub, val in entry.items()
+                }
+                if isinstance(entry, dict)
+                else entry
+            )
+            for key, entry in container.items()
+        }
 
     # 4b. Opacify the nominative list-valued sub-keys of dict-of-dicts fields
     #     (dung_frameworks.arguments = [claim_text, ...],

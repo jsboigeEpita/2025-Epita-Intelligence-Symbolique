@@ -2455,6 +2455,11 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         argument_ids_absent_reason: Optional[str] = None,
         population_total: Optional[int] = None,
         dropped_unresolved: Optional[int] = None,
+        aspic_undercut_emitted: Optional[int] = None,
+        aspic_undercut_considered: Optional[int] = None,
+        aspic_undercut_total: Optional[int] = None,
+        aspic_undercut_decisions: Optional[List[Dict[str, Any]]] = None,
+        aspic_undercut_reasons: Optional[List[str]] = None,
     ) -> str:
         """Add an ASPIC+ analysis result.
 
@@ -2492,6 +2497,23 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             entry["population_total"] = population_total
         if dropped_unresolved is not None:
             entry["dropped_unresolved"] = dropped_unresolved
+        # #1649 (State on 15/11) — the WK-undercut lever's ledger: the
+        # emitted/considered/total counters, the per-emission decisions
+        # (two-unit anchor: counter ↔ target rule) and the per-counter
+        # refusal reasons, so a cycle reading never needs the log line.
+        # Stored only when set (#3009 contract): absence stays absence —
+        # a payload without the keys is an older payload or a run without
+        # the consumer, never a measured zero (#1019).
+        if aspic_undercut_emitted is not None:
+            entry["aspic_undercut_emitted"] = aspic_undercut_emitted
+        if aspic_undercut_considered is not None:
+            entry["aspic_undercut_considered"] = aspic_undercut_considered
+        if aspic_undercut_total is not None:
+            entry["aspic_undercut_total"] = aspic_undercut_total
+        if aspic_undercut_decisions is not None:
+            entry["aspic_undercut_decisions"] = aspic_undercut_decisions
+        if aspic_undercut_reasons is not None:
+            entry["aspic_undercut_reasons"] = aspic_undercut_reasons
         self.aspic_results.append(entry)
         state_logger.info(f"ASPIC+ result added: {as_id} (reasoner: {reasoner_type})")
         return as_id

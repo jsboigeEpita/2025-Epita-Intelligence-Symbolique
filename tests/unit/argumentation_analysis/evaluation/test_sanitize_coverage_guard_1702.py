@@ -100,6 +100,18 @@ CANARY2 = (
     "never realistically achievable in practice"
 )
 
+#: #3590 — a synthetic pair-of-notes text, the shape the declared-zone reader
+#: keys on: a note naming an invented language, a line, then a note denying any
+#: verbatim record. The denying sentence carries the canary, so the writer's
+#: ``declared_quote`` does too. No word of it comes from the corpus.
+_DECLARED_ZONE_TEXT = (
+    "[Scene: a fictional assembly hall. The orator addresses the room in "
+    "pseudo-Marlev speech; a scribe relays each burst.] "
+    "Vlorbnex kessamil drau. "
+    "[There exists no verbatim record of the whole oration: " + CANARY + ".]"
+)
+_ZONE_INSIDE_QUOTE = "Vlorbnex kessamil drau."
+
 
 def _canaried_state() -> UnifiedAnalysisState:
     """Build a state with a canary planted in every NL slot a producer writes.
@@ -113,7 +125,7 @@ def _canaried_state() -> UnifiedAnalysisState:
     *shapes* are the real writer shapes (verified at each ``add_*`` call site
     in ``state_writers.py``), which is what the allow-list gates on.
     """
-    s = UnifiedAnalysisState("initial text")
+    s = UnifiedAnalysisState(_DECLARED_ZONE_TEXT)  # raw_text is dropped (pass 1)
     NL, NL2 = CANARY, CANARY2
 
     # --- RhetoricalAnalysisState (base) NL fields -----------------------------
@@ -159,7 +171,15 @@ def _canaried_state() -> UnifiedAnalysisState:
     # while ``shared_state`` has seven; the coordinator's replay of the stored
     # states surfaced the three the issue under-counted).
     labels: dict[str, str] = {"arg_1": NL, "arg_2": NL2}
-    s.add_counter_argument(NL, NL2, "distinction", 0.6)  # pass 5
+    s.add_counter_argument(  # pass 5 + 5b (.target_unresolved_reason)
+        NL,
+        NL2,
+        "distinction",
+        0.6,
+        # #1649 — the producer's reason embeds up to 60 chars of the
+        # model's echoed target (invoke_callables.py, the #2968 stamp).
+        target_unresolved_reason=NL,
+    )
     s.add_ranking_result(  # pass 5b (.arguments) + 5g (.argument_labels)
         "burden",
         [NL],
@@ -179,6 +199,23 @@ def _canaried_state() -> UnifiedAnalysisState:
             }
         ],
         argument_labels=labels,
+        # #1649 — the undercut ledger: ``counter_atom`` is ``_pl_atom`` of the
+        # counter's text (24 leading chars, the ``attacker_premises`` class),
+        # and each refusal reason can carry the producer's echoed target.
+        # ``counter_id`` / ``target_unit`` / ``target_rule`` are ids and rule
+        # names, structural at the producer: real-shaped literals, no canary.
+        aspic_undercut_emitted=1,
+        aspic_undercut_considered=1,
+        aspic_undercut_total=2,
+        aspic_undercut_decisions=[
+            {
+                "counter_id": "#0",
+                "counter_atom": NL,
+                "target_unit": "arg_1",
+                "target_rule": "def_con_1",
+            }
+        ],
+        aspic_undercut_reasons=[NL2],
     )
     s.add_belief_revision_result(  # passes 5b + 5e (.options) + 5g
         "dalal",
@@ -241,8 +278,16 @@ def _canaried_state() -> UnifiedAnalysisState:
     # leaf, which is exactly how 427 verbatim source spans survived on the
     # stored states. A bare-string claim rides along to keep the no-quote
     # shape exercised.
+    # #3590 — the same writer call carries one unit whose quote falls inside
+    # the declared zone of ``_DECLARED_ZONE_TEXT``: the writer then adds
+    # ``argument_provenance[id].indeterminate.declared_quote`` (the declaring
+    # sentence, canary included) after ``add_argument`` built the entry. An
+    # ``add_*`` plant cannot reach that leaf; only the writer writes it.
     _write_fact_extraction_to_state(
-        {"claims": [{"text": NL, "source_quote": NL2}, NL2], "arguments": []},
+        {
+            "claims": [{"text": NL, "source_quote": NL2}, NL2],
+            "arguments": [{"text": NL, "source_quote": _ZONE_INSIDE_QUOTE}],
+        },
         s,
         {},
     )
@@ -948,6 +993,14 @@ class TestSubstitutionControl:
                 "argument_provenance",
                 ".source_quote",
             ),
+            # #3590: the declaring sentence one dict deeper, written by the
+            # fact-extraction writer for a unit inside a declared zone.
+            (
+                "_TEXT_STRIP_DICT_OF_DICTS_NESTED",
+                "argument_provenance",
+                "argument_provenance",
+                ".indeterminate.declared_quote",
+            ),
             # Pass 5g (#3228): the display-label maps on the seven AF
             # containers — {arg_N: label}, the label being the argument text
             # itself. Removing one container's entry re-leaks its canary
@@ -1023,6 +1076,26 @@ class TestSubstitutionControl:
                 "aspic_results",
                 "aspic_results",
                 ".attacks",
+            ),
+            # #1649: the undercut ledger's counter atom (5d) and refusal
+            # reasons (5b), and the counter's own unresolved-target reason (5b).
+            (
+                "_OPAQUE_NESTED_ITEM_SUBKEYS",
+                "aspic_results",
+                "aspic_results",
+                ".aspic_undercut_decisions",
+            ),
+            (
+                "_OPAQUE_LIST_OF_DICTS_SUBKEYS",
+                "aspic_results",
+                "aspic_results",
+                ".aspic_undercut_reasons",
+            ),
+            (
+                "_OPAQUE_LIST_OF_DICTS_SUBKEYS",
+                "counter_arguments",
+                "counter_arguments",
+                ".target_unresolved_reason",
             ),
             # Pass 4 (#3235): identified_fallacies.problematic_quote — the
             # verbatim argument span the real add_fallacy writer stores.

@@ -61,6 +61,34 @@ def _identity_counts(output: Any) -> Dict[str, int]:
     return counts
 
 
+def _aspic_undercut_fields(output: Any) -> Dict[str, Any]:
+    """#1649 — the WK-undercut lever's ledger for the ``add_aspic_result``
+    pass-through: ``aspic_undercut_emitted / considered / total`` (the
+    consumer sets the three counters on every payload it returns — a 0 there
+    IS a measured zero) plus ``aspic_undercut_decisions`` (the two-unit anchor
+    per emission) and ``aspic_undercut_reasons`` (the named refusal per
+    non-emitting counter). Int/list-guarded like ``_identity_counts``; absent
+    or malformed on the output ⇒ the key stays out of the entry (honest
+    absence, the #3009 contract): an older payload — or a run where the
+    consumer did not run — writes nothing, never a fabricated 0 (#1019)."""
+    if not isinstance(output, dict):
+        return {}
+    fields: Dict[str, Any] = {}
+    for key in (
+        "aspic_undercut_emitted",
+        "aspic_undercut_considered",
+        "aspic_undercut_total",
+    ):
+        val = output.get(key)
+        if isinstance(val, int) and not isinstance(val, bool) and val >= 0:
+            fields[key] = val
+    for key in ("aspic_undercut_decisions", "aspic_undercut_reasons"):
+        val = output.get(key)
+        if isinstance(val, list):
+            fields[key] = val
+    return fields
+
+
 def _setaf_collective_count(attacks: Any) -> Optional[int]:
     """Count SetAF attacks that are genuinely collective (#1647).
 
@@ -1478,6 +1506,9 @@ def _write_aspic_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         argument_labels=output.get("argument_labels") or None,
         argument_ids_absent_reason=output.get("argument_ids_absent_reason"),
         **_identity_counts(output),
+        # #1649 (State on 15/11): persist the undercut ledger — a cycle
+        # reading should not need the log line.
+        **_aspic_undercut_fields(output),
     )
 
 

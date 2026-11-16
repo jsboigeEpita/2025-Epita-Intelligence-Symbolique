@@ -243,6 +243,11 @@ class _RecordingState(SimpleNamespace):
         argument_ids_absent_reason: Optional[str] = None,
         population_total: Optional[int] = None,
         dropped_unresolved: Optional[int] = None,
+        aspic_undercut_emitted: Optional[int] = None,
+        aspic_undercut_considered: Optional[int] = None,
+        aspic_undercut_total: Optional[int] = None,
+        aspic_undercut_decisions: Optional[List[Dict[str, Any]]] = None,
+        aspic_undercut_reasons: Optional[List[str]] = None,
     ) -> str:
         entry = self._curated(
             {
@@ -256,6 +261,18 @@ class _RecordingState(SimpleNamespace):
             population_total,
             dropped_unresolved,
         )
+        # #1649 — mirror the real sink's stored-only-when-set ledger, so the
+        # writer's ``**_aspic_undercut_fields(output)`` pass-through lands by
+        # ASSERTION, not by TypeError.
+        for key, value in (
+            ("aspic_undercut_emitted", aspic_undercut_emitted),
+            ("aspic_undercut_considered", aspic_undercut_considered),
+            ("aspic_undercut_total", aspic_undercut_total),
+            ("aspic_undercut_decisions", aspic_undercut_decisions),
+            ("aspic_undercut_reasons", aspic_undercut_reasons),
+        ):
+            if value is not None:
+                entry[key] = value
         self.aspic_results.append(entry)
         return f"aspic_{len(self.aspic_results)}"
 
