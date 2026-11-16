@@ -207,6 +207,10 @@ def make_registry_operational_executor(
                 )
 
                 for keyword, caps in _OBJECTIVE_CAPABILITY_MAP.items():
+                    # Restitution acts require the bridge's shared state and
+                    # ordered workflow; delegation cannot execute them alone.
+                    if keyword == "restitution":
+                        continue
                     if keyword in nl:
                         for c in caps:
                             if op_registry.has_capability(c):

@@ -145,6 +145,19 @@ def test_opt_in_flag_adds_the_objective_after_the_strategic_ones():
     assert _phase_capabilities(workflow) == ["deep_synthesis", *ACTS]
 
 
+async def test_generic_delegation_does_not_dispatch_a_restitution_act():
+    from argumentation_analysis.orchestration.hierarchical.delegation_orchestrator import (
+        make_registry_operational_executor,
+    )
+
+    calls = []
+    execute = make_registry_operational_executor(_recording_registry(calls))
+    result = await execute({"strategic_objective_description": "Produire la restitution"})
+    assert calls == []
+    assert result["status"] == "failed"
+    assert result["reason"] == "no_provider_for_required_capabilities"
+
+
 async def test_delegation_mode_rejects_the_restitution_request():
     with pytest.raises(ValueError, match="cannot plan the restitution acts"):
         await run_hierarchical_analysis(
