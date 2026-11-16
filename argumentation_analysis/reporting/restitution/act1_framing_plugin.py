@@ -480,14 +480,26 @@ def _format_historical_block(context: Dict[str, Any]) -> str:
     dating = context.get("dating")
     if isinstance(dating, dict) and dating.get("status") == "uncertain":
         refuted = dating.get("refuted_by") or {}
-        lines.append(
-            f"  Datation DÉGRADÉE (contrôle déterministe) : le document cite "
-            f"« {refuted.get('quote', '')} » (position {refuted.get('offset')}) "
-            f"comme déjà passé — il date donc au plus tôt de {refuted.get('year')}. "
-            f"La situation ci-dessous situait le texte au plus tard en "
-            f"{dating.get('model_year')} : datation incertaine, ne date pas le "
-            "texte d'après elle."
-        )
+        if refuted.get("month") is not None:
+            # #3589 — the day-granular refutation: no year to print, the
+            # cited DAY is the bound. The situation stays below, reframed as
+            # uncertain, exactly as the year channel keeps it.
+            lines.append(
+                f"  Datation DÉGRADÉE (contrôle déterministe) : le document cite "
+                f"déjà comme passé « {refuted.get('quote', '')} » "
+                f"(position {refuted.get('offset')}) — la prise de parole ne peut "
+                f"tomber ce jour-là. Datation incertaine, ne date pas le texte "
+                f"d'après elle."
+            )
+        else:
+            lines.append(
+                f"  Datation DÉGRADÉE (contrôle déterministe) : le document cite "
+                f"« {refuted.get('quote', '')} » (position {refuted.get('offset')}) "
+                f"comme déjà passé — il date donc au plus tôt de {refuted.get('year')}. "
+                f"La situation ci-dessous situait le texte au plus tard en "
+                f"{dating.get('model_year')} : datation incertaine, ne date pas le "
+                "texte d'après elle."
+            )
     situation = _truncate(context.get("situation", ""), _STRATEGIC_READ_CAP)
     if situation:
         prefix = (
