@@ -16,6 +16,8 @@ from typing import Dict, List, Optional, Tuple
 from pydantic import BaseModel, Field
 from semantic_kernel.functions import kernel_function
 
+from argumentation_analysis.core.shared_state import speaker_tag_form
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -102,7 +104,9 @@ def _split_sentences_with_offsets(text: str) -> List[Tuple[str, int]]:
     character in ``text``. A sentence assembled by the join rule (short
     piece, or previous piece ending on an abbreviation) keeps the offset of
     the piece that opened it — the group starts where its first sentence
-    starts. The sentence TEXTS are byte-identical to ``_split_sentences``
+    starts. #3623 — a short piece that has the FORM of a speaker tag is not
+    joined backward: it opens the NEXT sentence, which therefore starts at
+    the tag. The sentence TEXTS are byte-identical to ``_split_sentences``
     (same pieces, same joins): only positions are added.
     """
     # Pieces between separators, with their absolute positions. The pattern
@@ -116,18 +120,41 @@ def _split_sentences_with_offsets(text: str) -> List[Tuple[str, int]]:
     pieces.append((text[last:], last))
 
     sentences: List[Tuple[str, int]] = []
+    # #3623 — une étiquette de locuteur OUVRE le tour suivant : elle ne
+    # referme jamais le précédent. Une pièce courte qui EST une étiquette est
+    # retenue ici et préfixe la pièce suivante ; sa phrase démarre À
+    # l'étiquette (#2973).
+    pending_tags: List[Tuple[str, int]] = []
     for piece, piece_at in pieces:
         stripped = piece.strip()
         if not stripped:
             continue
         content_at = piece_at + (len(piece) - len(piece.lstrip()))
-        if sentences and (
-            len(stripped) <= _MIN_SENTENCE_CHARS
-            or _ABBREVIATION_TAIL.search(sentences[-1][0])
-        ):
+        form = speaker_tag_form(stripped)
+        is_short = len(stripped) <= _MIN_SENTENCE_CHARS
+        if form == "tag_only" and is_short:
+            pending_tags.append((stripped, content_at))
+            continue
+        if pending_tags:
+            prefix = " ".join(tag for tag, _ in pending_tags)
+            first_at = pending_tags[0][1]
+            pending_tags = []
+            sentences.append((f"{prefix} {stripped}", first_at))
+            continue
+        if form:
+            # Étiquette longue, ou « NOM: suite » : la pièce ouvre un tour,
+            # elle ne rejoint pas la phrase précédente (#3623, même classe).
+            sentences.append((stripped, content_at))
+            continue
+        if sentences and (is_short or _ABBREVIATION_TAIL.search(sentences[-1][0])):
             sentences[-1] = (f"{sentences[-1][0]} {stripped}", sentences[-1][1])
         else:
             sentences.append((stripped, content_at))
+    # Une étiquette sans tour après elle (fin de texte ou de chunk) survit
+    # seule : #2982 interdit de la perdre, et la porte #3584 la refuse comme
+    # non propositionnelle plutôt que de la laisser refermer le dernier tour.
+    for tag, tag_at in pending_tags:
+        sentences.append((tag, tag_at))
     return sentences
 
 
@@ -239,6 +266,18 @@ def _heuristic_extract_arguments(
         )
 
     for sent, sent_at in sentences:
+        # #3623 — une phrase réduite à une étiquette de locuteur est une
+        # unité à part : elle ne referme jamais celle du tour précédent, et
+        # la porte #3584 la refuse (aucune proposition). Sans cette règle,
+        # une étiquette en fin de chunk resterait collée en fin d'unité.
+        if speaker_tag_form(sent) == "tag_only":
+            if current_group:
+                _flush()
+            current_group = [sent]
+            group_start = sent_at
+            _flush()
+            current_group = []
+            continue
         is_marker = bool(_ARG_PATTERN.search(sent.split(",")[0]))
         if is_marker and current_group:
             _flush()

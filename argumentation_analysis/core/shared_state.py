@@ -291,12 +291,45 @@ def extend_question_quote(
 # un même doc du panel, mesurées).
 _NON_PROP_BRACKET_SPAN = re.compile(r"\[[^\[\]]*\]")
 # Étiquette de locuteur : préfixe sans minuscule ni chiffre (convention
-# théâtre/transcription), ≤ 40 caractères, terminé par « : ».
-_NON_PROP_SPEAKER_TAG = re.compile(r"^[^a-zà-ÿ0-9\n]{1,40}:\s*")
+# théâtre/transcription), ≤ 40 caractères. #3623 — UNE définition de la
+# forme, DEUX terminateurs : « : » (la forme de #3584, où la réplique suit
+# sur la même ligne) et « . » (la forme mesurée par #3623, où l'étiquette
+# clôt la pièce et ouvre le tour suivant). Le splitheur
+# (``text_to_kb_plugin``) et la porte ci-dessous lisent tous deux
+# ``speaker_tag_form`` — jamais un mot du corpus, jamais une longueur.
+_SPEAKER_TAG_BODY = r"[^a-zà-ÿ0-9\n]{1,40}"
+_NON_PROP_SPEAKER_TAG = re.compile(rf"^{_SPEAKER_TAG_BODY}:")
+_NON_PROP_SPEAKER_TAG_PERIOD = re.compile(rf"^{_SPEAKER_TAG_BODY}\.\s*$")
 _NON_PROP_TIMESTAMP = re.compile(
     r"^\d{1,2}[:hH]\d{2}([:.]\d{2})?" r"\s*(?:[-–]\s*\d{1,2}[:hH]\d{2}([:.]\d{2})?)?$"
 )
 _NON_PROP_LETTERS = re.compile(r"[A-Za-zÀ-ÿœŒ]")
+
+
+def speaker_tag_form(text: str) -> str:
+    """#3623 — la forme d'étiquette de locuteur d'un texte, ``""`` sinon.
+
+    Rend ``"tag_only"`` (le texte EST une étiquette : ``NOM.`` ou ``NOM:``),
+    ``"tag_prefix"`` (le texte OUVRE sur une étiquette suivie de sa réplique,
+    convention ``NOM:``) ou ``""``. Un seul prédicat pour deux lecteurs : le
+    splitheur (``text_to_kb_plugin._split_sentences_with_offsets``), où une
+    étiquette nue ouvre le tour SUIVANT, et la porte de forme
+    (``non_propositional_form``), où une unité réduite à une étiquette ne
+    porte aucune proposition (#3584). Le test ne lit que la forme — pas de
+    mot du corpus, pas de longueur propre : le corps ``{1,40}`` est celui de
+    ``_NON_PROP_SPEAKER_TAG``, et ``tag_only`` pour ``NOM:`` exige que le
+    résidu après l'étiquette ne porte aucune lettre.
+    """
+    raw = (text or "").strip()
+    if not raw:
+        return ""
+    if _NON_PROP_SPEAKER_TAG_PERIOD.match(raw):
+        return "tag_only"
+    match = _NON_PROP_SPEAKER_TAG.match(raw)
+    if not match:
+        return ""
+    residue = raw[match.end() :]
+    return "tag_only" if not _NON_PROP_LETTERS.search(residue) else "tag_prefix"
 
 
 def non_propositional_form(unit_text: str) -> str:
@@ -321,6 +354,13 @@ def non_propositional_form(unit_text: str) -> str:
     if raw.startswith("[") and raw.endswith("]"):
         if not _NON_PROP_BRACKET_SPAN.sub("", raw).strip():
             return "bracket_only"
+    # #3623 — la forme période de l'étiquette de locuteur entre dans la
+    # porte : une unité RÉDUITE à une étiquette (``NOM.``, ``NOM:``) ne porte
+    # aucune proposition, quel que soit son terminateur. Mesuré : 3 unités de
+    # ce type étaient mûes silencieusement sur un doc du panel (c17), et le
+    # splitheur en produit désormais aux frontières de chunk.
+    if speaker_tag_form(raw) == "tag_only":
+        return "speaker_tag_only"
     # Résidu : le texte moins les spans entre crochets, moins l'étiquette de
     # locuteur de tête. Des lettres dans le résidu = une proposition possible.
     residue = _NON_PROP_SPEAKER_TAG.sub(
