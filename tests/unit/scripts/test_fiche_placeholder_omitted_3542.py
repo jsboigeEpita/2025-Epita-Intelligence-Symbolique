@@ -53,13 +53,29 @@ _PLACEHOLDERS = {
 }
 
 #: The paragraph's material sentence when no field holds a placeholder —
-#: byte-identical to what the code printed before the fix (the control).
+#: the header's own elements first, then the registry's fields.
 _CONTROL_SENTENCE = (
-    "Le matériel enregistré le décrit ainsi — type de discours : « note de "
-    "service » ; lieu : « Institution X » ; événement : « audience de la "
+    "Le matériel enregistré le décrit ainsi — événement : « audience de la "
     "commission synthetique » ; participants : « deux rapporteurs fictifs » ; "
-    "titre du rapport : « Rapport sur un sujet invente »."
+    "titre du rapport : « Rapport sur un sujet invente » ; type de discours : "
+    "« note de service » ; lieu : « Institution X »."
 )
+
+#: The paragraph of a metadata that holds the header's elements and NO
+#: registry field: byte-identical to the one main printed, as a literal.
+_HEADER_ONLY_PARAGRAPH = (
+    "Ce document de 320 caractères n'a pas été lu comme une argumentation : "
+    "l'extraction n'y a identifié aucun argument — aucune thèse à examiner, "
+    "aucun raisonnement à suivre.\n\nLe matériel enregistré le décrit ainsi — "
+    "événement : « audience de la commission synthetique » ; participants : "
+    "« deux rapporteurs fictifs » ; titre du rapport : « Rapport sur un "
+    "sujet invente ».\n\nLes phases qui lisent des arguments, des sophismes "
+    "ou des inférences ont donc été écartées : la classification est "
+    "terminale, et ce n'est pas un échec."
+)
+
+#: The reader labels of the document's own header elements.
+_HEADER_LABELS = ("événement", "participants", "titre du rapport")
 
 
 def _state(metadata):
@@ -148,8 +164,8 @@ class TestAFieldWithAValueStillRenders:
 
 class TestTheControlRenderStaysByteIdentical:
     def test_a_metadata_without_placeholder_keeps_its_exact_bytes(self):
-        """No placeholder, no registry field: the paragraph is the one the
-        code already printed, byte for byte."""
+        """No placeholder: every field still renders, under its reader
+        label, with its value — the header first."""
         out = _paragraph(_VALUES)
         assert _CONTROL_SENTENCE in out
         assert "non renseigné" not in out
@@ -158,3 +174,48 @@ class TestTheControlRenderStaysByteIdentical:
         out = _paragraph({})
         assert "Le matériel enregistré" not in out
         assert "n'a pas été lu comme une argumentation" in out
+
+    def test_a_header_only_metadata_gives_the_paragraph_main_prints(self):
+        """Ask 4's control: a metadata with the header's elements and no
+        registry field gives the paragraph main prints, byte for byte —
+        there is nothing to reorder."""
+        out = _paragraph(
+            {
+                "event": "audience de la commission synthetique",
+                "participants": "deux rapporteurs fictifs",
+                "report_title": "Rapport sur un sujet invente",
+            }
+        )
+        assert out == _HEADER_ONLY_PARAGRAPH
+
+
+class TestTheHeaderElementsComeFirst:
+    """Ask 1 — the document's OWN header elements (the event, the
+    participants, the report's title) print before every other metadata
+    field: the reader meets what the document says about itself before
+    the registry's bookkeeping."""
+
+    def _labels(self, metadata):
+        out = _paragraph(metadata)
+        line = next(ln for ln in out.splitlines() if "Le matériel enregistré" in ln)
+        clauses = line.split(" — ", 1)[1].rstrip(".").split(" ; ")
+        return [clause.split(" : ", 1)[0] for clause in clauses]
+
+    def test_the_three_header_labels_precede_every_other_label(self):
+        """RED on the unmodified code: the record's order puts the
+        registry's fields first."""
+        labels = self._labels({**_VALUES, **_PLACEHOLDERS})
+        assert labels[:3] == list(_HEADER_LABELS)
+        # ... and every other label comes after them.
+        for label in labels[3:]:
+            assert labels.index(label) > 2
+
+    def test_a_header_only_metadata_keeps_its_own_order(self):
+        labels = self._labels(
+            {
+                "event": "audience de la commission synthetique",
+                "participants": "deux rapporteurs fictifs",
+                "report_title": "Rapport sur un sujet invente",
+            }
+        )
+        assert labels == list(_HEADER_LABELS)

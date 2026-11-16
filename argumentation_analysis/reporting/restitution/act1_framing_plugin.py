@@ -119,6 +119,15 @@ _META_LABELS: Dict[str, str] = {
 _META_PLACEHOLDER = "non renseigné"
 _META_PLACEHOLDER_VALUES = frozenset({"unknown", "none", "null", "n/a"})
 
+#: The keys the DOCUMENT's own header carries — the event, the
+#: participants, the report's title (#3392 ask 2, #3408 rework). Every
+#: other metadata key is a registry field: the header says what the
+#: document is about, the registry says what the corpus recorded. A
+#: reader surface that lists the registry's fields first makes the
+#: reader meet the corpus's bookkeeping before the document itself
+#: (#3542 ask 1), so these come first there.
+HEADER_METADATA_KEYS = ("event", "participants", "report_title")
+
 
 def reader_metadata_view(metadata: Dict[str, Any]) -> Dict[str, str]:
     """The metadata block as the WRITER sees it (#3311): reader labels,
