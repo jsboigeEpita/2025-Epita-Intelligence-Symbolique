@@ -159,7 +159,15 @@ def _canaried_state() -> UnifiedAnalysisState:
     # while ``shared_state`` has seven; the coordinator's replay of the stored
     # states surfaced the three the issue under-counted).
     labels: dict[str, str] = {"arg_1": NL, "arg_2": NL2}
-    s.add_counter_argument(NL, NL2, "distinction", 0.6)  # pass 5
+    s.add_counter_argument(  # pass 5 + 5b (.target_unresolved_reason)
+        NL,
+        NL2,
+        "distinction",
+        0.6,
+        # #1649 — the producer's reason embeds up to 60 chars of the
+        # model's echoed target (invoke_callables.py, the #2968 stamp).
+        target_unresolved_reason=NL,
+    )
     s.add_ranking_result(  # pass 5b (.arguments) + 5g (.argument_labels)
         "burden",
         [NL],
@@ -179,6 +187,23 @@ def _canaried_state() -> UnifiedAnalysisState:
             }
         ],
         argument_labels=labels,
+        # #1649 — the undercut ledger: ``counter_atom`` is ``_pl_atom`` of the
+        # counter's text (24 leading chars, the ``attacker_premises`` class),
+        # and each refusal reason can carry the producer's echoed target.
+        # ``counter_id`` / ``target_unit`` / ``target_rule`` are ids and rule
+        # names, structural at the producer: real-shaped literals, no canary.
+        aspic_undercut_emitted=1,
+        aspic_undercut_considered=1,
+        aspic_undercut_total=2,
+        aspic_undercut_decisions=[
+            {
+                "counter_id": "#0",
+                "counter_atom": NL,
+                "target_unit": "arg_1",
+                "target_rule": "def_con_1",
+            }
+        ],
+        aspic_undercut_reasons=[NL2],
     )
     s.add_belief_revision_result(  # passes 5b + 5e (.options) + 5g
         "dalal",
@@ -1023,6 +1048,26 @@ class TestSubstitutionControl:
                 "aspic_results",
                 "aspic_results",
                 ".attacks",
+            ),
+            # #1649: the undercut ledger's counter atom (5d) and refusal
+            # reasons (5b), and the counter's own unresolved-target reason (5b).
+            (
+                "_OPAQUE_NESTED_ITEM_SUBKEYS",
+                "aspic_results",
+                "aspic_results",
+                ".aspic_undercut_decisions",
+            ),
+            (
+                "_OPAQUE_LIST_OF_DICTS_SUBKEYS",
+                "aspic_results",
+                "aspic_results",
+                ".aspic_undercut_reasons",
+            ),
+            (
+                "_OPAQUE_LIST_OF_DICTS_SUBKEYS",
+                "counter_arguments",
+                "counter_arguments",
+                ".target_unresolved_reason",
             ),
             # Pass 4 (#3235): identified_fallacies.problematic_quote — the
             # verbatim argument span the real add_fallacy writer stores.

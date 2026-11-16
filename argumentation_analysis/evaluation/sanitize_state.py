@@ -416,7 +416,16 @@ _OPAQUE_LIST_OF_DICTS_SUBKEYS = {
     "ranking_results": {"arguments"},
     "probabilistic_results": {"arguments"},
     "bipolar_results": {"arguments", "supports"},
-    "aspic_results": {"extensions"},
+    # #1649 — ``aspic_undercut_reasons`` = one refusal string per counter;
+    # the unresolved-target leg embeds the producer's
+    # ``target_unresolved_reason``, i.e. up to 60 chars of the model's echoed
+    # target. Opacified, not dropped: the refusal count survives.
+    "aspic_results": {"extensions", "aspic_undercut_reasons"},
+    # #1649 — ``counter_arguments[*].target_unresolved_reason`` (#2968) reads
+    # "echoed target {echo[:60]!r} matches no offered key": the echo is the
+    # model's copy of a unit's text. Opacified, not dropped: an unlinked
+    # counter stays a measured fact in the export, its wording does not.
+    "counter_arguments": {"target_unresolved_reason"},
     "belief_revision_results": {"original", "revised"},
     "dialogue_results": {"topic"},
     # #3235: ``atms_contexts[*].assumptions`` — the arg atoms (measured:
@@ -553,7 +562,16 @@ _OPAQUE_NESTED_ITEM_SUBKEYS = {
     # closed vocabularies at every producer (measured: handler _qualify_attacks,
     # translator _validate_aspic_*) → preserved, exactly as dung_frameworks.name
     # is. Uses the same opacify_list_values path as dialogue_results.trace.
-    "aspic_results": {"attacks": {"target", "attacker_premises"}},
+    # #1649 (State on 15/11) — ``aspic_undercut_decisions[*].counter_atom`` is
+    # ``_pl_atom`` of the counter's text, the same atom the undercut rule
+    # puts in ``attacks[*].attacker_premises``: same class, same pass, and the
+    # deterministic ``opaque_id`` keeps the join between the two.
+    # ``counter_id`` / ``target_unit`` / ``target_rule`` are ids and rule
+    # names at the producer → preserved.
+    "aspic_results": {
+        "attacks": {"target", "attacker_premises"},
+        "aspic_undercut_decisions": {"counter_atom"},
+    },
     # #3235: ``jtms_beliefs`` is dict-keyed (``{jtms_N: {…}}``), so this
     # pass's list-only gate could never reach it — the same shape-blindness
     # 5b had before #1664. The justification items are dicts carrying the
