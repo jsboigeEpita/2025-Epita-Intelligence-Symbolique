@@ -58,9 +58,11 @@ Models tested: qwen-local, default, endpoint-2, endpoint-3, endpoint-4, openrout
 
 ### Individual Judge Evaluations
 
+> Note (#3575): the judge texts below once named the tested documents' speakers in their parentheticals; they now use role wording. `doc[N]` is the benchmark's document index; every score is unchanged.
+
 - **default** × light × doc[0]: overall=1/5 — The output is largely a dump of raw text and metadata counts with almost no extraction of arguments, claims, or fallacie
 - **default** × light × doc[1]: overall=1/5 — The analysis fails to identify or extract any of the clear arguments or claims in the input excerpt (argument_count = 0,
-- **default** × standard × doc[0]: overall=1/5 — The analysis largely failed to extract or label the clear arguments and claims in the input (Douglas's accusations, Linc
+- **default** × standard × doc[0]: overall=1/5 — The analysis largely failed to extract or label the clear arguments and claims in the input (the debaters' accusations and rebuttals
 - **default** × standard × doc[1]: overall=1/5 — The analysis essentially returned only a raw text snippet and empty counts (task_count, argument_count, fallacy_count al
 - **default** × full × doc[0]: overall=1/5 — The analysis fails to identify or summarize the key arguments in the text and mostly returns structural counters and a r
 - **default** × full × doc[1]: overall=1/5 — The analysis fails to identify or summarize any arguments from the input text (argument_count = 0) despite the text cont
@@ -68,26 +70,26 @@ Models tested: qwen-local, default, endpoint-2, endpoint-3, endpoint-4, openrout
 - **endpoint-2** × light × doc[1]: overall=1/5 — The analysis largely fails to identify any arguments, claims, or relationships in the provided text (argument_count 0, f
 - **endpoint-2** × standard × doc[0]: overall=1/5 — The analysis fails to extract or label the clear arguments and claims in the passage (argument_count=0 despite many clai
 - **endpoint-2** × standard × doc[1]: overall=1/5 — The output is largely placeholder/empty and fails to extract any arguments, claims, or fallacies from the input text. Se
-- **endpoint-2** × full × doc[0]: overall=1/5 — The output largely fails to extract or summarize the key arguments and claims from the text (Douglas's accusations, Linc
+- **endpoint-2** × full × doc[0]: overall=1/5 — The output largely fails to extract or summarize the key arguments and claims from the text (the debaters' accusations and rebuttals
 - **endpoint-2** × full × doc[1]: overall=1/5 — The analysis output is essentially empty and inconsistent. It fails to extract or summarize arguments, claims, or rhetor
-- **endpoint-3** × light × doc[0]: overall=1/5 — The analysis fails to extract or summarize the text's main claims (Douglas's accusations, Lincoln's denials/rebuttals). 
+- **endpoint-3** × light × doc[0]: overall=1/5 — The analysis fails to extract or summarize the text's main claims (the debaters' accusations and rebuttals — the denials each met)
 - **endpoint-3** × light × doc[1]: overall=1/5 — The analysis fails to identify or summarize any of the text's arguments, claims, or rhetorical moves (completeness and d
 - **endpoint-3** × standard × doc[0]: overall=1/5 — The analysis fails to identify or extract the text's arguments, claims, or fallacies (most counts are zero) and provides
-- **endpoint-3** × standard × doc[1]: overall=1/5 — The analysis fails to extract any arguments, claims, or fallacies from the provided Lincoln text and returns mostly zero
+- **endpoint-3** × standard × doc[1]: overall=1/5 — The analysis fails to extract any arguments, claims, or fallacies from the provided debate text and returns mostly zero
 - **endpoint-3** × full × doc[0]: overall=1/5 — The analysis fails to extract or summarize the key arguments from the text, reports contradictory and mostly zero counts
 - **endpoint-3** × full × doc[1]: overall=1/5 — The analysis fails to extract any arguments or claims from a clearly argumentative historical speech (argument_count 0, 
 - **endpoint-4** × light × doc[0]: overall=1/5 — The analysis fails to identify any of the obvious arguments, claims, or rebuttals in the provided debate excerpt (claims
 - **endpoint-4** × light × doc[1]: overall=1/5 — The analysis is essentially a sparse metadata dump with no substantive identification of arguments, claims, or fallacies
 - **endpoint-4** × standard × doc[0]: overall=1/5 — The analysis largely fails to extract or label the arguments present in the text (no arguments, fallacies, or tasks iden
-- **endpoint-4** × standard × doc[1]: overall=1/5 — The analysis fails to identify any arguments, claims, or fallacies from the provided Lincoln text and reports mostly zer
+- **endpoint-4** × standard × doc[1]: overall=1/5 — The analysis fails to identify any arguments, claims, or fallacies from the provided debate text and reports mostly zer
 - **endpoint-4** × full × doc[0]: overall=1/5 — The analysis fails to extract or label any arguments, claims, or fallacies from the input text and contains an error. Th
 - **endpoint-4** × full × doc[1]: overall=1/5 — The analysis largely failed to extract or label the argumentative content of the input: argument_count, tasks_defined, a
 - **openrouter** × light × doc[0]: overall=1/5 — The analysis largely fails to extract or label the text's arguments, claims, or fallacies (argument_count, fallacy_count
 - **openrouter** × light × doc[1]: overall=1/5 — The output fails to identify or extract any arguments, claims, or fallacies from the input text (task_count=0, argument_
 - **openrouter** × standard × doc[0]: overall=1/5 — The analysis largely fails to extract or label any arguments, claims, or fallacies from the input text (task_count, argu
 - **openrouter** × standard × doc[1]: overall=1/5 — The analysis essentially failed to extract the speech's arguments or structure (argument_count=0) despite clear argument
-- **openrouter** × full × doc[0]: overall=1/5 — The analysis fails to extract or summarize the key arguments and claims in the input (Douglas's charges and Lincoln's re
-- **openrouter** × full × doc[1]: overall=1/5 — The analysis largely fails to identify any arguments, claims, or rhetorical structure from the Lincoln excerpt (argument
+- **openrouter** × full × doc[0]: overall=1/5 — The analysis fails to extract or summarize the key arguments and claims in the input (the debaters' charges and rebuttals
+- **openrouter** × full × doc[1]: overall=1/5 — The analysis largely fails to identify any arguments, claims, or rhetorical structure from the debate excerpt (argument
 
 ## Analysis & Recommendations
 
