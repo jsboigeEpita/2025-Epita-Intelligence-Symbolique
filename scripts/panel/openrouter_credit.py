@@ -4,13 +4,21 @@
 
 One GET on the provider's key endpoint; prints one JSON line with ``usage``,
 ``limit`` and ``limit_remaining`` (USD). A cycle reads it before the pipeline
-and after the judges: the difference is what the cycle spent on that key, read
-from the provider and not from a token count multiplied by a price table.
+and after the judges.
 
-``limit_remaining`` is the figure that decides whether a cycle can start: with
-the key at its spending limit, neither the pipeline nor an OpenRouter judge
-can run (met on 2026-11-07). An Anthropic judge is billed on another key and
-does not appear here.
+The provider's two counters are not two views of one budget. On the cycles
+recorded in November 2026 the credit fell by about 10 USD over a cycle while
+``usage`` moved by about 0.3 USD, and on one paid run ``usage`` did not move
+at all while the credit fell by 0.42 USD. The cycle's spend is therefore the
+FALL of ``limit_remaining``; the change of ``usage`` is recorded beside it,
+under its own name, and the record says when the two disagree by more than a
+stated margin. What the provider means by ``usage`` is not established from
+here: the two readings are reported, they are not adjudicated.
+
+``limit_remaining`` is also the figure that decides whether a cycle can start:
+with the key at its spending limit, neither the pipeline nor an OpenRouter
+judge can run (met on 2026-11-07). An Anthropic judge is billed on another key
+and does not appear here.
 
 The key is the one the pipeline would use: the value the process was started
 with, else the checkout's ``.env``. It is never printed.
@@ -34,6 +42,11 @@ from scripts.panel import _common as c  # noqa: E402
 KEY_URL = "https://openrouter.ai/api/v1/key"
 KEY_VARIABLE = "OPENROUTER_API_KEY"
 FIELDS = ("usage", "limit", "limit_remaining")
+
+# The two provider counters disagree by more than this and the record says so:
+# a quarter of the larger figure, and never less than five cents.
+DISAGREEMENT_MARGIN = 0.25
+DISAGREEMENT_FLOOR_USD = 0.05
 
 Fetch = Callable[[str], Dict[str, Any]]
 
@@ -95,15 +108,82 @@ def read_credit(
     return {**{field: data.get(field) for field in FIELDS}, "key_source": source}
 
 
-def spent_between(
+def usage_delta_between(
     before: Optional[Dict[str, Any]], after: Optional[Dict[str, Any]]
 ) -> Optional[float]:
-    """USD spent on the key between two readings, or ``None`` when either
-    reading is missing — an unread credit is not a zero spend."""
+    """The change of the provider's ``usage`` counter between two readings
+    (after minus before), or ``None`` when either reading is missing."""
     try:
         return round(float(after["usage"]) - float(before["usage"]), 4)  # type: ignore[index]
     except (TypeError, KeyError, ValueError):
         return None
+
+
+def spent_between(
+    before: Optional[Dict[str, Any]], after: Optional[Dict[str, Any]]
+) -> Optional[float]:
+    """The change of the provider's ``usage`` counter between two readings, or
+    ``None`` when either reading is missing — an unread credit is not a zero
+    spend.
+
+    This is NOT what the cycle spent: on the cycles of November 2026 the
+    counter moved by a fraction of what the credit fell by, and on one paid
+    run it did not move at all (#3561). The spend is
+    ``credit_fall_between``; this function is kept for the readers that
+    already call it and want the counter's own change.
+    """
+    return usage_delta_between(before, after)
+
+
+def limit_remaining_delta_between(
+    before: Optional[Dict[str, Any]], after: Optional[Dict[str, Any]]
+) -> Optional[float]:
+    """The change of the provider's ``limit_remaining`` between two readings
+    (after minus before — negative when the credit fell), or ``None`` when
+    either reading is missing."""
+    try:
+        return round(
+            float(after["limit_remaining"]) - float(before["limit_remaining"]), 4  # type: ignore[index]
+        )
+    except (TypeError, KeyError, ValueError):
+        return None
+
+
+def credit_fall_between(
+    before: Optional[Dict[str, Any]], after: Optional[Dict[str, Any]]
+) -> Optional[float]:
+    """USD the credit fell by between two readings — the fall of the
+    provider's ``limit_remaining`` — or ``None`` when either reading is
+    missing: an unread credit is not a zero spend.
+
+    This is the cycle's spend, as the provider's own budget reports it. It is
+    not a token count multiplied by a price table.
+    """
+    delta = limit_remaining_delta_between(before, after)
+    if delta is None:
+        return None
+    fall = round(-delta, 4)
+    # A credit that did not move fell by zero, not by minus zero.
+    return fall + 0.0
+
+
+def spend_disagreement(
+    usage_spend: Optional[float], credit_spend: Optional[float]
+) -> Optional[bool]:
+    """Whether the provider's two counters disagree by more than the stated
+    margin: a quarter of the larger figure, and never less than five cents.
+
+    ``None`` when one of the two is missing — an unread figure is not an
+    agreement.
+    """
+    if usage_spend is None or credit_spend is None:
+        return None
+    usage_spend, credit_spend = abs(usage_spend), abs(credit_spend)
+    difference = abs(usage_spend - credit_spend)
+    margin = max(
+        DISAGREEMENT_FLOOR_USD, DISAGREEMENT_MARGIN * max(usage_spend, credit_spend)
+    )
+    return difference > margin
 
 
 def main(argv: Optional[List[str]] = None) -> int:

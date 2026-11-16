@@ -122,10 +122,27 @@ wrote down, not something the cycle can prove.
 - `panel_cycles/<tag>/pipeline.json` — the commit the states were produced
   at. This is the commit a cycle's verdict is about.
 - `panel_cycles/<tag>/cycle.json` — the last invocation: its command and its
-  own `HEAD`, the exit code of every step, the credit before and after and
-  `openrouter_spent`, and the pipeline record again under `pipeline`. After a
+  own `HEAD`, the exit code of every step, the credit before and after, the
+  cycle's spend and the two provider deltas it is made of, and the pipeline
+  record again under `pipeline`. After a
   resume the two commits differ, and the one that counts is the pipeline's.
   An unread credit is reported as unread, not as zero.
+  - The spend is `openrouter_spent`: the fall of the provider's
+    `limit_remaining` over the cycle, and `openrouter_spent_field` says which
+    field it reads. The change of each provider field is recorded under its
+    own name — `openrouter_usage_delta` (the `usage` counter) and
+    `openrouter_limit_remaining_delta` (the `limit_remaining` credit, signed:
+    negative when the credit fell). The two counters are not two views of one
+    budget, and they do not always agree: on the cycles of November 2026 the
+    credit fell by about 10 USD while `usage` moved by a fraction of that, and
+    on one paid run `usage` did not move at all.
+  - `openrouter_spent_disagreement` says when the two figures differ by more
+    than the margin in `openrouter_spent_disagreement_margin` (a quarter of
+    the larger figure, and never less than five cents). It is `null` when one
+    of the two figures is unread.
+  - The three raw readings — before the pipeline, after it, and at the end —
+    are in `credit_before`, `credit_after_pipeline` and `credit_after`, so the
+    spend of each step is derivable.
 - `judge_panel_3375_<tag>_<judge>_cons<k>/TABLE.md` — the verdict table of one
   family. `STABILITY.md` beside it compares the items kept with the previous
   cycle's.
