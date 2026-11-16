@@ -42,15 +42,26 @@ that sequence with the stops a paid run has already cost us:
   its commit, exit code and harvest in ``pipeline.json``; ``--stage judges``
   reads that record back and refuses a pipeline it shows as failed, and every
   later ``cycle.json`` carries it, so the commit the states were produced at
-  is never replaced by the commit of the invocation that judged them.
+  is never replaced by the commit of the invocation that judged them;
+- **a free invocation replaces no paid record** (#3611) — an invocation that
+  ran no paid step (``--stage consensus``, a resume whose passes are all
+  stored, a cycle stopped before its first step) writes its record to
+  ``cycle_free.json``, so the paid ``cycle.json`` keeps the readings and the
+  spend of the invocation that paid; a step skipped because its rows are
+  stored ran nothing, and pays nothing.
 
 Everything is written under ``<results>/panel_cycles/<tag>/`` (gitignored):
 ``states/``, ``signatures/``, ``logs/``, ``pipeline.json`` (the pipeline
 run: commit, tree, dirty flag, exit code, harvest), ``status.jsonl`` (one
-event per line, as it happens), ``cycle.json`` (the last invocation: its
-command and commit, exit codes, credit before and after, the cycle's spend and
-the two provider deltas it is made of, and the pipeline
-record) and ``trace.jsonl``. The judge's own directories keep their names,
+event per line, as it happens — every credit reading of every invocation
+as an event: ``credit_before``, ``credit_after_pipeline`` after a pipeline
+stage, ``credit_after`` at the end), ``cycle.json`` (the record of the last
+invocation that RAN a paid step — the pipeline or a judge pass: its command
+and commit, exit codes, credit before and after, the cycle's spend and the
+two provider deltas it is made of, and the pipeline record),
+``cycle_free.json`` (the record of the last invocation that ran no paid step:
+same shape, written beside the paid record, never over it) and
+``trace.jsonl``. The judge's own directories keep their names,
 ``<results>/judge_panel_3375_<tag>_<judge>_p<i>`` and ``..._cons<k>``.
 
 Exit code: 0 the cycle ran whole; 1 it stopped before any judge; 2 a judge
@@ -82,6 +93,8 @@ from scripts.panel import openrouter_credit  # noqa: E402
 
 PASS_PREFIX = "judge_panel_3375"
 PIPELINE_RECORD = "pipeline.json"
+CYCLE_RECORD = "cycle.json"
+FREE_RECORD = "cycle_free.json"
 STAGES = ("all", "pipeline", "judges", "consensus")
 DEFAULT_PASSES = 6
 DEFAULT_PIPELINE_TIMEOUT = 7200
@@ -608,6 +621,17 @@ def run_cycle(
     # The campaign's one parser: it raises on a missing or empty panel file.
     panel = c.read_panel(cfg.panel_file) or []
     status = Status(cfg.cycle_dir / "status.jsonl", now)
+    # The steps this invocation actually ran and paid for (#3611): the record
+    # of an invocation that ran none of them (a re-consolidation, a resume
+    # whose passes are all stored, a cycle stopped before its first step)
+    # must not replace the record of an invocation that did.
+    paid_steps: List[str] = []
+
+    def dispatch(step: Step) -> int:
+        if step.paid:
+            paid_steps.append(step.name)
+        return runner(step)
+
     at_start = head()
     summary: Dict[str, Any] = {
         "tag": cfg.tag,
@@ -650,6 +674,8 @@ def run_cycle(
         summary["head_at_end"] = head()["head"]
         summary["stopped"], summary["exit_code"] = stopped, code
         summary["ended"] = status.stamp()
+        summary["paid_steps"] = list(paid_steps)
+        status.event("credit_after", **(after or {}))
         status.event(
             "end",
             stopped=stopped,
@@ -662,7 +688,8 @@ def run_cycle(
             ],
             openrouter_spent_disagreement=summary["openrouter_spent_disagreement"],
         )
-        (cfg.cycle_dir / "cycle.json").write_text(
+        record = CYCLE_RECORD if paid_steps else FREE_RECORD
+        (cfg.cycle_dir / record).write_text(
             json.dumps(summary, ensure_ascii=False, indent=1), encoding="utf-8"
         )
         return summary
@@ -698,7 +725,7 @@ def run_cycle(
             )
         started = now()
         step = pipeline_step(cfg)
-        rc = runner(step)
+        rc = dispatch(step)
         seconds = round(now() - started)
         report = harvest(cfg, panel, started)
         record = {
@@ -754,7 +781,8 @@ def run_cycle(
     with ThreadPoolExecutor(max_workers=len(cfg.judges)) as pool:
         results = list(
             pool.map(
-                lambda judge: run_family(cfg, judge, panel, runner, status), cfg.judges
+                lambda judge: run_family(cfg, judge, panel, dispatch, status),
+                cfg.judges,
             )
         )
     summary["judges"] = {
@@ -762,7 +790,7 @@ def run_cycle(
     }
     judged = [judge for judge, result in zip(cfg.judges, results) if result["ok"]]
     if judged and cfg.passes >= 2:
-        rc = runner(trace_step(cfg, judged))
+        rc = dispatch(trace_step(cfg, judged))
         summary["trace"] = {"rc": rc, "families": [judge.name for judge in judged]}
         status.event("trace", **summary["trace"])
     failed = [
