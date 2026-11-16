@@ -1869,6 +1869,32 @@ def _record_assert_move(state: Any, arg_id: str, quote: str, raw_text: str) -> N
     )
 
 
+def _mark_declared_indeterminate(state: Any, arg_id: str, spans: List[Any]) -> None:
+    """#3590 — l'unité tombe dans un passage que le document déclare non établi.
+
+    L'état le PORTE, l'unité n'est PAS retirée : ``argument_provenance``
+    reçoit ``indeterminate`` (statut + la phrase qui déclare + sa position),
+    de la même famille que le ``dating: uncertain`` de l'historien — la
+    lecture reste, requalifiée par la déclaration du document. Une position
+    nommée absente n'appartient à aucune zone (#1019).
+    """
+    from argumentation_analysis.core.shared_state import (
+        declared_indeterminate_span_at,
+    )
+
+    entry = (getattr(state, "argument_provenance", {}) or {}).get(arg_id)
+    if not isinstance(entry, dict):
+        return
+    span = declared_indeterminate_span_at(entry.get("offset"), spans)
+    if span is None:
+        return
+    entry["indeterminate"] = {
+        "status": "indeterminate",
+        "declared_quote": span.quote,
+        "declared_offset": span.offset,
+    }
+
+
 def _write_fact_extraction_to_state(
     output: Any, state: Any, ctx: dict[str, Any]
 ) -> None:
@@ -1876,6 +1902,7 @@ def _write_fact_extraction_to_state(
     # #3491 — question-force helpers, function-local like ``_record_assert_move``
     # below (the module-level import graph stays untouched).
     from argumentation_analysis.core.shared_state import (
+        declared_indeterminate_spans,
         ends_as_question,
         extend_question_quote,
         non_propositional_form,
@@ -1922,6 +1949,9 @@ def _write_fact_extraction_to_state(
         # silently dropped.
         refused: dict[str, int] = {}
         raw_text = getattr(state, "raw_text", "") or ""
+        # #3590 — les zones que le document déclare lui-même non établies,
+        # lues UNE fois par document (fonction pure, jamais de réseau).
+        declared_spans = declared_indeterminate_spans(raw_text) if raw_text else []
         for arg in arguments:
             if isinstance(arg, dict):
                 text = arg.get("text", "").strip()
@@ -1970,6 +2000,8 @@ def _write_fact_extraction_to_state(
                         ),
                     )
                     _record_assert_move(state, arg_id, quote, raw_text)
+                    if declared_spans:
+                        _mark_declared_indeterminate(state, arg_id, declared_spans)
             elif isinstance(arg, str) and arg.strip():
                 # #3584 — same form gate on the bare-string shape.
                 _bare = arg.strip()
@@ -1981,6 +2013,8 @@ def _write_fact_extraction_to_state(
                 # usually a named absence, never a guess.
                 arg_id = state.add_argument(_bare, producer="llm_extract")
                 _record_assert_move(state, arg_id, "", raw_text)
+                if declared_spans:
+                    _mark_declared_indeterminate(state, arg_id, declared_spans)
         if refused:
             # #3584 — the refusal is data, not silence: counts by class, no
             # corpus text. Same channel as [extraction_status] above.
