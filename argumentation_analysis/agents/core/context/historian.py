@@ -717,7 +717,8 @@ async def extract_historical_context(**kwargs: Any) -> Dict[str, Any]:
 
 
 def context_note(state: Any) -> str:
-    """The labelled block a downstream reader prepends to its own prompt.
+    """The labelled block a downstream reader appends to its own prompt, after
+    its own contract.
 
     ONE producer for the wording (#3377): the NL→KB translator and any later
     consumer must say the same thing about the same read, or two readers will
