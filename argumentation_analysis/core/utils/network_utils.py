@@ -8,6 +8,7 @@ Il gère les exceptions courantes et permet de vérifier l'intégrité
 des fichiers téléchargés via leur taille.
 """
 
+import asyncio
 import logging
 import os
 import re
@@ -641,15 +642,32 @@ _T = TypeVar("_T")
 async def _call_through_breaker(func: Callable[[], Awaitable[_T]]) -> _T:
     """Exécute ``func`` sous ``network_breaker`` sans tornado (#3447).
 
-    Même sémantique que ``CircuitBreakerState.call_async`` : l'état est
-    figé avant l'appel, l'issue est comptée sur cet état, et un déclenchement
-    lève ``CircuitBreakerError`` au lieu de l'exception d'origine quand
-    ``throw_new_error_on_trip`` est armé (le défaut). L'état étant figé, un
-    succès tardif ne referme pas un disjoncteur qu'un appel concurrent aurait
-    ouvert entre-temps — et ``call_async`` ne l'empêchait pas davantage : son
-    ``RLock`` est réentrant pour le thread qui le détient, donc deux
-    coroutines de la MÊME boucle le traversent déjà en parallèle. Il ne
-    bloquait que les autres threads, et pendant toute la requête.
+    Même sémantique que ``CircuitBreakerState.call_async``, à un départ
+    près (#3610) : une annulation — ``asyncio.CancelledError``, et avec elle
+    ``KeyboardInterrupt`` / ``SystemExit`` / ``GeneratorExit`` — se propage
+    SANS comptabilité, ni ``_handle_error`` ni ``_handle_success``. Une
+    annulation est le retrait de l'appelant, pas une panne du service : le
+    budget de phase de l'exécuteur annule les appels encore en vol, et les
+    compter en échecs ouvrait le disjoncteur partagé pour tout le processus
+    (c16 doc_E). Les compter en succès — ce que ferait ``exclude=`` de
+    pybreaker, qui traite en 1.4.1 une exception exclue comme un succès —
+    serait l'erreur symétrique : une annulation n'est pas une preuve de
+    santé. ``KeyboardInterrupt`` / ``SystemExit`` / ``GeneratorExit``
+    suivent la même classe pour la même raison : c'est l'opérateur, le
+    processus ou la fermeture de la coroutine qui se retire, sans rien dire
+    de l'état du service — les compter ouvrirait la porte aux appels
+    restants du même processus.
+
+    Pour le reste, même sémantique que ``CircuitBreakerState.call_async`` :
+    l'état est figé avant l'appel, l'issue est comptée sur cet état, et un
+    déclenchement lève ``CircuitBreakerError`` au lieu de l'exception
+    d'origine quand ``throw_new_error_on_trip`` est armé (le défaut). L'état
+    étant figé, un succès tardif ne referme pas un disjoncteur qu'un appel
+    concurrent aurait ouvert entre-temps — et ``call_async`` ne l'empêchait
+    pas davantage : son ``RLock`` est réentrant pour le thread qui le
+    détient, donc deux coroutines de la MÊME boucle le traversent déjà en
+    parallèle. Il ne bloquait que les autres threads, et pendant toute la
+    requête.
     """
     with network_breaker._lock:
         state: CBStateType = network_breaker.state
@@ -669,6 +687,11 @@ async def _call_through_breaker(func: Callable[[], Awaitable[_T]]) -> _T:
 
     try:
         result = await func()
+    except (asyncio.CancelledError, KeyboardInterrupt, SystemExit, GeneratorExit):
+        # #3610 — le retrait de l'appelant n'est ni un échec ni un succès :
+        # sans cette clause, l'annulation-budget d'une phase comptait comme
+        # panne et ouvrait le disjoncteur pour tout le processus.
+        raise
     except BaseException as exc:
         with network_breaker._lock:
             # ``_handle_error`` relance l'exception lui-même (ou le
