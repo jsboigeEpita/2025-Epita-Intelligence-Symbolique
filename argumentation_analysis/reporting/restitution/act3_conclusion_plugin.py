@@ -216,6 +216,13 @@ _SUPPORT_PAIR_CAP = 3
 _SUPPORT_CYCLE_CAP = 2
 # #1645 PR2 — articulation points (sole-supporter) cap, same rationale.
 _ARTICULATION_CAP = 2
+# #3547 — counterfactual withdrawals (what falls when one premise is
+# withdrawn). The measured panel states carry up to THREE withdrawals on a
+# single document (c14/c17 shapes). This axis had borrowed _ARTICULATION_CAP
+# (2), so a third withdrawal never reached the writer — silently: the state
+# said three, the prompt said two. Sized on the measured shapes; the cap still
+# bounds the block beyond them.
+_COUNTERFACTUAL_ENTRY_CAP = 3
 # #1646 — minimal-retraction insight: at most this many distinct rupture
 # beliefs named in the prose (the cardinality is the headline; the beliefs are
 # the evidence). Small, same rationale as the cycle/articulation caps.
@@ -1997,7 +2004,7 @@ def _jtms_counterfactual_finding(state: Any) -> Optional[StructuredArgFinding]:
         return None
     parts: List[str] = []
     for entry in entries:
-        if not isinstance(entry, dict) or len(parts) >= _ARTICULATION_CAP:
+        if not isinstance(entry, dict) or len(parts) >= _COUNTERFACTUAL_ENTRY_CAP:
             continue
         premise = _truncate(str(entry.get("text") or "").strip(), _SUPPORT_NODE_CAP)
         if not premise:
