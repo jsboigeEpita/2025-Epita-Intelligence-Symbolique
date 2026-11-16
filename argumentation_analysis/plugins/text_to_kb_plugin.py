@@ -96,6 +96,39 @@ _ABBREVIATION_TAIL = re.compile(
 # characters or fewer used to be discarded, losing the attribution words).
 _MIN_SENTENCE_CHARS = 20
 
+# #3625 — a paragraph break (a blank line, spaces allowed on the blank line).
+_PARAGRAPH_BREAK = re.compile(r"\n[ \t]*\n")
+
+
+def _paragraph_tag_cuts(text: str) -> List[Tuple[int, int]]:
+    """#3625 — paragraph breaks whose next paragraph opens on a speaker tag.
+
+    Returns ``(whitespace_start, tag_start)`` pairs: the break's whitespace
+    runs from its first newline, and the tag starts at the first non-space
+    character of the next paragraph. A break only cuts when the piece the
+    cut would open — the segment up to the next sentence split — reads as a
+    speaker tag by ``speaker_tag_form`` (the shared #3584 vocabulary), and
+    is not an abbreviation tail: the check runs on the WHOLE opening piece,
+    so « M. » (a name's abbreviation, ``_ABBREVIATION_TAIL``) opens no turn
+    even at a paragraph break, and a break with no tag after it cuts
+    nothing — the split stays byte for byte as before.
+    """
+    cuts: List[Tuple[int, int]] = []
+    for break_match in _PARAGRAPH_BREAK.finditer(text):
+        rest = text[break_match.end() :]
+        stripped = rest.lstrip()
+        if not stripped:
+            continue
+        tag_at = break_match.end() + (len(rest) - len(stripped))
+        next_split = _SENTENCE_SPLIT.search(stripped)
+        head = stripped if next_split is None else stripped[: next_split.start()]
+        if speaker_tag_form(head) in (
+            "tag_only",
+            "tag_prefix",
+        ) and not _ABBREVIATION_TAIL.search(head):
+            cuts.append((break_match.start(), tag_at))
+    return cuts
+
 
 def _split_sentences_with_offsets(text: str) -> List[Tuple[str, int]]:
     """#2973 — the same split as ``_split_sentences``, positionally.
@@ -109,14 +142,24 @@ def _split_sentences_with_offsets(text: str) -> List[Tuple[str, int]]:
     the tag. The sentence TEXTS are byte-identical to ``_split_sentences``
     (same pieces, same joins): only positions are added.
     """
-    # Pieces between separators, with their absolute positions. The pattern
-    # has no capture groups (lookbehind), so finditer spans partition the
-    # text exactly the way .split() pieces do.
+    # Pieces between separators, with their absolute positions. The sentence
+    # splits (lookbehind, no capture groups) partition the text exactly the
+    # way .split() pieces do; the #3625 paragraph cuts interleave with them
+    # as additional boundaries — same partition discipline, more events.
+    bounds: List[Tuple[int, int]] = [
+        (m.start(), m.end()) for m in _SENTENCE_SPLIT.finditer(text)
+    ]
+    bounds.extend(_paragraph_tag_cuts(text))
+    bounds.sort()
     pieces: List[Tuple[str, int]] = []
     last = 0
-    for m in _SENTENCE_SPLIT.finditer(text):
-        pieces.append((text[last : m.start()], last))
-        last = m.end()
+    for cut_at, resume_at in bounds:
+        if resume_at <= last or cut_at < last:
+            # Already-consumed region (a sentence split that ate the same
+            # whitespace, or a stale duplicate break inside one run).
+            continue
+        pieces.append((text[last:cut_at], last))
+        last = resume_at
     pieces.append((text[last:], last))
 
     sentences: List[Tuple[str, int]] = []
