@@ -22,7 +22,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 from argumentation_analysis.agents.core.context import (
     MODEL_KNOWLEDGE_BASIS,
@@ -37,8 +37,11 @@ from argumentation_analysis.agents.core.context._json_reply import (
 from argumentation_analysis.agents.core.context.stated_dates import (
     PROMPT_MAX_DATES,
     StatedDate,
+    StatedMonthDay,
+    extract_past_month_days,
     extract_stated_dates,
     past_cited_bound,
+    stated_month_days,
     stated_years,
 )
 from argumentation_analysis.agents.core.reading import defining_moves
@@ -295,7 +298,10 @@ def _stakes_block(state: Any) -> str:
     return "\n".join(descriptions) if descriptions else "  (aucun enjeu extrait)"
 
 
-def _dates_section(stated: Optional[List[StatedDate]]) -> str:
+def _dates_section(
+    stated: Optional[List[StatedDate]],
+    past_days: Optional[List[StatedMonthDay]] = None,
+) -> str:
     """#3479 — the document's own dated references, for the historian's prompt.
 
     The section lists exactly the dates that BOUND the writing date — the
@@ -304,14 +310,19 @@ def _dates_section(stated: Optional[List[StatedDate]]) -> str:
     whose wording says "a dating you assign it earlier than one of them is
     impossible": that would hand the historian junk dated references again.
 
-    Empty string when the document states no bounding date: the formatted
-    prompt is then byte-identical to the one #3377 defined, which is the
-    no-change control the issue demands.
+    #3589 — the month-day references the document cites as already
+    delivered ride the same section, beside the years: a floor without a
+    year is still a floor, and the model must date with it in view.
+
+    Empty string when the document states no bounding date of either kind:
+    the formatted prompt is then byte-identical to the one #3377 defined,
+    which is the no-change control the issue demands.
     """
     bounding = [
         entry for entry in (stated or []) if entry.calendar and not entry.projected
     ]
-    if not bounding:
+    floors = list(past_days or [])
+    if not bounding and not floors:
         return ""
     lines = [
         "Dated references the document itself states (deterministic " "extraction,",
@@ -321,11 +332,24 @@ def _dates_section(stated: Optional[List[StatedDate]]) -> str:
     ]
     for entry in bounding[:PROMPT_MAX_DATES]:
         lines.append(f"- {entry.year} — « {entry.quote} » (offset {entry.offset})")
+    if floors:
+        lines.append(
+            "Past month-day references the document itself cites as already "
+            "delivered (no year printed): the speech cannot fall on one of "
+            "those days, nor before one within the year you assign it."
+        )
+        for entry in floors[:PROMPT_MAX_DATES]:
+            lines.append(
+                f"- {entry.day}/{entry.month} — « {entry.quote} » (offset {entry.offset})"
+            )
     return "\n".join(lines) + "\n\n"
 
 
 def build_historian_prompt(
-    state: Any, excerpt: str, stated_dates: Optional[List[StatedDate]] = None
+    state: Any,
+    excerpt: str,
+    stated_dates: Optional[List[StatedDate]] = None,
+    past_month_days: Optional[List[StatedMonthDay]] = None,
 ) -> str:
     """Render the historian's prompt from the gathered evidence.
 
@@ -334,6 +358,10 @@ def build_historian_prompt(
     may sit outside the reading window). The historian dates with them in
     view. ``None`` or empty keeps the prompt byte-identical to the one #3377
     defined — a document that states no date changes nothing.
+
+    #3589 — ``past_month_days`` are the month-day references the document
+    cites as already delivered (no year printed). Same rule: ``None`` or
+    empty changes nothing.
     """
     metadata = getattr(state, "source_metadata", {}) or {}
     # #3512 — an unrecorded field renders as an instruction, never as the
@@ -345,7 +373,7 @@ def build_historian_prompt(
         era=metadata_prompt_value(metadata, "era", "date_or_year"),
         language=metadata_prompt_value(metadata, "language"),
         stakes_block=_stakes_block(state),
-        dates_section=_dates_section(stated_dates),
+        dates_section=_dates_section(stated_dates, past_month_days),
         excerpt=excerpt,
     )
 
@@ -376,13 +404,18 @@ async def build_historical_context(
     # writes a date: they ride the prompt (the model dates with them in
     # view) and the post-check below confronts the answer against them.
     stated = extract_stated_dates(raw_text)
+    # #3589 — the month-day references cited as already delivered, no year
+    # printed: the same two consumers, one shape finer than the years.
+    past_days = extract_past_month_days(raw_text)
 
     result = HistoricalContext()
     if llm_callable is None:
         logger.debug("Historian: no LLM callable; returning an empty read.")
         return result
 
-    prompt = build_historian_prompt(state, excerpt, stated_dates=stated)
+    prompt = build_historian_prompt(
+        state, excerpt, stated_dates=stated, past_month_days=past_days
+    )
     try:
         reply = await request_json_reply(llm_callable, prompt)
     except Exception as e:  # pragma: no cover - provider failures
@@ -446,6 +479,10 @@ async def build_historical_context(
         ]
         result.status = "ok"
         _confront_dating(result, stated)
+        # #3589 — the day-granular sibling: the year channel above compared
+        # years only, so a situation claiming the very day the document
+        # cites as already delivered was invisible at year granularity.
+        _confront_dating_day(result, past_days)
         # #3555 — the document's own venue, read from the whole text: the
         # reading window can leave the statement out, so the excerpt is not
         # the reference here either.
@@ -501,6 +538,85 @@ def _confront_dating(result: HistoricalContext, stated: List[StatedDate]) -> Non
         model_year,
         bound.year,
         bound.offset,
+    )
+
+
+def _confront_dating_day(
+    result: HistoricalContext, past_days: List[StatedMonthDay]
+) -> None:
+    """#3589 — degrade a dating the document's cited DAYS refute.
+
+    The year channel above compared YEARS only: a situation claiming the
+    very speech the document cites as already delivered ("le discours
+    prononcé le 14 mars", no year printed) stayed invisible at year
+    granularity, where a later date in the same year is possible. This
+    sibling compares the claimed month-day with each past-cited month-day:
+
+    - the claimed day COINCIDES with a day the document cites as already
+      delivered — the situation claims the very cited speech, and the
+      document is a later one;
+    - the claimed day PRECEDES a cited day within the situation's claimed
+      year — a day already delivered cannot follow the speech.
+
+    Both leave the payload's shape to :meth:`HistoricalContext.to_state`,
+    with ``refuted_by`` carrying the month-day reference and its offset
+    (and no ``year`` key: that channel wrote its own refutation, and when it
+    fired this check stays silent — one degradation, named once). Same
+    anti-pendulum rule as the years: this does not stop the historian from
+    dating, and a situation carrying no month-day passes untouched.
+    """
+    if not past_days or result.dating_degraded:
+        return
+    claims = stated_month_days(result.situation)
+    if not claims:
+        return
+    refuting: Optional[StatedMonthDay] = None
+    claimed: Tuple[int, int] = (0, 0)
+    coincides = False
+    for claim in claims:
+        same = next(
+            (
+                day
+                for day in past_days
+                if (day.month, day.day) == (claim.month, claim.day)
+            ),
+            None,
+        )
+        if same is not None:
+            refuting, claimed, coincides = same, (claim.month, claim.day), True
+            break
+        later = next(
+            (
+                day
+                for day in past_days
+                if (day.month, day.day) > (claim.month, claim.day)
+            ),
+            None,
+        )
+        if later is not None:
+            refuting, claimed, coincides = later, (claim.month, claim.day), False
+            break
+    if refuting is None:
+        return
+    result.dating_degraded = True
+    years = stated_years(result.situation)
+    result.dating_model_year = max(years) if years else None
+    result.dating_refuted_by = {
+        "month": refuting.month,
+        "day": refuting.day,
+        "quote": refuting.quote,
+        "offset": refuting.offset,
+        "claimed_day_coincides": coincides,
+    }
+    logger.info(
+        "Historian dating degraded (day channel): situation claims %d/%d, "
+        "document cites %d/%d as already delivered (offset %d) — dating "
+        "uncertain",
+        claimed[0],
+        claimed[1],
+        refuting.month,
+        refuting.day,
+        refuting.offset,
     )
 
 
