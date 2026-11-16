@@ -86,7 +86,9 @@ from .dung_reader import (  # #1908: shared meaning with act2
     citable_appendix_refs,
 )
 from .native_dung import (  # #1912: single shared decoder — see native_dung.py
+    decode_accepted_members,
     decode_native_dung,
+    is_native_dung_framework,
     native_semantics_label,
     select_primary_native,
 )
@@ -346,6 +348,13 @@ _PARTIAL_MIN_AXES = 2
 # Single definition of the axis set, shared by the band computation and the
 # claim gate below. Two lists would drift, and the gate's whole job is to be
 # exactly as wide as the band's notion of coverage.
+#
+# #3587 — ONE documented exception, for Dung: the band's calibration counts the
+# axis as coverage when it yielded a weak point (a rejection), while the GATE
+# asks the state whether the axis produced a result at all. The band is a
+# verdict-strength calibration (recalibrating it is its own decision, #1986's
+# precedent); the gate is a presence oracle, and a framework that ran and
+# rejected nothing IS present.
 _ALL_AXES: Tuple[str, ...] = (
     _AXIS_FALLACIES,
     _AXIS_QUALITY,
@@ -407,6 +416,36 @@ _AXIS_CLAIM_MARKERS: Dict[str, Tuple[str, ...]] = {
         "extension préférée",
     ),
 }
+
+# #3587 — the Dung axis' PRESENCE is a fact about the state, not about the
+# outcome. Before this, the gate saw the axis only through a rejection: a
+# native framework that ran and rejected nothing counted as an absent axis, so
+# a TRUE sentence about the frameworks that DID run was retracted as
+# unestablished (« Affirmation retirée »), and the note claimed a dimension the
+# state contradicts. #3153's rule still holds — grounded non-membership is not
+# a rejection — but « nothing was rejected » is a RESULT, and the gate must
+# read the axis' presence where the state records it.
+#
+# A sentence saying the framework REJECTED an argument is a claim about one of
+# the axis' RESULTS, not about its presence: it stays checked against
+# ``rejected_by_arg`` (#1912/#3153). These markers are the narrow vocabulary of
+# such a claim — kept tight, like every other marker set of this gate.
+_DUNG_REJECTION_MARKERS: Tuple[str, ...] = (
+    "rejet",
+    "rejett",
+    "exclu",
+    "exclut",
+    "réfut",
+    "refut",
+    "vaincu",
+    "battu",
+)
+
+# The two reasons a claim can be withdrawn, so the note can say WHICH one it
+# is (#3587 ask 4): the axis produced nothing, or the axis produced something
+# else than the result the claim names.
+_BASIS_ABSENT_AXIS = "absent_axis"
+_BASIS_NO_REJECTION = "no_rejection"
 
 # A sentence carrying one of these is *stating the absence*, not claiming the
 # axis — exactly what #1609 asks the conclusion to do. Blocking it would punish
@@ -592,11 +631,16 @@ class BlockedClaim:
     Carries the offending sentence so a reviewer can audit what was withheld —
     a gate whose decisions are not inspectable is indistinguishable from prose
     that simply never made the claim.
+
+    ``basis`` says WHY the sentence was withheld (#3587): the axis produced
+    nothing, or the axis produced something else than the result the sentence
+    names. The reader-facing note must not deny a result the state holds.
     """
 
     axis: str
     label: str
     sentence: str
+    basis: str = _BASIS_ABSENT_AXIS
 
 
 @dataclass
@@ -638,6 +682,13 @@ class Act3Evidence:
     counter_strategies: List[CounterStrategy] = field(default_factory=list)
     verdict: Optional[VerdictBand] = None
     gates: Dict[str, bool] = field(default_factory=dict)
+    # #3587 — the Dung axis' PRESENCE, read from the state and not from the
+    # band's coverage list: a native framework whose extension was computed is
+    # a result, whether or not it rejected anything. ``dung_rejected`` says
+    # whether the decoder reports a rejection at all — the axis' presence does
+    # not license a rejection the decoder does not report (#1912/#3153).
+    dung_axis_present: bool = False
+    dung_rejected: bool = False
     # SV (#1182): governance verdict + debate exchanges, surfaced so the
     # conclusion can cite collective deliberation. None/empty when the phases
     # produced no non-trivial output (honest absence, not fabricated).
@@ -3205,6 +3256,11 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
     pl_verified = _pl_verified(state)
     fol_verified = _fol_verified(state)
     dung_rejected = decode_native_dung(state).rejected_by_arg
+    # #3587 — the axis' presence, for the claim gate. The BAND keeps its own
+    # calibration (a Dung axis counts as coverage when it yielded a weak
+    # point); the GATE asks the state directly, so a framework that ran and
+    # rejected nothing is still an axis that produced something.
+    dung_axis_present = _dung_axis_present(state)
     # #3394 cycle 2 — the refs the annex will print, and the semantics Act
     # II's primary verdict spoke under: the weak points gate their refs on
     # the first and name any divergence from the second.
@@ -3473,6 +3529,8 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         counter_strategies=counter_strategies,
         verdict=verdict,
         gates=gates,
+        dung_axis_present=dung_axis_present,
+        dung_rejected=bool(dung_rejected),
         virtuous_mode=virtuous_mode,
         governance_verdict=governance_verdict,
         debate_exchanges=debate_exchanges,
@@ -4569,8 +4627,54 @@ def _states_absence(lowered_sentence: str) -> bool:
     return any(m in lowered_sentence for m in _ABSENCE_MARKERS)
 
 
+def _dung_axis_present(state: Any) -> bool:
+    """True when the state holds a native Dung framework whose extension was computed.
+
+    #3587: the axis' presence is a question about the STATE, not about the
+    outcome. A native ``verification_*`` framework whose extension the solver
+    computed is a result — including when it rejected nothing (#3153: « nothing
+    was rejected » is a result, not an absence). A framework DECLARED without a
+    computed extension is not one: the decoder reports it as non-concluable,
+    and the axis stays absent.
+
+    Only native frameworks count: the sidecar entries that share the container
+    (``aba_``, ``setaf_``, ``weighted_``, ``delp_``, …) are other formalisms,
+    and #1912 forbids reading them as native Dung evidence.
+    """
+    frameworks = getattr(state, "dung_frameworks", {}) or {}
+    if not isinstance(frameworks, dict):
+        return False
+    for fw in frameworks.values():
+        if not is_native_dung_framework(fw):
+            continue
+        if decode_accepted_members(fw.get("extensions")) is None:
+            continue
+        return True
+    return False
+
+
+def _dung_rejection_claim(lowered: str) -> bool:
+    """True when the sentence claims that Dung REJECTED an argument.
+
+    #3587 ask 2: the axis' presence does not license a rejection the decoder
+    does not report. A sentence that names the axis AND a rejection is a claim
+    about one of the axis' results, so it is checked against ``rejected_by_arg``
+    — and the honest wording (« aucun argument rejeté ») is exempt, like every
+    other absence statement (#1609).
+    """
+    if not any(m in lowered for m in _AXIS_CLAIM_MARKERS[_AXIS_DUNG]):
+        return False
+    if not any(m in lowered for m in _DUNG_REJECTION_MARKERS):
+        return False
+    return not _states_absence(lowered)
+
+
 def _gate_unsupported_claims(
-    narrative: str, nontrivial_axes: List[str]
+    narrative: str,
+    nontrivial_axes: List[str],
+    *,
+    dung_present: bool = False,
+    dung_rejected: bool = False,
 ) -> Tuple[str, List[BlockedClaim]]:
     """Remove assertions resting on an axis that produced nothing.
 
@@ -4581,13 +4685,24 @@ def _gate_unsupported_claims(
     absence markers act as an exemption rather than the claim markers acting as
     a trigger on their own.
 
+    #3587 — the Dung axis is the one axis whose PRESENCE is not read from the
+    band's coverage list: a native framework that ran and rejected nothing IS a
+    result, so a sentence naming those frameworks is supported and must survive.
+    ``dung_present`` says the framework ran (its extension was computed);
+    ``dung_rejected`` says the decoder reports a rejection. With the framework
+    but no rejection, a sentence ATTRIBUTING a rejection to Dung is still
+    withdrawn — on its own basis, so the note does not deny the axis.
+
     Fail loud, not fail hard: the offending sentence is dropped and the drop is
     reported through ``degraded``; the rest of the conclusion is preserved. A
     reader must never receive an unsupported claim, and must never silently lose
     a whole conclusion either.
     """
-    absent = [a for a in _ALL_AXES if a not in set(nontrivial_axes)]
-    if not absent or not narrative:
+    present = set(nontrivial_axes)
+    if dung_present:
+        present.add(_AXIS_DUNG)
+    absent = [a for a in _ALL_AXES if a not in present]
+    if not narrative:
         return narrative, []
 
     blocked: List[BlockedClaim] = []
@@ -4608,10 +4723,19 @@ def _gate_unsupported_claims(
                 ),
                 None,
             )
+            basis = _BASIS_ABSENT_AXIS
+            if hit is None and dung_present and not dung_rejected:
+                # #3587 ask 2 — the axis is there, the RESULT it claims is not.
+                if _dung_rejection_claim(lowered):
+                    hit = _AXIS_DUNG
+                    basis = _BASIS_NO_REJECTION
             if hit is not None and not _states_absence(lowered):
                 blocked.append(
                     BlockedClaim(
-                        axis=hit, label=_AXIS_LABELS_FR[hit], sentence=chunk.strip()
+                        axis=hit,
+                        label=_AXIS_LABELS_FR[hit],
+                        sentence=chunk.strip(),
+                        basis=basis,
                     )
                 )
                 continue
@@ -4687,30 +4811,88 @@ def _blocked_claim_note(
     only the narrative; see the provenance note in ``pipeline_adapter``), so the
     narrative is the ONLY surface that reaches the reader. If every sentence was
     removed, the emptiness has to be stated *here* or it is not stated at all.
+
+    #3587 ask 4 — the note must not deny a result the state HOLDS. Two bases
+    are therefore worded apart: an axis that produced nothing, and an axis that
+    produced something else than the result the sentence names (the Dung
+    framework ran, but the rejection it is credited with is not in the state).
     """
-    labels = sorted({b.label for b in blocked})
+    absent = [b for b in blocked if b.basis == _BASIS_ABSENT_AXIS]
+    unbacked = [b for b in blocked if b.basis != _BASIS_ABSENT_AXIS]
+    tail = (
+        "Cette phrase a été retirée"
+        if len(blocked) == 1
+        else "Ces phrases ont été retirées"
+    )
+    if not unbacked:
+        # #1605's wording, unchanged: the axis produced nothing.
+        reason = _absent_axis_reason(absent)
+        if nothing_survived:
+            return (
+                "### Aucune conclusion soutenable\n\n"
+                "**Il ne reste aucune conclusion.** L'intégralité de la conclusion "
+                f"conduite reposait sur {reason}. Tout a été retiré : "
+                "il ne s'agit pas d'une conclusion écourtée mais d'une conclusion "
+                "dont aucune affirmation n'avait de support dans l'état de "
+                "l'analyse. Le lecteur ne doit rien en inférer."
+            )
+        return (
+            "### Affirmation retirée\n\n"
+            f"La conclusion conduite s'appuyait sur {reason}. "
+            f"{tail} "
+            "plutôt que nuancée : sans résultat dans l'état, l'affirmation n'avait "
+            "aucun support à nuancer."
+        )
+
+    # The axis IS in the state: the note names the axis, the result it is
+    # credited with, and says that THIS result is not in the state.
+    labels = sorted({b.label for b in unbacked})
+    listing = (
+        labels[0] if len(labels) == 1 else ", ".join(labels[:-1]) + f" et {labels[-1]}"
+    )
+    result = "un rejet que l'état ne contient pas"
+    detail = (
+        "le cadre a bien été conduit et son extension calculée, mais aucun de "
+        "ses arguments n'y a été rejeté"
+    )
+    if nothing_survived:
+        return (
+            "### Aucune conclusion soutenable\n\n"
+            "**Il ne reste aucune conclusion.** L'intégralité de la conclusion "
+            f"conduite reposait sur {result}, attribué à {listing} : {detail}. "
+            "Tout a été retiré : "
+            "il ne s'agit pas d'une conclusion écourtée mais d'une conclusion "
+            "dont aucune affirmation n'avait de support dans l'état de "
+            "l'analyse. Le lecteur ne doit rien en inférer."
+        )
+    if absent:
+        return (
+            "### Affirmation retirée\n\n"
+            f"La conclusion conduite s'appuyait sur {_absent_axis_reason(absent)} "
+            f"et attribuait à {listing} {result} : {detail}. "
+            f"{tail} "
+            "plutôt que nuancées : aucune de ces affirmations n'avait de "
+            "support dans l'état."
+        )
+    return (
+        "### Affirmation retirée\n\n"
+        f"La conclusion conduite attribuait à {listing} {result} : {detail}. "
+        f"{tail} "
+        "plutôt que nuancée : le rejet que la conclusion lui attribue ne figure "
+        "pas dans l'état."
+    )
+
+
+def _absent_axis_reason(absent: List[BlockedClaim]) -> str:
+    """The #1605 wording for the axes that produced nothing, as a reason."""
+    labels = sorted({b.label for b in absent})
     if len(labels) == 1:
         listing = labels[0]
         subject = "une dimension que cette analyse n'a pas pu établir"
     else:
         listing = ", ".join(labels[:-1]) + f" et {labels[-1]}"
         subject = "des dimensions que cette analyse n'a pas pu établir"
-    if nothing_survived:
-        return (
-            "### Aucune conclusion soutenable\n\n"
-            "**Il ne reste aucune conclusion.** L'intégralité de la conclusion "
-            f"conduite reposait sur {subject} : {listing}. Tout a été retiré : "
-            "il ne s'agit pas d'une conclusion écourtée mais d'une conclusion "
-            "dont aucune affirmation n'avait de support dans l'état de "
-            "l'analyse. Le lecteur ne doit rien en inférer."
-        )
-    return (
-        "### Affirmation retirée\n\n"
-        f"La conclusion conduite s'appuyait sur {subject} : {listing}. "
-        f"{'Cette phrase a été retirée' if len(blocked) == 1 else 'Ces phrases ont été retirées'} "
-        "plutôt que nuancée : sans résultat dans l'état, l'affirmation n'avait "
-        "aucun support à nuancer."
-    )
+    return f"{subject} : {listing}"
 
 
 # --- LLM-conducted weaving (fail-loud) ---------------------------------------
@@ -4953,7 +5135,10 @@ def _dress_act3_prose(
     nothing_survived = False
     if evidence.verdict is not None:
         narrative, blocked = _gate_unsupported_claims(
-            narrative, evidence.verdict.nontrivial_axes
+            narrative,
+            evidence.verdict.nontrivial_axes,
+            dung_present=evidence.dung_axis_present,
+            dung_rejected=evidence.dung_rejected,
         )
         if blocked:
             survivor = narrative.rstrip()
@@ -5304,7 +5489,16 @@ async def build_act3_conclusion(
             f"{accord(len(_dressed.blocked), 'affirmation retirée', 'affirmations retirées')}, "
             "sans support dans l'état : "
             + "; ".join(
-                f"{b.label} — « {_truncate(b.sentence, 90)} »" for b in _dressed.blocked
+                f"{b.label} — « {_truncate(b.sentence, 90)} »"
+                # #3587 ask 4 — this line reaches the reader: a claim withdrawn
+                # for a MISSING RESULT must not read as an axis that produced
+                # nothing (the axis IS in the state).
+                + (
+                    " (cadre conduit, rejet non établi par l'état)"
+                    if b.basis != _BASIS_ABSENT_AXIS
+                    else ""
+                )
+                for b in _dressed.blocked
             )
         )
         if _dressed.nothing_survived:
