@@ -53,6 +53,35 @@ from argumentation_analysis.orchestration.workflows import *  # noqa: F401,F403
 logger = logging.getLogger("UnifiedPipeline")
 
 
+def _resolve_skipped_phases(context: Optional[Dict[str, Any]]) -> List[str]:
+    """The phases this run leaves out of the workflow (#3377).
+
+    The caller's explicit list wins (``context["skip_phases"]``); otherwise the
+    environment variable is read. Both are the same run-time switch — the
+    environment is what the ablation arms use, the context is what a test or
+    an embedding caller uses.
+
+    An empty list means "no phase is left out" (the default run).
+    """
+    if context:
+        raw = context.get("skip_phases")
+        if raw:
+            if isinstance(raw, str):
+                chunks: List[str] = raw.split(",")
+            else:
+                chunks = [str(item) for item in raw]
+            names: List[str] = []
+            for chunk in chunks:
+                name = str(chunk).strip()
+                if name and name not in names:
+                    names.append(name)
+            if names:
+                return names
+    from argumentation_analysis.orchestration.workflows import read_skipped_phases
+
+    return read_skipped_phases()
+
+
 def _shield_verdict(state: Any) -> Optional[Dict[str, Any]]:
     """The AI Shield's verdict for this run, read from the state (#2095 item 5).
 
@@ -358,6 +387,26 @@ async def run_unified_analysis(
             replace(workflow, phases=list(workflow.phases)), formal_filter
         )
 
+    # #3377 — the ablation switch. A run-time list of phases to leave out of
+    # the workflow this run builds: this issue's persona arm
+    # (``historian,strategist``), #1649's paired run (``aspic_analysis``).
+    # The named phases leave the DAG and so does every edge that pointed at
+    # them; an unknown name raises (a caller error, never a silent no-op).
+    # The list is recorded on the state, so a reader — and the judges' tracer
+    # — can tell an ablation arm from a full run.
+    phases_left_out = _resolve_skipped_phases(context)
+    if phases_left_out:
+        from argumentation_analysis.orchestration.workflows import (
+            apply_skipped_phases,
+        )
+
+        workflow = apply_skipped_phases(workflow, phases_left_out)
+    if state is not None:
+        try:
+            state.phases_left_out = list(phases_left_out)
+        except Exception as e:  # noqa: BLE001 — the record is best-effort
+            logger.warning("Could not record the skipped phases on the state: %s", e)
+
     # JPype warmup: eagerly initialise JVM + Tweety classes before DAG
     # execution to eliminate the race condition where multiple parallel
     # phases call asyncio.to_thread() → TweetyInitializer concurrently
@@ -474,6 +523,9 @@ async def run_unified_analysis(
         "capabilities_used": capabilities_used,
         "capabilities_degraded": capabilities_degraded,
         "capabilities_missing": capabilities_missing,
+        # #3377 — the phases this run left out of the workflow (the ablation
+        # arms). Empty on a full run; the arms are told apart by it.
+        "phases_left_out": list(phases_left_out),
         # #2095 item 5: the shield's verdict, read from the state instead of
         # being written and forgotten.
         "shield_verdict": _shield_verdict(state) if state is not None else None,

@@ -1168,6 +1168,14 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         # sanitize_state, NOT this flag). Threaded via state because the build_*
         # prompt builders cannot see ``context`` (#1259).
         self.deanonymized: bool = True
+        # #3377 — the run-time phase skip switch (the ablation arms). The
+        # names of the phases THIS run left out of the workflow: the personas
+        # for this issue's arm (``historian,strategist``), ``aspic_analysis``
+        # for #1649's paired run. Recorded on the state so a reader — and the
+        # judges' tracer — can tell an ablation arm from a full run: a run
+        # whose state does not say it was one is a full run. Empty = no phase
+        # was skipped (the default).
+        self.phases_left_out: List[str] = []
         # PL 2-pass pipeline: shared atom inventory (#547)
         self.atomic_propositions: Dict[str, List[str]] = {}
         # FOL 2-pass pipeline: shared signature per source (#544)
@@ -2926,6 +2934,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
                     ),
                     "strategic_objective_count": len(self.strategic_objectives),
                     "strategic_decision_count": len(self.strategic_decisions_log),
+                    # #3377 — the phases this run left out (the ablation
+                    # arms). Named in the summary too: an arm that is not
+                    # named is indistinguishable from a full run.
+                    "phases_left_out": list(self.phases_left_out),
                 }
             )
         else:
