@@ -100,6 +100,18 @@ CANARY2 = (
     "never realistically achievable in practice"
 )
 
+#: #3590 — a synthetic pair-of-notes text, the shape the declared-zone reader
+#: keys on: a note naming an invented language, a line, then a note denying any
+#: verbatim record. The denying sentence carries the canary, so the writer's
+#: ``declared_quote`` does too. No word of it comes from the corpus.
+_DECLARED_ZONE_TEXT = (
+    "[Scene: a fictional assembly hall. The orator addresses the room in "
+    "pseudo-Marlev speech; a scribe relays each burst.] "
+    "Vlorbnex kessamil drau. "
+    "[There exists no verbatim record of the whole oration: " + CANARY + ".]"
+)
+_ZONE_INSIDE_QUOTE = "Vlorbnex kessamil drau."
+
 
 def _canaried_state() -> UnifiedAnalysisState:
     """Build a state with a canary planted in every NL slot a producer writes.
@@ -113,7 +125,7 @@ def _canaried_state() -> UnifiedAnalysisState:
     *shapes* are the real writer shapes (verified at each ``add_*`` call site
     in ``state_writers.py``), which is what the allow-list gates on.
     """
-    s = UnifiedAnalysisState("initial text")
+    s = UnifiedAnalysisState(_DECLARED_ZONE_TEXT)  # raw_text is dropped (pass 1)
     NL, NL2 = CANARY, CANARY2
 
     # --- RhetoricalAnalysisState (base) NL fields -----------------------------
@@ -266,8 +278,16 @@ def _canaried_state() -> UnifiedAnalysisState:
     # leaf, which is exactly how 427 verbatim source spans survived on the
     # stored states. A bare-string claim rides along to keep the no-quote
     # shape exercised.
+    # #3590 — the same writer call carries one unit whose quote falls inside
+    # the declared zone of ``_DECLARED_ZONE_TEXT``: the writer then adds
+    # ``argument_provenance[id].indeterminate.declared_quote`` (the declaring
+    # sentence, canary included) after ``add_argument`` built the entry. An
+    # ``add_*`` plant cannot reach that leaf; only the writer writes it.
     _write_fact_extraction_to_state(
-        {"claims": [{"text": NL, "source_quote": NL2}, NL2], "arguments": []},
+        {
+            "claims": [{"text": NL, "source_quote": NL2}, NL2],
+            "arguments": [{"text": NL, "source_quote": _ZONE_INSIDE_QUOTE}],
+        },
         s,
         {},
     )
@@ -972,6 +992,14 @@ class TestSubstitutionControl:
                 "argument_provenance",
                 "argument_provenance",
                 ".source_quote",
+            ),
+            # #3590: the declaring sentence one dict deeper, written by the
+            # fact-extraction writer for a unit inside a declared zone.
+            (
+                "_TEXT_STRIP_DICT_OF_DICTS_NESTED",
+                "argument_provenance",
+                "argument_provenance",
+                ".indeterminate.declared_quote",
             ),
             # Pass 5g (#3228): the display-label maps on the seven AF
             # containers — {arg_N: label}, the label being the argument text

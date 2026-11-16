@@ -133,6 +133,20 @@ _TEXT_STRIP_DICT_OF_DICTS = {
     "structured_arg_status": {"reason"},
 }
 
+# #3590 — dict-of-dicts fields whose entry carries a nested DICT holding a
+# verbatim leaf: field -> {entry_subkey -> {leaf_subkeys}}. The fact-extraction
+# writer (``_mark_declared_indeterminate``, state_writers.py) adds
+# ``argument_provenance[arg_id].indeterminate = {status, declared_quote,
+# declared_offset}`` AFTER ``add_argument`` built the entry, one dict below the
+# flat ``source_quote`` rule of pass 4, which therefore never reached it.
+# ``declared_quote`` is the document's own declaring sentence: the #3217
+# ``source_quote`` verdict applies, drop the leaf and keep the record.
+# ``status`` (closed vocabulary) and ``declared_offset`` (int) survive, so an
+# export still says which units the document declared unsettled.
+_TEXT_STRIP_DICT_OF_DICTS_NESTED: dict[str, dict[str, set[str]]] = {
+    "argument_provenance": {"indeterminate": {"declared_quote"}},
+}
+
 # Dict-of-dicts fields whose *list sub-keys* carry nominative text entries
 # (verified nominative firsthand, #1265): top-level field -> {sub_key}.
 # Each list is reduced by opacifying every string entry via ``opaque_id``
@@ -842,6 +856,29 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
                 )
                 for key, val in data[field].items()
             }
+
+    # 4, one dict deeper (#3590): the nested verbatim leaves of
+    # ``_TEXT_STRIP_DICT_OF_DICTS_NESTED``. New dicts are built, never mutated
+    # in place, because the ``dict(state)`` fallback above is a shallow copy.
+    for field, nested_spec in _TEXT_STRIP_DICT_OF_DICTS_NESTED.items():
+        container = data.get(field)
+        if not isinstance(container, dict):
+            continue
+        data[field] = {
+            key: (
+                {
+                    sub: (
+                        _strip_text_from_dict(val, nested_spec[sub])
+                        if sub in nested_spec and isinstance(val, dict)
+                        else val
+                    )
+                    for sub, val in entry.items()
+                }
+                if isinstance(entry, dict)
+                else entry
+            )
+            for key, entry in container.items()
+        }
 
     # 4b. Opacify the nominative list-valued sub-keys of dict-of-dicts fields
     #     (dung_frameworks.arguments = [claim_text, ...],
