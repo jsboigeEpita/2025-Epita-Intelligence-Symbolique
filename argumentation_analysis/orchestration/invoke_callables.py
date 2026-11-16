@@ -82,6 +82,7 @@ from argumentation_analysis.orchestration.selection import (
     coverage_figure,
     merged_population_units,
     named_move_residue,
+    rests_on_unit_ids,
     select_for_budget,
     state_text_length,
 )
@@ -10042,6 +10043,66 @@ def _selection_priority_spans(state_obj: Any) -> List[Tuple[int, int]]:
     return spans
 
 
+#: #3511 (2n) — name of the environment variable that turns the rests-on
+#: variant (#3595) on in PRODUCTION selection. Same shape as #3377's
+#: ``ARGUMENTATION_SKIP_PHASES``: a RUN-TIME option, not a code fork — the
+#: two arms of the paired draw differ by the value of this variable, and
+#: the code is the same. Unset or blank keeps today's selection
+#: byte-identical (the variant stays a replay variant until its paid draw).
+RESTS_ON_ENV_VAR = "ARGUMENTATION_RESTS_ON"
+
+#: The recognised values, lowercased. An unrecognised NON-EMPTY value is a
+#: CALLER ERROR (see ``parse_rests_on_value``): a typo would silently run
+#: the control arm as if it were the variant, and the paired draw would
+#: measure nothing while believing it measures the variant.
+_RESTS_ON_TRUTHY = frozenset({"1", "true", "yes", "on"})
+_RESTS_ON_FALSY = frozenset({"0", "false", "no", "off"})
+
+
+def parse_rests_on_value(raw: str, env_var: str = RESTS_ON_ENV_VAR) -> bool:
+    """Parse ONE candidate value of the run-time switch (#3511).
+
+    Pure parser — no environment read. ``_resolve_rests_on``
+    (unified_pipeline) calls it once per run, at setup, for the context
+    override and (through :func:`rests_on_enabled`) the environment.
+
+    :param raw: the candidate value (a context entry, or the variable's).
+    :return: ``True`` only for an explicit yes; absent, blank and the
+        explicit no values return ``False`` — the default arm is today's
+        selection, byte-identical.
+    :raises ValueError: on a non-empty value that is neither a yes nor a
+        no. Fail loud, never a silent no — and fail at SETUP, before the
+        DAG (PR #3621 review, point 1): mid-phase the error would only
+        kill the per-argument pass while the run still spent its cycle,
+        a third arm no draw asked for.
+    """
+    value = (raw or "").strip().lower()
+    if not value:
+        return False
+    if value in _RESTS_ON_TRUTHY:
+        return True
+    if value in _RESTS_ON_FALSY:
+        return False
+    raise ValueError(
+        f"{env_var}={value!r} is not a recognised switch value "
+        f"(yes: {sorted(_RESTS_ON_TRUTHY)}, no: {sorted(_RESTS_ON_FALSY)}) — "
+        "refusing to run an ambiguous arm of the paired draw"
+    )
+
+
+def rests_on_enabled(env_var: str = RESTS_ON_ENV_VAR) -> bool:
+    """Read the run-time switch from the environment (#3511) — the parser's
+    environment half.
+
+    Called ONCE per run, at pipeline setup (``_resolve_rests_on`` in
+    unified_pipeline), so an unrecognised value raises BEFORE any phase
+    runs. The selection seam does NOT call this: it reads the resolved
+    value from the state (``rests_on_armed``), never the environment
+    mid-phase (PR #3621 review, point 1).
+    """
+    return parse_rests_on_value(os.environ.get(env_var, ""), env_var=env_var)
+
+
 def _extract_arguments_for_parallel(
     input_text: str, context: Dict[str, Any]
 ) -> List[tuple[str, str]]:
@@ -10123,11 +10184,28 @@ def _extract_arguments_for_parallel(
                 if _fr_budget is not None
                 else per_argument_unit_budget(_doc_length)
             )
+            # #3511 (2n) — the rests-on variant, armed only through the
+            # switch resolved ONCE at pipeline setup
+            # (``_resolve_rests_on``, unified_pipeline): the resolved arm
+            # rides the state as ``rests_on_armed`` and this seam reads
+            # THAT — never the environment mid-phase (a mid-phase raise
+            # would only kill the per-argument pass while the run still
+            # spent its cycle, PR #3621 review point 1). Unarmed (the
+            # default), no ids are passed and the selection is
+            # byte-identical to today's; armed, the units a named claim
+            # rests on join the priority set — the same ids
+            # ``scripts/panel/_common.py`` replays, so the paired draw
+            # runs both arms through this one seam.
             selection = select_for_budget(
                 population,
                 _unit_budget,
                 text_length=state_text_length(state_obj),
                 priority_spans=_selection_priority_spans(state_obj),
+                priority_unit_ids=(
+                    rests_on_unit_ids(state_obj, population)
+                    if getattr(state_obj, "rests_on_armed", False)
+                    else None
+                ),
             )
             if hasattr(state_obj, "record_analysis_coverage"):
                 state_obj.record_analysis_coverage(

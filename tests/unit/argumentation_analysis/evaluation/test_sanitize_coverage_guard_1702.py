@@ -942,6 +942,13 @@ class TestScrubberCoverageGuard:
             "task_count",
             "deanonymized",
             "source_id",
+            # #3511 (2n) — run-time bookkeeping BOOL, same class as
+            # ``deanonymized`` above: written once by pipeline setup
+            # (``_resolve_rests_on``), never prose, never scrubber-filled.
+            # ``False`` counts as populated for the guard's emptiness test,
+            # which is why it cannot ride the ``phases_left_out`` precedent
+            # (an empty LIST reads as unpopulated).
+            "rests_on_armed",
             # #3249 verdict — 14 distinct literals measured on the 41 states
             # that carry it, ALL code-side templates (``Cadrage
             # indisponible — le LLM n'a rien produit (fail-loud, #1108)`` &c.,

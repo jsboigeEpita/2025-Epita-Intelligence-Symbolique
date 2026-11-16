@@ -1468,6 +1468,14 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         # whose state does not say it was one is a full run. Empty = no phase
         # was skipped (the default).
         self.phases_left_out: List[str] = []
+        # #3511 (2n) — the rests-on arm THIS run ran (the paired draw of
+        # #3595's selector variant). Resolved once at pipeline setup
+        # (``_resolve_rests_on``, unified_pipeline) and recorded here so a
+        # reader — and the judges' tracer — can tell the arms apart: a run
+        # whose state does not say the variant ran, ran the control. The
+        # selection seam reads this flag, never the environment mid-phase
+        # (PR #3621 review).
+        self.rests_on_armed: bool = False
         # PL 2-pass pipeline: shared atom inventory (#547)
         self.atomic_propositions: Dict[str, List[str]] = {}
         # FOL 2-pass pipeline: shared signature per source (#544)
@@ -3252,6 +3260,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
                     # arms). Named in the summary too: an arm that is not
                     # named is indistinguishable from a full run.
                     "phases_left_out": list(self.phases_left_out),
+                    # #3511 (2n) — the rests-on arm in the summary too, for
+                    # the same reason as the phases left out: an arm that is
+                    # not named is indistinguishable from the control.
+                    "rests_on_armed": bool(self.rests_on_armed),
                 }
             )
         else:

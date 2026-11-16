@@ -82,6 +82,34 @@ def _resolve_skipped_phases(context: Optional[Dict[str, Any]]) -> List[str]:
     return read_skipped_phases()
 
 
+def _resolve_rests_on(context: Optional[Dict[str, Any]]) -> bool:
+    """The rests-on arm this run runs (#3511, 2n).
+
+    The caller's explicit value wins (``context["rests_on"]`` — a bool, or
+    the same strings the environment accepts); otherwise the environment
+    variable is read. Resolved ONCE, HERE, BEFORE the DAG — the same place
+    ``_resolve_skipped_phases`` resolves its own switch (#3377): an
+    unrecognised value raises at setup, never mid-phase, where the error
+    would only kill the per-argument pass while the run still spent its
+    cycle (a third, meaningless paid arm — PR #3621 review, point 1).
+
+    The resolved value is recorded on the state (``rests_on_armed``); the
+    selection seam reads it there and never re-reads the environment.
+    """
+    from argumentation_analysis.orchestration.invoke_callables import (
+        parse_rests_on_value,
+        rests_on_enabled,
+    )
+
+    if context:
+        raw = context.get("rests_on")
+        if raw is not None:
+            if isinstance(raw, bool):
+                return raw
+            return parse_rests_on_value(str(raw))
+    return rests_on_enabled()
+
+
 def _shield_verdict(state: Any) -> Optional[Dict[str, Any]]:
     """The AI Shield's verdict for this run, read from the state (#2095 item 5).
 
@@ -407,6 +435,21 @@ async def run_unified_analysis(
         except Exception as e:  # noqa: BLE001 — the record is best-effort
             logger.warning("Could not record the skipped phases on the state: %s", e)
 
+    # #3511 (2n) — the rests-on arm switch, resolved ONCE here like the
+    # phase-skip switch above and BEFORE the DAG runs: mid-phase, a typo
+    # would only kill the per-argument pass while the run still spent its
+    # cycle — a third, meaningless paid arm (PR #3621 review, point 1).
+    # The resolved arm rides the state (``rests_on_armed``) so the
+    # selection seam never re-reads the environment, and an archived
+    # state — or the judges' tracer — can tell the arms of the paired
+    # draw apart (review, point 2).
+    rests_on = _resolve_rests_on(context)
+    if state is not None:
+        try:
+            state.rests_on_armed = rests_on
+        except Exception as e:  # noqa: BLE001 — the record is best-effort
+            logger.warning("Could not record the rests-on arm on the state: %s", e)
+
     # JPype warmup: eagerly initialise JVM + Tweety classes before DAG
     # execution to eliminate the race condition where multiple parallel
     # phases call asyncio.to_thread() → TweetyInitializer concurrently
@@ -526,6 +569,9 @@ async def run_unified_analysis(
         # #3377 — the phases this run left out of the workflow (the ablation
         # arms). Empty on a full run; the arms are told apart by it.
         "phases_left_out": list(phases_left_out),
+        # #3511 (2n) — the rests-on arm this run ran (PR #3621 review,
+        # point 2): False on a control run, never absent.
+        "rests_on_armed": rests_on,
         # #2095 item 5: the shield's verdict, read from the state instead of
         # being written and forgotten.
         "shield_verdict": _shield_verdict(state) if state is not None else None,
