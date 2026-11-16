@@ -61,6 +61,35 @@ class CorpusUnavailableError(RuntimeError):
     """
 
 
+def instance_tokens_by_definition(
+    definitions: Iterable[Mapping[str, Any]],
+) -> list[list[str]]:
+    """The instance vocabulary PER DEFINITION: the whole name first, then its
+    capitalised runs, casefolded — the per-source shape of the one rule.
+
+    ``derive_instance_tokens`` is exactly the union of these lists: same rule,
+    same order, one father. Consumers that need to attribute a token to its
+    source (the instance-label probe, #3575) consume this function so the
+    vocabulary can never drift between the scrubber and the detector — a
+    second derivation rule for the same census would be that drift.
+    """
+    per_definition: list[list[str]] = []
+    for definition in definitions:
+        name = str(definition.get("source_name") or "").strip()
+        entry: list[str] = []
+        if name:
+            entry.append(name.casefold())
+            for match in _WORD_RUN.finditer(name):
+                run = match.group(0)
+                if len(run) < _MIN_TOKEN_LEN:
+                    continue
+                if not run[0].isupper() or not any(c.isalpha() for c in run):
+                    continue
+                entry.append(run.casefold())
+        per_definition.append(entry)
+    return per_definition
+
+
 def derive_instance_tokens(
     definitions: Iterable[Mapping[str, Any]],
 ) -> frozenset[str]:
@@ -69,21 +98,11 @@ def derive_instance_tokens(
     Pure: no I/O, no settings, no key. Production feeds it the definitions
     ``load_instance_tokens`` just decrypted; a test feeds it its own — which
     keeps the mechanism identical on both sides without writing a single real
-    label into a tracked file.
+    label into a tracked file. The union of ``instance_tokens_by_definition``.
     """
     tokens: set[str] = set()
-    for definition in definitions:
-        name = str(definition.get("source_name") or "").strip()
-        if not name:
-            continue
-        tokens.add(name.casefold())
-        for match in _WORD_RUN.finditer(name):
-            run = match.group(0)
-            if len(run) < _MIN_TOKEN_LEN:
-                continue
-            if not run[0].isupper() or not any(c.isalpha() for c in run):
-                continue
-            tokens.add(run.casefold())
+    for entry in instance_tokens_by_definition(definitions):
+        tokens.update(entry)
     return frozenset(tokens)
 
 
