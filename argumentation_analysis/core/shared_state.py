@@ -381,15 +381,17 @@ _INDET_ANNOUNCE = re.compile(
 # ANNONCER que ce qui suit est la portion établie, citable, de l'adresse.
 # Lue avec un nom canonique NON nié dans la même phrase, cette annonce dit
 # le CONTRAIRE d'une déclaration d'indétermination sur le passage qu'elle
-# ouvre : l'échange annoncé stable n'est pas une zone non établie.
+# ouvre : l'échange annoncé stable n'est pas une zone non établie. Les
+# flexions françaises restent bornées aux formes accordées du vocabulaire
+# (revue 2 : jamais le préfixe ouvert, qui attraperait des mots plus longs).
 _INDET_SETTLED = re.compile(
-    r"\b(?:stable|citable|quotable|reliable|fiable|sûr\w*|établi\w*|settled"
+    r"\b(?:stable|citable|quotable|reliable|fiable|sûre?s?|établie?s?|settled"
     r"|only\s+(?:portion|part)|seule\s+partie)\b",
     re.IGNORECASE,
 )
 # Fenêtre maximale entre la négation et le nom nié, DANS la même phrase :
-# assez large pour « No canonical transcript of the full address », trop
-# courte pour attraper un « not » sans rapport.
+# assez large pour une négation qui précède le nom canonique de quelques
+# mots, trop courte pour attraper un « not » sans rapport.
 _INDET_NEGATION_WINDOW = 80
 
 
@@ -478,9 +480,9 @@ def _settled_announce(note_text: str) -> bool:
     (stable, citable, seule portion…), et un nom canonique NON nié : la
     note dit alors le CONTRAIRE d'une déclaration d'indétermination sur le
     passage qui la suit — elle ne peut ouvrir aucune zone non établie.
-    Mesuré : l'ouverture de l'échange mesuré dit « The following exchange is
-    the only portion with a stable, citable transcription » — l'échange
-    couvert n'est PAS déclaré non établi, seule la langue d'un parti l'est.
+    Mesuré : l'ouverture de l'échange mesuré annonce l'échange qui vient
+    comme la portion établie et citable de l'adresse — l'échange couvert
+    n'est PAS déclaré non établi, seule la langue d'un parti l'est.
     """
     for match in _INDET_SENTENCE.finditer(note_text or ""):
         sentence = match.group(0).strip()
@@ -515,10 +517,11 @@ def declared_indeterminate_spans(text: str) -> List[DeclaredIndeterminateSpan]:
         et c'est la note de fermeture — le non-canonique nié, forme (a) — qui
         nomme le passage.
 
-    R1170 (rework) — une note qui ANNONCE ce qui suit comme ÉTABLI (« the
-    only portion with a stable, citable transcription ») n'ouvre AUCUNE zone
-    : le passage annoncé est celui que le document dit établi, pas un
-    passage non établi. Ce qui reste de la note est sa déclaration de langue
+    R1170 (rework) — une note qui ANNONCE ce qui suit comme ÉTABLI (une
+    phrase d'ouverture qui dit de l'échange qui vient qu'il est la portion
+    établie et citable de l'adresse) n'ouvre AUCUNE zone : le passage
+    annoncé est celui que le document dit établi, pas un passage non établi.
+    Ce qui reste de la note est sa déclaration de langue
     (rendue par ``declared_indeterminate_declarations``), jamais une zone.
     Sur l'échange mesuré — deux tours, la langue inventée d'un parti puis la
     ligne en clair d'un autre — la marque ne tombe donc sur AUCUN tour : le

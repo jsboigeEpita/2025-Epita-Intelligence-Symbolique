@@ -1319,10 +1319,11 @@ def document_declarations_note(state: Any) -> str:
     return (
         "DÉCLARATIONS DU DOCUMENT SUR SA PROPRE MATIÈRE (ses propres mots, à "
         f"bornes) : {named}.\n"
-        "Aucune ligne que le document dit écrite dans une langue délibérément "
-        "inventée ne se raconte comme un contenu précis : le récit rend la "
-        "déclaration, jamais une paraphrase déterminée. Une ligne qu'aucune "
-        "déclaration ne nomme garde sa lecture normale."
+        "Aucune ligne que le document déclare — langue délibérément inventée, "
+        "ou sans enregistrement fidèle — ne se raconte comme un contenu "
+        "précis : le récit rend la déclaration, jamais une paraphrase "
+        "déterminée. Une ligne qu'aucune déclaration ne nomme garde sa "
+        "lecture normale."
     )
 
 
