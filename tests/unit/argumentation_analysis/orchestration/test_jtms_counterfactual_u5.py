@@ -446,3 +446,93 @@ class TestTheRender:
         ]
         statement = self._statement(self._state(withdrawals=withdrawals))
         assert statement == ""
+
+
+class TestTheEntriesCap:
+    """Every measured withdrawal reaches the writer (2j reading, R1172).
+
+    The measured panel states carry up to THREE withdrawals on one document
+    (c14/c17 shapes). The projector borrowed the bipolar articulation cap
+    (2 entries), so the third withdrawal never reached the prompt — silently:
+    the state said three, the writer saw two. A dedicated cap sized on the
+    measured shapes fixes the truncation; the cap keeps the block bounded
+    beyond it.
+    """
+
+    # Disjoint premise/fall pairs (the falls of one entry are never the
+    # premises of another, so a truncated entry removes BOTH its texts).
+    E_TEXT = "The council's traffic study names the market's peak hours"
+    F_TEXT = "So the square will need wider service roads"
+    G_TEXT = "The bus line already stops two streets away"
+    H_TEXT = "So delivery vans will keep using the back lane"
+
+    @classmethod
+    def _entry(cls, i: int, premise_text: str, fall_text: str):
+        return {
+            "premise": f"arg_9{i}:synthetic",
+            "premise_unit_id": f"arg_9{i}",
+            "text": premise_text,
+            "falls": [
+                {
+                    "name": f"arg_9{i}f:synthetic",
+                    "unit_id": f"arg_9{i}f",
+                    "text": fall_text,
+                }
+            ],
+        }
+
+    @classmethod
+    def _withdrawals(cls, n: int) -> list:
+        pairs = [
+            (A_TEXT, B_TEXT),
+            (C_TEXT, D_TEXT),
+            (cls.E_TEXT, cls.F_TEXT),
+            (cls.G_TEXT, cls.H_TEXT),
+        ]
+        return [cls._entry(i, p, f) for i, (p, f) in enumerate(pairs[:n])]
+
+    @classmethod
+    def _state(cls, withdrawals: list) -> types.SimpleNamespace:
+        return types.SimpleNamespace(
+            jtms_counterfactual_withdrawals=withdrawals,
+            strategic_read={"players": []},
+            argument_provenance=dict(PROVENANCE),
+        )
+
+    @classmethod
+    def _statement(cls, n: int) -> str:
+        evidence = build_act3_evidence(cls._state(cls._withdrawals(n)))
+        return next(
+            f.statement
+            for f in evidence.structured_findings
+            if f.capability == "belief_maintenance"
+        )
+
+    def test_three_entries_all_reach_the_writer(self):
+        """The measured 3-withdrawal shape: no entry silently truncated."""
+        statement = self._statement(3)
+        for text in (A_TEXT, C_TEXT, self.E_TEXT):
+            assert text[:60] in statement, (text, statement)
+
+    def test_the_third_entry_reaches_the_prompt(self):
+        """The writer-facing surface carries it (presence block, verbatim)."""
+        from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
+            build_act3_prompt,
+        )
+
+        prompt = build_act3_prompt(
+            build_act3_evidence(self._state(self._withdrawals(3)))
+        )
+        assert A_TEXT in prompt, "first entry missing"
+        assert self.E_TEXT in prompt, "third entry missing from the prompt"
+
+    def test_the_cap_keeps_the_block_bounded(self):
+        """Beyond the cap the block stays bounded — the cap is honest, not
+        infinite: a 4-entry state renders 3."""
+        statement = self._statement(4)
+        premises = (A_TEXT, C_TEXT, self.E_TEXT, self.G_TEXT)
+        present = [t for t in premises if t[:60] in statement]
+        assert len(present) == 3, (present, statement)
+        # and the fall texts travel with their entries: the fourth entry's
+        # fall is absent too.
+        assert self.H_TEXT[:60] not in statement, statement
