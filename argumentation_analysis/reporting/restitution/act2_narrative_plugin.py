@@ -696,6 +696,16 @@ class Act2Evidence:
     # reached the model): the prompt omits the section and stays byte-identical
     # to the pre-#3492 one (the issue's control).
     coverage_review: str = ""
+    # #3590 rework (R1170) — the document's own declarations about its
+    # matter, rendered by their ONE producer (``document_declarations_note``):
+    # the declaring sentences themselves, bounded, never re-worded. The block
+    # NAMES what the document declares (a party's language deliberately
+    # invented, the absence of a canonical transcript) and never says a
+    # passage is unsettled — on the measured exchange the announced-settled
+    # turns carry no unit mark, and this block is what remains. EMPTY when
+    # the document declares nothing: the prompt omits the section and stays
+    # byte-identical to the pre-#3590 one.
+    document_declarations: str = ""
 
 
 @dataclass
@@ -1260,20 +1270,60 @@ def _sampled_unit_ids(state: Any, phase: str) -> Optional[Set[str]]:
 
 
 def indeterminate_beat_line(arg_id: str, declared: Dict[str, Any]) -> str:
-    """#3590 — la ligne de beat d'une unité que le document dit non établie.
+    """#3590 — la ligne de beat d'une unité que le document déclare.
 
     L'Acte II rend la DÉCLARATION du document, jamais la paraphrase
     déterminée que l'extracteur a fabriquée pour ce passage (ask 3) : la
     description reste dans l'état, mais elle ne nourrit plus le récit.
+    R1170 (rework) — la ligne NOMME la déclaration au lieu d'asserter « ce
+    passage n'est pas établi » : une zone nominative peut déclarer la langue
+    inventée sans nier le passage, et une phrase d'établi du document ne se
+    retourne jamais en « non établi ».
     """
     quote = str(declared.get("declared_quote") or "").strip()
-    line = (
-        f"  • {arg_id} : lecture INDÉTERMINÉE — le document déclare lui-même "
-        f"que ce passage n'est pas établi"
-    )
+    line = f"  • {arg_id} : lecture INDÉTERMINÉE — déclaration du document lui-même"
     if quote:
         line += f" : « {truncate_at_boundary(quote, CITED_UNIT_TEXT_CAP)} »"
     return line + ". Ne le décris pas comme un contenu précis."
+
+
+#: #3590 rework — bornes du bloc documentaire : citations par phrase, nombre
+#: de déclarations rendues.
+_DOCUMENT_DECLARATIONS_MAX = 3
+
+
+def document_declarations_note(state: Any) -> str:
+    """#3590 rework (R1170) — le bloc des déclarations du document.
+
+    Rendues par leur UN producteur : les phrases déclarantes elles-mêmes,
+    bornées à ``CITED_UNIT_TEXT_CAP``, jamais re-formulées. Le bloc NE DIT
+    PAS qu'un passage est non établi — il nomme ce que le document déclare
+    sur ses propres lignes (langue délibérément inventée, absence de
+    transcription canonique) et borne ce que le récit peut lire d'une ligne
+    déclarée. C'est le canal qui RESTE quand l'échange annoncé établi ne
+    porte aucune marque (la déclaration survit à la mort de la zone).
+    Vide quand le document ne déclare rien : la section disparaît.
+    """
+    from argumentation_analysis.core.shared_state import (
+        declared_indeterminate_declarations,
+    )
+
+    raw_text = getattr(state, "raw_text", "") or ""
+    declarations = declared_indeterminate_declarations(raw_text)
+    if not declarations:
+        return ""
+    named = " ; ".join(
+        f"« {truncate_at_boundary(d.quote, CITED_UNIT_TEXT_CAP)} »"
+        for d in declarations[:_DOCUMENT_DECLARATIONS_MAX]
+    )
+    return (
+        "DÉCLARATIONS DU DOCUMENT SUR SA PROPRE MATIÈRE (ses propres mots, à "
+        f"bornes) : {named}.\n"
+        "Aucune ligne que le document dit écrite dans une langue délibérément "
+        "inventée ne se raconte comme un contenu précis : le récit rend la "
+        "déclaration, jamais une paraphrase déterminée. Une ligne qu'aucune "
+        "déclaration ne nomme garde sa lecture normale."
+    )
 
 
 def _indeterminate_entry(entry: Any) -> Optional[Dict[str, Any]]:
@@ -1610,6 +1660,9 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         coverage_review=coverage_review_note(
             state, exclude_unit_ids=set(coverage_lines_by_arg)
         ),
+        # #3590 rework (R1170) — same single-producer rule: the declaring
+        # sentences themselves, bounded, never re-worded.
+        document_declarations=document_declarations_note(state),
     )
 
 
@@ -2826,6 +2879,15 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
     coverage_review_block = (
         f"{evidence.coverage_review}\n\n" if evidence.coverage_review else ""
     )
+    # #3590 rework (R1170) — the document's own declarations about its
+    # matter, right after the document-level reads: the sentences themselves,
+    # bounded, never re-worded, and never a claim that a passage is unsettled.
+    # Empty when the document declares nothing: the section disappears.
+    document_declarations_block = (
+        f"{evidence.document_declarations}\n\n"
+        if evidence.document_declarations
+        else ""
+    )
     # #3505 — the binding rule rides the consigne ONLY when the review named
     # something (a line on a movement or a passage in the block): an empty
     # review leaves the prompt byte-identical to the pre-#3492 one — the
@@ -2891,6 +2953,7 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         )
         + f"\n{first_reading_block}"
         + f"{cross_passage_block}"
+        + f"{document_declarations_block}"
         + f"{coverage_review_block}"
         f"{reading_block}"
         f"{coverage_note}"

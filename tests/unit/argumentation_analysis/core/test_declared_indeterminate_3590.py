@@ -15,6 +15,14 @@ The repair has three parts:
 (3) Acte II renders the document's declaration for that line, never the
     minted paraphrase.
 
+R1170 rework — the measured exchange holds TWO turns: the invented-language
+lines of one party, and another speaker's plain-language line. The opening
+note ANNOUNCES the exchange as the only settled, citable portion, so the
+passage between the notes is NOT a zone of unsettled transcription: a note
+that announces what follows as settled opens no such zone. What remains is
+the language declaration, and Act II names IT (document-level block), never
+« ce passage n'est pas établi » over a line the document says is settled.
+
 The reader lives beside the #3584 form gate and reads by CLASS (public
 indeterminacy vocabulary, fr+en), never a word taken from the corpus, never
 a length threshold.
@@ -31,11 +39,11 @@ from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 
 #: The pair-of-notes shape: an opener naming the invented language, then a
 #: scene note, then a closer denying any canonical transcript. The passage
-#: BETWEEN the two declaration notes is the declared zone.
+#: BETWEEN the two declaration notes is the declared zone. The opener says
+#: NOTHING about the transcription being settled — the genuine shape (a).
 PAIR_TEXT = (
     "[Rally in a fictional city. The speaker addresses the crowd in "
-    "pseudo-Goblin double-talk; an interpreter renders each burst. The "
-    "following exchange is the only portion with a stable transcription.] "
+    "pseudo-Goblin double-talk; an interpreter renders each burst.] "
     "Grrk blanna schtunk krell. "
     "[He clasps his hands together] "
     "Nar veshk trall. "
@@ -44,6 +52,32 @@ PAIR_TEXT = (
     "No canonical transcript of the full address exists: the dialogue is "
     "deliberate pseudo-Goblin and published reconstructions disagree.]"
 )
+
+#: The measured two-turn shape (R1170): the opener names the invented
+#: language AND announces the exchange that follows as the only settled,
+#: citable portion; one turn in the invented language, another speaker's
+#: turn in plain language; the closer denies a canonical transcript of the
+#: FULL address. The settled announcement kills the zone — what the
+#: document declares is the invented language, never the exchange.
+TWO_TURN_TEXT = (
+    "[Rally in a fictional city. The leader addresses the crowd in "
+    "pseudo-Goblin double-talk; a relay voice renders each burst into "
+    "plain speech. The following exchange is the only portion with a "
+    "stable, citable transcription. It is a FRAGMENT, not the full "
+    "address.] "
+    "LEADER: Grrk blanna schtunk krell. "
+    "[He clasps his hands together] "
+    "RELAY: The leader has just referred to the shared struggles of his "
+    "early days. "
+    "[Elsewhere in the address the only intelligible items are the slogans "
+    '"Freya schtunk", embedded in otherwise non-propositional parody. '
+    "No canonical transcript of the full address exists: the dialogue is "
+    "deliberate pseudo-Goblin and published reconstructions disagree.]"
+)
+
+#: The invented-language turn's unit, and the plain-language turn's unit.
+LEADER_QUOTE = "Grrk blanna schtunk krell."
+RELAY_QUOTE = "The leader has just referred to the shared struggles of his early days."
 
 #: The declared unit: the invented line between the two declaration notes.
 INSIDE_QUOTE = "Grrk blanna schtunk krell."
@@ -79,6 +113,14 @@ def _spans(text):
     from argumentation_analysis.core.shared_state import declared_indeterminate_spans
 
     return declared_indeterminate_spans(text)
+
+
+def _declarations(text):
+    from argumentation_analysis.core.shared_state import (
+        declared_indeterminate_declarations,
+    )
+
+    return declared_indeterminate_declarations(text)
 
 
 def _write(text, arguments):
@@ -148,6 +190,48 @@ class TestTheReader:
         assert declared_indeterminate_span_at(None, _spans(PAIR_TEXT)) is None
 
 
+class TestTheSettledExchangeOpensNoZone:
+    """R1170 — an opener that announces the following exchange as the
+    SETTLED, citable portion cannot open a zone of unsettled transcription:
+    what the document declares is the invented language of one party's
+    lines, never the passage between the notes."""
+
+    def test_the_two_turn_exchange_declares_no_zone(self):
+        assert _spans(TWO_TURN_TEXT) == []
+
+    def test_the_declarations_survive_the_zone(self):
+        """The zone dies, the declarations do not: the prompt and Acte II
+        still name what the document declares about its own lines."""
+        declarations = _declarations(TWO_TURN_TEXT)
+        assert [d.rank for d in declarations] == [1, 2]
+        assert declarations[0].quote.startswith("The leader addresses")
+        assert declarations[1].quote.startswith("No canonical transcript")
+        assert declarations[1].offset == TWO_TURN_TEXT.index("No canonical transcript")
+
+    def test_without_the_settled_announcement_the_zone_stays(self):
+        """Control: the same two-turn shape MINUS the settledness sentence —
+        the between-notes zone opens (shape (a) is intact), and it covers
+        both turns, which is then what the document declared."""
+        variant = TWO_TURN_TEXT.replace(
+            "The following exchange is the only portion with a "
+            "stable, citable transcription. ",
+            "",
+        )
+        spans = _spans(variant)
+        assert len(spans) == 1
+        opener_end = variant.index("]") + 1
+        closer_start = variant.index("[Elsewhere")
+        assert (spans[0].start, spans[0].end) == (opener_end, closer_start)
+        assert opener_end < variant.index(RELAY_QUOTE) < closer_start
+
+    def test_the_stability_words_without_an_announce_keep_the_zone(self):
+        """The announce cue is what binds the settledness to what follows:
+        the same stability words about a passage the note does NOT announce
+        leave the zone intact."""
+        variant = TWO_TURN_TEXT.replace("The following exchange", "That exchange")
+        assert len(_spans(variant)) == 1
+
+
 # --- the writer post-check ----------------------------------------------------
 
 
@@ -204,6 +288,24 @@ class TestTheWriterMarksWithoutDropping:
         entry = next(iter(state.argument_provenance.values()))
         assert set(entry) == {"producer", "offset", "offset_basis", "source_quote"}
         assert entry["producer"] == "llm_extract"
+
+
+class TestTheWriterMarksNoSettledTurn:
+    """R1170 — a unit of the settled exchange (either turn) is not marked:
+    the bar is zero marks on the plain-language turn, and no zone means no
+    mark on the invented-language turn either."""
+
+    def test_no_unit_of_the_settled_exchange_is_marked(self):
+        state = _write(
+            TWO_TURN_TEXT,
+            [
+                {"text": "A pseudo-language line.", "source_quote": LEADER_QUOTE},
+                {"text": "A plain relay line.", "source_quote": RELAY_QUOTE},
+            ],
+        )
+        assert len(state.argument_provenance) == 2
+        for entry in state.argument_provenance.values():
+            assert "indeterminate" not in entry
 
 
 # --- Acte II ------------------------------------------------------------------
@@ -274,10 +376,67 @@ class TestTheAct2RendersTheDeclaration:
         )
         assert "No canonical transcript exists." in prompt
         assert "A DETERMINATE PARAPHRASE." not in prompt
+        # R1170 — the line NAMES the declaration; it never asserts that the
+        # passage is not established (that is the document's to say, and a
+        # settled passage must never read as unsettled).
+        assert "n'est pas établi" not in prompt
 
     def test_the_control_keeps_the_description(self):
         prompt = self._prompt(None)
         assert "A DETERMINATE PARAPHRASE." in prompt
+
+
+class TestTheAct2DocumentDeclarations:
+    """R1170 — when the declared passage is announced settled, no unit is
+    marked and no beat line fires; Act II still names the document's own
+    declarations at DOCUMENT level, and never says a settled passage is
+    unsettled."""
+
+    def _two_turn_state(self):
+        return _write(
+            TWO_TURN_TEXT,
+            [
+                {"text": "A pseudo-language line.", "source_quote": LEADER_QUOTE},
+                {"text": "A plain relay line.", "source_quote": RELAY_QUOTE},
+            ],
+        )
+
+    def test_the_evidence_carries_the_document_declarations(self):
+        from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
+            build_act2_evidence,
+        )
+
+        evidence = build_act2_evidence(self._two_turn_state())
+        assert "pseudo-Goblin" in evidence.document_declarations
+        assert "No canonical transcript" in evidence.document_declarations
+        assert "n'est pas établi" not in evidence.document_declarations
+
+    def test_the_prompt_names_the_declarations_and_no_beat_line(self):
+        from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
+            build_act2_evidence,
+            build_act2_prompt,
+        )
+
+        prompt = build_act2_prompt(build_act2_evidence(self._two_turn_state()))
+        assert "DÉCLARATIONS DU DOCUMENT" in prompt
+        # No marked unit: no beat line fires, both turns read as units.
+        assert "lecture INDÉTERMINÉE" not in prompt
+
+    def test_a_document_without_declarations_has_no_block(self):
+        from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
+            build_act2_evidence,
+        )
+
+        state = _write(
+            PLAIN_TEXT,
+            [
+                {
+                    "text": "The measure holds.",
+                    "source_quote": "The measure should be maintained.",
+                }
+            ],
+        )
+        assert build_act2_evidence(state).document_declarations == ""
 
 
 # --- the extraction prompt (ask 1 + ask 5) -------------------------------------
@@ -291,9 +450,26 @@ class TestTheExtractionPrompt:
             _indeterminate_declaration_instruction,
         )
 
-        instruction = _indeterminate_declaration_instruction(_spans(PAIR_TEXT))
+        instruction = _indeterminate_declaration_instruction(_declarations(PAIR_TEXT))
         assert "No canonical transcript" in instruction
-        assert "not settled" in instruction
+        # the anchor rides: only a line the declaration NAMES is affected
+        assert "keeps its normal reading" in instruction
+
+    def test_the_instruction_rides_the_declarations_not_the_zone(self):
+        """R1170 — on the settled exchange the zone is empty; the
+        instruction still names the declarations, so the model is told
+        what the document declares about its own lines."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _indeterminate_declaration_instruction,
+        )
+
+        assert _spans(TWO_TURN_TEXT) == []
+        instruction = _indeterminate_declaration_instruction(
+            _declarations(TWO_TURN_TEXT)
+        )
+        assert "pseudo-Goblin" in instruction
+        assert "No canonical transcript" in instruction
+        assert "keeps its normal reading" in instruction
 
     def test_no_declaration_means_no_instruction(self):
         from argumentation_analysis.orchestration.invoke_callables import (

@@ -377,6 +377,16 @@ _INDET_ANNOUNCE = re.compile(
     r"\b(?:the\s+following|below|ci-dessous|ci-après|ce\s+qui\s+suit)\b",
     re.IGNORECASE,
 )
+# R1170 (#3590 rework) — le vocabulaire public de l'ÉTABLI : une note peut
+# ANNONCER que ce qui suit est la portion établie, citable, de l'adresse.
+# Lue avec un nom canonique NON nié dans la même phrase, cette annonce dit
+# le CONTRAIRE d'une déclaration d'indétermination sur le passage qu'elle
+# ouvre : l'échange annoncé stable n'est pas une zone non établie.
+_INDET_SETTLED = re.compile(
+    r"\b(?:stable|citable|quotable|reliable|fiable|sûr\w*|établi\w*|settled"
+    r"|only\s+(?:portion|part)|seule\s+partie)\b",
+    re.IGNORECASE,
+)
 # Fenêtre maximale entre la négation et le nom nié, DANS la même phrase :
 # assez large pour « No canonical transcript of the full address », trop
 # courte pour attraper un « not » sans rapport.
@@ -396,6 +406,23 @@ class DeclaredIndeterminateSpan:
     end: int
     quote: str
     offset: int
+
+
+@dataclass(frozen=True)
+class DeclaredIndeterminateDeclaration:
+    """#3590 rework — une phrase par laquelle le document DÉCLARE une
+    indétermination sur ses propres lignes (R1170).
+
+    La déclaration SURVIT à la mort de la zone : un échange annoncé établi
+    n'est pas un passage non établi, mais la langue inventée que la note
+    nomme reste une déclaration — c'est elle que le prompt d'extraction et
+    le bloc documentaire de l'Acte II rendent. ``rank`` : 2 = non-canonique
+    nié, 1 = indétermination nommée.
+    """
+
+    quote: str
+    offset: int
+    rank: int
 
 
 def _declaring_sentence(
@@ -428,6 +455,46 @@ def _declaring_sentence(
     return best
 
 
+def _unnegated_canon_noun(sentence: str) -> bool:
+    """Un nom canonique de la phrase qui n'est PAS nié (liaison #3590).
+
+    La négation est la même fenêtre avant le nom que celle de la
+    déclaration : un « no canonical transcript » n'annonce rien d'établi,
+    seul un nom canonique SANS négation dans sa fenêtre le peut.
+    """
+    for noun in _INDET_CANON_NOUN.finditer(sentence):
+        for negation in _INDET_NEGATION.finditer(sentence):
+            if 0 <= noun.start() - negation.end() <= _INDET_NEGATION_WINDOW:
+                break
+        else:
+            return True
+    return False
+
+
+def _settled_announce(note_text: str) -> bool:
+    """R1170 (#3590 rework) — la note ANNONCE ce qui suit comme ÉTABLI.
+
+    Une phrase de la note porte le signal d'annonce, un marqueur d'établi
+    (stable, citable, seule portion…), et un nom canonique NON nié : la
+    note dit alors le CONTRAIRE d'une déclaration d'indétermination sur le
+    passage qui la suit — elle ne peut ouvrir aucune zone non établie.
+    Mesuré : l'ouverture de l'échange mesuré dit « The following exchange is
+    the only portion with a stable, citable transcription » — l'échange
+    couvert n'est PAS déclaré non établi, seule la langue d'un parti l'est.
+    """
+    for match in _INDET_SENTENCE.finditer(note_text or ""):
+        sentence = match.group(0).strip()
+        if not sentence:
+            continue
+        if not _INDET_ANNOUNCE.search(sentence):
+            continue
+        if not _INDET_SETTLED.search(sentence):
+            continue
+        if _unnegated_canon_noun(sentence):
+            return True
+    return False
+
+
 def declared_indeterminate_spans(text: str) -> List[DeclaredIndeterminateSpan]:
     """#3590 — les zones que le document lui-même déclare non établies.
 
@@ -448,6 +515,15 @@ def declared_indeterminate_spans(text: str) -> List[DeclaredIndeterminateSpan]:
         et c'est la note de fermeture — le non-canonique nié, forme (a) — qui
         nomme le passage.
 
+    R1170 (rework) — une note qui ANNONCE ce qui suit comme ÉTABLI (« the
+    only portion with a stable, citable transcription ») n'ouvre AUCUNE zone
+    : le passage annoncé est celui que le document dit établi, pas un
+    passage non établi. Ce qui reste de la note est sa déclaration de langue
+    (rendue par ``declared_indeterminate_declarations``), jamais une zone.
+    Sur l'échange mesuré — deux tours, la langue inventée d'un parti puis la
+    ligne en clair d'un autre — la marque ne tombe donc sur AUCUN tour : le
+    document ne déclare non établi ni l'un ni l'autre.
+
     Une note n'est JAMAIS sa propre zone : ses mots sont la DÉCLARATION, pas
     le passage déclaré. Rend les zones ordonnées, sans recouvrement.
 
@@ -456,18 +532,23 @@ def declared_indeterminate_spans(text: str) -> List[DeclaredIndeterminateSpan]:
     tel quel) n'est pas un document : aucune zone, jamais une exception.
     """
     source = text if isinstance(text, str) else ""
-    notes: List[Tuple[int, int, str, int, int]] = []
+    notes: List[Tuple[int, int, str, int, int, bool]] = []
     for match in _INDET_NOTE_SPAN.finditer(source):
         found = _declaring_sentence(match.group(0), match.start())
         if found is None:
             continue
         sentence, offset, rank = found
-        notes.append((match.start(), match.end(), sentence, offset, rank))
+        settled = _settled_announce(match.group(0))
+        notes.append((match.start(), match.end(), sentence, offset, rank, settled))
     if not notes:
         return []
     zones: List[DeclaredIndeterminateSpan] = []
     for first, second in zip(notes, notes[1:]):
         if second[0] <= first[1]:
+            continue
+        # R1170 — une note qui annonce ce qui suit comme ÉTABLI n'ouvre pas
+        # de zone : le passage qu'elle ouvre est celui qu'elle dit établi.
+        if first[5]:
             continue
         declaring = second if second[4] >= first[4] else first
         zones.append(
@@ -479,8 +560,10 @@ def declared_indeterminate_spans(text: str) -> List[DeclaredIndeterminateSpan]:
             )
         )
     brackets = [match.start() for match in _INDET_NOTE_SPAN.finditer(source)]
-    for _note_start, note_end, sentence, offset, _rank in notes:
+    for _note_start, note_end, sentence, offset, _rank, settled in notes:
         if not _INDET_ANNOUNCE.search(sentence):
+            continue
+        if settled:
             continue
         following = next((pos for pos in brackets if pos >= note_end), len(source))
         if following <= note_end:
@@ -497,6 +580,34 @@ def declared_indeterminate_spans(text: str) -> List[DeclaredIndeterminateSpan]:
             continue
         kept.append(zone)
     return kept
+
+
+def declared_indeterminate_declarations(
+    text: str,
+) -> List[DeclaredIndeterminateDeclaration]:
+    """#3590 rework — les phrases par lesquelles le document DÉCLARE.
+
+    Rend chaque note déclarante par sa phrase déclarante (la plus forte de
+    la note), dans l'ordre du document. Contrairement aux zones, les
+    déclarations SURVIVENT à l'annonce d'établi : la note qui dit à la fois
+    « langue inventée » et « l'échange qui suit est établi » ne ouvre pas de
+    zone, mais sa déclaration de langue reste à rendre — au prompt
+    d'extraction (ask 1) et au bloc documentaire de l'Acte II.
+
+    Même garde qu'ailleurs : un ``raw_text`` qui n'est pas une chaîne n'est
+    pas un document — liste vide, jamais une exception.
+    """
+    source = text if isinstance(text, str) else ""
+    found: List[DeclaredIndeterminateDeclaration] = []
+    for match in _INDET_NOTE_SPAN.finditer(source):
+        declaring = _declaring_sentence(match.group(0), match.start())
+        if declaring is None:
+            continue
+        sentence, offset, rank = declaring
+        found.append(
+            DeclaredIndeterminateDeclaration(quote=sentence, offset=offset, rank=rank)
+        )
+    return found
 
 
 def declared_indeterminate_span_at(

@@ -10319,13 +10319,19 @@ _QUESTION_FORCE_INSTRUCTION = (
 # document lui-même appelle charabia, et chaque lentille en aval hérite de la
 # précision. Cette instruction NOMME la déclaration du document (ask 1) ; la
 # moitié déterministe est le post-check du writer (#3590).
+# R1170 (rework) — l'instruction porte les DÉCLARATIONS (les phrases du
+# document), pas les zones : l'échange que la note d'ouverture annonce
+# ÉTABLI ne porte aucune marque, et l'ancre « une ligne que la déclaration
+# NOMME » interdit au modèle d'étendre la lecture à la ligne en clair de
+# l'autre parti, que le document ne déclare pas.
 _INDETERMINATE_DECLARATION_INSTRUCTION = (
-    " The document itself declares that part of its content is not settled; "
-    "its own words: {declarations}. For a line that falls under such a "
-    "declaration (deliberate invented language, or no canonical transcript), "
-    "do NOT paraphrase it into a determinate proposition and do NOT attribute "
-    "a precise thesis to it: quote the line as it stands, and say in its "
-    "'text' field that the passage is not settled, in the document's own terms."
+    " The document itself carries declarations about its own lines; its own "
+    "words: {declarations}. For a line such a declaration names (deliberate "
+    "invented language, or no canonical transcript), do NOT paraphrase it "
+    "into a determinate proposition and do NOT attribute a precise thesis to "
+    "it: quote the line as it stands, and say in its 'text' field what the "
+    "document declares about it, in the document's own terms. A line no "
+    "declaration names keeps its normal reading."
 )
 _INDETERMINATE_DECLARATION_CAP = 200
 _INDETERMINATE_DECLARATION_MAX = 3
@@ -10521,8 +10527,10 @@ async def _invoke_fact_extraction(
 
     # #3590 — le lecteur de déclaration vit dans le cœur (à côté de la garde
     # de forme #3584) : import local, le graphe d'imports module reste intact.
+    # R1170 — le prompt porte les DÉCLARATIONS, pas les zones : l'échange
+    # annoncé établi ne porte aucune marque, la déclaration de langue reste.
     from argumentation_analysis.core.shared_state import (
-        declared_indeterminate_spans,
+        declared_indeterminate_declarations,
     )
 
     # #2850 lot 8 — one flag dict shared by the k windows AND the fallback:
@@ -10563,7 +10571,7 @@ async def _invoke_fact_extraction(
         except Exception:
             lang_clause = ""
         system_content = _fact_extraction_system_content(
-            lang_clause, declared_indeterminate_spans(input_text)
+            lang_clause, declared_indeterminate_declarations(input_text)
         )
         # #1290 — strict-JSON-mode where the endpoint supports it. Some
         # OpenRouter-backed models reject response_format; on such a rejection
