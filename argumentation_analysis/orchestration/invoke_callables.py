@@ -10312,6 +10312,69 @@ _QUESTION_FORCE_INSTRUCTION = (
     "never a stage direction or a reaction of the audience."
 )
 
+# #3590 — un document peut DÉCLARER une partie de lui-même non établie : une
+# note entre crochets qui dit que le passage n'a pas de transcription
+# canonique, ou que sa langue est délibérément inventée. Mesuré au cycle 13 :
+# l'extracteur fabrique une paraphrase DÉTERMINÉE pour une ligne que le
+# document lui-même appelle charabia, et chaque lentille en aval hérite de la
+# précision. Cette instruction NOMME la déclaration du document (ask 1) ; la
+# moitié déterministe est le post-check du writer (#3590).
+_INDETERMINATE_DECLARATION_INSTRUCTION = (
+    " The document itself declares that part of its content is not settled; "
+    "its own words: {declarations}. For a line that falls under such a "
+    "declaration (deliberate invented language, or no canonical transcript), "
+    "do NOT paraphrase it into a determinate proposition and do NOT attribute "
+    "a precise thesis to it: quote the line as it stands, and say in its "
+    "'text' field that the passage is not settled, in the document's own terms."
+)
+_INDETERMINATE_DECLARATION_CAP = 200
+_INDETERMINATE_DECLARATION_MAX = 3
+
+
+def _indeterminate_declaration_instruction(declared: Sequence[Any]) -> str:
+    """#3590 — l'instruction qui nomme les déclarations du document.
+
+    Vide quand le document ne déclare rien : le prompt d'extraction reste
+    alors BYTE-IDENTIQUE sur tout autre document (ask 5).
+    """
+    if not declared:
+        return ""
+    named = "; ".join(
+        f'"{str(span.quote)[:_INDETERMINATE_DECLARATION_CAP]}"'
+        for span in declared[:_INDETERMINATE_DECLARATION_MAX]
+    )
+    return _INDETERMINATE_DECLARATION_INSTRUCTION.format(declarations=named)
+
+
+def _fact_extraction_system_content(lang_clause: str, declared: Sequence[Any]) -> str:
+    """#3590 — le prompt système d'extraction, construit en UN lieu.
+
+    Construit ici et non au call site pour que la non-régression du ask 5
+    (aucune déclaration ⇒ prompt byte-identique) soit une assertion : la
+    concaténation des constantes module est la référence, et la seule
+    différence admise est l'instruction d'indétermination.
+    """
+    return (
+        "You are an expert argument analyst. Extract the key arguments "
+        "and verifiable claims from the text. "
+        "For each argument and claim, include the exact quote from the "
+        "source text that supports it (verbatim, max 150 chars). "
+        "Do NOT detect fallacies — that is handled by a separate specialist. "
+        "Focus on: (1) identifying distinct argumentative positions, "
+        "(2) extracting factual claims that can be verified, "
+        "(3) noting rhetorical strategies used (without labeling them as fallacies). "
+        + _OPPOSING_POSITIONS_INSTRUCTION
+        + _MOVE_AUTHOR_INSTRUCTION
+        + _QUESTION_FORCE_INSTRUCTION
+        + _indeterminate_declaration_instruction(declared)
+        + lang_clause
+        + " Respond with ONLY a JSON object:\n"
+        '{"arguments": [{"text": "arg description", "source_quote": "exact quote...", '
+        '"move_author": "speaker|reported"}], '
+        '"claims": [{"text": "claim description", "source_quote": "exact quote..."}], '
+        '"summary": "brief analysis summary"}'
+    )
+
 
 async def _extraction_call_one_window(
     client: Any,
@@ -10456,6 +10519,12 @@ async def _invoke_fact_extraction(
     """
     import re
 
+    # #3590 — le lecteur de déclaration vit dans le cœur (à côté de la garde
+    # de forme #3584) : import local, le graphe d'imports module reste intact.
+    from argumentation_analysis.core.shared_state import (
+        declared_indeterminate_spans,
+    )
+
     # #2850 lot 8 — one flag dict shared by the k windows AND the fallback:
     # a param the endpoint rejects stays dropped across windows (same
     # endpoint), and ``last_reason`` names the last failure whatever the
@@ -10493,24 +10562,8 @@ async def _invoke_fact_extraction(
                 )
         except Exception:
             lang_clause = ""
-        system_content = (
-            "You are an expert argument analyst. Extract the key arguments "
-            "and verifiable claims from the text. "
-            "For each argument and claim, include the exact quote from the "
-            "source text that supports it (verbatim, max 150 chars). "
-            "Do NOT detect fallacies — that is handled by a separate specialist. "
-            "Focus on: (1) identifying distinct argumentative positions, "
-            "(2) extracting factual claims that can be verified, "
-            "(3) noting rhetorical strategies used (without labeling them as fallacies). "
-            + _OPPOSING_POSITIONS_INSTRUCTION
-            + _MOVE_AUTHOR_INSTRUCTION
-            + _QUESTION_FORCE_INSTRUCTION
-            + lang_clause
-            + " Respond with ONLY a JSON object:\n"
-            '{"arguments": [{"text": "arg description", "source_quote": "exact quote...", '
-            '"move_author": "speaker|reported"}], '
-            '"claims": [{"text": "claim description", "source_quote": "exact quote..."}], '
-            '"summary": "brief analysis summary"}'
+        system_content = _fact_extraction_system_content(
+            lang_clause, declared_indeterminate_spans(input_text)
         )
         # #1290 — strict-JSON-mode where the endpoint supports it. Some
         # OpenRouter-backed models reject response_format; on such a rejection

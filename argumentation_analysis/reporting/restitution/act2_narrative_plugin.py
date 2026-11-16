@@ -392,6 +392,12 @@ class ArgEvidence:
     # sentence. Attribution rides the line (``coverage_procede_lines``); the
     # label's one home — the binding sentence drops the labels it carries.
     coverage_procedes: List[str] = field(default_factory=list)
+    # #3590 — la déclaration du document pour cette unité, quand l'unité
+    # tombe dans un passage que le document dit lui-même non établi
+    # (``argument_provenance[arg_id]["indeterminate"]``, écrit par le
+    # post-check déterministe). ``None`` = aucune déclaration : la ligne de
+    # beat rend la description, exactement comme avant.
+    indeterminate: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -1253,6 +1259,36 @@ def _sampled_unit_ids(state: Any, phase: str) -> Optional[Set[str]]:
     return {str(u) for u in ids}
 
 
+def indeterminate_beat_line(arg_id: str, declared: Dict[str, Any]) -> str:
+    """#3590 — la ligne de beat d'une unité que le document dit non établie.
+
+    L'Acte II rend la DÉCLARATION du document, jamais la paraphrase
+    déterminée que l'extracteur a fabriquée pour ce passage (ask 3) : la
+    description reste dans l'état, mais elle ne nourrit plus le récit.
+    """
+    quote = str(declared.get("declared_quote") or "").strip()
+    line = (
+        f"  • {arg_id} : lecture INDÉTERMINÉE — le document déclare lui-même "
+        f"que ce passage n'est pas établi"
+    )
+    if quote:
+        line += f" : « {truncate_at_boundary(quote, CITED_UNIT_TEXT_CAP)} »"
+    return line + ". Ne le décris pas comme un contenu précis."
+
+
+def _indeterminate_entry(entry: Any) -> Optional[Dict[str, Any]]:
+    """#3590 — la déclaration d'indétermination que porte une provenance.
+
+    Rendue seulement quand elle est bien un dictionnaire : une valeur
+    malformée est une ABSENCE (l'unité se rend comme avant), jamais une
+    lecture devinée (#1019).
+    """
+    if not isinstance(entry, dict):
+        return None
+    declared = entry.get("indeterminate")
+    return declared if isinstance(declared, dict) else None
+
+
 def build_act2_evidence(state: Any) -> Act2Evidence:
     """Build the deterministic Acte II evidence bundle from a shared state.
 
@@ -1269,6 +1305,10 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
     fallacies = getattr(state, "identified_fallacies", {}) or {}
     quality = getattr(state, "argument_quality_scores", {}) or {}
     counters = getattr(state, "counter_arguments", []) or []
+    # #3590 — les déclarations d'indétermination vivent dans la provenance.
+    provenance = getattr(state, "argument_provenance", {}) or {}
+    if not isinstance(provenance, dict):
+        provenance = {}
 
     quality_axis_available = _quality_axis_usable(quality)
     # #3337 — the ranking line is computed below, after the governance verdict
@@ -1480,6 +1520,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
                 ),
                 coverage_lines=coverage_lines_by_arg.get(str(arg_id), []),
                 coverage_procedes=coverage_procedes_by_arg.get(str(arg_id), []),
+                indeterminate=_indeterminate_entry(provenance.get(str(arg_id))),
             )
         )
 
@@ -2235,7 +2276,12 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
             )
         lines: List[str] = [header]
         for a in mvt.arguments:
-            lines.append(f"  • {a.arg_id} : {a.description}")
+            # #3590 — une unité que le document déclare non établie rend la
+            # déclaration, jamais la paraphrase déterminée.
+            if a.indeterminate:
+                lines.append(indeterminate_beat_line(a.arg_id, a.indeterminate))
+            else:
+                lines.append(f"  • {a.arg_id} : {a.description}")
             if a.quality_available:
                 # #1907 — no grade in the reader narrative. ``a.virtues`` now
                 # holds ONLY the dimensions that were actually evaluable on this
