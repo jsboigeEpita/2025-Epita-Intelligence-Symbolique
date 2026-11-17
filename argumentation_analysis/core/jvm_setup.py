@@ -1239,8 +1239,9 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
             return False
 
         # Couche 2: Prise de contrôle explicite du cycle de vie de la JVM
-        # La configuration `destroy_jvm` est obsolète dans les versions récentes de JPype.
-        # Le contrôle manuel est maintenant le comportement par défaut.
+        # La forme d'arrêt natif est fixée plus bas (`destroy_jvm = False`,
+        # #2894) : le hook de sortie reste armé, seule la forme bloquante
+        # (`DestroyJavaVM`) est refusée.
         pass
 
         java_home = find_valid_java_home()
@@ -1315,13 +1316,13 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
 
             jvm_options = get_jvm_options()
 
-            # #2866: without ``DestroyJavaVM`` at exit (``onexit`` disabled
-            # below), Java's shutdown hooks never run, so Tweety's
-            # ``deleteOnExit`` files outlived the process (measured: 3 left
-            # on 3, versus 1 on 3 with the destroy). The JVM now writes its
-            # temporaries in a per-process directory that a Python atexit
-            # handler removes — the sweep no longer depends on the native
-            # shutdown this module disables.
+            # #2866: without ``DestroyJavaVM`` at exit (the destroy form
+            # refused below, #2894), Java's shutdown hooks never run, so
+            # Tweety's ``deleteOnExit`` files outlived the process
+            # (measured: 3 left on 3, versus 1 on 3 with the destroy). The
+            # JVM now writes its temporaries in a per-process directory that
+            # a Python atexit handler removes — the sweep no longer depends
+            # on the native destroy this module refuses.
             process_tmp_dir = tempfile.mkdtemp(prefix="jvm-tmp-")
             atexit.register(shutil.rmtree, process_tmp_dir, True)
             jvm_options.append(f"-Djava.io.tmpdir={process_tmp_dir}")
@@ -1372,25 +1373,24 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
                 f"Appel à jpype.startJVM terminé (Thread ID: {current_thread_id})."
             )
             _JVM_INITIALIZED_THIS_SESSION = True
-            # #2866: jpype's atexit ``_JTerminate`` calls the native
-            # ``_jpype.shutdown(config.destroy_jvm, ...)``, which never
-            # returned in the lock env once the package inits went lazy —
-            # the eager ``core`` init used to mask it by loading the
-            # ``semantic_kernel.connectors`` chain (measured: ``OpenSSL``
-            # or ``av`` alone prevent the hang; a bare attach does not —
-            # native exit-hang family tracked on #2894, distinct from
-            # #2005/#2080 by signature). This suite already keeps the
-            # JVM running until process death (see the sessionfinish note
-            # "L'arrêt de la JVM est désactivé"), so the atexit destroy is
-            # disabled here: the JVM dies with the process instead of
-            # deadlocking at its exit. The #2519 exit attach is retired
-            # with it: it only ever ran to keep that native shutdown
-            # alive, and removing it changes nothing on this head (7/7
-            # guards pass). An explicit ``shutdown_jvm()`` still performs
-            # the real teardown.
+            # #2894: jpype's atexit ``_JTerminate`` calls the native
+            # ``_jpype.shutdown(config.destroy_jvm, False)``. What blocks
+            # an exiting interpreter in the lock env is ``DestroyJavaVM``
+            # — ``shutdown(True, ...)`` never returns from one — while the
+            # reference-queue-only form ``shutdown(False, False)`` does
+            # (measured 17/11: 2-3 s on ai-01 in the main thread and in an
+            # atexit handler, 0.00 s direct on po-2023). The lock-env exit
+            # hang #2866 worked around with ``onexit = False`` was that
+            # destroy call, not the hook itself. The hook therefore stays
+            # armed and only the form is pinned: Java-side references are
+            # released at exit without deadlocking. The #2866 tmpdir
+            # sweeper stays — without ``DestroyJavaVM`` no Java shutdown
+            # hook runs, so Tweety's ``deleteOnExit`` files still need the
+            # Python-side sweep. An explicit ``shutdown_jvm()`` reads the
+            # same config and is non-blocking for the same reason.
             from jpype import config as _jpype_config
 
-            _jpype_config.onexit = False
+            _jpype_config.destroy_jvm = False
             logger.info("[SUCCESS] JVM démarrée avec succès.")
 
             # Auto-detect and configure external reasoning tools (issue #27)

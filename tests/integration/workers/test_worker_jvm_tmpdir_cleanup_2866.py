@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """#2866: the JVM's temporary files do not outlive the process.
 
-With jpype's exit hook disabled (``jpype.config.onexit = False``, set by
-``initialize_jvm``), ``DestroyJavaVM`` never runs at exit, so Java's shutdown
-hooks never run either, and Tweety's ``deleteOnExit`` files stayed behind —
-measured on the fix's first head: 3 temp files left on 3 created, versus 1 on
-3 with the destroy still active.
+With the destroy form refused at exit (``jpype.config.destroy_jvm = False``,
+set by ``initialize_jvm`` since #2894; before that the whole hook was
+disabled, ``onexit = False``, #2866), ``DestroyJavaVM`` never runs, so Java's
+shutdown hooks never run either, and Tweety's ``deleteOnExit`` files stayed
+behind — measured on the fix's first head: 3 temp files left on 3 created,
+versus 1 on 3 with the destroy still active.
 
 ``initialize_jvm`` therefore points ``java.io.tmpdir`` at a per-process
 directory that a Python ``atexit`` handler removes. Born red on ``36d829eeb``
