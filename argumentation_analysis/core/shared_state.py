@@ -332,6 +332,27 @@ def speaker_tag_form(text: str) -> str:
     return "tag_only" if not _NON_PROP_LETTERS.search(residue) else "tag_prefix"
 
 
+def speaker_tag_head(text: str) -> str:
+    """#3557 — l'étiquette de locuteur en tête d'un texte, ``""`` sinon.
+
+    Le complément de :func:`speaker_tag_form` pour le cadre de descente
+    (#3557) : la FORME dit si un texte ouvre sur une étiquette, la TÊTE
+    dit quelle étiquette — le texte jusqu'au terminateur inclus
+    (``NOM.`` entier pour la forme point, ``NOM:`` pour les deux formes
+    colon). Même vocabulaire, même frontière : jamais un mot du corpus,
+    jamais une longueur propre.
+    """
+    raw = (text or "").strip()
+    if not raw:
+        return ""
+    if _NON_PROP_SPEAKER_TAG_PERIOD.match(raw):
+        return raw
+    match = _NON_PROP_SPEAKER_TAG.match(raw)
+    if not match:
+        return ""
+    return raw[: match.end()]
+
+
 def non_propositional_form(unit_text: str) -> str:
     """#3584 — la classe de forme d'une unité, ``""`` si elle est propositionnelle.
 
