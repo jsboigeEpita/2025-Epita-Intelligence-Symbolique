@@ -171,16 +171,18 @@ def _document_frame_parts(frame: Any) -> Dict[str, str]:
     """#3428 — the frame's verbatim parts, normalised once for every site.
 
     Accepts the producer's record (``{"before": ..., "after": ...,
-    "source_quote": ...}``) and keeps only the non-blank parts, so the leaf,
-    the navigation and the one-shot fallback carry the SAME frame — a unit
-    must not get a different window because the descent took another path.
-    Anything else (None, a blank record) is ``{}``, and every prompt is then
-    byte-identical to the pre-#3428 one.
+    "source_quote": ..., "speaker": ..., "next_speaker": ...}``) and keeps
+    only the non-blank parts, so the leaf, the navigation and the one-shot
+    fallback carry the SAME frame — a unit must not get a different window
+    because the descent took another path. The two tag parts (#3557) ride
+    under the same rule: present when the producer's tag rule fired, absent
+    when it did not. Anything else (None, a blank record) is ``{}``, and
+    every prompt is then byte-identical to the pre-#3428 one.
     """
     if not isinstance(frame, dict):
         return {}
     parts: Dict[str, str] = {}
-    for key in ("before", "after", "source_quote"):
+    for key in ("before", "after", "source_quote", "speaker", "next_speaker"):
         text = str(frame.get(key) or "").strip()
         if text:
             parts[key] = text
@@ -203,6 +205,16 @@ def _document_frame_block(parts: Dict[str, str]) -> str:
             "- the document's own words where this unit was extracted "
             f"(the unit restates them): « {parts['source_quote']} »"
         )
+    if parts.get("speaker"):
+        lines.append(
+            "- the speaker tag of the turn this unit belongs to: "
+            f"« {parts['speaker']} »"
+        )
+    if parts.get("next_speaker"):
+        lines.append(
+            "- the speaker tag of the turn that follows: "
+            f"« {parts['next_speaker']} »"
+        )
     if not lines:
         return ""
     return (
@@ -211,15 +223,39 @@ def _document_frame_block(parts: Dict[str, str]) -> str:
     )
 
 
-def _frame_instruction() -> str:
+#: #3557 — the attribution case of the as-stated instruction, appended
+#: ONLY when the frame carries a speaker tag: a document no tag rule
+#: fires on keeps the pre-#3557 instruction byte for byte (#3416).
+_SPEAKER_ATTRIBUTION_INSTRUCTION = (
+    "SPEAKER ATTRIBUTION — the frame names the speaker tag of the turn "
+    "this unit belongs to, and of the turn that follows when it is "
+    "carried. Before confirming a node whose claim is someone's saying, "
+    "thinking or doing, settle from the frame who speaks the unit — and, "
+    "when the unit itself names the party it addresses, who that party "
+    "is: a reply the document gives to one character is not the other "
+    "character's words. A fallacy whose confirmation needs to know who "
+    "speaks, or who is addressed, cannot be confirmed without the frame "
+    "saying so — an accusation read on the wrong speaker is refuted: "
+    "pass matches=false and name the attribution in the justification "
+    "(who the frame gives the words to), or answer that the node does "
+    "not match. A real fallacy on another party's move stays a fallacy, "
+    "attributed to its speaker.\n"
+)
+
+
+def _frame_instruction(parts: Optional[Dict[str, str]] = None) -> str:
     """#3428 — judge the claim as the document states it, not as a bare
     assertion. Injected only when a frame rides, and it names no family:
     the four measured misreads span the taxonomy (an amalgam, a modality,
     a dilemma's structure, a conditional), so the reading rule is the same
     for every node. The absent case is stated: a frame that settles nothing
     leaves the judgment as it was.
+
+    #3557 — the attribution case rides the same channel, appended only
+    when the frame carries a speaker tag (``parts``): with no tag, the
+    instruction is the pre-#3557 string byte for byte.
     """
-    return (
+    base = (
         "AS-STATED JUDGMENT — judge the claim AS THE DOCUMENT STATES IT, "
         "using the frame above with the unit. Before confirming, settle "
         "from the frame: the claim's modality (can, must, would — a "
@@ -235,6 +271,10 @@ def _frame_instruction() -> str:
         "fallacy on a modal claim stays a fallacy, stated with its "
         "modality; a frame that settles nothing changes nothing.\n"
     )
+    parts = parts or {}
+    if parts.get("speaker") or parts.get("next_speaker"):
+        return base + _SPEAKER_ATTRIBUTION_INSTRUCTION
+    return base
 
 
 def _pool_widenet_answers(
@@ -1421,7 +1461,7 @@ class FallacyWorkflowPlugin:
         # function emits is byte-identical to the pre-#3428 path.
         _frame = _document_frame_parts(document_frame)
         frame_block = _document_frame_block(_frame)
-        frame_instruction = _frame_instruction() if _frame else ""
+        frame_instruction = _frame_instruction(_frame) if _frame else ""
 
         # FB-30 (#1107): no depth cap — the LLM descends until it reaches a
         # leaf (the only natural cap, depth ≤ 10). Bounded only by a generous
@@ -2695,7 +2735,7 @@ class FallacyWorkflowPlugin:
         caveat = _document_caveat_instruction() if _statements else ""
         _frame = _document_frame_parts(document_frame)
         frame_block = _document_frame_block(_frame)
-        frame_instruction = _frame_instruction() if _frame else ""
+        frame_instruction = _frame_instruction(_frame) if _frame else ""
         document_json_key = (
             ', "document_statement": "the document\'s own words that refute '
             'this attribution, verbatim — omission if none"'

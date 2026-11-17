@@ -96,7 +96,11 @@ from argumentation_analysis.core.reading_window import (
     pillar_budget,
     selected_text_and_selection,
 )
-from argumentation_analysis.core.shared_state import unit_extent
+from argumentation_analysis.core.shared_state import (
+    speaker_tag_form,
+    speaker_tag_head,
+    unit_extent,
+)
 
 logger = logging.getLogger("FirstReading")
 
@@ -1179,6 +1183,53 @@ FRAME_CONTEXT_MAX_CHARS = 600
 _SENTENCE_END_RE = re.compile(r'[.!?…]+[»"”\')\]]*\s+')
 
 
+def _turn_speaker_tags(
+    raw: str, breaks: List[re.Match], starts: List[int], idx: int
+) -> Dict[str, str]:
+    """#3557 — the speaker tags of the unit's turn and of the turn that
+    answers it, read from the sentence starts alone. ``{}`` when no tag
+    rule fires — the frame then keeps its pre-#3557 parts byte for byte.
+
+    The rule, stated for the reader (the pull request carries the same
+    statement and the misses): scanning sentence starts BACKWARD from the
+    unit's own sentence, the first sentence that OPENS on a speaker tag
+    (``NOM:`` + its reply, the ``tag_prefix`` form) is the tag of the turn
+    the unit belongs to, and a BARE tag sentence (``NOM.`` or a childless
+    ``NOM:``, the ``tag_only`` form) opens the FOLLOWING turn, so it
+    governs the unit only when it sits before it — the #3623 semantics the
+    splitter already reads. The answering turn is the first tag FORWARD
+    from the unit's sentence. One form definition for the whole pipeline
+    (``speaker_tag_form``): uppercase-convention tags of at most 40
+    characters, no corpus word, no learned model. What the rule MISSES:
+    markings outside that convention (a lowercase or dash-introduced tag,
+    a bracketed stage direction naming the speaker), and a tag glued
+    inside a sentence with no sentence end before it — the #3623/#3625
+    splitters prevent that form at extraction, but a recorded state that
+    still carries one reads no tag.
+    """
+    tags: Dict[str, str] = {}
+    for i in range(idx, -1, -1):
+        piece = (
+            raw[starts[i] : breaks[i].end()] if i < len(breaks) else raw[starts[i] :]
+        )
+        form = speaker_tag_form(piece)
+        if form == "tag_prefix" or (form == "tag_only" and i < idx):
+            head = speaker_tag_head(piece)
+            if head:
+                tags["speaker"] = head
+            break
+    for i in range(idx + 1, len(starts)):
+        piece = (
+            raw[starts[i] : breaks[i].end()] if i < len(breaks) else raw[starts[i] :]
+        )
+        if speaker_tag_form(piece):
+            head = speaker_tag_head(piece)
+            if head:
+                tags["next_speaker"] = head
+            break
+    return tags
+
+
 def document_frame_for_unit(
     state: Any,
     unit_text: str = "",
@@ -1204,6 +1255,16 @@ def document_frame_for_unit(
       i.e. the document's own words where a PARAPHRASE was extracted. For
       a paraphrase the offsets describe the quote, so the unit's end is
       computed on the quote, not on the paraphrase's length.
+    * ``speaker`` / ``next_speaker`` — #3557: the speaker tag of the turn
+      the unit belongs to, and of the turn that answers it, read from the
+      sentence starts by ``_turn_speaker_tags`` (the rule and its misses
+      are stated there). On a document that marks who speaks, a tag can
+      sit OUTSIDE the sentence window above (measured, cycle 7: the tag
+      185 characters before the unit, the window reaching 92 back), and
+      the descent then read a reply with no idea who speaks it. No window
+      is widened by a fixed number of characters — the tags ride as their
+      own short parts, and a document no tag rule fires on keeps the
+      pre-#3557 parts byte for byte.
 
     Offsets come from the caller (provenance) — never from a search of the
     unit text in the document: a paraphrase would cite the wrong passage,
@@ -1248,6 +1309,9 @@ def document_frame_for_unit(
     quote = str(source_quote or "").strip()
     if quote:
         parts["source_quote"] = quote
+    # #3557 — the turn's speaker tags ride as their own parts; no tag
+    # rule fires ⇒ the parts stay byte for byte.
+    parts.update(_turn_speaker_tags(raw, breaks, starts, idx))
     return parts
 
 
