@@ -55,7 +55,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 from fractions import Fraction
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 
 from .figure_scales import score_with_scale  # #3394
 from .arena_record import (  # #3073: shared arena record with act1
@@ -116,6 +116,7 @@ from argumentation_analysis.core.fallacy_attribution import (  # #3180
     DETECTION_STANDING_RULE,  # #3248
     is_reported_move,
     is_speaker_move,
+    MOVE_AUTHOR_SPEAKER,  # #3559 — only the speaker's own moves get a marker
     move_author_label_of,
     reported_position_qualifier,  # #3513 — one qualifier reader, every surface
     taxonomy_definition_note,  # #3394
@@ -271,8 +272,18 @@ _SETAF_REPORTED_POSITION_RULE = (
     "  ligne sans ce qualificatif ne dit à qui est la position : n'en infère\n"
     "  aucun camp.\n"
 )
-_WEIGHTED_DIST_ATTACK_CAP = 8  # max attacks sampled for the weight distribution
-# #2952 sites 1a-3 (DeLP / EAF / ADF) — same prompt-budget discipline as above.
+# #3559 — a claim whose passage the document marks with a speaker tag must
+# not be handed to another party (5/6 Sonnet passes at c7 gave one party the
+# other's words). Conditional by construction: no marker, no rule.
+_CLAIM_SPEAKER_RULE = (
+    "- TOUR MARQUÉ : quand une revendication (ou une unité jointe) porte\n"
+    "  « [tour : NOM] », ses mots sont ceux du locuteur de CE tour-là, pas\n"
+    "  ceux d'un autre. Ne prête jamais à un autre parti ce qu'elle dit —\n"
+    "  une traduction, une voix-off ou un contradicteur a ses propres mots,\n"
+    "  portés par sa propre ligne. Une ligne sans marque ne dit pas qui\n"
+    "  parle : n'en infère aucune attribution.\n"
+)
+_WEIGHTED_DIST_ATTACK_CAP = 8  # max attacks sampled for the weight distribution# #2952 sites 1a-3 (DeLP / EAF / ADF) — same prompt-budget discipline as above.
 _DELP_VERDICT_CAP = 3  # max named dialectical verdicts (warranted/defeated)
 _EAF_DIVERGENCE_CAP = 3  # max named agent-pair belief divergences
 _ADF_UNDECIDED_CAP = 3  # max named three-valued undecided statements
@@ -748,6 +759,12 @@ class Act3Evidence:
     # from. The prompt notice fires from the gap between what is listed and
     # what the join found, never from the cap alone (#1622/#2850 idiom).
     joined_excerpts_total: int = 0
+    # #3559 — the speaker TAG of the turn each claim (or joined unit)
+    # belongs to, read by the descent's own local and deterministic rule
+    # (#3557, corrected for a tag a stage direction precedes). Empty on a
+    # document that marks no passage: the prompt then carries no marker
+    # and no attribution rule, byte for byte (#3416).
+    claim_speakers: Dict[str, str] = field(default_factory=dict)
     # #2965 (Acte III slice) — the governance winner's own text, capped.
     # The writer does not join an id to its unit across a long prompt
     # (measured on the saved state: wrong unit 4 of 5 samples, R1071), so
@@ -3463,6 +3480,36 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         for u in selected_args
         if str(args[u] or "").strip()
     ]
+    # #3559 — the claim and joined lines carry their turn's speaker tag.
+    # Deliberately NARROWER than the descent's frame: the marker rides only
+    # when the unit's OWN sentence opens on the tag (leading stage
+    # directions skipped) — never a backward scan to an earlier turn,
+    # which would hand a claim to the wrong party (measured, c7: the
+    # slogans sit inside a bracketed direction of the SECOND voice's
+    # paragraph while ``move_author`` records them as the speaker's own
+    # words). A unit recorded as a reported move carries the existing
+    # « position rapportée » surfaces, never a speaker marker. No tag on
+    # the unit's own sentence ⇒ no marker; no marker anywhere ⇒ the
+    # prompt stays byte for byte (#3416).
+    from argumentation_analysis.agents.core.reading.first_reading import (
+        own_sentence_speaker_tag,
+    )
+
+    provenance = getattr(state, "argument_provenance", None) or {}
+    if not isinstance(provenance, dict):
+        provenance = {}
+    claim_speakers: Dict[str, str] = {}
+    for uid in dict.fromkeys(
+        [u for u, _ in claim_excerpts] + [u for u, _, _ in joined_excerpts]
+    ):
+        prov = provenance.get(uid) or {}
+        if not isinstance(prov, dict):
+            continue
+        if prov.get("move_author") not in (None, "", MOVE_AUTHOR_SPEAKER):
+            continue
+        tag = own_sentence_speaker_tag(state, prov.get("offset"))
+        if tag:
+            claim_speakers[uid] = tag
 
     # #2965 (Acte III slice) — the winner's referent travels on the
     # governance line itself; see the field's comment.
@@ -3554,6 +3601,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         },
         joined_excerpts=joined_excerpts,
         joined_excerpts_total=len(joined_units),
+        claim_speakers=claim_speakers,
         governance_winner_text=governance_winner_text,
         governance_divergent_texts=governance_divergent_texts,
         examination_by_unit=examination_by_unit,
@@ -3699,6 +3747,12 @@ def _strategy_suffix(strategy: str) -> str:
     """
     s = strategy_label_fr(strategy)
     return f" ({s})" if s else ""
+
+
+def _speaker_marker(speakers: Mapping[str, str], unit_id: str) -> str:
+    """#3559 — the claim line's speaker marker, ``""`` when no tag was read."""
+    tag = (speakers or {}).get(unit_id) or ""
+    return f" [tour : {tag}]" if tag else ""
 
 
 def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
@@ -3924,7 +3978,7 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
     # reintroduce the 240-char cut that kept 31 % of the winner.
     if evidence.claim_excerpts:
         claims_block = "\n".join(
-            f"  - {unit_id} : {text}"
+            f"  - {unit_id}{_speaker_marker(evidence.claim_speakers, unit_id)} : {text}"
             for unit_id, text in evidence.claim_excerpts[:_MAX_CLAIM_EXCERPTS]
         )
     else:
@@ -3951,7 +4005,7 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
     # section read the same to the writer (#1667).
     if evidence.joined_excerpts:
         joined_block = "\n".join(
-            f"  - {unit_id} ({relation}) : {text}"
+            f"  - {unit_id} ({relation}){_speaker_marker(evidence.claim_speakers, unit_id)} : {text}"
             for unit_id, relation, text in evidence.joined_excerpts
         )
     else:
@@ -4082,6 +4136,8 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
         _SETAF_REPORTED_QUALIFIER in (wp.label or "") for wp in evidence.weak_points
     ):
         setaf_side_rule = _SETAF_REPORTED_POSITION_RULE
+    # #3559 — the attribution rule rides only when a marker rides (#3416).
+    speaker_rule = _CLAIM_SPEAKER_RULE if evidence.claim_speakers else ""
 
     # #1667 — the symmetric presence side. Rendered in both states, exactly like
     # the absence block above: an empty section and a missing section read the
@@ -4371,6 +4427,7 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
         f"{SPEAKER_NAMING_RULE}\n"
         f"{READING_BASIS_RULE}\n"
         f"{setaf_side_rule}"
+        f"{speaker_rule}"
         # #3237 — the cause rule is now the shared constant from fol_cause
         # (the vocabulary's one home): Act II misstated a recorded cause
         # because only this act carried the rule. Same words, one father.
@@ -4924,6 +4981,7 @@ def build_act3_retry_prompt(
     virtue_flagged: Optional[List[str]] = None,
     virtue_table: str = "",
     letter_flagged: Optional[List[str]] = None,
+    attribution_flagged: Optional[List[str]] = None,
 ) -> str:
     """The bounded ONE writer retry (#3343) — the writer rewrites its own prose.
 
@@ -5017,6 +5075,32 @@ def build_act3_retry_prompt(
             "pas les phrases repérées : rends la conclusion complète, prête à "
             "lire.\n"
         )
+    if attribution_flagged:
+        # #3559 — the fourth motive rides the SAME bounded call: a marked
+        # claim's quoted words handed to another party. The correction names
+        # the sentences and the markers govern; no deterministic strip
+        # (#3317's calibration).
+        attribution_quoted = "\n".join(
+            f"- {sentence}" for sentence in attribution_flagged[:5]
+        )
+        header = (
+            "CORRECTION DEMANDÉE"
+            if not (flagged or virtue_flagged or letter_flagged)
+            else "AUTRE CORRECTION DEMANDÉE"
+        )
+        prompt += (
+            f"\n\n{header} — ta conclusion ci-dessus contient "
+            f"{len(attribution_flagged)} phrase(s) qui prêtent à un parti les "
+            "mots d'une revendication marquée « [tour : NOM] » d'un AUTRE "
+            f"parti. Phrases repérées :\n{attribution_quoted}\n\n"
+            "Réécris la conclusion EN ENTIER — même structure, mêmes beats, "
+            "mêmes données, même longueur. Pour chaque phrase repérée : "
+            "attribue les mots cités au locuteur du tour que son marqueur "
+            "nomme — une traduction ou une voix-off a ses propres mots, "
+            "portés par sa propre ligne — ou dis la même chose sans citer "
+            "ces mots. Ne commente pas cette consigne et ne cite pas les "
+            "phrases repérées : rends la conclusion complète, prête à lire.\n"
+        )
     return label_writer_prompt(prompt, evidence.unit_texts)
 
 
@@ -5027,6 +5111,7 @@ async def weave_act3_conclusion_retry(
     virtue_flagged: Optional[List[str]] = None,
     virtue_table: str = "",
     letter_flagged: Optional[List[str]] = None,
+    attribution_flagged: Optional[List[str]] = None,
 ) -> WeaveOutcome:
     """The bounded ONE retry (#3343), under the same fail-loud contract."""
     return await weave(
@@ -5036,6 +5121,7 @@ async def weave_act3_conclusion_retry(
             virtue_flagged=virtue_flagged,
             virtue_table=virtue_table,
             letter_flagged=letter_flagged,
+            attribution_flagged=attribution_flagged,
         ),
         llm_callable,
         "Acte III (relance)",
@@ -5069,6 +5155,9 @@ class _DressedAct3:
     # letter is a workshop handle the reader cannot resolve (#3317), and the
     # panel's conclusion printed « Pour γ, … » with no legend in sight.
     letter_sentences: List[str]
+    # #3559 — a marked claim's words handed to another party: the fourth
+    # motive of the SAME bounded retry (#3343 family).
+    attribution_sentences: List[str]
 
 
 def _dress_act3_prose(
@@ -5228,6 +5317,16 @@ def _dress_act3_prose(
     from .readability_gate import greek_label_sentences
 
     _letters = greek_label_sentences(narrative)
+    # #3559 — the marked claim's words must stay with its own party: same
+    # placement as the other motives (post claim-gate, pre grafts), same
+    # bounded retry, no deterministic strip.
+    from .speaker_attribution_check import attribution_flagged_sentences
+
+    _attribution_flagged = attribution_flagged_sentences(
+        narrative,
+        evidence.unit_texts,
+        evidence.claim_speakers,
+    )
     return _DressedAct3(
         text=narrative,
         bound_removal=_bound_removal,
@@ -5240,6 +5339,7 @@ def _dress_act3_prose(
         virtue_note=virtue_localisation_note(len(_virtue_flagged), "Acte III"),
         virtue_sentences=_virtue_flagged,
         letter_sentences=_letters,
+        attribution_sentences=_attribution_flagged,
     )
 
 
@@ -5345,7 +5445,15 @@ async def build_act3_conclusion(
     # cost comparison already sees a printed letter (a designation leak,
     # #2980/#3317) through ``designation_leak_count``.
     _first_letters = _dressed.letter_sentences
-    if _dressed.superlative_note or _dressed.virtue_note or _first_letters:
+    # #3559 — the attribution motive rides the SAME bounded call; its
+    # flagged count joins the summed cost both sides.
+    _first_attribution = _dressed.attribution_sentences
+    if (
+        _dressed.superlative_note
+        or _dressed.virtue_note
+        or _first_letters
+        or _first_attribution
+    ):
         from .readability_gate import designation_leak_count
         from .virtue_attribution_check import (
             flatten_unit_scores,
@@ -5353,6 +5461,9 @@ async def build_act3_conclusion(
             virtue_localisation_retry_motif,
         )
         from .whole_scope_superlative_check import superlative_retry_motif
+        from .speaker_attribution_check import attribution_note
+
+        _attribution_motif = attribution_note(len(_first_attribution))
 
         _retry_keys = [s.virtue for s in _passed_strengths(evidence.quality_strengths)]
         _retry_unit_scores = flatten_unit_scores(
@@ -5367,6 +5478,7 @@ async def build_act3_conclusion(
                 _retry_keys, _retry_unit_scores, display=VIRTUE_DISPLAY_FR
             ),
             letter_flagged=_first_letters,
+            attribution_flagged=_first_attribution,
         )
         if _retry.narrative:
             _second = _dress_act3_prose(_retry.narrative, state, evidence)
@@ -5374,12 +5486,14 @@ async def build_act3_conclusion(
                 len(_first_superlative)
                 + len(_first_virtue)
                 + len(_first_letters)
+                + len(_first_attribution)
                 + designation_leak_count(_dressed.text)
             )
             _after_total = (
                 len(_second.superlative_sentences)
                 + len(_second.virtue_sentences)
                 + len(_second.letter_sentences)
+                + len(_second.attribution_sentences)
                 + designation_leak_count(_second.text)
             )
             if _after_total < _before_total:
@@ -5405,10 +5519,11 @@ async def build_act3_conclusion(
                 )
         logger.info(
             "Acte III bounded writer retry (#3343/#3358): %s | %s | lettres: %d | "
-            "first draft: %s",
+            "attribution: %d | first draft: %s",
             _retry_motif or "(pas de superlatif)",
             _virtue_retry_motif or "(pas de vertu mal localisée)",
             len(_first_letters),
+            len(_first_attribution),
             "; ".join(
                 s[:90]
                 for s in (_first_superlative + _first_virtue + _first_letters)[:3]

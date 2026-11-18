@@ -1183,6 +1183,24 @@ FRAME_CONTEXT_MAX_CHARS = 600
 _SENTENCE_END_RE = re.compile(r'[.!?…]+[»"”\')\]]*\s+')
 
 
+_LEADING_DIRECTIONS_RE = re.compile(r"^(?:\s*\[[^\]\n]{0,200}\])+\s*")
+"""#3559 — the bracketed stage directions that may open a sentence BEFORE
+its speaker tag (``[He nods]\\n\\nINTERPRETE: sa réplique``). Anchored at the
+piece's start, square brackets only, single line, capped: strip nothing
+else, so the #3623 form definition stays the one vocabulary."""
+
+
+def _tag_reading_piece(piece: str) -> str:
+    """The piece with any LEADING bracketed directions removed (#3559).
+
+    Measured, c7: a turn whose tag sits right after a glued stage
+    direction read the PREVIOUS turn's tag — the form check is anchored
+    at the piece's start and the bracket hid the tag. A piece with no
+    leading direction comes back unchanged, byte for byte.
+    """
+    return _LEADING_DIRECTIONS_RE.sub("", piece)
+
+
 def _turn_speaker_tags(
     raw: str, breaks: List[re.Match], starts: List[int], idx: int
 ) -> Dict[str, str]:
@@ -1200,16 +1218,18 @@ def _turn_speaker_tags(
     splitter already reads. The answering turn is the first tag FORWARD
     from the unit's sentence. One form definition for the whole pipeline
     (``speaker_tag_form``): uppercase-convention tags of at most 40
-    characters, no corpus word, no learned model. What the rule MISSES:
-    markings outside that convention (a lowercase or dash-introduced tag,
-    a bracketed stage direction naming the speaker), and a tag glued
-    inside a sentence with no sentence end before it — the #3623/#3625
-    splitters prevent that form at extraction, but a recorded state that
-    still carries one reads no tag.
+    characters, no corpus word, no learned model. #3559 — leading
+    bracketed stage directions are skipped before the form check
+    (``_tag_reading_piece``). What the rule MISSES: markings outside the
+    #3623 convention (a lowercase or dash-introduced tag), a bracketed
+    direction NAMING the speaker (never read as a tag), and a tag glued
+    after prose inside a sentence with no sentence end before it — the
+    #3623/#3625 splitters prevent that form at extraction, but a recorded
+    state that still carries one reads no tag.
     """
     tags: Dict[str, str] = {}
     for i in range(idx, -1, -1):
-        piece = (
+        piece = _tag_reading_piece(
             raw[starts[i] : breaks[i].end()] if i < len(breaks) else raw[starts[i] :]
         )
         form = speaker_tag_form(piece)
@@ -1219,7 +1239,7 @@ def _turn_speaker_tags(
                 tags["speaker"] = head
             break
     for i in range(idx + 1, len(starts)):
-        piece = (
+        piece = _tag_reading_piece(
             raw[starts[i] : breaks[i].end()] if i < len(breaks) else raw[starts[i] :]
         )
         if speaker_tag_form(piece):
@@ -1228,6 +1248,34 @@ def _turn_speaker_tags(
                 tags["next_speaker"] = head
             break
     return tags
+
+
+def own_sentence_speaker_tag(state: Any, offset: Any) -> str:
+    """#3559 — the speaker tag of the unit's OWN sentence, ``""`` otherwise.
+
+    The narrow read Act III's claim marker uses: only a ``tag_prefix``
+    opening the very sentence the offset falls in (leading bracketed
+    directions skipped) — no backward or forward scan, so a claim never
+    inherits another turn's tag from a paragraph note or a didascalie.
+    """
+    if not isinstance(offset, int) or isinstance(offset, bool):
+        return ""
+    raw = str(getattr(state, "raw_text", "") or "")
+    if not raw or not (0 <= offset < len(raw)):
+        return ""
+    breaks = list(_SENTENCE_END_RE.finditer(raw))
+    starts = [0] + [m.end() for m in breaks]
+    idx = 0
+    for i, s in enumerate(starts):
+        if s <= offset:
+            idx = i
+        else:
+            break
+    end = breaks[idx].end() if idx < len(breaks) else len(raw)
+    for variant in (raw[starts[idx] : end], _tag_reading_piece(raw[starts[idx] : end])):
+        if speaker_tag_form(variant) == "tag_prefix":
+            return speaker_tag_head(variant)
+    return ""
 
 
 def document_frame_for_unit(
