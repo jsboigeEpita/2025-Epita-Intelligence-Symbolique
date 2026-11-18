@@ -165,8 +165,17 @@ class HierarchicalOrchestrator:
         if include_restitution and not any(
             "restitution" in obj.get("description", "").lower() for obj in objectives
         ):
-            # Request the act chain once, as part of the bridge's own plan.
-            objectives = [*objectives, dict(RESTITUTION_OBJECTIVE)]
+            # Keep the injected objective distinct from strategic identifiers.
+            restitution_objective = dict(RESTITUTION_OBJECTIVE)
+            existing_ids = {obj.get("id") for obj in objectives}
+            if restitution_objective["id"] in existing_ids:
+                suffix = 1
+                candidate = f"bridge_verdict_{suffix}"
+                while candidate in existing_ids:
+                    suffix += 1
+                    candidate = f"bridge_verdict_{suffix}"
+                restitution_objective["id"] = candidate
+            objectives = [*objectives, restitution_objective]
             logger.info(
                 "  → restitution requested natively "
                 f"({len(objectives)} objectives with the added act chain)"

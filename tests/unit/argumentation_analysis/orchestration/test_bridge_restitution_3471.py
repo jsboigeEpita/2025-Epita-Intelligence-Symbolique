@@ -145,6 +145,22 @@ async def test_explicit_restitution_objective_is_not_added_twice():
     assert result["summary"]["completed"] == 3
 
 
+async def test_injected_objective_avoids_existing_identifier():
+    calls = []
+    captured = {}
+    manager = _manager(
+        [{"id": "restitution", "description": "synthèse", "priority": "high"}]
+    )
+    manager.evaluate_final_results = lambda results: captured.update(results) or {}
+    result = await HierarchicalOrchestrator(
+        _recording_registry(calls), manager
+    ).analyze("synthetic text", include_restitution=True)
+    ids = [obj["id"] for obj in result["objectives"]]
+    assert len(set(ids)) == 2
+    assert len(captured) == 2
+    assert calls == ["deep_synthesis", *ACTS]
+
+
 def test_opt_in_flag_adds_the_objective_after_the_strategic_ones():
     objectives = [
         {"id": "synthesis", "description": "Synthèse finale", "priority": "high"}
@@ -162,7 +178,9 @@ async def test_generic_delegation_does_not_dispatch_a_restitution_act():
 
     calls = []
     execute = make_registry_operational_executor(_recording_registry(calls))
-    result = await execute({"strategic_objective_description": "Produire la restitution"})
+    result = await execute(
+        {"strategic_objective_description": "Produire la restitution"}
+    )
     assert calls == []
     assert result["status"] == "failed"
     assert result["reason"] == "no_provider_for_required_capabilities"
