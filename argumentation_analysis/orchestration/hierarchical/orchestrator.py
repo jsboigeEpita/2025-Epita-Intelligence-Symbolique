@@ -231,9 +231,13 @@ class HierarchicalOrchestrator:
         eval_input: Dict[str, Any] = {}
         for obj in objectives:
             obj_id = obj["id"]
-            # Find phase results that mention this objective
+            # The workflow records the originating objective on every phase;
+            # substring matching phase names confuses ids with capability names.
             obj_phases = {
-                name: pr for name, pr in phase_results.items() if obj_id in name
+                phase.name: phase_results[phase.name]
+                for phase in workflow.phases
+                if phase.parameters.get("objective") == obj
+                and phase.name in phase_results
             }
             # Compute a simple success rate based on phase outcomes
             if obj_phases:

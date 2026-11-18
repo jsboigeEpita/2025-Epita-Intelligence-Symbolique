@@ -161,6 +161,18 @@ async def test_injected_objective_avoids_existing_identifier():
     assert calls == ["deep_synthesis", *ACTS]
 
 
+async def test_evaluation_assigns_only_phases_of_each_objective():
+    calls = []
+    captured = {}
+    manager = _manager([{"id": "act1", "description": "synthèse", "priority": "high"}])
+    manager.evaluate_final_results = lambda results: captured.update(results) or {}
+    await HierarchicalOrchestrator(_recording_registry(calls), manager).analyze(
+        "synthetic text", include_restitution=True
+    )
+    assert list(captured["act1"]["phases"]) == ["phase_act1_deep_synthesis"]
+    assert len(captured["restitution"]["phases"]) == 3
+
+
 def test_opt_in_flag_adds_the_objective_after_the_strategic_ones():
     objectives = [
         {"id": "synthesis", "description": "Synthèse finale", "priority": "high"}
