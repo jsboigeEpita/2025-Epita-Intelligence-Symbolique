@@ -152,3 +152,62 @@ class TestCacheReset:
         assert exporter._snapshot is not None
         exporter._reset_cache()
         assert exporter._snapshot is None
+
+
+class TestXmlTagNames3632:
+    """#3632: a snapshot key must map to a LEGAL XML tag name.
+
+    The blanket ``key.replace("_", "-")`` turned ``_next_agent_designated``
+    into ``<-next-agent-designated>`` — an XML name may not start with ``-``.
+    All three tracked bundles (corpus_A/B/C.xml) carry the malformation; a
+    fourth key, ``_jtms_session``, does the same. The leading underscore
+    STAYS an underscore (legal start of an XML name), and any other illegal
+    start (a digit) is prefixed.
+    """
+
+    @staticmethod
+    def _state_with_private_leaves():
+        state = MagicMock()
+        state.get_state_snapshot.return_value = {
+            "_next_agent_designated": "CounterAgent",
+            "_jtms_session": "session-object-repr",
+            "identified_arguments": {
+                "arg_1": {"_private_note": "kept", "stance": "for"},
+            },
+            "counter_arguments": [{"_origin": "reply", "strategy": "reductio"}],
+        }
+        return state
+
+    def test_private_leaves_yield_a_parseable_document(self):
+        """Born-red on main: the emitted XML must round-trip through ET."""
+        exporter = MultiFormatExporter(self._state_with_private_leaves())
+        root = ET.fromstring(exporter.to_xml())
+        assert root.tag == "analysis_state"
+
+    def test_the_leading_underscore_stays_an_underscore(self):
+        exporter = MultiFormatExporter(self._state_with_private_leaves())
+        root = ET.fromstring(exporter.to_xml())
+        next_agent = root.find("_next-agent-designated")
+        assert next_agent is not None
+        assert next_agent.text == "CounterAgent"
+        jtms = root.find("_jtms-session")
+        assert jtms is not None
+        assert jtms.text == "session-object-repr"
+
+    def test_sub_keys_of_entries_and_items_get_the_same_mapping(self):
+        exporter = MultiFormatExporter(self._state_with_private_leaves())
+        root = ET.fromstring(exporter.to_xml())
+        entry = root.find("identified-arguments/entry")
+        assert entry is not None
+        assert entry.find("_private-note") is not None
+        assert entry.find("_private-note").text == "kept"
+        item = root.find("counter-arguments/entry")
+        assert item is not None
+        assert item.find("_origin") is not None
+
+    def test_a_digit_start_key_is_prefixed_not_rejected(self):
+        state = MagicMock()
+        state.get_state_snapshot.return_value = {"2nd_pass": "ran twice"}
+        exporter = MultiFormatExporter(state)
+        root = ET.fromstring(exporter.to_xml())
+        assert root.find("x-2nd-pass").text == "ran twice"

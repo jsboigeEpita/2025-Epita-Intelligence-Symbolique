@@ -31,7 +31,7 @@
   </answers>
   <extracts label="Extracts">[]</extracts>
   <errors label="errors">[]</errors>
-  <-next-agent-designated label="_next_agent_designated">InformalAgent</-next-agent-designated>
+  <_next-agent-designated label="_next_agent_designated">InformalAgent</_next-agent-designated>
   <counter-arguments count="1" label="Counter-Arguments">
     <entry>
       <id>ca_1</id>
@@ -67,5 +67,5 @@
   <narrative-synthesis label="narrative_synthesis"></narrative-synthesis>
   <atomic-propositions label="Atomic Propositions">{}</atomic-propositions>
   <fol-shared-signature label="FOL Shared Signature">{}</fol-shared-signature>
-  <-jtms-session label="_jtms_session">&lt;argumentation_analysis.services.jtms.extended_belief.JTMSSession object at 0x0000024B3507C8B0&gt;</-jtms-session>
+  <_jtms-session label="_jtms_session">&lt;argumentation_analysis.services.jtms.extended_belief.JTMSSession object at 0x0000024B3507C8B0&gt;</_jtms-session>
 </analysis_state>
