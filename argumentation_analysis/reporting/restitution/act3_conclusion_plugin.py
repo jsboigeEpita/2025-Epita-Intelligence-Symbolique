@@ -283,7 +283,9 @@ _CLAIM_SPEAKER_RULE = (
     "  portés par sa propre ligne. Une ligne sans marque ne dit pas qui\n"
     "  parle : n'en infère aucune attribution.\n"
 )
-_WEIGHTED_DIST_ATTACK_CAP = 8  # max attacks sampled for the weight distribution# #2952 sites 1a-3 (DeLP / EAF / ADF) — same prompt-budget discipline as above.
+_WEIGHTED_DIST_ATTACK_CAP = 8  # max attacks sampled for the weight distribution
+
+# #2952 sites 1a-3 (DeLP / EAF / ADF) — same prompt-budget discipline as above.
 _DELP_VERDICT_CAP = 3  # max named dialectical verdicts (warranted/defeated)
 _EAF_DIVERGENCE_CAP = 3  # max named agent-pair belief divergences
 _ADF_UNDECIDED_CAP = 3  # max named three-valued undecided statements
@@ -4981,7 +4983,6 @@ def build_act3_retry_prompt(
     virtue_flagged: Optional[List[str]] = None,
     virtue_table: str = "",
     letter_flagged: Optional[List[str]] = None,
-    attribution_flagged: Optional[List[str]] = None,
 ) -> str:
     """The bounded ONE writer retry (#3343) — the writer rewrites its own prose.
 
@@ -5075,32 +5076,6 @@ def build_act3_retry_prompt(
             "pas les phrases repérées : rends la conclusion complète, prête à "
             "lire.\n"
         )
-    if attribution_flagged:
-        # #3559 — the fourth motive rides the SAME bounded call: a marked
-        # claim's quoted words handed to another party. The correction names
-        # the sentences and the markers govern; no deterministic strip
-        # (#3317's calibration).
-        attribution_quoted = "\n".join(
-            f"- {sentence}" for sentence in attribution_flagged[:5]
-        )
-        header = (
-            "CORRECTION DEMANDÉE"
-            if not (flagged or virtue_flagged or letter_flagged)
-            else "AUTRE CORRECTION DEMANDÉE"
-        )
-        prompt += (
-            f"\n\n{header} — ta conclusion ci-dessus contient "
-            f"{len(attribution_flagged)} phrase(s) qui prêtent à un parti les "
-            "mots d'une revendication marquée « [tour : NOM] » d'un AUTRE "
-            f"parti. Phrases repérées :\n{attribution_quoted}\n\n"
-            "Réécris la conclusion EN ENTIER — même structure, mêmes beats, "
-            "mêmes données, même longueur. Pour chaque phrase repérée : "
-            "attribue les mots cités au locuteur du tour que son marqueur "
-            "nomme — une traduction ou une voix-off a ses propres mots, "
-            "portés par sa propre ligne — ou dis la même chose sans citer "
-            "ces mots. Ne commente pas cette consigne et ne cite pas les "
-            "phrases repérées : rends la conclusion complète, prête à lire.\n"
-        )
     return label_writer_prompt(prompt, evidence.unit_texts)
 
 
@@ -5111,7 +5086,6 @@ async def weave_act3_conclusion_retry(
     virtue_flagged: Optional[List[str]] = None,
     virtue_table: str = "",
     letter_flagged: Optional[List[str]] = None,
-    attribution_flagged: Optional[List[str]] = None,
 ) -> WeaveOutcome:
     """The bounded ONE retry (#3343), under the same fail-loud contract."""
     return await weave(
@@ -5121,7 +5095,6 @@ async def weave_act3_conclusion_retry(
             virtue_flagged=virtue_flagged,
             virtue_table=virtue_table,
             letter_flagged=letter_flagged,
-            attribution_flagged=attribution_flagged,
         ),
         llm_callable,
         "Acte III (relance)",
@@ -5155,9 +5128,6 @@ class _DressedAct3:
     # letter is a workshop handle the reader cannot resolve (#3317), and the
     # panel's conclusion printed « Pour γ, … » with no legend in sight.
     letter_sentences: List[str]
-    # #3559 — a marked claim's words handed to another party: the fourth
-    # motive of the SAME bounded retry (#3343 family).
-    attribution_sentences: List[str]
 
 
 def _dress_act3_prose(
@@ -5317,16 +5287,6 @@ def _dress_act3_prose(
     from .readability_gate import greek_label_sentences
 
     _letters = greek_label_sentences(narrative)
-    # #3559 — the marked claim's words must stay with its own party: same
-    # placement as the other motives (post claim-gate, pre grafts), same
-    # bounded retry, no deterministic strip.
-    from .speaker_attribution_check import attribution_flagged_sentences
-
-    _attribution_flagged = attribution_flagged_sentences(
-        narrative,
-        evidence.unit_texts,
-        evidence.claim_speakers,
-    )
     return _DressedAct3(
         text=narrative,
         bound_removal=_bound_removal,
@@ -5339,7 +5299,6 @@ def _dress_act3_prose(
         virtue_note=virtue_localisation_note(len(_virtue_flagged), "Acte III"),
         virtue_sentences=_virtue_flagged,
         letter_sentences=_letters,
-        attribution_sentences=_attribution_flagged,
     )
 
 
@@ -5445,15 +5404,7 @@ async def build_act3_conclusion(
     # cost comparison already sees a printed letter (a designation leak,
     # #2980/#3317) through ``designation_leak_count``.
     _first_letters = _dressed.letter_sentences
-    # #3559 — the attribution motive rides the SAME bounded call; its
-    # flagged count joins the summed cost both sides.
-    _first_attribution = _dressed.attribution_sentences
-    if (
-        _dressed.superlative_note
-        or _dressed.virtue_note
-        or _first_letters
-        or _first_attribution
-    ):
+    if _dressed.superlative_note or _dressed.virtue_note or _first_letters:
         from .readability_gate import designation_leak_count
         from .virtue_attribution_check import (
             flatten_unit_scores,
@@ -5461,9 +5412,6 @@ async def build_act3_conclusion(
             virtue_localisation_retry_motif,
         )
         from .whole_scope_superlative_check import superlative_retry_motif
-        from .speaker_attribution_check import attribution_note
-
-        _attribution_motif = attribution_note(len(_first_attribution))
 
         _retry_keys = [s.virtue for s in _passed_strengths(evidence.quality_strengths)]
         _retry_unit_scores = flatten_unit_scores(
@@ -5478,7 +5426,6 @@ async def build_act3_conclusion(
                 _retry_keys, _retry_unit_scores, display=VIRTUE_DISPLAY_FR
             ),
             letter_flagged=_first_letters,
-            attribution_flagged=_first_attribution,
         )
         if _retry.narrative:
             _second = _dress_act3_prose(_retry.narrative, state, evidence)
@@ -5486,14 +5433,12 @@ async def build_act3_conclusion(
                 len(_first_superlative)
                 + len(_first_virtue)
                 + len(_first_letters)
-                + len(_first_attribution)
                 + designation_leak_count(_dressed.text)
             )
             _after_total = (
                 len(_second.superlative_sentences)
                 + len(_second.virtue_sentences)
                 + len(_second.letter_sentences)
-                + len(_second.attribution_sentences)
                 + designation_leak_count(_second.text)
             )
             if _after_total < _before_total:
@@ -5519,11 +5464,10 @@ async def build_act3_conclusion(
                 )
         logger.info(
             "Acte III bounded writer retry (#3343/#3358): %s | %s | lettres: %d | "
-            "attribution: %d | first draft: %s",
+            "first draft: %s",
             _retry_motif or "(pas de superlatif)",
             _virtue_retry_motif or "(pas de vertu mal localisée)",
             len(_first_letters),
-            len(_first_attribution),
             "; ".join(
                 s[:90]
                 for s in (_first_superlative + _first_virtue + _first_letters)[:3]

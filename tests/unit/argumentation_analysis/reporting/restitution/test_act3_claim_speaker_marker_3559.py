@@ -11,16 +11,21 @@ witness pins, with invented texts only:
 * the descent's frame (#3557) reads that stage-direction-led tag too;
 * the assembled Act III prompt marks a speaker's own claim line, never a
   reported move's line, and carries the TOUR MARQUÉ rule only when a
-  marker rides (#3416 byte-for-byte otherwise);
-* the post-weave attribution check flags a sentence that quotes a marked
-  claim's words while naming another marked party, and stands when the
-  quote stays with its own party.
+  marker rides — on a document no tag fires on, the assembled bytes
+  EQUAL the base implementation's actual output (#3416), pinned by the
+  digest measured at the fixed base SHA below.
+
+Enforcement is marker + conditional instruction alone: the review of the
+first cut showed a quotation/rebuttal trigger cannot discriminate a
+legitimate contestation from a faulty attribution without a verb list,
+so no post-weave check rides (marker-only, per the issue's own answer).
 
 Privacy: invented parties, invented text, no corpus sentence.
 """
 
 from __future__ import annotations
 
+import hashlib
 from types import SimpleNamespace
 
 from argumentation_analysis.agents.core.reading.first_reading import (
@@ -31,9 +36,9 @@ from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import 
     build_act3_prompt,
 )
 
-# Born-red at the ASSERTIONS, not at collection: on main the two reader
-# symbols and the check module do not exist yet — their import fails here
-# and every assertion below then fails on behaviour, never on ImportError.
+# Born-red at the ASSERTIONS, not at collection: on main the reader symbol
+# does not exist yet — its import fails here and every assertion below
+# then fails on behaviour, never on ImportError.
 try:
     from argumentation_analysis.agents.core.reading.first_reading import (
         own_sentence_speaker_tag,
@@ -44,18 +49,16 @@ except ImportError:  # main: the symbol does not exist yet
         return ""
 
 
-try:
-    from argumentation_analysis.reporting.restitution.speaker_attribution_check import (
-        attribution_flagged_sentences,
-        tag_party_name,
-    )
-except ImportError:  # main: the module does not exist yet
-
-    def tag_party_name(tag):  # type: ignore[no-redef]
-        return ""
-
-    def attribution_flagged_sentences(narrative, unit_texts, claim_speakers):  # type: ignore[no-redef]
-        return []
+# #3416 — the byte-for-byte proof compares the HEAD's actual assembled
+# prompt against the BASE implementation's actual output for the SAME
+# no-tag synthetic state. The base digest below was measured at the FIXED
+# base SHA (the branch point), never ``origin/main`` (which moves):
+# worktree at that commit, editable finder bypassed, module path proven.
+_BASE_SHA = "2c4b82fd5"
+_BASE_NO_TAG_PROMPT_SHA256 = (
+    "6c535abd3170395195b85de350cfc0582eb17335627b283ca90d683dc7d914f1"
+)
+_BASE_NO_TAG_PROMPT_LEN = 16851
 
 
 DOC = (
@@ -188,7 +191,9 @@ class TestTheAct3PromptCarriesTheMarker:
         assert "arg_3" not in ev.claim_speakers
 
     def test_no_tag_document_keeps_prompt_byte_for_byte(self):
-        """#3416: a document no tag rule fires on assembles unchanged."""
+        """#3416: on a document no tag fires on, the head's assembled
+        prompt EQUALS the base implementation's actual output — same
+        synthetic state, base pinned at the fixed SHA (not origin/main)."""
         st = _state(
             raw_text="Une seule voix tient un propos suivi, sans étiquette. "
             "Elle avance une raison puis une autre.",
@@ -202,37 +207,12 @@ class TestTheAct3PromptCarriesTheMarker:
         ev = build_act3_evidence(st)
         assert ev.claim_speakers == {}
         prompt = build_act3_prompt(ev)
+        assert len(prompt) == _BASE_NO_TAG_PROMPT_LEN
+        digest = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+        assert digest == _BASE_NO_TAG_PROMPT_SHA256, (
+            "the no-tag prompt drifted from the pinned base output "
+            f"(base {_BASE_SHA}): the marker path must be additive only"
+        )
+        # Secondary, the same claim read directly.
         assert "[tour :" not in prompt
         assert "TOUR MARQUÉ" not in prompt
-
-
-class TestThePostWeaveAttributionCheck:
-    UNIT_TEXTS = {
-        "arg_1": "La citerne déborde dès la première averse.",
-        "arg_2": "Le second orateur affirme que la grange est solide.",
-    }
-    SPEAKERS = {"arg_1": "PREMIER ORATEUR:", "arg_2": "SECOND ORATEUR:"}
-
-    def test_tag_party_name_resolves_both_forms(self):
-        assert tag_party_name("PREMIER ORATEUR:") == "PREMIER ORATEUR"
-        assert tag_party_name("SECOND ORATEUR.") == "SECOND ORATEUR"
-        assert tag_party_name("") == ""
-
-    def test_quoting_another_partys_words_flags(self):
-        bad = (
-            "Le SECOND ORATEUR affirme que « la citerne déborde dès la "
-            "première averse » et en tire son verdict."
-        )
-        flagged = attribution_flagged_sentences(bad, self.UNIT_TEXTS, self.SPEAKERS)
-        assert len(flagged) == 1
-
-    def test_quote_staying_with_its_own_party_stands(self):
-        good = (
-            "Le PREMIER ORATEUR soutient que « la citerne déborde dès la "
-            "première averse » ; le SECOND ORATEUR répond sur la grange."
-        )
-        assert attribution_flagged_sentences(good, self.UNIT_TEXTS, self.SPEAKERS) == []
-
-    def test_unmarked_document_never_flags(self):
-        text = "Une voix dit « la citerne déborde dès la première averse »."
-        assert attribution_flagged_sentences(text, self.UNIT_TEXTS, {}) == []
