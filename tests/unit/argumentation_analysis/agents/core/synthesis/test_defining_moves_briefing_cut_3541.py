@@ -44,3 +44,23 @@ def test_small_population_is_not_truncated():
     ]
     assert len(lines) == 12
     assert "- defining_moves:" not in briefing
+
+
+def test_missing_positions_still_obeys_cap():
+    state = _state(33)
+    for move in state.defining_moves["moves"]:
+        move.pop("offset")
+    briefing = DeepSynthesisAgent.build_artifact_briefing(state)
+    lines = [
+        line for line in briefing.splitlines() if "[artifact:defining_moves." in line
+    ]
+    assert len(lines) == 15
+    assert any("move 31" in line for line in lines)
+    assert any("move 27" in line for line in lines)
+
+
+def test_zero_budget_selects_no_moves():
+    briefing = DeepSynthesisAgent.build_artifact_briefing(
+        _state(33), max_items_per_field=0
+    )
+    assert "[artifact:defining_moves." not in briefing
