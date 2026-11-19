@@ -1876,6 +1876,20 @@ def _write_stability(
     (out_dir / "STABILITY.md").write_text(
         render_stability(report, out_dir.name, other_dir.name), encoding="utf-8"
     )
+    # #3543 — the same report as data: the condition-2 reader consumes
+    # states, not markdown. STABILITY.md is byte-identical to before.
+    (out_dir / "STABILITY.json").write_text(
+        json.dumps(
+            {
+                "name_a": out_dir.name,
+                "name_b": other_dir.name,
+                "report": report,
+            },
+            ensure_ascii=False,
+            indent=1,
+        ),
+        encoding="utf-8",
+    )
     print(f"stability written: {out_dir / 'STABILITY.md'}", flush=True)
 
 
