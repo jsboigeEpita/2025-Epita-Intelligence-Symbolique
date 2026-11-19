@@ -21,6 +21,16 @@ Definitions (the issue's asks, pinned by ``tests/unit/scripts/test_condition2_35
   ``not_measurable`` if either family is not measurable OR fewer than two
   families contributed (one family's direction is diagnostic, never a
   verdict — the #3639 review).
+- **series** — the ARMS identify a series: ``pipeline_model`` and
+  ``pipeline_family`` in the consensus ``META.json``, which come from the
+  zero-shot record's provenance (#3138's single resolver) under the
+  same-model doctrine. The judge may change WITHIN a series (c22 changed
+  judges and still read against c20). A pair spanning a series break is
+  refused — the official predecessor is the same-series cycle (c22 read
+  against c20, skipping c21) — and the families of one cycle must name one
+  series (two META that disagree judged two different runs). A new series'
+  first cycle is declared with ``--new-series``: its own baseline, the
+  counter restarting at 1 (c21).
 - **counter** — ``no_progress`` adds 1, ``progress`` resets to 0 (the bar
   counts consecutive cycles), ``disagree`` and ``not_measurable`` leave it.
 
@@ -67,6 +77,7 @@ PROGRESS = "progress"
 NO_PROGRESS = "no_progress"
 DISAGREE = "disagree"
 NOT_MEASURABLE = "not_measurable"
+NEW_SERIES = "new_series"
 
 
 def state_direction(state_a: str, state_b: str) -> str:
@@ -208,7 +219,7 @@ def _norm_dir(path: Path) -> str:
     return os.path.normcase(str(path.resolve()))
 
 
-def _reject_reused_directories(families: Mapping[str, Tuple[Path, Path]]) -> None:
+def _reject_reused_directories(family_dirs: Mapping[str, Sequence[Path]]) -> None:
     """Two labels over the same consensus directories are not two readings.
 
     The #3639 review v2: the same current/previous pair supplied under both
@@ -218,8 +229,8 @@ def _reject_reused_directories(families: Mapping[str, Tuple[Path, Path]]) -> Non
     the same directory is caught too.
     """
     seen: Dict[str, str] = {}
-    for name, (current, previous) in families.items():
-        for directory in (current, previous):
+    for name, directories in family_dirs.items():
+        for directory in directories:
             key = _norm_dir(directory)
             if key in seen and seen[key] != name:
                 raise SystemExit(
@@ -228,6 +239,75 @@ def _reject_reused_directories(families: Mapping[str, Tuple[Path, Path]]) -> Non
                     "not two independent readings"
                 )
             seen[key] = name
+
+
+def _series_key(meta: Mapping[str, Any], directory: Path) -> Tuple[str, str]:
+    """The arms' identity of a judged run, as the consensus META records it.
+
+    ``pipeline_model``/``pipeline_family`` come from the zero-shot record's
+    provenance through #3138's single resolver — under the same-model
+    doctrine they name BOTH arms, which is what a series is (the judge may
+    change within a series: c22 changed judges and still read against c20).
+    A META that names no model is a named exit, never a guess.
+    """
+    model = meta.get("pipeline_model")
+    family = meta.get("pipeline_family")
+    if not model or not family:
+        raise SystemExit(
+            f"{directory}: the consensus META names no pipeline_model/"
+            f"pipeline_family — the series cannot be guessed (#3138)"
+        )
+    return str(model), str(family)
+
+
+def _read_series(dirs: Mapping[str, Path], role: str) -> Dict[str, str]:
+    """The one series the ``role`` directories all name — or a named exit.
+
+    Families within one cycle must judge the SAME run: two consensus META
+    that disagree on the arms judged two different runs, and a cross-family
+    verdict over them would read one run against another.
+    """
+    keys: Dict[Tuple[str, str], str] = {}
+    for name, directory in dirs.items():
+        meta_path = directory / jp.META_FILENAME
+        if not meta_path.exists():
+            raise SystemExit(
+                f"{directory}: no {jp.META_FILENAME} — the series is unreadable"
+            )
+        key = _series_key(jp.load_json(meta_path), directory)
+        keys.setdefault(key, name)
+    if len(keys) > 1:
+        mixed = "; ".join(f"{name}: {'/'.join(key)}" for key, name in keys.items())
+        raise SystemExit(
+            f"the {role} families judge different runs ({mixed}) — "
+            "a cross-family verdict reads ONE run"
+        )
+    key = next(iter(keys))
+    return {"model": key[0], "family": key[1]}
+
+
+def _reject_series_break(families: Mapping[str, Tuple[Path, Path]]) -> Dict[str, str]:
+    """The pair must belong to ONE series, or it is an input error.
+
+    A series break is not a reading: no verdict reads across it (c21's
+    entry: "No verdict of this series reads against c6–c20"), and the
+    official predecessor of a cycle is the SAME-SERIES one (c22 read against
+    c20, skipping c21). A pair that spans the break is refused — reading it
+    anyway (as a verdict or a silent hold) is how one series' counter would
+    count another series' cycles. The new series' first cycle is declared
+    with ``--new-series``.
+    """
+    current = _read_series({n: p[0] for n, p in families.items()}, "current")
+    previous = _read_series({n: p[1] for n, p in families.items()}, "previous")
+    if current != previous:
+        raise SystemExit(
+            f"the pair spans a series break (previous {previous['model']}, "
+            f"current {current['model']}): no verdict reads across series — "
+            "supply the same-series predecessor (c22 reads against c20, "
+            "skipping c21), or declare the new series' baseline with "
+            "--new-series"
+        )
+    return current
 
 
 def build(
@@ -239,6 +319,7 @@ def build(
 ) -> Dict[str, Any]:
     """The whole reading: per family, the verdict, the counter, the heads."""
     _reject_reused_directories(families)
+    series = _reject_series_break(families)
     readings = {
         name: family_direction(current, previous, panel)
         for name, (current, previous) in families.items()
@@ -250,6 +331,29 @@ def build(
         "verdict": verdict,
         "counter_before": counter_before,
         "counter_after": next_counter(verdict, counter_before),
+        "series": series,
+        "heads": read_heads(first_current, cycle_dir),
+    }
+
+
+def build_baseline(
+    currents: Mapping[str, Path], *, cycle_dir: Optional[Path] = None
+) -> Dict[str, Any]:
+    """The first cycle of a new series: its own baseline, the counter at 1.
+
+    c21's entry: "condition 2 restarts at 1 on this series (c21 is its own
+    baseline)". Nothing compares — the report names the series and the heads
+    so the NEXT cycle's pair is verifiable against it.
+    """
+    _reject_reused_directories({name: [d] for name, d in currents.items()})
+    series = _read_series(currents, "current")
+    first_current = next(iter(currents.values()))
+    return {
+        "families": {name: {"current_dir": str(d)} for name, d in currents.items()},
+        "verdict": NEW_SERIES,
+        "counter_before": None,
+        "counter_after": 1,
+        "series": series,
         "heads": read_heads(first_current, cycle_dir),
     }
 
@@ -262,6 +366,17 @@ def _parse_family(spec: str) -> Tuple[str, Tuple[Path, Path]]:
         raise SystemExit(f"--family {spec!r}: expected NAME=CUR_DIR|PREV_DIR")
     current, _, previous = pair.partition("|")
     return name, (Path(current), Path(previous))
+
+
+def _parse_baseline(spec: str) -> Tuple[str, Path]:
+    """``NAME=CUR_DIR`` — a new series' baseline has no previous half."""
+    name, sep, path = spec.partition("=")
+    if not sep or "|" in path:
+        raise SystemExit(
+            f"--family {spec!r}: a --new-series baseline takes NAME=CUR_DIR, "
+            "no previous half — the series has no predecessor to read against"
+        )
+    return name, Path(path)
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -314,32 +429,59 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument(
         "--out", type=Path, default=None, help="where condition2.json goes"
     )
+    parser.add_argument(
+        "--new-series",
+        action="store_true",
+        help="declare the first cycle of a new series: no comparison, the "
+        "counter restarts at 1 (--family NAME=CUR, without a previous half)",
+    )
     args = parser.parse_args(argv)
 
-    families: Dict[str, Tuple[Path, Path]] = dict(_parse_family(s) for s in args.family)
-    if args.tag and args.previous_tag:
-        for judge in args.judge:
-            current = (
-                args.results_root
-                / f"{PASS_PREFIX}_{args.tag}_{judge}_cons{args.passes}"
+    if args.new_series:
+        if args.previous_tag:
+            parser.error(
+                "--new-series: a new series has no previous cycle to read against"
             )
-            previous = (
-                args.results_root
-                / f"{PASS_PREFIX}_{args.previous_tag}_{judge}_cons{args.passes}"
+        currents: Dict[str, Path] = dict(_parse_baseline(s) for s in args.family)
+        if args.tag:
+            for judge in args.judge:
+                currents[judge] = (
+                    args.results_root
+                    / f"{PASS_PREFIX}_{args.tag}_{judge}_cons{args.passes}"
+                )
+        if not currents:
+            parser.error(
+                "no family: pass --family NAME=CUR (or --tag with --judge) "
+                "for --new-series"
             )
-            families[judge] = (current, previous)
-    if not families:
-        parser.error(
-            "no family: pass --family NAME=CUR|PREV (or --tag/--previous-tag/--judge)"
+        result = build_baseline(currents, cycle_dir=args.cycle_dir)
+    else:
+        families: Dict[str, Tuple[Path, Path]] = dict(
+            _parse_family(s) for s in args.family
         )
-
-    before = read_counter_before(args.previous_cycle_dir)
-    if before is None:
-        before = args.counter_before if args.counter_before is not None else 0
-    panel = c.read_panel(args.panel_file) if args.panel_file else None
-    result = build(
-        families, cycle_dir=args.cycle_dir, counter_before=before, panel=panel
-    )
+        if args.tag and args.previous_tag:
+            for judge in args.judge:
+                current = (
+                    args.results_root
+                    / f"{PASS_PREFIX}_{args.tag}_{judge}_cons{args.passes}"
+                )
+                previous = (
+                    args.results_root
+                    / f"{PASS_PREFIX}_{args.previous_tag}_{judge}_cons{args.passes}"
+                )
+                families[judge] = (current, previous)
+        if not families:
+            parser.error(
+                "no family: pass --family NAME=CUR|PREV "
+                "(or --tag/--previous-tag/--judge)"
+            )
+        before = read_counter_before(args.previous_cycle_dir)
+        if before is None:
+            before = args.counter_before if args.counter_before is not None else 0
+        panel = c.read_panel(args.panel_file) if args.panel_file else None
+        result = build(
+            families, cycle_dir=args.cycle_dir, counter_before=before, panel=panel
+        )
 
     out = args.out
     if out is None and args.cycle_dir is not None:
@@ -350,12 +492,15 @@ def main(argv: Optional[List[str]] = None) -> int:
         out.write_text(
             json.dumps(result, ensure_ascii=False, indent=1), encoding="utf-8"
         )
-    for name, reading in result["families"].items():
-        print(
-            f"{name}: {reading['direction']} — {len(reading['settled'])} settled, "
-            f"toward {reading['toward']}, away {reading['away']}, "
-            f"outside {reading['outside']}"
-        )
+    if result["verdict"] == NEW_SERIES:
+        print(f"series: {result['series']['model']} ({result['series']['family']})")
+    else:
+        for name, reading in result["families"].items():
+            print(
+                f"{name}: {reading['direction']} — {len(reading['settled'])} settled, "
+                f"toward {reading['toward']}, away {reading['away']}, "
+                f"outside {reading['outside']}"
+            )
     print(
         f"verdict: {result['verdict']} — counter {result['counter_before']} "
         f"-> {result['counter_after']}"

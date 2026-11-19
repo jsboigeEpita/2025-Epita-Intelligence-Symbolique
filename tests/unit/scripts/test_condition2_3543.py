@@ -60,15 +60,24 @@ def _row(doc, *, core, severe, abstain=False, fragile=False):
     }
 
 
-def _write_dir(path, rows, *, run_head="z" * 40):
+def _write_dir(
+    path,
+    rows,
+    *,
+    run_head="z" * 40,
+    series_model="openai/gpt-5.6-luna",
+    series_family="openai",
+):
     path.mkdir(parents=True, exist_ok=True)
     for row in rows:
         (path / f"{row['opaque_id']}.json").write_text(
             json.dumps(row), encoding="utf-8"
         )
-    (path / jp.META_FILENAME).write_text(
-        json.dumps({"run_head": run_head}), encoding="utf-8"
-    )
+    meta = {"run_head": run_head}
+    if series_model is not None:
+        meta["pipeline_model"] = series_model
+        meta["pipeline_family"] = series_family
+    (path / jp.META_FILENAME).write_text(json.dumps(meta), encoding="utf-8")
     return path
 
 
@@ -537,6 +546,143 @@ class TestReusedDirectories:
         )
         assert condition2.read_counter_before(prev_cycle) == 4
         assert condition2.read_counter_before(tmp_path / "absent") is None
+
+
+class TestSeriesContract:
+    """The new-series contract (verified on the artifacts before this
+    increment): a series is the ARMS — ``pipeline_model``/``pipeline_family``
+    in the consensus META, which come from the zero-shot record's provenance
+    (#3138's single resolver) under the same-model doctrine. The judge may
+    change WITHIN a series (c22 changed judges and still reads against c20);
+    a pair that spans a series break reads no verdict — the official
+    predecessor is the same-series cycle (c22 read against c20, skipping
+    c21) — and a new series' first cycle is its own baseline, the counter
+    restarting at 1 (the coordinator's c21 entry)."""
+
+    def test_a_pair_spanning_a_series_break_is_refused(self, tmp_path):
+        # c21's arms (Sonnet) paired with c20's (luna): the cross-series pair
+        # must be refused, not read as a verdict or a silent hold — the
+        # official pair for the next luna cycle was c22 -> c20, skipping c21.
+        cur = _write_dir(
+            tmp_path / "cur",
+            [_row("doc_A", core=True, severe=False)],
+            series_model="anthropic/claude-sonnet-5-5",
+            series_family="anthropic",
+        )
+        prev = _write_dir(tmp_path / "prev", [_row("doc_A", core=False, severe=False)])
+        with pytest.raises(SystemExit, match="series break"):
+            condition2.main(["--family", f"s={cur}|{prev}", "--counter-before", "3"])
+
+    def test_families_judging_different_runs_are_refused(self, tmp_path):
+        # Two families whose CURRENT consensus META disagree on the arms are
+        # not two readings of one cycle — they judged two different runs, and
+        # a cross-family verdict over them would read one run against another.
+        # Each family keeps its OWN previous directory (distinct pairs), so
+        # the reused-directories guard stays out of the way.
+        cur_s = _write_dir(tmp_path / "cur_s", [_row("doc_A", core=True, severe=False)])
+        cur_g = _write_dir(
+            tmp_path / "cur_g",
+            [_row("doc_A", core=True, severe=False)],
+            series_model="anthropic/claude-sonnet-5-5",
+            series_family="anthropic",
+        )
+        prev_s = _write_dir(
+            tmp_path / "prev_s", [_row("doc_A", core=False, severe=False)]
+        )
+        prev_g = _write_dir(
+            tmp_path / "prev_g", [_row("doc_A", core=False, severe=False)]
+        )
+        with pytest.raises(SystemExit, match="different runs"):
+            condition2.main(
+                [
+                    "--family",
+                    f"s={cur_s}|{prev_s}",
+                    "--family",
+                    f"g={cur_g}|{prev_g}",
+                ]
+            )
+
+    def test_a_meta_without_the_series_key_is_refused(self, tmp_path):
+        # #3138's doctrine: the model is never guessed. A consensus META that
+        # names no pipeline_model is a named exit, not a default.
+        cur = _write_dir(
+            tmp_path / "cur",
+            [_row("doc_A", core=True, severe=False)],
+            series_model=None,
+        )
+        prev = _write_dir(tmp_path / "prev", [_row("doc_A", core=False, severe=False)])
+        with pytest.raises(SystemExit, match="cannot be guessed"):
+            condition2.main(["--family", f"s={cur}|{prev}"])
+
+    def test_a_new_series_is_its_own_baseline(self, tmp_path, capsys):
+        # c21: "condition 2 restarts at 1 on this series (c21 is its own
+        # baseline)". No comparison, whatever the previous series' counter
+        # was — the baseline names the series and its heads so the NEXT
+        # cycle's pair is verifiable against it.
+        cur = _write_dir(
+            tmp_path / "cur",
+            [_row("doc_A", core=True, severe=False)],
+            series_model="anthropic/claude-sonnet-5-5",
+            series_family="anthropic",
+        )
+        out = tmp_path / "condition2.json"
+        rc = condition2.main(
+            ["--new-series", "--family", f"s={cur}", "--out", str(out)]
+        )
+        assert rc == 0
+        result = json.loads(out.read_text(encoding="utf-8"))
+        assert result["verdict"] == "new_series"
+        assert result["counter_before"] is None
+        assert result["counter_after"] == 1
+        assert result["series"] == {
+            "model": "anthropic/claude-sonnet-5-5",
+            "family": "anthropic",
+        }
+        assert result["heads"]["zeroshot_head"] == "z" * 40
+        assert "new_series" in capsys.readouterr().out
+
+    def test_a_new_series_baseline_takes_no_previous_half(self, tmp_path):
+        cur = _write_dir(tmp_path / "cur", [_row("doc_A", core=True, severe=False)])
+        prev = _write_dir(tmp_path / "prev", [_row("doc_A", core=False, severe=False)])
+        with pytest.raises(SystemExit, match="no previous half"):
+            condition2.main(["--new-series", "--family", f"s={cur}|{prev}"])
+
+    def test_tag_mode_declares_a_new_series(self, tmp_path):
+        root = tmp_path / "results"
+        _write_dir(
+            root / "judge_panel_3375_c21_l_cons6",
+            [_row("doc_A", core=True, severe=False)],
+            series_model="anthropic/claude-sonnet-5-5",
+            series_family="anthropic",
+        )
+        out = tmp_path / "condition2.json"
+        rc = condition2.main(
+            [
+                "--new-series",
+                "--tag",
+                "c21",
+                "--judge",
+                "l",
+                "--results-root",
+                str(root),
+                "--out",
+                str(out),
+            ]
+        )
+        assert rc == 0
+        result = json.loads(out.read_text(encoding="utf-8"))
+        assert result["verdict"] == "new_series"
+        assert result["counter_after"] == 1
+        assert result["families"]["l"]["current_dir"].endswith("c21_l_cons6")
+
+    def test_the_report_carries_the_series(self, tmp_path):
+        cur = _write_dir(tmp_path / "cur", [_row("doc_A", core=True, severe=False)])
+        prev = _write_dir(tmp_path / "prev", [_row("doc_A", core=False, severe=False)])
+        out = tmp_path / "condition2.json"
+        rc = condition2.main(["--family", f"s={cur}|{prev}", "--out", str(out)])
+        assert rc == 0
+        result = json.loads(out.read_text(encoding="utf-8"))
+        assert result["series"] == {"model": "openai/gpt-5.6-luna", "family": "openai"}
 
 
 class TestRunnerNotWiredYet:
