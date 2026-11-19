@@ -1,5 +1,6 @@
 """A bounded synthesis briefing must cover the whole synthetic document."""
 
+import hashlib
 import re
 from types import SimpleNamespace
 
@@ -44,6 +45,10 @@ def test_small_population_is_not_truncated():
     ]
     assert len(lines) == 12
     assert "- defining_moves:" not in briefing
+    # Measured from origin/main on the identical synthetic state.
+    assert hashlib.sha256(briefing.encode("utf-8")).hexdigest() == (
+        "7811eef409a8eda8e178e3ecec85aeaf1b2f9148dad9e4f188fd49d4d123c1c7"
+    )
 
 
 def test_missing_positions_still_obeys_cap():
