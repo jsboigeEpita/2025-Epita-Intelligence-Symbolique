@@ -177,3 +177,80 @@ class TestTheCli:
         f = tmp_path / "t.md"
         f.write_text(f"clean, quotes {NINE_CHAR_SHA}", encoding="utf-8")
         assert post_tracker.main(["scan", str(f)]) == 0
+
+
+class TestDefaultRepoResolutionIsAfterTheScan:
+    """The 19/11 review of #3635: with the default repository selection,
+    main() called ``gh repo view`` BEFORE the draft was scanned, so a refused
+    draft exited 3 after one gh call. Resolution now happens inside _run_gh,
+    which the scan precedes: a refused draft exits 3 with ZERO subprocess."""
+
+    @pytest.fixture
+    def bad_draft(self, tmp_path: Path) -> Path:
+        f = tmp_path / "draft.md"
+        f.write_text(
+            f"TITLE: mentions {FAKE_ID}\n\nbody quotes {FAKE_ID}", encoding="utf-8"
+        )
+        return f
+
+    def test_the_default_cli_refuses_without_any_subprocess(
+        self, monkeypatch, bad_draft, tmp_path
+    ):
+        calls: list[list] = []
+
+        def spy(*args, **kwargs):
+            calls.append(list(args) + list(kwargs))
+            return subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="", stderr=""
+            )
+
+        monkeypatch.setattr(post_tracker.subprocess, "run", spy)
+        rc = post_tracker.main(
+            ["--numbers", str(tmp_path / "n.tsv"), "comment", "12", str(bad_draft)]
+        )
+        assert rc == 3
+        assert calls == []
+
+    def test_an_explicit_repo_refuses_without_any_subprocess(
+        self, monkeypatch, bad_draft
+    ):
+        calls: list[list] = []
+
+        def spy(*args, **kwargs):
+            calls.append(list(args) + list(kwargs))
+            return subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="", stderr=""
+            )
+
+        monkeypatch.setattr(post_tracker.subprocess, "run", spy)
+        rc = post_tracker.main(["--repo", "o/r", "comment", "12", str(bad_draft)])
+        assert rc == 3
+        assert calls == []
+
+    def test_the_clean_default_path_resolves_the_repo_after_the_scan(
+        self, monkeypatch, tmp_path
+    ):
+        f = tmp_path / "draft.md"
+        f.write_text("TITLE: a clean title\n\na clean body", encoding="utf-8")
+        calls: list[list] = []
+
+        def spy(argv, **kwargs):
+            calls.append(list(argv))
+            if argv[:3] == ["gh", "repo", "view"]:
+                return subprocess.CompletedProcess(
+                    args=argv, returncode=0, stdout="o/r\n", stderr=""
+                )
+            return subprocess.CompletedProcess(
+                args=argv,
+                returncode=0,
+                stdout="https://example/issue/4242\n",
+                stderr="",
+            )
+
+        monkeypatch.setattr(post_tracker.subprocess, "run", spy)
+        rc = post_tracker.main(["--numbers", str(tmp_path / "n.tsv"), "new", str(f)])
+        assert rc == 0
+        # exactly two gh calls: repo view (default resolution) then issue create
+        assert [c[:2] for c in calls] == [["gh", "repo"], ["gh", "issue"]]
+        # -R rides the tail of the real call, with the resolved repository
+        assert calls[1][-2:] == ["-R", "o/r"]

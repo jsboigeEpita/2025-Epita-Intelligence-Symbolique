@@ -91,13 +91,18 @@ def _gh(
 
 
 def _run_gh(
-    args: list[str], *, repo: str, user: str | None, input: str | None = None
+    args: list[str], *, repo: str | None, user: str | None, input: str | None = None
 ) -> subprocess.CompletedProcess[str]:
     """Run one gh command against ``repo``; the account rides GH_TOKEN (#3551).
 
     ``-R`` rides at the tail: the seam's first argument stays the gh verb,
     which is what the tests pin.
+
+    The default repository is resolved HERE, not in main(): every posting
+    command scans before reaching this point, so a refused draft never
+    costs a gh call — the 19/11 review of #3635.
     """
+    repo = _resolve_repo(repo)
     env = dict(os.environ)
     if user is not None:
         env["GH_TOKEN"] = _token_for(user).stdout.strip()
@@ -140,7 +145,7 @@ def cmd_scan(paths: list[Path]) -> int:
 
 
 def cmd_new(
-    draft: Path, *, labels: str, repo: str, user: str | None, numbers: Path
+    draft: Path, *, labels: str, repo: str | None, user: str | None, numbers: Path
 ) -> int:
     text = _read(draft)
     first, _, rest = text.partition("\n")
@@ -168,7 +173,7 @@ def cmd_new(
     return 0
 
 
-def cmd_comment(number: int, path: Path, *, repo: str, user: str | None) -> int:
+def cmd_comment(number: int, path: Path, *, repo: str | None, user: str | None) -> int:
     return _post_text(
         ["issue", "comment", str(number), "--body-file", "-"],
         path,
@@ -177,7 +182,7 @@ def cmd_comment(number: int, path: Path, *, repo: str, user: str | None) -> int:
     )
 
 
-def cmd_title(number: int, title: str, *, repo: str, user: str | None) -> int:
+def cmd_title(number: int, title: str, *, repo: str | None, user: str | None) -> int:
     refusals = scan_string(title)
     if refusals:
         return _fail(refusals, f"title of #{number}")
@@ -187,14 +192,14 @@ def cmd_title(number: int, title: str, *, repo: str, user: str | None) -> int:
     return _report(proc)
 
 
-def cmd_body(number: int, path: Path, *, repo: str, user: str | None) -> int:
+def cmd_body(number: int, path: Path, *, repo: str | None, user: str | None) -> int:
     return _post_text(
         ["issue", "edit", str(number), "--body-file", "-"], path, repo=repo, user=user
     )
 
 
 def cmd_close(
-    number: int, path: Path, *, reason: str, repo: str, user: str | None
+    number: int, path: Path, *, reason: str, repo: str | None, user: str | None
 ) -> int:
     comment = _read(path)
     refusals = scan_string(comment)
@@ -208,7 +213,9 @@ def cmd_close(
     return _report(proc)
 
 
-def _post_text(args: list[str], path: Path, *, repo: str, user: str | None) -> int:
+def _post_text(
+    args: list[str], path: Path, *, repo: str | None, user: str | None
+) -> int:
     text = _read(path)
     refusals = scan_string(text)
     if refusals:
@@ -268,18 +275,17 @@ def main(argv: list[str] | None = None) -> int:
     ns = parser.parse_args(argv)
     if ns.cmd == "scan":
         return cmd_scan(ns.paths)
-    repo = _resolve_repo(ns.repo)
     if ns.cmd == "new":
         return cmd_new(
-            ns.draft, labels=ns.labels, repo=repo, user=ns.user, numbers=ns.numbers
+            ns.draft, labels=ns.labels, repo=ns.repo, user=ns.user, numbers=ns.numbers
         )
     if ns.cmd == "comment":
-        return cmd_comment(ns.number, ns.path, repo=repo, user=ns.user)
+        return cmd_comment(ns.number, ns.path, repo=ns.repo, user=ns.user)
     if ns.cmd == "title":
-        return cmd_title(ns.number, ns.title, repo=repo, user=ns.user)
+        return cmd_title(ns.number, ns.title, repo=ns.repo, user=ns.user)
     if ns.cmd == "body":
-        return cmd_body(ns.number, ns.path, repo=repo, user=ns.user)
-    return cmd_close(ns.number, ns.path, reason=ns.reason, repo=repo, user=ns.user)
+        return cmd_body(ns.number, ns.path, repo=ns.repo, user=ns.user)
+    return cmd_close(ns.number, ns.path, reason=ns.reason, repo=ns.repo, user=ns.user)
 
 
 if __name__ == "__main__":
