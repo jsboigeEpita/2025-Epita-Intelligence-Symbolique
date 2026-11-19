@@ -18,7 +18,9 @@ Definitions (the issue's asks, pinned by ``tests/unit/scripts/test_condition2_35
   ``not_measurable`` when nothing is settled.
 - **cross-family verdict** — ``progress`` when both families progress,
   ``no_progress`` when neither does, ``disagree`` otherwise,
-  ``not_measurable`` if either family is not measurable.
+  ``not_measurable`` if either family is not measurable OR fewer than two
+  families contributed (one family's direction is diagnostic, never a
+  verdict — the #3639 review).
 - **counter** — ``no_progress`` adds 1, ``progress`` resets to 0 (the bar
   counts consecutive cycles), ``disagree`` and ``not_measurable`` leave it.
 
@@ -128,7 +130,15 @@ def family_direction(
 
 
 def cross_family(readings: Mapping[str, Mapping[str, Any]]) -> str:
-    """The verdict of the cycle over its families' directions."""
+    """The verdict of the cycle over its families' directions.
+
+    The bar says BOTH families (#3639 review): with fewer than two
+    contributing families there is no cross-family reading — one family's
+    direction stays in ``families`` for diagnostic replay, but the verdict is
+    ``not_measurable`` so the official counter holds.
+    """
+    if len(readings) < 2:
+        return NOT_MEASURABLE
     directions = {str(r["direction"]) for r in readings.values()}
     if NOT_MEASURABLE in directions:
         return NOT_MEASURABLE

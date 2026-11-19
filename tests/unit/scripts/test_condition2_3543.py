@@ -348,6 +348,19 @@ class TestCrossFamily:
             == "not_measurable"
         )
 
+    def test_one_family_is_not_a_cross_family_reading(self):
+        # The #3639 review: the bar says BOTH families. A single family's
+        # direction is diagnostic (it stays in `families`), but it must not
+        # become a cross-family verdict — the counter would move on it.
+        assert (
+            condition2.cross_family({"s": self._reading("progress")})
+            == "not_measurable"
+        )
+        assert (
+            condition2.cross_family({"s": self._reading("no_progress")})
+            == "not_measurable"
+        )
+
 
 class TestCounter:
     def test_no_progress_adds_one(self):
@@ -387,7 +400,40 @@ class TestHeads:
 
 
 class TestTheCommand:
-    def test_the_explicit_pairs_mode_writes_the_report(self, tmp_path, capsys):
+    def test_two_agreeing_families_move_the_counter(self, tmp_path, capsys):
+        # The #3639 review's second CLI witness: with BOTH families agreeing
+        # (both progress), the counter moves (resets).
+        cur = _write_dir(tmp_path / "cli_cur", [_row("doc_A", core=True, severe=False)])
+        prev = _write_dir(
+            tmp_path / "cli_prev", [_row("doc_A", core=False, severe=False)]
+        )
+        out = tmp_path / "condition2.json"
+        rc = condition2.main(
+            [
+                "--family",
+                f"s={cur}|{prev}",
+                "--family",
+                f"g={cur}|{prev}",
+                "--counter-before",
+                "3",
+                "--out",
+                str(out),
+            ]
+        )
+        assert rc == 0
+        result = json.loads(out.read_text(encoding="utf-8"))
+        assert result["verdict"] == "progress"
+        assert result["counter_before"] == 3
+        assert result["counter_after"] == 0
+        assert result["families"]["s"]["toward"] == ["doc_A"]
+        assert result["families"]["g"]["toward"] == ["doc_A"]
+        assert result["heads"]["zeroshot_head"] == "z" * 40
+        assert "progress" in capsys.readouterr().out
+
+    def test_one_family_holds_the_counter(self, tmp_path, capsys):
+        # The #3639 review's first CLI witness: a single family — however
+        # strong its direction — is not a cross-family reading. The verdict
+        # is not_measurable and the counter HOLDS (3 -> 3, not 3 -> 0).
         cur = _write_dir(tmp_path / "cli_cur", [_row("doc_A", core=True, severe=False)])
         prev = _write_dir(
             tmp_path / "cli_prev", [_row("doc_A", core=False, severe=False)]
@@ -405,12 +451,14 @@ class TestTheCommand:
         )
         assert rc == 0
         result = json.loads(out.read_text(encoding="utf-8"))
-        assert result["verdict"] == "progress"
-        assert result["counter_before"] == 3
-        assert result["counter_after"] == 0
+        # The family's own direction is still reported (diagnostic replay).
+        assert result["families"]["s"]["direction"] == "progress"
         assert result["families"]["s"]["toward"] == ["doc_A"]
-        assert result["heads"]["zeroshot_head"] == "z" * 40
-        assert "progress" in capsys.readouterr().out
+        # But it does not become the cross-family verdict.
+        assert result["verdict"] == "not_measurable"
+        assert result["counter_before"] == 3
+        assert result["counter_after"] == 3
+        assert "not_measurable" in capsys.readouterr().out
 
     def test_the_previous_cycle_counter_is_read_back(self, tmp_path):
         prev_cycle = tmp_path / "previous_cycle"
