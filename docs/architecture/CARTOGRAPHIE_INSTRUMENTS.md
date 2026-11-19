@@ -35,7 +35,11 @@ affirmé à tort qu'aucune mesure récente n'existait.
 |---|---|---|---|
 | `scripts/measure_both_paths_vs_zeroshot.py` | **externe**, head-to-head sur corpus : DAG `spectacular` / conversationnel / référence zero-shot | quel *chemin d'orchestration* bat l'autre, dimension par dimension | **run : 31/05/2026** ⚠ non re-mesuré · imports revérifiés le 18/09 (3 points d'entrée OK) · référence : `docs/reports/BASELINE_0SHOT_2026-05-16.md` |
 | `scripts/dataset/run_zeroshot_arm.py` (#2841) | **bras zero-shot réel** : un appel par document, même corpus (`expand_corpus`), même modèle (résolveur canonique), même texte intégral ; réponse gardée entière en chemin gitignoré | ce que le modèle **seul** dit du document — l'autre moitié de la lecture côte à côte | **29/09/2026, campagne #2841** : 49/49 complets (~73 s/doc) face à la passe `spectacular` 49/49 (48/49 reader-valid = re-mesure exacte de #2062) |
-| `reporting/restitution/conclusion_salience.py` (#1914) | **interne**, déterministe, dérivé de l'état, rendu dans l'Acte III | ce que *ce run-ci* a établi qu'une lecture zero-shot forte ne donne pas | **vivant, campagne #2841 le 29/09** : 49 documents, surplus non procédural sur **48/49** (décisif_formel=69, structural=136, convergence_non_llm=71, stockés 29/09) · ré-derivation 30/09 (#2872, #2844 fermé) : **structural=124, convergence_non_llm=81**, 48/49 inchangé · **portée #2850 : ce surplus est mesuré sur la fenêtre de tête analysée par le pipeline (3 000 caractères), pas sur le texte entier** |
+| `reporting/restitution/conclusion_salience.py` (#1914) | **interne**, déterministe, dérivé de l'état, rendu dans l'Acte III | ce que *ce run-ci* a établi qu'une lecture zero-shot forte ne donne pas | **vivant, campagne #2841 le 29/09** : 49 documents, surplus non procédural sur **48/49** (décisif_formel=69, structural=136, convergence_non_llm=71, stockés 29/09) · ré-derivation 30/09 (#2872, #2844 fermé) : **structural=124, convergence_non_llm=81**, 48/49 inchangé · **portée #2850 (campagne du 29/09, avant #3444) : ce surplus est mesuré sur la fenêtre de tête analysée alors par le pipeline (3 000 caractères), pas sur le texte entier — lecture courante : texte entier sous `WHOLE_TEXT_CALL_CAPACITY` (6 016 car. mesurés) sinon k chunks, cf. le paragraphe de portée** |
+| `scripts/dataset/judge_panel.py` (#3375) | **juge aveugle du panel v1** : chaque document jugé par une famille de modèle AUTRE que celle du producteur, chaque citation vérifiée mécaniquement (un item sans citation est retiré et compté), une table agrégée ; passes gardées en `judge_panel_3375_<tag>_<juge>_p<i>` et `..._cons<k>` ; appelé hors `tests/` par `scripts/panel/run_cycle.py` et `scripts/panel/classify_items.py` | ce que le jugement **aveugle** d'une autre famille dit du différentiel pipeline vs zero-shot — le verdict du bar v1 (#3374) | **13/11/2026, cycle 6, étage consensus 09:54 UTC** : exit 0 pour les deux juges, lu depuis `evaluation/results/panel_cycles/c6/status.jsonl` (gitignoré, siège coordinateur ; mesure fournie par le coordinateur sur #3539) ; les passes de jugement ont couru plus tôt dans c6, ce record ne les date pas · fichier touché pour la dernière fois sur ce siège le **16/11** (`7e710c6e7`, #3601) |
+| `scripts/panel/run_cycle.py` (#3531) | **coureur d'un cycle du panel v1** : le panel entier dans le pipeline une fois, chaque famille de juges sur plusieurs passes, un consensus par famille, le traceur gratuit sur le consensus ; `--plan` imprime chaque commande sans rien lancer, `--stage` reprend par étage ; un `pipeline.json` par cycle garde commit, code de sortie et récolte | l'unité du bar v1 — un cycle complet, ses deux familles et son consensus, dans un seul enregistrement | **16/11/2026** : dernier toucher du fichier sur ce siège (`1aee50aaf`) ; les cycles qu'il a produits vivent dans `evaluation/results/panel_cycles/` (gitignoré, siège coordinateur), non re-mesurés ici |
+
+**Campagne #2841 close.** Les trois premières lignes de ce tableau datent de la campagne #2841 (29/09/2026) ; sa question zero-shot — « qu'apporte notre orchestration face à un modèle seul ? » — vit désormais dans le bar v1 (Epic #3374) et son panel : le juge #3375 et le coureur #3531 ci-dessus portent leurs propres mesures.
 
 **Différence à ne pas confondre** : le premier (`measure_both_paths_vs_zeroshot.py`) compare
 des *chemins* entre eux et a besoin d'une référence zero-shot enregistrée ; le second
@@ -45,10 +49,10 @@ jamais exécuter de zero-shot — il dérive le surplus de la nature des trouvai
 formelles, exclusions de Dung, relations structurelles, convergences portant au moins un
 signal non-LLM).
 
-**Portée mesurée le 29/09 (#2850) — le pipeline n'analyse pas le texte entier.** « Même
-texte » est vrai de l'*entrée* du bras zero-shot, pas de ce que le pipeline **lit** : la
-phase d'extraction qui peuple `identified_arguments` (`_invoke_fact_extraction`,
-`invoke_callables.py:6869`) n'envoie au LLM qu'une **fenêtre de tête de 3 000 caractères**
+**Portée mesurée le 29/09 (#2850) — vraie de la campagne #2841, avant #3444.** « Même
+texte » est vrai de l'*entrée* du bras zero-shot, pas de ce que le pipeline **lit** : à cette
+date, la phase d'extraction qui peuple `identified_arguments` (`_invoke_fact_extraction`)
+n'envoyait au LLM qu'une **fenêtre de tête de 3 000 caractères**
 (`selected_text(input_text, 3000, "fact_extraction")` ; offset 0 sur corpus prose,
 `core/reading_window.py`). Re-mesuré le 29/09 (#2850) sur mes 49 dumps frais de la
 campagne, couverture recalculée par le producteur de l'audit (0 appel LLM) : position
@@ -59,6 +63,14 @@ heuristiques, écrites sur le texte entier, ne sont touchées que **51 fois sur 
 toutes par `counter_arguments` (0 par quality, 0 par fallacy). La lecture côte à côte compare
 donc *la tête lue par le pipeline* au *texte entier lu par le zero-shot* : un écart
 d'instrument à porter dans toute conclusion tirée du surplus.
+
+**Lecture courante, mesurée le 19/11/2026 sur `main` (#3444).** `_invoke_fact_extraction`
+lit le **texte entier en un seul appel** tant qu'il tient sous `WHOLE_TEXT_CALL_CAPACITY`
+(`core/reading_window.py` ; valeur mesurée par exécution : **6 016 caractères**,
+`reads_whole_text_in_one_call`), et au-delà en **k chunks contigus**
+(`chunked_reading_offsets`). La fenêtre de tête de 3 000 caractères n'est plus le
+comportement de `main` ; les chiffres du 29/09 restent ceux de la campagne, pas un état
+courant.
 
 **Trou mesuré le 18/09 — comblé le 29/09 (campagne #2841).** Le surplus #1914 était calculé
 sur l'objet d'évidence de l'Acte III et rendu en prose, mais jamais persisté (0 occurrence
@@ -78,8 +90,9 @@ question : **23/49** documents comptaient l'axe pondéré comme surplus `structu
 établi alors que le framework n'avait rien produit (le défaut de comptage lui-même) ;
 **13/49** — sous-ensemble des 23 — sont ceux dont l'Acte III **rendu le même run**
 déclarait simultanément la dimension non concluante : la contradiction visible
-projection/prose. Portée #2850 : ce surplus est mesuré sur la fenêtre de tête que le
-pipeline analyse, pas sur le texte entier (cf. le paragraphe de portée ci-dessus).
+projection/prose. Portée #2850 (campagne du 29/09, avant #3444 — lecture courante dans le
+paragraphe de portée ci-dessus) : ce surplus est mesuré sur la fenêtre de tête que le
+pipeline analysait alors, pas sur le texte entier.
 
 ---
 
@@ -266,6 +279,15 @@ wrapper). **Un quatrième juge, hors du triptyque et découvert par le census, f
 `run_provenance` + `unified_pipeline`) et a produit les artefacts locaux
 `evaluation/results/full_judgment/` du **05/09/2026**. Les juges réellement exécutés en
 septembre ne passent donc pas par `judge.py`.
+
+**Le juge du panel v1 n'est pas dans ce triptyque** : `scripts/dataset/judge_panel.py`
+(#3375) est le juge **aveugle** du bar v1 — chaque document y est jugé par une famille de
+modèle **autre** que celle du producteur (règle d'exclusion de
+`docs/guides/GRILLE_JUGE_2841.md`), ses citations sont vérifiées mécaniquement (un item sans
+citation est retiré et compté), et ses passes sont celles des cycles du panel (#3374). Sa
+ligne, dans la section zero-shot ci-dessus, porte sa dernière exécution attestée et ses
+appelants hors `tests/` ; le coureur `scripts/panel/run_cycle.py` (#3531) est la surface qui
+l'orchestre.
 
 **Trou mesuré** : l'axe « juge » a quatre surfaces vivantes au sens large mais **aucune
 exécution attestée de `judge.py` lui-même depuis mars 2026** — toute conclusion citant un
