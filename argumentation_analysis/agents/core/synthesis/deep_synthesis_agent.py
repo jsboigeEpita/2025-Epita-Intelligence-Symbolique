@@ -2279,7 +2279,7 @@ class DeepSynthesisAgent(BaseAgent):
         if _reading_moves:
             _selected = list(range(len(_reading_moves)))
             if len(_reading_moves) > max_items_per_field:
-                _chosen: set = set()
+                _chosen: set[int] = set()
                 for _slot in ("thesis", "mechanism"):
                     for _i, _candidate in enumerate(_reading_moves):
                         if (
