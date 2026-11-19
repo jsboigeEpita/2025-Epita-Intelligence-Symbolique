@@ -12987,6 +12987,61 @@ async def _invoke_modal_logic(
             object.__setattr__(_modal_settings, "modal_solver", _prev_modal_solver)
 
 
+_AF_FRAME_NODE_BUDGET = 40
+_AF_FRAME_COVERAGE_SITE = "af_family_frame"
+
+
+def _af_frame_pairs(units: List[SelectableUnit], state: Any) -> List[Tuple[str, str]]:
+    """#3536 — the AF frame's nodes, spanning the text's position bands.
+
+    At or under the budget the frame keeps insertion order — byte-identical
+    to the pre-#3536 frame (same ids, same order, same payload): a
+    population the cap does not cut sees no reordering pass, and the
+    selector returns TEXT order, which is not that contract (the #3536
+    control plants insertion order away from text order to catch one).
+
+    Over the budget the cut goes through ``select_for_budget``
+    (``stratified_position``), so the held nodes cover the text's bands
+    instead of its head; ``population_total`` (#3014, the payload) still
+    names the size BEFORE the cap. The head-only cut was measured on the
+    synthetic state: 120 units at even offsets over 60,000 characters held
+    one third of three.
+
+    Whatever the size, the state records which units the frame holds — k
+    of N with the bands covered, under ONE site name for the family —
+    through ``record_analysis_coverage``; every family member builds the
+    same deterministic frame, so the last writer records the same
+    selection. A state without the recorder (no unit population of its
+    own, or a bare context) is skipped, never crashed.
+    """
+    if len(units) <= _AF_FRAME_NODE_BUDGET:
+        kept = list(units)
+        bands_covered, bands_total, span, stretch = coverage_figure(
+            kept, state_text_length(state)
+        )
+    else:
+        result = select_for_budget(
+            units, _AF_FRAME_NODE_BUDGET, text_length=state_text_length(state)
+        )
+        kept = list(result.selected)
+        bands_covered = result.bands_covered
+        bands_total = result.bands_total
+        span = result.span
+        stretch = result.largest_uncovered_stretch
+    if state is not None and hasattr(state, "record_analysis_coverage"):
+        state.record_analysis_coverage(
+            _AF_FRAME_COVERAGE_SITE,
+            len(kept),
+            len(units),
+            bands_covered,
+            bands_total,
+            span=span,
+            largest_uncovered_stretch=stretch,
+            unit_ids=[str(u.unit_id) for u in kept],
+        )
+    return [(str(u.unit_id), str(u.text)) for u in kept]
+
+
 def _population_node_units(
     input_text: str, context: Dict[str, Any]
 ) -> Tuple[List[Tuple[str, str]], Optional[str], int]:
@@ -13027,8 +13082,10 @@ def _population_node_units(
         units = merged_population_units(None, fallback_args=fallback)
     if units:
         # Budget parity with the previous extraction (its lists were capped
-        # at 40 too).
-        return [(str(u.unit_id), str(u.text)) for u in units[:40]], None, len(units)
+        # at 40 too). #3536: over the budget the cut spans the text's
+        # position bands instead of its insertion-order head, and the state
+        # records k of N under the family's site name.
+        return _af_frame_pairs(units, state), None, len(units)
     # Last resort: delegate to the HISTORICAL text extractor's own tail
     # (claims, then real sentences, then the whole input) — one fallback
     # implementation, and its #2850 census windows stay where they are
