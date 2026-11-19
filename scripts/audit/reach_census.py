@@ -75,8 +75,10 @@ def main() -> int:
             )
             for state in states
         )
+        # Markdown tables split on pipes even inside inline code.
+        display_pattern = pattern.replace("|", r"\|")
         print(
-            f"| {project} | {filled} of {len(states)} | not measured | {named} of {len(states)} | `{pattern}` |"
+            f"| {project} | {filled} of {len(states)} | not measured | {named} of {len(states)} | `{display_pattern}` |"
         )
     return 0
 
