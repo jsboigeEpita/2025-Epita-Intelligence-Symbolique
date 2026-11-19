@@ -1910,6 +1910,10 @@ class DeepSynthesisAgent(BaseAgent):
             if isinstance(entries, list):
                 _note(field, len(entries))
 
+        from argumentation_analysis.agents.core.reading import defining_moves
+
+        _note("defining_moves", len(defining_moves(state)))
+
         dung = getattr(state, "dung_frameworks", {}) or {}
         if isinstance(dung, dict):
             _note("dung_frameworks", len(dung))
@@ -2273,7 +2277,39 @@ class DeepSynthesisAgent(BaseAgent):
             else getattr(state, "defining_moves", None)
         )
         if _reading_moves:
-            for _move_index, _move in enumerate(_reading_moves[:max_items_per_field]):
+            _selected = list(range(len(_reading_moves)))
+            if len(_reading_moves) > max_items_per_field:
+                _chosen: set = set()
+                for _slot in ("thesis", "mechanism"):
+                    for _i, _candidate in enumerate(_reading_moves):
+                        if (
+                            _candidate.get("slot") == _slot
+                            and len(_chosen) < max_items_per_field
+                        ):
+                            _chosen.add(_i)
+                            break
+                _raw_text = getattr(state, "raw_text", "") or ""
+                if isinstance(state, dict):
+                    _raw_text = state.get("raw_text", "") or ""
+                if _raw_text:
+                    for _band in range(4):
+                        for _i, _candidate in enumerate(_reading_moves):
+                            _pos = _candidate.get("offset")
+                            if (
+                                isinstance(_pos, int)
+                                and 0 <= _pos < len(_raw_text)
+                                and min(3, 4 * _pos // len(_raw_text)) == _band
+                            ):
+                                if len(_chosen) < max_items_per_field:
+                                    _chosen.add(_i)
+                                break
+                for _i in range(len(_reading_moves)):
+                    if len(_chosen) >= max_items_per_field:
+                        break
+                    _chosen.add(_i)
+                _selected = sorted(_chosen)
+            for _move_index, _i in enumerate(_selected):
+                _move = _reading_moves[_i]
                 _offset = _move.get("offset")
                 _add(
                     "defining_moves",
