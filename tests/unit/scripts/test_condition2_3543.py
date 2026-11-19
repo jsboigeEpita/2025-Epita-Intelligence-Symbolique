@@ -402,18 +402,28 @@ class TestHeads:
 class TestTheCommand:
     def test_two_agreeing_families_move_the_counter(self, tmp_path, capsys):
         # The #3639 review's second CLI witness: with BOTH families agreeing
-        # (both progress), the counter moves (resets).
-        cur = _write_dir(tmp_path / "cli_cur", [_row("doc_A", core=True, severe=False)])
-        prev = _write_dir(
-            tmp_path / "cli_prev", [_row("doc_A", core=False, severe=False)]
+        # (both progress), the counter moves (resets). The two families use
+        # DISTINCT directory pairs — reusing one pair under two labels is
+        # rejected (TestReusedDirectories), not a second reading.
+        cur_s = _write_dir(
+            tmp_path / "cli_cur_s", [_row("doc_A", core=True, severe=False)]
+        )
+        prev_s = _write_dir(
+            tmp_path / "cli_prev_s", [_row("doc_A", core=False, severe=False)]
+        )
+        cur_g = _write_dir(
+            tmp_path / "cli_cur_g", [_row("doc_A", core=True, severe=False)]
+        )
+        prev_g = _write_dir(
+            tmp_path / "cli_prev_g", [_row("doc_A", core=False, severe=False)]
         )
         out = tmp_path / "condition2.json"
         rc = condition2.main(
             [
                 "--family",
-                f"s={cur}|{prev}",
+                f"s={cur_s}|{prev_s}",
                 "--family",
-                f"g={cur}|{prev}",
+                f"g={cur_g}|{prev_g}",
                 "--counter-before",
                 "3",
                 "--out",
@@ -459,6 +469,65 @@ class TestTheCommand:
         assert result["counter_before"] == 3
         assert result["counter_after"] == 3
         assert "not_measurable" in capsys.readouterr().out
+
+
+class TestReusedDirectories:
+    """The #3639 review v2: the same consensus directories supplied under
+    two labels passed the two-family guard and reset the official counter.
+    Two labels are not two independent readings — the command rejects any
+    consensus directory reused across families, including equivalent path
+    spellings."""
+
+    def test_the_same_pair_under_two_labels_is_rejected(self, tmp_path):
+        cur = _write_dir(tmp_path / "cur", [_row("doc_A", core=True, severe=False)])
+        prev = _write_dir(tmp_path / "prev", [_row("doc_A", core=False, severe=False)])
+        with pytest.raises(SystemExit, match="reused"):
+            condition2.main(
+                [
+                    "--family",
+                    f"s={cur}|{prev}",
+                    "--family",
+                    f"g={cur}|{prev}",
+                    "--counter-before",
+                    "3",
+                ]
+            )
+
+    def test_an_equivalent_spelling_of_the_same_directory_is_rejected(self, tmp_path):
+        # `cur` spelled through a `..` detour resolves to the same directory.
+        (tmp_path / "sub").mkdir()
+        cur = _write_dir(tmp_path / "cur", [_row("doc_A", core=True, severe=False)])
+        prev = _write_dir(tmp_path / "prev", [_row("doc_A", core=False, severe=False)])
+        cur_spelled = tmp_path / "sub" / ".." / "cur"
+        assert cur_spelled.resolve() == cur.resolve()  # the spelling is equivalent
+        with pytest.raises(SystemExit, match="reused"):
+            condition2.main(
+                [
+                    "--family",
+                    f"s={cur}|{prev}",
+                    "--family",
+                    f"g={cur_spelled}|{prev}",
+                ]
+            )
+
+    def test_two_distinct_pairs_are_accepted(self, tmp_path):
+        cur_s = _write_dir(tmp_path / "cs", [_row("doc_A", core=True, severe=False)])
+        prev_s = _write_dir(tmp_path / "ps", [_row("doc_A", core=False, severe=False)])
+        cur_g = _write_dir(tmp_path / "cg", [_row("doc_A", core=True, severe=False)])
+        prev_g = _write_dir(tmp_path / "pg", [_row("doc_A", core=False, severe=False)])
+        out = tmp_path / "condition2.json"
+        rc = condition2.main(
+            [
+                "--family",
+                f"s={cur_s}|{prev_s}",
+                "--family",
+                f"g={cur_g}|{prev_g}",
+                "--out",
+                str(out),
+            ]
+        )
+        assert rc == 0
+        assert json.loads(out.read_text(encoding="utf-8"))["verdict"] == "progress"
 
     def test_the_previous_cycle_counter_is_read_back(self, tmp_path):
         prev_cycle = tmp_path / "previous_cycle"

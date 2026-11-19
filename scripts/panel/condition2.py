@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
@@ -202,6 +203,33 @@ def read_counter_before(previous_cycle_dir: Optional[Path]) -> Optional[int]:
     return int(value) if isinstance(value, int) else None
 
 
+def _norm_dir(path: Path) -> str:
+    """The identity of a consensus directory, spelling-independent."""
+    return os.path.normcase(str(path.resolve()))
+
+
+def _reject_reused_directories(families: Mapping[str, Tuple[Path, Path]]) -> None:
+    """Two labels over the same consensus directories are not two readings.
+
+    The #3639 review v2: the same current/previous pair supplied under both
+    ``s`` and ``g`` passed the two-family guard and reset the official
+    counter. Every consensus directory must belong to ONE family — the check
+    compares resolved, case-normalised paths, so an equivalent spelling of
+    the same directory is caught too.
+    """
+    seen: Dict[str, str] = {}
+    for name, (current, previous) in families.items():
+        for directory in (current, previous):
+            key = _norm_dir(directory)
+            if key in seen and seen[key] != name:
+                raise SystemExit(
+                    f"consensus directory reused across families "
+                    f"({seen[key]} and {name}): {directory} — two labels are "
+                    "not two independent readings"
+                )
+            seen[key] = name
+
+
 def build(
     families: Mapping[str, Tuple[Path, Path]],
     *,
@@ -210,6 +238,7 @@ def build(
     panel: Optional[Sequence[str]] = None,
 ) -> Dict[str, Any]:
     """The whole reading: per family, the verdict, the counter, the heads."""
+    _reject_reused_directories(families)
     readings = {
         name: family_direction(current, previous, panel)
         for name, (current, previous) in families.items()
