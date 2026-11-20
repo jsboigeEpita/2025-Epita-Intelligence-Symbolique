@@ -398,7 +398,8 @@ REGISTRY = {
     ): (
         "window",
         "3000-char window from the selected offset",
-        "record_reading_window; Acts silent — #2850",
+        "record_reading_window — recorded since #3538 (the invoke threads "
+        "the shared state; no client, no entry) — #2850",
     ),
     (
         "argumentation_analysis/agents/core/political/stakes_extractor.py",
