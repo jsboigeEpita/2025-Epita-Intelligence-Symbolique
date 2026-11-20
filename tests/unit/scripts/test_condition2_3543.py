@@ -11,6 +11,7 @@ Free: no key, no network, no corpus — votes planted by hand.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -60,6 +61,24 @@ def _row(doc, *, core, severe, abstain=False, fragile=False):
     }
 
 
+def _pipeline_record(label, *, mount="a"):
+    """The real ``pipeline_run`` record the judge writes (#3639 review v4).
+
+    ``label`` names the RUN — its ``inputs_sha256`` and ``code_shas`` derive
+    from it; ``mount`` names WHERE that run was read from. Two mounts of one
+    label are one run under two directories (#3543 item 1): the identity is
+    inputs+code, the mounted directories are not part of it.
+    """
+    digest = hashlib.sha256(label.encode("utf-8")).hexdigest()
+    return {
+        "states_dir": f"/mounts/{mount}/states",
+        "signatures_dir": f"/mounts/{mount}/signatures",
+        "code_shas": [digest],
+        "input_fingerprint": {"doc_A": digest},
+        "inputs_sha256": digest,
+    }
+
+
 def _write_dir(
     path,
     rows,
@@ -71,6 +90,7 @@ def _write_dir(
     judge_family=None,
     judge_model=None,
     pipeline_run=None,
+    pipeline_mount="a",
 ):
     path.mkdir(parents=True, exist_ok=True)
     for row in rows:
@@ -87,8 +107,13 @@ def _write_dir(
         meta["judge_family"] = judge_family
         meta["judge_model"] = judge_model or "judge-model"
     if pipeline_run is not None:
-        # The field's name, as judge_panel.py records it (#3639 review v4).
-        meta["pipeline_run"] = {"run_id": pipeline_run}
+        # The field's name AND shape, as judge_panel.py records it (#3639
+        # review v4). A string expands to the real record (#3543 item 1);
+        # a dict is written as-is, so partial shapes stay witnesses.
+        if isinstance(pipeline_run, str):
+            meta["pipeline_run"] = _pipeline_record(pipeline_run, mount=pipeline_mount)
+        else:
+            meta["pipeline_run"] = pipeline_run
     (path / jp.META_FILENAME).write_text(json.dumps(meta), encoding="utf-8")
     return path
 
@@ -1132,6 +1157,80 @@ class TestPipelineRunBinding:
             "pipeline run" in h and "unproven" in h
             for h in result["provenance"]["holds"]
         )
+
+    def test_a_record_without_inputs_or_code_proves_no_run(self, tmp_path):
+        # #3543 item 1 — the pre-#3639 stand-in shape ({"run_id": ...})
+        # carries neither inputs_sha256 nor code_shas: the record's NAME is
+        # not its identity, so the binding is unproven and the counter holds.
+        dirs = self._two_official_families(
+            tmp_path,
+            cur_record={"run_id": "run-cur"},
+            prev_record={"run_id": "run-prev"},
+        )
+        result = self._run(dirs, tmp_path)
+        assert result["verdict"] == "not_measurable"
+        assert result["counter_after"] == 3
+        assert any(
+            "pipeline run" in h and "unproven" in h
+            for h in result["provenance"]["holds"]
+        )
+
+    def test_one_run_under_two_directories_is_a_cycle_read_against_itself(
+        self, tmp_path
+    ):
+        # #3543 item 1, witness 1 — the SAME run mounted under two
+        # directories: same inputs_sha256, same code_shas, different
+        # states_dir/signatures_dir. The old hold compared the whole
+        # per-family records, so the differing directories made the two
+        # roles look like two runs and the self-comparison was reported
+        # official. The identity binds on inputs+code.
+        dirs = {}
+        for name, family in (("s", "anthropic"), ("g", "google")):
+            cur = _write_dir(
+                tmp_path / f"{name}_cur",
+                [_row("doc_A", core=True, severe=False)],
+                judge_family=family,
+                pipeline_run="run-same",
+                pipeline_mount="a",
+            )
+            prev = _write_dir(
+                tmp_path / f"{name}_prev",
+                [_row("doc_A", core=False, severe=False)],
+                judge_family=family,
+                pipeline_run="run-same",
+                pipeline_mount="b",
+            )
+            dirs[name] = (cur, prev)
+        result = self._run(dirs, tmp_path)
+        assert result["verdict"] == "not_measurable"
+        assert result["counter_after"] == 3
+        assert any("same pipeline run" in h for h in result["provenance"]["holds"])
+
+    def test_one_run_under_two_family_sets_is_a_cycle_read_against_itself(self):
+        # #3543 item 1, witness 2 — the same run judged under two CLI label
+        # sets: the per-family dicts differ in KEYS alone, so the old
+        # whole-dict comparison saw no self-comparison. ``main`` applies one
+        # label set to both roles, so the shape is exercised where it can
+        # arise — the provenance the pair hold reads.
+        record = _pipeline_record("run-same")
+        current = {
+            "judge_families": {"s": "anthropic", "g": "google"},
+            "runs": {"binding": "proven", "per_family": {"s": ["m", "f", "1", "h"]}},
+            "pipeline_run": {
+                "binding": "one",
+                "per_family": {"s": record, "g": record},
+            },
+        }
+        previous = {
+            "judge_families": {"t": "kimi", "u": "qwen"},
+            "runs": {"binding": "proven", "per_family": {"t": ["m", "f", "1", "h"]}},
+            "pipeline_run": {
+                "binding": "one",
+                "per_family": {"t": record, "u": record},
+            },
+        }
+        holds = condition2._provenance_holds(current, previous)
+        assert any("same pipeline run" in h for h in holds)
 
 
 class TestRunnerNotWiredYet:
