@@ -1233,13 +1233,16 @@ class TestPipelineRunBinding:
         assert any("same pipeline run" in h for h in holds)
 
 
-class TestRunnerNotWiredYet:
-    """The dispatch (#3543) forbids wiring the counter into run_cycle before
-    the new-series contract is verified (c21 does not compare to c6–c20).
-    This increment is the standalone command + STABILITY.json; the runner
-    step belongs to a later increment, after that verification."""
+class TestRunnerWired:
+    """The wiring was deferred until the new-series contract held (c21 does
+    not compare to c6–c20): the run-identity binding and the mixed-presence
+    refusal landed in #3645, and the State comment of 2026-11-20 unblocked
+    the runner. The counter is now the cycle's own step — the full wiring
+    witnesses (both roles, the refusal, the reading's home) live in
+    ``tests/unit/scripts/panel/test_cycle_condition2_step_3543.py``; this
+    one pins the #3543 story's own file to it."""
 
-    def test_the_plan_does_not_yet_include_condition2(self, tmp_path):
+    def test_the_plan_now_includes_condition2(self, tmp_path):
         cfg = run_cycle.Config(
             tag="w3543",
             panel_file=tmp_path / "panel.json",
@@ -1250,7 +1253,7 @@ class TestRunnerNotWiredYet:
             compare_with_tag="w3542",
         )
         names = [step.name for step in run_cycle.plan(cfg)]
-        assert "condition2" not in names
+        assert "condition2" in names
 
 
 class TestMutations:

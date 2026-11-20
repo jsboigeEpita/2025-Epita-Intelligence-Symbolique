@@ -237,6 +237,15 @@ class Config:
                 found.append((int(suffix), path))
         return max(found)[1] if found else None
 
+    @property
+    def previous_cycle_dir(self) -> Optional[Path]:
+        """The compared cycle's directory — where its ``condition2.json``
+        (the counter this cycle's reading chains from) lives, when a
+        comparison cycle is configured."""
+        if not self.compare_with_tag:
+            return None
+        return self.results_root / "panel_cycles" / self.compare_with_tag
+
 
 # ---------------------------------------------------------------------------
 # The commands
@@ -334,6 +343,41 @@ def trace_step(cfg: Config, judges: Sequence[Judge]) -> Step:
     return Step(name="trace", argv=argv, log=cfg.logs_dir / "trace.log")
 
 
+def condition2_step(cfg: Config, judges: Sequence[Judge]) -> Step:
+    """#3543: the condition-2 counter as the cycle's own step — the two
+    roles' consensus directories in (one ``--judge`` per family, tag mode
+    resolves them under ``--results-root``), the reading written to the
+    cycle directory where the runbook files the cycle's artifacts. The
+    standalone command's provenance refusals exit non-zero: the cycle
+    treats that as a stop, never a green finish."""
+    argv = [
+        cfg.python,
+        "scripts/panel/condition2.py",
+        "--tag",
+        cfg.tag,
+        "--passes",
+        str(cfg.passes),
+        "--results-root",
+        str(cfg.results_root),
+        "--cycle-dir",
+        str(cfg.cycle_dir),
+        "--panel-file",
+        str(cfg.panel_file),
+    ]
+    for judge in judges:
+        argv += ["--judge", judge.name]
+    if cfg.compare_with_tag:
+        argv += [
+            "--previous-tag",
+            cfg.compare_with_tag,
+            "--previous-cycle-dir",
+            str(cfg.previous_cycle_dir),
+        ]
+    else:
+        argv += ["--new-series"]
+    return Step(name="condition2", argv=argv, log=cfg.logs_dir / "condition2.log")
+
+
 def plan(cfg: Config) -> List[Step]:
     """Every command the cycle can run, in order. ``--plan`` prints it; the
     run itself goes through the same builders."""
@@ -348,6 +392,7 @@ def plan(cfg: Config) -> List[Step]:
             steps += [consensus_step(cfg, judge, k) for k in cfg.consensus_sizes()]
         if cfg.judges and cfg.passes >= 2:
             steps.append(trace_step(cfg, cfg.judges))
+            steps.append(condition2_step(cfg, cfg.judges))
     return steps
 
 
@@ -793,6 +838,21 @@ def run_cycle(
         rc = dispatch(trace_step(cfg, judged))
         summary["trace"] = {"rc": rc, "families": [judge.name for judge in judged]}
         status.event("trace", **summary["trace"])
+        # #3543: the condition-2 reading is part of the cycle — a refusal
+        # (unproven provenance, reused directories, series break) stops the
+        # cycle stopped-loud, never a green finish over an unread counter.
+        rc = dispatch(condition2_step(cfg, judged))
+        summary["condition2"] = {
+            "rc": rc,
+            "families": [judge.name for judge in judged],
+        }
+        status.event("condition2", **summary["condition2"])
+        if rc != 0:
+            return finish(
+                f"condition2 refused the cycle (rc {rc}) — see "
+                f"{cfg.logs_dir / 'condition2.log'}",
+                EXIT_STOPPED,
+            )
     failed = [
         judge.name for judge, result in zip(cfg.judges, results) if not result["ok"]
     ]
