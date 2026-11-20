@@ -97,7 +97,7 @@
   "neural_fallacy_scores": [
     {
       "id": "nf_1",
-      "text_segment": "One year to afford our Volk enjoyment of the unity which many a generation yearned for in vain... a dream has come true.",
+      "text_segment": "<scrubbed>",
       "label": "appel_au_nationalisme",
       "confidence": 0.72,
       "detector": "camembert"

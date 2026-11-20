@@ -124,7 +124,7 @@ CounterAgent
 
 ## Neural Fallacy Scores (1)
 
-1. **id:** nf_1 | **text_segment:** One year to afford our Volk enjoyment of the unity which many a generation yearned for in vain... a ... | **label:** appel_au_nationalisme | **confidence:** 0.72 | **detector:** camembert
+1. **id:** nf_1 | **text_segment:** <scrubbed> | **label:** appel_au_nationalisme | **confidence:** 0.72 | **detector:** camembert
 
 ## Ranking Results (0)
 
