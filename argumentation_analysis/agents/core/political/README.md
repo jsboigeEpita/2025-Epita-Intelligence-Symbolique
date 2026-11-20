@@ -43,6 +43,7 @@ async def extract(
     deanonymized: bool = True,
     model_id: str = "",
     llm_call: Optional[Callable[..., Awaitable[Any]]] = None,
+    state: object = None,
 ) -> Dict[str, Any]:
 ```
 
@@ -51,7 +52,7 @@ Le wrapper de production, lui, a la signature d'un invoke de phase : `_invoke_st
 ## Amont / aval
 
 **Amont**
-- `argumentation_analysis/core/reading_window.py` — `selected_text(raw_text, 3000, "stakes_extractor")` (`stakes_extractor.py`) : le texte est tronqué à 3000 caractères et la sélection est enregistrée sur l'état partagé (#1737) ;
+- `argumentation_analysis/core/reading_window.py` — `selected_text(raw_text, 3000, "stakes_extractor", state=state)` (`stakes_extractor.py`) : le texte est tronqué à 3000 caractères et la sélection est enregistrée sur l'état partagé (#1737, câblé en #3538 — l'état est passé par l'invoke ; sans client LLM, rien n'est lu, rien n'est enregistré) ;
 - `UnifiedAnalysisState.identified_arguments` / `raw_text` / `source_metadata` (`core/shared_state.py`) — lus par le wrapper, pas par le module ;
 - `_get_openai_client()` + `_get_determinism_params()` + `_guarded_chat_completion` — injectés par le wrapper.
 

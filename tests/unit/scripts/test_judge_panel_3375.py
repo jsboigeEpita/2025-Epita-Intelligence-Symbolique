@@ -1913,3 +1913,47 @@ class TestPipelineRunRecord:
             passes.append(world["out"])
         with pytest.raises(SystemExit, match="pipeline run"):
             jp.build_consensus(passes, tmp_path / "cons3", PANEL)
+
+    def test_a_first_pass_without_the_record_and_a_later_one_with_it_is_refused(
+        self, tmp_path
+    ):
+        # #3543 item 2 — the refusal reads PRESENCE, not position. The old
+        # gate raised only when ``pass_records[0]`` carried a record: a first
+        # pass without one and a later pass with one produced a consensus
+        # that silently named no run, contradicting "refuses a mixed
+        # consensus". Same three passes as the agreeing witness, with the
+        # FIRST pass's record removed.
+        world = _with_panel_file(make_world(tmp_path))
+        judge = FakeJudge()
+        passes = []
+        for i in (1, 2, 3):
+            world["out"] = tmp_path / f"p{i}"
+            asyncio.run(jp.run(_argv(world), judge_call=judge))
+            passes.append(world["out"])
+        first_meta = passes[0] / "META.json"
+        meta = json.loads(first_meta.read_text(encoding="utf-8"))
+        del meta["pipeline_run"]
+        first_meta.write_text(json.dumps(meta), encoding="utf-8")
+        with pytest.raises(SystemExit, match="mixes"):
+            jp.build_consensus(passes, tmp_path / "cons3", PANEL)
+
+    def test_a_consensus_over_passes_that_all_lack_the_record_names_none(
+        self, tmp_path
+    ):
+        # The c2-c21 shape stays silent: every pass without a record is not a
+        # mixed consensus, and the consensus must not invent one.
+        world = _with_panel_file(make_world(tmp_path))
+        judge = FakeJudge()
+        passes = []
+        for i in (1, 2, 3):
+            world["out"] = tmp_path / f"p{i}"
+            asyncio.run(jp.run(_argv(world), judge_call=judge))
+            meta_path = world["out"] / "META.json"
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            del meta["pipeline_run"]
+            meta_path.write_text(json.dumps(meta), encoding="utf-8")
+            passes.append(world["out"])
+        out = tmp_path / "cons3"
+        jp.build_consensus(passes, out, PANEL)
+        meta = json.loads((out / "META.json").read_text(encoding="utf-8"))
+        assert "pipeline_run" not in meta

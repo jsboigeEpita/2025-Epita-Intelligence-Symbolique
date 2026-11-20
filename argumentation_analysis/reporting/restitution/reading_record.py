@@ -31,6 +31,9 @@ from .fr_accord import accord
 # name rather than being dropped — an unnamed reading still speaks.
 SITE_LABELS_FR = {
     "fact_extraction": "extraction des unités",
+    # #3538 — the stakes head (3,000) was read but never recorded; now the
+    # entry exists, the record needs the sentence a reader reads.
+    "stakes_extractor": "extraction des enjeux",
     "propositional_logic": "logique propositionnelle",
     "fol_reasoning": "logique du premier ordre",
     "governance": "délibération de gouvernance",

@@ -309,6 +309,38 @@ def _run_key(meta: Mapping[str, Any]) -> RunKey:
     )
 
 
+def _run_identity(record: Any) -> Optional[Tuple[str, Tuple[str, ...]]]:
+    """Which RUN a ``pipeline_run`` record names, ignoring where it was mounted.
+
+    #3543 item 1 — the identity of a judged run is its inputs
+    (``inputs_sha256``) and the code that produced them (``code_shas``).
+    ``states_dir``/``signatures_dir`` say WHERE that run was read from, not
+    WHICH run it was: the same run read under two directories, or by two
+    family sets, carries one identity. ``None`` when the record does not
+    carry both pieces (an older or partial record proves no identity).
+    """
+    if not isinstance(record, Mapping):
+        return None
+    inputs = record.get("inputs_sha256")
+    code = record.get("code_shas")
+    if not isinstance(inputs, str) or not inputs:
+        return None
+    if not isinstance(code, (list, tuple)):
+        return None
+    return (inputs, tuple(sorted(str(sha) for sha in code)))
+
+
+def _single_run_identity(
+    records: Mapping[str, Any],
+) -> Optional[Tuple[str, Tuple[str, ...]]]:
+    """The ONE run these families judged, or ``None`` when it is not one."""
+    identities = {_run_identity(record) for record in records.values()}
+    if len(identities) != 1:
+        return None
+    identity = next(iter(identities))
+    return identity
+
+
 def _role_provenance(dirs: Mapping[str, Path], role: str) -> Dict[str, Any]:
     """What the ``role``'s META files record about what they judged.
 
@@ -323,11 +355,12 @@ def _role_provenance(dirs: Mapping[str, Path], role: str) -> Dict[str, Any]:
       where the META records none): independence is counted over these,
       never over CLI labels or directory names.
     - **pipeline_run** — WHICH pipeline run was judged, as the judge records
-      it since #3639 review v4: ``one`` when every META carries the same
-      record, ``different`` when they disagree, ``unproven`` when any META
-      carries none (c2-c21's stored shape — arms/seed/run_head identical
-      across cycles, which proves neither "two cycles" nor "one cycle
-      against itself").
+      it since #3639 review v4, identified by ``inputs_sha256`` + ``code_shas``
+      (#3543 item 1 — the mounted directories are not part of the run): ``one``
+      when every META carries the same identity, ``different`` when they
+      disagree, ``unproven`` when any META carries none (c2-c21's stored
+      shape — arms/seed/run_head identical across cycles, which proves neither
+      "two cycles" nor "one cycle against itself").
     """
     metas = {name: _read_meta(directory) for name, directory in dirs.items()}
     series_keys: Dict[Tuple[str, str], str] = {}
@@ -350,9 +383,17 @@ def _role_provenance(dirs: Mapping[str, Path], role: str) -> Dict[str, Any]:
     else:
         binding = "different"
     pipeline_records = {name: meta.get("pipeline_run") for name, meta in metas.items()}
-    if any(record is None for record in pipeline_records.values()):
+    # #3543 item 1 — the binding is over the RUN, not over the whole record:
+    # two directories mounting the same run (or two family sets judging it)
+    # used to disagree on ``states_dir``/``signatures_dir`` and read as two
+    # runs, while a cycle read against itself under two family sets slipped
+    # through the pair hold below. The identity is inputs+code.
+    pipeline_identities = {
+        name: _run_identity(record) for name, record in pipeline_records.items()
+    }
+    if any(identity is None for identity in pipeline_identities.values()):
         pipeline_binding = "unproven"
-    elif len({json.dumps(r, sort_keys=True) for r in pipeline_records.values()}) == 1:
+    elif len(set(pipeline_identities.values())) == 1:
         pipeline_binding = "one"
     else:
         pipeline_binding = "different"
@@ -462,12 +503,16 @@ def _provenance_holds(
     # The pair must be TWO runs: one pipeline run in both roles is a cycle
     # read against itself (the review's measured case: cons6 vs cons3 of one
     # cycle reads no_progress and the counter ticks) — never official.
+    # #3543 item 1 — compared on the RUN IDENTITY, not on the per-family
+    # records: the old dict comparison missed the same run mounted under two
+    # directories (the records differ there) and the same run judged under
+    # two family sets (the keys differ there).
     if (
         current["pipeline_run"]["binding"] == "one"
         and previous["pipeline_run"]["binding"] == "one"
-        and current["pipeline_run"]["per_family"]
-        and current["pipeline_run"]["per_family"]
-        == previous["pipeline_run"]["per_family"]
+        and _single_run_identity(current["pipeline_run"]["per_family"]) is not None
+        and _single_run_identity(current["pipeline_run"]["per_family"])
+        == _single_run_identity(previous["pipeline_run"]["per_family"])
     ):
         holds.append(
             "both roles record the same pipeline run — a cycle read against "
