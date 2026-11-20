@@ -21,16 +21,31 @@ Definitions (the issue's asks, pinned by ``tests/unit/scripts/test_condition2_35
   ``not_measurable`` if either family is not measurable OR fewer than two
   families contributed (one family's direction is diagnostic, never a
   verdict — the #3639 review).
+- **judge independence** — the official verdict needs two DISTINCT RECORDED
+  judge families: ``judge_family`` in each consensus ``META.json``, never
+  the CLI labels or the directory names. The same judge's results under two
+  labels — or two consensus sizes of one family — are one reading, not two;
+  a META that records no judge family proves nothing and is diagnostic only.
+- **execution binding** — the families of one cycle must be bound to the
+  same measured execution: every META of the role records ``seed`` and
+  ``run_head`` and they all agree. ``run_head`` is the zero-shot arm's head
+  and on its own cannot identify the pipeline run — agreement is what the
+  records prove, not more; a role that records disagreeing executions (same
+  arms, another run) or cannot prove the binding keeps its per-family
+  diagnosis and the counter holds. The inherited counter is bound the same
+  way: it must come from the selected predecessor, whose condition2.json
+  names the same series.
 - **series** — the ARMS identify a series: ``pipeline_model`` and
   ``pipeline_family`` in the consensus ``META.json``, which come from the
   zero-shot record's provenance (#3138's single resolver) under the
-  same-model doctrine. The judge may change WITHIN a series (c22 changed
-  judges and still read against c20). A pair spanning a series break is
-  refused — the official predecessor is the same-series cycle (c22 read
-  against c20, skipping c21) — and the families of one cycle must name one
-  series (two META that disagree judged two different runs). A new series'
-  first cycle is declared with ``--new-series``: its own baseline, the
-  counter restarting at 1 (c21).
+  same-model doctrine. A judge change WITHIN a series is not a break (the
+  doctrine; the panel ledger records no such comparison yet — the
+  skip-a-break numbering is hypothetical, not a published cycle pair). A
+  pair spanning a series break is refused — the official predecessor is the
+  same-series cycle, skipping any newer cycles of other series — and the
+  families of one cycle must name one series (two META that disagree judged
+  two different runs). A new series' first cycle is declared with
+  ``--new-series``: its own baseline, the counter restarting at 1 (c21).
 - **counter** — ``no_progress`` adds 1, ``progress`` resets to 0 (the bar
   counts consecutive cycles), ``disagree`` and ``not_measurable`` leave it.
 
@@ -246,9 +261,10 @@ def _series_key(meta: Mapping[str, Any], directory: Path) -> Tuple[str, str]:
 
     ``pipeline_model``/``pipeline_family`` come from the zero-shot record's
     provenance through #3138's single resolver — under the same-model
-    doctrine they name BOTH arms, which is what a series is (the judge may
-    change within a series: c22 changed judges and still read against c20).
-    A META that names no model is a named exit, never a guess.
+    doctrine they name BOTH arms, which is what a series is (a judge change
+    within a series is not a break, by the doctrine — the panel ledger
+    records no such comparison yet). A META that names no model is a named
+    exit, never a guess.
     """
     model = meta.get("pipeline_model")
     family = meta.get("pipeline_family")
@@ -260,54 +276,190 @@ def _series_key(meta: Mapping[str, Any], directory: Path) -> Tuple[str, str]:
     return str(model), str(family)
 
 
-def _read_series(dirs: Mapping[str, Path], role: str) -> Dict[str, str]:
-    """The one series the ``role`` directories all name — or a named exit.
+def _read_meta(directory: Path) -> Mapping[str, Any]:
+    """One consensus directory's META, or a named exit when unreadable."""
+    meta_path = directory / jp.META_FILENAME
+    if not meta_path.exists():
+        raise SystemExit(
+            f"{directory}: no {jp.META_FILENAME} — the series is unreadable"
+        )
+    return jp.load_json(meta_path)
 
-    Families within one cycle must judge the SAME run: two consensus META
-    that disagree on the arms judged two different runs, and a cross-family
-    verdict over them would read one run against another.
+
+RunKey = Tuple[Optional[str], Optional[str], Optional[str], Optional[str]]
+
+
+def _run_key(meta: Mapping[str, Any]) -> RunKey:
+    """The recorded binding to ONE measured execution.
+
+    ``(pipeline_model, pipeline_family, seed, run_head)``, ``None`` where
+    the META records nothing (historical provenance). ``run_head`` is the
+    zero-shot arm's head and on its own cannot identify the pipeline run —
+    agreement of the recorded tuple is what the records PROVE, never more.
     """
-    keys: Dict[Tuple[str, str], str] = {}
-    for name, directory in dirs.items():
-        meta_path = directory / jp.META_FILENAME
-        if not meta_path.exists():
-            raise SystemExit(
-                f"{directory}: no {jp.META_FILENAME} — the series is unreadable"
-            )
-        key = _series_key(jp.load_json(meta_path), directory)
-        keys.setdefault(key, name)
-    if len(keys) > 1:
-        mixed = "; ".join(f"{name}: {'/'.join(key)}" for key, name in keys.items())
+    model = meta.get("pipeline_model")
+    family = meta.get("pipeline_family")
+    seed = meta.get("seed")
+    head = meta.get("run_head")
+    return (
+        str(model) if model else None,
+        str(family) if family else None,
+        str(seed) if seed is not None else None,
+        str(head) if head else None,
+    )
+
+
+def _role_provenance(dirs: Mapping[str, Path], role: str) -> Dict[str, Any]:
+    """What the ``role``'s META files record about what they judged.
+
+    - **series** — ONE series or a named exit: two META that disagree on the
+      ARMS judged two different runs, and a cross-family verdict over them
+      would read one run against another.
+    - **runs** — the execution binding: ``proven`` when every META records
+      ``seed`` and ``run_head`` and they all agree; ``different`` when the
+      recorded values disagree (same arms, another execution); ``unproven``
+      when some META records nothing.
+    - **judge_families** — the RECORDED judge family per directory (``None``
+      where the META records none): independence is counted over these,
+      never over CLI labels or directory names.
+    """
+    metas = {name: _read_meta(directory) for name, directory in dirs.items()}
+    series_keys: Dict[Tuple[str, str], str] = {}
+    for name, meta in metas.items():
+        series_keys.setdefault(_series_key(meta, dirs[name]), name)
+    if len(series_keys) > 1:
+        mixed = "; ".join(
+            f"{name}: {'/'.join(key)}" for key, name in series_keys.items()
+        )
         raise SystemExit(
             f"the {role} families judge different runs ({mixed}) — "
             "a cross-family verdict reads ONE run"
         )
-    key = next(iter(keys))
-    return {"model": key[0], "family": key[1]}
+    series_key = next(iter(series_keys))
+    runs = {name: _run_key(meta) for name, meta in metas.items()}
+    if any(any(part is None for part in run) for run in runs.values()):
+        binding = "unproven"
+    elif len(set(runs.values())) == 1:
+        binding = "proven"
+    else:
+        binding = "different"
+    return {
+        "series": {"model": series_key[0], "family": series_key[1]},
+        "runs": {
+            "binding": binding,
+            "per_family": {n: list(v) for n, v in runs.items()},
+        },
+        "judge_families": {
+            name: (str(meta["judge_family"]) if meta.get("judge_family") else None)
+            for name, meta in metas.items()
+        },
+    }
 
 
-def _reject_series_break(families: Mapping[str, Tuple[Path, Path]]) -> Dict[str, str]:
+def _reject_series_break(
+    families: Mapping[str, Tuple[Path, Path]],
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """The pair must belong to ONE series, or it is an input error.
 
     A series break is not a reading: no verdict reads across it (c21's
     entry: "No verdict of this series reads against c6–c20"), and the
-    official predecessor of a cycle is the SAME-SERIES one (c22 read against
-    c20, skipping c21). A pair that spans the break is refused — reading it
-    anyway (as a verdict or a silent hold) is how one series' counter would
-    count another series' cycles. The new series' first cycle is declared
-    with ``--new-series``.
+    official predecessor of a cycle is the SAME-SERIES one — the last cycle
+    of this series, skipping any newer cycles of other series (hypothetical
+    numbering: were c21 a one-cycle break, the next cycle would read against
+    the last same-series cycle before it; the panel ledger publishes no such
+    pair). A pair that spans the break is refused — reading it anyway (as a
+    verdict or a silent hold) is how one series' counter would count another
+    series' cycles. The new series' first cycle is declared with
+    ``--new-series``.
     """
-    current = _read_series({n: p[0] for n, p in families.items()}, "current")
-    previous = _read_series({n: p[1] for n, p in families.items()}, "previous")
-    if current != previous:
+    current = _role_provenance({n: p[0] for n, p in families.items()}, "current")
+    previous = _role_provenance({n: p[1] for n, p in families.items()}, "previous")
+    if current["series"] != previous["series"]:
         raise SystemExit(
-            f"the pair spans a series break (previous {previous['model']}, "
-            f"current {current['model']}): no verdict reads across series — "
-            "supply the same-series predecessor (c22 reads against c20, "
-            "skipping c21), or declare the new series' baseline with "
-            "--new-series"
+            f"the pair spans a series break (previous "
+            f"{previous['series']['model']}, current {current['series']['model']}): "
+            "no verdict reads across series — supply the same-series "
+            "predecessor (the last cycle of this series, skipping any newer "
+            "cycles of other series), or declare the new series' baseline "
+            "with --new-series"
         )
-    return current
+    return current, previous
+
+
+def _provenance_holds(
+    current: Mapping[str, Any], previous: Mapping[str, Any]
+) -> List[str]:
+    """Why the reading is not official — empty when both guarantees hold.
+
+    Judge independence and execution binding (the #3639 review v3) are
+    provenance facts read from the consensus META, not from CLI labels or
+    directory names. A role that fails either keeps its per-family
+    diagnosis; the official verdict is ``not_measurable`` and the counter
+    holds.
+    """
+    holds: List[str] = []
+    for role, provenance in (("current", current), ("previous", previous)):
+        recorded = [
+            family
+            for family in provenance["judge_families"].values()
+            if family is not None
+        ]
+        distinct = sorted(set(recorded))
+        missing = sorted(
+            name
+            for name, family in provenance["judge_families"].items()
+            if family is None
+        )
+        if len(distinct) < 2:
+            if missing:
+                holds.append(
+                    f"{role}: judge provenance missing in {', '.join(missing)} — "
+                    "not two recorded judge families"
+                )
+            else:
+                holds.append(
+                    f"{role}: one recorded judge family ({'/'.join(distinct)}) "
+                    f"under {len(provenance['judge_families'])} labels — two "
+                    "labels are not two independent readings"
+                )
+        binding = provenance["runs"]["binding"]
+        if binding == "different":
+            holds.append(
+                f"{role}: the families judge different executions of the same "
+                "arms (same model, another seed/run_head) — a verdict reads "
+                "ONE execution"
+            )
+        elif binding == "unproven":
+            holds.append(
+                f"{role}: the execution binding is unproven (seed/run_head not "
+                "recorded everywhere) — historical provenance is diagnostic only"
+            )
+    return holds
+
+
+def _reject_foreign_counter(
+    counter_source_dir: Optional[Path], series: Mapping[str, str]
+) -> None:
+    """The inherited counter must come from the selected predecessor.
+
+    The previous cycle's ``condition2.json`` names the series it counted: a
+    counter of ANOTHER series feeding this pair is the caller wiring the
+    wrong predecessor — a named exit, not a hold (a silent hold would let
+    one series' consecutive count feed another's).
+    """
+    if counter_source_dir is None:
+        return
+    path = counter_source_dir / "condition2.json"
+    if not path.exists():
+        return
+    recorded = jp.load_json(path).get("series")
+    if isinstance(recorded, dict) and recorded != dict(series):
+        raise SystemExit(
+            f"the inherited counter comes from {counter_source_dir}, whose "
+            f"series is {recorded.get('model')}, not {series['model']} — the "
+            "counter must be inherited from the selected predecessor (the "
+            "same series' previous cycle)"
+        )
 
 
 def build(
@@ -316,23 +468,51 @@ def build(
     cycle_dir: Optional[Path] = None,
     counter_before: int = 0,
     panel: Optional[Sequence[str]] = None,
+    counter_source_dir: Optional[Path] = None,
 ) -> Dict[str, Any]:
-    """The whole reading: per family, the verdict, the counter, the heads."""
+    """The whole reading: per family, the verdict, the counter, the heads.
+
+    The verdict is OFFICIAL only when the provenance holds (two distinct
+    recorded judge families per role, one proven execution binding per
+    role, the counter inherited from the selected predecessor): otherwise
+    the per-family diagnosis is preserved, the verdict is
+    ``not_measurable`` and the counter holds.
+    """
     _reject_reused_directories(families)
-    series = _reject_series_break(families)
+    current, previous = _reject_series_break(families)
+    _reject_foreign_counter(counter_source_dir, current["series"])
     readings = {
-        name: family_direction(current, previous, panel)
-        for name, (current, previous) in families.items()
+        name: family_direction(cur, prev, panel)
+        for name, (cur, prev) in families.items()
     }
-    verdict = cross_family(readings)
+    raw_verdict = cross_family(readings)
+    holds = _provenance_holds(current, previous)
+    verdict = NOT_MEASURABLE if holds else raw_verdict
     first_current = next(iter(families.values()))[0]
     return {
         "families": readings,
         "verdict": verdict,
         "counter_before": counter_before,
         "counter_after": next_counter(verdict, counter_before),
-        "series": series,
+        "series": current["series"],
         "heads": read_heads(first_current, cycle_dir),
+        "provenance": {
+            "official": not holds,
+            "holds": holds,
+            "cross_family_verdict": raw_verdict,
+            "judge_families": {
+                "current": current["judge_families"],
+                "previous": previous["judge_families"],
+            },
+            "run_binding": {
+                "current": current["runs"]["binding"],
+                "previous": previous["runs"]["binding"],
+            },
+            "counter": {
+                "source_dir": (str(counter_source_dir) if counter_source_dir else None),
+                "before": counter_before,
+            },
+        },
     }
 
 
@@ -343,18 +523,33 @@ def build_baseline(
 
     c21's entry: "condition 2 restarts at 1 on this series (c21 is its own
     baseline)". Nothing compares — the report names the series and the heads
-    so the NEXT cycle's pair is verifiable against it.
+    so the NEXT cycle's pair is verifiable against it. The currents must be
+    bound to ONE execution (two consensus recording different runs of the
+    same arms cannot both be the baseline); a judge family is recorded, not
+    required — a new series' first cycle may legitimately have one judge.
     """
     _reject_reused_directories({name: [d] for name, d in currents.items()})
-    series = _read_series(currents, "current")
+    provenance = _role_provenance(currents, "current")
+    if provenance["runs"]["binding"] == "different":
+        raise SystemExit(
+            "the baseline families judge different executions of the same "
+            "arms (same model, another seed/run_head) — a baseline declares "
+            "ONE execution"
+        )
     first_current = next(iter(currents.values()))
     return {
         "families": {name: {"current_dir": str(d)} for name, d in currents.items()},
         "verdict": NEW_SERIES,
         "counter_before": None,
         "counter_after": 1,
-        "series": series,
+        "series": provenance["series"],
         "heads": read_heads(first_current, cycle_dir),
+        "provenance": {
+            "official": True,
+            "holds": [],
+            "judge_families": {"current": provenance["judge_families"]},
+            "run_binding": {"current": provenance["runs"]["binding"]},
+        },
     }
 
 
@@ -480,7 +675,11 @@ def main(argv: Optional[List[str]] = None) -> int:
             before = args.counter_before if args.counter_before is not None else 0
         panel = c.read_panel(args.panel_file) if args.panel_file else None
         result = build(
-            families, cycle_dir=args.cycle_dir, counter_before=before, panel=panel
+            families,
+            cycle_dir=args.cycle_dir,
+            counter_before=before,
+            panel=panel,
+            counter_source_dir=args.previous_cycle_dir,
         )
 
     out = args.out
@@ -505,6 +704,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         f"verdict: {result['verdict']} — counter {result['counter_before']} "
         f"-> {result['counter_after']}"
     )
+    for reason in result.get("provenance", {}).get("holds", []):
+        print(f"hold: {reason}")
     return 0
 
 

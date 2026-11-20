@@ -67,16 +67,24 @@ def _write_dir(
     run_head="z" * 40,
     series_model="openai/gpt-5.6-luna",
     series_family="openai",
+    seed=3375,
+    judge_family=None,
+    judge_model=None,
 ):
     path.mkdir(parents=True, exist_ok=True)
     for row in rows:
         (path / f"{row['opaque_id']}.json").write_text(
             json.dumps(row), encoding="utf-8"
         )
-    meta = {"run_head": run_head}
+    meta = {"seed": seed}
+    if run_head is not None:
+        meta["run_head"] = run_head
     if series_model is not None:
         meta["pipeline_model"] = series_model
         meta["pipeline_family"] = series_family
+    if judge_family is not None:
+        meta["judge_family"] = judge_family
+        meta["judge_model"] = judge_model or "judge-model"
     (path / jp.META_FILENAME).write_text(json.dumps(meta), encoding="utf-8")
     return path
 
@@ -412,19 +420,34 @@ class TestTheCommand:
     def test_two_agreeing_families_move_the_counter(self, tmp_path, capsys):
         # The #3639 review's second CLI witness: with BOTH families agreeing
         # (both progress), the counter moves (resets). The two families use
-        # DISTINCT directory pairs — reusing one pair under two labels is
-        # rejected (TestReusedDirectories), not a second reading.
+        # DISTINCT directory pairs AND two distinct RECORDED judge families
+        # (anthropic and google, as the stored META carry them) — reusing one
+        # pair under two labels is rejected (TestReusedDirectories), and two
+        # labels of one recorded judge family cannot move the counter
+        # (TestRecordedProvenance).
         cur_s = _write_dir(
-            tmp_path / "cli_cur_s", [_row("doc_A", core=True, severe=False)]
+            tmp_path / "cli_cur_s",
+            [_row("doc_A", core=True, severe=False)],
+            judge_family="anthropic",
+            judge_model="claude-sonnet-5-5",
         )
         prev_s = _write_dir(
-            tmp_path / "cli_prev_s", [_row("doc_A", core=False, severe=False)]
+            tmp_path / "cli_prev_s",
+            [_row("doc_A", core=False, severe=False)],
+            judge_family="anthropic",
+            judge_model="claude-sonnet-5-5",
         )
         cur_g = _write_dir(
-            tmp_path / "cli_cur_g", [_row("doc_A", core=True, severe=False)]
+            tmp_path / "cli_cur_g",
+            [_row("doc_A", core=True, severe=False)],
+            judge_family="google",
+            judge_model="gemini-4-argon",
         )
         prev_g = _write_dir(
-            tmp_path / "cli_prev_g", [_row("doc_A", core=False, severe=False)]
+            tmp_path / "cli_prev_g",
+            [_row("doc_A", core=False, severe=False)],
+            judge_family="google",
+            judge_model="gemini-4-argon",
         )
         out = tmp_path / "condition2.json"
         rc = condition2.main(
@@ -446,6 +469,8 @@ class TestTheCommand:
         assert result["counter_after"] == 0
         assert result["families"]["s"]["toward"] == ["doc_A"]
         assert result["families"]["g"]["toward"] == ["doc_A"]
+        assert result["provenance"]["official"] is True
+        assert result["provenance"]["holds"] == []
         assert result["heads"]["zeroshot_head"] == "z" * 40
         assert "progress" in capsys.readouterr().out
 
@@ -520,10 +545,26 @@ class TestReusedDirectories:
             )
 
     def test_two_distinct_pairs_are_accepted(self, tmp_path):
-        cur_s = _write_dir(tmp_path / "cs", [_row("doc_A", core=True, severe=False)])
-        prev_s = _write_dir(tmp_path / "ps", [_row("doc_A", core=False, severe=False)])
-        cur_g = _write_dir(tmp_path / "cg", [_row("doc_A", core=True, severe=False)])
-        prev_g = _write_dir(tmp_path / "pg", [_row("doc_A", core=False, severe=False)])
+        cur_s = _write_dir(
+            tmp_path / "cs",
+            [_row("doc_A", core=True, severe=False)],
+            judge_family="anthropic",
+        )
+        prev_s = _write_dir(
+            tmp_path / "ps",
+            [_row("doc_A", core=False, severe=False)],
+            judge_family="anthropic",
+        )
+        cur_g = _write_dir(
+            tmp_path / "cg",
+            [_row("doc_A", core=True, severe=False)],
+            judge_family="google",
+        )
+        prev_g = _write_dir(
+            tmp_path / "pg",
+            [_row("doc_A", core=False, severe=False)],
+            judge_family="google",
+        )
         out = tmp_path / "condition2.json"
         rc = condition2.main(
             [
@@ -552,12 +593,14 @@ class TestSeriesContract:
     """The new-series contract (verified on the artifacts before this
     increment): a series is the ARMS — ``pipeline_model``/``pipeline_family``
     in the consensus META, which come from the zero-shot record's provenance
-    (#3138's single resolver) under the same-model doctrine. The judge may
-    change WITHIN a series (c22 changed judges and still reads against c20);
-    a pair that spans a series break reads no verdict — the official
-    predecessor is the same-series cycle (c22 read against c20, skipping
-    c21) — and a new series' first cycle is its own baseline, the counter
-    restarting at 1 (the coordinator's c21 entry)."""
+    (#3138's single resolver) under the same-model doctrine. A judge change
+    WITHIN a series is not a break (the doctrine says so; the panel ledger
+    records no such comparison yet — the skip-a-break numbering below is
+    hypothetical, not a published cycle pair); a pair that spans a series
+    break reads no verdict — the official predecessor is the same-series
+    cycle, skipping any newer cycles of other series — and a new series'
+    first cycle is its own baseline, the counter restarting at 1 (the
+    coordinator's c21 entry)."""
 
     def test_a_pair_spanning_a_series_break_is_refused(self, tmp_path):
         # c21's arms (Sonnet) paired with c20's (luna): the cross-series pair
@@ -683,6 +726,302 @@ class TestSeriesContract:
         assert rc == 0
         result = json.loads(out.read_text(encoding="utf-8"))
         assert result["series"] == {"model": "openai/gpt-5.6-luna", "family": "openai"}
+
+
+class TestRecordedProvenance:
+    """The #3639 review v3: two guarantees the CLI labels and the directory
+    names cannot give.
+
+    (1) JUDGE INDEPENDENCE is counted over the RECORDED ``judge_family`` of
+    each consensus META — the same judge's results under two labels (or two
+    consensus sizes of one family) are one reading, not two. Missing judge
+    provenance is diagnostic only.
+
+    (2) EXECUTION BINDING: the families of one cycle must be bound to the
+    same measured execution — ``seed`` and ``run_head`` recorded and agreeing
+    per role — and the inherited counter must come from the selected
+    predecessor (the previous condition2.json's series). A reading that fails
+    either guarantee keeps its per-family diagnosis and the counter holds."""
+
+    def test_one_recorded_judge_family_under_two_labels_cannot_move_the_counter(
+        self, tmp_path
+    ):
+        # Two distinct directory pairs, both recording judge_family "google"
+        # (two models of the same family — the same shape as two consensus
+        # sizes of one judge). Both read progress, but one judge's consensus
+        # under two labels is one reading: the verdict is not official and
+        # the counter HOLDS (3 -> 3).
+        cur_s = _write_dir(
+            tmp_path / "cs",
+            [_row("doc_A", core=True, severe=False)],
+            judge_family="google",
+            judge_model="gemini-4-argon",
+        )
+        prev_s = _write_dir(
+            tmp_path / "ps",
+            [_row("doc_A", core=False, severe=False)],
+            judge_family="google",
+            judge_model="gemini-4-argon",
+        )
+        cur_g = _write_dir(
+            tmp_path / "cg",
+            [_row("doc_A", core=True, severe=False)],
+            judge_family="google",
+            judge_model="gemini-4-boron",
+        )
+        prev_g = _write_dir(
+            tmp_path / "pg",
+            [_row("doc_A", core=False, severe=False)],
+            judge_family="google",
+            judge_model="gemini-4-boron",
+        )
+        out = tmp_path / "condition2.json"
+        rc = condition2.main(
+            [
+                "--family",
+                f"s={cur_s}|{prev_s}",
+                "--family",
+                f"g={cur_g}|{prev_g}",
+                "--counter-before",
+                "3",
+                "--out",
+                str(out),
+            ]
+        )
+        assert rc == 0
+        result = json.loads(out.read_text(encoding="utf-8"))
+        # The per-family diagnosis is preserved (both families read progress)...
+        assert result["families"]["s"]["direction"] == "progress"
+        assert result["families"]["g"]["direction"] == "progress"
+        # ...but the reading is not official: verdict not_measurable, hold.
+        assert result["verdict"] == "not_measurable"
+        assert result["counter_before"] == 3
+        assert result["counter_after"] == 3
+        assert result["provenance"]["official"] is False
+        assert any(
+            "one recorded judge family" in h for h in result["provenance"]["holds"]
+        )
+
+    def test_missing_judge_provenance_is_diagnostic_only(self, tmp_path):
+        # No judge_family recorded (a historical META): independence cannot be
+        # proven — the reading is diagnostic, no exit, the counter holds.
+        cur_s = _write_dir(tmp_path / "cs", [_row("doc_A", core=True, severe=False)])
+        prev_s = _write_dir(tmp_path / "ps", [_row("doc_A", core=False, severe=False)])
+        cur_g = _write_dir(tmp_path / "cg", [_row("doc_A", core=True, severe=False)])
+        prev_g = _write_dir(tmp_path / "pg", [_row("doc_A", core=False, severe=False)])
+        out = tmp_path / "condition2.json"
+        rc = condition2.main(
+            [
+                "--family",
+                f"s={cur_s}|{prev_s}",
+                "--family",
+                f"g={cur_g}|{prev_g}",
+                "--counter-before",
+                "2",
+                "--out",
+                str(out),
+            ]
+        )
+        assert rc == 0
+        result = json.loads(out.read_text(encoding="utf-8"))
+        assert result["verdict"] == "not_measurable"
+        assert result["counter_after"] == 2
+        assert any(
+            "judge provenance missing" in h for h in result["provenance"]["holds"]
+        )
+
+    def test_the_same_model_with_different_executions_cannot_move_the_counter(
+        self, tmp_path
+    ):
+        # Same arms, same seed, DIFFERENT run_head between the two current
+        # consensus: they judged two executions of the same model — a verdict
+        # reads ONE execution. Same-series, so no exit: the diagnosis is
+        # preserved and the counter holds.
+        cur_s = _write_dir(
+            tmp_path / "cs",
+            [_row("doc_A", core=True, severe=False)],
+            run_head="a" * 40,
+            judge_family="anthropic",
+        )
+        prev_s = _write_dir(
+            tmp_path / "ps",
+            [_row("doc_A", core=False, severe=False)],
+            judge_family="anthropic",
+        )
+        cur_g = _write_dir(
+            tmp_path / "cg",
+            [_row("doc_A", core=True, severe=False)],
+            run_head="b" * 40,
+            judge_family="google",
+        )
+        prev_g = _write_dir(
+            tmp_path / "pg",
+            [_row("doc_A", core=False, severe=False)],
+            judge_family="google",
+        )
+        out = tmp_path / "condition2.json"
+        rc = condition2.main(
+            [
+                "--family",
+                f"s={cur_s}|{prev_s}",
+                "--family",
+                f"g={cur_g}|{prev_g}",
+                "--counter-before",
+                "3",
+                "--out",
+                str(out),
+            ]
+        )
+        assert rc == 0
+        result = json.loads(out.read_text(encoding="utf-8"))
+        assert result["families"]["s"]["direction"] == "progress"
+        assert result["families"]["g"]["direction"] == "progress"
+        assert result["verdict"] == "not_measurable"
+        assert result["counter_after"] == 3
+        assert any("different executions" in h for h in result["provenance"]["holds"])
+
+    def test_an_unrecorded_execution_binding_keeps_the_counter(self, tmp_path):
+        # A current META without run_head (historical provenance) cannot bind
+        # the role to one execution — diagnostic only, the counter holds.
+        cur_s = _write_dir(
+            tmp_path / "cs",
+            [_row("doc_A", core=True, severe=False)],
+            run_head=None,
+            judge_family="anthropic",
+        )
+        prev_s = _write_dir(
+            tmp_path / "ps",
+            [_row("doc_A", core=False, severe=False)],
+            judge_family="anthropic",
+        )
+        cur_g = _write_dir(
+            tmp_path / "cg",
+            [_row("doc_A", core=True, severe=False)],
+            judge_family="google",
+        )
+        prev_g = _write_dir(
+            tmp_path / "pg",
+            [_row("doc_A", core=False, severe=False)],
+            judge_family="google",
+        )
+        out = tmp_path / "condition2.json"
+        rc = condition2.main(
+            [
+                "--family",
+                f"s={cur_s}|{prev_s}",
+                "--family",
+                f"g={cur_g}|{prev_g}",
+                "--counter-before",
+                "5",
+                "--out",
+                str(out),
+            ]
+        )
+        assert rc == 0
+        result = json.loads(out.read_text(encoding="utf-8"))
+        assert result["verdict"] == "not_measurable"
+        assert result["counter_after"] == 5
+        assert any("unproven" in h for h in result["provenance"]["holds"])
+
+    def test_the_inherited_counter_must_come_from_the_selected_predecessor(
+        self, tmp_path
+    ):
+        # The previous cycle's condition2.json names the series it counted.
+        # Inheriting a luna counter into a Sonnet pair wires the counter to
+        # the WRONG predecessor — an input error, refused by name.
+        cur = _write_dir(
+            tmp_path / "cur",
+            [_row("doc_A", core=True, severe=False)],
+            series_model="anthropic/claude-sonnet-5-5",
+            series_family="anthropic",
+            judge_family="anthropic",
+        )
+        prev = _write_dir(
+            tmp_path / "prev",
+            [_row("doc_A", core=False, severe=False)],
+            series_model="anthropic/claude-sonnet-5-5",
+            series_family="anthropic",
+            judge_family="anthropic",
+        )
+        prev_cycle = tmp_path / "prev_cycle"
+        prev_cycle.mkdir()
+        (prev_cycle / "condition2.json").write_text(
+            json.dumps(
+                {
+                    "counter_after": 4,
+                    "series": {"model": "openai/gpt-5.6-luna", "family": "openai"},
+                }
+            ),
+            encoding="utf-8",
+        )
+        with pytest.raises(SystemExit, match="selected predecessor"):
+            condition2.main(
+                [
+                    "--family",
+                    f"s={cur}|{prev}",
+                    "--previous-cycle-dir",
+                    str(prev_cycle),
+                ]
+            )
+
+    def test_a_counter_of_the_same_series_is_inherited(self, tmp_path):
+        # The positive side: the counter file's series matches the pair's —
+        # the counter is inherited and can move (here: reset on progress).
+        cur = _write_dir(
+            tmp_path / "cur",
+            [_row("doc_A", core=True, severe=False)],
+            judge_family="anthropic",
+        )
+        prev = _write_dir(
+            tmp_path / "prev",
+            [_row("doc_A", core=False, severe=False)],
+            judge_family="anthropic",
+        )
+        prev_cycle = tmp_path / "prev_cycle"
+        prev_cycle.mkdir()
+        (prev_cycle / "condition2.json").write_text(
+            json.dumps(
+                {
+                    "counter_after": 4,
+                    "series": {"model": "openai/gpt-5.6-luna", "family": "openai"},
+                }
+            ),
+            encoding="utf-8",
+        )
+        out = tmp_path / "condition2.json"
+        rc = condition2.main(
+            [
+                "--family",
+                f"s={cur}|{prev}",
+                "--previous-cycle-dir",
+                str(prev_cycle),
+                "--out",
+                str(out),
+            ]
+        )
+        assert rc == 0
+        result = json.loads(out.read_text(encoding="utf-8"))
+        assert result["counter_before"] == 4
+        assert result["verdict"] == "not_measurable"  # one family: diagnostic
+        assert result["counter_after"] == 4  # single-family readings hold
+
+    def test_a_baseline_over_two_executions_is_refused(self, tmp_path):
+        # --new-series declares ONE execution of the new arms: two consensus
+        # recording different runs of the same model cannot both be it.
+        cur_s = _write_dir(
+            tmp_path / "cs",
+            [_row("doc_A", core=True, severe=False)],
+            run_head="a" * 40,
+        )
+        cur_g = _write_dir(
+            tmp_path / "cg",
+            [_row("doc_A", core=True, severe=False)],
+            run_head="b" * 40,
+        )
+        with pytest.raises(SystemExit, match="different executions"):
+            condition2.main(
+                ["--new-series", "--family", f"s={cur_s}", "--family", f"g={cur_g}"]
+            )
 
 
 class TestRunnerNotWiredYet:
