@@ -27,7 +27,7 @@
   <answers label="answers">{}</answers>
   <extracts label="Extracts">[]</extracts>
   <errors label="errors">[]</errors>
-  <-next-agent-designated label="_next_agent_designated">CounterAgent</-next-agent-designated>
+  <_next-agent-designated label="_next_agent_designated">CounterAgent</_next-agent-designated>
   <counter-arguments count="6" label="Counter-Arguments">
     <entry>
       <id>ca_1</id>
@@ -88,7 +88,7 @@
   <neural-fallacy-scores count="1" label="Neural Fallacy Scores">
     <entry>
       <id>nf_1</id>
-      <text-segment>One year to afford our Volk enjoyment of the unity which many a generation yearned for in vain... a dream has come true.</text-segment>
+      <text-segment>&lt;scrubbed&gt;</text-segment>
       <label>appel_au_nationalisme</label>
       <confidence>0.72</confidence>
       <detector>camembert</detector>
@@ -111,5 +111,5 @@
   <narrative-synthesis label="narrative_synthesis"></narrative-synthesis>
   <atomic-propositions label="Atomic Propositions">{}</atomic-propositions>
   <fol-shared-signature label="FOL Shared Signature">{}</fol-shared-signature>
-  <-jtms-session label="_jtms_session">&lt;argumentation_analysis.services.jtms.extended_belief.JTMSSession object at 0x0000024B3504D210&gt;</-jtms-session>
+  <_jtms-session label="_jtms_session">&lt;argumentation_analysis.services.jtms.extended_belief.JTMSSession object at 0x0000024B3504D210&gt;</_jtms-session>
 </analysis_state>

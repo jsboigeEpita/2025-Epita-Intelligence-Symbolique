@@ -55,7 +55,8 @@ ROOT = Path(__file__).resolve().parents[3]
 _MECHANISM_MODULE = "argumentation_analysis/core/reading_window.py"
 _TEXT_TOKEN = re.compile(r"text", re.IGNORECASE)
 _UNIT_TOKEN = re.compile(
-    r"arg|claim|fallac|sophism|counter|sentence|segment|chunk|premise", re.IGNORECASE
+    r"arg|claim|fallac|sophism|counter|sentence|segment|chunk|premise|unit",
+    re.IGNORECASE,
 )
 
 
@@ -791,6 +792,53 @@ REGISTRY = {
         "partition, not a cap — #2850: the head half is the proponent's side "
         "and the tail (args[mid:]) is the opponent's; no unit is dropped by "
         "this slice (the split is the dialogue's two-player design)",
+    ),
+    # --- #3536: the `unit` token enters the census; every site it reads ---
+    (
+        "argumentation_analysis/orchestration/invoke_callables.py",
+        "units",
+        "40",
+        1,
+    ): (
+        "population_cap",
+        "first 40 in insertion order on the caller-args path; rest unanalysed",
+        "the state-population path spans the text's bands and records k of N "
+        "(#3536); this fallback path mints positional ids over caller texts "
+        "with NO offsets, so insertion order is the only order (#2850)",
+    ),
+    (
+        "argumentation_analysis/core/shared_state.py",
+        "unit_key",
+        "_UNIT_PREFIX_MIN",
+        1,
+    ): (
+        "match_prefix",
+        "nothing — the truncated key only disambiguates a unit's position "
+        "when the full quote matches several spots",
+        "anchor-resolution fallback; no unit is dropped, no text is left "
+        "unread (#3536 census)",
+    ),
+    (
+        "argumentation_analysis/reporting/restitution/act3_conclusion_plugin.py",
+        "joined_units",
+        "_MAX_JOINED_EXCERPTS",
+        1,
+    ): (
+        "display",
+        "first 8 joined-excerpt sidecars of the Act III prompt block",
+        "prompt budget + privacy truncation, the #2845/#3311 view — the "
+        "claims list above keeps its own selection (#3536 census)",
+    ),
+    (
+        "argumentation_analysis/reporting/restitution/native_dung.py",
+        "ordered_units",
+        "_ARBITRATION_UNIT_CAP",
+        1,
+    ): (
+        "display",
+        "first 8 arbitration notes rendered",
+        "the overflow line names the rest and every detection stays in the "
+        "report, marked contested — never a filter (#2928; #3536 census)",
     ),
     ("argumentation_analysis/orchestration/invoke_callables.py", "arguments", "6", 1): (
         "population_cap",

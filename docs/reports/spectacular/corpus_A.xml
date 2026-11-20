@@ -33,7 +33,7 @@
   </answers>
   <extracts label="Extracts">[]</extracts>
   <errors label="errors">[]</errors>
-  <-next-agent-designated label="_next_agent_designated">QualityAgent</-next-agent-designated>
+  <_next-agent-designated label="_next_agent_designated">QualityAgent</_next-agent-designated>
   <counter-arguments label="Counter-Arguments">[]</counter-arguments>
   <argument-quality-scores count="4" label="Quality Scores">
     <entry id="arg_2">
@@ -88,5 +88,5 @@
   <narrative-synthesis label="narrative_synthesis"></narrative-synthesis>
   <atomic-propositions label="Atomic Propositions">{}</atomic-propositions>
   <fol-shared-signature label="FOL Shared Signature">{}</fol-shared-signature>
-  <-jtms-session label="_jtms_session">&lt;argumentation_analysis.services.jtms.extended_belief.JTMSSession object at 0x0000024ACB602080&gt;</-jtms-session>
+  <_jtms-session label="_jtms_session">&lt;argumentation_analysis.services.jtms.extended_belief.JTMSSession object at 0x0000024ACB602080&gt;</_jtms-session>
 </analysis_state>

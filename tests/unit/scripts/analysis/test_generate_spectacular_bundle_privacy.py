@@ -1198,3 +1198,59 @@ class TestInstanceVocabularyIsDerived:
         )
         with pytest.raises(CorpusUnavailableError, match="passphrase"):
             corpus_instance_tokens.load_instance_tokens()
+
+
+# --- #3622: neural_fallacy_scores.text_segment reaches the scrub -------------
+
+
+class TestNeuralFallacyScoresTextSegment3622:
+    """The producer's scrub kills the verbatim passage, keeps every other field.
+
+    Measured before the fix: a 124-char synthetic ``text_segment`` SURVIVED
+    ``_scrub_state_for_export`` verbatim — the container had no pass, so the
+    key-list addition alone did not bite; the born-red witness stayed red
+    until the dedicated pass landed. The export boundary
+    (``sanitize_state.py``) already listed the field: the two scrubs had
+    diverged on it.
+
+    Privacy: synthetic passage, no corpus text.
+    """
+
+    PASSAGE = (
+        "One synthetic year to afford a completely invented passage of well "
+        "over forty-two characters so the scrub measurement can see it die."
+    )
+
+    def _state(self) -> Dict[str, Any]:
+        return {
+            "neural_fallacy_scores": [
+                {
+                    "id": "nf_1",
+                    "text_segment": self.PASSAGE,
+                    "label": "invented_label",
+                    "confidence": 0.72,
+                    "detector": "synthetic",
+                }
+            ],
+            "identified_arguments": {"arg_1": "un argument invente assez long"},
+            "debate_transcripts": [],
+        }
+
+    def test_the_scrub_kills_the_text_segment(self):
+        out = _scrub_state_for_export(self._state())
+        entry = out["neural_fallacy_scores"][0]
+        assert entry["text_segment"] == "<scrubbed>"
+        assert self.PASSAGE not in str(out)
+
+    def test_every_other_field_of_the_entry_stays(self):
+        out = _scrub_state_for_export(self._state())
+        entry = out["neural_fallacy_scores"][0]
+        assert entry["id"] == "nf_1"
+        assert entry["label"] == "invented_label"
+        assert entry["confidence"] == 0.72
+        assert entry["detector"] == "synthetic"
+
+    def test_a_non_dict_entry_passes_through_untouched(self):
+        """The pass keeps the container-shape tolerance of its siblings."""
+        out = _scrub_state_for_export({"neural_fallacy_scores": ["kept"]})
+        assert out["neural_fallacy_scores"] == ["kept"]

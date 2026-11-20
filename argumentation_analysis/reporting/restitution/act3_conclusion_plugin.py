@@ -55,7 +55,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 from fractions import Fraction
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 
 from .figure_scales import score_with_scale  # #3394
 from .arena_record import (  # #3073: shared arena record with act1
@@ -116,6 +116,7 @@ from argumentation_analysis.core.fallacy_attribution import (  # #3180
     DETECTION_STANDING_RULE,  # #3248
     is_reported_move,
     is_speaker_move,
+    MOVE_AUTHOR_SPEAKER,  # #3559 — only the speaker's own moves get a marker
     move_author_label_of,
     reported_position_qualifier,  # #3513 — one qualifier reader, every surface
     taxonomy_definition_note,  # #3394
@@ -271,7 +272,19 @@ _SETAF_REPORTED_POSITION_RULE = (
     "  ligne sans ce qualificatif ne dit à qui est la position : n'en infère\n"
     "  aucun camp.\n"
 )
+# #3559 — a claim whose passage the document marks with a speaker tag must
+# not be handed to another party (5/6 Sonnet passes at c7 gave one party the
+# other's words). Conditional by construction: no marker, no rule.
+_CLAIM_SPEAKER_RULE = (
+    "- TOUR MARQUÉ : quand une revendication (ou une unité jointe) porte\n"
+    "  « [tour : NOM] », ses mots sont ceux du locuteur de CE tour-là, pas\n"
+    "  ceux d'un autre. Ne prête jamais à un autre parti ce qu'elle dit —\n"
+    "  une traduction, une voix-off ou un contradicteur a ses propres mots,\n"
+    "  portés par sa propre ligne. Une ligne sans marque ne dit pas qui\n"
+    "  parle : n'en infère aucune attribution.\n"
+)
 _WEIGHTED_DIST_ATTACK_CAP = 8  # max attacks sampled for the weight distribution
+
 # #2952 sites 1a-3 (DeLP / EAF / ADF) — same prompt-budget discipline as above.
 _DELP_VERDICT_CAP = 3  # max named dialectical verdicts (warranted/defeated)
 _EAF_DIVERGENCE_CAP = 3  # max named agent-pair belief divergences
@@ -748,6 +761,12 @@ class Act3Evidence:
     # from. The prompt notice fires from the gap between what is listed and
     # what the join found, never from the cap alone (#1622/#2850 idiom).
     joined_excerpts_total: int = 0
+    # #3559 — the speaker TAG of the turn each claim (or joined unit)
+    # belongs to, read by the descent's own local and deterministic rule
+    # (#3557, corrected for a tag a stage direction precedes). Empty on a
+    # document that marks no passage: the prompt then carries no marker
+    # and no attribution rule, byte for byte (#3416).
+    claim_speakers: Dict[str, str] = field(default_factory=dict)
     # #2965 (Acte III slice) — the governance winner's own text, capped.
     # The writer does not join an id to its unit across a long prompt
     # (measured on the saved state: wrong unit 4 of 5 samples, R1071), so
@@ -3463,6 +3482,36 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         for u in selected_args
         if str(args[u] or "").strip()
     ]
+    # #3559 — the claim and joined lines carry their turn's speaker tag.
+    # Deliberately NARROWER than the descent's frame: the marker rides only
+    # when the unit's OWN sentence opens on the tag (leading stage
+    # directions skipped) — never a backward scan to an earlier turn,
+    # which would hand a claim to the wrong party (measured, c7: the
+    # slogans sit inside a bracketed direction of the SECOND voice's
+    # paragraph while ``move_author`` records them as the speaker's own
+    # words). A unit recorded as a reported move carries the existing
+    # « position rapportée » surfaces, never a speaker marker. No tag on
+    # the unit's own sentence ⇒ no marker; no marker anywhere ⇒ the
+    # prompt stays byte for byte (#3416).
+    from argumentation_analysis.agents.core.reading.first_reading import (
+        own_sentence_speaker_tag,
+    )
+
+    provenance = getattr(state, "argument_provenance", None) or {}
+    if not isinstance(provenance, dict):
+        provenance = {}
+    claim_speakers: Dict[str, str] = {}
+    for uid in dict.fromkeys(
+        [u for u, _ in claim_excerpts] + [u for u, _, _ in joined_excerpts]
+    ):
+        prov = provenance.get(uid) or {}
+        if not isinstance(prov, dict):
+            continue
+        if prov.get("move_author") not in (None, "", MOVE_AUTHOR_SPEAKER):
+            continue
+        tag = own_sentence_speaker_tag(state, prov.get("offset"))
+        if tag:
+            claim_speakers[uid] = tag
 
     # #2965 (Acte III slice) — the winner's referent travels on the
     # governance line itself; see the field's comment.
@@ -3554,6 +3603,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         },
         joined_excerpts=joined_excerpts,
         joined_excerpts_total=len(joined_units),
+        claim_speakers=claim_speakers,
         governance_winner_text=governance_winner_text,
         governance_divergent_texts=governance_divergent_texts,
         examination_by_unit=examination_by_unit,
@@ -3699,6 +3749,12 @@ def _strategy_suffix(strategy: str) -> str:
     """
     s = strategy_label_fr(strategy)
     return f" ({s})" if s else ""
+
+
+def _speaker_marker(speakers: Mapping[str, str], unit_id: str) -> str:
+    """#3559 — the claim line's speaker marker, ``""`` when no tag was read."""
+    tag = (speakers or {}).get(unit_id) or ""
+    return f" [tour : {tag}]" if tag else ""
 
 
 def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
@@ -3924,7 +3980,7 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
     # reintroduce the 240-char cut that kept 31 % of the winner.
     if evidence.claim_excerpts:
         claims_block = "\n".join(
-            f"  - {unit_id} : {text}"
+            f"  - {unit_id}{_speaker_marker(evidence.claim_speakers, unit_id)} : {text}"
             for unit_id, text in evidence.claim_excerpts[:_MAX_CLAIM_EXCERPTS]
         )
     else:
@@ -3951,7 +4007,7 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
     # section read the same to the writer (#1667).
     if evidence.joined_excerpts:
         joined_block = "\n".join(
-            f"  - {unit_id} ({relation}) : {text}"
+            f"  - {unit_id} ({relation}){_speaker_marker(evidence.claim_speakers, unit_id)} : {text}"
             for unit_id, relation, text in evidence.joined_excerpts
         )
     else:
@@ -4082,6 +4138,8 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
         _SETAF_REPORTED_QUALIFIER in (wp.label or "") for wp in evidence.weak_points
     ):
         setaf_side_rule = _SETAF_REPORTED_POSITION_RULE
+    # #3559 — the attribution rule rides only when a marker rides (#3416).
+    speaker_rule = _CLAIM_SPEAKER_RULE if evidence.claim_speakers else ""
 
     # #1667 — the symmetric presence side. Rendered in both states, exactly like
     # the absence block above: an empty section and a missing section read the
@@ -4371,6 +4429,7 @@ def _assemble_act3_prompt(evidence: Act3Evidence) -> str:
         f"{SPEAKER_NAMING_RULE}\n"
         f"{READING_BASIS_RULE}\n"
         f"{setaf_side_rule}"
+        f"{speaker_rule}"
         # #3237 — the cause rule is now the shared constant from fol_cause
         # (the vocabulary's one home): Act II misstated a recorded cause
         # because only this act carried the rule. Same words, one father.
