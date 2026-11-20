@@ -8110,15 +8110,53 @@ async def _invoke_eaf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
 async def _invoke_delp(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
     """Invoke DeLP handler (#89) with JVM fallback.
 
-    #1215 (FP-12): requires an explicit ``program`` in context. Never feeds raw
-    text to ``DelpParser`` — DeLP syntax (facts / strict rules / defeasible
-    rules) is not prose; the old ``input_text[:500]`` default guaranteed a parse
-    failure AND leaked corpus text into the parser (correctness + privacy).
-    Honest-absent when no program is supplied, not a fake parse.
+    #1215 (FP-12): the DOCUMENT's prose is never fed to ``DelpParser`` — DeLP
+    syntax (facts / strict rules / defeasible rules) is not prose. Two whole
+    ways a program reaches the handler, both validated: (1) an explicit
+    ``program`` in context; (2) #3546 asks 2-6 — the structured-arg
+    translator derives a program from the run's own units, whose atoms are
+    opaque snake_case identifiers (privacy: #1702). Honest-absent when
+    neither yields a program, never a fake parse.
     """
     program_text = context.get("program")
     queries = context.get("queries", [])
     criterion = context.get("criterion", "generalized_specificity")
+    program_origin = "context" if program_text else None
+
+    if not program_text:
+        # #3546 asks 2-6: one producer derives the defeasible KB (facts +
+        # strict rules + defeasible rules) and the contested queries from
+        # the run's own units. The translator's output is validated DeLP
+        # (whole literals, opaque atoms) — #1215 bars the prose itself, not
+        # a derived program.
+        try:
+            from argumentation_analysis.orchestration.structured_arg_translator import (
+                translate_to_delp_program,
+            )
+
+            outcome = await translate_to_delp_program(
+                input_text, context.get("arguments", [])
+            )
+            _propagate_structured_arg_cause(
+                context, "delp_reasoning", outcome.cause, outcome.error
+            )
+            if outcome.relations.get("program_text"):
+                program_text = outcome.relations["program_text"]
+                queries = queries or list(outcome.relations.get("queries", []))
+                program_origin = "translator"
+                logger.info(
+                    "DeLP: translator-derived program (%d lines, %d queries).",
+                    len(program_text.splitlines()),
+                    len(queries),
+                )
+        except Exception as e:
+            logger.warning(
+                "DeLP program translator unavailable (%s); translator_failed.",
+                e,
+            )
+            _propagate_structured_arg_cause(
+                context, "delp_reasoning", "translator_failed", type(e).__name__
+            )
 
     if not program_text:
         # #3546 (ask 1): an unavailable DeLP result must be filed DEGRADED,
@@ -8132,13 +8170,15 @@ async def _invoke_delp(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             "status": "unavailable",
             "degraded": True,
             "degradation_reason": (
-                "no DeLP 'program' in context (prose is never parsed as DeLP, "
-                "#1215) — the phase did not reason over any defeasible KB"
+                "no DeLP 'program' in context and the translator derived none "
+                "(prose is never parsed as DeLP, #1215) — the phase did not "
+                "reason over any defeasible KB"
             ),
             "message": (
                 "DeLP analysis requires an explicit 'program' in context "
                 "(DeLP syntax: 'fact.', 'head <- body.' strict, "
-                "'head -< body.' defeasible). Raw text is not a valid program."
+                "'head -< body.' defeasible) or a translator-derived one. "
+                "Raw text is not a valid program."
             ),
             "queries": queries,
         }
@@ -8151,9 +8191,12 @@ async def _invoke_delp(input_text: str, context: Dict[str, Any]) -> Dict[str, An
 
         initializer = ready_initializer()
         handler = DeLPHandler(initializer)
-        return await asyncio.to_thread(
+        result = await asyncio.to_thread(
             handler.analyze_delp, program_text, queries, criterion
         )
+        if isinstance(result, dict):
+            result.setdefault("program_origin", program_origin)
+        return result
     except Exception as e:
         raise RuntimeError(
             f"DeLP analysis unavailable: JVM/Tweety required ({e}). "
