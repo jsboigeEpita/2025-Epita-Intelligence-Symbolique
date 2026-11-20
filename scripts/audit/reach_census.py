@@ -1,7 +1,7 @@
 """Offline, aggregate-only census of student contributions (#3549).
 
-Prompt projection is deliberately reported as not measured until its mapping is
-validated against the Act III evidence projectors.
+Only the JTMS counterfactual projection is measured; other projectors remain
+unvalidated and are explicitly reported as not measured.
 """
 
 from __future__ import annotations
@@ -75,9 +75,7 @@ def main() -> int:
             and finding.statement in prompt
             for finding in evidence.structured_findings
         )
-    print(
-        f"# command: python scripts/audit/reach_census.py --cycle-dir {args.cycle_dir}"
-    )
+    print("# command: python scripts/audit/reach_census.py --cycle-dir <cycle-dir>")
     print(
         f"# cycle head: {cycle.get('head', 'unknown')}; date: {datetime.date.today().isoformat()}"
     )

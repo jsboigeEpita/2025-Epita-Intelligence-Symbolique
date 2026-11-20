@@ -46,6 +46,7 @@ def test_synthetic_cycle_counts_filled_named_and_channels(tmp_path):
     assert "n/a (channel)" in mobile
     assert "0 of 2" in result.stdout
     assert "state_full_" not in result.stdout
+    assert str(tmp_path) not in result.stdout
     assert r"\|" in jtms  # regex alternatives do not create table columns
 
     first = states / "state_full_0.json"
@@ -63,5 +64,6 @@ def test_synthetic_cycle_counts_filled_named_and_channels(tmp_path):
     changed_jtms = next(
         row for row in changed.stdout.splitlines() if row.startswith("| 1.4.1-JTMS |")
     )
+    assert "0 of 2 (JTMS counterfactual only)" in changed_jtms
     assert "| 0 of 2 |" in changed_jtms
     assert "| 1 of 2 |" in changed_jtms
