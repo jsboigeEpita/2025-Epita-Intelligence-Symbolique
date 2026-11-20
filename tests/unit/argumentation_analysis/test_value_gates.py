@@ -760,8 +760,20 @@ class TestDeLPValueGate:
             _invoke_delp,
         )
 
-        # No 'program' in context -> early-return before to_thread (not patched).
-        result = await _invoke_delp("test prog", {"queries": ["p", "q"]})
+        # Hermetic (#3546 rework): without a 'program' the units now come
+        # from the shared extractor, so the translator IS reached — stub it
+        # (derives nothing) to pin the honest early-return without a live
+        # LLM request. No 'program' in context -> unavailable before to_thread.
+        empty_outcome = MagicMock()
+        empty_outcome.relations = {}
+        empty_outcome.cause = "no_genuine_relations"
+        empty_outcome.error = ""
+        with patch(
+            "argumentation_analysis.orchestration.structured_arg_translator"
+            ".translate_to_delp_program",
+            new=AsyncMock(return_value=empty_outcome),
+        ):
+            result = await _invoke_delp("test prog", {"queries": ["p", "q"]})
 
         assert result.get("status") == "unavailable", (
             f"DeLP without a program must return status='unavailable', "

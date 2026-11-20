@@ -23,7 +23,10 @@ the city-funded rule), and the state writer → ``_delp_verdicts_finding``
 more specific rule flips the verdict to YES.
 ``TestWiringWithoutJvm`` proves the wiring without a JVM (fake handler
 receives the translated program; prose never reaches the handler when no
-program was derived). ``TestDelpProgramValidator`` holds the validator
+program was derived). ``TestProductionContextReachesTheTranslator`` (the
+#3642 rework) witnesses the executor's context shape reaching the
+translator: an explicit ``arguments`` list first, else the shared
+extractor over the phase outputs, with the k-of-N basis on the payload. ``TestDelpProgramValidator`` holds the validator
 (whole DeLP syntax only; prose, malformed literals and dangling source
 ids dropped) and ``TestAssembledProgramParses`` round-trips the ASSEMBLED
 program through the real Tweety parser.
@@ -40,6 +43,7 @@ each repair reddens again under its mutation.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -53,6 +57,16 @@ def _run(coro):
     return asyncio.new_event_loop().run_until_complete(coro)
 
 
+#: An empty translator outcome (no program derived) — the hermetic stub for
+#: the filing witnesses: since the R1198 rework, an empty context still
+#: REACHES the translator (the shared helper hands it the document opening),
+#: so those tests stub it instead of driving a live LLM call.
+_EMPTY_TRANSLATOR_OUTCOME = MagicMock()
+_EMPTY_TRANSLATOR_OUTCOME.relations = {}
+_EMPTY_TRANSLATOR_OUTCOME.cause = "no_genuine_relations"
+_EMPTY_TRANSLATOR_OUTCOME.error = ""
+
+
 class TestDelpUnavailableIsDegraded:
     """The unavailable payload (no program in context) must carry the
     degraded signal — otherwise the workflow rollup files the phase as
@@ -63,7 +77,10 @@ class TestDelpUnavailableIsDegraded:
             _invoke_delp,
         )
 
-        result = _run(_invoke_delp("ignored text", {}))
+        with patch(
+            _TRANSLATOR_SRC, new=AsyncMock(return_value=_EMPTY_TRANSLATOR_OUTCOME)
+        ):
+            result = _run(_invoke_delp("ignored text", {}))
 
         assert result.get("status") == "unavailable"
         assert (
@@ -79,7 +96,10 @@ class TestDelpUnavailableIsDegraded:
             _invoke_delp,
         )
 
-        result = _run(_invoke_delp("ignored text", {}))
+        with patch(
+            _TRANSLATOR_SRC, new=AsyncMock(return_value=_EMPTY_TRANSLATOR_OUTCOME)
+        ):
+            result = _run(_invoke_delp("ignored text", {}))
         reason = str(result.get("degradation_reason", "")).lower()
         assert (
             "program" in reason
@@ -380,6 +400,101 @@ class TestWiringWithoutJvm:
         assert built == [], "no handler may be constructed without a program"
         assert result.get("status") == "unavailable"
         assert result.get("degraded") is True
+
+
+# ---------------------------------------------------------------------------
+# #3642 rework — a production-shaped context must reach the translator.
+# The coordinator's probe (comment 7046752840) measured on the pre-rework
+# head: with the tests' shape ({"arguments": [...]}) the translator was
+# called; with the executor's shape ({"phase_extract_output": {...}} only)
+# it made 0 calls — ``_invoke_delp`` read a key the executor never fills
+# (workflow_dsl.py only sets ``phase_<name>_output``), the inventory came
+# back empty and the translator returned before any LLM call.
+# ---------------------------------------------------------------------------
+
+
+class TestProductionContextReachesTheTranslator:
+    """The units are sourced the sibling way (PL/FOL/NTL): an explicit
+    ``context["arguments"]`` first when the caller supplied one, else the
+    shared ``_extract_arguments_from_context`` over the phase outputs. The
+    basis (k-of-N, #2850 lot 5) rides the payload on both paths."""
+
+    def _spy_translator(self):
+        calls = []
+
+        async def _spy(input_text, arguments):
+            calls.append({"input_text": input_text, "arguments": list(arguments)})
+            return _fake_translator_outcome(
+                PLANTED_PROGRAM_WITH_SPECIFIC, [PLANTED_QUERY]
+            )
+
+        return calls, _spy
+
+    @contextlib.contextmanager
+    def _fake_handler(self):
+        class _FakeHandler:
+            def __init__(self, initializer):
+                pass
+
+            def analyze_delp(self, program_text, queries, criterion):
+                return {"query_results": [], "program": program_text}
+
+        with patch(
+            "argumentation_analysis.agents.core.logic.delp_handler.DeLPHandler",
+            _FakeHandler,
+        ), patch(
+            "argumentation_analysis.agents.core.logic.tweety_initializer"
+            ".ready_initializer",
+            return_value=object(),
+        ):
+            yield
+
+    def test_production_shaped_context_reaches_the_translator_with_the_units(self):
+        calls, spy = self._spy_translator()
+        # The executor's shape: ONLY ``phase_<name>_output`` — no top-level
+        # ``arguments`` key exists in a real run.
+        context = {
+            "phase_extract_output": {"arguments": [{"text": u} for u in _PLANTED_UNITS]}
+        }
+        with patch(_TRANSLATOR_SRC, new=spy), self._fake_handler():
+            result = _run(_delp_invoke(PLANTED_TEXT, context))
+
+        assert len(calls) == 1, (
+            "the translator must be reached at all — 0 call is the reworked "
+            "bug (the executor never fills a top-level 'arguments' key; the "
+            f"units must come from the phase outputs), got {len(calls)} call(s)"
+        )
+        assert calls[0]["arguments"] == list(
+            _PLANTED_UNITS
+        ), "the three extracted units must reach the translator"
+        assert result.get("program_origin") == "translator"
+        assert result.get("arguments_basis") == {
+            "path": "extract_arguments",
+            "selected": 3,
+            "available": 3,
+        }
+
+    def test_an_explicit_arguments_list_still_wins(self):
+        calls, spy = self._spy_translator()
+        explicit = ["explicit unit one", "explicit unit two"]
+        context = {
+            "arguments": explicit,
+            "phase_extract_output": {
+                "arguments": [{"text": u} for u in _PLANTED_UNITS]
+            },
+        }
+        with patch(_TRANSLATOR_SRC, new=spy), self._fake_handler():
+            result = _run(_delp_invoke(PLANTED_TEXT, context))
+
+        assert len(calls) == 1
+        assert (
+            calls[0]["arguments"] == explicit
+        ), "a caller-supplied arguments list must win over the phase outputs"
+        assert result.get("arguments_basis") == {
+            "path": "context_arguments",
+            "selected": 2,
+            "available": 2,
+        }
 
 
 # ---------------------------------------------------------------------------
