@@ -322,6 +322,12 @@ def _role_provenance(dirs: Mapping[str, Path], role: str) -> Dict[str, Any]:
     - **judge_families** — the RECORDED judge family per directory (``None``
       where the META records none): independence is counted over these,
       never over CLI labels or directory names.
+    - **pipeline_run** — WHICH pipeline run was judged, as the judge records
+      it since #3639 review v4: ``one`` when every META carries the same
+      record, ``different`` when they disagree, ``unproven`` when any META
+      carries none (c2-c21's stored shape — arms/seed/run_head identical
+      across cycles, which proves neither "two cycles" nor "one cycle
+      against itself").
     """
     metas = {name: _read_meta(directory) for name, directory in dirs.items()}
     series_keys: Dict[Tuple[str, str], str] = {}
@@ -343,12 +349,20 @@ def _role_provenance(dirs: Mapping[str, Path], role: str) -> Dict[str, Any]:
         binding = "proven"
     else:
         binding = "different"
+    pipeline_records = {name: meta.get("pipeline_run") for name, meta in metas.items()}
+    if any(record is None for record in pipeline_records.values()):
+        pipeline_binding = "unproven"
+    elif len({json.dumps(r, sort_keys=True) for r in pipeline_records.values()}) == 1:
+        pipeline_binding = "one"
+    else:
+        pipeline_binding = "different"
     return {
         "series": {"model": series_key[0], "family": series_key[1]},
         "runs": {
             "binding": binding,
             "per_family": {n: list(v) for n, v in runs.items()},
         },
+        "pipeline_run": {"binding": pipeline_binding, "per_family": pipeline_records},
         "judge_families": {
             name: (str(meta["judge_family"]) if meta.get("judge_family") else None)
             for name, meta in metas.items()
@@ -434,6 +448,31 @@ def _provenance_holds(
                 f"{role}: the execution binding is unproven (seed/run_head not "
                 "recorded everywhere) — historical provenance is diagnostic only"
             )
+        pipeline_binding = provenance["pipeline_run"]["binding"]
+        if pipeline_binding == "different":
+            holds.append(
+                f"{role}: the families judge different pipeline runs "
+                "(pipeline_run records disagree) — a verdict reads ONE run"
+            )
+        elif pipeline_binding == "unproven":
+            holds.append(
+                f"{role}: the judged pipeline run is unproven (no pipeline_run "
+                "record — the c2-c21 shape) — diagnostic only, the counter holds"
+            )
+    # The pair must be TWO runs: one pipeline run in both roles is a cycle
+    # read against itself (the review's measured case: cons6 vs cons3 of one
+    # cycle reads no_progress and the counter ticks) — never official.
+    if (
+        current["pipeline_run"]["binding"] == "one"
+        and previous["pipeline_run"]["binding"] == "one"
+        and current["pipeline_run"]["per_family"]
+        and current["pipeline_run"]["per_family"]
+        == previous["pipeline_run"]["per_family"]
+    ):
+        holds.append(
+            "both roles record the same pipeline run — a cycle read against "
+            "itself is not a cycle-to-cycle comparison"
+        )
     return holds
 
 

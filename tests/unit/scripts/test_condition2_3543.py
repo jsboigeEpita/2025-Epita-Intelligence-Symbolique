@@ -70,6 +70,7 @@ def _write_dir(
     seed=3375,
     judge_family=None,
     judge_model=None,
+    pipeline_run=None,
 ):
     path.mkdir(parents=True, exist_ok=True)
     for row in rows:
@@ -85,6 +86,9 @@ def _write_dir(
     if judge_family is not None:
         meta["judge_family"] = judge_family
         meta["judge_model"] = judge_model or "judge-model"
+    if pipeline_run is not None:
+        # The field's name, as judge_panel.py records it (#3639 review v4).
+        meta["pipeline_run"] = {"run_id": pipeline_run}
     (path / jp.META_FILENAME).write_text(json.dumps(meta), encoding="utf-8")
     return path
 
@@ -424,30 +428,35 @@ class TestTheCommand:
         # (anthropic and google, as the stored META carry them) — reusing one
         # pair under two labels is rejected (TestReusedDirectories), and two
         # labels of one recorded judge family cannot move the counter
-        # (TestRecordedProvenance).
+        # (TestRecordedProvenance), and both roles must record ONE pipeline
+        # run each, the current run differing from the previous (review v4).
         cur_s = _write_dir(
             tmp_path / "cli_cur_s",
             [_row("doc_A", core=True, severe=False)],
             judge_family="anthropic",
             judge_model="claude-sonnet-5-5",
+            pipeline_run="run-cur",
         )
         prev_s = _write_dir(
             tmp_path / "cli_prev_s",
             [_row("doc_A", core=False, severe=False)],
             judge_family="anthropic",
             judge_model="claude-sonnet-5-5",
+            pipeline_run="run-prev",
         )
         cur_g = _write_dir(
             tmp_path / "cli_cur_g",
             [_row("doc_A", core=True, severe=False)],
             judge_family="google",
             judge_model="gemini-4-argon",
+            pipeline_run="run-cur",
         )
         prev_g = _write_dir(
             tmp_path / "cli_prev_g",
             [_row("doc_A", core=False, severe=False)],
             judge_family="google",
             judge_model="gemini-4-argon",
+            pipeline_run="run-prev",
         )
         out = tmp_path / "condition2.json"
         rc = condition2.main(
@@ -549,21 +558,25 @@ class TestReusedDirectories:
             tmp_path / "cs",
             [_row("doc_A", core=True, severe=False)],
             judge_family="anthropic",
+            pipeline_run="run-cur",
         )
         prev_s = _write_dir(
             tmp_path / "ps",
             [_row("doc_A", core=False, severe=False)],
             judge_family="anthropic",
+            pipeline_run="run-prev",
         )
         cur_g = _write_dir(
             tmp_path / "cg",
             [_row("doc_A", core=True, severe=False)],
             judge_family="google",
+            pipeline_run="run-cur",
         )
         prev_g = _write_dir(
             tmp_path / "pg",
             [_row("doc_A", core=False, severe=False)],
             judge_family="google",
+            pipeline_run="run-prev",
         )
         out = tmp_path / "condition2.json"
         rc = condition2.main(
@@ -1022,6 +1035,103 @@ class TestRecordedProvenance:
             condition2.main(
                 ["--new-series", "--family", f"s={cur_s}", "--family", f"g={cur_g}"]
             )
+
+
+class TestPipelineRunBinding:
+    """The #3639 review v4, measured on the stored META: c2-c20 ALL record
+    the same (model, family, seed, run_head) — that binding proves neither
+    "two cycles of the same series" nor "one cycle read against itself"
+    (cons6 vs cons3 -> no_progress -> the counter ticks +1). The judge now
+    records WHICH pipeline run it read (pipeline_run in META); the counter
+    links on THAT field: one pipeline run per role AND the current run is
+    not the previous one. A META without it (c2-c21) is unproven:
+    diagnostic only, the counter holds."""
+
+    def _two_official_families(self, tmp_path, *, cur_record, prev_record):
+        dirs = {}
+        for name, family in (("s", "anthropic"), ("g", "google")):
+            cur = _write_dir(
+                tmp_path / f"{name}_cur",
+                [_row("doc_A", core=True, severe=False)],
+                judge_family=family,
+                pipeline_run=cur_record,
+            )
+            prev = _write_dir(
+                tmp_path / f"{name}_prev",
+                [_row("doc_A", core=False, severe=False)],
+                judge_family=family,
+                pipeline_run=prev_record,
+            )
+            dirs[name] = (cur, prev)
+        return dirs
+
+    def _run(self, dirs, tmp_path):
+        out = tmp_path / "condition2.json"
+        args = []
+        for name, (cur, prev) in dirs.items():
+            args += ["--family", f"{name}={cur}|{prev}"]
+        args += ["--counter-before", "3", "--out", str(out)]
+        rc = condition2.main(args)
+        assert rc == 0
+        return json.loads(out.read_text(encoding="utf-8"))
+
+    def test_two_pipeline_runs_of_one_series_are_official(self, tmp_path):
+        # The positive shape: one pipeline run per role, and the current run
+        # differs from the previous one — the verdict is official, 3 -> 0.
+        dirs = self._two_official_families(
+            tmp_path, cur_record="run-cur", prev_record="run-prev"
+        )
+        result = self._run(dirs, tmp_path)
+        assert result["verdict"] == "progress"
+        assert result["counter_after"] == 0
+        assert result["provenance"]["official"] is True
+        assert result["provenance"]["holds"] == []
+
+    def test_two_cycles_sharing_one_pipeline_run_hold_the_counter(self, tmp_path):
+        # Same model, seed, run_head AND pipeline run in both roles: a cycle
+        # read against itself (cons6 vs cons3) yields no_progress — the
+        # counter would tick. The reading is not official.
+        dirs = self._two_official_families(
+            tmp_path, cur_record="run-a", prev_record="run-a"
+        )
+        result = self._run(dirs, tmp_path)
+        assert result["verdict"] == "not_measurable"
+        assert result["counter_after"] == 3
+        assert any("same pipeline run" in h for h in result["provenance"]["holds"])
+
+    def test_one_role_mixing_two_pipeline_runs_holds_the_counter(self, tmp_path):
+        # The current role mixes two pipeline runs (one per family): the
+        # verdict would read two runs against one — diagnostic only.
+        dirs = self._two_official_families(
+            tmp_path, cur_record="run-cur", prev_record="run-prev"
+        )
+        # Overwrite only the "g" family's current META: another run.
+        _write_dir(
+            dirs["g"][0],
+            [_row("doc_A", core=True, severe=False)],
+            judge_family="google",
+            pipeline_run="run-other",
+        )
+        result = self._run(dirs, tmp_path)
+        assert result["verdict"] == "not_measurable"
+        assert result["counter_after"] == 3
+        assert any(
+            "different pipeline runs" in h for h in result["provenance"]["holds"]
+        )
+
+    def test_an_unrecorded_pipeline_run_is_diagnostic_only(self, tmp_path):
+        # c2-c21's stored shape: everything recorded except pipeline_run —
+        # the binding is unproven, the counter holds even though both
+        # families progress and the judge families are distinct.
+        dirs = self._two_official_families(tmp_path, cur_record=None, prev_record=None)
+        result = self._run(dirs, tmp_path)
+        assert result["families"]["s"]["direction"] == "progress"
+        assert result["verdict"] == "not_measurable"
+        assert result["counter_after"] == 3
+        assert any(
+            "pipeline run" in h and "unproven" in h
+            for h in result["provenance"]["holds"]
+        )
 
 
 class TestRunnerNotWiredYet:

@@ -58,7 +58,7 @@ import sys
 import time
 from collections import Counter
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO_ROOT))
@@ -2113,6 +2113,31 @@ def build_consensus(
         meta = {}
     meta["consensus_of"] = sources
     meta["consensus_need"] = len(pass_dirs) // 2 + 1
+    # #3639 review v4 — a consensus reads the pipeline run its PASSES judged:
+    # the record propagates only when every pass carries the SAME one (the
+    # consensus is then a reading of that run). A consensus over mixed runs
+    # — or over passes that never recorded one — cannot name a run: named
+    # exit, not a partial agreement presented as one.
+    pass_records: List[Optional[Any]] = []
+    for pass_dir in pass_dirs:
+        pass_meta_path = pass_dir / META_FILENAME
+        if pass_meta_path.exists():
+            pass_records.append(load_json(pass_meta_path).get("pipeline_run"))
+        else:
+            pass_records.append(None)
+    if any(record is None for record in pass_records):
+        if pass_records[0] is not None:
+            raise SystemExit(
+                "the consensus mixes passes that recorded the judged pipeline "
+                "run with passes that did not — which run it reads is unknown"
+            )
+    elif len({json.dumps(r, sort_keys=True) for r in pass_records}) != 1:
+        raise SystemExit(
+            "the consensus passes do not record ONE pipeline run — a consensus "
+            "over different runs reads no single execution"
+        )
+    else:
+        meta["pipeline_run"] = pass_records[0]
     (out_dir / META_FILENAME).write_text(
         json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8"
     )
@@ -2175,6 +2200,48 @@ def _judge_one(
         "dropped": dropped,
         "style_notes": [str(note) for note in (parsed.get("style_notes") or [])],
         "conclusion": str(parsed.get("conclusion") or "").strip(),
+    }
+
+
+def pipeline_run_record(
+    documents: Sequence[Mapping[str, Any]],
+    states_dir: Path,
+    signatures_dir: Path,
+    signatures: Mapping[str, Mapping[str, Any]],
+) -> Dict[str, Any]:
+    """#3639 review v4 — WHICH pipeline run the judge read.
+
+    ``(pipeline_model, pipeline_family, seed, run_head)`` is the same on
+    every stored META from c2 to c20: that tuple distinguishes neither two
+    cycles nor one cycle judged against itself. What DOES identify the
+    judged run is what the judge actually read: the states and signatures
+    directories, the code_shas read from the signatures, and a fingerprint
+    of the judged pipeline texts (sha256 of each document's arm text — the
+    text itself stays out of the record, the ids are the panel's).
+    """
+    import hashlib
+
+    code_shas = sorted(
+        {
+            str(sig["provenance"]["code_sha"])
+            for sig in signatures.values()
+            if isinstance(sig.get("provenance"), dict)
+            and sig["provenance"].get("code_sha")
+        }
+    )
+    fingerprint = {
+        str(doc["opaque_id"]): hashlib.sha256(
+            str(doc["pipeline_text"]).encode("utf-8")
+        ).hexdigest()
+        for doc in documents
+    }
+    canonical = json.dumps(fingerprint, sort_keys=True)
+    return {
+        "states_dir": str(states_dir),
+        "signatures_dir": str(signatures_dir),
+        "code_shas": code_shas,
+        "input_fingerprint": fingerprint,
+        "inputs_sha256": hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
     }
 
 
@@ -2342,6 +2409,7 @@ async def run(
         documents.append(
             {
                 "opaque_id": doc_id,
+                "signature": signature,
                 "pipeline_text": pipeline_text_from_state(state, signature),
                 "zeroshot_text": zeroshot.get("answer") or "",
                 "document_text": document_texts[doc_id],
@@ -2622,6 +2690,16 @@ async def run(
         "seed": args.seed,
         "judge_temperature": args.judge_temperature,
         "run_head": run_head,
+        # #3639 review v4 — which pipeline run was judged: the directories,
+        # the code_shas read, and a fingerprint of the judged texts. Two
+        # passes of the same run record the same; a re-rendered cycle's
+        # record differs, which is what condition2 links on.
+        "pipeline_run": pipeline_run_record(
+            documents,
+            args.states_dir,
+            args.signatures_dir,
+            {str(d["opaque_id"]): d["signature"] for d in documents},
+        ),
         "judge_host": endpoint.get("host"),
         "judge_route": endpoint.get("route"),
         # Replayable as typed (#2353): the panel selectors ride in the
