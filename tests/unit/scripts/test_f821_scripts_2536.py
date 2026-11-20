@@ -269,24 +269,9 @@ def test_analyze_directory_usage_main_produces_json_report(tmp_path):
 
 
 # --- scripts/utils/inspect_specific_sources.py :32 --------------------------
-
-
-def test_inspect_specific_sources_runpy_completes(tmp_path, monkeypatch):
-    """Script module-level : runpy dans un cwd temporaire avec la config qu'il
-    lit. Pré-fix : NameError ``find_sources_in_config_by_ids``."""
-    temp_dir = tmp_path / "_temp"
-    temp_dir.mkdir()
-    config = {"sources": [{"id": "x1", "source_name": "s1"}, {"id": "x2"}]}
-    (temp_dir / "config_paths_corrected_v3.json").write_text(
-        json.dumps(config), encoding="utf-8"
-    )
-    script_path = str(SCRIPTS_DIR / "utils" / "inspect_specific_sources.py")
-    monkeypatch.chdir(tmp_path)
-    with mock.patch.object(sys, "argv", [script_path]):
-        try:
-            runpy.run_path(script_path, run_name="__main__")
-        except SystemExit as exc:
-            assert exc.code in (0, None)
+# Removed with the script (#3619): the one-off config inspector went, and its
+# runpy witness went with it. ``find_sources_in_config_by_ids`` stays — its own
+# suite (tests/unit/argumentation_analysis/utils/test_config_utils.py) covers it.
 
 
 # --- scripts/maintenance/tools/remove_source_from_config.py :26,42,52,60 ----

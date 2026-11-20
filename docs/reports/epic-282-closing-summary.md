@@ -46,7 +46,9 @@ Epic #282 transformed the analysis pipeline from a structurally sound but semant
 |----------|------|-----------|----------|----|----|------|---------|-------------|--------|------------|--------|------|------|
 | src3_ext0 | 9 | 3 | 6 | 1 | 1 | 26 | 8 | 5 | 1 | 1 | 14/32 | 27 KB | 401s |
 | anthology_ext0 | 8 | 2 | 6 | 1 | 1 | 23 | 8 | 5 | 1 | 1 | 14/32 | 30 KB | 350s |
-| attal_ext0 | 8 | 1 | 6 | 1 | 1 | 25 | 8 | 5 | 1 | 1 | 14/32 | 26 KB | 432s |
+| speaker_ext0 | 8 | 1 | 6 | 1 | 1 | 25 | 8 | 5 | 1 | 1 | 14/32 | 26 KB | 432s |
+
+> **Label note (#3619):** the Document column carries opaque ids — this table's third row was earlier labelled with the document's speaker (relabelled under the dataset privacy discipline); no metric moved.
 
 ### Baseline Results: Full Workflow (3 documents)
 
@@ -54,7 +56,9 @@ Epic #282 transformed the analysis pipeline from a structurally sound but semant
 |----------|------|-----------|----------|----|----|------|---------|-------------|--------|------------|--------|------|------|
 | src3_ext0 | 8 | 0 | 6 | 1 | 1 | 18 | 8 | 5 | 1 | 1 | 14/32 | 24 KB | 424s |
 | anthology_ext0 | 9 | 0 | 6 | 1 | 1 | 24 | 8 | 5 | 1 | 1 | 14/32 | 30 KB | 290s |
-| attal_ext0 | 13 | 0 | 6 | 1 | 1 | 20 | 8 | 5 | 1 | 1 | 14/32 | 23 KB | 376s |
+| speaker_ext0 | 13 | 0 | 6 | 1 | 1 | 20 | 8 | 5 | 1 | 1 | 14/32 | 23 KB | 376s |
+
+> **Label note (#3619):** same relabelling as above — the third row's earlier id named the document's speaker; no metric moved.
 
 ### Progress Summary
 
