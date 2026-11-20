@@ -167,9 +167,9 @@ class TestExtractionWindowDisclosed:
         assert len(exact) == 10000
         out = self._run(exact, _Recorder())
         assert out["source_length"] == len(exact)
-        assert out["reading_window_chars"] == len(exact), (
-            "the whole text is read: the payload's k equals the source's N"
-        )
+        assert out["reading_window_chars"] == len(
+            exact
+        ), "the whole text is read: the payload's k equals the source's N"
 
     def test_trace_names_a_partial_union_and_the_source(self) -> None:
         """A chunk that answers nothing read nothing: the note names the
@@ -203,12 +203,8 @@ class TestExtractionWindowDisclosed:
         with patch(
             f"{INVOKE}._get_openai_client",
             return_value=(MagicMock(), "gpt-witness"),
-        ), patch(
-            f"{INVOKE}._guarded_chat_completion", AsyncMock(side_effect=_fake)
-        ):
-            out = asyncio.run(
-                _invoke_fact_extraction(exact, {"_state_object": state})
-            )
+        ), patch(f"{INVOKE}._guarded_chat_completion", AsyncMock(side_effect=_fake)):
+            out = asyncio.run(_invoke_fact_extraction(exact, {"_state_object": state}))
         summary = state.entry_for("extract")["summary"]
         assert out["reading_window_chars"] < len(exact)
         assert str(out["reading_window_chars"]) in summary, summary
@@ -228,9 +224,16 @@ class TestPropositionalLogicWindowsDisclosed:
         pass1 = _resp({"propositions": ["unit_present", "corpus_anchor"]})
         no_formula = _resp({"formulas": []})
         client = AsyncMock()
-        client.chat.completions.create = AsyncMock(
-            side_effect=[pass1] + [no_formula] * 8
-        )
+
+        async def _dispatch(**kwargs: Any) -> SimpleNamespace:
+            # #3537 — pass 1 now issues one call PER reading window; a fixed
+            # side_effect list would starve the k-th one.
+            content = kwargs["messages"][-1]["content"]
+            if "atomic propositions (basic facts)" in content:
+                return pass1
+            return no_formula
+
+        client.chat.completions.create = AsyncMock(side_effect=_dispatch)
         captured: list = []
         with patch("openai.AsyncOpenAI", return_value=client), patch.dict(
             "os.environ", {"OPENAI_API_KEY": "test-key"}
@@ -248,10 +251,13 @@ class TestPropositionalLogicWindowsDisclosed:
         result = self._run(state)
         metrics = result["pl_metrics"]
         assert metrics["source_total"] == len(LONG)
-        assert metrics["reading_window_chars"] == LOGIC_READING_WINDOW, (
-            "the phase feeds Pass 1 from a %d-char head and must say so"
-            % LOGIC_READING_WINDOW
+        # #3537 — Pass 1 no longer reads a head: it tiles the document, so
+        # the pair says k calls and the whole text, never the 4000-char head.
+        assert metrics["reading_window_chars"] == len(LONG), (
+            "Pass 1 tiles the document since #3537 — the pair must say the "
+            "whole text was read, not a %d-char head" % LOGIC_READING_WINDOW
         )
+        assert metrics["reading_calls"] > 1
 
     def test_metrics_name_the_argument_window_population(self) -> None:
         state = _long_state()
@@ -265,16 +271,19 @@ class TestPropositionalLogicWindowsDisclosed:
             "say how many units that truncation touches"
         )
 
-    def test_trace_names_both_windows(self) -> None:
+    def test_trace_names_the_argument_window_and_claims_no_partial_read(
+        self,
+    ) -> None:
         state = _long_state()
         self._run(state)
         entry = next(
             e for e in state.analysis_trace if e["phase"] == "propositional_logic"
         )
         summary = entry["summary"]
-        assert (
-            str(len(LONG)) in summary and str(LOGIC_READING_WINDOW) in summary
-        ), summary
+        # #3537 — the document is read whole now, so the trace must NOT
+        # repeat the old "lecture N des M caractères" clause; the
+        # per-argument window is still the truncation in force.
+        assert "lecture " not in summary, summary
         assert str(LOGIC_ARGUMENT_WINDOW) in summary, summary
 
 
@@ -294,9 +303,15 @@ class TestFolWindowsDisclosed:
         )
         no_formula = _resp({"formulas": []})
         client = AsyncMock()
-        client.chat.completions.create = AsyncMock(
-            side_effect=[pass1] + [no_formula] * 8
-        )
+
+        async def _dispatch(**kwargs: Any) -> SimpleNamespace:
+            # #3537 — the signature pass tiles the document too.
+            content = kwargs["messages"][-1]["content"]
+            if "first-order logic signature" in content:
+                return pass1
+            return no_formula
+
+        client.chat.completions.create = AsyncMock(side_effect=_dispatch)
         captured: list = []
         with patch("openai.AsyncOpenAI", return_value=client), patch.dict(
             "os.environ", {"OPENAI_API_KEY": "test-key"}
@@ -314,7 +329,9 @@ class TestFolWindowsDisclosed:
         result = self._run(state)
         metrics = result["fol_metrics"]
         assert metrics["source_total"] == len(LONG)
-        assert metrics["reading_window_chars"] == LOGIC_READING_WINDOW
+        # #3537 — the whole original document is read, in k tiled calls.
+        assert metrics["reading_window_chars"] == len(LONG)
+        assert metrics["reading_calls"] > 1
 
     def test_metrics_name_the_argument_window_population(self) -> None:
         state = _long_state()
@@ -324,14 +341,15 @@ class TestFolWindowsDisclosed:
         assert metrics["argument_window_population"] == 10
         assert metrics["argument_window_over_cap"] == 10
 
-    def test_trace_names_both_windows(self) -> None:
+    def test_trace_names_the_argument_window_and_claims_no_partial_read(
+        self,
+    ) -> None:
         state = _long_state()
         self._run(state)
         entry = next(e for e in state.analysis_trace if e["phase"] == "fol_reasoning")
         summary = entry["summary"]
-        assert (
-            str(len(LONG)) in summary and str(LOGIC_READING_WINDOW) in summary
-        ), summary
+        # #3537 — whole document read: no "lecture N des M" clause remains.
+        assert "lecture " not in summary, summary
         assert str(LOGIC_ARGUMENT_WINDOW) in summary, summary
 
 

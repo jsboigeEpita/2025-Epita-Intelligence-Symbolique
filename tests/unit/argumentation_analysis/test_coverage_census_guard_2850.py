@@ -1151,11 +1151,15 @@ REGISTRY = {
         1,
     ): (
         "window",
-        "4000-char window from the selected offset, read by the PL arm's "
-        "Pass 1 atom inventory",
-        "recorded via pl_metrics reading_window_chars/source_total and the "
-        "propositional_logic trace entry (Lecture limitée) — cap stays debt "
-        "#2850 lot 4",
+        "the HEAD of the PL arm's Pass 1 atom inventory: below one call's "
+        "capacity the 4000-char window from the selected offset IS the read; "
+        "above it the inventory tiles the whole text in k contiguous "
+        "6,016-char chunks from the same offset (#3537 — tiled in full, no "
+        "cap on k; the window itself is NOT raised)",
+        "recorded via pl_metrics reading_window_chars/source_total (the "
+        "union of the spans that answered) and reading_calls, plus the "
+        "propositional_logic entry's windows/chars_read when k>1 — #2850 "
+        "lot 4, whole-text read #3537",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -1164,11 +1168,15 @@ REGISTRY = {
         2,
     ): (
         "window",
-        "4000-char window of the ORIGINAL document (_doc_text_fol, not the "
-        "directive-prepended input), read by the FOL arm's Pass 1 signature",
-        "recorded via fol_metrics reading_window_chars/source_total and the "
-        "fol_reasoning trace entry (Lecture limitée) — cap stays debt #2850 "
-        "lot 4",
+        "the HEAD of the FOL arm's Pass 1 signature read, over the ORIGINAL "
+        "document (_doc_text_fol, not the directive-prepended input): below "
+        "one call's capacity the 4000-char window IS the read; above it the "
+        "signature pass tiles the whole document in k contiguous "
+        "6,016-char chunks (#3537 — same plan as the PL arm)",
+        "recorded via fol_metrics reading_window_chars/source_total (the "
+        "union of the spans that answered) and reading_calls, plus the "
+        "fol_reasoning entry's windows/chars_read when k>1 — #2850 lot 4, "
+        "whole-text read #3537",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",

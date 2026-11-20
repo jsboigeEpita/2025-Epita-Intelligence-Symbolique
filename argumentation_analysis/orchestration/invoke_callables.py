@@ -36,6 +36,7 @@ from argumentation_analysis.core.reading_window import (
     LOGIC_ARGUMENT_WINDOW,
     LOGIC_READING_WINDOW,
     STATUS_SELECTED,
+    WHOLE_TEXT_CALL_CAPACITY,
     WindowSelection,
     chunked_reading_offsets,
     gather_k_calls,
@@ -11112,37 +11113,123 @@ async def _invoke_propositional_logic(
                         "propositional_logic",
                         state=reading_state_from_context(context),
                     )
-                    # #2850 lot 4 — the document window's k of N on the
-                    # payload; the trace entry at the selection gate below
-                    # names it too (counts only, no source text — #2908).
-                    pl_metrics["reading_window_chars"] = len(pl_reading)
-                    pl_metrics["source_total"] = len(input_text)
-                    # ── Pass 1: Atom inventory from the reading window ──
-                    pass1_prompt = (
-                        "You are an expert in propositional logic. Your task is to identify "
-                        "atomic propositions (basic facts) in the given text.\n\n"
-                        "Output a JSON object with a single key 'propositions' mapping to a "
-                        "list of strings. Each string is an atomic proposition name in "
-                        "lowercase snake_case (e.g. 'is_mortal', 'foreign_threat').\n\n"
-                        f"Text:\n{pl_reading}"
-                    )
+                    # #3537 — head-first, tiled beyond it (coordinator
+                    # decision, 2026-11-20: tiled in full, no cap on k).
+                    # Below one call's capacity the plan IS this selection,
+                    # so the pass-1 prompt is byte-identical and no cassette
+                    # key moves (ask 3). Above it the atom inventory reads
+                    # the WHOLE text in k contiguous chunks at the measured
+                    # capacity, from the selector's offset — the #2850 lot-10
+                    # plan. LOGIC_READING_WINDOW is NOT raised: the head-first
+                    # order and every downstream slice stay as measured.
+                    _pl_offset = _pl_head_selection.offset
+                    if len(input_text) - _pl_offset <= LOGIC_READING_WINDOW:
+                        _pl_spans: List[Tuple[int, int]] = [
+                            (_pl_offset, _pl_offset + len(pl_reading))
+                        ]
+                        _pl_readings = [pl_reading]
+                    else:
+                        _pl_spans = [
+                            (o, min(o + WHOLE_TEXT_CALL_CAPACITY, len(input_text)))
+                            for o in chunked_reading_offsets(
+                                len(input_text),
+                                WHOLE_TEXT_CALL_CAPACITY,
+                                start=_pl_offset,
+                            )
+                        ]
+                        _pl_readings = [input_text[_lo:_hi] for _lo, _hi in _pl_spans]
                     det_params = _get_determinism_params()
-                    pass1_resp = await _guarded_chat_completion(
-                        client,
-                        model=model_id,
-                        messages=[{"role": "user", "content": pass1_prompt}],
-                        **det_params,
+
+                    async def _pl_atoms_one_reading(
+                        _reading: str,
+                    ) -> Optional[List[str]]:
+                        """One atom-inventory call over one planned reading."""
+                        _prompt = (
+                            "You are an expert in propositional logic. Your task is to identify "
+                            "atomic propositions (basic facts) in the given text.\n\n"
+                            "Output a JSON object with a single key 'propositions' mapping to a "
+                            "list of strings. Each string is an atomic proposition name in "
+                            "lowercase snake_case (e.g. 'is_mortal', 'foreign_threat').\n\n"
+                            f"Text:\n{_reading}"
+                        )
+                        try:
+                            _resp = await _guarded_chat_completion(
+                                client,
+                                model=model_id,
+                                messages=[{"role": "user", "content": _prompt}],
+                                **det_params,
+                            )
+                        except LLMCacheMiss:
+                            raise  # #2320 — a replay miss traverses
+                        except Exception as _atom_err:  # noqa: BLE001
+                            logger.warning(
+                                f"PL atom inventory reading failed: {_atom_err}"
+                            )
+                            return None
+                        _data = _parse_json_from_llm(
+                            _resp.choices[0].message.content or ""
+                        )
+                        # Validate atoms: alphanumeric + underscore.
+                        return [
+                            a
+                            for a in _data.get("propositions", [])
+                            if isinstance(a, str)
+                            and re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", a)
+                        ]
+
+                    # ── Pass 1: atom inventory over every planned reading ──
+                    _pl_atom_answers = await gather_k_calls(
+                        [_pl_atoms_one_reading(_r) for _r in _pl_readings]
                     )
-                    pass1_raw = pass1_resp.choices[0].message.content or ""
-
-                    # Parse propositions
-                    props_data = _parse_json_from_llm(pass1_raw)
-                    raw_atoms = props_data.get("propositions", [])
-
-                    # Validate atoms: must be alphanumeric + underscore
-                    valid_atoms = [
-                        a for a in raw_atoms if re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", a)
-                    ]
+                    _pl_windows_ok = 0
+                    _pl_read_spans: List[Tuple[int, int]] = []
+                    valid_atoms: List[str] = []
+                    _seen_atoms: Set[str] = set()
+                    for _pl_index, _pl_atoms in enumerate(_pl_atom_answers):
+                        if _pl_atoms is None:
+                            continue  # this window never answered: it read nothing
+                        _pl_windows_ok += 1
+                        _pl_read_spans.append(_pl_spans[_pl_index])
+                        for _a in _pl_atoms:
+                            if _a not in _seen_atoms:
+                                _seen_atoms.add(_a)
+                                valid_atoms.append(_a)
+                    # #2850 lot 4 — the document window's k of N on the
+                    # payload, the UNION of the spans that ANSWERED (a failed
+                    # window's span would overcount what it never saw).
+                    _pl_chars_read = 0
+                    _pl_span_end = -1
+                    for _lo, _hi in sorted(_pl_read_spans):
+                        if _hi <= _lo:
+                            continue
+                        _pl_chars_read += max(0, _hi - max(_lo, _pl_span_end))
+                        _pl_span_end = max(_pl_span_end, _hi)
+                    _pl_chars_read = min(_pl_chars_read, len(input_text))
+                    pl_metrics["reading_window_chars"] = _pl_chars_read
+                    # #3537 ask 1 — the reading calls ISSUED next to the k of
+                    # N: a document's cost is the calls it paid for, answered
+                    # or not (the coordinator asked for this figure in
+                    # pl_metrics beside the character count).
+                    pl_metrics["reading_calls"] = len(_pl_readings)
+                    pl_metrics["source_total"] = len(input_text)
+                    if _pl_windows_ok > 1:
+                        # The record says k windows and the union read —
+                        # counts only (#2908), in the #3105 ``extra`` shape.
+                        # One answered window keeps today's entry untouched.
+                        _pl_recorder = getattr(
+                            reading_state_from_context(context),
+                            "record_reading_window",
+                            None,
+                        )
+                        if _pl_recorder is not None:
+                            _pl_recorder(
+                                "propositional_logic",
+                                _pl_head_selection,
+                                extra={
+                                    "windows": _pl_windows_ok,
+                                    "chars_read": _pl_chars_read,
+                                },
+                            )
                     if valid_atoms:
                         shared_atoms = valid_atoms
                         pl_metrics["pass1_atoms"] = len(shared_atoms)
@@ -11214,11 +11301,21 @@ async def _invoke_propositional_logic(
                         pl_metrics["argument_window_population"] = len(_pl_targets)
                         pl_metrics["argument_window_over_cap"] = len(_pl_over_cap)
                         _pl_window_bits = []
-                        if len(pl_reading) < len(input_text):
-                            _pl_window_bits.append(
-                                f"lecture {len(pl_reading)} des "
-                                f"{len(input_text)} caractères"
-                            )
+                        # #3537 — the note names what the pass-1 inventory
+                        # actually read (the union of the answered windows),
+                        # never the head slice it replaced.
+                        if _pl_chars_read < len(input_text):
+                            if _pl_windows_ok > 1:
+                                _pl_window_bits.append(
+                                    f"lecture {_pl_chars_read} des "
+                                    f"{len(input_text)} caractères en "
+                                    f"{_pl_windows_ok} fenêtres"
+                                )
+                            else:
+                                _pl_window_bits.append(
+                                    f"lecture {_pl_chars_read} des "
+                                    f"{len(input_text)} caractères"
+                                )
                         if _pl_over_cap:
                             _pl_window_bits.append(
                                 f"fenêtre par argument ({LOGIC_ARGUMENT_WINDOW} car.) "
@@ -11364,10 +11461,24 @@ async def _invoke_propositional_logic(
                                 if state_obj is not None and hasattr(
                                     state_obj, "record_reading_window"
                                 ):
+                                    # #3537 — this re-record REPLACES the
+                                    # entry (#1737): the tiled pass-1's
+                                    # ``windows``/``chars_read`` are carried
+                                    # forward, or the head's formula count
+                                    # would erase the k-of-N it just gained.
+                                    _wt_extra: Dict[str, Any] = {
+                                        "head_formulas": wide_net_extras
+                                    }
+                                    _wt_prev = getattr(
+                                        state_obj, "reading_window_status", {}
+                                    ).get("propositional_logic", {})
+                                    for _wt_key in ("windows", "chars_read"):
+                                        if _wt_key in _wt_prev:
+                                            _wt_extra[_wt_key] = _wt_prev[_wt_key]
                                     state_obj.record_reading_window(
                                         "propositional_logic",
                                         _pl_head_selection,
-                                        extra={"head_formulas": wide_net_extras},
+                                        extra=_wt_extra,
                                     )
                                 logger.info(
                                     f"PL wide-net pass: {wide_net_extras} extra formulas"
@@ -11881,52 +11992,153 @@ async def _invoke_fol_reasoning(
 
                     # #1737: reading window on the ORIGINAL document (not the
                     # directive-prepended input_text).
-                    fol_reading = selected_text(
+                    fol_reading, _fol_head_selection = selected_text_and_selection(
                         _doc_text_fol,
                         LOGIC_READING_WINDOW,
                         "fol_reasoning",
                         state=reading_state_from_context(context),
                     )
-                    # #2850 lot 4 — same k-of-N pair as the PL arm, over the
-                    # ORIGINAL document: `_doc_text_fol`, never the
-                    # directive-prepended `input_text`.
-                    fol_metrics["reading_window_chars"] = len(fol_reading)
-                    fol_metrics["source_total"] = len(_doc_text_fol)
-                    # ── Pass 1: Shared FOL signature from the reading window ──
-                    pass1_prompt = (
-                        "You are a formal logic expert. Analyze the text and extract a "
-                        "first-order logic signature.\n\n"
-                        "Output a JSON object with:\n"
-                        '- "sorts": dict mapping sort_name -> list of constant names '
-                        '(e.g. {"Person": ["socrates", "plato"]})\n'
-                        '- "predicates": dict mapping pred_name -> list of arg sort names '
-                        '(e.g. {"Mortal": ["Person"], "Human": ["Person"]})\n'
-                        '- "constants": dict mapping const_name -> description '
-                        '(e.g. {"socrates": "the philosopher"})\n\n'
-                        "Rules:\n"
-                        "- Sorts: group related constants (Person, Country, etc.)\n"
-                        "- Predicates: CamelCase, list arg sorts\n"
-                        "- Constants: lowercase\n"
-                        '- If unsure about sort, use "Thing"\n\n'
-                        f"Text:\n{fol_reading}"
-                    )
+                    # #3537 — the FOL lens tiles exactly like the PL one:
+                    # below one call's capacity the plan IS this selection
+                    # (byte-identical prompt, ask 3); above it the signature
+                    # pass reads the WHOLE original document in k contiguous
+                    # chunks at the measured capacity, from the selector's
+                    # offset (#2850 lot-10 plan). LOGIC_READING_WINDOW is not
+                    # raised.
+                    _fol_offset = _fol_head_selection.offset
+                    if len(_doc_text_fol) - _fol_offset <= LOGIC_READING_WINDOW:
+                        _fol_spans: List[Tuple[int, int]] = [
+                            (_fol_offset, _fol_offset + len(fol_reading))
+                        ]
+                        _fol_readings = [fol_reading]
+                    else:
+                        _fol_spans = [
+                            (
+                                o,
+                                min(o + WHOLE_TEXT_CALL_CAPACITY, len(_doc_text_fol)),
+                            )
+                            for o in chunked_reading_offsets(
+                                len(_doc_text_fol),
+                                WHOLE_TEXT_CALL_CAPACITY,
+                                start=_fol_offset,
+                            )
+                        ]
+                        _fol_readings = [
+                            _doc_text_fol[_lo:_hi] for _lo, _hi in _fol_spans
+                        ]
                     det_params = _get_determinism_params()
-                    pass1_resp = await _guarded_chat_completion(
-                        client,
-                        model=model_id,
-                        messages=[{"role": "user", "content": pass1_prompt}],
-                        **det_params,
-                    )
-                    pass1_raw = pass1_resp.choices[0].message.content or ""
 
-                    sig_data = _parse_json_from_llm(pass1_raw)
-                    sorts = sig_data.get("sorts", {})
-                    predicates = sig_data.get("predicates", {})
-                    constants_raw = sig_data.get("constants", {})
+                    async def _fol_signature_one_reading(
+                        _reading: str,
+                    ) -> Optional[Dict[str, Any]]:
+                        """One signature call over one planned reading."""
+                        _prompt = (
+                            "You are a formal logic expert. Analyze the text and extract a "
+                            "first-order logic signature.\n\n"
+                            "Output a JSON object with:\n"
+                            '- "sorts": dict mapping sort_name -> list of constant names '
+                            '(e.g. {"Person": ["socrates", "plato"]})\n'
+                            '- "predicates": dict mapping pred_name -> list of arg sort names '
+                            '(e.g. {"Mortal": ["Person"], "Human": ["Person"]})\n'
+                            '- "constants": dict mapping const_name -> description '
+                            '(e.g. {"socrates": "the philosopher"})\n\n'
+                            "Rules:\n"
+                            "- Sorts: group related constants (Person, Country, etc.)\n"
+                            "- Predicates: CamelCase, list arg sorts\n"
+                            "- Constants: lowercase\n"
+                            '- If unsure about sort, use "Thing"\n\n'
+                            f"Text:\n{_reading}"
+                        )
+                        try:
+                            _resp = await _guarded_chat_completion(
+                                client,
+                                model=model_id,
+                                messages=[{"role": "user", "content": _prompt}],
+                                **det_params,
+                            )
+                        except LLMCacheMiss:
+                            raise  # #2320 — a replay miss traverses
+                        except Exception as _sig_err:  # noqa: BLE001
+                            logger.warning(f"FOL signature reading failed: {_sig_err}")
+                            return None
+                        return _parse_json_from_llm(
+                            _resp.choices[0].message.content or ""
+                        )
+
+                    # ── Pass 1: shared signature over every planned reading ──
+                    _fol_sig_answers = await gather_k_calls(
+                        [_fol_signature_one_reading(_r) for _r in _fol_readings]
+                    )
+                    _fol_windows_ok = 0
+                    _fol_read_spans: List[Tuple[int, int]] = []
+                    sorts: Dict[str, List[str]] = {}
+                    predicates: Dict[str, List[str]] = {}
+                    constants_raw: Dict[str, Any] = {}
+                    for _fol_index, _sig in enumerate(_fol_sig_answers):
+                        if _sig is None:
+                            continue  # this window never answered: it read nothing
+                        _fol_windows_ok += 1
+                        _fol_read_spans.append(_fol_spans[_fol_index])
+                        # Merge in plan order, first sighting wins — the
+                        # cross-window rule of #2850 lot 10.
+                        for _s, _names in (_sig.get("sorts") or {}).items():
+                            if not isinstance(_names, list):
+                                continue
+                            _merged = sorts.setdefault(_s, [])
+                            for _n in _names:
+                                if _n not in _merged:
+                                    _merged.append(_n)
+                        for _p, _args in (_sig.get("predicates") or {}).items():
+                            if not isinstance(_args, list):
+                                continue
+                            _merged_p = predicates.setdefault(_p, [])
+                            for _arg in _args:
+                                if _arg not in _merged_p:
+                                    _merged_p.append(_arg)
+                        for _c, _desc in (_sig.get("constants") or {}).items():
+                            constants_raw.setdefault(_c, _desc)
+                    # #2850 lot 4 — same k-of-N pair as the PL arm, over the
+                    # ORIGINAL document, the union of the spans that ANSWERED.
+                    _fol_chars_read = 0
+                    _fol_span_end = -1
+                    for _lo, _hi in sorted(_fol_read_spans):
+                        if _hi <= _lo:
+                            continue
+                        _fol_chars_read += max(0, _hi - max(_lo, _fol_span_end))
+                        _fol_span_end = max(_fol_span_end, _hi)
+                    _fol_chars_read = min(_fol_chars_read, len(_doc_text_fol))
+                    fol_metrics["reading_window_chars"] = _fol_chars_read
+                    # #3537 ask 1 — the reading calls ISSUED beside the k of N.
+                    fol_metrics["reading_calls"] = len(_fol_readings)
+                    fol_metrics["source_total"] = len(_doc_text_fol)
+                    if _fol_windows_ok > 1:
+                        _fol_recorder = getattr(
+                            reading_state_from_context(context),
+                            "record_reading_window",
+                            None,
+                        )
+                        if _fol_recorder is not None:
+                            _fol_recorder(
+                                "fol_reasoning",
+                                _fol_head_selection,
+                                extra={
+                                    "windows": _fol_windows_ok,
+                                    "chars_read": _fol_chars_read,
+                                },
+                            )
 
                     if sorts or constants_raw:
                         if not sorts and constants_raw:
                             sorts = {"Thing": list(constants_raw.keys())}
+                        # #3537 — pass 2 reads the MERGED signature: the
+                        # windows' union, in the shape the prompt builder
+                        # expects, exactly the parsed dict a single call
+                        # used to hand it.
+                        sig_data = {
+                            "sorts": sorts,
+                            "predicates": predicates,
+                            "constants": constants_raw,
+                        }
                         fol_metrics["pass1_sorts"] = len(sorts)
                         fol_metrics["pass1_predicates"] = len(predicates)
                         fol_metadata_shared = {
@@ -12005,11 +12217,21 @@ async def _invoke_fol_reasoning(
                             )
                             fol_metrics["argument_window_over_cap"] = len(_fol_over_cap)
                             _fol_window_bits = []
-                            if len(fol_reading) < len(_doc_text_fol):
-                                _fol_window_bits.append(
-                                    f"lecture {len(fol_reading)} des "
-                                    f"{len(_doc_text_fol)} caractères"
-                                )
+                            # #3537 — the note names what the signature pass
+                            # actually read (union of answered windows), never
+                            # the head slice it replaced.
+                            if _fol_chars_read < len(_doc_text_fol):
+                                if _fol_windows_ok > 1:
+                                    _fol_window_bits.append(
+                                        f"lecture {_fol_chars_read} des "
+                                        f"{len(_doc_text_fol)} caractères en "
+                                        f"{_fol_windows_ok} fenêtres"
+                                    )
+                                else:
+                                    _fol_window_bits.append(
+                                        f"lecture {_fol_chars_read} des "
+                                        f"{len(_doc_text_fol)} caractères"
+                                    )
                             if _fol_over_cap:
                                 _fol_window_bits.append(
                                     f"fenêtre par argument "
