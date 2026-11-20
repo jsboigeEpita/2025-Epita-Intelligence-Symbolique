@@ -1826,3 +1826,90 @@ class TestClusterIdentityIsTheDocumentPassage3598:
         # what its members said without ever deciding.
         assert kept["severity"] == "severe"
         assert minority["severity"] == "severe"
+
+
+# ---------------------------------------------------------------------------
+# #3543 — the META records WHICH pipeline run was judged
+# ---------------------------------------------------------------------------
+
+
+class TestPipelineRunRecord:
+    """#3639 review v4: c2-c20 all record the same (model, family, seed,
+    run_head) — that tuple distinguishes neither two cycles nor a cycle
+    judged against itself. The judge knows which run it read: the states
+    and signatures directories, the code_shas read, and a fingerprint of
+    the judged pipeline texts. The consensus propagates the record when
+    its passes agree, and refuses one consensus over mixed runs."""
+
+    def test_the_pass_meta_names_the_pipeline_run(self, tmp_path):
+        world = _with_panel_file(make_world(tmp_path))
+        judge = FakeJudge()
+        asyncio.run(jp.run(_argv(world), judge_call=judge))
+        meta = json.loads((world["out"] / "META.json").read_text(encoding="utf-8"))
+        record = meta["pipeline_run"]
+        assert record["states_dir"].endswith("states")
+        assert record["signatures_dir"].endswith("signatures")
+        assert sorted(record["code_shas"]) == []  # the fixture carries none
+        # The fingerprint is over the judged texts: one entry per document.
+        assert set(record["input_fingerprint"].keys()) == set(PANEL)
+
+    def test_the_fingerprint_tracks_the_judged_texts(self, tmp_path):
+        # A pipeline run whose one document's text changed is ANOTHER run.
+        world = _with_panel_file(make_world(tmp_path))
+        judge = FakeJudge()
+        asyncio.run(jp.run(_argv(world), judge_call=judge))
+        meta_a = json.loads((world["out"] / "META.json").read_text(encoding="utf-8"))
+        # Second pass over the same inputs -> same fingerprint.
+        world["out"] = tmp_path / "out2"
+        asyncio.run(jp.run(_argv(world), judge_call=judge))
+        meta_b = json.loads((world["out"] / "META.json").read_text(encoding="utf-8"))
+        assert meta_a["pipeline_run"] == meta_b["pipeline_run"]
+        # Now change ONE judged pipeline text: the fingerprint must move.
+        changed = world["states"] / f"state_full_{PANEL[0]}.json"
+        state = json.loads(changed.read_text(encoding="utf-8"))
+        state["state"]["act1_framing"] = "Une analyse differente, autre run."
+        changed.write_text(json.dumps(state), encoding="utf-8")
+        world["out"] = tmp_path / "out3"
+        asyncio.run(jp.run(_argv(world), judge_call=judge))
+        meta_c = json.loads((world["out"] / "META.json").read_text(encoding="utf-8"))
+        assert meta_c["pipeline_run"] != meta_a["pipeline_run"]
+        # ...and it is the TEXTS that moved: only that document's hash differs.
+        a, c = meta_a["pipeline_run"], meta_c["pipeline_run"]
+        assert a["states_dir"] == c["states_dir"]
+        diff = {
+            d for d in PANEL if a["input_fingerprint"][d] != c["input_fingerprint"][d]
+        }
+        assert diff == {PANEL[0]}
+
+    def test_the_consensus_propagates_an_agreeing_record(self, tmp_path):
+        world = _with_panel_file(make_world(tmp_path))
+        judge = FakeJudge()
+        passes = []
+        for i in (1, 2, 3):
+            world["out"] = tmp_path / f"p{i}"
+            asyncio.run(jp.run(_argv(world), judge_call=judge))
+            passes.append(world["out"])
+        out = tmp_path / "cons3"
+        jp.build_consensus(passes, out, PANEL)
+        meta = json.loads((out / "META.json").read_text(encoding="utf-8"))
+        expected = json.loads(
+            (tmp_path / "p1" / "META.json").read_text(encoding="utf-8")
+        )["pipeline_run"]
+        assert meta["pipeline_run"] == expected
+
+    def test_a_consensus_over_two_pipeline_runs_is_refused(self, tmp_path):
+        world = _with_panel_file(make_world(tmp_path))
+        judge = FakeJudge()
+        passes = []
+        for i in (1, 2, 3):
+            if i == 3:
+                # The third pass judged ANOTHER pipeline run.
+                changed = world["states"] / f"state_full_{PANEL[0]}.json"
+                state = json.loads(changed.read_text(encoding="utf-8"))
+                state["state"]["act1_framing"] = "Autre run pour la passe trois."
+                changed.write_text(json.dumps(state), encoding="utf-8")
+            world["out"] = tmp_path / f"p{i}"
+            asyncio.run(jp.run(_argv(world), judge_call=judge))
+            passes.append(world["out"])
+        with pytest.raises(SystemExit, match="pipeline run"):
+            jp.build_consensus(passes, tmp_path / "cons3", PANEL)

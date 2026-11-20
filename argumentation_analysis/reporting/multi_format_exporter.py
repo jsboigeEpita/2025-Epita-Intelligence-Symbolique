@@ -51,6 +51,21 @@ def _safe_str(val: Any, max_len: int = 200) -> str:
     return s if len(s) <= max_len else s[:max_len] + "..."
 
 
+def _xml_tag(name: str) -> str:
+    """Map a snapshot key to a legal XML tag name (#3632).
+
+    ``_`` becomes ``-`` inside the name, but a LEADING ``_`` stays: an XML
+    name may start with ``_`` and must never start with ``-`` — the blanket
+    ``key.replace("_", "-")`` turned ``_next_agent_designated`` into the
+    invalid ``<-next-agent-designated>`` (carried by corpus_A/B/C.xml). Any
+    other illegal start (a digit) is prefixed rather than emitted broken.
+    """
+    head, body = name[:1], name[1:].replace("_", "-")
+    if head == "_" or head.isalpha():
+        return head + body
+    return "x-" + head + body
+
+
 def _count_items(data: Any) -> int:
     if isinstance(data, (list, dict)):
         return len(data)
@@ -109,7 +124,7 @@ class MultiFormatExporter:
         lines: List[str] = []
         pad = "  " * indent
         for key, value in data.items():
-            tag = key.replace("_", "-")
+            tag = _xml_tag(key)
             label = _DIMENSION_LABELS.get(key, key)
             count = _count_items(value)
             if isinstance(value, dict) and count > 0:
@@ -120,7 +135,7 @@ class MultiFormatExporter:
                         lines.append(f'{pad}  <{inner_tag} id="{_xml_escape(k)}">')
                         for sk, sv in v.items():
                             lines.append(
-                                f"{pad}    <{sk.replace('_', '-')}>{_xml_escape(_safe_str(sv, 500))}</{sk.replace('_', '-')}>"
+                                f"{pad}    <{_xml_tag(sk)}>{_xml_escape(_safe_str(sv, 500))}</{_xml_tag(sk)}>"
                             )
                         lines.append(f"{pad}  </{inner_tag}>")
                     else:
@@ -135,7 +150,7 @@ class MultiFormatExporter:
                         lines.append(f"{pad}  <entry>")
                         for sk, sv in item.items():
                             lines.append(
-                                f"{pad}    <{sk.replace('_', '-')}>{_xml_escape(_safe_str(sv, 500))}</{sk.replace('_', '-')}>"
+                                f"{pad}    <{_xml_tag(sk)}>{_xml_escape(_safe_str(sv, 500))}</{_xml_tag(sk)}>"
                             )
                         lines.append(f"{pad}  </entry>")
                     else:
