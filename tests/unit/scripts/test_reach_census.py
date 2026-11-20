@@ -16,6 +16,12 @@ def test_synthetic_cycle_counts_filled_named_and_channels(tmp_path):
         [
             {
                 "jtms_retraction_chain": [{"reason": "synthetic"}],
+                "jtms_counterfactual_withdrawals": [
+                    {
+                        "text": "premise synthétique",
+                        "falls": [{"text": "conséquence synthétique"}],
+                    }
+                ],
                 "act3_conclusion": "Une rétractation est constatée.",
             },
             {},
@@ -36,6 +42,7 @@ def test_synthetic_cycle_counts_filled_named_and_channels(tmp_path):
     mobile = next(row for row in rows if row.startswith("| 3.1.5_Interface_Mobile |"))
     assert "1 of 2" in jtms
     assert jtms.count("1 of 2") >= 2
+    assert "1 of 2 (JTMS counterfactual only)" in jtms
     assert "n/a (channel)" in mobile
     assert "0 of 2" in result.stdout
     assert "state_full_" not in result.stdout

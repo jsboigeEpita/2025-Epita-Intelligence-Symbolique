@@ -10,7 +10,18 @@ import argparse
 import datetime
 import json
 import re
+import sys
 from pathlib import Path
+from types import SimpleNamespace
+
+REPO = Path(__file__).resolve().parents[2]
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
+
+from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (  # noqa: E402
+    build_act3_evidence,
+    build_act3_prompt,
+)
 
 # Fields and vocabulary are observational proxies, not proof of attribution.
 PROJECTS = {
@@ -51,7 +62,19 @@ def main() -> int:
         parser.error("no state files found")
     states = [json.loads(p.read_text(encoding="utf-8")) for p in paths]
     cycle = json.loads((args.cycle_dir / "cycle.json").read_text(encoding="utf-8"))
-    print("# reach census (partial: prompt projection not measured)")
+    print(
+        "# reach census (partial: only JTMS counterfactual prompt projection measured)"
+    )
+    projected = 0
+    for state in states:
+        evidence = build_act3_evidence(SimpleNamespace(**state))
+        prompt = build_act3_prompt(evidence)
+        projected += any(
+            finding.capability == "belief_maintenance"
+            and bool(finding.statement)
+            and finding.statement in prompt
+            for finding in evidence.structured_findings
+        )
     print(
         f"# command: python scripts/audit/reach_census.py --cycle-dir {args.cycle_dir}"
     )
@@ -77,8 +100,13 @@ def main() -> int:
         )
         # Markdown tables split on pipes even inside inline code.
         display_pattern = pattern.replace("|", r"\|")
+        prompt_count = (
+            f"{projected} of {len(states)} (JTMS counterfactual only)"
+            if project == "1.4.1-JTMS"
+            else "not measured"
+        )
         print(
-            f"| {project} | {filled} of {len(states)} | not measured | {named} of {len(states)} | `{display_pattern}` |"
+            f"| {project} | {filled} of {len(states)} | {prompt_count} | {named} of {len(states)} | `{display_pattern}` |"
         )
     return 0
 
