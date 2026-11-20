@@ -38,12 +38,16 @@ _PRIVACY_STRIP_FIELDS = frozenset(
     }
 )
 
-# NL fields inside dict values to replace with opaque markers
+# NL fields inside dict values to replace with opaque markers.
+# #3622 — ``text_segment`` joins the list: the spectacular bundle's producer
+# scrubs through THIS pass, and the export boundary (``sanitize_state.py``)
+# already listed the field — the two scrubs had diverged on it.
 _NL_SCRUB_KEYS = frozenset(
     {
         "premisses",
         "conclusion",
         "text",
+        "text_segment",
         "justification",
         "quote",
         "reformulation",
@@ -204,6 +208,32 @@ def _scrub_state_for_export(
             )
             for ca in counters
         ]
+
+    # Fifth-bis pass: scrub neural_fallacy_scores (#3622). The writer stores
+    # the detected passage verbatim in ``text_segment``; the export boundary
+    # (``sanitize_state.py``) already listed the field and this scrub had no
+    # pass for the container — measured: a 124-char synthetic passage
+    # survived verbatim through this function. Same shape as the fifth pass,
+    # and it only fires when the state carries the key: an absent dimension
+    # stays absent (the integration test reads exact equality on empty states).
+    if "neural_fallacy_scores" in cleaned:
+        neural = cleaned["neural_fallacy_scores"]
+        if isinstance(neural, list):
+            cleaned["neural_fallacy_scores"] = [
+                (
+                    {
+                        k: (
+                            "<scrubbed>"
+                            if k in _NL_SCRUB_KEYS and isinstance(v, str)
+                            else v
+                        )
+                        for k, v in nf.items()
+                    }
+                    if isinstance(nf, dict)
+                    else nf
+                )
+                for nf in neural
+            ]
 
     # Sixth pass: scrub debate_transcripts — transcript-level keys AND the
     # nested exchanges (#2135: the writer stores point/rebuttal inside

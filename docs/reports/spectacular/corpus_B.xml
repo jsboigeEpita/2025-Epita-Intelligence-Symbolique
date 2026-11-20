@@ -88,7 +88,7 @@
   <neural-fallacy-scores count="1" label="Neural Fallacy Scores">
     <entry>
       <id>nf_1</id>
-      <text-segment>One year to afford our Volk enjoyment of the unity which many a generation yearned for in vain... a dream has come true.</text-segment>
+      <text-segment>&lt;scrubbed&gt;</text-segment>
       <label>appel_au_nationalisme</label>
       <confidence>0.72</confidence>
       <detector>camembert</detector>
