@@ -82,6 +82,7 @@ class StakesExtractor:
         deanonymized: bool = True,
         model_id: str = "",
         llm_call: Optional[Callable[..., Awaitable[Any]]] = None,
+        state: object = None,
     ) -> Dict[str, Any]:
         """Extract stakes, stakeholders, register, and arena from discourse.
 
@@ -100,6 +101,11 @@ class StakesExtractor:
                       to a direct ``await client.chat.completions.create``; the
                       orchestrator injects ``_guarded_chat_completion`` (#708
                       runaway guard).
+            state: The shared state whose ``record_reading_window`` records the
+                       excerpt actually sent (#3538 — the census row and the
+                       README had promised this recording; the state was never
+                       passed). None keeps the slice-only behaviour for callers
+                       holding no state.
 
         Returns:
             Dict matching UnifiedAnalysisState.stakes_and_stakeholders schema.
@@ -130,7 +136,10 @@ class StakesExtractor:
         )
 
         excerpt = selected_text(
-            raw_text or "", LLM_EXTRACTION_WINDOW, "stakes_extractor"
+            raw_text or "",
+            LLM_EXTRACTION_WINDOW,
+            "stakes_extractor",
+            state=state,
         )
 
         # Epic #1258 / Track 1 #1259 — when the working state is deanonymized,

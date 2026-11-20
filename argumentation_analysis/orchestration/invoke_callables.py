@@ -1443,9 +1443,9 @@ def _stamp_counter_targets(
         else:
             ca["target_unit_id"] = None
             ca["target_text"] = None
-            ca["target_unresolved_reason"] = (
-                f"echoed target {echo[:60]!r} matches no offered key"
-            )
+            ca[
+                "target_unresolved_reason"
+            ] = f"echoed target {echo[:60]!r} matches no offered key"
         # #1649 — the component survives only in its canonical vocabulary
         # (normalized lower): a reply that says something else carries no
         # component, not a guessed one — the ASPIC consumer reads exactly
@@ -4268,9 +4268,9 @@ async def _invoke_jtms(input_text: str, context: Dict[str, Any]) -> Dict[str, An
             _causes[_trigger_name] = _trigger_causes[_trigger_name]
         for _edge in _chain_entry.get("cascade_edges", []) or []:
             _through = _edge.get("through_in", []) or []
-            _causes[_edge.get("conclusion", "")] = (
-                f"cascaded through justification {' + '.join(_through)}"
-            )
+            _causes[
+                _edge.get("conclusion", "")
+            ] = f"cascaded through justification {' + '.join(_through)}"
         if _causes:
             _chain_entry["causes"] = _causes
 
@@ -4941,9 +4941,9 @@ async def _invoke_camembert_fallacy(
             # merely degrade its funnel, it produced nothing (measured: the
             # one-shot failed with 401 while the marker also rode along).
             _ret["degraded"] = True
-            _ret["degradation_reason"] = (
-                f"self-hosted LLM fallacy analysis failed: {plugin_error}"
-            )
+            _ret[
+                "degradation_reason"
+            ] = f"self-hosted LLM fallacy analysis failed: {plugin_error}"
             _ret["error"] = plugin_error
         if _strat_ids_cam:
             _ret["strategic_objective_ids"] = _strat_ids_cam
@@ -11100,7 +11100,6 @@ async def _invoke_propositional_logic(
                 # Honors the OpenRouter toggle via _get_openai_client.
                 client, model_id = _get_openai_client()
                 if client is not None and input_text and len(input_text) > 100:
-
                     # #1737: the phase's reading window — one selection, two
                     # feeds (pass 1 inventory + the wide-net pass below).
                     # #3136 — the selection is kept: the wide-net pass amends
@@ -11878,7 +11877,6 @@ async def _invoke_fol_reasoning(
                 # Honors the OpenRouter toggle via _get_openai_client.
                 client, model_id = _get_openai_client()
                 if client is not None and input_text and len(input_text) > 100:
-
                     # #1737: reading window on the ORIGINAL document (not the
                     # directive-prepended input_text).
                     fol_reading = selected_text(
@@ -11948,9 +11946,9 @@ async def _invoke_fol_reasoning(
                             source_id = context.get("source_metadata", {}).get(
                                 "opaque_id", "default"
                             )
-                            state_obj.fol_shared_signature[source_id] = (
-                                fol_metadata_shared
-                            )
+                            state_obj.fol_shared_signature[
+                                source_id
+                            ] = fol_metadata_shared
 
                         # ── Pass 2: Parallel batched FOL formula generation (#729) ──
                         # #3030 — the gate reads the population, not the
@@ -16821,6 +16819,7 @@ async def _invoke_stakes_extractor(
         model_id=model_id,
         llm_call=_guarded_chat_completion,
         deanonymized=bool(getattr(state, "deanonymized", True)),
+        state=state,
     )
 
     # #3096 — fail loud: an LLM failure in the extractor is a DEGRADED phase
