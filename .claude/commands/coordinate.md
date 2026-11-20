@@ -215,7 +215,9 @@ L'occupation d'une lane se lit sur le dashboard workspace (`[CLAIMED]`, `[DONE]`
 ### La file `queue` : la source du dispatch
 
 L'issue ouverte au label `queue` porte la file ordonnée de chaque lane. Seul le coordinateur en
-édite le corps : `gh issue edit <numéro de la file> --body-file <corps relu>`.
+édite le corps : `gh issue edit <numéro de la file> --body-file <corps relu>`. Tout texte de
+tracker parti sur GitHub passe par `scripts/coordination/post_tracker.py` (scan puis refus avant
+tout appel `gh`), et un sous-agent reçoit la page `docs/guides/SUBAGENT_RULES.md`.
 
 - Un dispatch part de la file : le premier item de la lane, ni barré (`~~…~~`) ni revendiqué.
 - Après les merges (Phase 3), barrer les items livrés.
