@@ -1,28 +1,40 @@
-"""#3546 — U4 of #1644: a DeLP phase that returns ``unavailable`` is filed
-DEGRADED with its reason, so the absence ledger names it.
+"""#3546 — U4 of #1644: the DeLP chain, from the unavailable filing to the
+producer that derives a program from the run's own units.
 
 Measured on the recorded cycle-6 panel states (coordinator seat): phase
 ``delp_reasoning`` status ``completed`` on 9 of 10 documents, 0 of 10 in
 ``degraded_phases``. Yet ``_invoke_delp`` returned ``status: "unavailable"``
 (no ``program`` in context — see #1215: prose is never parsed as DeLP).
 
-Root cause: the unavailable payload carried ``status: "unavailable"`` but
-NO ``degraded: True`` flag, so the rollup at
+Ask 1 — filing: the unavailable payload carried ``status: "unavailable"``
+but NO ``degraded: True`` flag, so the rollup at
 ``workflow_dsl.py:_compute_workflow_degraded`` (which reads
 ``r.output.get("degraded") is True`` on COMPLETED phases) did not see it.
-The phase read as healthy.
+The phase read as healthy. ``TestDelpUnavailableIsDegraded`` witnesses the
+flag and the reason.
 
-Two asks, tested here:
-1. Filing: an ``unavailable`` DeLP result carries ``degraded=True`` and a
-   ``degradation_reason``, matching the established pattern (self-hosted
-   LLM invoke_callables:4810, :4970, bipolar honest-absent #1645).
-2. Verdict (separate test, fake handler, no JVM): with a fake translator
-   producing a DeLP program for the planted permit text, the handler
-   returns one decided query and the program sidecar is populated.
+Asks 2-7 — producer: ``TestTranslatedProgramProducesVerdict`` (real JVM)
+runs the planted permit text through the wiring with a fake translator:
+the validated program reaches the handler, the query is decided NO under
+generalized specificity (the heritage-zone rule, more specific, defeats
+the city-funded rule), and the state writer → ``_delp_verdicts_finding``
+→ ``build_act3_prompt`` chain carries the Act III line.
+``TestMostSpecificRuleMutation`` is the issue's DoD mutation: removing the
+more specific rule flips the verdict to YES.
+``TestWiringWithoutJvm`` proves the wiring without a JVM (fake handler
+receives the translated program; prose never reaches the handler when no
+program was derived). ``TestDelpProgramValidator`` holds the validator
+(whole DeLP syntax only; prose, malformed literals and dangling source
+ids dropped) and ``TestAssembledProgramParses`` round-trips the ASSEMBLED
+program through the real Tweety parser.
+``TestStrongNegationQuerySurvives`` / ``TestHandlerAnswerVocabulary``
+witness the two handler repairs: the re-parse reads the SOURCE text
+(``str(program)`` prints strong negation as ``!``, a lexical rejection),
+and the answer is the bare token (Tweety's long form "The answer is: NO"
+fell through the reader's comparisons).
 
-Witness is red on ``main`` (no degraded flag, no program).
-Mutation: removing the degraded flag (or the more specific rule from the
-program) reddens the witness again.
+Witnesses were born red on the #3641 head (7 of the 9 here), then green;
+each repair reddens again under its mutation.
 """
 
 from __future__ import annotations
