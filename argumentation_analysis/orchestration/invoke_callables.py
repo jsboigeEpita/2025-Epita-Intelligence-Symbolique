@@ -8120,8 +8120,20 @@ async def _invoke_delp(input_text: str, context: Dict[str, Any]) -> Dict[str, An
     criterion = context.get("criterion", "generalized_specificity")
 
     if not program_text:
+        # #3546 (ask 1): an unavailable DeLP result must be filed DEGRADED,
+        # not completed — the rollup (_compute_workflow_degraded) reads
+        # output["degraded"] on COMPLETED phases, and without the flag the
+        # absence ledger never named the phase (measured: 9 of 10 panel
+        # documents filed completed, 0 degraded). Pattern matches the
+        # self-hosted LLM unavailable branch (:4810, :4970) and the bipolar
+        # honest-absent dict (#1645).
         return {
             "status": "unavailable",
+            "degraded": True,
+            "degradation_reason": (
+                "no DeLP 'program' in context (prose is never parsed as DeLP, "
+                "#1215) — the phase did not reason over any defeasible KB"
+            ),
             "message": (
                 "DeLP analysis requires an explicit 'program' in context "
                 "(DeLP syntax: 'fact.', 'head <- body.' strict, "
