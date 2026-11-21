@@ -627,6 +627,84 @@ class TestReusedDirectories:
         assert condition2.read_counter_before(tmp_path / "absent") is None
 
 
+class TestRefuseHolds:
+    """The runner's opt-in refusal of held readings (#3543 wiring, R1199
+    review): a hold is a diagnosis — the standalone replay of c2-c6 keeps
+    rc 0 — but a CYCLE must never finish green over a counter it could not
+    read officially. ``--refuse-holds`` turns a non-empty hold list into a
+    named exit code, so the runner's rc-watch stops the cycle; without the
+    flag the diagnostic behaviour is unchanged."""
+
+    def _held_pair(self, tmp_path):
+        cur_s = _write_dir(
+            tmp_path / "cs",
+            [_row("doc_A", core=True, severe=False)],
+            judge_family="anthropic",
+        )
+        prev_s = _write_dir(
+            tmp_path / "ps",
+            [_row("doc_A", core=False, severe=False)],
+            judge_family="anthropic",
+        )
+        cur_g = _write_dir(
+            tmp_path / "cg",
+            [_row("doc_A", core=True, severe=False)],
+            judge_family="google",
+        )
+        prev_g = _write_dir(
+            tmp_path / "pg",
+            [_row("doc_A", core=False, severe=False)],
+            judge_family="google",
+        )
+        return [
+            "--family",
+            f"s={cur_s}|{prev_s}",
+            "--family",
+            f"g={cur_g}|{prev_g}",
+        ]
+
+    def test_without_the_flag_a_held_reading_stays_diagnostic(self, tmp_path):
+        rc = condition2.main(self._held_pair(tmp_path))
+        assert rc == 0
+
+    def test_with_the_flag_a_held_reading_exits_the_named_code(self, tmp_path):
+        rc = condition2.main(self._held_pair(tmp_path) + ["--refuse-holds"])
+        assert rc == condition2.EXIT_HELD
+
+    def test_with_the_flag_a_proven_reading_stays_rc_zero(self, tmp_path):
+        argv = self._held_pair(tmp_path)
+        # The same pair, with the runs recorded: provenance holds, no hold.
+        for label, directory in (
+            ("run-cur", tmp_path / "cs"),
+            ("run-prev", tmp_path / "ps"),
+        ):
+            meta_path = directory / jp.META_FILENAME
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            meta["pipeline_run"] = _pipeline_record(label)
+            meta_path.write_text(json.dumps(meta), encoding="utf-8")
+        for label, directory in (
+            ("run-cur", tmp_path / "cg"),
+            ("run-prev", tmp_path / "pg"),
+        ):
+            meta_path = directory / jp.META_FILENAME
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            meta["pipeline_run"] = _pipeline_record(label, mount="b")
+            meta_path.write_text(json.dumps(meta), encoding="utf-8")
+        rc = condition2.main(argv + ["--refuse-holds"])
+        assert rc == 0
+
+    def test_with_the_flag_a_new_series_baseline_stays_rc_zero(self, tmp_path):
+        cur_s = _write_dir(
+            tmp_path / "cs",
+            [_row("doc_A", core=True, severe=False)],
+            judge_family="anthropic",
+        )
+        rc = condition2.main(
+            ["--family", f"s={cur_s}", "--new-series", "--refuse-holds"]
+        )
+        assert rc == 0
+
+
 class TestSeriesContract:
     """The new-series contract (verified on the artifacts before this
     increment): a series is the ARMS — ``pipeline_model``/``pipeline_family``
@@ -1233,13 +1311,16 @@ class TestPipelineRunBinding:
         assert any("same pipeline run" in h for h in holds)
 
 
-class TestRunnerNotWiredYet:
-    """The dispatch (#3543) forbids wiring the counter into run_cycle before
-    the new-series contract is verified (c21 does not compare to c6–c20).
-    This increment is the standalone command + STABILITY.json; the runner
-    step belongs to a later increment, after that verification."""
+class TestRunnerWired:
+    """The wiring was deferred until the new-series contract held (c21 does
+    not compare to c6–c20): the run-identity binding and the mixed-presence
+    refusal landed in #3645, and the State comment of 2026-11-20 unblocked
+    the runner. The counter is now the cycle's own step — the full wiring
+    witnesses (both roles, the refusal, the reading's home) live in
+    ``tests/unit/scripts/panel/test_cycle_condition2_step_3543.py``; this
+    one pins the #3543 story's own file to it."""
 
-    def test_the_plan_does_not_yet_include_condition2(self, tmp_path):
+    def test_the_plan_now_includes_condition2(self, tmp_path):
         cfg = run_cycle.Config(
             tag="w3543",
             panel_file=tmp_path / "panel.json",
@@ -1250,7 +1331,7 @@ class TestRunnerNotWiredYet:
             compare_with_tag="w3542",
         )
         names = [step.name for step in run_cycle.plan(cfg)]
-        assert "condition2" not in names
+        assert "condition2" in names
 
 
 class TestMutations:

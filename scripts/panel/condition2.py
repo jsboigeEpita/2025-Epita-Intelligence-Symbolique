@@ -94,6 +94,14 @@ DISAGREE = "disagree"
 NOT_MEASURABLE = "not_measurable"
 NEW_SERIES = "new_series"
 
+# ``main()``'s exit codes: 0 = the reading is written (official or held — a
+# hold is a diagnosis, the standalone replay keeps rc 0); the ``SystemExit``
+# refusals exit 1; ``EXIT_HELD`` names the runner's opt-in refusal of a held
+# reading (#3543 wiring, R1199 review) — a cycle must never finish green
+# over a counter it could not read officially, while a human replay of the
+# c2-c6 directories still gets its diagnostic rc 0.
+EXIT_HELD = 3
+
 
 def state_direction(state_a: str, state_b: str) -> str:
     """The direction of a change from ``state_a`` (previous) to ``state_b``.
@@ -714,6 +722,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         help="declare the first cycle of a new series: no comparison, the "
         "counter restarts at 1 (--family NAME=CUR, without a previous half)",
     )
+    parser.add_argument(
+        "--refuse-holds",
+        action="store_true",
+        help="exit EXIT_HELD (3) when the provenance holds (the reading is "
+        "not official: unproven, not independent, or the same run twice) — "
+        "the cycle runner's wiring; the standalone diagnostic replay keeps "
+        "rc 0",
+    )
     args = parser.parse_args(argv)
 
     if args.new_series:
@@ -790,6 +806,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     for reason in result.get("provenance", {}).get("holds", []):
         print(f"hold: {reason}")
+    if args.refuse_holds and result.get("provenance", {}).get("holds"):
+        return EXIT_HELD
     return 0
 
 

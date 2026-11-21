@@ -1125,6 +1125,7 @@ class TestPlan:
             "s.cons2",
             "s.cons3",
             "trace",
+            "condition2",
         ]
         paid = [step.name for step in run_cycle.plan(world.cfg) if step.paid]
         assert paid == ["pipeline", "g.p1", "g.p2", "g.p3", "s.p1", "s.p2", "s.p3"]
@@ -1169,7 +1170,7 @@ class TestCycle:
         summary = world.run()
         assert summary["exit_code"] == 0 and summary["stopped"] is None
         calls = world.calls
-        assert calls[0] == "pipeline" and calls[-1] == "trace"
+        assert calls[0] == "pipeline" and calls[-1] == "condition2"
         for family in ("g", "s"):
             order = [
                 calls.index(f"{family}.{name}")
@@ -1412,7 +1413,7 @@ class TestCycle:
         for number in (1, 2, 3):
             write_pass(world.cfg.pass_dir(SYNC, number), map(judged_row, PANEL))
         world.run()
-        assert world.calls == ["g.cons3", "trace"]
+        assert world.calls == ["g.cons3", "trace", "condition2"]
 
     def test_the_consensus_stage_pays_nothing_whatever_it_finds(self, tmp_path):
         world = World(tmp_path, judges=(SYNC, BATCH), stage="consensus")
@@ -1424,13 +1425,14 @@ class TestCycle:
         write_pass(world.cfg.pass_dir(BATCH, 1), map(judged_row, PANEL))
         summary = world.run()
         assert world.paid() == []
-        assert sorted(world.calls) == ["g.cons3", "trace"]
+        assert sorted(world.calls) == ["condition2", "g.cons3", "trace"]
         assert summary["exit_code"] == run_cycle.EXIT_JUDGES
         assert "[2, 3]" in summary["judges"]["s"]["stopped"]
         assert [s.name for s in run_cycle.plan(world.cfg)] == [
             "g.cons3",
             "s.cons3",
             "trace",
+            "condition2",
         ]
 
     def test_only_the_families_that_completed_are_traced(self, tmp_path):
