@@ -140,6 +140,51 @@ class TestDirection:
         assert condition2.state_direction("UNPARSED", P) == "outside"
 
 
+class TestEqualOutsideStatesAreUnchanged:
+    """#3543 19b — equal states are ``unchanged`` first.
+
+    ``state_direction`` returned ``outside`` before testing equality, so a
+    document that stayed ``BOTH_ABSTAIN`` across two consensus (doc_A, five
+    Sonnet consensus in a row) was listed ``outside`` in every reading — a
+    document that did not move dressed as one that cannot be measured. Equal
+    states return ``unchanged`` wherever they sit; the verdicts do not move:
+    the direction is decided by the documents that changed inside the order.
+    """
+
+    def test_a_both_abstain_pair_reads_unchanged(self):
+        assert condition2.state_direction("BOTH_ABSTAIN", "BOTH_ABSTAIN") == "unchanged"
+
+    def test_an_unparsed_pair_reads_unchanged(self):
+        assert condition2.state_direction("UNPARSED", "UNPARSED") == "unchanged"
+
+    def test_a_stable_outside_document_leaves_the_outside_ledger(self, tmp_path):
+        prev = [
+            _row("doc_A", core=False, severe=False, abstain=True),
+            _row("doc_B", core=True, severe=False),
+        ]
+        cur = [
+            _row("doc_A", core=False, severe=False, abstain=True),
+            _row("doc_B", core=False, severe=False),
+        ]
+        reading = _direction(tmp_path, "stable_outside", cur, prev)
+        assert "doc_A" in reading["settled"]
+        assert "doc_A" not in reading["outside"]
+        assert reading["outside"] == []
+
+    def test_the_verdict_does_not_move(self, tmp_path):
+        prev = [
+            _row("doc_A", core=False, severe=False, abstain=True),
+            _row("doc_B", core=False, severe=False),
+        ]
+        cur = [
+            _row("doc_A", core=False, severe=False, abstain=True),
+            _row("doc_B", core=True, severe=False),
+        ]
+        reading = _direction(tmp_path, "verdict_held", cur, prev)
+        assert reading["toward"] == ["doc_B"]
+        assert reading["direction"] == "progress"
+
+
 class TestTruthTable:
     """The (core, severe) -> state mapping, as judge_panel.state_from_votes
     computes it: severe=True means a severe item is PRESENT (WG), not absent.
