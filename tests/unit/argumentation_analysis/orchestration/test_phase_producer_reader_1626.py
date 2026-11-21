@@ -132,6 +132,23 @@ KNOWN_CROSS_ORPHANS = {
         "listed in agents/core/synthesis/deep_synthesis_agent.py ARTIFACT_FIELDS "
         "(the spectacular deliverable).",
     ),
+    # #3548 — the corpus reader's offsets-only record: consumed by Acte I's
+    # framing (reporting/restitution/act1_framing_plugin.py,
+    # ``_format_corpus_echo_block``), which runs on the render voie, not on
+    # these pipelines' own voie. Same family as ``aspic_results`` above: a
+    # producer whose reader is an act.
+    ("standard", "semantic_indexing"): (
+        frozenset({"semantic_index_refs"}),
+        "consumed by reporting/restitution/act1_framing_plugin.py "
+        "(`_format_corpus_echo_block`, Acte I's corpus echo) — render voie "
+        "only (#3548).",
+    ),
+    ("full", "index"): (
+        frozenset({"semantic_index_refs"}),
+        "consumed by reporting/restitution/act1_framing_plugin.py "
+        "(`_format_corpus_echo_block`, Acte I's corpus echo) — render voie "
+        "only (#3548).",
+    ),
 }
 
 

@@ -313,6 +313,12 @@ class Act1Evidence:
     # prompt then says the read is absent rather than inventing one.
     historical_context: Dict[str, Any] = field(default_factory=dict)
     strategic_read: Dict[str, Any] = field(default_factory=dict)
+    # #3548 — the corpus reader's record: the OTHER documents of the corpus
+    # where a claim of this one already appears, as offsets-only entries
+    # (opaque id, span, score). Empty list = the reader did not run or found
+    # nothing above its stated threshold; the prompt then carries no echo
+    # block rather than an invented one.
+    semantic_index_refs: List[Dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -798,6 +804,45 @@ def _format_strategic_block(read: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _format_corpus_echo_block(refs: List[Dict[str, Any]]) -> str:
+    """#3548 — render the corpus reader's finding: the same claim, elsewhere.
+
+    One line per recorded match, grounding without text: the OTHER
+    document's OPAQUE id, the measured position of the passage and the
+    similarity score — never the passage itself (the record is offsets-only
+    by construction, ask 7; this renderer could not print text it does not
+    hold). Labelled CALCULÉE like the governance engine's lines: a
+    similarity the retrieval measured, not a reading the model made. An
+    empty or malformed record renders nothing — the echo is absent, never
+    invented (honest absence).
+    """
+    lines: List[str] = []
+    for ref in refs or []:
+        if not isinstance(ref, dict):
+            continue
+        doc = str(ref.get("document_id") or "").strip()
+        start, end = ref.get("start"), ref.get("end")
+        score = ref.get("score")
+        if (
+            not doc
+            or isinstance(start, bool)
+            or isinstance(end, bool)
+            or not isinstance(start, int)
+            or not isinstance(end, int)
+            or end <= start
+            or not isinstance(score, (int, float))
+            or isinstance(score, bool)
+        ):
+            continue
+        shown = f"{float(score):.2f}".replace(".", ",")
+        lines.append(
+            f"  La même thèse figure déjà dans un autre document du corpus : "
+            f"{doc}, passage en position {start}-{end}, similarité {shown} "
+            f"(mesurée par recherche sémantique — le corpus, pas ce texte)."
+        )
+    return "\n".join(lines)
+
+
 def _derive_genre(
     state: Any, arena_record: ArenaRecord | None = None
 ) -> Tuple[str, str]:
@@ -1000,6 +1045,9 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
         # reading keep separate containers, and the prompt labels them apart.
         historical_context=dict(getattr(state, "historical_context", {}) or {}),
         strategic_read=dict(getattr(state, "strategic_read", {}) or {}),
+        # #3548 — the corpus reader's offsets-only record, read as it is.
+        # ``list(...)`` copies: the evidence never aliases the state's list.
+        semantic_index_refs=list(getattr(state, "semantic_index_refs", None) or []),
     )
 
 
@@ -1595,6 +1643,15 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
     # never mistake them for what the text says.
     historical_block = _format_historical_block(evidence.historical_context)
     strategic_block = _format_strategic_block(evidence.strategic_read)
+    # #3548 — the corpus echo: present only when the reader measured a match.
+    corpus_block = _format_corpus_echo_block(evidence.semantic_index_refs)
+    corpus_section = (
+        f"[ÉCHO DU CORPUS — similarité CALCULÉE par recherche sémantique sur "
+        f"le corpus chiffré (#3548) ; ni une lecture du texte, ni un savoir "
+        f"du modèle]\n{corpus_block}\n\n"
+        if corpus_block
+        else ""
+    )
 
     return (
         "Tu es l'auteur de l'ACTE I d'un rapport de restitution argumentative —\n"
@@ -1631,6 +1688,7 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         f"contre le document, « savoir du modèle » = lecture sans citation, "
         f"que le texte n'a pas vérifiée, « sans rapport » = citation "
         f"retrouvée mais pas pour ce joueur (#3430, #3461, #3556)]\n{gt_block}\n{gt_note}\n{strategic_block}\n\n"
+        f"{corpus_section}"
         "CONSIGNE DE RÉDACTION :\n"
         "- Rédige 4 paragraphes thématiques (un par battement), en prose lisible,\n"
         "  pas une liste de champs.\n"

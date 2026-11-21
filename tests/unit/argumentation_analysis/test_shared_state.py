@@ -488,24 +488,27 @@ class TestUnifiedAnalysisStateNewMethods(unittest.TestCase):
         self.assertIsNone(self.state.transcription_segments[0]["speaker"])
 
     def test_add_semantic_index_ref(self):
-        si_id = self.state.add_semantic_index_ref(
-            "query text", "doc_42", 0.85, "relevant snippet"
-        )
+        # #3548 — offsets-only shape: the former query/snippet text fields
+        # are retired; the record names the OTHER document and its span.
+        si_id = self.state.add_semantic_index_ref("doc_42", 120, 340, 0.85)
         self.assertTrue(si_id.startswith("si_"))
         self.assertEqual(len(self.state.semantic_index_refs), 1)
         ref = self.state.semantic_index_refs[0]
         self.assertEqual(ref["document_id"], "doc_42")
+        self.assertEqual((ref["start"], ref["end"]), (120, 340))
         self.assertAlmostEqual(ref["score"], 0.85)
-        self.assertEqual(ref["snippet"], "relevant snippet")
+        self.assertNotIn("query", ref)
+        self.assertNotIn("snippet", ref)
 
     def test_add_semantic_index_ref_no_snippet(self):
-        si_id = self.state.add_semantic_index_ref("query", "doc_1", 0.5)
-        self.assertIsNone(self.state.semantic_index_refs[0]["snippet"])
+        # #3548 — a bad span is dropped (None returned), never repaired.
+        self.assertIsNone(self.state.add_semantic_index_ref("doc_1", 300, 120, 0.5))
+        self.assertEqual(self.state.semantic_index_refs, [])
 
     def test_snapshot_includes_new_counts(self):
         self.state.add_neural_fallacy_score("t", "l", 0.5)
         self.state.add_transcription_segment(0, 1, "t")
-        self.state.add_semantic_index_ref("q", "d", 0.5)
+        self.state.add_semantic_index_ref("d", 0, 10, 0.5)
         snapshot = self.state.get_state_snapshot(summarize=True)
         self.assertEqual(snapshot["neural_fallacy_score_count"], 1)
         self.assertEqual(snapshot["transcription_segment_count"], 1)

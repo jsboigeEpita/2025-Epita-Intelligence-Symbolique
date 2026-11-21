@@ -117,6 +117,15 @@ document rather than deleted: the design above is only readable against them.
    panel index (the ten documents of #3375) is a **second reader**, not v1's
    scope. Consequence: the chunk count above is a per-document figure, and the
    envelope to respect is one document's.
+   **The second reader exists since #3548** — `services/semantic_retrieval.py`
+   grew `build_corpus_kb` (shape A: every OTHER corpus document chunked and
+   embedded in memory, dropped at exit) and `query_corpus_for_claim` (cosine,
+   v1's own solver, matches above a STATED threshold as `{doc, start, end,
+   score}`). The claim is one the strategist's `players` attribute to a side,
+   else the first reading's thesis — never the historian's note. Its record
+   replaces the producer-less `semantic_index_refs` branch with an
+   offsets-only shape (no `query`, no `snippet`), and Act I's framing reads
+   it (« la même thèse figure déjà dans un autre document du corpus »).
 2. **Embedding endpoint — configurable, defaulting to the pipeline's provider
    route.** The endpoint is a setting, and its **key and base URL are read as
    a PAIR from one source** — the rule #3414 established for the judge: a key
