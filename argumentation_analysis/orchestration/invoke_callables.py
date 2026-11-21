@@ -11320,16 +11320,25 @@ async def _invoke_propositional_logic(
                     # the next panel cycle reads the extra windows' yield
                     # from the state instead of estimating it.
                     _pl_yields: List[Optional[int]] = [None] * len(_pl_readings)
+                    # #3537 (R1202 item 27b) — per-window NEW yield: the atoms
+                    # no earlier ANSWERED window returned, same plan order and
+                    # None semantics as the yields. The merge loop below is
+                    # where a name is first sighted, so the window that
+                    # contributes each name is counted where it happens.
+                    _pl_new_yields: List[Optional[int]] = [None] * len(_pl_readings)
                     for _pl_index, _pl_atoms in enumerate(_pl_atom_answers):
                         if _pl_atoms is None:
                             continue  # this window never answered: it read nothing
                         _pl_windows_ok += 1
                         _pl_yields[_pl_index] = len(_pl_atoms)
                         _pl_read_spans.append(_pl_spans[_pl_index])
+                        _pl_new_this_window = 0
                         for _a in _pl_atoms:
                             if _a not in _seen_atoms:
                                 _seen_atoms.add(_a)
                                 valid_atoms.append(_a)
+                                _pl_new_this_window += 1
+                        _pl_new_yields[_pl_index] = _pl_new_this_window
                     # #2850 lot 4 — the document window's k of N on the
                     # payload, the UNION of the spans that ANSWERED (a failed
                     # window's span would overcount what it never saw).
@@ -11350,6 +11359,9 @@ async def _invoke_propositional_logic(
                     # #3537 (R1199) — the per-window yield beside the call
                     # count (see the loop above for the None semantics).
                     pl_metrics["reading_yields"] = _pl_yields
+                    # #3537 (R1202 item 27b) — the NEW yield beside the yield:
+                    # what each window added, not what it repeated.
+                    pl_metrics["new_reading_yields"] = _pl_new_yields
                     pl_metrics["source_total"] = len(input_text)
                     if _pl_windows_ok > 1:
                         # The record says k windows and the union read —
@@ -12394,12 +12406,19 @@ async def _invoke_fol_reasoning(
                     # PREDICATES each call returned (the R1199 table's unit),
                     # plan order, None for a call that never answered.
                     _fol_yields: List[Optional[int]] = [None] * len(_fol_readings)
+                    # #3537 (R1202 item 27b) — per-window NEW predicates, same
+                    # plan order and None semantics: a name first sighted HERE
+                    # counts for THIS window, and a failed window's names never
+                    # enter the merge, so a later window that answers them
+                    # counts them as new.
+                    _fol_new_yields: List[Optional[int]] = [None] * len(_fol_readings)
                     for _fol_index, _sig in enumerate(_fol_sig_answers):
                         if _sig is None:
                             continue  # this window never answered: it read nothing
                         _fol_windows_ok += 1
                         _fol_yields[_fol_index] = len(_sig.get("predicates") or {})
                         _fol_read_spans.append(_fol_spans[_fol_index])
+                        _fol_new_this_window = 0
                         # Merge in plan order, first sighting wins — the
                         # cross-window rule of #2850 lot 10.
                         for _s, _names in (_sig.get("sorts") or {}).items():
@@ -12412,12 +12431,15 @@ async def _invoke_fol_reasoning(
                         for _p, _args in (_sig.get("predicates") or {}).items():
                             if not isinstance(_args, list):
                                 continue
+                            if _p not in predicates:
+                                _fol_new_this_window += 1
                             _merged_p = predicates.setdefault(_p, [])
                             for _arg in _args:
                                 if _arg not in _merged_p:
                                     _merged_p.append(_arg)
                         for _c, _desc in (_sig.get("constants") or {}).items():
                             constants_raw.setdefault(_c, _desc)
+                        _fol_new_yields[_fol_index] = _fol_new_this_window
                     # #2850 lot 4 — same k-of-N pair as the PL arm, over the
                     # ORIGINAL document, the union of the spans that ANSWERED.
                     _fol_chars_read = 0
@@ -12434,6 +12456,9 @@ async def _invoke_fol_reasoning(
                     # #3537 (R1199) — the per-window yield beside the call
                     # count (see the loop above for the None semantics).
                     fol_metrics["reading_yields"] = _fol_yields
+                    # #3537 (R1202 item 27b) — the NEW predicates beside the
+                    # yield: what each window added, not what it repeated.
+                    fol_metrics["new_reading_yields"] = _fol_new_yields
                     fol_metrics["source_total"] = len(_doc_text_fol)
                     if _fol_windows_ok > 1:
                         _fol_recorder = getattr(
