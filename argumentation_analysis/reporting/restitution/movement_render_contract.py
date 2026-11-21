@@ -476,8 +476,10 @@ def check_render_contract(reading: RenderContractReading) -> GateVerdict:
             if reading.stated_movement_drops is not None
             else "aucun"
         )
+        # #3560 follow-up — ``accord`` already carries the count; a leading
+        # number doubled it (« 1 1 mouvement absent », measured on the c11
+        # and c12 panel archives).
         reasons.append(
-            f"{reading.movements_untreated} "
             f"{accord(reading.movements_untreated, 'mouvement absent', 'mouvements absents')} "
             f"du récit sur {reading.movements_total} remis, compte du rédacteur : "
             f"{stated} (#3560)"
@@ -489,7 +491,6 @@ def check_render_contract(reading: RenderContractReading) -> GateVerdict:
             else "aucun"
         )
         reasons.append(
-            f"{reading.items_untreated} "
             f"{accord(reading.items_untreated, 'constat de couverture non repris', 'constats de couverture non repris')} "
             f"sur {reading.items_total}, compte du rédacteur : {stated} (#3560)"
         )
@@ -539,7 +540,6 @@ def render_contract_motif(reading: RenderContractReading) -> str:
             else ""
         )
         parts.append(
-            f"{reading.movements_untreated} "
             f"{accord(reading.movements_untreated, 'mouvement absent', 'mouvements absents')} "
             f"du récit sur {reading.movements_total} remis sans compte exact du "
             f"rédacteur{stated}"
@@ -551,7 +551,6 @@ def render_contract_motif(reading: RenderContractReading) -> str:
             else ""
         )
         parts.append(
-            f"{reading.items_untreated} "
             f"{accord(reading.items_untreated, 'constat de couverture non repris', 'constats de couverture non repris')} "
             f"sur {reading.items_total}{stated}"
         )
