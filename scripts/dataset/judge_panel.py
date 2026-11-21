@@ -2125,12 +2125,18 @@ def build_consensus(
             pass_records.append(load_json(pass_meta_path).get("pipeline_run"))
         else:
             pass_records.append(None)
-    if any(record is None for record in pass_records):
-        if pass_records[0] is not None:
-            raise SystemExit(
-                "the consensus mixes passes that recorded the judged pipeline "
-                "run with passes that did not — which run it reads is unknown"
-            )
+    # #3543 item 2 — the refusal reads the PRESENCE of records, whichever
+    # pass carries them: the old ``pass_records[0] is not None`` gate stayed
+    # silent when the FIRST pass lacked the record and a later one had it,
+    # contradicting the stated "refuses a mixed consensus".
+    present = [record for record in pass_records if record is not None]
+    if present and len(present) != len(pass_records):
+        raise SystemExit(
+            "the consensus mixes passes that recorded the judged pipeline "
+            "run with passes that did not — which run it reads is unknown"
+        )
+    if not present:
+        pass  # the c2-c21 shape: no pass recorded one; the consensus names none
     elif len({json.dumps(r, sort_keys=True) for r in pass_records}) != 1:
         raise SystemExit(
             "the consensus passes do not record ONE pipeline run — a consensus "

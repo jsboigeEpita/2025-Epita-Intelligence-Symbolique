@@ -362,7 +362,10 @@ class TestTheControlCaseAndTheUndecidedCase:
         assert payload["status"] == "undecided"
         assert payload["findings"] == []
         state.cross_passage_consistency = payload
-        assert "non tranche" in cross_passage_note(state)
+        # #3488 — the spelling the reader sees is « non tranché » (the
+        # coordinator's State names the typo); the assertion strength is
+        # unchanged, only the word is spelled.
+        assert "non tranché" in cross_passage_note(state)
 
     def test_a_state_without_the_first_reading_says_its_absence(self):
         state = UnifiedAnalysisState("Un texte court sans première lecture.")

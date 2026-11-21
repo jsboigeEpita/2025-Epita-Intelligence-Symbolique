@@ -175,9 +175,27 @@ class TestReadingLicenseCheck:
     def test_a_decisive_fol_entry_licenses_the_strength_claim(self):
         # Positive control (coordinator): a consistent FOL entry on a theory
         # that DID decide something — an inference answered — may be cited.
+        # #3545 rework: the payload is the production shape the conclusion-
+        # query wiring writes (a dict record with a DECIDED verdict). The
+        # former string list was a shape the pipeline never wrote non-empty,
+        # and a bare string carries no verdict to read (review 7062184686:
+        # non-dict items never count).
         state = UnifiedAnalysisState("texte")
         state.add_fol_analysis_result(
-            ["P(a)", "P(a) => Q(a)"], True, ["Q(a)"], message="consistent"
+            ["P(a)", "P(a) => Q(a)"],
+            True,
+            [
+                {
+                    "unit_ids": ["u_1"],
+                    "premises": ["P(a)", "P(a) => Q(a)"],
+                    "premise_texts_source": "stated",
+                    "minted_under": "document_text",
+                    "query": "Q(a)",
+                    "verdict": "entailed",
+                    "message": "",
+                }
+            ],
+            message="consistent",
         )
         result = check_reading_license(
             "Le discours est robuste au niveau de la cohérence formelle.", state

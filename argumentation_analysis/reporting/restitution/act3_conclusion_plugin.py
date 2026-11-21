@@ -58,6 +58,7 @@ from fractions import Fraction
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 
 from .figure_scales import score_with_scale  # #3394
+from .formal_derivation import fol_inference_sentence  # #3545 — act sentence
 from .arena_record import (  # #3073: shared arena record with act1
     ArenaRecord,
     build_arena_record,
@@ -287,6 +288,7 @@ _WEIGHTED_DIST_ATTACK_CAP = 8  # max attacks sampled for the weight distribution
 
 # #2952 sites 1a-3 (DeLP / EAF / ADF) — same prompt-budget discipline as above.
 _DELP_VERDICT_CAP = 3  # max named dialectical verdicts (warranted/defeated)
+_FOL_INFERENCE_CAP = 3  # max named entailment verdicts (#3545, mirrors DeLP)
 _EAF_DIVERGENCE_CAP = 3  # max named agent-pair belief divergences
 _ADF_UNDECIDED_CAP = 3  # max named three-valued undecided statements
 # #2952 site 3 — assignments inside a Tweety ``str(interp)`` rendering
@@ -325,6 +327,13 @@ _ABSENT_DIMENSION_LABELS: Dict[str, str] = {
     "delp_reasoning": "la décision dialectique sur requêtes défaisables",
     "eaf_reasoning": "les croyances épistémiques par agent",
     "adf_reasoning": "l'acceptation à trois valeurs des énoncés",
+    # #3545 — the FOL entailment axis: whether a unit's stated premises FORCE
+    # its stated conclusion (a directed query no other axis asks). As a key
+    # of this map (see the #3087 note above), an executor-level death of the
+    # ``fol_reasoning`` phase now also reaches the absence ledger — before
+    # this entry a timed-out FOL phase left no ledger entry whatever (same
+    # fold as #2952's three axes).
+    "fol_reasoning": "la déduction du premier ordre (ce que les prémisses forcent)",
     # #3131 — the local tier. Its skip/error statuses are collected from
     # ``state.local_llm_results`` by ``_collect_local_llm_dimension`` below;
     # and as a key of this map the executor-failure father (``state_writers.
@@ -2497,6 +2506,70 @@ def _delp_criterion_qualifier(state: Any) -> str:
     return f"{qualifier}{amplitude}"
 
 
+def _fol_entailment_finding(state: Any) -> Optional[StructuredArgFinding]:
+    """Project the entailment VERDICTS — what FOL concluded per marked unit (#3545).
+
+    FOL's first-level container ``fol_analysis_results`` (writer
+    ``_write_fol_to_state``) carries ``inferences`` records from the
+    conclusion-query wiring (``_fol_entailment_inferences``): one dict per
+    unit whose text held a conclusion marker, with a tri-state verdict —
+    ``entailed`` / ``not_entailed`` / ``no_verdict`` (#2447). The singular
+    fact is the DEDUCTION ITSELF: whether the unit's stated premises force
+    its stated conclusion. No other axis asks the prover a directed query —
+    Dung decides per-framework, DeLP per defeasible query, and the
+    consistency verdict says nothing about any one conclusion.
+
+    Each decided record renders through
+    :func:`formal_derivation.fol_inference_sentence` — before this projector
+    that reader had no production caller (review 7062184686): the sentence
+    existed, the render never read it. The statement names the unit
+    (pipeline-generated ``arg_*``-shaped ids, truncated all the same) beside
+    its verdict sentence; ``message`` payloads never reach the prose (solver
+    diagnostics). Returns ``None`` when nothing was decided (all
+    ``no_verdict``, empty or malformed): a query the reasoner never answered
+    supports no sentence (#2447) — honest absence, never a fabricated
+    verdict. Cap mirrors the DeLP channel: first names, then the count.
+    """
+    named: List[Tuple[str, str]] = []
+    total_decided = 0
+    for entry in getattr(state, "fol_analysis_results", None) or []:
+        if not isinstance(entry, dict):
+            continue
+        inferences = entry.get("inferences")
+        if not isinstance(inferences, list):
+            continue
+        for record in inferences:
+            if not isinstance(record, dict):
+                continue
+            sentence = fol_inference_sentence(record)
+            if not sentence:
+                continue
+            total_decided += 1
+            unit = ""
+            unit_ids = record.get("unit_ids")
+            if isinstance(unit_ids, list):
+                ids = [u for u in unit_ids if isinstance(u, str) and u.strip()]
+                if ids:
+                    unit = _truncate(ids[0].strip(), _FORMALISM_NODE_CAP)
+            named.append((unit, sentence))
+    if not named:
+        return None
+    parts: List[str] = []
+    for unit, sentence in named[:_FOL_INFERENCE_CAP]:
+        head = f"« {unit} » : " if unit else ""
+        parts.append(head + sentence)
+    over = ""
+    if total_decided > _FOL_INFERENCE_CAP:
+        over = f" (sur {total_decided} unités marquées)"
+    return StructuredArgFinding(
+        capability="fol_reasoning",
+        label=_axis_label("fol_reasoning"),
+        statement="la déduction du premier ordre a tranché : "
+        + " ; ".join(parts)
+        + over,
+    )
+
+
 def _delp_verdicts_finding(state: Any) -> Optional[StructuredArgFinding]:
     """Project the dialectical VERDICTS — what DeLP decided (#2952 site 1b).
 
@@ -3052,6 +3125,10 @@ def _collect_structured_arg_findings(state: Any) -> List[StructuredArgFinding]:
         _delp_verdicts_finding,
         _eaf_finding,
         _adf_finding,
+        # #3545 — FOL entailment (first-level ``inferences`` records): the
+        # directed conclusion query, decided unit by unit. Same contract —
+        # ``None`` when nothing was decided (honest absence, #2447).
+        _fol_entailment_finding,
     ):
         finding = projector(state)
         if finding is None or finding.capability in degraded:

@@ -29,9 +29,29 @@ theater family, sibling of the modal/DL/DeLP bugs):
 Privacy HARD: synthetic atoms only (``human``/``john``). 0 corpus content.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
 from argumentation_analysis.core.jvm_setup import initialize_jvm
+
+#: Hermetic stub for the no-program witnesses (#3546 rework): since the
+#: units come from the shared extractor, a context without a ``program``
+#: still REACHES ``translate_to_delp_program`` — stubbed to derive nothing,
+#: which is the premise these tests witness (the unavailable filing, and
+#: no leak into the result), not a live LLM call.
+_TRANSLATOR_SRC = (
+    "argumentation_analysis.orchestration.structured_arg_translator"
+    ".translate_to_delp_program"
+)
+
+
+def _empty_translator_outcome():
+    outcome = MagicMock()
+    outcome.relations = {}
+    outcome.cause = "no_genuine_relations"
+    outcome.error = ""
+    return outcome
 
 
 @pytest.fixture(scope="module")
@@ -91,7 +111,11 @@ class TestDeLPNoRawTextFailLoud:
     async def test_no_program_returns_unavailable(self):
         from argumentation_analysis.orchestration.invoke_callables import _invoke_delp
 
-        result = await _invoke_delp("some raw prose that is not a program", {})
+        with patch(
+            _TRANSLATOR_SRC,
+            new=AsyncMock(return_value=_empty_translator_outcome()),
+        ):
+            result = await _invoke_delp("some raw prose that is not a program", {})
         assert (
             result["status"] == "unavailable"
         ), f"No program in context must fail-loud unavailable; got {result!r}."
@@ -104,7 +128,11 @@ class TestDeLPNoRawTextFailLoud:
         from argumentation_analysis.orchestration.invoke_callables import _invoke_delp
 
         secret = "SECRET_CORPUS_LEAK_" + "x" * 200
-        result = await _invoke_delp(secret, {})
+        with patch(
+            _TRANSLATOR_SRC,
+            new=AsyncMock(return_value=_empty_translator_outcome()),
+        ):
+            result = await _invoke_delp(secret, {})
         assert result["status"] == "unavailable"
         # The raw input must not appear anywhere in the result (no leak).
         assert "SECRET_CORPUS_LEAK" not in str(result)

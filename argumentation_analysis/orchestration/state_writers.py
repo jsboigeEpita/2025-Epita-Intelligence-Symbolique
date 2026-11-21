@@ -1353,6 +1353,22 @@ def _write_fallacy_winner_reading_to_state(
     for i in fresh:
         added_by[i] = "vote_winner_reading"
 
+    # #3558 — the per-unit outcomes survive the rebuild and grow with the
+    # winners this reading walked: the winner reading IS the per-argument
+    # reading, targeted after the vote (#3105 vocabulary), so its answered
+    # walks conclude like any other — findings kept on the winner, or none.
+    # ``examined_ids`` already holds only answered walks (#3326), so every
+    # id here concludes; the counts come from this output's own findings,
+    # keyed by the source_arg_id the walk stamped.
+    outcomes = dict(record.get("per_unit_outcomes") or {})
+    for i in examined_ids:
+        outcomes[i] = 0
+    if isinstance(fallacies, list):
+        for f in fallacies:
+            sid = str(f.get("source_arg_id") or "") if isinstance(f, dict) else ""
+            if sid in outcomes:
+                outcomes[sid] += 1
+
     # #3511 (R1164 review §1) — the residue is RECOMPUTED over the merged
     # selection, never copied forward: ``record_analysis_coverage`` rebuilds
     # the entry from scratch, so an ``extra_fields`` holding ``added_by``
@@ -1373,6 +1389,7 @@ def _write_fallacy_winner_reading_to_state(
         extra_fields={
             **named_move_residue(state, selected, units),
             "added_by": added_by,
+            **({"per_unit_outcomes": outcomes} if outcomes else {}),
         },
     )
     state.add_trace_entry(
