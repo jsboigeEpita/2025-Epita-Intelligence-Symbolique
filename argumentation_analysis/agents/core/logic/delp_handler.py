@@ -72,7 +72,11 @@ class DeLPHandler:
             raise RuntimeError(f"DeLP parse error: {e}") from e
 
     def query(
-        self, program, query_string: str, criterion: str = "generalized_specificity"
+        self,
+        program,
+        query_string: str,
+        criterion: str = "generalized_specificity",
+        program_text: Optional[str] = None,
     ) -> Tuple[str, str]:
         """Query a DeLP program.
 
@@ -80,6 +84,15 @@ class DeLPHandler:
             program: Parsed DefeasibleLogicProgram.
             query_string: The literal to query (e.g., "flies(tweety)").
             criterion: Comparison criterion ("generalized_specificity" or "empty").
+            program_text: The SOURCE text ``program`` was parsed from. The
+                parser is stateful — ``parseFormula`` needs the program's
+                signature loaded first, which is why the belief base is
+                re-parsed here. Re-parse the SOURCE (whose ``~`` strong
+                negation parses), never ``str(program)``: the Java
+                ``toString`` prints strong negation as ``!``, a token the
+                parser rejects with a lexical error — so on the old path
+                every strongly negated rule turned its query into UNKNOWN
+                (#3546).
 
         Returns:
             (answer, message) where answer is YES/NO/UNDECIDED/UNKNOWN.
@@ -98,14 +111,26 @@ class DeLPHandler:
             # Parse the query formula
             parser = self._DelpParser()
             StringReader = jpype.JClass("java.io.StringReader")
-            # Re-parse to get the FOL signature
-            temp_program = parser.parseBeliefBase(StringReader(str(program)))
+            # Re-parse to load the FOL signature into THIS parser — from the
+            # source text when the caller has it (see docstring), falling
+            # back to str(program) only for callers holding the parsed object
+            # alone (whose '!' representation breaks on strong negation).
+            source = program_text if program_text is not None else str(program)
+            temp_program = parser.parseBeliefBase(StringReader(source))
             formula = parser.parseFormula(jpype.JString(query_string))
 
             result = reasoner.query(temp_program, formula)
-            answer_str = str(result)
+            # #3546: Tweety's DelpAnswer prints as "The answer is: NO" — the
+            # writer/reader chain (state_writers → _delp_verdicts_finding)
+            # speaks the bare token vocabulary (YES/NO/UNDECIDED/UNKNOWN), so
+            # a long-form answer read as neither YES nor NO: every real
+            # verdict fell through the reader's comparisons. Keep the long
+            # form in the message, return the bare token as the answer.
+            answer_str = str(result).strip()
+            if ":" in answer_str:
+                answer_str = answer_str.rsplit(":", 1)[-1].strip()
 
-            return answer_str, f"DeLP query '{query_string}': {answer_str}"
+            return answer_str, f"DeLP query '{query_string}': {result}"
         except jpype.JException as e:
             error_msg = f"DeLP query error: {e.getMessage()}"
             logger.error(error_msg)
@@ -137,7 +162,9 @@ class DeLPHandler:
             results = []
             if queries:
                 for q in queries:
-                    answer, msg = self.query(program, q, criterion)
+                    answer, msg = self.query(
+                        program, q, criterion, program_text=program_text
+                    )
                     results.append(
                         {
                             "query": q,
