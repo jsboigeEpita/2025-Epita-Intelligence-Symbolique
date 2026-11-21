@@ -380,6 +380,56 @@ def _slot_label(entry: Dict[str, Any]) -> str:
     return "un pilier de la thèse"
 
 
+#: #3488 — every ``reason`` the module can write, mapped to one French
+#: clause for the reader-facing note. The RECORD keeps the raw key (it is
+#: the state's machine-readable vocabulary); only the NOTE translates it —
+#: the Act II prompt forbids raw snake_case because writers copied such
+#: tokens onto the reader surface (#3311, #3328). The two dynamic reasons
+#: are keyed by their prefix: ``translation_failed: <ExceptionType>`` and
+#: ``unsat_theory_including_single_passage: s1,s2`` — the exception class
+#: and the entry ids are producer detail, never reader words. The
+#: completeness test walks the AST and fails when a ``payload["reason"] =``
+#: value has no clause here.
+_REASON_CLAUSES: Dict[str, str] = {
+    "no_first_reading_slots": (
+        "aucun mouvement de première lecture n'avait été enregistré"
+    ),
+    "no_verbatim_quote_on_any_slot": (
+        "aucun passage porteur ne porte de citation vérifiée"
+    ),
+    "no_llm_translation_route": "aucune route de traduction n'était disponible",
+    "translation_failed": "la traduction des passages a échoué",
+    "translation_produced_no_formula": (
+        "la traduction n'a produit aucune formule exploitable"
+    ),
+    "unsat_theory_including_single_passage": (
+        "la théorie contredit l'un des passages isolément"
+    ),
+    "unsat_theory_without_a_decided_positioned_pair": (
+        "la théorie est contradictoire sans qu'aucune paire localisable ne la porte"
+    ),
+    "the_reasoner_did_not_decide_a_batch_theory": (
+        "le raisonneur n'a tranché aucune théorie du lot"
+    ),
+}
+
+
+def _reason_clause(reason: Any) -> str:
+    """The French clause of a ``reason`` key, '' when there is none to say.
+
+    Exact key first; then the dynamic prefixes (everything before the first
+    ``:``); never the raw key back — an untranslated key printed as-is is
+    the defect this table exists to close.
+    """
+    key = str(reason or "").strip()
+    if not key:
+        return ""
+    if key in _REASON_CLAUSES:
+        return _REASON_CLAUSES[key]
+    prefix = key.split(":", 1)[0]
+    return _REASON_CLAUSES.get(prefix, "")
+
+
 def cross_passage_note(state: Any) -> str:
     """The one reader-facing block of the check (#3432 ask 6b, #1941).
 
@@ -436,19 +486,46 @@ def cross_passage_note(state: Any) -> str:
         if len(lines) == 1:
             single = record.get("single_passage_unsat") or []
             if single:
+                # #3488 — the reader words of each contradicting passage:
+                # its slot, its recorded quote and its position, the same
+                # line a located pair prints. The internal entry id never
+                # reaches the writer (an id such as ``s3`` names nothing a
+                # reader can find); entries are re-derived from the same
+                # defining moves the check read, so the ids match by
+                # construction — an id that no longer resolves is named as
+                # unlocalizable, never printed.
+                by_id = {entry["id"]: entry for entry in _slot_entries(state)}
                 lines.append(
                     "Le solveur établit une contradiction interne à un seul "
-                    "passage ("
-                    + ", ".join(str(s) for s in single)
-                    + ") ; aucune paire de passages éloignés n'a été établie."
+                    "passage ; aucune paire de passages éloignés n'a été "
+                    "établie :"
                 )
+                for entry_id in single:
+                    entry = by_id.get(str(entry_id))
+                    if (
+                        entry
+                        and str(entry.get("quote") or "")
+                        and isinstance(entry.get("offset"), int)
+                    ):
+                        lines.append(
+                            f"  — {_slot_label(entry)} « {entry['quote']} » "
+                            f"(position {entry['offset']})"
+                        )
+                    else:
+                        lines.append(
+                            "  — un passage dont la citation n'est pas " "localisable"
+                        )
             else:
                 # An inconsistent record with no readable finding: the
                 # verdict exists, the located pair does not — stated, not
-                # decorated.
+                # decorated. #3488 — the reason is translated, never printed
+                # as its raw key.
+                clause = _reason_clause(record.get("reason"))
                 lines.append(
                     "Le solveur établit une contradiction dans la théorie, sans "
-                    f"qu'aucune paire localisable ne la porte ({record.get('reason') or 'sans paire décidée'})."
+                    "qu'aucune paire localisable ne la porte"
+                    + (f" : {clause}" if clause else " (sans paire décidée)")
+                    + "."
                 )
     elif status == "checked":
         line = (
@@ -458,9 +535,11 @@ def cross_passage_note(state: Any) -> str:
         )
         lines.append(line)
     else:
-        reason = str(record.get("reason") or "")
-        suffix = f" ({reason})" if reason else ""
-        word = "non tranche" if status == "undecided" else "non atteint"
+        # #3488 — the reason's clause, never its raw key, and the typo the
+        # reader saw: « non tranché ».
+        clause = _reason_clause(record.get("reason"))
+        suffix = f" : {clause}" if clause else ""
+        word = "non tranché" if status == "undecided" else "non atteint"
         lines.append(f"Contrôle {word}{suffix} : aucune incohérence rapportée.")
     skipped = record.get("cross_batch_pairs_not_decided") or 0
     if skipped:
