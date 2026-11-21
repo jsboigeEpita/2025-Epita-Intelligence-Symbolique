@@ -9397,6 +9397,38 @@ def _record_per_argument_reading(
     )
 
 
+def _record_per_argument_outcomes(
+    context: Dict[str, Any], outcomes: Dict[str, int]
+) -> None:
+    """#3558 — the pass's per-unit conclusion, beside the units it selected.
+
+    The selection record (#2966) says WHICH units the pass submitted; this
+    key says what it CONCLUDED on each — the findings it kept, ``0`` meaning
+    examined and clean, a recorded judgment the render and the tracer read.
+    Without it the conclusions lived only in ``identified_fallacies``, keyed
+    by target, so an examined unit with no finding left no trace that it was
+    judged at all.
+
+    Set directly on the coverage entry the selection wrote (same units, same
+    run — no geometry to recompute), NOT through ``record_analysis_coverage``
+    which rebuilds the entry from scratch; the one writer that rebuilds it
+    (#3326, the winner reading) carries the key through its rebuild.
+
+    Silent when no state is reachable or the selection left no record — the
+    same rule as every reading site.
+    """
+    state: Any = context.get("_state_object")
+    if state is None:
+        return
+    coverage = getattr(state, "analysis_coverage", None)
+    record = (
+        coverage.get("fallacy_per_argument") if isinstance(coverage, dict) else None
+    )
+    if not isinstance(record, dict) or not outcomes:
+        return
+    record["per_unit_outcomes"] = {str(k): int(v) for k, v in outcomes.items()}
+
+
 def _record_logic_units_reading(state_obj: Any, site: str, selection: Any) -> None:
     """#3136 — the logic arms' formulas come from k stratified UNITS.
 
@@ -10044,6 +10076,27 @@ async def _invoke_hierarchical_fallacy_per_argument(
                 f"fallacy runs got no answer: {run_failures[0]}"
             )
 
+        # #3558 — the pass's own conclusion, per examined unit: the findings
+        # it kept on each, or none. Only ANSWERED walks conclude — a walk
+        # that got no answer was selected, not examined (#3326's
+        # ``examined_ids`` rule) — and the dedup above already decided what
+        # the pass keeps, so the counts agree with the findings it returns.
+        # Without this, an examined unit with no finding left no trace that
+        # it was judged at all: the render could let a judgment of « propre »
+        # read as « jamais examiné » (panel c7, the doc_E judge note).
+        per_unit_outcomes: Dict[str, int] = {}
+        for result in per_arg_results:
+            if isinstance(result, dict) and not _unanswered(result):
+                arg_id = str(result.get("source_arg_id") or "")
+                if arg_id:
+                    per_unit_outcomes[arg_id] = 0
+        for f in deduped:
+            if not isinstance(f, dict):
+                continue
+            arg_id = str(f.get("source_arg_id") or "")
+            if arg_id in per_unit_outcomes:
+                per_unit_outcomes[arg_id] += 1
+
         exploration_method = (
             "+".join(sorted(methods_used)) if methods_used else "per_argument_parallel"
         )
@@ -10063,6 +10116,7 @@ async def _invoke_hierarchical_fallacy_per_argument(
             "per_argument_count": len(arguments),
             "parallel_executed": True,
             "descent_budget_exceeded": any_descent_budget_exceeded,
+            "per_unit_outcomes": per_unit_outcomes,
         }
         if run_failures:
             per_arg_output["degraded"] = True
@@ -10073,6 +10127,11 @@ async def _invoke_hierarchical_fallacy_per_argument(
             )
         # #3105 — the reading this pass actually did, on its own site.
         _record_per_argument_reading(context, arguments)
+        # #3558 — and what it concluded on each unit, beside the units the
+        # selection recorded. Written by the invoker like the reading
+        # record: both lanes (pipeline and conversational) reach the state
+        # through this one seam.
+        _record_per_argument_outcomes(context, per_unit_outcomes)
         return per_arg_output
 
     except FallacyDetectionFailed:

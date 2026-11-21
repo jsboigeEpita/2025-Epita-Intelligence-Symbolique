@@ -380,6 +380,13 @@ class ArgEvidence:
     # « non examinée » et « ensemble inconnu » ne se racontent pas pareil.
     fallacy_examined: Optional[bool] = None
     quality_examined: Optional[bool] = None
+    # #3558 — le verdict ENREGISTRÉ de la passe par argument sur cette
+    # unité : les constats qu'elle y a gardés. ``0`` = « examinée, aucun
+    # procédé retenu » — un jugement, pas une absence d'examen (la note du
+    # juge c7 sur doc_E lisait « propre » comme « jamais examiné »).
+    # ``None`` = pas de verdict enregistré (état d'avant #3558, ou marche
+    # sans réponse) : la ligne de beat reste exactement celle d'avant.
+    per_argument_retained: Optional[int] = None
     # #3505 — the coverage review's findings bound to THIS unit: each line is
     # the review's own wording (``coverage_item_line``), so the attribution
     # rides the line wherever it renders. A finding that reaches its
@@ -1269,6 +1276,35 @@ def _sampled_unit_ids(state: Any, phase: str) -> Optional[Set[str]]:
     return {str(u) for u in ids}
 
 
+def _per_argument_outcomes(state: Any) -> Dict[str, int]:
+    """#3558 — le verdict enregistré de la passe par argument, par unité.
+
+    Ce que la passe a retenu sur chaque unité examinée : le nombre de
+    constats gardés, ``0`` signifiant « examinée, aucun procédé retenu » —
+    un jugement ENREGISTRÉ, distinct d'une unité jamais soumise. Ne couvre
+    que les marches qui ont répondu (une marche sans réponse n'a rien
+    conclu, règle #3326) : une unité de l'échantillon absente de la clé
+    n'est ni propre ni condamnée, elle est sans verdict enregistré.
+
+    ``{}`` = état écrit avant #3558, ou passe sans état : le rendu reste
+    byte-identique à celui d'avant (aucun verdict, aucun compte).
+    """
+    coverage = getattr(state, "analysis_coverage", None)
+    if not isinstance(coverage, dict):
+        return {}
+    entry = coverage.get("fallacy_per_argument")
+    if not isinstance(entry, dict):
+        return {}
+    raw = entry.get("per_unit_outcomes")
+    if not isinstance(raw, dict):
+        return {}
+    outcomes: Dict[str, int] = {}
+    for unit_id, kept in raw.items():
+        if isinstance(kept, int) and not isinstance(kept, bool) and kept >= 0:
+            outcomes[str(unit_id)] = kept
+    return outcomes
+
+
 def indeterminate_beat_line(arg_id: str, declared: Dict[str, Any]) -> str:
     """#3590 — la ligne de beat d'une unité que le document déclare.
 
@@ -1457,6 +1493,9 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
     # which units it saw, so no unit can be called holding.
     fallacy_sample = _sampled_unit_ids(state, "fallacy_per_argument")
     quality_sample = _sampled_unit_ids(state, "quality")
+    # #3558 — le verdict par unité de la passe par argument : ce qu'elle a
+    # gardé sur chaque unité examinée (0 = examinée, aucun procédé retenu).
+    per_argument_outcomes = _per_argument_outcomes(state)
     # #3505 part 3 — an argument the deep phases did not examine, on which the
     # coverage walk retained a fallacy, LEAVES « non examinés »: the movement
     # says what was found (the fallacy's family, by the deep rule), the procédé
@@ -1569,6 +1608,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
                 quality_examined=(
                     None if quality_sample is None else str(arg_id) in quality_sample
                 ),
+                per_argument_retained=per_argument_outcomes.get(str(arg_id)),
                 coverage_lines=coverage_lines_by_arg.get(str(arg_id), []),
                 coverage_procedes=coverage_procedes_by_arg.get(str(arg_id), []),
                 indeterminate=_indeterminate_entry(provenance.get(str(arg_id))),
@@ -2329,6 +2369,29 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                 f"les arguments attaqués par la famille « {mvt.theme} »"
             )
         lines: List[str] = [header]
+        if is_soutiens:
+            # #3558 ask 3 — le mouvement DIT ce qu'il tient, dans la forme
+            # comptée de la note de lecture première (« N gestes nommés, M
+            # montrés ici ») : un soutien que la prose ne traite pas est un
+            # choix ÉNONCÉ, pas un silence. La ligne n'existe que si au
+            # moins un soutien porte le verdict enregistré — sur un état
+            # d'avant #3558 le rendu reste byte-identique.
+            verdict_n = sum(1 for a in mvt.arguments if a.per_argument_retained == 0)
+            if verdict_n:
+                total_n = len(mvt.arguments)
+                count_line = (
+                    f"  {accord(total_n, 'argument', 'arguments')} : "
+                    f"{verdict_n} au verdict enregistré "
+                    "« examiné, aucun procédé retenu »"
+                )
+                if total_n > verdict_n:
+                    count_line += (
+                        f", {total_n - verdict_n} sans verdict enregistré "
+                        "sur ce run."
+                    )
+                else:
+                    count_line += "."
+                lines.append(count_line)
         for a in mvt.arguments:
             # #3590 — une unité que le document déclare non établie rend la
             # déclaration, jamais la paraphrase déterminée.
@@ -2336,6 +2399,16 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                 lines.append(indeterminate_beat_line(a.arg_id, a.indeterminate))
             else:
                 lines.append(f"  • {a.arg_id} : {a.description}")
+            if is_soutiens and a.per_argument_retained == 0:
+                # #3558 ask 2 — le verdict enregistré CHEVAUCHE la ligne qui
+                # nomme l'argument : un lecteur ne peut plus prendre un
+                # passage examiné pour un passage jamais examiné (la note du
+                # juge c7 sur doc_E). Le cap de 220 caractères tient : le
+                # verdict vit à côté de la description, pas dedans.
+                lines.append(
+                    "      Examen par argument : procédé cherché, aucun retenu "
+                    "(verdict enregistré)."
+                )
             if a.quality_available:
                 # #1907 — no grade in the reader narrative. ``a.virtues`` now
                 # holds ONLY the dimensions that were actually evaluable on this
