@@ -201,6 +201,23 @@ def _theme_fallback_anchors(theme: str) -> Tuple[str, ...]:
     return ()
 
 
+def _theme_is_non_examine(theme: str) -> bool:
+    """True when ``theme`` is the canonical « non examinés » movement.
+
+    Same branch order as :func:`_theme_fallback_anchors` — the vocabulary
+    that function recognises decides here too, so the two can never drift:
+    a « soutiens » or « échantillon non enregistré » theme is a different
+    non-attack population, and only the « non examinés » movement carries
+    the units the evidence itself declares unexamined (#3560 item 23b).
+    """
+    t = _norm(theme)
+    if "soutien" in t:
+        return False
+    if "enregistr" in t or "échantillon" in t:
+        return False
+    return "examin" in t
+
+
 def _movement_anchors(movement: Any) -> List[str]:
     """Every name a treatment of ``movement`` can carry into the prose."""
     anchors: List[str] = []
@@ -368,6 +385,14 @@ class RenderContractReading:
     #: confirmed on the recorded panel states. The count stays exposed here
     #: for the tracer; the reader is not told a number nothing can back.
     items_measured: bool = True
+    #: #3560 item 23b — how many review items sit on units the evidence
+    #: itself did NOT examine (the « non examinés » movement's population).
+    #: The channel's TREATMENT is not measurable, but this split is
+    #: deterministic: it reads the evidence's own structure, not the prose.
+    #: It feeds the motif only — never the reader's count line, which states
+    #: proven channels only, and never the check's reasons (the split says
+    #: the structure, not the treatment).
+    items_on_unexamined_units: int = 0
     stated_movement_drops: Optional[int] = None
     stated_item_drops: Optional[int] = None
 
@@ -378,6 +403,10 @@ class RenderContractReading:
     @property
     def items_untreated(self) -> int:
         return self.items_total - self.items_treated
+
+    @property
+    def items_on_examined_units(self) -> int:
+        return self.items_total - self.items_on_unexamined_units
 
     @property
     def movements_count_missing_or_wrong(self) -> bool:
@@ -429,8 +458,16 @@ def read_render_contract(
     #: 29/31/38/29 of 61/63/77/66 items treated only through it; an eye check
     #: on one document found such items absent from the act).
     treated_unit_ids: Set[str] = set()
+    unexamined_unit_ids: Set[str] = set()
     for movement in movements:
         theme = str(getattr(movement, "theme", "") or "")
+        if _theme_is_non_examine(theme):
+            # The channel's structure, whatever the treatment — the units
+            # the evidence ITSELF declares unexamined (#3560 item 23b).
+            for argument in getattr(movement, "arguments", []) or []:
+                arg_id = str(getattr(argument, "arg_id", "") or "")
+                if arg_id:
+                    unexamined_unit_ids.add(arg_id)
         if _movement_treated(movement, prose_norm, prose_runs):
             treated += 1
             if not _theme_fallback_anchors(theme):
@@ -446,6 +483,9 @@ def read_render_contract(
         for item in items
         if _item_treated(item, prose_norm, prose_runs, treated_unit_ids)
     )
+    items_on_unexamined = sum(
+        1 for item in items if str(item.get("unit_id") or "") in unexamined_unit_ids
+    )
     return RenderContractReading(
         movements_total=len(movements),
         movements_treated=treated,
@@ -453,6 +493,7 @@ def read_render_contract(
         items_total=len(items),
         items_treated=items_treated,
         items_measured=COVERAGE_ITEM_MEASURE_PROVEN,
+        items_on_unexamined_units=items_on_unexamined,
         stated_movement_drops=_first_int(_STATED_MOVEMENT_DROPS_RE, narrative),
         stated_item_drops=_first_int(_STATED_ITEM_DROPS_RE, narrative),
     )
@@ -555,8 +596,13 @@ def render_contract_motif(reading: RenderContractReading) -> str:
             f"sur {reading.items_total}{stated}"
         )
     if not reading.items_measured and reading.items_total:
+        # #3560 item 23b — the split is deterministic (the evidence's own
+        # structure) even though the channel's treatment is not measurable:
+        # the motif states the répartition, still no count of the treated.
         parts.append(
-            f"{accord(reading.items_total, 'constat de couverture remis au rédacteur', 'constats de couverture remis au rédacteur')}, "
+            f"{accord(reading.items_total, 'constat de couverture remis au rédacteur', 'constats de couverture remis au rédacteur')} : "
+            f"{reading.items_on_examined_units} sur unités examinées, "
+            f"{reading.items_on_unexamined_units} sur unités non examinées, "
             "mesure non éprouvée sur ce canal — aucun compte énoncé"
         )
     if not parts:
