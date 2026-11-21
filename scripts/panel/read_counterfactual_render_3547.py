@@ -131,8 +131,10 @@ def _analysis_prose(render: str) -> str:
     """The render's analysis sections, before the run metadata markers.
 
     Section titles are dropped: a title may carry the support verb as a
-    label (« ce que l'appel soutient réellement », measured on a recorded
-    render) without stating any relation between two discourse objects.
+    label (« ce que l'exposé soutient en clair » — an invented title of the
+    same grammatical form; the recorded one that motivated this exclusion
+    is quoted nowhere, #3649 review) without stating any relation between
+    two discourse objects.
     """
     cut = len(render)
     for marker in _SCOPE_MARKERS:

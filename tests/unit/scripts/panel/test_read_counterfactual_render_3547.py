@@ -142,7 +142,7 @@ class TestScoping:
 class TestSoleSupport:
     def test_a_lui_seul_raises_the_sole_flag(self):
         reading = read_render(
-            "L'argument des moyens futurs soutient à lui seul l'idée d'un renversement."
+            "L'argument des halles couvertes soutient à lui seul l'idée d'une relocalisation."
         )
         assert reading.sole_support is True
         assert reading.dependence is True
@@ -174,7 +174,7 @@ class TestConsequenceForms:
 
     def test_conditional_weakening_fires(self):
         reading = read_render(
-            "Leur fragilisation aurait donc des effets en cascade sur l'ensemble."
+            "Leur fragilisation engendrerait des glissements successifs sur l'ensemble."
         )
         assert reading.consequence is True
         assert "conditional_weakening" in reading.cons_forms
@@ -193,7 +193,7 @@ class TestConsequenceForms:
 
     def test_bare_noun_fragilite_does_not_fire(self):
         reading = read_render(
-            "C'est une fragilité de l'avenir, pas une réfutation complète."
+            "C'est une fragilité de la charpente, pas une invalidation complète."
         )
         assert reading.consequence is False
 
@@ -231,13 +231,13 @@ class TestEndToEndSynthetic:
             "### Ce que le texte soutient\n"
             "Le locuteur pose sa thèse liminaire.\n\n"
             "### Ce qui tient, et ce qui dérape\n"
-            "L'axe des exemples soutient la conclusion liminaire, tandis que "
-            "l'axe des témoignages soutient celui du prolongement.\n\n"
+            "L'axe des relevés soutient la conclusion liminaire, tandis que "
+            "l'axe des notations soutient celui du prolongement.\n\n"
             "### Comment se faire son avis\n"
-            "L'analyse aide à voir les dépendances : l'axe des exemples "
+            "L'analyse éclaire les dépendances : l'axe des relevés "
             "soutient à lui seul l'idée du prolongement, et l'axe des "
-            "témoignages soutient celui de la conclusion ; leur "
-            "fragilisation aurait donc des effets en cascade.\n\n"
+            "notations soutient celui de la conclusion ; leur "
+            "fragilisation engendrerait des glissements successifs.\n\n"
             "**Verdict sur les vertus (chiffres du pipeline)**\n"
             "Le texte tient sur pertinence."
         )
@@ -249,7 +249,7 @@ class TestEndToEndSynthetic:
 
     def test_render_without_any_form_reads_all_false(self):
         render = (
-            "### Ce qui tient\nLe texte est cohérent comme récit de mobilisation.\n"
+            "### Ce qui tient\nLe texte est cohérent comme récit d'apprentissage.\n"
         )
         reading = read_render(render)
         assert reading.dependence is False
