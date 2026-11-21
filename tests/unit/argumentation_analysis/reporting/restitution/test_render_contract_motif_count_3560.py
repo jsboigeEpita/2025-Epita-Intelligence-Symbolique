@@ -38,12 +38,16 @@ def _reading(**kwargs) -> RenderContractReading:
 
 class TestMotifStatesEachCountOnce:
     def test_singular_motif_exact(self):
-        """The archived c11 motif, un-doubled — byte for byte."""
+        """The archived c11 motif, un-doubled — byte for byte. The
+        unmeasured-items clause now carries the deterministic split
+        (#3560 item 23b), with the reading's default reading all items
+        on examined units."""
         motif = render_contract_motif(_reading())
         assert motif == (
             "Acte II : 1 mouvement absent du récit sur 8 remis sans compte "
             "exact du rédacteur ; 15 constats de couverture remis au "
-            "rédacteur, mesure non éprouvée sur ce canal — aucun compte "
+            "rédacteur : 15 sur unités examinées, 0 sur unités non "
+            "examinées, mesure non éprouvée sur ce canal — aucun compte "
             "énoncé (#3560)"
         )
 
