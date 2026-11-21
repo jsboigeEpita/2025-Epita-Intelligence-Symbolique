@@ -11992,6 +11992,184 @@ async def _invoke_propositional_logic(
         )
 
 
+#: #3545 — sentence-initial conclusion markers, a closed list (the languages
+#: the corpus and the translator work in). The split is the production rule;
+#: the planted texts of the witness merely carry it.
+_FOL_CONCLUSION_MARKERS: Tuple[str, ...] = (
+    "so ",
+    "therefore ",
+    "thus ",
+    "hence ",
+    "donc ",
+    "par conséquent ",
+    "d'où ",
+    "ainsi ",
+    "alors ",
+)
+
+
+def _split_conclusion_span(text: str) -> Optional[Tuple[str, str]]:
+    """Split a unit at its LAST sentence-initial conclusion marker (#3545).
+
+    Sentence-initial: at the start of the text, or after sentence punctuation
+    with only whitespace between. The marker belongs to neither span — it is
+    scaffolding, not a premise. Returns ``(premises, conclusion)`` or ``None``
+    when no marker fires or either span is empty: no honest query can be
+    minted from the remainder.
+    """
+
+    def _sentence_initial(lowered: str, idx: int) -> bool:
+        if idx == 0:
+            return True
+        j = idx - 1
+        while j >= 0 and lowered[j].isspace():
+            j -= 1
+        return j < 0 or lowered[j] in ".!?;:"
+
+    lowered = text.lower()
+    best: Optional[Tuple[int, int]] = None
+    for marker in _FOL_CONCLUSION_MARKERS:
+        search_from = 0
+        while True:
+            idx = lowered.find(marker, search_from)
+            if idx < 0:
+                break
+            if _sentence_initial(lowered, idx) and (best is None or idx > best[0]):
+                best = (idx, idx + len(marker))
+            search_from = idx + 1
+    if best is None:
+        return None
+    premises = text[: best[0]].strip()
+    conclusion = text[best[1] :].strip()
+    if not premises or not conclusion:
+        return None
+    return premises, conclusion
+
+
+#: #3545 — the tri-state verdict as a record's one word. ``None`` keeps its
+#: own name (#2447): a query the reasoner never answered is not "not entailed".
+_FOL_VERDICT_NAMES: Dict[Optional[bool], str] = {
+    True: "entailed",
+    False: "not_entailed",
+    None: "no_verdict",
+}
+
+
+async def _fol_entailment_inferences(
+    units: List[Any],
+    *,
+    fol_handler: Any = None,
+    situation_note: str = "",
+) -> List[Dict[str, Any]]:
+    """Mint one conclusion query per marked unit, answer it, record it (#3545).
+
+    The chain the panel never had: text → persona → KB → query → solver → act
+    sentence. Per unit whose text carries a conclusion marker:
+
+    * the KB is that unit's STATED premises — the spans come from the unit's
+      own text, and the historian's note never adds a premise formula of its
+      own; when the note was in the translation context the record names it
+      (``minted_under``, #3377) so model knowledge is never counted as the
+      speaker's (``premise_texts_source`` stays ``stated`` for the SPANS);
+    * the query is the conclusion span's first formula, renamed to the KB
+      signature's declared names;
+    * the answer comes from ``FOLHandler.execute_fol_query`` ->
+      ``_in_jvm_entailment`` (#2502): tri-state, and ``None`` records
+      ``no_verdict`` with its message — never "not entailed" (#2447).
+
+    Units without a marker, or whose spans do not translate, yield no record:
+    #1631's bar for what ``inferences`` carries stands.
+    """
+    marked: List[Tuple[Any, str, str]] = []
+    for unit in units:
+        split = _split_conclusion_span(str(getattr(unit, "text", "") or ""))
+        if split is not None:
+            marked.append((unit, split[0], split[1]))
+    if not marked:
+        return []
+
+    from argumentation_analysis.services.nl_to_logic import (
+        NLToLogicTranslator,
+        TranslationResult,
+    )
+
+    translator = NLToLogicTranslator(max_retries=2, logic_type="fol")
+    spans: List[str] = []
+    for _unit, premises_text, conclusion_text in marked:
+        spans.extend((premises_text, conclusion_text))
+    batch = await translator.translate_batch(
+        spans,
+        logic_type="fol",
+        check_consistency=False,
+        context_note=situation_note,
+    )
+    formulas_by_text: Dict[str, List[str]] = {}
+    for item in batch.translations:
+        key = " ".join(str(getattr(item, "original_text", "") or "").split())
+        if not bool(getattr(item, "is_valid", False)):
+            continue
+        for formula in TranslationResult.split_formulas(
+            str(getattr(item, "formula", "") or "")
+        ):
+            text = str(formula).strip()
+            if text:
+                formulas_by_text.setdefault(key, []).append(text)
+
+    from argumentation_analysis.agents.core.logic.fol_logic_agent import (
+        FOLLogicAgent,
+    )
+
+    minted_under = "historian_note" if str(situation_note).strip() else "document_text"
+    records: List[Dict[str, Any]] = []
+    for unit, premises_text, conclusion_text in marked:
+        key_p = " ".join(premises_text.split())
+        key_c = " ".join(conclusion_text.split())
+        premise_formulas = formulas_by_text.get(key_p, [])
+        conclusion_formulas = formulas_by_text.get(key_c, [])
+        if not premise_formulas or not conclusion_formulas:
+            continue
+        try:
+            meta = FOLLogicAgent.extract_fol_metadata(premise_formulas)
+            kb_text = "\n".join(
+                str(line)
+                for line in list(meta["signature_lines"])
+                + [""]
+                + list(meta["formulas"])
+            )
+            # #2468: the renaming is the renamer's own — the query reads the
+            # maps where they are produced, never re-implemented here.
+            query = FOLLogicAgent.rename_fol_query(conclusion_formulas[0], meta)
+        except Exception as signature_err:
+            logger.warning(
+                "FOL conclusion query: the premise signature could not be "
+                "built for %s (%s); no record.",
+                getattr(unit, "unit_id", "?"),
+                signature_err,
+            )
+            continue
+        verdict: Optional[bool] = None
+        message = "no handler; no query verdict"
+        if fol_handler is not None:
+            try:
+                verdict, message = await asyncio.to_thread(
+                    fol_handler.execute_fol_query, kb_text, query
+                )
+            except Exception as solver_err:
+                verdict, message = None, f"FOL query error: {solver_err}"
+        records.append(
+            {
+                "unit_ids": [str(getattr(unit, "unit_id", "") or "")],
+                "premises": premise_formulas,
+                "premise_texts_source": "stated",
+                "minted_under": minted_under,
+                "query": query,
+                "verdict": _FOL_VERDICT_NAMES.get(verdict, "no_verdict"),
+                "message": str(message or "")[:200],
+            }
+        )
+    return records
+
+
 async def _invoke_fol_reasoning(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -12576,7 +12754,11 @@ async def _invoke_fol_reasoning(
     # or by whole-dict serialization — the removal cannot change the deliverable.
     # Tweety can do deduction; wiring it is a separate question. Until then the
     # honest value is the empty list, and the field marks the place.
-    inferences: List[str] = []
+    # #3545 answers that question: the conclusion-query wiring below fills
+    # ``inferences`` with one RECORD per marked unit (premises, query, verdict,
+    # unit ids). The empty list stays the honest value on every path the
+    # wiring does not reach (no translation, no bridge).
+    inferences: List[Dict[str, Any]] = []
 
     def _cause_for(
         _checked: List[str],
@@ -12814,6 +12996,34 @@ async def _invoke_fol_reasoning(
         )
 
         bridge = TweetyBridge()
+
+        # #3545 — the conclusion query. One per marked unit of the same
+        # selection the arms formalised (#3030's one-selection doctrine):
+        # the unit's stated premises are the KB, its conclusion the query,
+        # answered by the same JVM the consistency check uses. Guarded: a
+        # query that cannot be minted or answered records its own absence —
+        # it never degrades the consistency verdict this phase exists to
+        # produce.
+        try:
+            from argumentation_analysis.agents.core.context.historian import (
+                context_note as _fol_historian_note,
+            )
+
+            _fol_note = _fol_historian_note(state_obj) if state_obj is not None else ""
+        except Exception:
+            _fol_note = ""
+        try:
+            inferences = await _fol_entailment_inferences(
+                list(_fol_selection.selected),
+                fol_handler=getattr(bridge, "fol_handler", None),
+                situation_note=_fol_note,
+            )
+        except Exception as _infer_err:
+            logger.warning(
+                "FOL conclusion query unavailable (%s); inferences stays " "empty.",
+                _infer_err,
+            )
+            inferences = []
 
         # Convert Unicode FOL operators to ASCII before signature extraction (#677)
         fol_metrics["pre_sanitize"] = len(formulas)
