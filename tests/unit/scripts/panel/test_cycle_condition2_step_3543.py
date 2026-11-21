@@ -25,6 +25,7 @@ a refused counter could not stop anything.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -33,6 +34,8 @@ from typing import Dict, List
 REPO_ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(REPO_ROOT))
 
+from scripts.dataset import judge_panel as jp  # noqa: E402
+from scripts.panel import condition2  # noqa: E402
 from scripts.panel import run_cycle  # noqa: E402
 
 PANEL = ["doc_A"]
@@ -123,6 +126,10 @@ class TestThePlanCarriesTheCounter:
         i = argv.index("--previous-cycle-dir")
         assert Path(argv[i + 1]) == cfg.results_root / "panel_cycles" / "c21"
         assert "--new-series" not in argv
+        # The runner asks the counter to refuse held readings: without the
+        # flag the real command exits 0 on an unproven reading (R1199
+        # review) and the cycle finishes green over an unread counter.
+        assert "--refuse-holds" in argv
         # The counter is free: never a paid step.
         assert step.paid is False
 
@@ -143,6 +150,10 @@ class TestThePlanCarriesTheCounter:
 
 
 class TestTheCycleRefusesAnUnreadCounter:
+    """The plumbing: the dispatched cycle watches the counter step's exit
+    code (the knob here covers the wiring only — the stop semantics over
+    what the REAL command returns are witnessed one class below)."""
+
     def _cycle(self, tmp_path, condition2_rc: int):
         cfg = _config(tmp_path, compare_with_tag="c21")
         _world(cfg)
@@ -183,3 +194,133 @@ class TestTheCycleRefusesAnUnreadCounter:
         assert summary["exit_code"] == run_cycle.EXIT_OK
         assert summary["stopped"] is None
         assert summary["condition2"] == {"rc": 0, "families": ["g", "s"]}
+
+
+# --- the real command, not a knob ------------------------------------------
+
+
+def _pipeline_record(label: str) -> Dict[str, object]:
+    """The real ``pipeline_run`` record shape (#3639 review v4, #3543 item
+    1): the run's identity is its inputs and code, not its mount."""
+    digest = hashlib.sha256(label.encode("utf-8")).hexdigest()
+    return {
+        "states_dir": f"/mounts/{label}/states",
+        "signatures_dir": f"/mounts/{label}/signatures",
+        "code_shas": [digest],
+        "inputs_sha256": digest,
+    }
+
+
+def _consensus_dir(path: Path, judge_family: str, pipeline_run=None) -> Path:
+    """A consensus directory the REAL condition2 can read end to end: one
+    settled row per panel document, a META naming the series, the execution
+    (seed + run_head) and the judge family. ``pipeline_run=None`` writes no
+    record — the stored c2-c21 shape: every other guarantee holds, the
+    judged run does not."""
+    votes = {"parsed": 6, "need": 4, "core": 6, "severe": 0, "abstain": 0}
+    for doc in PANEL:
+        row = {
+            "opaque_id": doc,
+            "reported_state": jp.state_from_votes(votes),
+            "kept": [],
+            "consensus": {
+                "passes": 6,
+                "need": 4,
+                "parsed": 6,
+                "sources": [],
+                "votes": votes,
+                "fragile": False,
+            },
+        }
+        path.mkdir(parents=True, exist_ok=True)
+        (path / f"{doc}.json").write_text(json.dumps(row), encoding="utf-8")
+    meta: Dict[str, object] = {
+        "seed": 3375,
+        "run_head": "z" * 40,
+        "pipeline_model": "openai/gpt-5.6-luna",
+        "pipeline_family": "openai",
+        "judge_family": judge_family,
+        "judge_model": f"judge-{judge_family}",
+    }
+    if pipeline_run is not None:
+        meta["pipeline_run"] = pipeline_run
+    (path / jp.META_FILENAME).write_text(json.dumps(meta), encoding="utf-8")
+    return path
+
+
+def _stored_consensuses(cfg: run_cycle.Config, *, run_labels=None) -> None:
+    """Both roles' consensus directories under --results-root, as tag mode
+    resolves them. ``run_labels=None`` leaves every META without a
+    ``pipeline_run`` record (the c2-c21 shape the review measured); a dict
+    binds each role to one recorded run label."""
+    for judge in cfg.judges:
+        for role, tag in (
+            ("cur", cfg.tag),
+            ("prev", cfg.compare_with_tag),
+        ):
+            record = (
+                _pipeline_record(run_labels[role]) if run_labels is not None else None
+            )
+            _consensus_dir(
+                cfg.results_root
+                / f"judge_panel_3375_{tag}_{judge.name}_cons{cfg.passes}",
+                f"family-{judge.name}",
+                pipeline_run=record,
+            )
+
+
+def _real_condition2_runner():
+    """A runner that dispatches the REAL condition2 for the counter step —
+    in-process, over the step's own argv — and succeeds elsewhere. No exit
+    code is invented: what stops the cycle is what the command returns."""
+    ran: Dict[str, List[str]] = {"steps": []}
+
+    def runner(step: run_cycle.Step) -> int:
+        ran["steps"].append(step.name)
+        if step.name != "condition2":
+            return 0
+        return condition2.main(step.argv[2:])
+
+    return ran, runner
+
+
+class TestTheRealCommandStopsTheCycleOnAHeldReading:
+    """The R1199 review's measured defect: the real condition2 exits 0 on an
+    unproven reading (the hold is a diagnosis, not a refusal), so a wiring
+    that watches only the exit code finishes the cycle GREEN over an unread
+    counter. These witnesses drive the real command over consensus
+    directories of the stored c2-c21 shape — the stop must survive contact
+    with what ``main()`` actually returns."""
+
+    def _cycle(self, tmp_path, *, run_labels):
+        cfg = _config(tmp_path, compare_with_tag="c21")
+        _world(cfg)
+        _stored_consensuses(cfg, run_labels=run_labels)
+        ran, runner = _real_condition2_runner()
+        summary = run_cycle.run_cycle(
+            cfg,
+            runner=runner,
+            credit=lambda: dict(CREDIT),
+            head=lambda: dict(HEAD),
+        )
+        return cfg, ran, summary
+
+    def test_a_held_reading_stops_the_cycle_loud(self, tmp_path):
+        cfg, ran, summary = self._cycle(tmp_path, run_labels=None)
+        assert "condition2" in ran["steps"]
+        assert summary["exit_code"] == run_cycle.EXIT_STOPPED, (
+            "the real command over an unproven pair (no pipeline_run record, "
+            "the c2-c21 shape) must stop the cycle stopped-loud — got a "
+            f"green finish (rc={summary['condition2']['rc']})"
+        )
+        assert summary["condition2"]["rc"] != 0
+        assert "condition2 refused" in str(summary["stopped"])
+
+    def test_a_recorded_reading_under_the_same_wiring_finishes_green(self, tmp_path):
+        cfg, ran, summary = self._cycle(
+            tmp_path,
+            run_labels={"cur": "run-current", "prev": "run-previous"},
+        )
+        assert summary["exit_code"] == run_cycle.EXIT_OK
+        assert summary["stopped"] is None
+        assert summary["condition2"]["rc"] == 0

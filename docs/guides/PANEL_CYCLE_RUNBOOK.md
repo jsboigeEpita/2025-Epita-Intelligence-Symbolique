@@ -163,9 +163,22 @@ wrote down, not something the cycle can prove.
   condition-2 counter (#3543): both roles' consensus directories compared,
   the verdict per family, the counter chained from the previous cycle's
   `condition2.json` (`--new-series` declares the first cycle of a series).
-  The runner writes it after the consensus steps; a refusal (unproven
-  provenance, reused directories, a series break) stops the cycle
-  stopped-loud — never a green finish over an unread counter.
+  The runner writes it after the consensus steps, then two classes of exit
+  stop the cycle stopped-loud — never a green finish over an unread
+  counter:
+  - **rc 1 — a provenance refusal**: reused consensus directories, a series
+    break, a foreign counter, an unreadable META.
+  - **rc 3 — a held reading** (the runner passes `--refuse-holds`): the
+    provenance does not hold — a role's judge families not two distinct
+    recorded ones, an execution binding unproven or different, the judged
+    pipeline run unproven (no `pipeline_run` record — the c2-c21 shape) or
+    the same run in both roles. A hold is a diagnosis, not an error: run
+    standalone without the flag, the same reading exits 0.
+  One consequence, by construction: the first cycle compared with c21
+  (whose META carry no `pipeline_run` record) stops loud with rc 3 — that
+  stop is the expected signal that the pair cannot be read officially, not
+  a defect; the reading itself stays diagnostic in `condition2.json` and
+  the log's `hold:` lines.
 - An Anthropic judge's cost is in its pass tables (`judge_cost` per row); it
   is not on the OpenRouter key.
 

@@ -347,9 +347,11 @@ def condition2_step(cfg: Config, judges: Sequence[Judge]) -> Step:
     """#3543: the condition-2 counter as the cycle's own step — the two
     roles' consensus directories in (one ``--judge`` per family, tag mode
     resolves them under ``--results-root``), the reading written to the
-    cycle directory where the runbook files the cycle's artifacts. The
-    standalone command's provenance refusals exit non-zero: the cycle
-    treats that as a stop, never a green finish."""
+    cycle directory where the runbook files the cycle's artifacts. Two
+    classes of exit stop the cycle, never a green finish: the standalone
+    command's provenance refusals (rc 1), and — under ``--refuse-holds``,
+    the runner's mode — a held reading (rc 3: unproven, not independent,
+    or the same run in both roles)."""
     argv = [
         cfg.python,
         "scripts/panel/condition2.py",
@@ -375,6 +377,12 @@ def condition2_step(cfg: Config, judges: Sequence[Judge]) -> Step:
         ]
     else:
         argv += ["--new-series"]
+    # R1199 review: the real command exits 0 on a held reading (a hold is a
+    # diagnosis, not a refusal), so watching the rc alone would finish the
+    # cycle green over an unread counter. The runner asks the counter to
+    # refuse held readings: a non-empty hold list exits EXIT_HELD (3) and
+    # the cycle stops; the standalone diagnostic replay keeps rc 0.
+    argv += ["--refuse-holds"]
     return Step(name="condition2", argv=argv, log=cfg.logs_dir / "condition2.log")
 
 
