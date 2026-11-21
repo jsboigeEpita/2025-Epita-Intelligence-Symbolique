@@ -106,9 +106,16 @@ EXIT_HELD = 3
 def state_direction(state_a: str, state_b: str) -> str:
     """The direction of a change from ``state_a`` (previous) to ``state_b``.
 
-    A state outside ``STATE_ORDER`` (``BOTH_ABSTAIN``, ``UNPARSED``) takes the
-    change ``outside``: it counts neither toward nor away.
+    Equal states are ``unchanged`` first, wherever they sit: a document that
+    stayed ``BOTH_ABSTAIN`` across two consensus did not move at all, so it
+    never joins the ``outside`` ledger (#3543 19b — measured: doc_A stayed
+    ``BOTH_ABSTAIN`` through five consecutive Sonnet consensus and was
+    listed ``outside`` in every reading). Otherwise, a state outside
+    ``STATE_ORDER`` (``BOTH_ABSTAIN``, ``UNPARSED``) takes the change
+    ``outside``: it counts neither toward nor away.
     """
+    if state_a == state_b:
+        return UNCHANGED
     if state_a not in STATE_ORDER or state_b not in STATE_ORDER:
         return OUTSIDE
     delta = STATE_ORDER.index(state_b) - STATE_ORDER.index(state_a)
