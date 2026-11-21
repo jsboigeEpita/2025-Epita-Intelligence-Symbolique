@@ -218,6 +218,20 @@ def _theme_is_non_examine(theme: str) -> bool:
     return "examin" in t
 
 
+def _theme_is_unregistered_sample(theme: str) -> bool:
+    """True when ``theme`` is the « échantillon non enregistré » movement.
+
+    #3560 item 23c — the second reserved non-attack population. Its units
+    are NOT the evidence's non-examined declaration (that is ``Y``): the
+    sample was never recorded, so no unit can be called examined or not —
+    an item anchored there is outside the examined bucket entirely (``Z``).
+    Same vocabulary branch as :func:`_theme_is_non_examine` and
+    :func:`_theme_fallback_anchors`, so the three can never drift.
+    """
+    t = _norm(theme)
+    return "enregistr" in t or "échantillon" in t
+
+
 def _movement_anchors(movement: Any) -> List[str]:
     """Every name a treatment of ``movement`` can carry into the prose."""
     anchors: List[str] = []
@@ -393,6 +407,14 @@ class RenderContractReading:
     #: proven channels only, and never the check's reasons (the split says
     #: the structure, not the treatment).
     items_on_unexamined_units: int = 0
+    #: #3560 item 23c — the third bucket: items no examined movement carries
+    #: (no ``unit_id`` at all, a unit the « échantillon non enregistré »
+    #: movement holds, or a unit no movement holds). Before the carve-out
+    #: these sat silently inside the examined bucket by subtraction — the
+    #: split's X said "examined" about items no examined unit anchors. X now
+    #: counts them OUT; the motif states Z only when positive (an empty
+    #: bucket says nothing).
+    items_without_unit_anchor: int = 0
     stated_movement_drops: Optional[int] = None
     stated_item_drops: Optional[int] = None
 
@@ -406,7 +428,13 @@ class RenderContractReading:
 
     @property
     def items_on_examined_units(self) -> int:
-        return self.items_total - self.items_on_unexamined_units
+        # #3560 item 23c — X is what the examined movements POSITIVELY
+        # carry: the unanchored bucket (Z) no longer rides along.
+        return (
+            self.items_total
+            - self.items_on_unexamined_units
+            - self.items_without_unit_anchor
+        )
 
     @property
     def movements_count_missing_or_wrong(self) -> bool:
@@ -459,6 +487,11 @@ def read_render_contract(
     #: on one document found such items absent from the act).
     treated_unit_ids: Set[str] = set()
     unexamined_unit_ids: Set[str] = set()
+    #: #3560 item 23c — the two buckets the X count now needs: what an
+    #: examined movement (taxonomy or « soutiens ») positively carries, and
+    #: what the « échantillon non enregistré » movement holds.
+    examined_unit_ids: Set[str] = set()
+    unregistered_sample_unit_ids: Set[str] = set()
     for movement in movements:
         theme = str(getattr(movement, "theme", "") or "")
         if _theme_is_non_examine(theme):
@@ -468,6 +501,18 @@ def read_render_contract(
                 arg_id = str(getattr(argument, "arg_id", "") or "")
                 if arg_id:
                     unexamined_unit_ids.add(arg_id)
+        elif _theme_is_unregistered_sample(theme):
+            for argument in getattr(movement, "arguments", []) or []:
+                arg_id = str(getattr(argument, "arg_id", "") or "")
+                if arg_id:
+                    unregistered_sample_unit_ids.add(arg_id)
+        else:
+            # Taxonomy or « soutiens » — the examined movements whose units
+            # anchor an item in X (#3560 item 23c: X counts positively).
+            for argument in getattr(movement, "arguments", []) or []:
+                arg_id = str(getattr(argument, "arg_id", "") or "")
+                if arg_id:
+                    examined_unit_ids.add(arg_id)
         if _movement_treated(movement, prose_norm, prose_runs):
             treated += 1
             if not _theme_fallback_anchors(theme):
@@ -486,6 +531,12 @@ def read_render_contract(
     items_on_unexamined = sum(
         1 for item in items if str(item.get("unit_id") or "") in unexamined_unit_ids
     )
+    items_without_anchor = sum(
+        1
+        for item in items
+        if str(item.get("unit_id") or "") not in unexamined_unit_ids
+        and str(item.get("unit_id") or "") not in examined_unit_ids
+    )
     return RenderContractReading(
         movements_total=len(movements),
         movements_treated=treated,
@@ -494,6 +545,7 @@ def read_render_contract(
         items_treated=items_treated,
         items_measured=COVERAGE_ITEM_MEASURE_PROVEN,
         items_on_unexamined_units=items_on_unexamined,
+        items_without_unit_anchor=items_without_anchor,
         stated_movement_drops=_first_int(_STATED_MOVEMENT_DROPS_RE, narrative),
         stated_item_drops=_first_int(_STATED_ITEM_DROPS_RE, narrative),
     )
@@ -599,10 +651,20 @@ def render_contract_motif(reading: RenderContractReading) -> str:
         # #3560 item 23b — the split is deterministic (the evidence's own
         # structure) even though the channel's treatment is not measurable:
         # the motif states the répartition, still no count of the treated.
+        # #3560 item 23c — the third bucket, stated only when positive: an
+        # empty bucket says nothing, and the zero case keeps the exact
+        # two-number form item 23b froze (snapshot test).
+        without_anchor = (
+            f", {reading.items_without_unit_anchor} sans unité portée par un "
+            "mouvement examiné"
+            if reading.items_without_unit_anchor
+            else ""
+        )
         parts.append(
             f"{accord(reading.items_total, 'constat de couverture remis au rédacteur', 'constats de couverture remis au rédacteur')} : "
             f"{reading.items_on_examined_units} sur unités examinées, "
-            f"{reading.items_on_unexamined_units} sur unités non examinées, "
+            f"{reading.items_on_unexamined_units} sur unités non examinées"
+            f"{without_anchor}, "
             "mesure non éprouvée sur ce canal — aucun compte énoncé"
         )
     if not parts:
