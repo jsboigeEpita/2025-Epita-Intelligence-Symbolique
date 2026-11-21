@@ -2879,7 +2879,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self,
         formulas: List[str],
         consistent: bool,
-        inferences: List[str],
+        inferences: List[Any],
         confidence: float = 0.0,
         arg_id: Optional[str] = None,
         message: Optional[str] = None,
@@ -2892,6 +2892,11 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         consumers (restitution, measurement matrix) can confirm the entry is a
         real solver decision OR an explicit degradation, never a silent
         "trivially consistent sur vide" (#1019).
+
+        #3545: ``inferences`` carries one RECORD per conclusion query the FOL
+        phase answered (premises, query, verdict, unit ids) — dict items, not
+        the strings #1631 removed. The annotation is ``List[Any]`` so both
+        shapes stay honest; the empty list remains the no-query value.
         """
         fol_id = self._generate_id("fol", self.fol_analysis_results)
         entry = {

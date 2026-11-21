@@ -385,3 +385,30 @@ def read_tested_content(
         None,
         len(real),
     )
+
+
+def fol_inference_sentence(record: object) -> str:
+    """#3545 (ask 6) — one act sentence per ``inferences`` record.
+
+    The conclusion-query wiring (``_fol_entailment_inferences``) records the
+    tri-state verdict per marked unit; this is its one reader:
+
+    * ``not_entailed`` — "la conclusion ne s'ensuit pas des prémisses
+      énoncées";
+    * ``entailed`` — "la conclusion s'ensuit des prémisses énoncées";
+    * ``no_verdict`` (and anything that is not a record) — nothing: a query
+      the reasoner never answered supports no sentence (#2447), and a
+      sentence without an ``inferences`` record behind it is the act the
+      issue forbids.
+
+    The wording carries the ``s'ensuit`` motif the panel measurement grepped
+    for (0 of 10 documents) — the sentence is the render's answer to it.
+    """
+    if not isinstance(record, dict):
+        return ""
+    verdict = str(record.get("verdict") or "").strip()
+    if verdict == "entailed":
+        return "la conclusion s'ensuit des prémisses énoncées"
+    if verdict == "not_entailed":
+        return "la conclusion ne s'ensuit pas des prémisses énoncées"
+    return ""

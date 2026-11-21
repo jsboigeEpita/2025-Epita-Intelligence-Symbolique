@@ -698,6 +698,19 @@ REGISTRY = {
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
+        "text",
+        "expr",
+        1,
+    ): (
+        "split",
+        "nothing — the premise span and the conclusion span are both "
+        "consumed (premises -> the unit's KB, conclusion -> its query); the "
+        "slice separates the conclusion marker's two sides, it does not "
+        "bound a read (#3545)",
+        "the act sentence names the conclusion (#3545)",
+    ),
+    (
+        "argumentation_analysis/orchestration/invoke_callables.py",
         "arg_names",
         "expr",
         1,
