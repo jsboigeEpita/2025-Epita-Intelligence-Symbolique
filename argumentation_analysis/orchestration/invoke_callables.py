@@ -11313,10 +11313,18 @@ async def _invoke_propositional_logic(
                     _pl_read_spans: List[Tuple[int, int]] = []
                     valid_atoms: List[str] = []
                     _seen_atoms: Set[str] = set()
+                    # #3537 (R1199 decision) — per-window yield: the atoms
+                    # each call RETURNED, plan order, None for a call that
+                    # never answered. ``reading_calls`` says the whole text
+                    # was SENT; this says what each window brought BACK, so
+                    # the next panel cycle reads the extra windows' yield
+                    # from the state instead of estimating it.
+                    _pl_yields: List[Optional[int]] = [None] * len(_pl_readings)
                     for _pl_index, _pl_atoms in enumerate(_pl_atom_answers):
                         if _pl_atoms is None:
                             continue  # this window never answered: it read nothing
                         _pl_windows_ok += 1
+                        _pl_yields[_pl_index] = len(_pl_atoms)
                         _pl_read_spans.append(_pl_spans[_pl_index])
                         for _a in _pl_atoms:
                             if _a not in _seen_atoms:
@@ -11339,6 +11347,9 @@ async def _invoke_propositional_logic(
                     # or not (the coordinator asked for this figure in
                     # pl_metrics beside the character count).
                     pl_metrics["reading_calls"] = len(_pl_readings)
+                    # #3537 (R1199) — the per-window yield beside the call
+                    # count (see the loop above for the None semantics).
+                    pl_metrics["reading_yields"] = _pl_yields
                     pl_metrics["source_total"] = len(input_text)
                     if _pl_windows_ok > 1:
                         # The record says k windows and the union read —
@@ -12201,10 +12212,15 @@ async def _invoke_fol_reasoning(
                     sorts: Dict[str, List[str]] = {}
                     predicates: Dict[str, List[str]] = {}
                     constants_raw: Dict[str, Any] = {}
+                    # #3537 (R1199 decision) — per-window yield, FOL arm: the
+                    # PREDICATES each call returned (the R1199 table's unit),
+                    # plan order, None for a call that never answered.
+                    _fol_yields: List[Optional[int]] = [None] * len(_fol_readings)
                     for _fol_index, _sig in enumerate(_fol_sig_answers):
                         if _sig is None:
                             continue  # this window never answered: it read nothing
                         _fol_windows_ok += 1
+                        _fol_yields[_fol_index] = len(_sig.get("predicates") or {})
                         _fol_read_spans.append(_fol_spans[_fol_index])
                         # Merge in plan order, first sighting wins — the
                         # cross-window rule of #2850 lot 10.
@@ -12237,6 +12253,9 @@ async def _invoke_fol_reasoning(
                     fol_metrics["reading_window_chars"] = _fol_chars_read
                     # #3537 ask 1 — the reading calls ISSUED beside the k of N.
                     fol_metrics["reading_calls"] = len(_fol_readings)
+                    # #3537 (R1199) — the per-window yield beside the call
+                    # count (see the loop above for the None semantics).
+                    fol_metrics["reading_yields"] = _fol_yields
                     fol_metrics["source_total"] = len(_doc_text_fol)
                     if _fol_windows_ok > 1:
                         _fol_recorder = getattr(
