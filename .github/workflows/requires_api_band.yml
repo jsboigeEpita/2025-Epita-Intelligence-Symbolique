@@ -57,6 +57,15 @@ name: requires_api band (scheduled real-LLM lane)
 # tests/unit/test_band_argv_matches_gate_1867.py holds both equalities, so
 # the gate's argv can no longer move alone.
 #
+# Route (#3653, user decision 21/11): the live job runs on the Anthropic key,
+# model claude-haiku-5-5. ANTHROPIC_CHAT_MODEL_ID + ANTHROPIC_API_KEY select
+# the named route of resolve_chat_endpoint (#3096 item 6), which every
+# scheduled test reaches through _build_gate_llm_service. The OpenAI key of
+# this repo answers 401 since the week of 14-21/11. Tests of the full band
+# that build their own OpenAI client still read OPENAI_API_KEY. Measured on
+# ai-01 before the switch (21/11): the 10 scheduled tests on this route,
+# 10 passed, 13 calls to api.anthropic.com, 30 s.
+#
 # Cost: 10 tests x ~$0.01-0.05 => roughly $0.10-0.50 per scheduled run.
 # Full-band dispatch is an on-demand operator action, never scheduled, so it
 # cannot silently balloon. The replay job spends no LLM credit (dummy key,
@@ -156,6 +165,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 180  # light band ~1h expected; full-band dispatch gets the headroom
     env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      ANTHROPIC_CHAT_MODEL_ID: claude-haiku-5-5
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       TEXT_CONFIG_PASSPHRASE: ${{ secrets.TEXT_CONFIG_PASSPHRASE }}
     steps:
@@ -176,12 +187,14 @@ jobs:
         if: always()
         shell: pwsh
         run: |
-          if ("${{ secrets.OPENAI_API_KEY }}" -ne "") {
+          # #3653: the scheduled band routes on the Anthropic key, so that is
+          # the key this check reads.
+          if ("${{ secrets.ANTHROPIC_API_KEY }}" -ne "") {
             echo "API_KEYS_CONFIGURED=true" >> $env:GITHUB_ENV
-            Write-Host "✅ API keys are configured"
+            Write-Host "✅ API keys are configured (route: Anthropic, $env:ANTHROPIC_CHAT_MODEL_ID)"
           } else {
             echo "API_KEYS_CONFIGURED=false" >> $env:GITHUB_ENV
-            Write-Host "⚠️ OPENAI_API_KEY not configured - lane cannot run (it exists precisely to run WITH keys)"
+            Write-Host "⚠️ ANTHROPIC_API_KEY not configured - lane cannot run (it exists precisely to run WITH keys)"
           }
 
       # #1803 step 5 (user decision 2026-09-28): the env is installed from
@@ -300,7 +313,7 @@ jobs:
               exit 1
             } else {
               Write-Host "❌ FAIL-LOUD: this lane ran WITHOUT API keys. There is no honest-skip story here:"
-              Write-Host "   the OPENAI_API_KEY secret is missing/blocked for scheduled runs on this repo."
+              Write-Host "   the ANTHROPIC_API_KEY secret is missing/blocked for scheduled runs on this repo."
               exit 1
             }
           }
