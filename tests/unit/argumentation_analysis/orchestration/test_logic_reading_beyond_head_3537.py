@@ -21,6 +21,10 @@ Witnesses (all free: no key, no network, no corpus — loopback fake):
 - the FOL signature prompts likewise;
 - the reading record and ``pl_metrics``/``fol_metrics`` say how much was
   read: k calls and the union of characters, next to k of N;
+- **per-window yield** (R1199 decision): ``reading_yields`` carries, plan
+  order, the atoms (PL) / predicates (FOL) each call RETURNED — ``None``
+  for a call that never answered — so a panel cycle reads what the extra
+  windows bring from the state, not from an estimate;
 - a 3,500-character document still costs ONE call with today's entry
   (control — green before and after);
 - mutation: the tiling disabled (``chunked_reading_offsets`` pinned to the
@@ -31,12 +35,15 @@ from __future__ import annotations
 
 import json
 from types import SimpleNamespace
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import pytest
 
 import argumentation_analysis.orchestration.invoke_callables as ic
-from argumentation_analysis.core.reading_window import WHOLE_TEXT_CALL_CAPACITY
+from argumentation_analysis.core.reading_window import (
+    WHOLE_TEXT_CALL_CAPACITY,
+    chunked_reading_offsets,
+)
 from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 
 # ---------------------------------------------------------------------------
@@ -63,15 +70,30 @@ _FOL_SIG_PROMPT = "first-order logic signature"
 
 _PROMPTS: List[str] = []
 
+# R1199 per-window yield — the fake answers a count DERIVED from the window
+# it was shown, so the witness can tell one window's slot from another's.
+_YIELD_BY_MARKER = {_MARK_1: 1, _MARK_2: 2, _MARK_3: 3}
+# Set by the failure-semantics test: a prompt carrying this marker makes the
+# call FAIL, as a stalled or errored window does.
+_RAISE_MARKER: Optional[str] = None
+
+
+def _yield_of(text: str) -> int:
+    return sum(count for mark, count in _YIELD_BY_MARKER.items() if mark in text)
+
 
 def _reply_for(prompt: str) -> Any:
     if _PL_ATOM_PROMPT in prompt:
-        content = json.dumps({"propositions": ["fait_general"]})
+        count = _yield_of(prompt)
+        content = json.dumps(
+            {"propositions": [f"atome_fenetre_{i}" for i in range(count)]}
+        )
     elif _FOL_SIG_PROMPT in prompt:
+        count = _yield_of(prompt)
         content = json.dumps(
             {
                 "sorts": {"Chose": ["alpha", "beta"]},
-                "predicates": {"Pred": ["Chose"]},
+                "predicates": {f"Pred{i}": ["Chose"] for i in range(1, count + 1)},
                 "constants": {"alpha": "premier", "beta": "second"},
             }
         )
@@ -86,6 +108,8 @@ async def _fake_llm_call(client: Any, **kwargs: Any) -> Any:
     # The last message is the user turn on both doors (pass-1 sends a single
     # user message; NL-to-logic sends system then user).
     prompt = kwargs["messages"][-1]["content"]
+    if _RAISE_MARKER is not None and _RAISE_MARKER in prompt:
+        raise RuntimeError("loopback window failure (witness-controlled)")
     _PROMPTS.append(prompt)
     return _reply_for(prompt)
 
@@ -105,6 +129,8 @@ async def _fake_nl_translation(client: Any, **kwargs: Any) -> Any:
 
 
 def _wire_loopback(monkeypatch: pytest.MonkeyPatch) -> None:
+    global _RAISE_MARKER
+    _RAISE_MARKER = None
     import argumentation_analysis.services.nl_to_logic as nl2l
 
     monkeypatch.setattr(ic, "_get_openai_client", lambda: (object(), "loopback-model"))
@@ -207,6 +233,106 @@ class TestFolReadsTheWholeDocument:
         entry = state.reading_window_status.get("fol_reasoning", {})
         assert entry.get("windows") == expected_k
         assert entry.get("chars_read") == len(_TEXT)
+
+
+class TestPerWindowYield:
+    """R1199 decision on #3537 — ``reading_yields`` beside ``reading_calls``.
+
+    ``reading_calls`` says the whole text was SENT; the yields say what each
+    window brought BACK, in plan order, one slot per issued call — ``None``
+    for a call that never answered (a failed window read nothing; counting
+    it as 0 would claim it found no atom when it never looked). RED on main:
+    the field does not exist there, so the yields cannot be read at all.
+    """
+
+    def _expected_yields(
+        self, text: str, none_when: Optional[str] = None
+    ) -> List[Optional[int]]:
+        """The plan's spans mapped to the count the fake derives from each
+        window's own text — the attribution the field must reproduce."""
+        spans = [
+            (o, min(o + WHOLE_TEXT_CALL_CAPACITY, len(text)))
+            for o in chunked_reading_offsets(len(text), WHOLE_TEXT_CALL_CAPACITY)
+        ]
+        out: List[Optional[int]] = []
+        for _lo, _hi in spans:
+            window = text[_lo:_hi]
+            if none_when is not None and none_when in window:
+                out.append(None)
+            else:
+                out.append(_yield_of(window))
+        return out
+
+    async def test_pl_metrics_carry_the_yield_of_each_call(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _PROMPTS.clear()
+        _wire_loopback(monkeypatch)
+        state = _state(_TEXT)
+
+        out = await ic._invoke_propositional_logic(_TEXT, {"_state_object": state})
+
+        metrics = out.get("pl_metrics", {})
+        expected = self._expected_yields(_TEXT)
+        assert metrics.get("reading_yields") == expected, (
+            f"pl_metrics reading_yields is {metrics.get('reading_yields')!r}, "
+            f"expected {expected!r} — a window's slot must hold that window's "
+            f"atoms, not another's (#3537 R1199)"
+        )
+        assert len(metrics.get("reading_yields") or []) == metrics.get("reading_calls")
+
+    async def test_a_window_that_never_answers_yields_none(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        global _RAISE_MARKER
+        _PROMPTS.clear()
+        _wire_loopback(monkeypatch)
+        _RAISE_MARKER = _MARK_2
+        state = _state(_TEXT)
+
+        out = await ic._invoke_propositional_logic(_TEXT, {"_state_object": state})
+
+        metrics = out.get("pl_metrics", {})
+        yields = metrics.get("reading_yields")
+        expected = self._expected_yields(_TEXT, none_when=_MARK_2)
+        assert yields == expected, (
+            f"reading_yields is {yields!r}, expected {expected!r} — a failed "
+            f"call must read as None, never as 0 (#3537 R1199)"
+        )
+        assert None in yields
+
+    async def test_fol_metrics_carry_the_yield_of_each_call(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _PROMPTS.clear()
+        _wire_loopback(monkeypatch)
+        state = _state(_TEXT)
+
+        out = await ic._invoke_fol_reasoning(_TEXT, {"_state_object": state})
+
+        metrics = out.get("fol_metrics", {})
+        expected = self._expected_yields(_TEXT)
+        assert metrics.get("reading_yields") == expected, (
+            f"fol_metrics reading_yields is {metrics.get('reading_yields')!r}, "
+            f"expected {expected!r} — the FOL arm must carry its predicates' "
+            f"per-window counts (#3537 R1199)"
+        )
+
+    async def test_a_short_document_yields_a_one_slot_list(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Control (ask 3's shape): one call, one slot — the yields list
+        never claims more windows than the plan issued."""
+        _PROMPTS.clear()
+        _wire_loopback(monkeypatch)
+        state = _state(_SHORT_TEXT)
+
+        out = await ic._invoke_propositional_logic(
+            _SHORT_TEXT, {"_state_object": state}
+        )
+
+        metrics = out.get("pl_metrics", {})
+        assert metrics.get("reading_yields") == [1]
 
 
 class TestShortDocumentUnchanged:

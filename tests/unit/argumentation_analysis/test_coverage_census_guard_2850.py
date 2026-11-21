@@ -1172,8 +1172,10 @@ REGISTRY = {
         "cap on k; the window itself is NOT raised)",
         "recorded via pl_metrics reading_window_chars/source_total (the "
         "union of the spans that answered) and reading_calls, plus the "
-        "propositional_logic entry's windows/chars_read when k>1 — #2850 "
-        "lot 4, whole-text read #3537",
+        "propositional_logic entry's windows/chars_read when k>1, plus "
+        "reading_yields (the atoms each call returned, None for a call "
+        "that never answered) — #2850 lot 4, whole-text read #3537, "
+        "per-window yield R1199",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
@@ -1189,8 +1191,10 @@ REGISTRY = {
         "6,016-char chunks (#3537 — same plan as the PL arm)",
         "recorded via fol_metrics reading_window_chars/source_total (the "
         "union of the spans that answered) and reading_calls, plus the "
-        "fol_reasoning entry's windows/chars_read when k>1 — #2850 lot 4, "
-        "whole-text read #3537",
+        "fol_reasoning entry's windows/chars_read when k>1, plus "
+        "reading_yields (the predicates each call returned, None for a "
+        "call that never answered) — #2850 lot 4, whole-text read #3537, "
+        "per-window yield R1199",
     ),
     (
         "argumentation_analysis/orchestration/invoke_callables.py",
