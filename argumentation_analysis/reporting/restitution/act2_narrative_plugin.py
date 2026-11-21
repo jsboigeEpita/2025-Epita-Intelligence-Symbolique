@@ -1376,6 +1376,55 @@ def _indeterminate_entry(entry: Any) -> Optional[Dict[str, Any]]:
     return declared if isinstance(declared, dict) else None
 
 
+class _MappingStateView:
+    """Attribute read-access over the mapping form of an archived state.
+
+    #3560 item 25b — ``json.loads`` of an archived state yields a dict, and
+    the builder reads by attribute; before this view the dict was silently
+    read as an empty state (0 movements, no error — the coordinator's c12
+    probe). Missing keys raise ``AttributeError`` so every defensive
+    ``getattr(state, …, default)`` in the builder keeps its default.
+    """
+
+    __slots__ = ("_data",)
+
+    def __init__(self, data: Dict[str, Any]) -> None:
+        object.__setattr__(self, "_data", data)
+
+    def __getattr__(self, name: str) -> Any:
+        data = object.__getattribute__(self, "_data")
+        try:
+            return data[name]
+        except KeyError:
+            raise AttributeError(name) from None
+
+
+def _coerce_state_input(state: Any) -> Any:
+    """Accept the two forms the replay tooling produces, refuse the rest.
+
+    A mapping is wrapped for attribute access (item 25b). An arbitrary
+    object passes through untouched — the builder already defaults every
+    missing field, and a partial state (a speaker-only stub, a minimal
+    replay) is a legitimate input, so the coercion must not re-decide what
+    a "complete" state is (measured: an allow-list version broke 15 caller
+    tests stubbing only the non-analysis dimensions). What raises
+    ``TypeError`` is what can only be a mistake: the JSON scalars and
+    sequences (``None``, ``str``, numbers, ``list``…) — inputs whose
+    silent reading as an empty state is exactly the bug this guards.
+    """
+    if isinstance(state, dict):
+        return _MappingStateView(state)
+    if state is None or isinstance(
+        state, (str, bytes, bool, int, float, list, tuple, set, frozenset)
+    ):
+        raise TypeError(
+            "build_act2_evidence expects an analysis state (attribute form) "
+            "or the mapping form of one (a dict decoded from an archived "
+            f"state); got {type(state).__name__}"
+        )
+    return state
+
+
 def build_act2_evidence(state: Any) -> Act2Evidence:
     """Build the deterministic Acte II evidence bundle from a shared state.
 
@@ -1387,7 +1436,12 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
 
     No LLM, no JVM — pure state extraction. Privacy: corpus-derived fields are
     truncated; IDs stay opaque.
+
+    #3560 item 25b — ``state`` may be the mapping form of an archived state
+    (a dict): it is read, not refused; an input that is neither a state nor
+    a mapping raises ``TypeError``.
     """
+    state = _coerce_state_input(state)
     args = getattr(state, "identified_arguments", {}) or {}
     fallacies = getattr(state, "identified_fallacies", {}) or {}
     quality = getattr(state, "argument_quality_scores", {}) or {}
