@@ -365,8 +365,21 @@ _TEXT_STRIP_LISTS = {
 # (the axis readers take the verdict and the counts). Arity of
 # ``external_checks`` survives with the leaf gone.
 # field -> {sub_key: {nested leaf}}
+# #3545 — ``inferences`` joins ``external_checks`` on the FOL container: its
+# records' ``message`` payloads carry the same solver/JVM diagnostics (parser
+# echoes, classpath text) the re-check leaf strips, and they reach the same
+# export surface (review 7062184686). Census: sole producer
+# ``invoke_callables._fol_entailment_inferences`` (via ``_write_fol_to_state``);
+# readers — ``reading_license._decided_inference_records`` (verdict only),
+# ``act3_conclusion_plugin._fol_entailment_finding`` (verdict + unit ids) and
+# ``formal_derivation.fol_inference_sentence`` (verdict only) — none reads
+# ``message``. Drop the leaf, keep the record: the verdict, the query and the
+# unit ids survive with the list arity.
 _NESTED_TEXT_STRIP_SUBKEYS: dict[str, dict[str, set[str]]] = {
-    "fol_analysis_results": {"external_checks": {"message"}},
+    "fol_analysis_results": {
+        "external_checks": {"message"},
+        "inferences": {"message"},
+    },
     "modal_analysis_results": {"external_checks": {"message"}},
 }
 

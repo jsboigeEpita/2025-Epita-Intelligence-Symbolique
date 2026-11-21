@@ -743,6 +743,29 @@ RÉPONDS EN FORMAT JSON :
         }
 
     @staticmethod
+    def rename_fol_query(query: str, meta: Dict[str, Any]) -> str:
+        """Read a QUERY in the signature's declared names (#2468's query side).
+
+        #3545: the conclusion query is minted OUTSIDE ``extract_fol_metadata``
+        — a query added to the formulas would enter the KB and make its own
+        entailment trivial — so it needs the renaming the extracted formulas
+        already got. This lives HERE, next to the maps' producer, per #2468's
+        doctrine: the renaming knowledge is the renamer's, no call site
+        re-implements it. Identity when nothing was renamed (the common case).
+        """
+        import re as _re
+
+        for surface, declared in {
+            **meta.get("predicate_map", {}),
+            **meta.get("constant_map", {}),
+        }.items():
+            surface = str(surface)
+            declared = str(declared)
+            if surface and surface != declared:
+                query = _re.sub(rf"\b{_re.escape(surface)}\b", declared, query)
+        return query
+
+    @staticmethod
     def _rename_to_signature(
         formulas: List[str],
         predicate_map: Dict[str, str],
