@@ -21,7 +21,10 @@ its passages are made up):
 - the check's FAIL reasons gain no split either;
 - ``read_render_contract`` derives the split from the evidence itself: an
   item on a unit the « non examinés » movement carries counts Y; an item
-  on a taxonomy movement's unit or with no unit at all counts X.
+  on a taxonomy or « soutiens » movement's unit counts X (positively,
+  #3560 item 23c); an item with no ``unit_id``, on the « échantillon non
+  enregistré » movement's unit, or on a unit no movement carries counts Z
+  — stated in the motif only when positive.
 """
 
 from __future__ import annotations
@@ -169,7 +172,10 @@ class TestTheReadingDerivesTheSplit:
         )
         assert reading.items_total == 3
         assert reading.items_on_unexamined_units == 1
-        assert reading.items_on_examined_units == 2
+        # #3560 item 23c — the no-unit item left the examined bucket for the
+        # third one, so X is arg_1's item alone (was 2 before the carve-out).
+        assert reading.items_on_examined_units == 1
+        assert reading.items_without_unit_anchor == 1
 
     def test_a_state_without_the_sample_records_no_split_either_way(self):
         """When the pass did not record its sample, no unit can be called
@@ -182,6 +188,73 @@ class TestTheReadingDerivesTheSplit:
             state,
         )
         assert reading.items_on_unexamined_units == 0
+
+
+class TestThirdBucket:
+    """#3560 item 23c — the items no examined movement anchors.
+
+    Before the carve-out these sat inside X by subtraction: the split said
+    « sur unités examinées » about items carrying no unit at all (measured
+    1 of 217 on the recorded panel) and about units the « échantillon non
+    enregistré » movement holds. X now counts positively; Z is stated in
+    the motif only when positive.
+    """
+
+    def test_the_third_bucket_sums_with_the_other_two(self):
+        reading = _reading(items_without_unit_anchor=2)
+        assert (
+            reading.items_on_examined_units
+            + reading.items_on_unexamined_units
+            + reading.items_without_unit_anchor
+            == reading.items_total
+        )
+
+    def test_the_motif_states_the_third_bucket_only_when_positive(self):
+        with_third = render_contract_motif(_reading(items_without_unit_anchor=1))
+        assert "1 sans unité portée par un mouvement examiné" in with_third
+        without = render_contract_motif(_reading(items_without_unit_anchor=0))
+        assert "sans unité portée" not in without
+
+    def test_a_no_unit_item_is_read_as_third_bucket(self):
+        """The _state() items: arg_1 (taxonomy movement, X), arg_5 (« non
+        examinés », Y), and one carrying no ``unit_id`` — Z, RED on the
+        pre-23c head where the subtraction put it in X."""
+        reading = read_render_contract(
+            "Un cas unique est monté en règle pour justifier la mesure.",
+            build_act2_evidence(_state()),
+            _state(),
+        )
+        assert reading.items_without_unit_anchor == 1
+        motif = render_contract_motif(reading)
+        assert "sans unité portée par un mouvement examiné" in motif
+
+    def test_an_unregistered_sample_unit_is_third_bucket_not_examined(self):
+        """Without the recorded sample, arg_5's movement is « échantillon
+        non enregistré » — its item is Z (and the no-unit item too), never
+        X: the split no longer calls an unregistered sample examined."""
+        state = _state()
+        state.analysis_coverage = {}
+        reading = read_render_contract(
+            "Un cas unique est monté en règle pour justifier la mesure.",
+            build_act2_evidence(state),
+            state,
+        )
+        assert reading.items_on_unexamined_units == 0
+        assert reading.items_without_unit_anchor == 2  # arg_5's item + the no-unit one
+        assert reading.items_on_examined_units == 1
+
+    def test_the_reader_gains_no_third_bucket(self):
+        """Anti-pendulum, 23b's contract extended: the reader's count line
+        and the check's reasons never name the split — any bucket's."""
+        line = render_count_line(_reading(items_without_unit_anchor=1))
+        assert "sans unité portée" not in line
+        verdict = check_render_contract(
+            _reading(
+                movements_total=3, movements_treated=1, items_without_unit_anchor=1
+            )
+        )
+        for reason in verdict.reasons:
+            assert "sans unité portée" not in reason
 
 
 if __name__ == "__main__":

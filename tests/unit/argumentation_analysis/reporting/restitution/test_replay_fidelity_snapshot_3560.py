@@ -182,6 +182,13 @@ class TestTheContractReadingSurvivesTheSnapshot:
             replay_reading.items_on_unexamined_units
             == live_reading.items_on_unexamined_units
         )
+        # #3560 item 23c — the third bucket replays identically too: an
+        # unfaithful dump losing the coverage record shifts Z exactly as it
+        # shifts Y (the witness class below).
+        assert (
+            replay_reading.items_without_unit_anchor
+            == live_reading.items_without_unit_anchor
+        )
 
 
 class TestTheWitnessCanSeeAnUnfaithfulReplay:
