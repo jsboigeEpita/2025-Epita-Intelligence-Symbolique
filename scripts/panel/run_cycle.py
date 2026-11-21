@@ -510,6 +510,32 @@ def harvest(cfg: Config, panel: Sequence[str], started: float) -> Dict[str, List
     return report
 
 
+def length_stop_phases(states_dir: Path, docs: Sequence[str]) -> List[str]:
+    """Phase names whose harvested states count replies cut at the token cap
+    (#3658 ask 2) — ``length_stops > 0`` in a state's ``llm_usage``.
+
+    Reads the states this cycle just harvested (the copies, not the kb
+    originals), unions the names across documents, sorts them. Only names:
+    the counts stay in the state, where the reader who needs them looks. A
+    missing or unreadable state is skipped — the harvest already named
+    missing documents as its own stop.
+    """
+    phases = set()
+    for doc in docs:
+        try:
+            usage = json.loads(
+                (states_dir / f"state_full_{doc}.json").read_text(encoding="utf-8")
+            ).get("llm_usage")
+        except (OSError, ValueError, AttributeError):
+            continue
+        if not isinstance(usage, dict):
+            continue
+        for phase, bucket in usage.items():
+            if isinstance(bucket, dict) and bucket.get("length_stops"):
+                phases.add(str(phase))
+    return sorted(phases)
+
+
 def recorded_pipeline(cfg: Config) -> Optional[Dict[str, Any]]:
     """What the pipeline stage recorded for this cycle — the commit its states
     were produced at, its exit code, the harvest — or ``None`` for a cycle
@@ -799,6 +825,9 @@ def run_cycle(
             **record,
             missing_documents=report["missing"],
             stale_documents=report["stale"],
+            # #3658 ask 2 — a PASS with replies cut at the token cap must be
+            # visible without opening the state.
+            length_stop_phases=length_stop_phases(cfg.states_dir, report["copied"]),
         )
         summary["credit_after_pipeline"] = credit()
         status.event(

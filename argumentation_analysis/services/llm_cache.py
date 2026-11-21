@@ -226,6 +226,7 @@ class UsageStats:
         cost: Optional[float],
         usage_reported: bool = True,
         model: Optional[str] = None,
+        finish_reason: Optional[str] = None,
     ) -> None:
         """Tally one live round-trip.
 
@@ -234,8 +235,17 @@ class UsageStats:
         (its tokens are unknown, not zero — never merge "0 tokens" with
         "not reported", #2853 review item 3) and tallied apart so the runner
         can print "not reported for k of n calls".
+
+        ``finish_reason`` (#3658 ask 1): ``"length"`` counts the reply as cut
+        at the token cap (``length_stops``); ``None`` means the response
+        reported no finish reason and is counted apart
+        (``calls_without_finish_reason``) — never merged into 0, the same
+        rule ``calls_without_usage`` applies (#2853). Any other value is a
+        whole reply: 0 stops, a measurement. A cut reply is model output: it
+        is recorded, never raised (value-provenance rule).
         """
         phase = _current_phase.get() or UNATTRIBUTED_PHASE
+        finish = _finish_str(finish_reason)
         with self._lock:
             bucket = self._phases.setdefault(
                 phase,
@@ -244,6 +254,8 @@ class UsageStats:
                     "completion_tokens": 0,
                     "calls": 0,
                     "calls_without_usage": 0,
+                    "length_stops": 0,
+                    "calls_without_finish_reason": 0,
                 },
             )
             bucket["prompt_tokens"] += prompt_tokens
@@ -251,6 +263,10 @@ class UsageStats:
             bucket["calls"] += 1
             if not usage_reported:
                 bucket["calls_without_usage"] += 1
+            if finish is None:
+                bucket["calls_without_finish_reason"] += 1
+            elif finish == "length":
+                bucket["length_stops"] += 1
             if cost is not None:
                 self._cost_usd = (self._cost_usd or 0.0) + cost
             # #3095 — the run's own price. A call whose usage was not reported
@@ -311,6 +327,16 @@ def _int_or_zero(value: Any) -> int:
         return 0
 
 
+def _finish_str(value: Any) -> Optional[str]:
+    """A finish reason as a plain string — SK's is a str-enum, the raw SDK's
+    already a string (#3658 ask 1). ``None``/empty stays ``None``: "reported
+    no finish reason" and "reported 0 stops" are different facts."""
+    if value is None:
+        return None
+    raw = getattr(value, "value", value)
+    return str(raw) if raw else None
+
+
 def _usage_fields(usage: Any) -> "tuple[int, int, Optional[float]]":
     """(prompt, completion, cost) from a pydantic or dict usage object."""
     if isinstance(usage, dict):
@@ -339,9 +365,19 @@ def _account_sk_usage(response: Any, model: Optional[str] = None) -> None:
     #3095 — ``model`` is the id the call resolved to (settings first, the
     inner service's default second): the accounting point prices the call
     from it.
+
+    #3658 ask 1 — the stop reason rides the same round-trip: SK's
+    ``ChatMessageContent.finish_reason`` (a str-enum comparing equal to
+    ``"length"``), last non-None across the messages — on a streamed reply
+    the verdict arrives with the final chunk. A response reporting none is
+    counted apart by ``record``, never as 0 stops.
     """
     try:
+        finish: Optional[str] = None
         for msg in response if isinstance(response, list) else [response]:
+            raw_finish = getattr(msg, "finish_reason", None)
+            if raw_finish is not None:
+                finish = _finish_str(raw_finish)
             metadata = getattr(msg, "metadata", None) or {}
             usage = None
             if hasattr(metadata, "get"):
@@ -351,9 +387,13 @@ def _account_sk_usage(response: Any, model: Optional[str] = None) -> None:
             if usage is None:
                 continue
             prompt, completion, _cost = _usage_fields(usage)
-            _usage_stats.record(prompt, completion, None, model=model)
+            _usage_stats.record(
+                prompt, completion, None, model=model, finish_reason=finish
+            )
             return  # one usage per round-trip, carried by the first message
-        _usage_stats.record(0, 0, None, usage_reported=False, model=model)
+        _usage_stats.record(
+            0, 0, None, usage_reported=False, model=model, finish_reason=finish
+        )
     except Exception as exc:  # noqa: BLE001 — instrument must not break the call
         logger.warning("Usage accounting (SK path) skipped: %r", exc)
 
@@ -362,14 +402,25 @@ def _account_raw_usage(response: Any, model: Optional[str] = None) -> None:
     """Account the live usage of a raw chat.completions response (#2849).
 
     #3095 — ``model`` is the ``model=`` the direct call sent; the reported
-    ``usage.cost`` is kept apart from the price the table computes."""
+    ``usage.cost`` is kept apart from the price the table computes.
+
+    #3658 ask 1 — the stop reason of the first choice rides the same
+    round-trip; a response without one (no choices, or ``finish_reason:
+    None``) is counted apart by ``record``, never as 0 stops.
+    """
     try:
+        finish: Optional[str] = None
+        choices = getattr(response, "choices", None)
+        if choices:
+            finish = _finish_str(getattr(choices[0], "finish_reason", None))
         usage = getattr(response, "usage", None)
         if usage is None:
-            _usage_stats.record(0, 0, None, usage_reported=False, model=model)
+            _usage_stats.record(
+                0, 0, None, usage_reported=False, model=model, finish_reason=finish
+            )
             return
         prompt, completion, cost = _usage_fields(usage)
-        _usage_stats.record(prompt, completion, cost, model=model)
+        _usage_stats.record(prompt, completion, cost, model=model, finish_reason=finish)
     except Exception as exc:  # noqa: BLE001 — instrument must not break the call
         logger.warning("Usage accounting (raw path) skipped: %r", exc)
 
@@ -610,6 +661,98 @@ def _apply_thinking_to_raw_kwargs(
     return out
 
 
+# ──── OpenAI-compatible thinking switch (#3658 ask 3) ────
+#
+# Measured (issue #3658, R1202, doc_J on the claudish/MiniMax route): a reply
+# cut at the cap reads as a whole reply — ``finish_reason: "length"`` means
+# the model spent ``max_tokens`` reasoning before it finished writing. The
+# control the route exposes is ``extra_body={"enable_thinking": false}``
+# (a two-call probe answered in both modes). ``LLM_ANTHROPIC_THINKING`` above
+# is Anthropic-route-only by design; this knob is its OpenAI-compatible twin:
+# ONE run-wide variable riding both funnels, with NO route gate — the value
+# is never inferred from the model name, an explicit caller ``extra_body``
+# value always wins, an unknown value fails loud at the first call, and the
+# payload rides the cassette keys automatically (``extra_body`` already
+# serializes into both key builders, R1227 parity). The knob COMMANDS, it
+# does not decide: whether a pass should run with thinking off is the
+# coordinator's call, not a default this file picks (anti-pendulum).
+
+_ENABLE_THINKING_ENV = "LLM_ENABLE_THINKING"
+_ENABLE_THINKING_VALUES = ("true", "false")
+_enable_thinking_unannounced = True
+_enable_thinking_barren_types: List[str] = []
+
+
+def enable_thinking_override() -> Optional[bool]:
+    """The run-wide ``LLM_ENABLE_THINKING`` knob, or ``None`` when unset.
+
+    Fails loud on a value outside the probed dictionary — a typo must not
+    run a pass with the route's default thinking. Applies to every
+    OpenAI-compatible call, whatever the model id: the knob commands, it
+    never infers from the model name (#3658 ask 3)."""
+    global _enable_thinking_unannounced
+    raw = (os.environ.get(_ENABLE_THINKING_ENV) or "").strip().lower()
+    if not raw:
+        return None
+    if raw not in _ENABLE_THINKING_VALUES:
+        raise ValueError(
+            f"{_ENABLE_THINKING_ENV}={raw!r} — expected one of "
+            f"{'/'.join(_ENABLE_THINKING_VALUES)} (#3658 ask 3). Fix the value "
+            "or unset the variable; a typo must not run a pass at the route "
+            "default."
+        )
+    value = raw == "true"
+    if _enable_thinking_unannounced:
+        _enable_thinking_unannounced = False
+        logger.info("#3658: OpenAI-compatible thinking switch set explicitly: %s", raw)
+    return value
+
+
+def _apply_enable_thinking_to_settings(settings: Any, enabled: Optional[bool]) -> None:
+    """Carry the switch onto an SK settings object — ``extra_body`` is a
+    declared field on ``OpenAIChatPromptExecutionSettings`` (measured on this
+    SK version). Never overrides an explicit caller choice; a settings class
+    that cannot carry it is named once."""
+    if enabled is None or settings is None:
+        return
+    extra = getattr(settings, "extra_body", None)
+    if isinstance(extra, dict) and extra.get("enable_thinking") is not None:
+        return
+    type_name = type(settings).__name__
+    try:
+        settings.extra_body = {
+            **(extra if isinstance(extra, dict) else {}),
+            "enable_thinking": enabled,
+        }
+    except (ValueError, AttributeError) as exc:
+        if type_name not in _enable_thinking_barren_types:
+            _enable_thinking_barren_types.append(type_name)
+            logger.warning(
+                "#3658 ask 3: settings class %s cannot carry enable_thinking "
+                "(%s) — its calls run with the route's default thinking",
+                type_name,
+                exc,
+            )
+
+
+def _apply_enable_thinking_to_raw_kwargs(
+    kwargs: Dict[str, Any], enabled: Optional[bool]
+) -> Dict[str, Any]:
+    """Carry the switch into a raw ``chat.completions.create(**kwargs)`` call.
+
+    ``extra_body`` rides the JSON body on every SDK version and is part of
+    the cassette key (R1227), so a cassette recorded at one switch position
+    never answers a call at the other; a caller that already chose keeps it."""
+    if enabled is None:
+        return kwargs
+    extra = dict(kwargs.get("extra_body") or {})
+    if extra.get("enable_thinking") is None:
+        extra["enable_thinking"] = enabled
+    out = dict(kwargs)
+    out["extra_body"] = extra
+    return out
+
+
 def get_cache_mode() -> str:
     """Read LLM_CACHE_MODE env var. Defaults to 'off'."""
     mode = os.getenv("LLM_CACHE_MODE", OFF).lower()
@@ -845,6 +988,7 @@ class CachedChatCompletion(ChatCompletionClientBase):
             _apply_thinking_to_settings(
                 settings, anthropic_thinking_override(self._call_model(settings))
             )
+            _apply_enable_thinking_to_settings(settings, enable_thinking_override())
             response = await self._inner.get_chat_message_contents(
                 chat_history=chat_history, settings=settings, **kwargs
             )
@@ -863,6 +1007,9 @@ class CachedChatCompletion(ChatCompletionClientBase):
         _apply_thinking_to_settings(
             settings, anthropic_thinking_override(self._call_model(settings))
         )
+        # #3658 ask 3 — applied BEFORE the key: the switch is part of the
+        # request's identity, exactly like the effort above (R1227).
+        _apply_enable_thinking_to_settings(settings, enable_thinking_override())
         key = compute_cache_key(chat_history, settings)
 
         if self._mode == REPLAY:
@@ -964,6 +1111,7 @@ class CachedChatCompletion(ChatCompletionClientBase):
         _apply_thinking_to_settings(
             settings, anthropic_thinking_override(self._call_model(settings))
         )
+        _apply_enable_thinking_to_settings(settings, enable_thinking_override())
         chunks: List[Any] = []
         async for group in self._inner.get_streaming_chat_message_contents(
             chat_history=chat_history, settings=settings, **kwargs
@@ -1109,6 +1257,9 @@ async def cached_raw_chat_completion(client: Any, **kwargs: Any) -> Any:
     kwargs = _apply_thinking_to_raw_kwargs(
         kwargs, anthropic_thinking_override(kwargs.get("model"))
     )
+    # #3658 ask 3 — the OpenAI-compatible switch has no route gate; applied
+    # before the key so it is part of the request's identity (R1227).
+    kwargs = _apply_enable_thinking_to_raw_kwargs(kwargs, enable_thinking_override())
     if mode == OFF:
         _cache_stats.live += 1
         response = await client.chat.completions.create(**kwargs)
@@ -1182,6 +1333,7 @@ def cached_raw_chat_completion_sync(client: Any, **kwargs: Any) -> Any:
     kwargs = _apply_thinking_to_raw_kwargs(
         kwargs, anthropic_thinking_override(kwargs.get("model"))
     )
+    kwargs = _apply_enable_thinking_to_raw_kwargs(kwargs, enable_thinking_override())
     if mode == OFF:
         _cache_stats.live += 1
         response = client.chat.completions.create(**kwargs)
