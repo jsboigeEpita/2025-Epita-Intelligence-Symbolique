@@ -475,6 +475,13 @@ class TestGateServiceProvenance2840:
     modèle de production, sinon son verdict n'a pas de lecteur."""
 
     def test_retired_env_id_is_substituted_not_measured(self, monkeypatch):
+        # The substitution (#1930) lives on the OpenAI branch of the
+        # resolver. Two declarations precede that branch: the named
+        # Anthropic route (#3096 item 6), which the live band declares since
+        # #3653, and the OpenRouter toggle. Both are removed here so the test
+        # reaches the branch it names on every seat and in every lane.
+        monkeypatch.delenv("ANTHROPIC_CHAT_MODEL_ID", raising=False)
+        monkeypatch.delenv("OPENROUTER_BASE_URL", raising=False)
         monkeypatch.setenv("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
         _, _, model_id = _build_gate_llm_service()
         assert model_id != "gpt-5-mini", (
