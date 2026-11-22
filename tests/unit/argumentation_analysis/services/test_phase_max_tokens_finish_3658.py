@@ -20,35 +20,73 @@ from types import SimpleNamespace
 from typing import Any, Dict, List
 
 import pytest
+from semantic_kernel import Kernel
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
 import argumentation_analysis.orchestration.invoke_callables as ic
 from argumentation_analysis.orchestration import structured_arg_translator as sat
 from argumentation_analysis.services import llm_cache
 
 
-class _FakeSettings:
-    """The SK settings shape the acts pin the cap on."""
-
-    def __init__(self, extension_data=None):
-        self.extension_data = dict(extension_data or {})
+def _real_act_settings():
+    """The settings the acts receive in production: the class a kernel with an
+    OpenAI-compatible service answers (no network — the service is never called)."""
+    kernel = Kernel()
+    kernel.add_service(
+        OpenAIChatCompletion(
+            service_id="fake-openai",
+            ai_model_id="fake-model",
+            api_key="test-key-not-a-secret",
+        )
+    )
+    return kernel.get_prompt_execution_settings_from_service_id("fake-openai")
 
 
 class TestExplicitPhaseCaps:
-    def test_an_act_without_a_cap_receives_the_shared_ceiling(self):
-        settings = _FakeSettings()
+    def test_the_cap_reaches_the_serialised_request(self):
+        """On the real class, the cap must survive prepare_settings_dict() —
+        an extension_data key added after construction does not (SK 1.34 seat,
+        1.44 gate, coordinator review R1204)."""
+        settings = _real_act_settings()
         out = ic._with_phase_max_tokens(settings)
-        assert out.extension_data["max_tokens"] == 8192
+        assert out.prepare_settings_dict().get("max_tokens") == 8192
 
     def test_an_explicit_cap_always_wins(self):
-        settings = _FakeSettings({"max_tokens": 12345})
+        settings = _real_act_settings()
+        settings.max_tokens = 12345
         out = ic._with_phase_max_tokens(settings)
-        assert out.extension_data["max_tokens"] == 12345
+        assert out.prepare_settings_dict().get("max_tokens") == 12345
 
     def test_the_zero_override_adds_nothing(self, monkeypatch):
         monkeypatch.setattr(ic, "_PHASE_MAX_TOKENS", 0)
-        settings = _FakeSettings()
+        settings = _real_act_settings()
         out = ic._with_phase_max_tokens(settings)
-        assert "max_tokens" not in out.extension_data
+        assert "max_tokens" not in out.prepare_settings_dict()
+
+    def test_a_class_spelling_it_max_completion_tokens_is_capped(self):
+        class _MctOnly:
+            def __init__(self):
+                self.max_completion_tokens = None
+
+        out = ic._with_phase_max_tokens(_MctOnly())
+        assert out.max_completion_tokens == 8192
+
+    def test_a_class_without_any_cap_field_is_named_once(self, monkeypatch):
+        warnings: List[str] = []
+        monkeypatch.setattr(
+            ic.logger, "warning", lambda *a, **k: warnings.append(str(a))
+        )
+        monkeypatch.setattr(ic, "_cap_barren_types", [])
+
+        class _Barren:
+            pass
+
+        out = ic._with_phase_max_tokens(_Barren())
+        assert not hasattr(out, "max_tokens")
+        assert len(warnings) == 1 and "_Barren" in warnings[0], warnings
+        # named once: a second barren object of the same class stays silent
+        ic._with_phase_max_tokens(_Barren())
+        assert len(warnings) == 1, warnings
 
     async def test_the_translator_sends_an_explicit_cap(self, monkeypatch):
         """Capture witness over the translator's real call path (DeLP/ASPIC):

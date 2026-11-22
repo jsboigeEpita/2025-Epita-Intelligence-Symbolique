@@ -540,19 +540,50 @@ _EXTRACTION_MAX_TOKENS = _env_number("EXTRACTION_MAX_TOKENS", 8192, int)
 _PHASE_MAX_TOKENS = _env_number("PHASE_MAX_TOKENS", 8192, int)
 
 
-def _with_phase_max_tokens(settings: Any) -> Any:
-    """Pin the shared cap on an act's SK settings when it carries none (#3658).
+# The declared fields that can carry the cap, in the order a settings class
+# spells them (OpenAIChatPromptExecutionSettings has max_tokens; some
+# reasoning-classes spell it max_completion_tokens).
+_CAP_FIELDS = ("max_tokens", "max_completion_tokens")
+_cap_barren_types: List[str] = []
 
-    An explicit per-call cap always wins; ``PHASE_MAX_TOKENS=0`` adds nothing.
+
+def _name_cap_barren_type(type_name: str, reason: Any) -> None:
+    if type_name not in _cap_barren_types:
+        _cap_barren_types.append(type_name)
+        logger.warning(
+            "#3658: settings class %s cannot carry the phase cap (%s) — "
+            "its calls run with the route's default ceiling",
+            type_name,
+            reason,
+        )
+
+
+def _with_phase_max_tokens(settings: Any) -> Any:
+    """Pin the shared cap on an act's SK settings — on the DECLARED field (#3658).
+
+    On the real ``OpenAIChatPromptExecutionSettings`` a key added to
+    ``extension_data`` after construction is never serialised (measured SK
+    1.44, coordinator review R1204): the cap rides the declared
+    ``max_tokens`` field — or ``max_completion_tokens`` on a class that
+    spells it that way, named once. An explicit per-call cap always wins;
+    ``PHASE_MAX_TOKENS=0`` adds nothing. A settings class carrying neither
+    field is named once and left as it was.
     """
     if not _PHASE_MAX_TOKENS or settings is None:
         return settings
-    try:
-        ext = getattr(settings, "extension_data", None)
-        if isinstance(ext, dict) and not ext.get("max_tokens"):
-            ext["max_tokens"] = _PHASE_MAX_TOKENS
-    except Exception:  # noqa: BLE001 - a cap must never break the act
-        logger.warning("phase max_tokens not applied: settings without extension_data")
+    for field in _CAP_FIELDS:
+        if getattr(settings, field, None):
+            return settings
+    type_name = type(settings).__name__
+    for field in _CAP_FIELDS:
+        if not hasattr(settings, field):
+            continue
+        try:
+            setattr(settings, field, _PHASE_MAX_TOKENS)
+        except (ValueError, AttributeError) as exc:
+            _name_cap_barren_type(type_name, exc)
+        return settings
+    _name_cap_barren_type(type_name, "no declared cap field")
     return settings
 
 
