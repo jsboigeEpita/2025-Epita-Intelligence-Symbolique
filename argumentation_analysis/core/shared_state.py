@@ -2456,23 +2456,50 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
 
     def add_semantic_index_ref(
         self,
-        query: str,
         document_id: str,
+        start: int,
+        end: int,
         score: float,
-        snippet: Optional[str] = None,
-    ) -> str:
-        """Add a semantic index search reference."""
+    ) -> Optional[str]:
+        """Add a corpus-match reference — offsets only (#3548 ask 7).
+
+        The former shape carried ``query`` and ``snippet``: two TEXT fields
+        the sanitizer had to strip, written by a producer-less branch that
+        stored ``ctx["input_data"]`` verbatim. The corpus reader's record
+        replaces it: the OTHER document's opaque id, the measured span and
+        the score. An invalid span is dropped (return ``None``) rather than
+        repaired — an invented offset would point at a passage the
+        retrieval never ranked (same rule as
+        :meth:`record_semantic_priority_spans`). Legacy entries with
+        ``query``/``snippet`` still exist in recorded states on disk;
+        ``sanitize_state`` keeps stripping them.
+        """
+        if (
+            not str(document_id or "").strip()
+            or isinstance(start, bool)
+            or isinstance(end, bool)
+            or not isinstance(start, int)
+            or not isinstance(end, int)
+            or start < 0
+            or end <= start
+        ):
+            state_logger.warning(
+                "add_semantic_index_ref: entry dropped (bad id or span: "
+                f"{document_id!r}, {start!r}, {end!r}) — never repaired (#3548)"
+            )
+            return None
         si_id = self._generate_id("si", self.semantic_index_refs)
         entry = {
             "id": si_id,
-            "query": query,
-            "document_id": document_id,
+            "document_id": str(document_id),
+            "start": start,
+            "end": end,
             "score": score,
-            "snippet": snippet,
         }
         self.semantic_index_refs.append(entry)
         state_logger.info(
-            f"Semantic index ref added: {si_id} (doc: {document_id}, score: {score:.2f})"
+            f"Semantic index ref added: {si_id} (doc: {document_id}, "
+            f"span {start}-{end}, score: {score:.2f})"
         )
         return si_id
 
