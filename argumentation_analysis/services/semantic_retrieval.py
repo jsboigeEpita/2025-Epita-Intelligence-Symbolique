@@ -112,9 +112,25 @@ def resolve_embedding_route() -> Tuple[Optional[EmbeddingRoute], str]:
             ),
         )
     # Default: the pipeline's provider route — one resolver, so key and URL
-    # come from the same declaration.
-    from argumentation_analysis.core.llm_service import resolve_chat_endpoint
+    # come from the same declaration. #3667 ask 1: the named Anthropic route
+    # (#3096 item 6) serves no ``/v1/embeddings`` — its absence is named
+    # BEFORE any call (c21 measured 8 documents of 404 over a phase table
+    # that read ``completed``). Read from the resolver's own route identity,
+    # never from the model name (anti-pendule). A declared pair above wins.
+    from argumentation_analysis.core.llm_service import (
+        _resolve_named_anthropic_route,
+        resolve_chat_endpoint,
+    )
 
+    if _resolve_named_anthropic_route() is not None:
+        return (
+            None,
+            (
+                "no embedding route: the named Anthropic chat route serves no "
+                f"/v1/embeddings endpoint — declare the {EMBEDDING_KEY_ENV} / "
+                f"{EMBEDDING_URL_ENV} pair to give the semantic lens a route"
+            ),
+        )
     api_key, base_url, _chat_model = resolve_chat_endpoint()
     if not api_key:
         return None, "no embedding route: no provider key and no declared pair"
