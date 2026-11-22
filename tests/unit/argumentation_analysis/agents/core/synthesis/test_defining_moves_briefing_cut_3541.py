@@ -69,3 +69,29 @@ def test_zero_budget_selects_no_moves():
         _state(33), max_items_per_field=0
     )
     assert "[artifact:defining_moves." not in briefing
+
+
+def test_two_slots_take_precedence_when_budget_is_two():
+    briefing = DeepSynthesisAgent.build_artifact_briefing(
+        _state(33), max_items_per_field=2
+    )
+    lines = [
+        line for line in briefing.splitlines() if "[artifact:defining_moves." in line
+    ]
+    assert len(lines) == 2
+    assert "move 27" in lines[0]
+    assert "move 31" in lines[1]
+
+
+def test_repeated_slots_do_not_crowd_out_other_quarters():
+    state = _state(33)
+    state.defining_moves["moves"][0]["slot"] = "thesis"
+    briefing = DeepSynthesisAgent.build_artifact_briefing(state, max_items_per_field=6)
+    lines = [
+        line for line in briefing.splitlines() if "[artifact:defining_moves." in line
+    ]
+    offsets = [int(re.search(r"offset=(\d+)", line).group(1)) for line in lines]
+    assert len(lines) == 6
+    assert {offset // 2500 for offset in offsets} == {0, 1, 2, 3}
+    assert 8100 in offsets
+    assert offsets == sorted(offsets)
