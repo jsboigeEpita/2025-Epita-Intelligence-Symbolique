@@ -50,6 +50,23 @@ def test_synthetic_cycle_counts_filled_named_and_channels(tmp_path):
     assert r"\|" in jtms  # regex alternatives do not create table columns
 
     first = states / "state_full_0.json"
+    original = json.loads(first.read_text(encoding="utf-8"))
+    del original["act3_conclusion"]
+    first.write_text(json.dumps(original), encoding="utf-8")
+    without_sentence = subprocess.run(
+        [sys.executable, "scripts/audit/reach_census.py", "--cycle-dir", str(tmp_path)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=True,
+    )
+    row = next(
+        line
+        for line in without_sentence.stdout.splitlines()
+        if line.startswith("| 1.4.1-JTMS |")
+    )
+    assert "| 1 of 2 | 1 of 2 (JTMS counterfactual only) | 0 of 2 |" in row
+
     first.write_text(
         json.dumps({"jtms_retraction_chain": [{"reason": "synthetic"}]}),
         encoding="utf-8",
