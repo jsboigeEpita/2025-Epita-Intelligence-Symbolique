@@ -5277,17 +5277,29 @@ def _analysed_document_ids(state: Any) -> "set[str]":
     return ids
 
 
+# The UNFILTERED corpus KB, held for the process (#3548 wiring). The phase's
+# context is copied per document — WorkflowExecutor builds a fresh dict on
+# every run (workflow_dsl.py:457, ``ctx = dict(context or {})``) — so a
+# context-level holder would rebuild the KB (and re-embed the whole corpus)
+# for every document of a cycle. Keyed by the route and the definitions
+# file; the per-document exclusion is applied AT QUERY TIME, so the same
+# vectors serve every document. Shape A of the design note: volatile, never
+# persisted, dropped with the process.
+_CORPUS_KB_HOLDER: Dict[Tuple[str, str, str, str], List[Any]] = {}
+
+
 async def _corpus_second_reader(
     state: Any, context: Dict[str, Any], route: Any
 ) -> Dict[str, Any]:
     """The corpus as a second reader: the same claim, elsewhere (#3548 wiring).
 
-    Loads the encrypted definitions IN MEMORY (never persisted), builds the
-    KB ONCE PER PROCESS (a module-level holder keyed by the route — a KB per
-    document would multiply the embedding spend by the panel size), excluding
-    the analysed document by id, and answers ``corpus_matches`` for the claim
-    ``corpus_claim_from_state`` names. A missing passphrase, source or claim
-    names itself in ``status`` and makes no call.
+    Loads the encrypted definitions IN MEMORY (never persisted) and builds the
+    KB ONCE PER PROCESS into the module-level ``_CORPUS_KB_HOLDER`` — the
+    context does not outlive one document, so it cannot be the holder. The
+    holder keeps the UNFILTERED KB; the analysed document is excluded by id
+    AT QUERY TIME, so a cycle's second document is neither served the first
+    document's exclusion nor its own text. A missing passphrase, source or
+    claim names itself in ``status`` and makes no call.
     """
     from argumentation_analysis.services import semantic_retrieval as sr
 
@@ -5300,19 +5312,20 @@ async def _corpus_second_reader(
             "status": "skipped: no_corpus_key",
             "reason": "TEXT_CONFIG_PASSPHRASE is unset — the corpus stays encrypted",
         }
-    cache = context.setdefault("_corpus_kb_cache", {})
-    key = (route.base_url, route.model, route.source)
-    kb = cache.get(key)
+    from argumentation_analysis.config.settings import settings as app_settings
+
+    definitions_path = str(app_settings.config_file_enc)
+    key = (route.base_url, route.model, route.source, definitions_path)
+    kb = _CORPUS_KB_HOLDER.get(key)
     if kb is None:
         from argumentation_analysis.core.io_manager import load_extract_definitions
         from argumentation_analysis.core.utils.crypto_utils import (
             derive_encryption_key,
         )
-        from pathlib import Path
 
         derived = derive_encryption_key(passphrase)
         definitions = load_extract_definitions(
-            Path("argumentation_analysis/data/extract_sources.json.gz.enc"),
+            app_settings.config_file_enc,
             derived.decode("utf-8") if isinstance(derived, bytes) else derived,
         )
         entries = []
@@ -5334,12 +5347,14 @@ async def _corpus_second_reader(
                 "status": "skipped: no_corpus",
                 "reason": reason or "no corpus document yielded a chunk",
             }
-        # Exclusion by id, both forms (base opaque id and _ext<N>): the
-        # analysed document never answers its own query. Filtering the built
-        # KB keeps it built ONCE for the process, not once per document.
-        exclude = _analysed_document_ids(state)
-        kb = [e for e in built if e.doc_id not in exclude]
-        cache[key] = kb
+        _CORPUS_KB_HOLDER[key] = built
+        kb = built
+    # Exclusion by id at QUERY TIME, for this document alone (both panel
+    # forms reduce to the base opaque id): the analysed document never
+    # answers its own query, and the cached KB serves every document of the
+    # cycle with the same vectors.
+    exclude = _analysed_document_ids(state)
+    kb = [e for e in kb if e.doc_id not in exclude]
     try:
         answer = await asyncio.to_thread(sr.query_corpus_for_claim, claim, kb, route)
     except Exception as exc:  # noqa: BLE001 — named skip, never a silent success
