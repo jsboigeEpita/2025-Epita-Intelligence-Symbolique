@@ -871,3 +871,144 @@ class TestACompoundNameNamesThePlayer:
         player = state["players"][0]
 
         assert player["named_offset"] == doc.find("fédération")
+
+
+#: #3556 (c16) — the reply's name carries a leading article the text does
+#: not repeat: the document names the player once, without any determiner.
+#: The recorded c16 shape (a player kept severe by both judge families
+#: because Act I filed a position the text states under outside knowledge).
+#: Synthetic and opaque.
+DOC_ARTICLE = (
+    "L'assemblée a voté le budget sans débat. "
+    "Alliance boréale livrera l'appui industriel promis dès l'automne. "
+    "Le vote a été enregistré au procès-verbal."
+)
+
+#: #3556 (c16) control — the text carries the whole name WITH its article:
+#: the plain whole-name check runs first, so the offset is the whole
+#: name's, not the articleless form's later occurrence.
+DOC_ARTICLE_WHOLE_FIRST = (
+    "L'Alliance boréale a signé la charte dès le printemps. "
+    "Alliance boréale livrera l'appui industriel promis dès l'automne."
+)
+
+
+class TestALeadingArticleIsTheReplysGrammar:
+    """#3556 (c16) — a leading article in the REPLY's name is the reply's
+    own grammar, not the document's: the text may name the player without
+    it. The whole-name check keeps priority wherever the text carries the
+    full string; only when it does not is ONE leading article stripped —
+    a closed set, the name minus its determiner, never a word-bag. Born
+    red on ``main``: the recorded c16 player stayed plain model knowledge
+    with no ``named_offset``, because « Les … » never occurs where the
+    text names « … » alone."""
+
+    async def test_the_text_names_the_player_without_the_replys_article(self):
+        players = [
+            {
+                "name": "L'Alliance boréale",
+                "role": "partenaire industriel de l'effort",
+                "stance": "ambivalent",
+            }
+        ]
+        _, state = await _read(_payload(players), DOC_ARTICLE)
+        player = state["players"][0]
+
+        # The stance itself stays an unverified reading (#3461 kept).
+        assert player["basis"] == MODEL_KNOWLEDGE_BASIS
+        assert "quote" not in player
+        assert "anchor" not in player
+        # The text CARRIES the name without the article, and the record
+        # says where — born red on main: no key exists there.
+        offset = player["named_offset"]
+        assert isinstance(offset, int)
+        assert DOC_ARTICLE[offset : offset + len("Alliance boréale")].lower() == (
+            "alliance boréale"
+        )
+        # The naming sentence fires on the same occurrence: it carries the
+        # reply's own role vocabulary (« industriel »).
+        assert player["naming_sentence"] == (
+            "Alliance boréale livrera l'appui industriel promis dès l'automne."
+        )
+
+    async def test_the_whole_name_keeps_priority_over_the_articleless_form(self):
+        """Control, green on main too: where the whole name occurs, its
+        offset stands even though the articleless form occurs later."""
+        players = [
+            {
+                "name": "L'Alliance boréale",
+                "role": "partenaire industriel de l'effort",
+                "stance": "ambivalent",
+            }
+        ]
+        _, state = await _read(_payload(players), DOC_ARTICLE_WHOLE_FIRST)
+        player = state["players"][0]
+
+        whole = DOC_ARTICLE_WHOLE_FIRST.find("L'Alliance boréale")
+        assert player["named_offset"] == whole
+        assert player["named_offset"] != DOC_ARTICLE_WHOLE_FIRST.rfind("Alliance")
+
+    async def test_no_article_to_strip_changes_nothing(self):
+        """Control, green on main too: a name the text does not carry,
+        with or without an article, keeps its exact pre-c16 shape."""
+        players = [
+            {
+                "name": "Le comité des sages",
+                "role": "arbitre bénévole",
+                "stance": "for",
+            }
+        ]
+        _, state = await _read(_payload(players), DOC_ARTICLE)
+        player = state["players"][0]
+
+        assert "named_offset" not in player
+        assert "naming_span" not in player
+        assert "naming_sentence" not in player
+
+    def test_one_article_one_time_and_only_an_article(self):
+        """The strip is ONE leading article from a closed set — never a
+        bare preposition, never two, never the whole name."""
+        from argumentation_analysis.agents.core.context.strategist import (
+            _name_without_leading_article,
+        )
+
+        assert _name_without_leading_article("Les Ateliers réunis") == "Ateliers réunis"
+        assert _name_without_leading_article("la commission") == "commission"
+        assert _name_without_leading_article("L'Alliance boréale") == "Alliance boréale"
+        assert _name_without_leading_article("des archivistes") == "archivistes"
+        assert _name_without_leading_article("du bureau") == "bureau"
+        assert _name_without_leading_article("The board") == "board"
+        assert _name_without_leading_article("An alliance") == "alliance"
+        # A bare preposition is not an article (a family name must survive).
+        assert _name_without_leading_article("De Valmont") is None
+        # Nothing left to name after the strip, or no article at all.
+        assert _name_without_leading_article("Les") is None
+        assert _name_without_leading_article("A") is None
+        assert _name_without_leading_article("Alliance boréale") is None
+        assert _name_without_leading_article("") is None
+
+
+class TestActOneQuotesTheArticlelessNaming:
+    """#3556 (c16) — the render path is the c13 one, unchanged: on an
+    articleless hit the label quotes the naming sentence as what the text
+    says where it names the player. Born red on ``main``."""
+
+    async def test_the_label_quotes_the_sentence_the_text_carries(self):
+        players = [
+            {
+                "name": "L'Alliance boréale",
+                "role": "partenaire industriel de l'effort",
+                "stance": "ambivalent",
+            }
+        ]
+        _, state = await _read(_payload(players), DOC_ARTICLE)
+        block = _format_strategic_block(state)
+        prompt = build_act1_prompt(_evidence(state))
+
+        sentence = "Alliance boréale livrera l'appui industriel promis dès l'automne."
+        assert f"« {sentence} »" in block
+        assert "en le nommant, le texte dit" in block
+        assert "en le nommant, le texte dit" in prompt
+        # The stance basis is unchanged — the naming quote is never the
+        # position (#3461, #3389).
+        assert "le texte n'a pas été vérifié pour cette position" in block
