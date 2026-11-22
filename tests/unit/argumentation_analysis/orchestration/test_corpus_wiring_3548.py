@@ -8,7 +8,8 @@ doc_P's claim records doc_Q's span in `semantic_index_refs` — the producer
 reaches the state, one hop past where #3664 stopped.
 
 Seat-free: no key, no network, no real corpus — the planted texts are invented.
-The KB is built ONCE PER PROCESS (a context-level holder), never per document.
+The KB is built ONCE PER PROCESS (a module-level holder, reset by the fixture),
+and the per-document exclusion is applied at query time.
 """
 
 from __future__ import annotations
@@ -28,6 +29,18 @@ from argumentation_analysis.orchestration.state_writers import (
 from argumentation_analysis.services import semantic_retrieval as sr
 
 _DIM = 96
+
+
+@pytest.fixture(autouse=True)
+def _fresh_module_holder():
+    """The module-level KB holder never leaks between tests. Defensive: on a
+    head without the holder (born-red measurement), nothing to clear."""
+    holder = getattr(ic, "_CORPUS_KB_HOLDER", None)
+    if holder is not None:
+        holder.clear()
+    yield
+    if holder is not None:
+        holder.clear()
 
 
 def _vector(text: str) -> List[float]:
@@ -67,6 +80,15 @@ def _definitions() -> List[Dict[str, Any]]:
 def _state_for_doc_p() -> UnifiedAnalysisState:
     state = UnifiedAnalysisState(initial_text=DOC_P_TEXT)
     state.set_source_metadata({"source_name": "planted_p"})
+    state.defining_moves = {
+        "moves": [{"kind": "thesis", "quote": CLAIM, "reading": "", "offset": 0}]
+    }
+    return state
+
+
+def _state_for_doc_q() -> UnifiedAnalysisState:
+    state = UnifiedAnalysisState(initial_text=DOC_Q_TEXT)
+    state.set_source_metadata({"source_name": "planted_q"})
     state.defining_moves = {
         "moves": [{"kind": "thesis", "quote": CLAIM, "reading": "", "offset": 0}]
     }
@@ -131,13 +153,27 @@ async def test_the_analysed_document_never_answers_its_own_query(wired_phase):
         assert not str(match["doc"]).startswith(doc_p_id)
 
 
-async def test_the_kb_is_built_once_per_process(wired_phase):
-    """Two phase calls, one loader call: the KB rides the context holder."""
-    state = _state_for_doc_p()
-    context: Dict[str, Any] = {"_state_object": state}
-    await ic._invoke_semantic_index(DOC_P_TEXT, context)
-    await ic._invoke_semantic_index(DOC_P_TEXT, context)
+async def test_one_kb_serves_both_documents_of_a_cycle(wired_phase):
+    """The review witness (R1204, comment 7075013167): doc_P then doc_Q through
+    the REAL phase, each with a FRESH context — as production gives it, since
+    WorkflowExecutor copies the context per document. Exactly ONE loader
+    call; doc_Q's run never answers doc_Q; doc_Q's run CAN answer doc_P."""
+    await ic._invoke_semantic_index(DOC_P_TEXT, {"_state_object": _state_for_doc_p()})
+    result_q = await ic._invoke_semantic_index(
+        DOC_Q_TEXT, {"_state_object": _state_for_doc_q()}
+    )
+    assert result_q.get("corpus_status") == "ran", result_q
     assert len(wired_phase) == 1, f"loader called {len(wired_phase)} times"
+    from argumentation_analysis.evaluation.opaque_id import opaque_id
+
+    doc_p_id = opaque_id("planted_p")
+    doc_q_id = opaque_id("planted_q")
+    matches = result_q.get("corpus_matches") or []
+    answered_by = sorted({str(m["doc"]) for m in matches})
+    assert doc_q_id not in answered_by, f"doc_Q answered its own query: {answered_by}"
+    assert (
+        doc_p_id in answered_by
+    ), f"doc_Q's run cannot see doc_P any more: {answered_by}"
 
 
 async def test_a_missing_passphrase_names_itself_and_makes_no_call(
