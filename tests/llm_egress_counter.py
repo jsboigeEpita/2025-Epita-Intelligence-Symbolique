@@ -69,7 +69,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
-DEFAULT_HOSTS = ("api.openai.com", "openrouter.ai")
+DEFAULT_HOSTS = ("api.openai.com", "openrouter.ai", "api.anthropic.com")
 
 # Env vars that carry an LLM endpoint URL (defaults + configured endpoints,
 # including local/self-hosted ones — they cost no OpenRouter credits but are

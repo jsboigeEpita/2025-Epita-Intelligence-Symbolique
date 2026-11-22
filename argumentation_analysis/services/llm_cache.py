@@ -371,13 +371,21 @@ def _account_sk_usage(response: Any, model: Optional[str] = None) -> None:
     ``"length"``), last non-None across the messages — on a streamed reply
     the verdict arrives with the final chunk. A response reporting none is
     counted apart by ``record``, never as 0 stops.
+
+    #3658 follow-up (R1203 review): the finish pass must COMPLETE before
+    any usage return — an early ``return`` at the first usage-carrying
+    chunk dropped a ``length`` arriving on a later chunk, and the call was
+    counted under ``calls_without_finish_reason`` instead. The finish
+    reason is now read over ALL messages first, then usage is recorded.
     """
     try:
+        messages = response if isinstance(response, list) else [response]
         finish: Optional[str] = None
-        for msg in response if isinstance(response, list) else [response]:
+        for msg in messages:
             raw_finish = getattr(msg, "finish_reason", None)
             if raw_finish is not None:
                 finish = _finish_str(raw_finish)
+        for msg in messages:
             metadata = getattr(msg, "metadata", None) or {}
             usage = None
             if hasattr(metadata, "get"):
